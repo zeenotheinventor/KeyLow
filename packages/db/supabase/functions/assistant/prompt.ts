@@ -6,8 +6,13 @@
 // change to what every conversation pays for:
 // - `SYSTEM_PROMPT` is a constant. A date, an id or a flag in it would be a different prefix every time.
 //   What changes per turn (today, the day on screen) goes in the user message, once, and is stored.
-// - Stored messages are replayed as they were stored. Nothing is edited, reordered or dropped, so turn
-//   two's request starts with turn one's bytes. The one breakpoint that moves is put on a copy.
+// - Stored messages are replayed as they were stored, bar the thinking of turns that are over (below).
+//   Nothing is edited or reordered, so turn two's request starts with turn one's bytes. The one
+//   breakpoint that moves is put on a copy.
+// - Only the current turn's thinking blocks are sent. A Haiku 5.5 thinking block is bound to the system
+//   prompt, the tools and every message before it, so a deploy that changes any of them would make the API
+//   refuse every later request of a conversation that still holds one. Blocks made in a turn that is over
+//   are removed from the front of the history, which the API allows, and the rows are not touched.
 // - The `tools` array does not change per turn. The allowlist is enforced by the executor, not here.
 import { z } from "zod";
 
@@ -203,23 +208,51 @@ export function userContent({
   return [...open.map(resultForOpenToolUse), context, { type: "text", text }];
 }
 
+const isThinking = (block: Anthropic.ContentBlockParam): boolean =>
+  block.type === "thinking" || block.type === "redacted_thinking";
+
+// What a stored message sends. The assistant messages of a turn that is over lose their thinking and
+// redacted thinking, and keep their text and their calls. Of the current turn they are sent as they were.
+function replayBlocks(
+  message: StoredHistoryMessage,
+  currentTurnId: string,
+): Anthropic.ContentBlockParam[] {
+  const blocks = blocksOf(message);
+  return message.role === "assistant" && message.turnId !== currentTurnId
+    ? blocks.filter((block) => !isThinking(block))
+    : blocks;
+}
+
 // The stored messages as Messages API messages, in the order given (`seq`). A turn that ended on a
 // confirm leaves a user message of results and the next turn's user message follows it, and two user
-// messages in a row are a 400, so messages of one role are joined into one. Nothing else is changed, so
-// every later turn replays the same bytes, and `display` is for the app and is never sent.
+// messages in a row are a 400, so messages of one role are joined into one. `display` is for the app and
+// is never sent.
+//
+// Thinking is sent for `currentTurnId` only, byte for byte, because a tool round needs its own blocks
+// back. An assistant message of an earlier turn that holds nothing else is dropped, not sent empty. That
+// is what the thread does with it too, as `threadFromMessages` shows text and calls and never thinking,
+// and the user messages either side of it are joined by the rule above, so the roles still alternate.
+// Everything else is unchanged, so every later turn replays the same bytes.
 //
 // A `tool_result` must come first in a user message. A turn that failed before its message was rewritten
 // leaves its raw text row behind an open call, and the next turn's results would join behind it. So the
 // results of a joined user message go to the front, in their order, and the rest keep theirs. In a valid
 // history they are first already, so nothing moves.
-export function toApiMessages(history: readonly StoredHistoryMessage[]): Anthropic.MessageParam[] {
+export function toApiMessages(
+  history: readonly StoredHistoryMessage[],
+  currentTurnId: string,
+): Anthropic.MessageParam[] {
   const messages: { role: "user" | "assistant"; content: Anthropic.ContentBlockParam[] }[] = [];
   for (const message of history) {
+    const blocks = replayBlocks(message, currentTurnId);
+    if (blocks.length === 0) {
+      continue;
+    }
     const previous = messages.at(-1);
     if (previous !== undefined && previous.role === message.role) {
-      previous.content.push(...blocksOf(message));
+      previous.content.push(...blocks);
     } else {
-      messages.push({ role: message.role, content: blocksOf(message) });
+      messages.push({ role: message.role, content: blocks });
     }
   }
   return messages.map((message) =>

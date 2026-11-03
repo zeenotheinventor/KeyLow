@@ -590,7 +590,10 @@ async function runModelCalls(run: Run, session: Session): Promise<Ending> {
     const { messages } = await turns.readConversation(userId, conversationId, {
       excludeMessageId: NO_MESSAGE_ID,
     });
-    const request = buildTurnRequest({ tools: session.tools, messages: toApiMessages(messages) });
+    const request = buildTurnRequest({
+      tools: session.tools,
+      messages: toApiMessages(messages, run.context.turnId),
+    });
     const outcome = await callModel(run, session, request);
     if (outcome.kind === "interrupted") {
       return interruption(run) ?? ending("stopped");

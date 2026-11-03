@@ -1989,3 +1989,188 @@ Deno.test(
     );
   },
 );
+
+// ---- Thinking replay (KEY-818) ----
+
+const thinkingReply = (
+  signature: string,
+  blocks: ScriptedResponse["blocks"],
+): ScriptedResponse => ({
+  blocks: [{ type: "thinking", thinking: `thought ${signature}`, signature }, ...blocks],
+  stopReason: blocks.some((block) => block.type === "tool_use") ? "tool_use" : "end_turn",
+});
+
+const messagesOf = (body: Record<string, unknown> | undefined) =>
+  Array.isArray(body?.["messages"]) ? body["messages"].filter(isRecord) : [];
+
+const isThinkingBlock = (block: Record<string, unknown>) =>
+  block["type"] === "thinking" || block["type"] === "redacted_thinking";
+
+const thinkingBlocksOf = (message: Record<string, unknown>) =>
+  blocksOf(message["content"]).filter(isThinkingBlock);
+
+// Three turns, each with thinking. The second one has a tool round, so it makes two model calls.
+const threeTurnsOfThinking: ScriptedResponse[] = [
+  {
+    blocks: [
+      { type: "thinking", thinking: "thought one", signature: "sig-turn-1" },
+      { type: "redacted_thinking", data: "data-turn-1" },
+      { type: "text", text: "Hello." },
+    ],
+    stopReason: "end_turn",
+  },
+  thinkingReply("sig-turn-2-call-1", [
+    { type: "tool_use", id: "s1", name: "search_foods", input: { query: "egg" } },
+  ]),
+  thinkingReply("sig-turn-2-call-2", [{ type: "text", text: "Found eggs." }]),
+  thinkingReply("sig-turn-3", [{ type: "text", text: "Done." }]),
+];
+
+Deno.test("turn 2's request holds no thinking or redacted thinking block from turn 1", async () => {
+  await withHarness({ responses: threeTurnsOfThinking }, async (harness) => {
+    const turnOne = await harness.take("hi");
+    const storedBefore = JSON.stringify(turnOne.rows);
+    await harness.take("find an egg");
+
+    const bodies = harness.mock.json();
+    // The stored turn 1 holds both kinds, so the request left them out on purpose.
+    const turnOneAssistant = rowsOfRole(harness, "assistant")[0];
+    assertEquals(
+      blocksOf(turnOneAssistant?.content).map((block) => block["type"]),
+      ["thinking", "redacted_thinking", "text"],
+    );
+    const turnTwoFirst = messagesOf(bodies[1]);
+    assertEquals(turnTwoFirst.flatMap(thinkingBlocksOf), []);
+    // Only the thinking went. The reply is still there.
+    assertEquals(
+      blocksOf(turnTwoFirst[1]?.["content"]).map((block) => block["text"]),
+      ["Hello."],
+    );
+    // The stored rows are as they were.
+    assertEquals(JSON.stringify(harness.rows().slice(0, turnOne.rows.length)), storedBefore);
+  });
+});
+
+Deno.test(
+  "inside one turn's tool loop the earlier responses' thinking goes back unchanged",
+  async () => {
+    await withHarness({ responses: threeTurnsOfThinking }, async (harness) => {
+      await harness.take("hi");
+      await harness.take("find an egg");
+
+      const bodies = harness.mock.json();
+      const turnTwoSecond = messagesOf(bodies[2]);
+      const storedCallOne = rowsOfRole(harness, "assistant")[1];
+      // The model's first response of turn 2 is replayed in full, signature and all.
+      assertEquals(
+        JSON.stringify(turnTwoSecond[3]?.["content"]),
+        JSON.stringify(storedCallOne?.content),
+      );
+      assertEquals(
+        thinkingBlocksOf(turnTwoSecond[3] ?? {}).map((block) => block["signature"]),
+        ["sig-turn-2-call-1"],
+      );
+      assertEquals(turnTwoSecond.flatMap(thinkingBlocksOf).length, 1);
+    });
+  },
+);
+
+Deno.test(
+  "a change to the system prompt or the tools between turns cannot invalidate a thinking block, because none from before it is sent",
+  async () => {
+    await withHarness({ responses: threeTurnsOfThinking }, async (harness) => {
+      await harness.take("hi");
+      await harness.take("find an egg");
+      await harness.take("thanks");
+
+      const bodies = harness.mock.json();
+      assertEquals(bodies.length, 4);
+      // Each turn's first request ends with that turn's user message. Everything in front of it, which
+      // is everything a changed system prompt or tool list would have invalidated, holds no thinking.
+      for (const first of [0, 1, 3]) {
+        const messages = messagesOf(bodies[first]);
+        assertEquals(messages.slice(0, -1).flatMap(thinkingBlocksOf), [], `request ${first}`);
+        assertEquals(messages.at(-1)?.["role"], "user");
+      }
+      // And the request that does hold thinking holds only the turn's own, after its user message.
+      const secondCall = messagesOf(bodies[2]);
+      const ownMessages = secondCall.slice(2);
+      assertEquals(secondCall.slice(0, 2).flatMap(thinkingBlocksOf), []);
+      assertEquals(ownMessages.flatMap(thinkingBlocksOf).length, 1);
+    });
+  },
+);
+
+Deno.test(
+  "roles alternate in every request, with no empty content and no blank block",
+  async () => {
+    await withHarness({ responses: threeTurnsOfThinking }, async (harness) => {
+      await harness.take("hi");
+      await harness.take("find an egg");
+      await harness.take("thanks");
+
+      for (const [index, body] of harness.mock.json().entries()) {
+        const messages = messagesOf(body);
+        messages.forEach((message, position) => {
+          assertEquals(
+            message["role"],
+            position % 2 === 0 ? "user" : "assistant",
+            `request ${index}`,
+          );
+          const blocks = blocksOf(message["content"]);
+          assertNotEquals(blocks.length, 0, `request ${index}`);
+          for (const block of blocks) {
+            assertEquals(block["type"] === "text" && String(block["text"]).trim() === "", false);
+          }
+        });
+      }
+    });
+  },
+);
+
+Deno.test(
+  "the requests of turns 2 and 3 are byte for byte the same up to the start of turn 2",
+  async () => {
+    await withHarness({ responses: threeTurnsOfThinking }, async (harness) => {
+      await harness.take("hi");
+      await harness.take("find an egg");
+      await harness.take("thanks");
+
+      const bodies = harness.mock.json();
+      const turnTwoFirst = messagesOf(bodies[1]);
+      const turnThreeFirst = messagesOf(bodies[3]);
+      // Turn 1's two messages, then turn 2's user message, which is where turn 2 starts.
+      const startOfTurnTwo = 2;
+      const bytesUpTo = (messages: Record<string, unknown>[], end: number) =>
+        JSON.stringify(withoutCacheControl(messages.slice(0, end)));
+      assertEquals(
+        bytesUpTo(turnThreeFirst, startOfTurnTwo + 1),
+        bytesUpTo(turnTwoFirst, startOfTurnTwo + 1),
+      );
+      // The system prompt and the tools are the same too, so the cache reads all of it.
+      assertEquals(JSON.stringify(bodies[3]?.["system"]), JSON.stringify(bodies[1]?.["system"]));
+      assertEquals(JSON.stringify(bodies[3]?.["tools"]), JSON.stringify(bodies[1]?.["tools"]));
+      // Turn 2's own messages are what changes: they lose their thinking once turn 2 is over.
+      assertNotEquals(
+        bytesUpTo(turnThreeFirst, turnThreeFirst.length),
+        bytesUpTo(turnTwoFirst, turnTwoFirst.length),
+      );
+    });
+  },
+);
+
+Deno.test("a turn that replays earlier turns logs no message text or thinking", async () => {
+  const spy = spyOnConsole();
+  try {
+    await withHarness({ responses: threeTurnsOfThinking }, async (harness) => {
+      await harness.take("my private breakfast");
+      await harness.take("find an egg");
+    });
+    assertEquals(
+      spy.lines.some((line) => line.includes("private breakfast") || line.includes("thought")),
+      false,
+    );
+  } finally {
+    spy.restore();
+  }
+});
