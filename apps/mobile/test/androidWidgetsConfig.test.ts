@@ -1,7 +1,7 @@
 import { WIDGET_GALLERY } from "@keylow/core/copy";
 
 import appJson from "../app.json";
-import { DASHBOARD_WIDGET_PROVIDERS } from "../lib/widgets/widgetProviders";
+import { WIDGET_PROVIDERS } from "../lib/widgets/widgetProviders";
 
 // Typed by hand because the app has no Node type definitions.
 const { existsSync } = jest.requireActual<{ existsSync: (path: string) => boolean }>("node:fs");
@@ -34,16 +34,16 @@ const pluginWidgets = (): Record<string, unknown>[] => {
 };
 
 describe("the Android widgets in app.json", () => {
-  it("should register the six dashboard widgets under the names the task handler draws", () => {
+  it("should register the eleven widgets under the names the task handler draws", () => {
     expect(pluginWidgets().map((widget) => widget.name)).toEqual(
-      DASHBOARD_WIDGET_PROVIDERS.map((provider) => provider.name),
+      WIDGET_PROVIDERS.map((provider) => provider.name),
     );
   });
 
   it("should word each widget's label and description exactly as the core copy does", () => {
     const widgets = pluginWidgets();
 
-    DASHBOARD_WIDGET_PROVIDERS.forEach(({ kind }, position) => {
+    WIDGET_PROVIDERS.forEach(({ kind }, position) => {
       expect(widgets[position]).toMatchObject({
         label: WIDGET_GALLERY[kind].label,
         description: WIDGET_GALLERY[kind].description,
@@ -60,7 +60,7 @@ describe("the Android widgets in app.json", () => {
     }
   });
 
-  it("should size the small widgets 2 by 2, the medium 4 by 2 and the large 4 by 4", () => {
+  it("should size the small widgets 2 by 2, the medium 4 by 2 and the large 4 by 4 as the boards do", () => {
     const cells: Record<string, string> = {};
     for (const widget of pluginWidgets()) {
       cells[String(widget.name)] =
@@ -74,6 +74,11 @@ describe("the Android widgets in app.json", () => {
       BodyHeat: "2x2",
       TodayGlance: "4x4",
       BodyMap: "4x2",
+      LogGrid: "2x2",
+      TodayLogging: "4x2",
+      LogAgain: "4x2",
+      WeighIn: "2x2",
+      Training: "4x2",
     });
   });
 

@@ -1,4 +1,4 @@
-import type { WidgetTheme } from "../../theme";
+import type { WidgetColour, WidgetTheme } from "../../theme";
 import type { WidgetAction } from "@keylow/core/widgets";
 import type { ReactNode } from "react";
 import type { FlexWidgetStyle } from "react-native-android-widget";
@@ -9,6 +9,8 @@ export type WidgetCardProps = Readonly<{
   tap?: WidgetAction;
   /** The name a screen reader reads for the card. */
   accessibleName?: string;
+  /** The border, which is the accent while a session runs. */
+  borderColour?: WidgetColour;
   paddingVertical?: number;
   paddingHorizontal?: number;
   direction?: "column" | "row";

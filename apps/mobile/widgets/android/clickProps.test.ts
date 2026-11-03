@@ -23,7 +23,46 @@ describe("the widget tap", () => {
     });
   });
 
-  it("should leave an action that runs a write unwired until the one-tap widgets", () => {
-    expect(clickPropsFor({ type: "log_again", entryId: "entry" })).toEqual({});
+  it("should turn Log again into a named click carrying only the entry's id", () => {
+    expect(clickPropsFor({ type: "log_again", entryId: "entry-id" })).toEqual({
+      clickAction: "LOG_AGAIN",
+      clickActionData: { entryId: "entry-id" },
+    });
+  });
+
+  it("should turn Log set into a named click carrying only ids and the set position", () => {
+    expect(
+      clickPropsFor({
+        type: "log_set",
+        sessionId: "session-id",
+        exerciseId: "exercise-id",
+        setNumber: 3,
+      }),
+    ).toEqual({
+      clickAction: "LOG_SET",
+      clickActionData: { sessionId: "session-id", exerciseId: "exercise-id", setNumber: 3 },
+    });
+  });
+
+  it("should turn Undo into a named click with no data, because the handler reads its stored record", () => {
+    expect(clickPropsFor({ type: "undo", action: "log_set", rowId: "row-id" })).toEqual({
+      clickAction: "UNDO",
+      clickActionData: {},
+    });
+  });
+
+  it("should carry no name, load, amount or other health data in any click", () => {
+    const clicks = [
+      clickPropsFor({ type: "log_again", entryId: "e" }),
+      clickPropsFor({ type: "log_set", sessionId: "s", exerciseId: "x", setNumber: 1 }),
+      clickPropsFor({ type: "undo", action: "log_again", rowId: "r" }),
+    ];
+
+    for (const click of clicks) {
+      for (const [key, value] of Object.entries(click.clickActionData ?? {})) {
+        expect(["entryId", "sessionId", "exerciseId", "setNumber"]).toContain(key);
+        expect(["string", "number"]).toContain(typeof value);
+      }
+    }
   });
 });

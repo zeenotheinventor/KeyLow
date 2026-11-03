@@ -1,19 +1,24 @@
 import { BodyHeatWidget } from "./BodyHeatWidget";
 import { BodyMapWidget } from "./BodyMapWidget";
+import { LogAgainWidget } from "./LogAgainWidget";
+import { LogGridWidget } from "./LogGridWidget";
 import { MessageWidget } from "./MessageWidget";
 import { widgetThemeFor } from "./theme";
 import { ThisWeekWidget } from "./ThisWeekWidget";
 import { TodayGlanceWidget } from "./TodayGlanceWidget";
+import { TodayLoggingWidget } from "./TodayLoggingWidget";
 import { TodayMacrosWidget } from "./TodayMacrosWidget";
 import { TodayRingWidget } from "./TodayRingWidget";
+import { TrainingWidget } from "./TrainingWidget";
+import { WeighInWidget } from "./WeighInWidget";
 
 import type { WidgetTheme } from "./theme";
 import type { WidgetViewModel } from "@keylow/core/widgets";
 import type { JSX } from "react";
 import type { WidgetRepresentation } from "react-native-android-widget";
 
-/** One drawing of a view model in one theme, or null for a kind no layout exists for yet. */
-const drawingOf = (viewModel: WidgetViewModel, theme: WidgetTheme): JSX.Element | null => {
+/** One drawing of a view model in one theme. */
+const drawingOf = (viewModel: WidgetViewModel, theme: WidgetTheme): JSX.Element => {
   if (viewModel.state !== "ready") {
     return <MessageWidget viewModel={viewModel} theme={theme} />;
   }
@@ -30,19 +35,24 @@ const drawingOf = (viewModel: WidgetViewModel, theme: WidgetTheme): JSX.Element 
       return <TodayGlanceWidget viewModel={viewModel} theme={theme} />;
     case "body_map":
       return <BodyMapWidget viewModel={viewModel} theme={theme} />;
-    default:
-      // The quick logging widgets (KEY-806) add their cases above.
-      return null;
+    case "log_grid":
+      return <LogGridWidget viewModel={viewModel} theme={theme} />;
+    case "today_logging":
+      return <TodayLoggingWidget viewModel={viewModel} theme={theme} />;
+    case "log_again":
+      return <LogAgainWidget viewModel={viewModel} theme={theme} />;
+    case "weigh_in":
+      return <WeighInWidget viewModel={viewModel} theme={theme} />;
+    case "training":
+      return <TrainingWidget viewModel={viewModel} theme={theme} />;
   }
 };
 
 /**
  * What the launcher is handed for a view model: the light and the dark drawing, so the widget follows the
- * phone's mode without the app running. Null for a kind with no layout yet.
+ * phone's mode without the app running.
  */
-export const widgetRepresentation = (viewModel: WidgetViewModel): WidgetRepresentation | null => {
-  const light = drawingOf(viewModel, widgetThemeFor("light"));
-  const dark = drawingOf(viewModel, widgetThemeFor("dark"));
-
-  return light === null || dark === null ? null : { light, dark };
-};
+export const widgetRepresentation = (viewModel: WidgetViewModel): WidgetRepresentation => ({
+  light: drawingOf(viewModel, widgetThemeFor("light")),
+  dark: drawingOf(viewModel, widgetThemeFor("dark")),
+});
