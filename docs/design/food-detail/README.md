@@ -122,7 +122,7 @@ Where the sources disagree, the order is: Zee's rulings, then the Ki-Lo design s
 
 ## Favourites proposal
 
-These boards are drawn by hand from the exported `own-food` board, not exported from the canvas, so they live in `proposals/` where `tools/design-export` does not look for boards. They wait for Zee's approval. Each PNG is 820 by 844 at device pixel ratio 2, dark on the left and light on the right, like the exported boards.
+These boards are drawn by hand from the exported `own-food` board, not exported from the canvas, so they live in `proposals/` where `tools/design-export` does not look for boards. Zee approved them on 2026-11-03. Each PNG is 820 by 844 at device pixel ratio 2, dark on the left and light on the right, like the exported boards.
 
 ### favourite-off
 

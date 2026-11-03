@@ -156,7 +156,7 @@ Where the sources disagree, the order is: Zee's rulings, then the Ki-Lo design s
 
 ## Favourites proposal
 
-This board is drawn by hand, not exported from the canvas, so it lives in `proposals/` where `tools/design-export` does not look for boards. It waits for Zee's approval. The PNG is 820 by 844 at device pixel ratio 2, dark on the left and light on the right. It draws the log search as the app has it today (`LogIdle`: the "Log food" header, the day's macro strip, Quick add, Recent with its plus buttons, the docked search field) with the strip added, and the plate empty.
+This board is drawn by hand, not exported from the canvas, so it lives in `proposals/` where `tools/design-export` does not look for boards. Zee approved it on 2026-11-03. The PNG is 820 by 844 at device pixel ratio 2, dark on the left and light on the right. It draws the log search as the app has it today (`LogIdle`: the "Log food" header, the day's macro strip, Quick add, Recent with its plus buttons, the docked search field) with the strip added, and the plate empty.
 
 ### favourites
 
@@ -166,4 +166,4 @@ The log search idle state with the Favourites strip between Quick add and Recent
 
 Open [proposals/favourites.html](proposals/favourites.html) in a browser.
 
-Settled with Zee on 2026-11-03 (defaults accepted): the order of the strip (most recently favourited first is assumed), whether a tile shows its last amount under the name (the board shows the name only), and whether recipes come first (Zee said whole recipes matter more).
+Settled with Zee on 2026-11-03 (defaults accepted): the strip is ordered most recently favourited first, with foods and recipes mixed rather than grouped, and a tile shows the name only, not its last amount.
