@@ -119,6 +119,7 @@ export function AssistantNotice({
             <Button
               key={button.label}
               fullWidth
+              loading={button.isBusy === true}
               variant={buttonVariants[button.kind]}
               onPress={button.onPress}
             >

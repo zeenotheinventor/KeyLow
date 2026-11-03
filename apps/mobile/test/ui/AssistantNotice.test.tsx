@@ -172,6 +172,18 @@ describe("AssistantNotice", () => {
       expect(screen.getByRole("button", { name: "Turn on" })).toBeOnTheScreen();
     });
 
+    it("should be busy and ignore a press while a button is saving", async () => {
+      const user = userEvent.setup();
+      const onTurnOn = jest.fn();
+      await renderNotice({
+        buttons: [{ label: "Turn on", kind: "primary", isBusy: true, onPress: onTurnOn }],
+      });
+
+      await user.press(screen.getByRole("button", { name: /Turn on/, busy: true }));
+
+      expect(onTurnOn).not.toHaveBeenCalled();
+    });
+
     it("should draw them in the order given", async () => {
       await renderNotice({
         buttons: [

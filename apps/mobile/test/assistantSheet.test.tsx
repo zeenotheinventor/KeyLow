@@ -58,6 +58,15 @@ jest.mock("@keylow/api-client", () => ({
   useAssistantConversation: () => mockAssistant.conversation,
   useAssistantTurn: () => mockAssistant.turn,
   useNewAssistantConversation: () => mockAssistant.newConversation,
+  // The assistant is open for this person. The access states are tested in assistantSheetAccess.test.tsx.
+  useAssistantStatus: () => ({
+    data: { notice: null },
+    isSuccess: true,
+    isError: false,
+    refetch: jest.fn(),
+  }),
+  useSetAssistantConsent: () => ({ mutate: jest.fn(), isPending: false }),
+  useProfileTimeZone: () => ({ data: "Europe/London" }),
 }));
 
 setUpTests();

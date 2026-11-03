@@ -25,7 +25,12 @@ const askAgainOptions = [{ value: "ask-again", label: ASSISTANT_STOPPED.askAgain
  * Every word comes from the thread the screen was given or from core's copy, so nothing here words a
  * message, and nothing in it decides what to show.
  */
-export function AssistantThread({ thread, onTryAgain, onAskAgain }: AssistantThreadProps) {
+export function AssistantThread({
+  thread,
+  timeZone,
+  onTryAgain,
+  onAskAgain,
+}: AssistantThreadProps) {
   function renderEntry(entry: AssistantSheetEntry) {
     switch (entry.kind) {
       case "you":
@@ -49,7 +54,7 @@ export function AssistantThread({ thread, onTryAgain, onAskAgain }: AssistantThr
           />
         );
       case "notice": {
-        const words = describeAssistantNotice(entry.notice);
+        const words = describeAssistantNotice(entry.notice, timeZone);
         const look = noticeLooks[entry.notice.code];
         return (
           <AssistantNotice

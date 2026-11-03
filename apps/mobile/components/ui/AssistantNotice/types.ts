@@ -11,6 +11,8 @@ export type AssistantNoticeButtonKind = "primary" | "secondary" | "danger" | "gh
 export type AssistantNoticeButton = {
   label: string;
   kind: AssistantNoticeButtonKind;
+  /** Keeps the label's width, shows a spinner and stops the button responding, while the action saves. */
+  isBusy?: boolean | undefined;
   onPress: () => void;
 };
 
