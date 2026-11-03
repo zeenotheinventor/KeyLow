@@ -92,7 +92,14 @@ export function writeContext(
 ) {
   const stub = writeStub(
     { ...dietRows(), ...options.rows },
-    { callerUserId: userId, ...(options.rpc === undefined ? {} : { rpc: options.rpc }) },
+    {
+      callerUserId: userId,
+      ...(options.rpc === undefined ? {} : { rpc: options.rpc }),
+      // What the database fills in on a new food that the repo does not send.
+      insertDefaults: {
+        foods: { source_ref: null, food_group: null, quality: {}, fetched_at: null },
+      },
+    },
   );
   const made = createFakeContext(tools, {
     localDate: "2026-11-03",

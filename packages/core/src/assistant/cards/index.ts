@@ -1,5 +1,6 @@
 export { confirmCopyButtons, confirmCopyQuestion } from "./confirmCopy";
 export { confirmArchiveButtons, confirmArchiveQuestion } from "./confirmArchive";
+export { confirmTargetsButtons, confirmTargetsQuestion } from "./confirmTargets";
 export { confirmDeleteButtons, confirmDeleteQuestion } from "./confirmDelete";
 export { buildDayCompletedCard } from "./dayCompleted";
 export { buildDayCopiedCard } from "./dayCopied";
@@ -12,9 +13,13 @@ export {
   withActionIds,
 } from "./entryCardEntry";
 export type { AssistantCardDraft, CardEntry } from "./entryCardEntry";
+export { buildFoodCreatedCard } from "./foodCreated";
+export type { FoodCreatedCardFood } from "./foodCreated";
 export { buildLoggedCard } from "./logged";
 export { buildRecipeArchivedCard } from "./recipeArchived";
 export { buildRecipeCreatedCard } from "./recipeCreated";
 export type { RecipeCardRecipe } from "./recipeCreated";
 export { buildRecipeUpdatedCard } from "./recipeUpdated";
+export { buildTargetsChangedCard } from "./targetsChanged";
+export type { TargetsChangedCardChange } from "./targetsChanged";
 export { buildUpdatedCard } from "./updated";

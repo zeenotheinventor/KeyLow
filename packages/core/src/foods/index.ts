@@ -46,3 +46,5 @@ export type { PackSize } from "./packSize";
 export { packPortion } from "./packPortion";
 export { requiresConfirmation } from "./quality";
 export { resolveCarbs } from "./offRules";
+export { LABEL_KCAL_TOLERANCE, labelFoodInput, macroKcalOf } from "./labelFood";
+export type { LabelFoodResult, LabelFoodValues } from "./labelFood";
