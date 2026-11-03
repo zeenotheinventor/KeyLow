@@ -39,6 +39,11 @@ export type RecipeSave = {
   ingredients: readonly RecipeIngredient[];
   /** In order, the first being step 1. Trimmed, and blank ones dropped, before the save. */
   steps: readonly string[];
+  /**
+   * The web page the recipe came from, http or https. Left out, the save sends no link, so a replaced recipe
+   * keeps the one it has.
+   */
+  sourceUrl?: string;
 };
 
 export type RecipeUpdate = RecipeSave & {
@@ -52,6 +57,9 @@ export type DuplicateRecipeInput = {
   name: string;
 };
 
+// The longest link a recipe keeps.
+const MAX_SOURCE_URL_LENGTH = 2000;
+
 // The checks are core's own schemas, so the repo refuses before any request what the database would
 // refuse. Every ingredient is parsed before `computeRecipe` or the save sees it: the builder allows a
 // quantity of 0 that the schema refuses, and a hand-made row with a negative quantity would otherwise
@@ -62,6 +70,11 @@ const recipeSaveSchema = z.object({
   yieldGrams: recipeSchema.shape.yield_grams,
   steps: recipeSchema.shape.instructions,
   ingredients: z.array(recipeIngredientSchema).max(MAX_RECIPE_INGREDIENTS),
+  sourceUrl: z
+    .string()
+    .regex(/^https?:\/\//)
+    .max(MAX_SOURCE_URL_LENGTH)
+    .optional(),
 });
 
 /** A `RangeError` with the paths of the fields that failed. A Zod error is not attached, because its issues can quote the value. */
@@ -138,7 +151,7 @@ async function saveRecipe(
   recipeId: string | null,
   save: RecipeSave,
 ): Promise<RecipeDetail> {
-  const { name, servings, yieldGrams, steps, ingredients } = checkedSave(save);
+  const { name, servings, yieldGrams, steps, ingredients, sourceUrl } = checkedSave(save);
 
   const recipe = {
     name,
@@ -146,6 +159,7 @@ async function saveRecipe(
     yield_grams: yieldGrams,
     instructions: steps,
     computed: computeRecipe({ servings, yieldGrams, ingredients }),
+    ...(sourceUrl === undefined ? {} : { source_url: sourceUrl }),
   };
 
   let saved = await callSaveRecipe(client, recipeId, recipe, ingredients);

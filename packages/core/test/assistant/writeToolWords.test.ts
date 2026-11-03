@@ -33,6 +33,7 @@ describe("describeAssistantChange", () => {
     ["copy_day", 1, "Copied a day"],
     ["set_day_complete", 1, "Changed whether a day is complete"],
     ["create_recipe", 1, "Added a recipe"],
+    ["import_recipe_from_url", 1, "Added a recipe"],
     ["update_recipe", 1, "Updated a recipe"],
     ["archive_recipe", 1, "Archived a recipe"],
     ["create_custom_food", 1, "Added a food"],
@@ -223,6 +224,13 @@ describe("the recipe words", () => {
     expect(changed("create_recipe", [rowOf("a", "Porridge", 1)])).toEqual({
       title: "Added recipe Porridge",
       detail: "1 serving",
+    });
+  });
+
+  it("should word an imported recipe as a created one, because it makes the same row", () => {
+    expect(changed("import_recipe_from_url", [pastaBake])).toEqual({
+      title: "Added recipe Pasta bake",
+      detail: "4 servings",
     });
   });
 

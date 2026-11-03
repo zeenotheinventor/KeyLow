@@ -1,6 +1,8 @@
+import { describeFoodSource } from "./foodSources";
 import { formatCalories, formatGrams } from "../format/numbers";
 import { formatScaledCount } from "../format/scaledCount";
 
+import type { FoodSource } from "../schemas/food";
 import type { NullableNutrients } from "../schemas/nutrients";
 
 /*
@@ -68,3 +70,54 @@ export const CONFIRM_ARCHIVE_BUTTONS = {
 /** "Archive Chicken and rice? It leaves your recipe list. Entries already logged from it stay in your diary." */
 export const describeConfirmArchiveQuestion = (name: string): string =>
   `Archive ${name}? It leaves your recipe list. Entries already logged from it stay in your diary.`;
+
+/** The longest page address the import card prints under its title. */
+const IMPORT_ADDRESS_MAX_CHARACTERS = 60;
+
+/**
+ * "From example.com/lemon-traybake": the page as its host and path, with no scheme, no "www.", no query or
+ * fragment and no trailing slash. A longer address is cut and ends with an ellipsis. An address that is not
+ * http or https is given back as it is.
+ */
+export const describeImportedFrom = (sourceUrl: string): string => {
+  const match = /^https?:\/\/(?:www\.)?([^/?#]+)([^?#]*)/i.exec(sourceUrl);
+  const address =
+    match === null ? sourceUrl : `${match[1] ?? ""}${(match[2] ?? "").replace(/\/+$/, "")}`;
+  const shown =
+    address.length > IMPORT_ADDRESS_MAX_CHARACTERS
+      ? `${address.slice(0, IMPORT_ADDRESS_MAX_CHARACTERS - 1)}…`
+      : address;
+  return `From ${shown}`;
+};
+
+/** The line under an imported line that matched no food. */
+export const IMPORT_LINE_NOT_COUNTED = "Not counted. Choose a food in the recipe editor.";
+
+/**
+ * "Choose a food for the wine": the link on an import card with a line that matched no food. The food is
+ * named by the last word of its name ("white wine" is the wine).
+ */
+export const describeChooseFoodFor = (foodWord: string): string => {
+  const words = foodWord.trim().split(/\s+/);
+  const head = (words[words.length - 1] ?? foodWord).toLowerCase();
+  return `Choose a food for the ${head}`;
+};
+
+/** An amount the import guessed for a vague line: "50 ml (a splash, estimated)", or "50 ml (estimated)". */
+export const describeGuessedAmount = (
+  guess: { amount: number; unit: "g" | "ml" },
+  phrase: string | null,
+): string =>
+  `${formatGrams(guess.amount)} ${guess.unit} (${phrase === null ? "" : `${phrase}, `}estimated)`;
+
+/**
+ * The second line of a matched imported line, as the board prints it: the food, the guessed amount when
+ * there is one, and its source ("Milk, semi-skimmed · 50 ml (a splash, estimated) · UK CoFID").
+ */
+export const describeMatchedImportLine = (
+  food: { name: string; source: FoodSource },
+  guessedAmount: string | null,
+): string =>
+  [food.name, guessedAmount, describeFoodSource(food.source)]
+    .filter((part): part is string => part !== null)
+    .join(" · ");

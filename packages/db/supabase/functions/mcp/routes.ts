@@ -14,6 +14,7 @@ import { createToolServer } from "./server.ts";
 
 import type { ExecutionResult } from "../_shared/assistant/executor.ts";
 import type { ActionStore } from "../_shared/assistant/store.ts";
+import type { RecipeImportServices } from "../_shared/assistant/recipeParse.ts";
 import type { ToolContext, ToolRegistry } from "../_shared/assistant/tool.ts";
 import type { Database } from "../_shared/core/database.types.ts";
 import type { ReportError } from "../_shared/report.ts";
@@ -27,6 +28,9 @@ export type McpDependencies = {
   caller(request: Request): SupabaseClient<Database>;
   actions: ActionStore;
   registry: ToolRegistry;
+  // The page fetch and the parse call of `import_recipe_from_url`. A test that does not call that tool leaves
+  // it out, and then the tool answers `tool_failed`.
+  recipeImport?: RecipeImportServices;
   now(): Date;
   report: ReportError;
 };
@@ -122,6 +126,9 @@ export function createMcpEndpoint(
         registry,
         allowedTools,
         reportError: dependencies.report,
+        ...(dependencies.recipeImport === undefined
+          ? {}
+          : { recipeImport: dependencies.recipeImport }),
       };
       return await executeTool(context, name, rawInput);
     }

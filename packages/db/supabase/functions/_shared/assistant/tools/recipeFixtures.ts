@@ -63,7 +63,7 @@ let nextRecipe = 1;
 
 // `save_recipe` as the database answers it: the recipe and its ingredients are kept together, a new recipe
 // is the caller's and is not archived, and a recipe that is not the caller's is not found.
-const saveRecipe: RpcHandler = (args, tables) => {
+export const saveRecipeRpc: RpcHandler = (args, tables) => {
   const recipe = args["p_recipe"] as Record<string, unknown>;
   const ingredients = args["p_ingredients"] as Record<string, unknown>[];
   const rows = (tables["recipes"] ??= []);
@@ -82,14 +82,25 @@ const saveRecipe: RpcHandler = (args, tables) => {
   const existingId = args["p_recipe_id"];
   if (existingId === null || existingId === undefined) {
     const id = `00000000-0000-4000-8000-0000000e${String(nextRecipe++).padStart(4, "0")}`;
-    rows.push({ id, owner_id: userId, is_archived: false, source_url: null, ...fields });
+    rows.push({
+      id,
+      owner_id: userId,
+      is_archived: false,
+      source_url: recipe["source_url"] ?? null,
+      ...fields,
+    });
     return { data: id, error: null };
   }
   const existing = rows.find((row) => row["id"] === existingId && row["owner_id"] === userId);
   if (existing === undefined) {
     return { data: null, error: { code: "P0002", message: "not found" } };
   }
-  Object.assign(existing, fields);
+  // A save without the key keeps the stored link, as the database does.
+  Object.assign(
+    existing,
+    fields,
+    "source_url" in recipe ? { source_url: recipe["source_url"] } : {},
+  );
   return { data: existingId, error: null };
 };
 
@@ -127,6 +138,6 @@ export function recipeContext(
       food_portions: [...diet.food_portions, ...foods.food_portions],
       ...options.rows,
     },
-    rpc: { save_recipe: saveRecipe },
+    rpc: { save_recipe: saveRecipeRpc },
   });
 }

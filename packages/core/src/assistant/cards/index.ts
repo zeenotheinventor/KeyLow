@@ -19,6 +19,8 @@ export { buildLoggedCard } from "./logged";
 export { buildRecipeArchivedCard } from "./recipeArchived";
 export { buildRecipeCreatedCard } from "./recipeCreated";
 export type { RecipeCardRecipe } from "./recipeCreated";
+export { buildRecipeImportedCard } from "./recipeImported";
+export type { RecipeImportedCardInput, RecipeImportedLine } from "./recipeImported";
 export { buildRecipeUpdatedCard } from "./recipeUpdated";
 export { buildTargetsChangedCard } from "./targetsChanged";
 export type { TargetsChangedCardChange } from "./targetsChanged";

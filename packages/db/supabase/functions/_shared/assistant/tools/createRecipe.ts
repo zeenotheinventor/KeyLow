@@ -5,9 +5,10 @@
 import { z } from "zod";
 
 import { buildRecipeCreatedCard } from "../../core.ts";
-import { createRecipe, getRecipe, setRecipeArchived } from "../../repos.ts";
+import { createRecipe } from "../../repos.ts";
 import { invalidInput } from "./entryWrite.ts";
 import {
+  archiveMadeRecipe,
   buildIngredients,
   cardRecipeOf,
   checkDraft,
@@ -70,7 +71,10 @@ export const createRecipeTool: WriteToolDefinition<CreateRecipeInput> = {
     }
     let recipe;
     try {
-      recipe = await createRecipe(ctx.caller, checked.save);
+      recipe = await createRecipe(ctx.caller, {
+        ...checked.save,
+        ...(source_url === null ? {} : { sourceUrl: source_url }),
+      });
     } catch (caught) {
       // A RangeError from the repo is a recipe it refuses before any request. It quotes no value.
       if (caught instanceof RangeError) {
@@ -79,39 +83,12 @@ export const createRecipeTool: WriteToolDefinition<CreateRecipeInput> = {
       throw caught;
     }
 
-    // The write has landed. Nothing below may throw, or the model would save the recipe a second time.
-    // The repo's save does not carry the link, so it is added to the recipe it just made.
-    let linkSaved = true;
-    if (source_url !== null) {
-      try {
-        const { error } = await ctx.caller
-          .from("recipes")
-          .update({ source_url })
-          .eq("id", recipe.id);
-        if (error) {
-          // The database's message can quote a row, so only its code is kept.
-          throw new Error(`Could not save the recipe's link ${error.code}`);
-        }
-      } catch (caught) {
-        linkSaved = false;
-        ctx.reportError("assistant tool create_recipe", "internal_error", caught);
-      }
-    }
+    // The write has landed, and it carried the link, so nothing below can leave the recipe without it.
     return {
-      data: { created: recipeView(recipe), ...(linkSaved ? {} : { source_url_saved: false }) },
+      data: { created: recipeView(recipe) },
       structured: { card: buildRecipeCreatedCard(cardRecipeOf(recipe)) },
       target: { targetId: recipe.id },
     };
   },
-  // Archives the recipe, unless the person has archived or deleted it already. `recipes` has no change
-  // time to compare, so an edit made since is not noticed, and archiving loses nothing.
-  async inverse(ctx, action) {
-    const { targetId } = action;
-    const recipe = targetId === null ? null : await getRecipe(ctx.caller, targetId);
-    if (targetId === null || recipe === null || recipe.is_archived) {
-      return "unavailable";
-    }
-    await setRecipeArchived(ctx.caller, targetId, true);
-    return "undone";
-  },
+  inverse: archiveMadeRecipe,
 };

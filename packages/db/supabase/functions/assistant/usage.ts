@@ -12,8 +12,9 @@ export type TokenCounts = {
 };
 
 // `describe_or_ask` is a call of the turn loop, which reaches its tools over MCP. `compact` is the call that
-// writes a conversation's note, which has no tools and no transport (the table's own check lists both).
-export type UsageRoute = "describe_or_ask" | "compact";
+// writes a conversation's note, and `recipe_parse` the call that reads an imported recipe's lines. Both have
+// no tools and no transport (the table's own check lists all three).
+export type UsageRoute = "describe_or_ask" | "compact" | "recipe_parse";
 
 export type UsageToRecord = TokenCounts & {
   userId: string;
@@ -88,7 +89,7 @@ export async function recordUsage(
     cost_usd_micros: costMicros,
     latency_ms: call.latencyMilliseconds,
     stop_reason: call.stopReason,
-    transport: route === "compact" ? "none" : "mcp_http",
+    transport: route === "describe_or_ask" ? "mcp_http" : "none",
   });
   if (error !== null) {
     throw new Error(`assistant usage insert failed ${error.code}`);
