@@ -21,7 +21,6 @@
       "cache": false
     },
     "lint": {
-      "dependsOn": ["^lint"],
       "outputs": []
     },
     "typecheck": {
@@ -29,7 +28,6 @@
       "outputs": []
     },
     "test": {
-      "dependsOn": ["^typecheck"],
       "outputs": ["coverage/**"]
     },
     "bundle-core-for-deno": {
@@ -42,7 +40,7 @@
       "cache": false
     },
     "test:integration": {
-      "dependsOn": ["^typecheck", "^test:integration"],
+      "dependsOn": ["^test:integration"],
       "outputs": [],
       "cache": false
     }
