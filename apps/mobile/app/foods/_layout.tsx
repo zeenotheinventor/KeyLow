@@ -1,6 +1,7 @@
 import { Stack, useGlobalSearchParams } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 
+import { AssistantSheetHost } from "../../components/AssistantSheetHost";
 import { readLogContext } from "../../lib/navigation";
 import { DiscardPlateDialog, PlateProvider } from "../../lib/plate";
 import { useTheme } from "../../lib/theme";
@@ -16,18 +17,24 @@ export default function FoodsLayout() {
     <PlateProvider initialTime={readLogContext({ day, time })?.time}>
       {/* Light content on the dark sheet, dark on the light one. */}
       <StatusBar style={scheme === "dark" ? "light" : "dark"} />
-      <Stack
-        screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}
-      >
-        <Stack.Screen name="index" />
-        <Stack.Screen name="[id]/index" />
-        <Stack.Screen name="[id]/log" />
-        <Stack.Screen name="recipe/[id]/log" />
-        <Stack.Screen name="new" />
-        <Stack.Screen name="[id]/edit" />
-        <Stack.Screen name="scan" />
-        <Stack.Screen name="quick-add" />
-      </Stack>
+      {/* The food sheet is a modal that covers the app, and anything drawn outside it, such as the root's assistant sheet, is under it. So Describe opens the assistant here, over the search. */}
+      <AssistantSheetHost>
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: colors.background },
+          }}
+        >
+          <Stack.Screen name="index" />
+          <Stack.Screen name="[id]/index" />
+          <Stack.Screen name="[id]/log" />
+          <Stack.Screen name="recipe/[id]/log" />
+          <Stack.Screen name="new" />
+          <Stack.Screen name="[id]/edit" />
+          <Stack.Screen name="scan" />
+          <Stack.Screen name="quick-add" />
+        </Stack>
+      </AssistantSheetHost>
       {/* Drawn here, not by the search, so it shows above the scanner and quick add, which cover the search. */}
       <DiscardPlateDialog />
     </PlateProvider>

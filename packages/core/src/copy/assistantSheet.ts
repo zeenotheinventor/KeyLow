@@ -39,3 +39,25 @@ export const ASSISTANT_CARD_NOTES = {
   entriesChanged:
     "You changed these entries in your diary since, so Undo is off. Edit or delete them in the diary.",
 } as const;
+
+/**
+ * The words of Describe, the second way into the assistant, from Log food (`assistant · describe` and the
+ * Describe row on the Log food board). The sheet opened this way has its own intro in place of the starters,
+ * and a line over the composer that says when the entries will be logged.
+ */
+export const ASSISTANT_DESCRIBE = {
+  /** The row under Quick add in Log food, and its caption. */
+  rowTitle: "Describe",
+  rowCaption: "Say what you ate, the assistant logs it",
+  emptyHeading: "Describe a meal",
+  emptyLede:
+    "Name each food and how much, in your own words: 2 eggs, a slice of toast, 150 g of rice. If a portion is unclear, the assistant asks.",
+  composerPlaceholder: "Describe a meal",
+  /** Follows the "Logs at 13:00" chip over the composer. */
+  hintText: "Say what and how much",
+} as const;
+
+/** The chip over the composer that says the time the described food is logged at, `time` being `HH:MM`. */
+export function describeLogsAt(time: string): string {
+  return `Logs at ${time}`;
+}

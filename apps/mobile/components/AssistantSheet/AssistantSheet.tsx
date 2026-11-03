@@ -28,7 +28,7 @@ import { Composer } from "./Composer";
 import { ConsentCard } from "./ConsentCard";
 import { assistantCardHref } from "../../lib/assistantCardRoutes";
 import { useIsOnline } from "../../lib/connectivity";
-import { Banner, BottomSheet, SheetHeader, SheetScrollView, useToast } from "../ui";
+import { Badge, Banner, BottomSheet, SheetHeader, SheetScrollView, Text, useToast } from "../ui";
 
 import type { AssistantSheetProps } from "./types";
 import type { AssistantCardLink, AssistantSheetSent } from "@keylow/core";
@@ -39,7 +39,8 @@ const deviceTimeZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
 // The boards' open height leaves the diary's header showing, 106 of 844 points from the top. The sheet drags
 // up to full height, which starts 54 points from the top.
 const SNAP_POINTS = ["87%", "94%"];
-// The consent card opens at full height (`assistant · consent-needed`, 54 points from the top).
+// The consent card opens at full height (`assistant · consent-needed`, 54 points from the top), and so does
+// the sheet opened from Describe (`assistant · describe`).
 const OPEN_SNAP_INDEX = 0;
 const FULL_HEIGHT_SNAP_INDEX = 1;
 
@@ -59,7 +60,7 @@ const threadClassNames = {
  * card, a disabled composer under a limit) is `resolveAssistantSheetAccess`. The status is read again each
  * time the sheet opens.
  */
-export function AssistantSheet({ open, onClose, localDate }: AssistantSheetProps) {
+export function AssistantSheet({ open, onClose, localDate, describeAt }: AssistantSheetProps) {
   const isOnline = useIsOnline();
   const router = useRouter();
   const conversation = useAssistantConversation({ enabled: open });
@@ -94,7 +95,7 @@ export function AssistantSheet({ open, onClose, localDate }: AssistantSheetProps
     isStreaming,
     accessNotice: access.kind === "limited" ? access.notice : null,
   });
-  const composer = describeAssistantComposer({ access, isOnline, timeZone });
+  const composer = describeAssistantComposer({ access, isOnline, timeZone, describeAt });
 
   // The turn on screen and what it left, for the read on open below, which finishes after the render that
   // started it.
@@ -178,7 +179,7 @@ export function AssistantSheet({ open, onClose, localDate }: AssistantSheetProps
     setSent({ text, afterItemId: items?.at(-1)?.id ?? null });
     // The thread's own conversation, or the one the first turn started, which is not read yet.
     const conversationId = conversation.data?.conversationId ?? live?.conversationId ?? null;
-    void send(text, { conversationId, localDate });
+    void send(text, { conversationId, localDate, localTime: describeAt });
   }
 
   function sendDraft() {
@@ -254,6 +255,7 @@ export function AssistantSheet({ open, onClose, localDate }: AssistantSheetProps
     if (isEmpty) {
       return isThreadKnown ? (
         <AssistantEmpty
+          describeAt={describeAt}
           isDisabled={!isOnline || conversation.isFetching}
           onStarterPress={sendMessage}
         />
@@ -274,7 +276,11 @@ export function AssistantSheet({ open, onClose, localDate }: AssistantSheetProps
     <BottomSheet
       label={ASSISTANT_SHEET.title}
       open={open}
-      snapIndex={access.kind === "consent" ? FULL_HEIGHT_SNAP_INDEX : OPEN_SNAP_INDEX}
+      snapIndex={
+        access.kind === "consent" || describeAt !== undefined
+          ? FULL_HEIGHT_SNAP_INDEX
+          : OPEN_SNAP_INDEX
+      }
       snapPoints={SNAP_POINTS}
       onClose={close}
     >
@@ -319,7 +325,16 @@ export function AssistantSheet({ open, onClose, localDate }: AssistantSheetProps
                 variant="offline"
               />
             )}
+            {composer.hint === undefined ? null : (
+              <View className="flex-row items-center gap-2">
+                <Badge outlined>{composer.hint.chip}</Badge>
+                <Text tone="muted" variant="caption">
+                  {composer.hint.text}
+                </Text>
+              </View>
+            )}
             <Composer
+              isAutoFocused={describeAt !== undefined}
               isFieldDisabled={composer.isFieldDisabled}
               isSendDisabled={!canSendWords(draft)}
               placeholder={composer.placeholder}

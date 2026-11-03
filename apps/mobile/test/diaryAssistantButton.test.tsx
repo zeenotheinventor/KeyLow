@@ -3,6 +3,7 @@ import { onlineManager } from "@tanstack/react-query";
 import { act, cleanup, render, screen, userEvent } from "@testing-library/react-native";
 import { Text as MockText } from "react-native";
 
+import { AssistantSheetHost } from "../components/AssistantSheetHost";
 import { DiaryScreen } from "../components/DiaryScreen";
 import { ToastProvider } from "../components/ui";
 import { ThemeProvider } from "../lib/theme";
@@ -41,7 +42,8 @@ jest.mock("../lib/useNow", () => {
 });
 
 // The sheet has its own tests. Here it is a stand-in that says whether it is open and which day it was given,
-// so the diary's side of it is what is tested: the button, the day, and when the sheet starts.
+// so the diary's side of it is what is tested: the button, the day, and when the sheet starts. The host the
+// button opens it through is the app's own.
 const mockSheetMounts = jest.fn();
 jest.mock("../components/AssistantSheet", () => ({
   AssistantSheet: ({ open, localDate, onClose }: AssistantSheetProps) => {
@@ -60,7 +62,9 @@ const diaryTree = () => (
   <ThemeProvider fixedPreference="dark">
     <KeyLowProvider client={diaryClient} queryClient={queryClient}>
       <ToastProvider>
-        <DiaryScreen />
+        <AssistantSheetHost>
+          <DiaryScreen />
+        </AssistantSheetHost>
       </ToastProvider>
     </KeyLowProvider>
   </ThemeProvider>

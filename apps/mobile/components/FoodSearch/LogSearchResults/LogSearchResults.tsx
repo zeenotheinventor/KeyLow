@@ -1,4 +1,5 @@
-import { useRecipeSearch } from "@keylow/api-client";
+import { useProfileTimeZone, useRecipeSearch } from "@keylow/api-client";
+import { describeInLogOpening, resolveAssistantTimeZone } from "@keylow/core";
 import { OFFLINE_BANNER, PLATE, describeAddedToPlate } from "@keylow/core/copy";
 import { canLogRecipe } from "@keylow/core/diary";
 import { plateItemOfHit, plateItemOfRecent, plateItemOfRecipe } from "@keylow/core/plate";
@@ -8,6 +9,7 @@ import { AccessibilityInfo } from "react-native";
 import { useIsOnline } from "../../../lib/connectivity";
 import { usePlate } from "../../../lib/plate";
 import { useReadsEnabled } from "../../../lib/useReadsEnabled";
+import { useOpenAssistant } from "../../AssistantSheetHost";
 import { Banner } from "../../ui";
 import { LogIdle } from "../LogIdle";
 import { SearchResults } from "../SearchResults";
@@ -15,8 +17,8 @@ import { SearchResults } from "../SearchResults";
 import type { LogSearchResultsProps } from "./types";
 
 /**
- * The search sheet's results while food is being logged: the idle state is Quick add, Favourites and Recent,
- * and each row shows a serving with a plus that puts it on the plate, and the user's recipes that match come
+ * The search sheet's results while food is being logged: the idle state is Quick add with Describe under it,
+ * Favourites and Recent, and each row shows a serving with a plus that puts it on the plate, and the user's recipes that match come
  * first (a recipe row opens the amount step, and its plus puts one serving on the plate). The plus builds the
  * plate item from the row's own data, so it loads nothing, writes nothing and works offline. Offline, a banner
  * says the plate can still be filled. Only here are the plate and the recipe search needed, so the plain
@@ -31,7 +33,10 @@ export function LogSearchResults({
 }: LogSearchResultsProps) {
   const { add, addCount, isLogging } = usePlate();
   const isOnline = useIsOnline();
-  const recipeSearch = useRecipeSearch(query, { enabled: useReadsEnabled() });
+  const isReadEnabled = useReadsEnabled();
+  const recipeSearch = useRecipeSearch(query, { enabled: isReadEnabled });
+  const openAssistant = useOpenAssistant();
+  const profileTimeZone = useProfileTimeZone({ enabled: isReadEnabled });
 
   // Whatever puts a food on the plate, this search or the portion picker over it, sends the person back to the
   // idle list with an empty field. The count the screen started with is not an add.
@@ -49,6 +54,15 @@ export function LogSearchResults({
     AccessibilityInfo.announceForAccessibility(describeAddedToPlate(name));
   }
 
+  // The assistant sheet is the app's one, over this sheet, and Describe logs to the day and time being logged.
+  function describeMeal() {
+    const timeZone = resolveAssistantTimeZone(
+      profileTimeZone.data,
+      Intl.DateTimeFormat().resolvedOptions().timeZone,
+    );
+    openAssistant(describeInLogOpening(logging.context, new Date(), timeZone));
+  }
+
   return (
     <>
       {isOnline ? null : (
@@ -61,6 +75,7 @@ export function LogSearchResults({
             onAdd={(recent) => {
               addToPlate(recent.snapshot.name, (key) => plateItemOfRecent(key, recent));
             }}
+            onDescribe={describeMeal}
             onQuickAdd={logging.onQuickAdd}
             onOpenFavouriteFood={logging.onOpenRecent}
             onOpenFavouriteRecipe={logging.onOpenRecipe}

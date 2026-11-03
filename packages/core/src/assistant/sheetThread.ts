@@ -1,5 +1,5 @@
 import { ASSISTANT_OFFLINE, describeAssistantNotice } from "../copy/assistantNotices";
-import { ASSISTANT_SHEET } from "../copy/assistantSheet";
+import { ASSISTANT_DESCRIBE, ASSISTANT_SHEET, describeLogsAt } from "../copy/assistantSheet";
 
 import type { AssistantCard } from "./card";
 import type { AssistantNotice } from "./notice";
@@ -352,22 +352,36 @@ export function resolveAssistantSheetAccess({
 }
 
 export type AssistantComposerLook =
-  { isShown: false } | { isShown: true; isFieldDisabled: boolean; placeholder: string };
+  | { isShown: false }
+  | {
+      isShown: true;
+      isFieldDisabled: boolean;
+      placeholder: string;
+      /** The line over the field, from Describe only, and only while the field takes typing. */
+      hint?: { chip: string; text: string };
+    };
 
 /**
  * The composer under the thread: gone for the consent card and while the status is read, off with the
  * notice's own words when the assistant is limited (in the person's time zone), off with the offline
- * words while offline, else on with the sheet's placeholder.
+ * words while offline, else on with the sheet's placeholder. Opened from Describe (`describeAt` is the
+ * time it logs at) it asks for a meal instead, and says when the meal is logged while the field is on.
  */
 export function describeAssistantComposer({
   access,
   isOnline,
   timeZone,
+  describeAt,
 }: {
   access: AssistantSheetAccess;
   isOnline: boolean;
   timeZone: string;
+  describeAt?: string | undefined;
 }): AssistantComposerLook {
+  const placeholder =
+    describeAt === undefined
+      ? ASSISTANT_SHEET.composerPlaceholder
+      : ASSISTANT_DESCRIBE.composerPlaceholder;
   switch (access.kind) {
     case "checking":
     case "consent":
@@ -376,18 +390,20 @@ export function describeAssistantComposer({
       return {
         isShown: true,
         isFieldDisabled: true,
-        placeholder:
-          describeAssistantNotice(access.notice, timeZone).fieldText ??
-          ASSISTANT_SHEET.composerPlaceholder,
+        placeholder: describeAssistantNotice(access.notice, timeZone).fieldText ?? placeholder,
       };
     case "open":
-      return isOnline
-        ? {
-            isShown: true,
-            isFieldDisabled: false,
-            placeholder: ASSISTANT_SHEET.composerPlaceholder,
-          }
-        : { isShown: true, isFieldDisabled: true, placeholder: ASSISTANT_OFFLINE.fieldText };
+      if (!isOnline) {
+        return { isShown: true, isFieldDisabled: true, placeholder: ASSISTANT_OFFLINE.fieldText };
+      }
+      return {
+        isShown: true,
+        isFieldDisabled: false,
+        placeholder,
+        ...(describeAt === undefined
+          ? {}
+          : { hint: { chip: describeLogsAt(describeAt), text: ASSISTANT_DESCRIBE.hintText } }),
+      };
   }
 }
 
