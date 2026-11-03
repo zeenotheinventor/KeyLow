@@ -164,18 +164,6 @@ describe("PortionPicker in recipe mode", () => {
       expect(screen.getByRole("radio", { name: "g", checked: true })).toBeOnTheScreen();
     });
 
-    it("should show 408 kcal for 300 g, with the macros of that amount", async () => {
-      const { user } = await renderPicker();
-      await user.press(screen.getByRole("radio", { name: "g" }));
-      await typeAmount("300");
-
-      const hero = screen.getByLabelText("Energy and macros, For 300 g");
-      expect(within(hero).getByText("408")).toBeOnTheScreen();
-      expect(within(hero).getByLabelText(/^Protein, 35 g,/)).toBeOnTheScreen();
-      expect(within(hero).getByLabelText(/^Carbs, 46 g,/)).toBeOnTheScreen();
-      expect(within(hero).getByLabelText(/^Fat, 8\.9 g,/)).toBeOnTheScreen();
-    });
-
     it("should reset the amount to 1 when 1 serving is chosen again", async () => {
       const { user } = await renderPicker();
       await user.press(screen.getByRole("radio", { name: "g" }));

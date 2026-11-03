@@ -6,6 +6,8 @@ export type ReminderSettings = {
   trainEnabled: boolean;
   progressEnabled: boolean;
   easeEnabled: boolean;
+  missedEnabled: boolean;
+  checkinEnabled: boolean;
   foodEnabled: boolean;
   /** The time of day for the train reminder, as 24 hour "HH:MM". */
   trainTime: string;
@@ -21,10 +23,12 @@ export const defaultReminderSettings: ReminderSettings = {
   trainEnabled: false,
   progressEnabled: false,
   easeEnabled: false,
+  missedEnabled: false,
+  checkinEnabled: false,
   foodEnabled: false,
   trainTime: "17:30",
   foodTime: "20:00",
-  lastVariant: { train: null, progress: null, ease: null, food: null },
+  lastVariant: { train: null, progress: null, ease: null, missed: null, checkin: null, food: null },
 };
 
 const timeOfDay = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -55,6 +59,8 @@ function variantsFrom(value: unknown): ReminderSettings["lastVariant"] {
     train: variant("train"),
     progress: variant("progress"),
     ease: variant("ease"),
+    missed: variant("missed"),
+    checkin: variant("checkin"),
     food: variant("food"),
   };
 }
@@ -74,6 +80,8 @@ function parseReminderSettings(raw: string): ReminderSettings {
     trainEnabled: booleanOr(stored.trainEnabled, defaultReminderSettings.trainEnabled),
     progressEnabled: booleanOr(stored.progressEnabled, defaultReminderSettings.progressEnabled),
     easeEnabled: booleanOr(stored.easeEnabled, defaultReminderSettings.easeEnabled),
+    missedEnabled: booleanOr(stored.missedEnabled, defaultReminderSettings.missedEnabled),
+    checkinEnabled: booleanOr(stored.checkinEnabled, defaultReminderSettings.checkinEnabled),
     foodEnabled: booleanOr(stored.foodEnabled, defaultReminderSettings.foodEnabled),
     trainTime: timeOr(stored.trainTime, defaultReminderSettings.trainTime),
     foodTime: timeOr(stored.foodTime, defaultReminderSettings.foodTime),

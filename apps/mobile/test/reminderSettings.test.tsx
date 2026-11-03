@@ -51,10 +51,19 @@ describe("reminder settings", () => {
         trainEnabled: false,
         progressEnabled: false,
         easeEnabled: false,
+        missedEnabled: false,
+        checkinEnabled: false,
         foodEnabled: false,
         trainTime: "17:30",
         foodTime: "20:00",
-        lastVariant: { train: null, progress: null, ease: null, food: null },
+        lastVariant: {
+          train: null,
+          progress: null,
+          ease: null,
+          missed: null,
+          checkin: null,
+          food: null,
+        },
       });
     });
   });
@@ -69,10 +78,19 @@ describe("reminder settings", () => {
         trainEnabled: true,
         progressEnabled: false,
         easeEnabled: true,
+        missedEnabled: true,
+        checkinEnabled: true,
         foodEnabled: true,
         trainTime: "07:05",
         foodTime: "21:15",
-        lastVariant: { train: "train-2", progress: null, ease: "ease-1", food: "food-3" },
+        lastVariant: {
+          train: "train-2",
+          progress: null,
+          ease: "ease-1",
+          missed: "missed-1",
+          checkin: "checkin-1",
+          food: "food-3",
+        },
       };
 
       await writeReminderSettings(settings);
@@ -109,7 +127,31 @@ describe("reminder settings", () => {
         trainEnabled: true,
         easeEnabled: true,
         trainTime: "07:05",
-        lastVariant: { train: "train-2", progress: null, ease: "ease-1", food: null },
+        lastVariant: { ...defaultReminderSettings.lastVariant, train: "train-2", ease: "ease-1" },
+      });
+    });
+
+    it("should load a record saved before the missed day and check in reminders with both off", async () => {
+      mockStorageItems.set(
+        reminderSettingsStorageKey,
+        JSON.stringify({ trainEnabled: true, foodEnabled: true }),
+      );
+
+      const settings = await readReminderSettings();
+
+      expect(settings.missedEnabled).toBe(false);
+      expect(settings.checkinEnabled).toBe(false);
+    });
+
+    it("should default a missed day or check in switch that is not a boolean and keep the other", async () => {
+      mockStorageItems.set(
+        reminderSettingsStorageKey,
+        JSON.stringify({ missedEnabled: "yes", checkinEnabled: true }),
+      );
+
+      expect(await readReminderSettings()).toEqual({
+        ...defaultReminderSettings,
+        checkinEnabled: true,
       });
     });
 
@@ -152,7 +194,7 @@ describe("reminder settings", () => {
       expect(await readReminderSettings()).toEqual({
         ...defaultReminderSettings,
         trainEnabled: true,
-        lastVariant: { train: "train-1", progress: null, ease: null, food: null },
+        lastVariant: { ...defaultReminderSettings.lastVariant, train: "train-1" },
       });
     });
   });

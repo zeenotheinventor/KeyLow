@@ -9,10 +9,17 @@ export const samples: Record<string, () => string[]> = {
         const { title, body } = copy.describeTrainingReminder(type, id);
         return [title, body];
       }),
-    ).concat(
-      copy.NAMED_TRAIN_REMINDER_VARIANTS.flatMap(({ id }) => {
-        const { title, body } = copy.describeTrainingReminder("train", id, "Alpha");
-        return [title, body];
-      }),
-    ),
+    )
+      .concat(
+        copy.NAMED_TRAIN_REMINDER_VARIANTS.flatMap(({ id }) => {
+          const { title, body } = copy.describeTrainingReminder("train", id, "Alpha");
+          return [title, body];
+        }),
+      )
+      .concat(
+        copy.MISSED_MERGED_REMINDER_VARIANTS.flatMap(({ id }) => {
+          const { title, body } = copy.describeTrainingReminder("missed", id);
+          return [title, body];
+        }),
+      ),
 };

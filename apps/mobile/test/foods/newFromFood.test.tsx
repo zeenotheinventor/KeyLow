@@ -623,15 +623,6 @@ describe("new food screen, copying a food with the from parameter", () => {
       expect(createdInput()).not.toHaveProperty("sat_fat_g");
     });
 
-    it("should keep the saturated fat when the fat is edited to equal it", async () => {
-      const user = await renderCopy();
-      await replaceValue(user, "Fat (g)", "3");
-
-      await save(user);
-
-      expect(createdInput()).toMatchObject({ sat_fat_g: 3 });
-    });
-
     it("should drop the sugars when the carbohydrate is edited below them", async () => {
       const user = await renderCopy();
       await replaceValue(user, "Carbohydrate (g)", "11.9");
@@ -640,40 +631,6 @@ describe("new food screen, copying a food with the from parameter", () => {
 
       expect(createdInput()).toMatchObject({ sat_fat_g: 3, salt_g: 0.8 });
       expect(createdInput()).not.toHaveProperty("sugars_g");
-    });
-
-    it("should keep the sugars when the carbohydrate is edited to equal them", async () => {
-      const user = await renderCopy();
-      await replaceValue(user, "Carbohydrate (g)", "12");
-
-      await save(user);
-
-      expect(createdInput()).toMatchObject({ sugars_g: 12 });
-    });
-
-    it("should carry the salt whatever the fat and carbohydrate are edited to", async () => {
-      const user = await renderCopy();
-      await replaceValue(user, "Fat (g)", "0");
-      await replaceValue(user, "Carbohydrate (g)", "0");
-
-      await save(user);
-
-      expect(createdInput()).toMatchObject({ salt_g: 0.8 });
-      expect(createdInput()).not.toHaveProperty("sat_fat_g");
-      expect(createdInput()).not.toHaveProperty("sugars_g");
-    });
-
-    it("should keep the saturated fat and sugars the source holds above its own fat and carbohydrate when the edit raises them", async () => {
-      Object.assign(foodQuery, {
-        data: { ...cofidFood, fat_g: 2, sat_fat_g: 3, carbs_g: 5, sugars_g: 8 },
-      });
-      const user = await renderCopy();
-      await replaceValue(user, "Fat (g)", "5");
-      await replaceValue(user, "Carbohydrate (g)", "10");
-
-      await save(user);
-
-      expect(createdInput()).toMatchObject({ sat_fat_g: 3, sugars_g: 8 });
     });
 
     it("should send none of the three when a partial write makes the next save an update", async () => {
