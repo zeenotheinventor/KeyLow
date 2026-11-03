@@ -140,6 +140,12 @@ export const parseAssistantEvent = (line: string): ParsedAssistantEvent => {
 };
 
 /**
+ * The longest message a person can send the assistant, in characters. A recommendation the owner can
+ * change, shared by the `turn` route and the composer so neither accepts what the other refuses.
+ */
+export const ASSISTANT_MAX_TEXT_LENGTH = 2000;
+
+/**
  * The body of `POST /functions/v1/assistant/turn`. `conversationId` is null for the first message of a
  * new conversation. `localDate` is the day the sheet was opened on, in the person's time zone, so
  * Describe opened from Log food on another day logs to that day. `localTime` is the Describe hint's hour,
@@ -147,7 +153,7 @@ export const parseAssistantEvent = (line: string): ParsedAssistantEvent => {
  */
 export const assistantTurnRequestSchema = z.strictObject({
   conversationId: assistantIdSchema.nullable(),
-  text: z.string().min(1),
+  text: z.string().trim().min(1).max(ASSISTANT_MAX_TEXT_LENGTH),
   localDate: z.iso.date(),
   localTime: z.iso.time({ precision: -1 }).nullable(),
 });
