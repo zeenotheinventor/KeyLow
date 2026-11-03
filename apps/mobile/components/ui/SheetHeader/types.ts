@@ -58,4 +58,10 @@ export type SheetHeaderProps = {
    * heading, as the food detail has the food's name, turns it off so there is one.
    */
   isTitleHeading?: boolean;
+  /**
+   * Sets the title at the start, beside the leading control, and draws nothing after it, for a title too long
+   * to centre between two 44 point ends, as the changes board's "What the assistant changed" is. It does not
+   * apply to a title with a `subtitle`. Defaults to false.
+   */
+  isTitleAtStart?: boolean;
 };

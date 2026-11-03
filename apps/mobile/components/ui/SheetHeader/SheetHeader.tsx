@@ -87,6 +87,7 @@ export function SheetHeader({
   trailingSlot,
   isTitleHeading = true,
   hasWideSlots = false,
+  isTitleAtStart = false,
 }: SheetHeaderProps) {
   const look = variants[variant];
 
@@ -126,6 +127,9 @@ export function SheetHeader({
   }
 
   function renderTrailing() {
+    if (trailing === undefined && trailingSlot === undefined && isTitleAtStart) {
+      return null;
+    }
     if (trailing === undefined) {
       // Two slots of one width keep the title in the middle, so a header with no control on the right still centres it.
       return trailingSlot ?? <View className="w-touch-target" testID="sheet-header-empty-slot" />;
@@ -153,7 +157,7 @@ export function SheetHeader({
       )}
       {subtitle === undefined ? (
         <Text
-          className="flex-1 text-center"
+          className={isTitleAtStart ? "flex-1 text-left" : "flex-1 text-center"}
           numberOfLines={1}
           role={isTitleHeading ? "heading" : undefined}
           variant={look.titleVariant}

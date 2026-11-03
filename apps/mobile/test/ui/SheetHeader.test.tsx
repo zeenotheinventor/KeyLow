@@ -244,6 +244,44 @@ describe("SheetHeader", () => {
     });
   });
 
+  describe("a title at the start", () => {
+    const changesHeader: SheetHeaderProps = {
+      title: "What the assistant changed",
+      leading: { icon: "ChevronLeft", label: "Back to Assistant", onPress: () => undefined },
+      isTitleAtStart: true,
+    };
+
+    it("should set the title at the start, in the h2 style, as the changes board draws it", async () => {
+      await renderHeader(changesHeader);
+
+      expect(screen.getByRole("heading", { name: "What the assistant changed" })).toHaveStyle({
+        fontSize: 20,
+        lineHeight: 26,
+        textAlign: "left",
+      });
+    });
+
+    it("should keep the raised, bordered back control and draw no empty slot after the title", async () => {
+      await renderHeader(changesHeader);
+
+      expect(screen.getByRole("button", { name: "Back to Assistant" })).toHaveStyle({
+        height: controlHeight.md,
+        width: touchTarget,
+        borderWidth: 1,
+      });
+      expect(screen.queryByTestId("sheet-header-empty-slot")).not.toBeOnTheScreen();
+    });
+
+    it("should still centre the title when it is not asked to start", async () => {
+      await renderHeader({ ...changesHeader, isTitleAtStart: false });
+
+      expect(screen.getByRole("heading", { name: "What the assistant changed" })).toHaveStyle({
+        textAlign: "center",
+      });
+      expect(screen.getByTestId("sheet-header-empty-slot")).toBeOnTheScreen();
+    });
+  });
+
   describe("the stack header, which heads a view inside the sheet", () => {
     it("should head the view with its title between a back control and a close control", async () => {
       await renderHeader(stackHeader);

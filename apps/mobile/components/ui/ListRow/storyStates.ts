@@ -15,4 +15,6 @@ export const storyStates = [
   "WithControl",
   "DangerTitle",
   "WithToggle",
+  "TrailingAction",
+  "TrailingLabel",
 ];

@@ -16,6 +16,7 @@ type MutationOptions = { onSuccess?: () => void; onError?: () => void };
 // What the three assistant hooks answer. The hooks are tested where they live, in `@keylow/api-client`.
 const mockAssistant: {
   consent: { data: { isOn: boolean } | undefined };
+  changes: { data: { count: number } | undefined };
   setConsent: {
     mutate: jest.Mock<undefined, [{ on: boolean }, MutationOptions]>;
     isPending: boolean;
@@ -23,6 +24,7 @@ const mockAssistant: {
   deleteAll: { mutate: jest.Mock<undefined, [undefined, MutationOptions]>; isPending: boolean };
 } = {
   consent: { data: { isOn: false } },
+  changes: { data: { count: 5 } },
   setConsent: {
     mutate: jest.fn<undefined, [{ on: boolean }, MutationOptions]>(),
     isPending: false,
@@ -35,6 +37,7 @@ jest.mock("@keylow/api-client", () => ({
   useAssistantConsent: () => mockAssistant.consent,
   useSetAssistantConsent: () => mockAssistant.setConsent,
   useDeleteAllAssistantConversations: () => mockAssistant.deleteAll,
+  useAssistantChanges: () => mockAssistant.changes,
 }));
 jest.mock("@react-native-async-storage/async-storage", () => ({
   __esModule: true,
@@ -55,7 +58,7 @@ const FIRST_PARAGRAPH =
 const SECOND_PARAGRAPH =
   "To do this, your messages and the Ki-Lo data the assistant reads are sent to Anthropic, the company that runs its AI model, as Ki-Lo's processor. Anthropic keeps them for up to 30 days. Ki-Lo keeps your conversations until you delete them.";
 const DIALOG_BODY =
-  "This removes every conversation with the assistant. Changes it made to your diary and recipes stay.";
+  "This removes every conversation with the assistant. Changes it made to your diary and recipes stay, and you can still undo them from What the assistant changed.";
 
 async function renderSettings() {
   const user = userEvent.setup();
@@ -82,6 +85,7 @@ describe("the Assistant settings screen", () => {
     registerAppStyles(kitStyles);
     resetRouterMock();
     mockAssistant.consent = { data: { isOn: false } };
+    mockAssistant.changes = { data: { count: 5 } };
     mockAssistant.setConsent = {
       mutate: jest.fn<undefined, [{ on: boolean }, MutationOptions]>(),
       isPending: false,
@@ -208,12 +212,6 @@ describe("the Assistant settings screen", () => {
       ).toBeOnTheScreen();
     });
 
-    it("should not offer What the assistant changed, which Assistant mobile 10 adds with its screen", async () => {
-      await renderSettings();
-
-      expect(screen.queryByText("What the assistant changed")).not.toBeOnTheScreen();
-    });
-
     it("should draw no chevron on Delete all conversations", async () => {
       await renderSettings();
 
@@ -223,6 +221,50 @@ describe("the Assistant settings screen", () => {
       expect(
         screen.root?.queryAll((node) => node.type === "RNSVGSvgView" && isInside(node, row)),
       ).toHaveLength(0);
+    });
+  });
+
+  describe("the What the assistant changed row", () => {
+    const conversations = () => within(screen.getByLabelText("Your conversations"));
+
+    it("should be first in Your conversations, before Delete all conversations, with its count", async () => {
+      await renderSettings();
+
+      const changesRow = conversations().getByRole("button", {
+        name: "What the assistant changed, 5",
+      });
+
+      expect(conversations().getAllByRole("button")).toHaveLength(2);
+      expect(conversations().getAllByRole("button")[0]).toBe(changesRow);
+      expect(within(changesRow).getByText("5")).toBeOnTheScreen();
+    });
+
+    it("should be there when the assistant is on as well", async () => {
+      mockAssistant.consent = { data: { isOn: true } };
+      await renderSettings();
+
+      expect(
+        conversations().getByRole("button", { name: "What the assistant changed, 5" }),
+      ).toBeOnTheScreen();
+    });
+
+    it("should show no count until the list is read", async () => {
+      mockAssistant.changes = { data: undefined };
+      await renderSettings();
+
+      expect(
+        conversations().getByRole("button", { name: "What the assistant changed" }),
+      ).toBeOnTheScreen();
+    });
+
+    it("should open the changes screen inside this tab when pressed", async () => {
+      const user = await renderSettings();
+
+      await user.press(
+        conversations().getByRole("button", { name: /^What the assistant changed/ }),
+      );
+
+      expect(routerMock.push).toHaveBeenCalledWith("/more/assistant/changes");
     });
   });
 

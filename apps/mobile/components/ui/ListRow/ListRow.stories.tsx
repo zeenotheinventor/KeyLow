@@ -5,7 +5,12 @@ import { Card } from "../Card";
 import { SegmentedControl } from "../SegmentedControl";
 import { ListRow } from "./ListRow";
 
-import type { ListRowToPressProps, ListRowWithControlProps, ListRowWithToggleProps } from "./types";
+import type {
+  ListRowToPressProps,
+  ListRowWithControlProps,
+  ListRowWithToggleProps,
+  ListRowWithTrailingProps,
+} from "./types";
 import type { Meta, StoryObj } from "@storybook/react-native";
 
 const meta = {
@@ -192,4 +197,24 @@ function UseTheAssistant({ title }: { title: string }) {
 export const WithToggle: StoryObj<Meta<ListRowWithToggleProps>> = {
   args: { title: "Use the assistant" },
   render: (args) => <UseTheAssistant title={args.title} />,
+};
+
+// The changes list's row with Undo: a title and a sub line, and the text button in the accent ink at the end.
+// Its props are the row with a trailing action, which takes no press, so it has a story type of its own.
+export const TrailingAction: StoryObj<Meta<ListRowWithTrailingProps>> = {
+  args: {
+    title: "Logged 2 eggs and toast at 08:10",
+    subtitle: "08:11 · 2 entries",
+    trailing: { kind: "action", label: "Undo", onPress: () => undefined },
+  },
+};
+
+// The same row once it was undone: the title muted and the plain word Undone at the end.
+export const TrailingLabel: StoryObj<Meta<ListRowWithTrailingProps>> = {
+  args: {
+    title: "Copied 8 entries from yesterday",
+    subtitle: "12:30",
+    titleTone: "secondary",
+    trailing: { kind: "label", label: "Undone" },
+  },
 };
