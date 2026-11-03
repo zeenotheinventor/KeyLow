@@ -132,6 +132,23 @@ const readLoggedEntries: AssistantTargetSource = async (client, ids) => {
 };
 
 /**
+ * Reads recipes by id, archived ones too, because the row of an undone create is an archived recipe. A
+ * recipe has no change time (ADR 0003 gives no table an `updated_at` but the diary), so `updatedAt` is null
+ * and the app counts only a missing recipe as a change. The row carries what the words of the changes list
+ * print: the name and the servings.
+ */
+const readRecipes: AssistantTargetSource = async (client, ids) => {
+  const { data, error } = await client
+    .from("recipes")
+    .select("id,name,servings,is_archived")
+    .in("id", ids);
+  if (error) {
+    throw repoError("load what the assistant changed", error);
+  }
+  return data.map((recipe) => ({ id: recipe.id, updatedAt: null, row: recipe }));
+};
+
+/**
  * The target tables whose rows are read back, keyed by `assistant_actions.target_table`. A write ticket
  * (KEY-688, 693, 694, 697) adds its table here with the change time its inverse compares, and its card
  * words read the rows. A source gets at most 100 ids per call and parses each `row` with its own schema.
@@ -140,6 +157,7 @@ const readLoggedEntries: AssistantTargetSource = async (client, ids) => {
  */
 export const assistantTargetSources: ReadonlyMap<string, AssistantTargetSource> = new Map([
   ["food_log_entries", readLoggedEntries],
+  ["recipes", readRecipes],
 ]);
 
 export type AssistantActionsRead = {

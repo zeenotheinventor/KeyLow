@@ -36,7 +36,7 @@ export const actionRow = (overrides: Partial<ActionFakeRow> = {}): ActionFakeRow
   turn_seq: 1,
   tool: "log_entry",
   // A table with no target source, so the thread and the changes list read no target rows for these.
-  target_table: "recipes",
+  target_table: "day_logs",
   target_id: "00000000-0000-4000-8000-0000000000f1",
   target_ids: null,
   target_local_date: null,

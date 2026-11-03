@@ -3,6 +3,9 @@ import { describe, expect, it } from "vitest";
 import { loggedCard } from "./cardFixtures";
 import {
   buildLoggedCard,
+  buildRecipeArchivedCard,
+  buildRecipeCreatedCard,
+  buildRecipeUpdatedCard,
   cardEntryOfRow,
   describeAssistantChange,
   mergeAssistantCards,
@@ -14,6 +17,10 @@ import { buildFood, buildFoodPortion } from "../../src/testing";
 import type { AssistantChangeTarget, CardEntry } from "../../src/assistant";
 
 const secondActionId = "00000000-0000-4000-8000-0000000000d3";
+const ids: [string, string] = [
+  "00000000-0000-4000-8000-0000000000d1",
+  "00000000-0000-4000-8000-0000000000d2",
+];
 
 describe("describeAssistantChange", () => {
   it.each([
@@ -181,10 +188,6 @@ describe("the log_entry words", () => {
   });
 
   it("should merge the cards of two calls into the board's one card", () => {
-    const ids: [string, string] = [
-      "00000000-0000-4000-8000-0000000000d1",
-      "00000000-0000-4000-8000-0000000000d2",
-    ];
     const merged = mergeAssistantCards([
       withActionIds(buildLoggedCard([mustEntry(eggs)]), [ids[0]]),
       withActionIds(buildLoggedCard([mustEntry(toast)]), [ids[1]]),
@@ -200,6 +203,119 @@ describe("the log_entry words", () => {
     // The eggs printed P 13 g (12.6 rounded), so the sum of the printed figures is P 16 g where the board
     // adds the unrounded entries and prints P 15 g. The other figures agree with the board.
     expect(merged.totalText).toBe("232 kcal · P 16 g · C 17 g · F 10 g");
+  });
+});
+
+describe("the recipe words", () => {
+  const rowOf = (id: string, name: string, servings: number): AssistantChangeTarget => ({
+    id,
+    row: { id, name, servings, is_archived: false },
+  });
+  const pastaBake = rowOf("a", "Pasta bake", 4);
+  const changed = (tool: string, targets: AssistantChangeTarget[]) =>
+    describeAssistantChange({ tool, actionCount: targets.length, targets });
+
+  it("should word a created recipe with its servings under it, as the changes board does", () => {
+    expect(changed("create_recipe", [pastaBake])).toEqual({
+      title: "Added recipe Pasta bake",
+      detail: "4 servings",
+    });
+    expect(changed("create_recipe", [rowOf("a", "Porridge", 1)])).toEqual({
+      title: "Added recipe Porridge",
+      detail: "1 serving",
+    });
+  });
+
+  it("should word an archived and an updated recipe by its name", () => {
+    expect(changed("archive_recipe", [pastaBake])).toEqual({
+      title: "Archived recipe Pasta bake",
+      detail: null,
+    });
+    expect(changed("update_recipe", [pastaBake])).toEqual({
+      title: "Updated recipe Pasta bake",
+      detail: null,
+    });
+  });
+
+  it("should count the recipes when one row groups several calls", () => {
+    const two = [pastaBake, rowOf("b", "Chilli", 6)];
+
+    expect(changed("create_recipe", two)).toEqual({ title: "Added 2 recipes", detail: null });
+    expect(changed("archive_recipe", two)).toEqual({ title: "Archived 2 recipes", detail: null });
+  });
+
+  it("should word a recipe that is gone, or a row it cannot read, plainly", () => {
+    expect(changed("create_recipe", [{ id: "a", row: null }])).toEqual({
+      title: "Added a recipe",
+      detail: null,
+    });
+    expect(changed("archive_recipe", [{ id: "a", row: { id: "a" } }])).toEqual({
+      title: "Archived a recipe",
+      detail: null,
+    });
+    expect(describeAssistantChange({ tool: "update_recipe", actionCount: 1, targets: [] })).toEqual(
+      {
+        title: "Updated a recipe",
+        detail: null,
+      },
+    );
+  });
+
+  describe("when a turn makes several recipe cards", () => {
+    const recipe = (id: string, name: string, actionId: string) => ({
+      id,
+      name,
+      servings: 4,
+      perServing: { kcal: 500, protein_g: 30, carbs_g: 50, fat_g: 10 },
+      actionId,
+    });
+    const first = recipe("00000000-0000-4000-8000-0000000000e1", "Chilli", ids[0]);
+    const second = recipe("00000000-0000-4000-8000-0000000000e2", "Pasta bake", ids[1]);
+
+    it("should merge created recipes into one card that archives them all", () => {
+      const merged = mergeAssistantCards([
+        withActionIds(buildRecipeCreatedCard(first), [first.actionId]),
+        withActionIds(buildRecipeCreatedCard(second), [second.actionId]),
+      ]);
+
+      expect(merged).toMatchObject({
+        kind: "recipe_created",
+        actionIds: ids,
+        title: "Added 2 recipes",
+        sub: null,
+        link: null,
+        undo: "available",
+        undoneSub: "Archived 2 recipes",
+      });
+    });
+
+    it("should merge archived recipes into one card that restores them all", () => {
+      const merged = mergeAssistantCards([
+        withActionIds(buildRecipeArchivedCard(first), [first.actionId]),
+        withActionIds(buildRecipeArchivedCard(second), [second.actionId]),
+      ]);
+
+      expect(merged).toMatchObject({
+        kind: "recipe_archived",
+        title: "Archived 2 recipes",
+        undoneSub: "Restored 2 recipes",
+      });
+    });
+
+    it("should merge updated recipes into one card that still says Undo is off", () => {
+      const merged = mergeAssistantCards([
+        withActionIds(buildRecipeUpdatedCard(first), [first.actionId]),
+        withActionIds(buildRecipeUpdatedCard(second), [second.actionId]),
+      ]);
+
+      expect(merged).toMatchObject({
+        kind: "recipe_updated",
+        title: "Updated 2 recipes",
+        note: "Undo is off for changes. Edit it again in the recipe editor.",
+        link: null,
+        undo: "unavailable",
+      });
+    });
   });
 });
 

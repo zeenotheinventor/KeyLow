@@ -2,13 +2,22 @@
 // answers what the repos ask of PostgREST (select, insert, update, eq, in, is, single, maybeSingle),
 // fills in what the database fills in (the id, `created_at`, the generated `kcal`, and an `updated_at`
 // stamped once per statement, as the trigger does) and hides the rows of another user, as row level
-// security does. Nothing in production imports this.
+// security does. A select may embed the rows a row holds under the name of the embedded table
+// (`recipe_ingredients(position,food_id)`), and an RPC is answered by the handler a test passes in.
+// Nothing in production imports this.
 import type { Database } from "../../core/database.types.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 type Row = Record<string, unknown>;
 
 export type WriteCall = { table: string; method: string; patch?: Row };
+
+// What a test stands in for a database function with. It gets the arguments and the tables, and answers as
+// the client does.
+export type RpcHandler = (
+  args: Record<string, unknown>,
+  tables: Record<string, Row[]>,
+) => { data: unknown; error: { code: string; message: string } | null };
 
 export type WriteStub = {
   caller: SupabaseClient<Database>;
@@ -28,7 +37,7 @@ const stampOf = (statement: number) =>
 
 export function writeStub(
   initial: Record<string, Row[]> = {},
-  options: { callerUserId?: string } = {},
+  options: { callerUserId?: string; rpc?: Record<string, RpcHandler> } = {},
 ): WriteStub {
   const tables: Record<string, Row[]> = Object.fromEntries(
     Object.entries(initial).map(([table, rows]) => [table, rows.map((row) => ({ ...row }))]),
@@ -40,24 +49,49 @@ export function writeStub(
   let statement = 0;
   let nextId = 1;
 
-  const visible = (row: Row) =>
+  // A table keeps its rows under the column that names their owner.
+  const ownerColumnOf = (table: string) =>
+    table === "recipes" || table === "recipe_ingredients" ? "owner_id" : "user_id";
+
+  const visible = (table: string, row: Row) =>
     options.callerUserId === undefined ||
-    row["user_id"] === undefined ||
-    row["user_id"] === options.callerUserId;
+    row[ownerColumnOf(table)] === undefined ||
+    row[ownerColumnOf(table)] === options.callerUserId;
+
+  // The commas that are not inside the brackets of an embedded table.
+  const topLevelColumns = (columns: string): string[] => {
+    const found: string[] = [];
+    let depth = 0;
+    let start = 0;
+    for (let index = 0; index < columns.length; index += 1) {
+      const character = columns[index];
+      depth += character === "(" ? 1 : character === ")" ? -1 : 0;
+      if (character === "," && depth === 0) {
+        found.push(columns.slice(start, index).trim());
+        start = index + 1;
+      }
+    }
+    return [...found, columns.slice(start).trim()];
+  };
 
   const project = (row: Row, columns: string): Row =>
     columns === "*"
       ? { ...row }
       : Object.fromEntries(
-          columns
-            .split(",")
-            .map((column) => column.trim())
-            .filter((column) => column in row)
-            .map((column) => [column, row[column]]),
+          topLevelColumns(columns).flatMap((column) => {
+            const embedded = /^(\w+)\((.*)\)$/s.exec(column);
+            if (embedded?.[1] === undefined || embedded[2] === undefined) {
+              return column in row ? [[column, row[column]]] : [];
+            }
+            const inner = row[embedded[1]];
+            return Array.isArray(inner)
+              ? [[embedded[1], inner.map((item: Row) => project(item, embedded[2] ?? "*"))]]
+              : [];
+          }),
         );
 
   function queryOver(table: string) {
-    const filters: ((row: Row) => boolean)[] = [(row) => visible(row)];
+    const filters: ((row: Row) => boolean)[] = [(row) => visible(table, row)];
     let operation: "select" | "insert" | "update" = "select";
     let columns = "*";
     let returning = false;
@@ -173,7 +207,18 @@ export function writeStub(
     return query;
   }
 
-  const client = { from: (table: string) => queryOver(table) };
+  const client = {
+    from: (table: string) => queryOver(table),
+    rpc(name: string, args: Record<string, unknown>) {
+      calls.push({ table: `rpc:${name}`, method: "rpc" });
+      const handler = options.rpc?.[name];
+      return Promise.resolve(
+        handler === undefined
+          ? { data: null, error: { code: "42883", message: "no such function" } }
+          : handler(args, tables),
+      );
+    },
+  };
   return {
     // The repos only call the methods above. The stub cannot satisfy the whole client type.
     caller: client as unknown as SupabaseClient<Database>,

@@ -1,6 +1,10 @@
 import { assertEquals } from "@std/assert";
 
-import { confirmCopyButtons, confirmDeleteButtons } from "../_shared/core.ts";
+import {
+  confirmArchiveButtons,
+  confirmCopyButtons,
+  confirmDeleteButtons,
+} from "../_shared/core.ts";
 import { confirmWordsFor } from "./confirmWords.ts";
 
 const ids = [
@@ -24,7 +28,7 @@ Deno.test(
 );
 
 Deno.test("a confirming tool with no line gives no words", () => {
-  assertEquals(confirmWordsFor("archive_recipe", { id: ids[0] }), null);
+  assertEquals(confirmWordsFor("update_targets", { kcal: 2000 }), null);
   assertEquals(confirmWordsFor("toString", {}), null);
 });
 
@@ -55,4 +59,22 @@ Deno.test("a copy_day input with no entry count gives no words", () => {
   assertEquals(confirmWordsFor("copy_day", { from: "2026-11-02", to: "2026-11-03" }), null);
   assertEquals(confirmWordsFor("copy_day", { entry_count: 0 }), null);
   assertEquals(confirmWordsFor("copy_day", null), null);
+});
+
+Deno.test("archive_recipe gets the board's archive buttons and the primary tone", () => {
+  assertEquals(confirmWordsFor("archive_recipe", { id: ids[0] }), {
+    confirmLabel: "Archive recipe",
+    cancelLabel: "Keep it",
+    tone: "primary",
+  });
+  assertEquals(confirmWordsFor("archive_recipe", { id: ids[0] }), {
+    ...confirmArchiveButtons(),
+    tone: "primary",
+  });
+});
+
+Deno.test("an archive_recipe input with no id gives no words", () => {
+  assertEquals(confirmWordsFor("archive_recipe", {}), null);
+  assertEquals(confirmWordsFor("archive_recipe", { id: 3 }), null);
+  assertEquals(confirmWordsFor("archive_recipe", null), null);
 });

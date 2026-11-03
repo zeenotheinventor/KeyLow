@@ -166,6 +166,20 @@ export const dayCopiedCard: AssistantCard = {
   undoneSub: "Removed 8 copied entries from today",
 };
 
+/** `assistant-card · recipe-created`: Chicken and rice made from typed ingredients. */
+export const recipeCreatedCard: AssistantCard = {
+  actionIds: [firstActionId],
+  kind: "recipe_created",
+  title: "Added recipe Chicken and rice, 4 servings",
+  sub: "Per serving 550 kcal · P 37 g · C 79 g · F 8.6 g",
+  rows: [],
+  totalText: null,
+  note: null,
+  link: { label: "Open in recipe editor", target: { screen: "recipe_editor", recipeId } },
+  undo: "available",
+  undoneSub: "Archived Chicken and rice",
+};
+
 export const cardBoards = [
   {
     board: "assistant-card · logged",
@@ -261,5 +275,14 @@ export const cardBoards = [
     board: "assistant-card · day-copied",
     card: dayCopiedCard,
     boardStrings: ["Copied 8 entries from yesterday", "Saturday 24 October to today · 1,940 kcal"],
+  },
+  {
+    board: "assistant-card · recipe-created",
+    card: recipeCreatedCard,
+    boardStrings: [
+      "Added recipe Chicken and rice, 4 servings",
+      "Per serving 550 kcal · P 37 g · C 79 g · F 8.6 g",
+      "Open in recipe editor",
+    ],
   },
 ];

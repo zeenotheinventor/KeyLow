@@ -1,5 +1,13 @@
+import { z } from "zod";
+
 import { cardEntryOfRow, describeCardName, sharedClockTime } from "./cards";
 import { describeLoggedTitle, describeLoggedUndone } from "../copy/assistantEntryCards";
+import {
+  describeRecipeArchivedTitle,
+  describeRecipeServings,
+  describeRecipeUpdatedTitle,
+  describeRecipesCount,
+} from "../copy/assistantRecipeCards";
 import { formatCalories, formatGrams } from "../format/numbers";
 
 import type { AssistantCard, AssistantCardKind } from "./card";
@@ -167,15 +175,66 @@ const describeCopiedEntries: AssistantChangeBuilder = ({ actionCount, targets })
   };
 };
 
+// The part of a `recipes` row the words read. A row that has no name is worded plainly.
+const recipeRowSchema = z.looseObject({ name: z.string().min(1), servings: z.number().positive() });
+
+// "Added recipe Pasta bake" with "4 servings" under it, as the changes board words a created recipe. A row
+// that groups several recipes counts them, and a change whose rows are gone or unreadable is plain.
+const describeRecipeChange =
+  (
+    kind: "recipe_created" | "recipe_archived" | "recipe_updated",
+    title: (name: string) => string,
+  ): AssistantChangeBuilder =>
+  ({ actionCount, targets }) => {
+    const recipes = targets.flatMap(({ row }) => {
+      const recipe = recipeRowSchema.safeParse(row);
+      return recipe.success ? [recipe.data] : [];
+    });
+    const [only] = recipes;
+    if (only === undefined || recipes.length !== targets.length) {
+      return { title: plainTitles[kind](actionCount), detail: null };
+    }
+    if (recipes.length > 1) {
+      return { title: plainTitles[kind](recipes.length), detail: null };
+    }
+    return {
+      title: title(only.name),
+      detail: kind === "recipe_created" ? describeRecipeServings(only.servings) : null,
+    };
+  };
+
 // A write ticket adds its tool here, with the board's words for its rows.
 const changeBuilders: Readonly<Partial<Record<AssistantWriteTool, AssistantChangeBuilder>>> = {
   log_entry: describeLoggedEntries,
   copy_day: describeCopiedEntries,
+  create_recipe: describeRecipeChange("recipe_created", (name) => `Added recipe ${name}`),
+  update_recipe: describeRecipeChange("recipe_updated", describeRecipeUpdatedTitle),
+  archive_recipe: describeRecipeChange("recipe_archived", describeRecipeArchivedTitle),
 };
+
+// "Added 2 recipes" with a line for Undo that keeps the count. No link, because the recipes are several,
+// and an edit keeps the note that says its Undo is off.
+function mergeRecipeCards(cards: readonly AssistantCard[]): AssistantCard {
+  const merged = plainMerge(cards);
+  const recipes = describeRecipesCount(merged.actionIds.length);
+  switch (merged.kind) {
+    case "recipe_created":
+      return { ...merged, undoneSub: `Archived ${recipes}` };
+    case "recipe_archived":
+      return { ...merged, undoneSub: `Restored ${recipes}` };
+    case "recipe_updated":
+      return { ...merged, note: cards[0]?.note ?? null };
+    default:
+      return merged;
+  }
+}
 
 // A write ticket adds its kind here when the board words several calls as one card.
 const cardMergers: Readonly<Partial<Record<AssistantCardKind, AssistantCardMerger>>> = {
   logged: mergeLoggedCards,
+  recipe_created: mergeRecipeCards,
+  recipe_updated: mergeRecipeCards,
+  recipe_archived: mergeRecipeCards,
 };
 
 const plainTitles: Record<AssistantCardKind, (count: number) => string> = {
@@ -185,9 +244,9 @@ const plainTitles: Record<AssistantCardKind, (count: number) => string> = {
   day_copied: () => "Copied a day",
   // NOT ON THE CANVAS. The row does not say which way the call went, so it never claims "complete".
   day_completed: () => "Changed whether a day is complete",
-  recipe_created: () => "Added a recipe",
-  recipe_updated: () => "Updated a recipe",
-  recipe_archived: () => "Archived a recipe",
+  recipe_created: (count) => (count === 1 ? "Added a recipe" : `Added ${count} recipes`),
+  recipe_updated: (count) => (count === 1 ? "Updated a recipe" : `Updated ${count} recipes`),
+  recipe_archived: (count) => (count === 1 ? "Archived a recipe" : `Archived ${count} recipes`),
   food_created: () => "Added a food",
   targets_changed: () => "Changed your targets",
 };
