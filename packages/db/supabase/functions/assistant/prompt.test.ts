@@ -23,6 +23,7 @@ const tools = toAnthropicTools(
     description: tool.description,
     inputSchema: toJsonSchema(tool),
     readOnlyHint: tool.annotations.readOnlyHint,
+    strict: tool.strict !== false,
   })),
 );
 
