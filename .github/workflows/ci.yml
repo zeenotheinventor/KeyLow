@@ -57,7 +57,8 @@ name: CI
 # the app, so the legs that save each cache run. A manual run restores both caches and never saves (the
 # steps check for a push).
 #
-# Setup (pnpm, Node, the store cache, the install) is the local action .github/actions/setup.
+# Setup (Node, pnpm through Corepack, node_modules or the store cache, the install) is the local
+# action .github/actions/setup.
 on:
   pull_request:
   push:
