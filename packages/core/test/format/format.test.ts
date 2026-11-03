@@ -7,6 +7,7 @@ import {
   formatEnergyShare,
   formatGrams,
   formatWeight,
+  formatWeightValue,
 } from "../../src/format";
 
 describe("formatCalories", () => {
@@ -100,6 +101,15 @@ describe("formatGrams", () => {
         expect(formatGrams(grams)).toMatch(/^-?\d+(\.\d)?$/);
       }),
     );
+  });
+});
+
+describe("formatWeightValue", () => {
+  it("should round on the half the way formatWeight does, where toFixed would not", () => {
+    // 0.35 is 0.34999999999999997 in binary, so toFixed(1) gives "0.3" and Math.round gives 0.4.
+    expect((0.35).toFixed(1)).toBe("0.3");
+    expect(formatWeightValue(0.35)).toBe("0.4");
+    expect(formatWeight(0.35)).toBe("0.4 kg");
   });
 });
 
