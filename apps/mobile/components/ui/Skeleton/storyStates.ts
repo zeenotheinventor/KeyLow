@@ -1,5 +1,6 @@
 export const storyStates = [
   "Row",
+  "Favourites",
   "Group",
   "RecipeGroup",
   "RecipeView",

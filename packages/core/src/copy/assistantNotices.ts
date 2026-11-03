@@ -1,5 +1,7 @@
 import { MONTH_NAMES_LONG } from "./diaryDay";
 import { parseCalendarDay } from "../dates/calendarDay";
+import { isValidTimeZone } from "../dates/isValidTimeZone";
+import { readZonedClock } from "../dates/zonedClock";
 
 import type { AssistantNotice, AssistantStreamEvent } from "../assistant";
 
@@ -30,21 +32,53 @@ const dayAndMonth = (calendarDate: string): string => {
   return `${day} ${MONTH_NAMES_LONG[month - 1]}`;
 };
 
+const MIDNIGHT_HOUR = 0;
+const NOON_HOUR = 12;
+const HOURS_ON_A_CLOCK_FACE = 12;
+
 /**
- * The words of a notice (`assistant · day-limit`, `plus`, `resting`, `unavailable`). The day limit
- * reads "Back at midnight" as its board does, whatever `resetsAt` holds.
+ * When the day limit lifts, in the person's own words: "midnight" and "noon" on the hour they are, else
+ * the 12-hour clock ("1 am", "7 pm", "5:30 am"). `resetsAt` is the server's next midnight UTC as an ISO
+ * instant, read in `timeZone`, so British Summer Time is "1 am" and winter is "midnight", as the board
+ * prints. A time zone that is not one is read as UTC. Hand-written from the numbers, so Hermes and Node
+ * agree.
+ */
+export function describeResetTime(resetsAt: string, timeZone: string): string {
+  const { hour, minute } = readZonedClock(
+    new Date(resetsAt),
+    isValidTimeZone(timeZone) ? timeZone : "UTC",
+  );
+  if (minute === 0 && hour === MIDNIGHT_HOUR) {
+    return "midnight";
+  }
+  if (minute === 0 && hour === NOON_HOUR) {
+    return "noon";
+  }
+  const hourOnClockFace =
+    hour % HOURS_ON_A_CLOCK_FACE === 0 ? HOURS_ON_A_CLOCK_FACE : hour % HOURS_ON_A_CLOCK_FACE;
+  const clock =
+    minute === 0 ? `${hourOnClockFace}` : `${hourOnClockFace}:${String(minute).padStart(2, "0")}`;
+  return `${clock} ${hour < NOON_HOUR ? "am" : "pm"}`;
+}
+
+/**
+ * The words of a notice (`assistant · day-limit`, `plus`, `resting`, `unavailable`). The day limit's time is
+ * `resetsAt` read in `timeZone`, the person's own, which no other notice uses.
  */
 export function describeAssistantNotice(
   notice: DescribableAssistantNotice,
+  timeZone: string,
 ): AssistantNoticeDescription {
   switch (notice.code) {
-    case "day_limit":
+    case "day_limit": {
+      const time = describeResetTime(notice.resetsAt, timeZone);
       return {
         title: "You have used today's turns",
-        body: `The assistant is back at midnight. ${LOGGING_STILL_WORKS}`,
-        fieldText: "Back at midnight",
+        body: `The assistant is back at ${time}. ${LOGGING_STILL_WORKS}`,
+        fieldText: `Back at ${time}`,
         button: null,
       };
+    }
     case "plus":
       return {
         title: "The assistant is part of Ki-Lo Plus",

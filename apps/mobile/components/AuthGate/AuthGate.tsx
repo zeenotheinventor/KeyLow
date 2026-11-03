@@ -7,6 +7,7 @@ import { takeNewTargets } from "../../lib/checkinToast";
 import { useCancelRemindersWhenSignedOut } from "../../lib/reminderScheduler";
 import { identifyUser } from "../../lib/sentry/identifyUser";
 import { supabase } from "../../lib/supabase";
+import { WidgetSync } from "../../lib/widgets/WidgetSync";
 import { CheckinRunner } from "../CheckinRunner";
 import { DeviceTimeZoneSync } from "../DeviceTimeZoneSync";
 import { HealthImportRunner } from "../HealthImportRunner";
@@ -137,7 +138,7 @@ export function AuthGate({ children, readStoredUserId = readNoStoredUserId }: Au
   // The terms gate is drawn over them the same way, and hides them from a screen reader, until the signed in
   // account is known to have accepted the current Terms. It mounts only with a session, so nothing reads
   // the acceptance for a signed out user. The setup gate, the time zone sync, the health import, the check-in runner,
-  // the reminder scheduler and the reminder tap routing mount with it, for the same reason.
+  // the reminder scheduler, the reminder tap routing and the widget sync mount with it, for the same reason.
   return (
     <>
       <View aria-hidden={termsGateState !== "open"} className="flex-1">
@@ -153,6 +154,7 @@ export function AuthGate({ children, readStoredUserId = readNoStoredUserId }: Au
           <CheckinRunner />
           <ReminderScheduler />
           <ReminderTapRouting />
+          <WidgetSync />
         </>
       ) : null}
     </>

@@ -7,18 +7,22 @@ export type SheetHeaderControl = {
   label: string;
   /** Dims the control to 40 percent and stops it responding, as the recipe view does while offline. */
   disabled?: boolean | undefined;
+  /** Draws the glyph filled in the accent, for a control that is on, such as the favourite heart. */
+  isFilled?: boolean | undefined;
   onPress: () => void;
 };
 
-/** The two controls on the right of a header that has two, such as Edit and More. */
-export type SheetHeaderControlPair = readonly [SheetHeaderControl, SheetHeaderControl];
+/** The controls on the right of a header that has more than one, such as the recipe view's heart, Edit and More. */
+export type SheetHeaderControlGroup = readonly SheetHeaderControl[];
 
 /**
  * `sheet` is the header of the sheet itself, as the search sheet has it: raised controls and a large
  * title. `stack` is the header of a view inside the sheet, such as a food, the food form or the scanner:
- * clear controls and a compact title.
+ * clear controls and a compact title. `quiet` is the assistant sheet's: clear controls with a secondary
+ * glyph, the large title, and 4 points above, 12 at the sides and 8 below, because the grabber above it
+ * already gives the sheet its top.
  */
-export type SheetHeaderVariant = "sheet" | "stack";
+export type SheetHeaderVariant = "sheet" | "stack" | "quiet";
 
 export type SheetHeaderProps = {
   /** Defaults to `sheet`. */
@@ -31,10 +35,10 @@ export type SheetHeaderProps = {
   leading?: SheetHeaderControl | undefined;
   /**
    * The optional control on the right: create on the sheet header, close on the stack header. A header
-   * can have two, side by side, such as the recipe view's Edit and More. The title then sits in the space
+   * can have several, side by side, such as the recipe view's heart, Edit and More. The title then sits in the space
    * they leave.
    */
-  trailing?: SheetHeaderControl | SheetHeaderControlPair | undefined;
+  trailing?: SheetHeaderControl | SheetHeaderControlGroup | undefined;
   /** A line under the title in the secondary caption, such as a session's clock. */
   subtitle?: string | undefined;
   /**

@@ -145,12 +145,13 @@ describe("the recipe view's More menu", () => {
   });
 
   describe("More", () => {
-    it("should be the header's second control, after Edit", async () => {
+    it("should be the header's last control, after the heart and Edit", async () => {
       await showView();
 
-      const [back, edit, more] = screen.getAllByRole("button");
+      const [back, heart, edit, more] = screen.getAllByRole("button");
 
       expect(back).toHaveAccessibleName("Back");
+      expect(heart).toHaveAccessibleName("Add to favourites");
       expect(edit).toHaveAccessibleName("Edit Chicken and rice");
       expect(more).toHaveAccessibleName("More");
     });

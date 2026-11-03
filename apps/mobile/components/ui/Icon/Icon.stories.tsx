@@ -117,6 +117,16 @@ export const Tones: Story = {
   ),
 };
 
+// The favourite heart: an outline when off, and filled in the accent when on, lime in dark and green in light.
+export const Filled: Story = {
+  render: (args) => (
+    <View className="flex-row items-center gap-4">
+      <Icon {...args} name="Heart" size="lg" />
+      <Icon {...args} isFilled name="Heart" size="lg" tone="accent" />
+    </View>
+  ),
+};
+
 export const Labelled: Story = { args: { name: "ScanBarcode", size: "lg", label: "Scan barcode" } };
 
 export const Names: Story = {

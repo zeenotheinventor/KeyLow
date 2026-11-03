@@ -11,11 +11,18 @@ import type { SupabaseClient } from "@supabase/supabase-js";
  * or `signOut` returns an error, the stored session is removed here, and a local sign out is then run, which
  * has nothing left to read and so sends SIGNED_OUT. Everything that listens for it (the sign-in gate, the
  * query cache and the stored diary cache) then does its part. The server is not told when it cannot be reached.
+ *
+ * The widgets' snapshot and pending-undo record are deleted and the widgets redrawn signed out (ADR 0007).
  */
 export async function endSession(
   auth: Pick<SupabaseClient["auth"], "signOut">,
   removeStoredSession: () => Promise<void>,
+  clearWidgets: () => Promise<void> = () => Promise.resolve(),
 ): Promise<void> {
+  // The widgets show the last account's numbers on the home screen, so they go first, whether or not the
+  // server can be reached. A failure to delete them must not keep the person signed in.
+  await clearWidgets().catch(() => undefined);
+
   if (onlineManager.isOnline()) {
     const { error } = await auth.signOut();
     if (error === null) {

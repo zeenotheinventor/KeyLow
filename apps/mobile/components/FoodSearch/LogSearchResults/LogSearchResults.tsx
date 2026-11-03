@@ -15,12 +15,12 @@ import { SearchResults } from "../SearchResults";
 import type { LogSearchResultsProps } from "./types";
 
 /**
- * The search sheet's results while food is being logged: the idle state is Quick add and Recent, and each
- * row shows a serving with a plus that puts it on the plate, and the user's recipes that match come first (a
- * recipe row opens the amount step, and its plus puts one serving on the plate). The plus builds the plate item
- * from the row's own data, so it loads nothing, writes nothing and works offline. Offline, a banner says the
- * plate can still be filled. Only here are the plate and the recipe search needed, so the plain search never
- * asks for them.
+ * The search sheet's results while food is being logged: the idle state is Quick add, Favourites and Recent,
+ * and each row shows a serving with a plus that puts it on the plate, and the user's recipes that match come
+ * first (a recipe row opens the amount step, and its plus puts one serving on the plate). The plus builds the
+ * plate item from the row's own data, so it loads nothing, writes nothing and works offline. Offline, a banner
+ * says the plate can still be filled. Only here are the plate and the recipe search needed, so the plain
+ * search never asks for them.
  */
 export function LogSearchResults({
   query,
@@ -62,6 +62,8 @@ export function LogSearchResults({
               addToPlate(recent.snapshot.name, (key) => plateItemOfRecent(key, recent));
             }}
             onQuickAdd={logging.onQuickAdd}
+            onOpenFavouriteFood={logging.onOpenRecent}
+            onOpenFavouriteRecipe={logging.onOpenRecipe}
             onOpen={(recent) => {
               logging.onOpenRecent(recent.foodId);
             }}

@@ -1,4 +1,4 @@
-import { DAY_STEPPER } from "@keylow/core/copy";
+import { ASSISTANT_SHEET, DAY_STEPPER } from "@keylow/core/copy";
 import { View } from "react-native";
 
 import { DiaryHeader } from "../DiaryHeader";
@@ -9,6 +9,7 @@ import type { DiaryFrameProps } from "./types";
 export function DiaryFrame({
   title = DAY_STEPPER.today,
   moreLabel,
+  onAssistant,
   onChooseDate,
   onMore,
   children,
@@ -16,9 +17,11 @@ export function DiaryFrame({
   return (
     <View className="flex-1 bg-background">
       <DiaryHeader
+        assistantLabel={ASSISTANT_SHEET.title}
         chooseDateLabel={DAY_STEPPER.chooseDate}
         moreLabel={moreLabel}
         title={title}
+        onAssistant={onAssistant}
         onChooseDate={onChooseDate}
         onMore={onMore}
       />

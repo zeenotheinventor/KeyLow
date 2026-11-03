@@ -57,6 +57,18 @@ describe("BottomSheet with snap points", () => {
     expect(screen.getByText("Contents")).toBeOnTheScreen();
   });
 
+  it("should start at the first snap point", async () => {
+    await renderSheet({ snapPoints: ["87%", "94%"] });
+
+    expect(mockSheet.props["index"]).toBe(0);
+  });
+
+  it("should start at the snap point it is asked to", async () => {
+    await renderSheet({ snapPoints: ["87%", "94%"], snapIndex: 1 });
+
+    expect(mockSheet.props["index"]).toBe(1);
+  });
+
   it("should still size itself to its contents when it has none", async () => {
     await renderSheet();
 

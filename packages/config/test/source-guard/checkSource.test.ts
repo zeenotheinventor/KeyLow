@@ -117,6 +117,56 @@ describe("inline style", () => {
     ).toEqual(["inline-style", "inline-style", "inline-style"]);
   });
 
+  describe("the Android widget folder (ADR 0007)", () => {
+    const widgetFile = "apps/mobile/widgets/android/TodayRingWidget/TodayRingWidget.tsx";
+    const widgetStyle = `export const a = <FlexWidget style={{ padding: 16, borderRadius: 22 }} />;`;
+
+    it("should allow a style object in the widget folder", () => {
+      expect(rulesFound(widgetFile, widgetStyle)).toEqual([]);
+    });
+
+    it("should allow a style held in a variable and a prop that ends in Style there", () => {
+      expect(
+        rulesFound(
+          widgetFile,
+          `const s = { flex: 1 };\nexport const a = <FlexWidget style={s} contentStyle={{ gap: 4 }} />;`,
+        ),
+      ).toEqual([]);
+    });
+
+    it("should allow a style object in a property of the folder, which is not a colour read from the theme", () => {
+      expect(rulesFound(widgetFile, `export const a = { rowStyle: { padding: 4 } };`)).toEqual([]);
+    });
+
+    it("should flag the same style object in the rest of the mobile app", () => {
+      expect(rulesFound(mobileFile, widgetStyle)).toEqual(["inline-style"]);
+    });
+
+    it("should flag it in a sibling folder whose name only starts the same way", () => {
+      expect(rulesFound("apps/mobile/widgets/android-extra/Thing.tsx", widgetStyle)).toEqual([
+        "inline-style",
+      ]);
+      expect(rulesFound("apps/mobile/widgets/ios/Thing.tsx", widgetStyle)).toEqual([
+        "inline-style",
+      ]);
+    });
+
+    it("should flag it in the widget helpers of the app, which are not layouts", () => {
+      expect(rulesFound("apps/mobile/lib/widgets/Thing.tsx", widgetStyle)).toEqual([
+        "inline-style",
+      ]);
+    });
+
+    it("should still flag a raw hex colour in the widget folder", () => {
+      expect(
+        rulesFound(
+          widgetFile,
+          `export const a = <FlexWidget style={{ backgroundColor: "#CCF249" }} />;`,
+        ),
+      ).toEqual(["raw-hex"]);
+    });
+  });
+
   it("should flag an object literal on an animated view", () => {
     expect(
       rulesFound(mobileFile, `export const a = <Animated.View style={{ opacity: 1 }} />;`),

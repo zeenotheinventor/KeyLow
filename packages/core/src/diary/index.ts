@@ -5,6 +5,8 @@ export type { BuildLogEntryInput, BuildQuickEntryInput } from "./buildLogEntry";
 export { buildRecipeLogEntry } from "./buildRecipeLogEntry";
 export type { BuildRecipeLogEntryInput } from "./buildRecipeLogEntry";
 export { canLogRecipe } from "./canLogRecipe";
+export { favouriteTiles } from "./favouriteTiles";
+export type { FavouriteFoodInput, FavouriteRecipeInput, FavouriteTile } from "./favouriteTiles";
 export { previewRecipeAmount, recipeAmountStart } from "./previewRecipeAmount";
 export type { RecipeAmountValues } from "./previewRecipeAmount";
 export { previewTypedRecipeAmount } from "./previewTypedRecipeAmount";

@@ -169,6 +169,19 @@ describe("Toast", () => {
       },
     );
 
+    it("should colour the icon with the accent tone, and fill it when asked, as the favourite toast does", async () => {
+      await renderToast({ icon: "Heart", tone: "accent", isIconFilled: true }, "dark");
+
+      expect(drawings()[0]).toHaveProp("stroke", themes.dark.accent);
+      expect(drawings()[0]).toHaveProp("fill", themes.dark.accent);
+    });
+
+    it("should draw the accent icon as an outline unless it is filled", async () => {
+      await renderToast({ icon: "Heart", tone: "accent" }, "dark");
+
+      expect(drawings()[0]).toHaveProp("fill", "none");
+    });
+
     // The design draws the action in `--accent-ink`, which is lime in dark and the primary text colour in
     // light. The token is not in main yet, so the kit resolves it here until it lands.
     it("should draw the action as accent ink, lime in dark", async () => {
@@ -227,6 +240,12 @@ describe("Toast", () => {
   });
 
   describe("where it sits", () => {
+    it("should sit the given number of points under the safe area, for a toast that goes under a header", async () => {
+      await renderToast({ topInset: 59, topOffset: 64 });
+
+      expect(await screen.findByTestId("toast")).toHaveStyle({ top: 59 + 64 });
+    });
+
     it("should sit under the status bar's safe area, with 12 points between, at the top", async () => {
       await renderToast({ topInset: 59 });
 

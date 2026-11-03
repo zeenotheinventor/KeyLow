@@ -49,3 +49,16 @@ export type ChipGroupMultipleProps<Value extends string> = ChipGroupSharedProps<
   /** Hands on all the chosen values after a chip is pressed: the pressed one added at the end, or taken out. */
   onChange: (next: Value[]) => void;
 };
+
+/**
+ * Chips that are one-shot buttons, for a quick reply such as the assistant's Ask again: each press does
+ * something at once and nothing is chosen. The chips are buttons in a plain group, with no radio group and no
+ * selected state, and `onChipPress` hears each press.
+ */
+export type ChipGroupActionProps<Value extends string> = Omit<
+  ChipGroupSharedProps<Value>,
+  "onChipPress"
+> & {
+  selection: "action";
+  onChipPress: (value: Value) => void;
+};

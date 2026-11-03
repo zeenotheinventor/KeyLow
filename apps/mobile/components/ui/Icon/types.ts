@@ -30,6 +30,8 @@ export type IconProps = {
    * plus at 2.25. Defaults to `iconStroke`.
    */
   strokeWidth?: number;
+  /** Fills the glyph with its own colour, as the favourite heart is when it is on. Defaults to false, an outline. */
+  isFilled?: boolean;
   /** The accessible name. An icon without one is decoration and is hidden from screen readers. */
   label?: string;
 };

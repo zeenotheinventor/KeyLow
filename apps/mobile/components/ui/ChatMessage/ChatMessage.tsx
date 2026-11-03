@@ -80,7 +80,8 @@ function AssistantLines({
  * One message in the assistant's conversation: your words in a bubble on the right, or the assistant's as
  * plain paragraphs, with the caret while they arrive, the Estimate badge, the citation and the stopped line
  * under them. Every word comes in by prop, because the kit adds no copy. It is one group for a screen reader,
- * named for who said it, and a polite live region while it streams.
+ * named for who said it. It is not a live region while it streams, because Android would read the whole text
+ * again for every chunk and iOS ignores a live region, so the screen announces a finished answer itself.
  */
 export function ChatMessage(props: ChatMessageProps) {
   const accessibility = {
@@ -103,7 +104,7 @@ export function ChatMessage(props: ChatMessageProps) {
 
   const { isStreaming = false } = props;
   return (
-    <View {...accessibility} aria-live={isStreaming ? "polite" : undefined} className="gap-2 pr-4">
+    <View {...accessibility} className="gap-2 pr-4">
       <Paragraphs
         caretIndex={isStreaming ? props.paragraphs.length - 1 : undefined}
         paragraphs={props.paragraphs}

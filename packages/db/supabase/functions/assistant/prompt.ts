@@ -6,8 +6,15 @@
 // change to what every conversation pays for:
 // - `SYSTEM_PROMPT` is a constant. A date, an id or a flag in it would be a different prefix every time.
 //   What changes per turn (today, the day on screen) goes in the user message, once, and is stored.
-// - Stored messages are replayed as they were stored. Nothing is edited, reordered or dropped, so turn
-//   two's request starts with turn one's bytes. The one breakpoint that moves is put on a copy.
+// - Stored messages are replayed as they were stored, bar the thinking of turns that are over (below).
+//   Nothing is edited or reordered, so turn two's request starts with turn one's bytes. The one
+//   breakpoint that moves is put on a copy.
+// - Only the current turn's thinking blocks are sent. A Haiku 5.5 thinking block is bound to the system
+//   prompt, the tools and every message before it, so a deploy that changes any of them would make the API
+//   refuse every later request of a conversation that still holds one. Blocks made in a turn that is over
+//   are removed from the front of the history, which the API allows, and the rows are not touched. The one
+//   exception is the last message of the turn before, when the current request answers its calls, because
+//   the API guide asks for a call and its result to travel with their thinking.
 // - The `tools` array does not change per turn. The allowlist is enforced by the executor, not here.
 import { z } from "zod";
 
@@ -203,23 +210,92 @@ export function userContent({
   return [...open.map(resultForOpenToolUse), context, { type: "text", text }];
 }
 
+const isThinking = (block: Anthropic.ContentBlockParam): boolean =>
+  block.type === "thinking" || block.type === "redacted_thinking";
+
+// What a stored message sends. The assistant messages of a turn that is over lose their thinking and
+// redacted thinking, and keep their text and their calls. Of the current turn they are sent as they were.
+// `keepThinking` marks the one earlier message that is the exception (below).
+function replayBlocks(
+  message: StoredHistoryMessage,
+  currentTurnId: string,
+  keepThinking: boolean,
+): Anthropic.ContentBlockParam[] {
+  const blocks = blocksOf(message);
+  return message.role === "assistant" && message.turnId !== currentTurnId && !keepThinking
+    ? blocks.filter((block) => !isThinking(block))
+    : blocks;
+}
+
+// The one earlier assistant message that keeps its thinking: the last message of the turn just before the
+// current one, when every call it made is answered by the user rows that follow it. The request then holds
+// that message and its results side by side, and the API guide asks for the thinking of such a pair to go
+// back. It is a suffix of the thinking in the history, so the blocks that are sent stay in order. A question
+// the person has not answered yet (`ask_user`), a confirm and a call that did not run all end up here. It is
+// the previous turn only, so a turn with no reply of its own cannot hold old thinking in every request after.
+//
+// What is left is a small window: a deploy that changes the system prompt or the tools between a question
+// and its answer makes the kept block invalid, and that one request is refused. The next turn strips the
+// block. Whether that next request is then accepted is not verified. It holds only if Haiku 5.5 takes a
+// final assistant message with a call and no thinking block, and a live probe has not run yet (it needs the
+// eval key). If the model insists on thinking there, the conversation stays refused until a new one is
+// started, and the `drop_block` beta (`thinking-binding-controls-2026-08-01`) is the fallback.
+function messageKeepingThinking(
+  history: readonly StoredHistoryMessage[],
+  currentTurnId: string,
+): StoredHistoryMessage | undefined {
+  const previousTurnId = history.findLast((message) => message.turnId !== currentTurnId)?.turnId;
+  const index = history.findLastIndex(
+    (message) => message.role === "assistant" && message.turnId !== currentTurnId,
+  );
+  const candidate = history[index];
+  if (candidate === undefined || candidate.turnId !== previousTurnId) {
+    return undefined;
+  }
+  const callIds = blocksOf(candidate).flatMap((block) =>
+    block.type === "tool_use" ? [block.id] : [],
+  );
+  const answeredIds = new Set(
+    history
+      .slice(index + 1)
+      .filter((message) => message.role === "user")
+      .flatMap(blocksOf)
+      .flatMap((block) => (block.type === "tool_result" ? [block.tool_use_id] : [])),
+  );
+  return callIds.length > 0 && callIds.every((id) => answeredIds.has(id)) ? candidate : undefined;
+}
+
 // The stored messages as Messages API messages, in the order given (`seq`). A turn that ended on a
 // confirm leaves a user message of results and the next turn's user message follows it, and two user
-// messages in a row are a 400, so messages of one role are joined into one. Nothing else is changed, so
-// every later turn replays the same bytes, and `display` is for the app and is never sent.
+// messages in a row are a 400, so messages of one role are joined into one. `display` is for the app and
+// is never sent.
+//
+// Thinking is sent for `currentTurnId` only, byte for byte, because a tool round needs its own blocks
+// back. The one exception is the message `messageKeepingThinking` names. An assistant message of an earlier turn that holds nothing else is dropped, not sent empty. That
+// is what the thread does with it too, as `threadFromMessages` shows text and calls and never thinking,
+// and the user messages either side of it are joined by the rule above, so the roles still alternate.
+// Everything else is unchanged, so every later turn replays the same bytes.
 //
 // A `tool_result` must come first in a user message. A turn that failed before its message was rewritten
 // leaves its raw text row behind an open call, and the next turn's results would join behind it. So the
 // results of a joined user message go to the front, in their order, and the rest keep theirs. In a valid
 // history they are first already, so nothing moves.
-export function toApiMessages(history: readonly StoredHistoryMessage[]): Anthropic.MessageParam[] {
+export function toApiMessages(
+  history: readonly StoredHistoryMessage[],
+  currentTurnId: string,
+): Anthropic.MessageParam[] {
   const messages: { role: "user" | "assistant"; content: Anthropic.ContentBlockParam[] }[] = [];
+  const keeping = messageKeepingThinking(history, currentTurnId);
   for (const message of history) {
+    const blocks = replayBlocks(message, currentTurnId, message === keeping);
+    if (blocks.length === 0) {
+      continue;
+    }
     const previous = messages.at(-1);
     if (previous !== undefined && previous.role === message.role) {
-      previous.content.push(...blocksOf(message));
+      previous.content.push(...blocks);
     } else {
-      messages.push({ role: message.role, content: blocksOf(message) });
+      messages.push({ role: message.role, content: blocks });
     }
   }
   return messages.map((message) =>

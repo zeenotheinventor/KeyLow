@@ -38,6 +38,16 @@ export const Loading: Story = {
   args: { subtitle: "Foods you created or copied", onPress: () => undefined, loading: true },
 };
 
+// The assistant's starter: no icon tile, and an arrow up where the chevron goes, for "send this".
+export const WithTrailingIcon: Story = {
+  args: {
+    icon: undefined,
+    title: "What's left for today?",
+    trailingIcon: "ArrowUp",
+    onPress: () => undefined,
+  },
+};
+
 // A row with a trailing value and unit that goes nowhere, so it has no chevron.
 export const WithValue: Story = {
   args: {

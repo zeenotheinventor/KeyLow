@@ -10,6 +10,7 @@ import {
 } from "@keylow/core/diary";
 import { z } from "zod";
 
+import { EntryNotFoundError } from "../errors";
 import { isDeadPortionRefusal, writeWithoutDeadPortion } from "./deadPortion";
 import { ENTRY_COLUMNS, idOfRow, insertDiaryEntry, parseRow, repoError } from "./diaryRows";
 import {
@@ -258,7 +259,7 @@ async function setDeletedAt(
     throw repoError(action, error);
   }
   if (data === null) {
-    throw new Error(`The entry ${id} was not found`);
+    throw new EntryNotFoundError();
   }
 }
 
@@ -560,7 +561,7 @@ export async function updateLogEntry(
     throw repoError("update the entry", error);
   }
   if (data === null) {
-    throw new Error(`The entry ${entry.id} was not found`);
+    throw new EntryNotFoundError();
   }
 
   return parseRow(logEntrySchema, data, "read the updated entry", idOfRow);

@@ -58,6 +58,7 @@ export function IconButton({
   size = "md",
   tone = "primary",
   isSelected = false,
+  isFilled = false,
   disabled = false,
   dimsWhenDisabled = true,
   haptic,
@@ -72,9 +73,18 @@ export function IconButton({
       <Icon name={icon} size={iconSize} strokeWidth={primaryStrokeWidth} tone="accent-foreground" />
     ) : (
       <Icon
+        isFilled={isFilled}
         name={icon}
         size={iconSize}
-        tone={isSelectedSecondary ? "accent-ink" : variant === "ring" ? "secondary" : tone}
+        tone={
+          isFilled
+            ? "accent"
+            : isSelectedSecondary
+              ? "accent-ink"
+              : variant === "ring"
+                ? "secondary"
+                : tone
+        }
       />
     );
 

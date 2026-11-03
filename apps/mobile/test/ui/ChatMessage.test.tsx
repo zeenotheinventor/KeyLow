@@ -118,10 +118,10 @@ describe("ChatMessage", () => {
   describe("a streaming answer", () => {
     const streaming: ChatMessageProps = { ...answer, isStreaming: true };
 
-    it("should be a polite live region", async () => {
+    it("should not be a live region, so Android does not read the whole text again for each chunk", async () => {
       await renderMessage(streaming);
 
-      expect(screen.getByRole("group", { name: /^Assistant/ })).toHaveProp("aria-live", "polite");
+      expect(screen.getByRole("group", { name: /^Assistant/ })).not.toHaveProp("aria-live");
     });
 
     it("should draw the caret once, hidden from a screen reader", async () => {
