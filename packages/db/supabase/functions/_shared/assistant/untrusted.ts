@@ -2,8 +2,8 @@
 // it is never an instruction. Food names from Open Food Facts and the user's own text are content, so
 // a result may hold a sentence that reads like an order, and the wrapper is what marks it as data.
 // This is also the last place a result is minimised (ADR 0006, rule b): a fixed list of keys is removed
-// at any depth before wrapping. The tools select named columns and never `*`, so this is the backstop
-// and not the first defence.
+// at any depth before wrapping. Each tool projects the fields it returns, so this is the backstop and
+// not the first defence.
 
 export type JsonValue =
   string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };

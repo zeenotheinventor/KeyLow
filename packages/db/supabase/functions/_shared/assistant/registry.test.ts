@@ -74,8 +74,19 @@ Deno.test("a name that is not lower snake case is refused", () => {
   assertThrows(() => createRegistry([read("Get Day")]), Error);
 });
 
-Deno.test("the real registry holds no tool until a tool ticket adds one", () => {
-  assertEquals(toolRegistry.list, []);
+Deno.test("the real registry lists the food read tools in order, all read-only", () => {
+  assertEquals(
+    toolRegistry.list.map((tool) => tool.name),
+    ["search_foods", "get_food", "get_recipes"],
+  );
+  assertEquals(
+    toolRegistry.list.map((tool) => [tool.kind, tool.annotations.readOnlyHint]),
+    [
+      ["read", true],
+      ["read", true],
+      ["read", true],
+    ],
+  );
 });
 
 // A read tool whose input is the given schema, for the schemas a strict tool cannot hold.
