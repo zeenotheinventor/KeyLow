@@ -1,4 +1,13 @@
+import { Platform } from "react-native";
+
+import { createAndroidWidgetBridge } from "./androidWidgetBridge";
 import { createAsyncStorageWidgetBridge } from "./asyncStorageWidgetBridge";
 
-/** The bridge the app and a future task handler share. Its redraw does nothing until KEY-805 gives one. */
-export const defaultWidgetBridge = createAsyncStorageWidgetBridge();
+import type { WidgetBridge } from "./types";
+
+/** The Android bridge redraws the widgets. Anywhere else there are no widgets, so a redraw does nothing. */
+export const createDefaultWidgetBridge = (platform: string): WidgetBridge =>
+  platform === "android" ? createAndroidWidgetBridge() : createAsyncStorageWidgetBridge();
+
+/** The bridge the app and the task handler share. */
+export const defaultWidgetBridge = createDefaultWidgetBridge(Platform.OS);
