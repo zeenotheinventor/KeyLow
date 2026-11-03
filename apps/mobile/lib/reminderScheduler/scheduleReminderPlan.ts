@@ -6,7 +6,7 @@ import {
   readScheduledReminders,
   writeScheduledReminders,
 } from "./scheduledReminders";
-import { getPermission, replaceReminders } from "../notifications";
+import { getPermission, reminderTypes, replaceReminders } from "../notifications";
 
 import type { Reminder, ReminderType } from "../notifications";
 import type { ReminderSettings } from "../reminderSettings";
@@ -69,7 +69,7 @@ export async function scheduleReminderPlan({
   const lastVariantOf = (type: ReminderType): string | null =>
     delivered.find((reminder) => reminder.type === type)?.variantId ?? settings.lastVariant[type];
 
-  const trainingPlanned =
+  const trainingPlannedByCore =
     inputs === null
       ? []
       : planTrainingReminders({
@@ -82,6 +82,11 @@ export async function scheduleReminderPlan({
             ease: lastVariantOf("ease"),
           },
         });
+  // The core can also plan "missed" and "checkin", which the app does not switch on yet: it keeps the types it knows.
+  const trainingPlanned = trainingPlannedByCore.flatMap((reminder) => {
+    const type = reminderTypes.find((known) => known === reminder.type);
+    return type === undefined ? [] : [{ ...reminder, type }];
+  });
   const foodPlanned =
     foodInputs === null
       ? []
