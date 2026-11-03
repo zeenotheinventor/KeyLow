@@ -31,6 +31,7 @@ import {
   WIDGET_EYEBROWS,
   WIDGET_STATES,
 } from "../../src/copy";
+import { DASHBOARD_LOAD_FAILED } from "../../src/copy/dashboard";
 
 describe("the widget copy", () => {
   it("should word the states as board D draws them", () => {
@@ -47,6 +48,11 @@ describe("the widget copy", () => {
     expect(WIDGET_STATES.noRecentFoods.headline).toBe("Nothing logged yet");
     expect(WIDGET_STATES.couldntLog.headline).toBe("Couldn't log that. Nothing was saved.");
     expect(WIDGET_STATES.couldntLog.body).toBe("Check your connection, or log it in Ki-Lo.");
+    expect(WIDGET_STATES.couldntUndo).toEqual({
+      headline: "Couldn't undo that.",
+      body: "Check your connection and try again.",
+    });
+    expect(WIDGET_STATES.couldntUndo.body).toBe(DASHBOARD_LOAD_FAILED.body);
     expect(WIDGET_STATES.sessionMovedOn.headline).toBe("Your session moved on");
   });
 

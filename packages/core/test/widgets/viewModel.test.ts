@@ -559,6 +559,25 @@ describe("Log again", () => {
     });
   });
 
+  it("should say it could not undo, and keep the Open Ki-Lo way out", () => {
+    expect(widgetViewModel(ready(), "log_again", NOW, { failure: "couldnt_undo" })).toMatchObject({
+      state: "couldnt_undo",
+      eyebrow: "LOG AGAIN",
+      headline: "Couldn't undo that.",
+      headlineRole: "danger",
+      body: "Check your connection and try again.",
+      actions: [{ label: "Open Ki-Lo", emphasis: "secondary" }],
+    });
+  });
+
+  it("should say it could not undo a set, with the session's eyebrow", () => {
+    expect(
+      widgetViewModel(ready(sampleSnapshotInSession()), "training", NOW, {
+        failure: "couldnt_undo",
+      }),
+    ).toMatchObject({ state: "couldnt_undo", eyebrow: "IN SESSION" });
+  });
+
   it("should keep the second recent food's entry for its own tap", () => {
     const model = view("log_again");
 

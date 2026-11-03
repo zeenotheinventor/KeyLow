@@ -5,6 +5,7 @@ import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 
+import { EntryNotFoundError } from "../../src/errors";
 import {
   logFood,
   logQuickEntry,
@@ -201,7 +202,7 @@ describe("softDeleteLogEntry", () => {
     answerEntryWrites([]);
 
     await expect(softDeleteLogEntry(createTestClient(), id)).rejects.toThrow(
-      `The entry ${id} was not found`,
+      new EntryNotFoundError(),
     );
   });
 
@@ -312,9 +313,7 @@ describe("restoreLogEntry", () => {
   it("should throw when no entry of the caller matched", async () => {
     answerEntryWrites([]);
 
-    await expect(restoreLogEntry(createTestClient(), id)).rejects.toThrow(
-      `The entry ${id} was not found`,
-    );
+    await expect(restoreLogEntry(createTestClient(), id)).rejects.toThrow(new EntryNotFoundError());
   });
 });
 
@@ -888,6 +887,6 @@ describe("updateLogEntry", () => {
         entry: original,
         amount: { quantity: 10, unit: "g" },
       }),
-    ).rejects.toThrow(`The entry ${original.id} was not found`);
+    ).rejects.toBeInstanceOf(EntryNotFoundError);
   });
 });
