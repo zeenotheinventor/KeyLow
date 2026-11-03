@@ -154,6 +154,7 @@ export {
   listMyExpenditureSnapshots,
   listMyTargetsHistory,
   recomputeMyTargets,
+  reopenProgram,
   updateMyProgram,
 } from "./program";
 export type {

@@ -2,6 +2,7 @@
 // The order is part of the prompt cache's prefix, so a tool is only ever appended or moved on purpose.
 import { archiveRecipeTool } from "./tools/archiveRecipe.ts";
 import { copyDayTool } from "./tools/copyDay.ts";
+import { createCustomFoodTool } from "./tools/createCustomFood.ts";
 import { createRecipeTool } from "./tools/createRecipe.ts";
 import { deleteEntryTool } from "./tools/deleteEntry.ts";
 import { askUserTool } from "./tools/askUser.ts";
@@ -16,6 +17,7 @@ import { searchFoodsTool } from "./tools/searchFoods.ts";
 import { setDayCompleteTool } from "./tools/setDayComplete.ts";
 import { updateEntryTool } from "./tools/updateEntry.ts";
 import { updateRecipeTool } from "./tools/updateRecipe.ts";
+import { updateTargetsTool } from "./tools/updateTargets.ts";
 import { strictSchemaProblem } from "./tool.ts";
 
 import type { ToolDefinition, ToolRegistry } from "./tool.ts";
@@ -63,6 +65,8 @@ const toolDefinitions: readonly ToolDefinition[] = [
   createRecipeTool,
   updateRecipeTool,
   archiveRecipeTool,
+  createCustomFoodTool,
+  updateTargetsTool,
   askUserTool,
 ];
 

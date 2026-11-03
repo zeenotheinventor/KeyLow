@@ -76,7 +76,7 @@ Deno.test("a name that is not lower snake case is refused", () => {
 });
 
 Deno.test(
-  "the real registry lists the food reads, the diary reads, the diary, day and recipe writes and then ask_user in order",
+  "the real registry lists the food reads, the diary reads, the diary, day, recipe, food and targets writes and then ask_user in order",
   () => {
     assertEquals(
       toolRegistry.list.map((tool) => [tool.name, tool.kind]),
@@ -96,6 +96,8 @@ Deno.test(
         ["create_recipe", "write"],
         ["update_recipe", "write"],
         ["archive_recipe", "write"],
+        ["create_custom_food", "write"],
+        ["update_targets", "write"],
         ["ask_user", "read"],
       ],
     );
@@ -167,6 +169,24 @@ Deno.test("update_recipe opts out of strict mode and the other recipe writes do 
   assertEquals(strictOf("create_recipe"), undefined);
   assertEquals(strictOf("archive_recipe"), undefined);
 });
+
+Deno.test("create_custom_food opts out of strict mode and update_targets does not", () => {
+  const strictOf = (name: string) => toolRegistry.get(name)?.strict;
+
+  assertEquals(strictOf("create_custom_food"), false);
+  assertEquals(strictOf("update_targets"), undefined);
+});
+
+Deno.test(
+  "the strict budget of the real registry is 15 tools, 0 optional and 12 union parameters",
+  () => {
+    assertEquals(strictBudgetOf(toolRegistry.list), {
+      tools: 15,
+      optionalParameters: 0,
+      unionParameters: 12,
+    });
+  },
+);
 
 Deno.test(
   "the budget counts a nullable and a confirmation id as union parameters, and skips a tool that is not strict",

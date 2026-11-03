@@ -149,6 +149,41 @@ const readRecipes: AssistantTargetSource = async (client, ids) => {
 };
 
 /**
+ * Reads the caller's own foods by id, leaving out a deleted one, because a food the person has deleted
+ * since is a change and its Undo is gone. A food has no change time (ADR 0003 gives no table an
+ * `updated_at` but the diary), so `updatedAt` is null and only a missing food counts as a change. The row
+ * carries the name the words of the changes list print.
+ */
+const readFoods: AssistantTargetSource = async (client, ids) => {
+  const { data, error } = await client
+    .from("foods")
+    .select("id,name")
+    .in("id", ids)
+    .is("deleted_at", null);
+  if (error) {
+    throw repoError("load what the assistant changed", error);
+  }
+  return data.map((food) => ({ id: food.id, updatedAt: null, row: food }));
+};
+
+/**
+ * Reads programs by id, ended ones too, because the program an Undo reopens was ended by the write. The
+ * change time is `updated_at`, which the client writes on every update, so a program that was reopened or
+ * edited since is a change. The row carries the id only: the plan is health data the words do not need.
+ */
+const readPrograms: AssistantTargetSource = async (client, ids) => {
+  const { data, error } = await client.from("programs").select("id,updated_at").in("id", ids);
+  if (error) {
+    throw repoError("load what the assistant changed", error);
+  }
+  return data.map((program) => ({
+    id: program.id,
+    updatedAt: program.updated_at,
+    row: { id: program.id },
+  }));
+};
+
+/**
  * The target tables whose rows are read back, keyed by `assistant_actions.target_table`. A write ticket
  * (KEY-688, 693, 694, 697) adds its table here with the change time its inverse compares, and its card
  * words read the rows. A source gets at most 100 ids per call and parses each `row` with its own schema.
@@ -158,6 +193,8 @@ const readRecipes: AssistantTargetSource = async (client, ids) => {
 export const assistantTargetSources: ReadonlyMap<string, AssistantTargetSource> = new Map([
   ["food_log_entries", readLoggedEntries],
   ["recipes", readRecipes],
+  ["foods", readFoods],
+  ["programs", readPrograms],
 ]);
 
 export type AssistantActionsRead = {

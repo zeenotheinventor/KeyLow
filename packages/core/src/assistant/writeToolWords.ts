@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { cardEntryOfRow, describeCardName, sharedClockTime } from "./cards";
 import { describeLoggedTitle, describeLoggedUndone } from "../copy/assistantEntryCards";
+import { describeFoodCreatedTitle, describeFoodsCount } from "../copy/assistantFoodCards";
 import {
   describeRecipeArchivedTitle,
   describeRecipeServings,
@@ -203,6 +204,29 @@ const describeRecipeChange =
     };
   };
 
+// The part of a `foods` row the words read.
+const foodRowSchema = z.looseObject({ name: z.string().min(1) });
+
+// "Added food My protein bar", as the changes board words a created food. Several foods in one row are
+// counted, and a food that is gone (deleted since) or unreadable is worded plainly.
+const describeFoodChange: AssistantChangeBuilder = ({ actionCount, targets }) => {
+  const foods = targets.flatMap(({ row }) => {
+    const food = foodRowSchema.safeParse(row);
+    return food.success ? [food.data] : [];
+  });
+  const [only] = foods;
+  if (only === undefined || foods.length !== targets.length) {
+    return { title: plainTitles.food_created(actionCount), detail: null };
+  }
+  return {
+    title:
+      foods.length > 1
+        ? plainTitles.food_created(foods.length)
+        : describeFoodCreatedTitle(only.name),
+    detail: null,
+  };
+};
+
 // A write ticket adds its tool here, with the board's words for its rows.
 const changeBuilders: Readonly<Partial<Record<AssistantWriteTool, AssistantChangeBuilder>>> = {
   log_entry: describeLoggedEntries,
@@ -210,6 +234,7 @@ const changeBuilders: Readonly<Partial<Record<AssistantWriteTool, AssistantChang
   create_recipe: describeRecipeChange("recipe_created", (name) => `Added recipe ${name}`),
   update_recipe: describeRecipeChange("recipe_updated", describeRecipeUpdatedTitle),
   archive_recipe: describeRecipeChange("recipe_archived", describeRecipeArchivedTitle),
+  create_custom_food: describeFoodChange,
 };
 
 // "Added 2 recipes" with a line for Undo that keeps the count. No link, because the recipes are several,
@@ -247,7 +272,7 @@ const plainTitles: Record<AssistantCardKind, (count: number) => string> = {
   recipe_created: (count) => (count === 1 ? "Added a recipe" : `Added ${count} recipes`),
   recipe_updated: (count) => (count === 1 ? "Updated a recipe" : `Updated ${count} recipes`),
   recipe_archived: (count) => (count === 1 ? "Archived a recipe" : `Archived ${count} recipes`),
-  food_created: () => "Added a food",
+  food_created: describeFoodsCount,
   targets_changed: () => "Changed your targets",
 };
 

@@ -416,3 +416,69 @@ describe("the recipes target source", () => {
     });
   });
 });
+
+describe("the foods target source", () => {
+  const source = assistantTargetSources.get("foods");
+  const FOOD_ID = "00000000-0000-4000-8000-0000000000f1";
+  const DELETED_FOOD_ID = "00000000-0000-4000-8000-0000000000f2";
+
+  it("should read the foods that are not deleted, with the name the words need and no change time", async () => {
+    const asked: URL[] = [];
+    server.use(
+      http.get(`${REST_URL}/foods`, ({ request }) => {
+        asked.push(new URL(request.url));
+        return postgrestRows(request, [{ id: FOOD_ID, name: "My protein bar" }]);
+      }),
+    );
+
+    const reads = await source?.(createTestClient(), [FOOD_ID, DELETED_FOOD_ID]);
+
+    expect(asked[0]?.searchParams.get("id")).toBe(`in.(${FOOD_ID},${DELETED_FOOD_ID})`);
+    expect(asked[0]?.searchParams.get("deleted_at")).toBe("is.null");
+    expect(reads).toEqual([
+      { id: FOOD_ID, updatedAt: null, row: { id: FOOD_ID, name: "My protein bar" } },
+    ]);
+  });
+
+  it("should name the action and the database code in a failure and never the database's message", async () => {
+    server.use(
+      http.get(`${REST_URL}/foods`, () =>
+        postgrestError(500, "XX000", "failing row (My protein bar) violates a check"),
+      ),
+    );
+
+    const failure = await source?.(createTestClient(), [FOOD_ID]).then(
+      () => null,
+      (caught: unknown) => caught,
+    );
+
+    expect(failure).toMatchObject({
+      message: "Could not load what the assistant changed (XX000)",
+      cause: { code: "XX000" },
+    });
+  });
+});
+
+describe("the programs target source", () => {
+  const source = assistantTargetSources.get("programs");
+  const PROGRAM_ID = "00000000-0000-4000-8000-0000000000a1";
+
+  it("should read the programs by id with their change time and nothing about the plan", async () => {
+    const asked: URL[] = [];
+    server.use(
+      http.get(`${REST_URL}/programs`, ({ request }) => {
+        asked.push(new URL(request.url));
+        return postgrestRows(request, [
+          { id: PROGRAM_ID, updated_at: "2026-11-03T10:00:00+00:00" },
+        ]);
+      }),
+    );
+
+    const reads = await source?.(createTestClient(), [PROGRAM_ID]);
+
+    expect(asked[0]?.searchParams.get("select")).toBe("id,updated_at");
+    expect(reads).toEqual([
+      { id: PROGRAM_ID, updatedAt: "2026-11-03T10:00:00+00:00", row: { id: PROGRAM_ID } },
+    ]);
+  });
+});

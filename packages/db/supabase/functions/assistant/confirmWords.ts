@@ -7,6 +7,7 @@ import {
   confirmArchiveButtons,
   confirmCopyButtons,
   confirmDeleteButtons,
+  confirmTargetsButtons,
 } from "../_shared/core.ts";
 
 export type ConfirmWords = {
@@ -20,8 +21,11 @@ type WordsFor = (input: unknown) => ConfirmWords | null;
 const deleteEntryInput = z.object({ ids: z.array(z.string()).min(1) });
 const copyDayInput = z.object({ entry_count: z.number().int().min(1) });
 const archiveRecipeInput = z.object({ id: z.string() });
+const updateTargetsInput = z.object({ current_kcal: z.number().int().nullable() });
 
-// KEY-697 adds a line for each confirming tool it builds.
+// The buttons of `update_targets` name the number the person keeps, which the tool's input holds as
+// `current_kcal`. `needsConfirmation` reads the person's own number and refuses a call that disagrees, so a
+// wrong number never reaches a button. Following `copy_day`'s `entry_count`.
 const wordsByTool: ReadonlyMap<string, WordsFor> = new Map<string, WordsFor>([
   [
     "delete_entry",
@@ -47,6 +51,15 @@ const wordsByTool: ReadonlyMap<string, WordsFor> = new Map<string, WordsFor>([
       archiveRecipeInput.safeParse(input).success
         ? { ...confirmArchiveButtons(), tone: "primary" }
         : null,
+  ],
+  [
+    "update_targets",
+    (input) => {
+      const parsed = updateTargetsInput.safeParse(input);
+      return parsed.success
+        ? { ...confirmTargetsButtons(parsed.data.current_kcal), tone: "primary" }
+        : null;
+    },
   ],
 ]);
 

@@ -37,7 +37,12 @@ const stampOf = (statement: number) =>
 
 export function writeStub(
   initial: Record<string, Row[]> = {},
-  options: { callerUserId?: string; rpc?: Record<string, RpcHandler> } = {},
+  options: {
+    callerUserId?: string;
+    rpc?: Record<string, RpcHandler>;
+    // The columns a table fills in on insert beyond the ones the stub knows (`source_ref` on a food).
+    insertDefaults?: Record<string, Row>;
+  } = {},
 ): WriteStub {
   const tables: Record<string, Row[]> = Object.fromEntries(
     Object.entries(initial).map(([table, rows]) => [table, rows.map((row) => ({ ...row }))]),
@@ -98,6 +103,7 @@ export function writeStub(
     let payload: Row[] = [];
     let patch: Row = {};
     let wantsOne: "single" | "maybeSingle" | null = null;
+    let rowLimit = Number.POSITIVE_INFINITY;
 
     const run = (): { data: unknown; error: { code: string; message: string } | null } => {
       calls.push({ table, method: operation, ...(operation === "update" ? { patch } : {}) });
@@ -136,9 +142,12 @@ export function writeStub(
             updated_at: stampOf(statement),
             deleted_at: null,
             ...(table === "day_logs" ? { note: null } : {}),
+            ...(options.insertDefaults?.[table] ?? {}),
             user_id: options.callerUserId,
             ...row,
-            kcal: (row["nutrients"] as { kcal?: number } | undefined)?.kcal ?? null,
+            ...("nutrients" in row
+              ? { kcal: (row["nutrients"] as { kcal?: number } | undefined)?.kcal ?? null }
+              : {}),
           };
           rows.push(inserted);
           return inserted;
@@ -146,9 +155,10 @@ export function writeStub(
       } else if (operation === "update") {
         statement += 1;
         affected = rows.filter((row) => filters.every((filter) => filter(row)));
-        affected.forEach((row) => Object.assign(row, patch, { updated_at: stampOf(statement) }));
+        // A stamp the caller writes itself (a program's `updated_at`) wins over the one the database would give.
+        affected.forEach((row) => Object.assign(row, { updated_at: stampOf(statement) }, patch));
       } else {
-        affected = rows.filter((row) => filters.every((filter) => filter(row)));
+        affected = rows.filter((row) => filters.every((filter) => filter(row))).slice(0, rowLimit);
       }
       if (operation !== "select" && !returning) {
         return { data: null, error: null };
@@ -191,8 +201,17 @@ export function writeStub(
         filters.push((row) => (row[column] ?? null) === value);
         return query;
       },
+      // Only `.not(column, "is", null)`, the one form the repos use.
+      not(column: string, _operator: string, value: unknown) {
+        filters.push((row) => (row[column] ?? null) !== value);
+        return query;
+      },
       order: () => query,
-      limit: () => query,
+      // `order` does nothing, so a table is listed in the order its read should answer in.
+      limit(count: number) {
+        rowLimit = count;
+        return query;
+      },
       single() {
         wantsOne = "single";
         return query;
