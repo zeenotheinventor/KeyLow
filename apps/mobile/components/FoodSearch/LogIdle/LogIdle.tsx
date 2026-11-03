@@ -9,7 +9,8 @@ import type { LogIdleProps } from "./types";
 
 /**
  * What the log search shows before anything is typed, as the log search boards draw it: the Quick add row,
- * then the Favourites strip, then Recent. Quick add stays pressable offline, because the form it opens waits for a connection itself.
+ * then the Favourites strip, then Recent. Quick add stays pressable offline, because the form it opens waits
+ * for a connection itself.
  */
 export function LogIdle({
   onOpenFavouriteFood,

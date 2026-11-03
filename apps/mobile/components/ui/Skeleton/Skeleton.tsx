@@ -40,8 +40,8 @@ function SkeletonFavourites() {
   return (
     <View className="flex-row gap-3 overflow-hidden px-4" testID="skeleton-favourites">
       {favouriteBoneKeys.map((key) => (
-        <View key={key} className="w-[72px] items-center gap-2">
-          <SkeletonBone className="h-[54px] w-[54px] rounded-full" />
+        <View key={key} className="w-[72px] items-center gap-1">
+          <SkeletonBone className="h-control-lg w-[52px] rounded-full" />
           <SkeletonBone className="h-3 w-[56px]" />
         </View>
       ))}

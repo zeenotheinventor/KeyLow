@@ -171,7 +171,9 @@ describe("the Favourites strip in the log search", () => {
     };
     await renderLogSearch();
 
-    expect(screen.queryByRole("button", { name: "Log Mystery stew" })).not.toBeOnTheScreen();
+    expect(
+      screen.queryByRole("button", { name: "Log Mystery stew, recipe" }),
+    ).not.toBeOnTheScreen();
     expect(screen.queryByRole("heading", { name: "Favourites" })).not.toBeOnTheScreen();
   });
 
@@ -203,7 +205,7 @@ describe("the Favourites strip in the log search", () => {
     };
     const user = await renderLogSearch();
 
-    await user.press(screen.getByRole("button", { name: "Log Overnight oats" }));
+    await user.press(screen.getByRole("button", { name: "Log Overnight oats, recipe" }));
 
     expect(routerMock.push).toHaveBeenCalledWith(
       `/foods/recipe/${oatsRecipeId}/log?day=2026-10-14&time=12%3A00`,
@@ -227,6 +229,19 @@ describe("the Favourites strip in the log search", () => {
     expect(screen.queryByRole("heading", { name: "Favourites" })).not.toBeOnTheScreen();
     expect(screen.getByText("Nothing recent")).toBeOnTheScreen();
     expect(recentFoods.current.isError).toBe(false);
+  });
+
+  it("should hide the strip when the foods load and only the recipes fail to load", async () => {
+    favouriteFoods.current = {
+      data: [favouriteFood(porridgeId, "Porridge", "2026-10-13T08:00:00+00:00")],
+      isPending: false,
+      isError: false,
+    };
+    favouriteRecipes.current = { data: undefined, isPending: false, isError: true };
+    await renderLogSearch();
+
+    expect(screen.queryByRole("heading", { name: "Favourites" })).not.toBeOnTheScreen();
+    expect(screen.queryByRole("button", { name: "Log Porridge" })).not.toBeOnTheScreen();
   });
 
   it("should drop a tile when its favourite is removed", async () => {

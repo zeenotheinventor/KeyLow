@@ -7,7 +7,13 @@ describe("the Favourites strip's copy", () => {
     expect(FAVOURITES_STRIP.heading).toBe("Favourites");
   });
 
-  it("should name a tile for a screen reader by what pressing it does", () => {
-    expect(describeLogFavouriteName("Porridge")).toBe("Log Porridge");
+  it("should name a food's tile for a screen reader by what pressing it does", () => {
+    expect(describeLogFavouriteName("Porridge", "food")).toBe("Log Porridge");
+  });
+
+  it("should say a recipe's tile is a recipe", () => {
+    expect(describeLogFavouriteName("Chicken and rice", "recipe")).toBe(
+      "Log Chicken and rice, recipe",
+    );
   });
 });

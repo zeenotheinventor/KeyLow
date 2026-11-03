@@ -3,5 +3,6 @@ export const FAVOURITES_STRIP = {
   heading: "Favourites",
 } as const;
 
-/** What a screen reader says on a tile of the strip, whether the favourite is a food or a recipe. */
-export const describeLogFavouriteName = (name: string): string => `Log ${name}`;
+/** What a screen reader says on a tile of the strip: "Log Porridge", or "Log Chicken and rice, recipe". */
+export const describeLogFavouriteName = (name: string, kind: "food" | "recipe"): string =>
+  kind === "recipe" ? `Log ${name}, recipe` : `Log ${name}`;
