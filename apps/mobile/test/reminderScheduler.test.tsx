@@ -19,7 +19,10 @@ import type { AppStateStatus } from "react-native";
 const mockStorageItems = new Map<string, string>();
 let mockPlanInputs: ReminderPlanInputs | null = null;
 let mockFoodInputs: FoodReminderPlanInputs | null = null;
-const mockTrainingInputsRead = jest.fn<undefined, [{ enabled: boolean }]>();
+const mockTrainingInputsRead = jest.fn<
+  undefined,
+  [{ enabled: boolean; includeEarlierWeeks: boolean }]
+>();
 const mockFoodInputsRead = jest.fn<undefined, [{ enabled: boolean }]>();
 
 jest.mock("@react-native-async-storage/async-storage", () => ({
@@ -41,7 +44,7 @@ jest.mock(
 );
 // The reads the plan is made from have their own tests. Here they are whatever the test says they are.
 jest.mock("../lib/reminderScheduler/useReminderPlanInputs", () => ({
-  useReminderPlanInputs: (options: { enabled: boolean }) => {
+  useReminderPlanInputs: (options: { enabled: boolean; includeEarlierWeeks: boolean }) => {
     mockTrainingInputsRead(options);
     return mockPlanInputs;
   },
@@ -272,7 +275,9 @@ describe("the reminder scheduler", () => {
       });
       await settle();
 
-      expect(mockFoodInputsRead).toHaveBeenLastCalledWith({ enabled: false });
+      expect(mockFoodInputsRead).toHaveBeenLastCalledWith({
+        enabled: false,
+      });
     });
 
     it("should read today's diary once the food switch is on and the settings have loaded", async () => {
@@ -283,7 +288,9 @@ describe("the reminder scheduler", () => {
       });
       await settle();
 
-      expect(mockFoodInputsRead).toHaveBeenLastCalledWith({ enabled: true });
+      expect(mockFoodInputsRead).toHaveBeenLastCalledWith({
+        enabled: true,
+      });
     });
 
     it("should drop today's reminder as soon as a food is logged today", async () => {
@@ -343,8 +350,43 @@ describe("the reminder scheduler", () => {
       });
       await settle();
 
-      expect(mockTrainingInputsRead).toHaveBeenLastCalledWith({ enabled: false });
+      expect(mockTrainingInputsRead).toHaveBeenLastCalledWith({
+        enabled: false,
+        includeEarlierWeeks: false,
+      });
     });
+
+    it("should leave the earlier weeks unread while neither the missed day nor the check in switch is on", async () => {
+      saveSettings(trainOn);
+
+      await renderHook(() => {
+        useReminderScheduler();
+      });
+      await settle();
+
+      expect(mockTrainingInputsRead).toHaveBeenLastCalledWith({
+        enabled: true,
+        includeEarlierWeeks: false,
+      });
+    });
+
+    it.each(["missedEnabled", "checkinEnabled"] as const)(
+      "should read the training inputs and plan when only %s is on",
+      async (key) => {
+        saveSettings({ ...defaultReminderSettings, [key]: true });
+
+        await renderHook(() => {
+          useReminderScheduler();
+        });
+        await settle();
+
+        expect(mockTrainingInputsRead).toHaveBeenLastCalledWith({
+          enabled: true,
+          includeEarlierWeeks: true,
+        });
+        expect(replaceReminders).toHaveBeenCalledTimes(1);
+      },
+    );
   });
 
   it("should cancel ours and schedule nothing when every switch is off", async () => {

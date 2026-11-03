@@ -41,7 +41,7 @@ jest.mock(
     jest.requireActual<{ default: unknown }>("react-native-safe-area-context/jest/mock").default,
 );
 
-const [train, progress, ease] = REMINDERS_SCREEN.reminders;
+const [train, progress, ease, missed, checkin] = REMINDERS_SCREEN.reminders;
 const { food } = REMINDERS_SCREEN;
 
 let openSettings: jest.SpyInstance;
@@ -88,16 +88,18 @@ describe("the Reminders screen", () => {
       expect(routerMock.replace).toHaveBeenCalledWith("/(tabs)/more");
     });
 
-    it("should draw the four switches in order, all off, each with its helper line", async () => {
+    it("should draw the six switches in order, all off, each with its helper line", async () => {
       await renderReminders();
 
       expect(screen.getAllByRole("switch")).toEqual([
         switchNamed(train.title),
         switchNamed(progress.title),
         switchNamed(ease.title),
+        switchNamed(missed.title),
+        switchNamed(checkin.title),
         switchNamed(food.title),
       ]);
-      for (const reminder of [train, progress, ease, food]) {
+      for (const reminder of [train, progress, ease, missed, checkin, food]) {
         expect(switchNamed(reminder.title)).not.toBeChecked();
         expect(screen.getByText(reminder.helper)).toBeOnTheScreen();
       }
@@ -115,7 +117,12 @@ describe("the Reminders screen", () => {
     it("should show the saved switches on", async () => {
       mockStorageItems.set(
         reminderSettingsStorageKey,
-        JSON.stringify({ trainEnabled: true, easeEnabled: true, foodEnabled: true }),
+        JSON.stringify({
+          trainEnabled: true,
+          easeEnabled: true,
+          checkinEnabled: true,
+          foodEnabled: true,
+        }),
       );
       await renderReminders();
 
@@ -124,6 +131,8 @@ describe("the Reminders screen", () => {
       });
       expect(switchNamed(progress.title)).not.toBeChecked();
       expect(switchNamed(ease.title)).toBeChecked();
+      expect(switchNamed(missed.title)).not.toBeChecked();
+      expect(switchNamed(checkin.title)).toBeChecked();
       expect(switchNamed(food.title)).toBeChecked();
     });
 
@@ -167,6 +176,20 @@ describe("the Reminders screen", () => {
       });
       expect(mockExpoNotifications.requestPermissionsAsync).toHaveBeenCalledTimes(1);
       expect((await readReminderSettings()).foodEnabled).toBe(true);
+    });
+
+    it.each([
+      [missed.title, "missedEnabled"],
+      [checkin.title, "checkinEnabled"],
+    ] as const)("should turn %s on and keep it", async (title, key) => {
+      const user = await renderReminders();
+
+      await user.press(switchNamed(title));
+
+      await waitFor(() => {
+        expect(switchNamed(title)).toBeChecked();
+      });
+      expect((await readReminderSettings())[key]).toBe(true);
     });
 
     it("should keep the food switch off and show the denied notice when the person refuses", async () => {

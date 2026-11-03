@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { AppState } from "react-native";
 
-import { scheduleReminderPlan } from "./scheduleReminderPlan";
+import { hasTrainingSwitchOn, scheduleReminderPlan } from "./scheduleReminderPlan";
 import { useFoodReminderInputs } from "./useFoodReminderInputs";
 import { useReminderPlanInputs } from "./useReminderPlanInputs";
 import { useReminderSettings } from "../reminderSettings";
@@ -23,10 +23,10 @@ export const REMINDER_DEBOUNCE_MILLISECONDS = 1000;
 export function useReminderScheduler(): void {
   const readsEnabled = useReadsEnabled();
   const { settings, isLoaded } = useReminderSettings();
-  const hasTrainingSwitchOn =
-    settings.trainEnabled || settings.progressEnabled || settings.easeEnabled;
   const inputs = useReminderPlanInputs({
-    enabled: readsEnabled && isLoaded && hasTrainingSwitchOn,
+    enabled: readsEnabled && isLoaded && hasTrainingSwitchOn(settings),
+    // The older weeks are for the missed day rules only.
+    includeEarlierWeeks: settings.missedEnabled || settings.checkinEnabled,
   });
   const foodInputs = useFoodReminderInputs({
     enabled: readsEnabled && isLoaded && settings.foodEnabled,

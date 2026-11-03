@@ -73,6 +73,32 @@ describe("tapping a reminder", () => {
       expect(goneTo()).toHaveLength(1);
     });
 
+    it("should open the Train tab for A fresh start", async () => {
+      await renderHook(() => {
+        useReminderTapRouting();
+      });
+
+      await act(() => {
+        tapNotification(identifierOf("missed"), { type: "missed" });
+      });
+
+      expect(routerMock.navigate).toHaveBeenCalledWith("/train");
+      expect(goneTo()).toHaveLength(1);
+    });
+
+    it("should open the Routines page, where the plan can be changed, for Checking in", async () => {
+      await renderHook(() => {
+        useReminderTapRouting();
+      });
+
+      await act(() => {
+        tapNotification(identifierOf("checkin"), { type: "checkin" });
+      });
+
+      expect(routerMock.push).toHaveBeenCalledWith("/train/routines");
+      expect(goneTo()).toHaveLength(1);
+    });
+
     it("should open today's diary, a tab, for Log your food", async () => {
       await renderHook(() => {
         useReminderTapRouting();
