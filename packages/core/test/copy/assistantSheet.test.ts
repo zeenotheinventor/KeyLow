@@ -24,6 +24,7 @@ describe("ASSISTANT_SHEET", () => {
       composerPlaceholder: "Log food or ask about your diary",
       speakerYou: "You",
       speakerAssistant: "Assistant",
+      estimateBadge: "Estimate",
     });
   });
 

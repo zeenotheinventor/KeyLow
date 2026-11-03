@@ -28,6 +28,8 @@ export const ASSISTANT_SHEET = {
   /** Who said a message, as a screen reader hears it first. The boards draw neither word. */
   speakerYou: "You",
   speakerAssistant: "Assistant",
+  /** The badge beside the line of an answer built on an estimate (`assistant · answer-estimate`). */
+  estimateBadge: "Estimate",
 } as const;
 
 /**

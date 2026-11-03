@@ -41,7 +41,8 @@ const deviceTimeZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
 // up to full height, which starts 54 points from the top.
 const SNAP_POINTS = ["87%", "94%"];
 // The consent card opens at full height (`assistant · consent-needed`, 54 points from the top), and so does
-// the sheet opened from Describe (`assistant · describe`).
+// the sheet opened from Describe (`assistant · describe`) and a thread holding a recipe import card
+// (`assistant · recipe-import`, `recipe-unresolved`), so its ingredient list shows.
 const OPEN_SNAP_INDEX = 0;
 const FULL_HEIGHT_SNAP_INDEX = 1;
 
@@ -159,6 +160,8 @@ export function AssistantSheet({ open, onClose, localDate, describeAt }: Assista
     isOnline,
     isThreadKnown,
     isThreadFetching: conversation.isFetching,
+    // The turn's status clears with its next event, so the reading is over as soon as anything else arrives.
+    isReadingRecipe: (live?.status ?? null) !== null,
     access,
   };
   const canSendWords = (words: string) => canSendAssistantMessage({ text: words, ...sendState });
@@ -285,7 +288,7 @@ export function AssistantSheet({ open, onClose, localDate, describeAt }: Assista
       label={ASSISTANT_SHEET.title}
       open={open}
       snapIndex={
-        access.kind === "consent" || describeAt !== undefined
+        access.kind === "consent" || describeAt !== undefined || thread.needsFullHeight
           ? FULL_HEIGHT_SNAP_INDEX
           : OPEN_SNAP_INDEX
       }

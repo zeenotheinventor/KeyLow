@@ -27,6 +27,8 @@ const liveTurn = (overrides: Partial<AssistantSheetLiveTurn> = {}): AssistantShe
   cards: [],
   clarify: null,
   confirm: null,
+  answerMeta: null,
+  status: null,
   stopped: false,
   notice: null,
   ...overrides,
@@ -61,6 +63,8 @@ describe("buildAssistantSheetThread", () => {
           paragraphs: ["You have 1,693 kcal and 117 g of protein left today."],
           isStreaming: false,
           isStopped: false,
+          citation: "Based on 4 entries today and your targets",
+          estimate: null,
         },
       ]);
     });
@@ -110,6 +114,7 @@ describe("buildAssistantSheetThread", () => {
         lastMessage: null,
         canAskAgain: false,
         fieldHint: null,
+        needsFullHeight: false,
       });
     });
   });
@@ -133,6 +138,8 @@ describe("buildAssistantSheetThread", () => {
           paragraphs: ["Yesterday, you logged 8 entries"],
           isStreaming: true,
           isStopped: false,
+          citation: null,
+          estimate: null,
         },
       ]);
     });
@@ -451,6 +458,8 @@ describe("buildAssistantSheetThread with a question", () => {
           paragraphs: [CLARIFY_QUESTION],
           isStreaming: false,
           isStopped: false,
+          citation: null,
+          estimate: null,
         },
         { kind: "quickReplies", key: "q1", options: QUICK_REPLIES },
       ]);
@@ -497,6 +506,8 @@ describe("buildAssistantSheetThread with a question", () => {
           paragraphs: [DELETE_QUESTION],
           isStreaming: false,
           isStopped: false,
+          citation: null,
+          estimate: null,
         },
         {
           kind: "confirm",
@@ -591,6 +602,8 @@ describe("buildAssistantSheetThread with a question", () => {
           paragraphs: [CLARIFY_QUESTION],
           isStreaming: false,
           isStopped: false,
+          citation: null,
+          estimate: null,
         },
         { kind: "quickReplies", key: "sent:clarify", options: QUICK_REPLIES },
       ]);
@@ -772,6 +785,7 @@ describe("canSendAssistantMessage", () => {
     isOnline: true,
     isThreadKnown: true,
     isThreadFetching: false,
+    isReadingRecipe: false,
     access: { kind: "open" } satisfies AssistantSheetAccess,
   };
 
@@ -814,6 +828,7 @@ describe("canAnswerAssistantQuestion", () => {
     isOnline: true,
     isThreadKnown: true,
     isThreadFetching: false,
+    isReadingRecipe: false,
     access: { kind: "open" } satisfies AssistantSheetAccess,
   };
 
