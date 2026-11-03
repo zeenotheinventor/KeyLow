@@ -126,7 +126,7 @@ describe("the widget copy", () => {
     expect(describeLastTime(null, 8)).toBe("Last time 8 reps");
   });
 
-  it("should name and describe the six dashboard widgets for the launcher's widget picker", () => {
+  it("should name and describe the eleven widgets for the launcher's widget picker", () => {
     expect(Object.keys(WIDGET_GALLERY)).toEqual([
       "today_ring",
       "today_macros",
@@ -134,7 +134,14 @@ describe("the widget copy", () => {
       "body_heat",
       "today_glance",
       "body_map",
+      "log_grid",
+      "today_logging",
+      "log_again",
+      "weigh_in",
+      "training",
     ]);
+    expect(WIDGET_GALLERY.today_logging.label).toBe("Today plus logging");
+    expect(WIDGET_GALLERY.training.label).toBe("Training");
     expect(WIDGET_GALLERY.today_ring.label).toBe("Today ring");
     expect(WIDGET_GALLERY.today_macros.label).toBe("Today with macros");
     expect(WIDGET_GALLERY.today_glance.label).toBe("Today at a glance");

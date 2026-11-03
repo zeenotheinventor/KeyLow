@@ -85,7 +85,7 @@ export const WIDGET_STATES = {
 } as const;
 
 /**
- * What the launcher's widget picker shows for each dashboard widget (board A's captions). The Android
+ * What the launcher's widget picker shows for each widget (the captions of boards A and B). The Android
  * config plugin writes the same strings into the app's manifest, and a test keeps the two equal.
  */
 export const WIDGET_GALLERY = {
@@ -106,6 +106,20 @@ export const WIDGET_GALLERY = {
   body_map: {
     label: "Body map",
     description: "Your body map on heat or weekly volume, as set in More.",
+  },
+  log_grid: {
+    label: "Log grid",
+    description: "Four shortcuts: search, scan, quick add and weight.",
+  },
+  today_logging: {
+    label: "Today plus logging",
+    description: "Calories left today, with shortcuts to log food.",
+  },
+  log_again: { label: "Log again", description: "Log a recent food with one tap." },
+  weigh_in: { label: "Weigh in", description: "Your last weight, and a shortcut to log today's." },
+  training: {
+    label: "Training",
+    description: "Start today's session, then log each set with one tap.",
   },
 } as const;
 

@@ -1,9 +1,17 @@
 import { widgetViewModel } from "@keylow/core/widgets";
 
-import { NOW, testSnapshot } from "../../../test/support/widgetFixtures";
+import {
+  ENTRY_ID,
+  EXERCISE_ID,
+  NEW_ROW_ID,
+  NOW,
+  SESSION_ID,
+  testSnapshot,
+} from "../../../test/support/widgetFixtures";
 
 import type {
   MessageViewModel,
+  PendingUndo,
   ReadyViewModel,
   WidgetKind,
   WidgetSnapshot,
@@ -95,3 +103,59 @@ export const messageModel = (
 
   return model;
 };
+
+export const RECENT_FOODS = [
+  { id: ENTRY_ID, name: "Overnight oats", kcal: 410 },
+  { id: "22222222-2222-4222-8222-222222222222", name: "Chicken wrap", kcal: 520 },
+  { id: "33333333-3333-4333-8333-333333333333", name: "Protein shake", kcal: 180 },
+] as const;
+
+/** The populated snapshot with three recent foods, a weigh-in from yesterday and a running session. */
+export const quickLogSnapshot = (): WidgetSnapshot => ({
+  ...populatedSnapshot(),
+  recentFoods: RECENT_FOODS.map((food) => ({
+    entryId: food.id,
+    name: food.name,
+    kcal: food.kcal,
+    amount: { quantity: 1, unit: "portion" as const },
+  })),
+  lastWeighIn: { weightKg: 78.4, localDate: "2026-11-02" },
+});
+
+/** The snapshot of a session 32 minutes in, on set 3 of 4 of the second exercise. */
+export const sessionSnapshot = (): WidgetSnapshot => {
+  const base = quickLogSnapshot();
+
+  return {
+    ...base,
+    training: {
+      ...base.training,
+      session: {
+        id: SESSION_ID,
+        startedAt: "2026-11-03T11:28:00.000Z",
+        dayName: "Pull day",
+        next: {
+          exerciseId: EXERCISE_ID,
+          exerciseName: "Barbell row",
+          exerciseNumber: 2,
+          exerciseCount: 5,
+          setNumber: 3,
+          setCount: 4,
+          loadKg: 70,
+          reps: 8,
+          lastTime: { loadKg: 67.5, reps: 8 },
+        },
+      },
+    },
+  };
+};
+
+export const pendingUndoOf = (
+  action: PendingUndo["action"],
+  sourceEntryId?: string,
+): PendingUndo => ({
+  action,
+  rowId: NEW_ROW_ID,
+  ...(sourceEntryId === undefined ? {} : { sourceEntryId }),
+  at: NOW.toISOString(),
+});

@@ -172,6 +172,66 @@
               "resizeMode": "horizontal|vertical",
               "previewImage": "./assets/widgets/body-map.png",
               "updatePeriodMillis": 1800000
+            },
+            {
+              "name": "LogGrid",
+              "label": "Log grid",
+              "description": "Four shortcuts: search, scan, quick add and weight.",
+              "minWidth": "110dp",
+              "minHeight": "110dp",
+              "targetCellWidth": 2,
+              "targetCellHeight": 2,
+              "resizeMode": "horizontal|vertical",
+              "previewImage": "./assets/widgets/log-grid.png",
+              "updatePeriodMillis": 1800000
+            },
+            {
+              "name": "TodayLogging",
+              "label": "Today plus logging",
+              "description": "Calories left today, with shortcuts to log food.",
+              "minWidth": "250dp",
+              "minHeight": "110dp",
+              "targetCellWidth": 4,
+              "targetCellHeight": 2,
+              "resizeMode": "horizontal|vertical",
+              "previewImage": "./assets/widgets/today-logging.png",
+              "updatePeriodMillis": 1800000
+            },
+            {
+              "name": "LogAgain",
+              "label": "Log again",
+              "description": "Log a recent food with one tap.",
+              "minWidth": "250dp",
+              "minHeight": "110dp",
+              "targetCellWidth": 4,
+              "targetCellHeight": 2,
+              "resizeMode": "horizontal|vertical",
+              "previewImage": "./assets/widgets/log-again.png",
+              "updatePeriodMillis": 1800000
+            },
+            {
+              "name": "WeighIn",
+              "label": "Weigh in",
+              "description": "Your last weight, and a shortcut to log today's.",
+              "minWidth": "110dp",
+              "minHeight": "110dp",
+              "targetCellWidth": 2,
+              "targetCellHeight": 2,
+              "resizeMode": "horizontal|vertical",
+              "previewImage": "./assets/widgets/weigh-in.png",
+              "updatePeriodMillis": 1800000
+            },
+            {
+              "name": "Training",
+              "label": "Training",
+              "description": "Start today's session, then log each set with one tap.",
+              "minWidth": "250dp",
+              "minHeight": "110dp",
+              "targetCellWidth": 4,
+              "targetCellHeight": 2,
+              "resizeMode": "horizontal|vertical",
+              "previewImage": "./assets/widgets/training.png",
+              "updatePeriodMillis": 1800000
             }
           ]
         }
