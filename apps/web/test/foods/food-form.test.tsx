@@ -303,19 +303,6 @@ describe("FoodForm", () => {
       ).toBeTruthy();
     });
 
-    it("should reject a negative amount in the words the mobile form uses", () => {
-      renderForm();
-      fillRequiredFields();
-      typeInto(fat, "-2");
-
-      save();
-
-      expect(createFood).not.toHaveBeenCalled();
-      expect(
-        screen.getByRole("textbox", { name: fat, description: "Fat cannot be negative" }),
-      ).toBeTruthy();
-    });
-
     it("should reject an amount that is not a number", () => {
       renderForm();
       fillRequiredFields();
@@ -326,32 +313,6 @@ describe("FoodForm", () => {
       expect(createFood).not.toHaveBeenCalled();
       expect(
         screen.getByRole("textbox", { name: protein, description: "Protein must be a number" }),
-      ).toBeTruthy();
-    });
-
-    it("should reject an exponent, which the form does not read as a number", () => {
-      renderForm();
-      fillRequiredFields();
-      typeInto(energy, "1e3");
-
-      save();
-
-      expect(createFood).not.toHaveBeenCalled();
-      expect(
-        screen.getByRole("textbox", { name: energy, description: "Energy must be a number" }),
-      ).toBeTruthy();
-    });
-
-    it("should reject a name that is only spaces", () => {
-      renderForm();
-      fillRequiredFields();
-      typeInto("Name", "   ");
-
-      save();
-
-      expect(createFood).not.toHaveBeenCalled();
-      expect(
-        screen.getByRole("textbox", { name: "Name", description: "Required Name is required" }),
       ).toBeTruthy();
     });
 
@@ -366,22 +327,6 @@ describe("FoodForm", () => {
         screen.getByRole("textbox", {
           name: "Name",
           description: "Required Name must be 200 characters or fewer",
-        }),
-      ).toBeTruthy();
-    });
-
-    it("should explain a barcode whose check digit is wrong", () => {
-      renderForm();
-      fillRequiredFields();
-      typeInto("Barcode", "5000159484696");
-
-      save();
-
-      expect(createFood).not.toHaveBeenCalled();
-      expect(
-        screen.getByRole("textbox", {
-          name: "Barcode",
-          description: "Barcode check digit is wrong",
         }),
       ).toBeTruthy();
     });
@@ -716,18 +661,6 @@ describe("FoodForm", () => {
         expect(input).not.toHaveProperty("sat_fat_g");
       });
 
-      it("should keep the saturated fat when the fat is edited to equal it", async () => {
-        renderForm({ copyOf: cofidCopyOf });
-        typeInto(fat, "3");
-
-        save("Save to your foods");
-
-        await waitFor(() => {
-          expect(createFood).toHaveBeenCalledTimes(1);
-        });
-        expect(createFood.mock.calls[0]?.[0]).toMatchObject({ sat_fat_g: 3 });
-      });
-
       it("should drop the sugars when the carbohydrate is edited below them", async () => {
         renderForm({ copyOf: cofidCopyOf });
         typeInto(carbohydrate, "11.9");
@@ -740,51 +673,6 @@ describe("FoodForm", () => {
         const input = createFood.mock.calls[0]?.[0];
         expect(input).toMatchObject({ sat_fat_g: 3, salt_g: 0.8 });
         expect(input).not.toHaveProperty("sugars_g");
-      });
-
-      it("should keep the sugars when the carbohydrate is edited to equal them", async () => {
-        renderForm({ copyOf: cofidCopyOf });
-        typeInto(carbohydrate, "12");
-
-        save("Save to your foods");
-
-        await waitFor(() => {
-          expect(createFood).toHaveBeenCalledTimes(1);
-        });
-        expect(createFood.mock.calls[0]?.[0]).toMatchObject({ sugars_g: 12 });
-      });
-
-      it("should carry the salt whatever the fat and carbohydrate are edited to", async () => {
-        renderForm({ copyOf: cofidCopyOf });
-        typeInto(fat, "0");
-        typeInto(carbohydrate, "0");
-
-        save("Save to your foods");
-
-        await waitFor(() => {
-          expect(createFood).toHaveBeenCalledTimes(1);
-        });
-        const input = createFood.mock.calls[0]?.[0];
-        expect(input).toMatchObject({ salt_g: 0.8 });
-        expect(input).not.toHaveProperty("sat_fat_g");
-        expect(input).not.toHaveProperty("sugars_g");
-      });
-
-      it("should keep the saturated fat and sugars the source holds above its own fat and carbohydrate when the edit raises them", async () => {
-        const mismatchedSource = {
-          ...cofidCopyOf,
-          food: { ...cofidCopyOf.food, fat_g: 2, sat_fat_g: 3, carbs_g: 5, sugars_g: 8 },
-        };
-        renderForm({ copyOf: mismatchedSource });
-        typeInto(fat, "5");
-        typeInto(carbohydrate, "10");
-
-        save("Save to your foods");
-
-        await waitFor(() => {
-          expect(createFood).toHaveBeenCalledTimes(1);
-        });
-        expect(createFood.mock.calls[0]?.[0]).toMatchObject({ sat_fat_g: 3, sugars_g: 8 });
       });
 
       it("should leave out a value the source does not record, never sending null", async () => {

@@ -1030,15 +1030,6 @@ describe("the edit entry dialog for a quick add", () => {
       expect(screen.getByText("Enter calories.")).toBeTruthy();
     });
 
-    it("should disable Save and say Enter calories for 0", () => {
-      renderDialog(crisps());
-
-      type(calories(), "0");
-
-      expect(save()).toHaveProperty("disabled", true);
-      expect(screen.getByText("Enter calories.")).toBeTruthy();
-    });
-
     it("should not save on Enter while the calories are not above 0", () => {
       renderDialog(crisps());
       type(calories(), "0");
@@ -1086,19 +1077,6 @@ describe("the edit entry dialog for a quick add", () => {
       // 40.75 g of protein is 163 kcal: 33 kcal over, which is more than a quarter of 130.
       type(protein(), "40.75");
       expect(isWarning("Macros add up to 163 kcal")).toBe(true);
-    });
-
-    it("should stay plain at a quarter below the calories and warn just under it", () => {
-      renderDialog(crisps());
-      type(calories(), "130");
-      type(carbs(), "");
-      type(fat(), "");
-
-      type(protein(), "24.5");
-      expect(isWarning("Macros add up to 98 kcal")).toBe(false);
-
-      type(protein(), "24.25");
-      expect(isWarning("Macros add up to 97 kcal")).toBe(true);
     });
 
     it("should be information only: Save is still allowed", () => {

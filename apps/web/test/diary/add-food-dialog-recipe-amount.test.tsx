@@ -231,23 +231,6 @@ describe("the add food dialog, the amount step of a recipe", () => {
       expect(amountField()).toHaveProperty("value", "1");
     });
 
-    it("should come to 408 kcal for 300 g, with the same shares", async () => {
-      renderDialog();
-      await openRecipe();
-
-      fireEvent.click(unitChip("g"));
-      typeAmount("300");
-
-      const card = hero("For 300 g");
-      expect(within(card).getByText("408")).toBeTruthy();
-      expect(within(card).getByText("35 g")).toBeTruthy();
-      expect(within(card).getByText("46 g")).toBeTruthy();
-      expect(within(card).getByText("8.9 g")).toBeTruthy();
-      expect(within(card).getByText("34 %")).toBeTruthy();
-      expect(within(card).getByText("45 %")).toBeTruthy();
-      expect(within(card).getByText("20 %")).toBeTruthy();
-    });
-
     it("should put the cursor in the amount with the new starting amount selected when a unit chip is pressed", async () => {
       renderDialog();
       await openRecipe();

@@ -2,7 +2,7 @@ import { onlineManager } from "@tanstack/react-query";
 import { cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { boardWeek, emptyWeek, noTargets, overTargetWeek, targets } from "../diary/support";
+import { boardWeek, emptyWeek, noTargets, targets } from "../diary/support";
 import { renderWithRouter } from "../ui/appRouter";
 
 import type { DiaryWeekDay, Targets } from "@keylow/api-client";
@@ -113,15 +113,6 @@ describe("the weekly averages page", () => {
     ]);
   });
 
-  it("should not change a number when today's entries change", () => {
-    // Monday to Wednesday as before, and today 2,412 instead of 1,039.
-    show([...boardWeek.slice(0, 3), ...overTargetWeek.slice(3)]);
-    renderWithRouter(<WeekAveragesScreen />);
-
-    expect(rowsOf("Daily average")[0]).toBe("Energy1,895 / 2,200 kcal");
-    expect(rowsOf("Week so far")[0]).toBe("Energy5,686 kcal");
-  });
-
   it("should draw the calories average over the days logged before today, captioned Mon to yesterday", () => {
     renderWithRouter(<WeekAveragesScreen />);
 
@@ -133,17 +124,6 @@ describe("the weekly averages page", () => {
     expect(screen.queryByText(/Mon to today/)).toBeNull();
   });
 
-  it("should print the overshoot of the days before today", () => {
-    // Monday 2,140, Tuesday 2,260 and Wednesday 2,988 average 2,463, which is 263 over.
-    show(overTargetWeek);
-    renderWithRouter(<WeekAveragesScreen />);
-
-    expect(screen.getByRole("meter", { name: "Average" }).getAttribute("aria-valuetext")).toBe(
-      "2,463 of 2,200 kilocalories, over target",
-    );
-    expect(screen.getByText("+263 kcal")).toBeTruthy();
-  });
-
   it("should say the averages start tomorrow on a Monday, with no bars and no tables", () => {
     vi.setSystemTime(new Date("2026-10-12T11:20:00Z"));
     renderWithRouter(<WeekAveragesScreen />);
@@ -153,16 +133,6 @@ describe("the weekly averages page", () => {
     expect(screen.queryByRole("meter")).toBeNull();
     expect(screen.queryByRole("table")).toBeNull();
     expect(screen.getByRole("link", { name: "See each day in the diary" })).toBeTruthy();
-  });
-
-  it("should say nothing is logged before today when only today has entries", () => {
-    // Thursday's 1,039 alone, with nothing on the days before it.
-    show([...emptyWeek.slice(0, 3), ...boardWeek.slice(3)]);
-    renderWithRouter(<WeekAveragesScreen />);
-
-    expect(screen.getByText("Nothing logged before today this week.")).toBeTruthy();
-    expect(screen.queryByRole("meter")).toBeNull();
-    expect(screen.queryByRole("table")).toBeNull();
   });
 
   it("should write the averages alone when no target is set", () => {

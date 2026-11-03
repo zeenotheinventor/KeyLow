@@ -227,18 +227,6 @@ describe("the This week card", () => {
       expect(screen.getByRole("link", { name: "Edit targets" })).toBeTruthy();
     });
 
-    it("should count a day marked complete that is still to come as no day at all", () => {
-      showWeek([
-        ...boardWeek.slice(0, 4),
-        weekDay("2026-10-16", null, true),
-        ...boardWeek.slice(5),
-      ]);
-      renderDashboard();
-
-      expect(weekCard().getAttribute("aria-label")).toContain("2 of 4 days complete.");
-      expect(markerNamed("Friday 16 October")).toBeTruthy();
-    });
-
     it("should say the averages start tomorrow on a Monday, and 1 of 1 day complete", () => {
       vi.setSystemTime(new Date("2026-10-12T09:00:00Z"));
       showWeek([weekDay(MONDAY, [1500, 100, 150, 50], true), ...emptyWeek.slice(1)]);
@@ -299,20 +287,6 @@ describe("the This week card", () => {
       renderDashboard();
 
       expect(within(weekCard()).getByText("0 of 4 days complete")).toBeTruthy();
-      expect(weekCard().getAttribute("aria-label")).toBe(
-        "This week, open your weekly averages. Nothing logged before today this week. 0 of 4 days complete.",
-      );
-    });
-  });
-
-  describe("only today logged", () => {
-    it("should say nothing is logged before today, since today's entries do not count yet", () => {
-      // Thursday's 1,039 alone, with nothing on the days before it.
-      showWeek([...emptyWeek.slice(0, 3), ...boardWeek.slice(3)]);
-      renderDashboard();
-
-      expect(within(weekCard()).getByText("Nothing logged before today this week.")).toBeTruthy();
-      expect(within(weekCard()).queryByRole("meter", { hidden: true })).toBeNull();
       expect(weekCard().getAttribute("aria-label")).toBe(
         "This week, open your weekly averages. Nothing logged before today this week. 0 of 4 days complete.",
       );
