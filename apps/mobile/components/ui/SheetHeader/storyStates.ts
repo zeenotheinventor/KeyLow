@@ -1,5 +1,6 @@
 export const storyStates = [
   "Search",
+  "Quiet",
   "Detail",
   "Form",
   "Scanner",

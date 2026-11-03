@@ -1,5 +1,6 @@
 export { ChipGroup } from "./ChipGroup";
 export type {
+  ChipGroupActionProps,
   ChipGroupClearableProps,
   ChipGroupLayout,
   ChipGroupMultipleProps,

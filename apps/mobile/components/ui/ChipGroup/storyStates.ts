@@ -8,4 +8,5 @@ export const storyStates = [
   "MultipleTwoChosen",
   "EqualColumnsRir",
   "ClearableRir",
+  "QuickReplies",
 ];
