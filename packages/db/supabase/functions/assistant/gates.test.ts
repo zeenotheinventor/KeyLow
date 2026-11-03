@@ -1,8 +1,10 @@
 import { assertEquals, assertRejects } from "@std/assert";
 
-import { checkAccess } from "./gates.ts";
+import { checkAccess, createAccessStore } from "./gates.ts";
 
+import type { Database } from "../_shared/core/database.types.ts";
 import type { AccessStore } from "./gates.ts";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 const userId = "00000000-0000-4000-8000-0000000000a1";
 const midnightEve = new Date("2026-10-25T23:59:00Z");
@@ -236,4 +238,151 @@ Deno.test("a malformed cap fails before the daily gate consumes a turn", async (
       assertEquals(fake.consumed, []);
     },
   );
+});
+
+type Answer = {
+  data?: unknown;
+  count?: number | null;
+  error: { message: string; code?: string } | null;
+  status: number;
+};
+
+const ok = (data: unknown, count: number | null = null): Answer => ({
+  data,
+  count,
+  error: null,
+  status: 200,
+});
+// What supabase-js hands back: a Kong 502 has no PostgREST code, and a connection error has status 0.
+const badGateway: Answer = { error: { message: "bad gateway" }, status: 502 };
+const unavailable: Answer = { error: { message: "unavailable" }, status: 503 };
+const connectionError: Answer = {
+  error: { message: "TypeError: fetch failed", code: "" },
+  status: 0,
+};
+const serverError: Answer = { error: { message: "boom", code: "XX000" }, status: 500 };
+
+// Answers each call of a query from a script, in order, and records which queries were made.
+function scriptedClient(script: Record<string, Answer[]>) {
+  const calls: string[] = [];
+  const builderFor = (name: string) => {
+    const answer = () => {
+      calls.push(name);
+      const next = script[name]?.shift();
+      if (next === undefined) {
+        throw new Error(`no scripted answer for ${name}`);
+      }
+      return next;
+    };
+    const builder = {
+      select: () => builder,
+      eq: () => builder,
+      gte: () => builder,
+      single: () => Promise.resolve(answer()),
+      maybeSingle: () => Promise.resolve(answer()),
+      then: (resolve: (value: Answer) => unknown) => resolve(answer()),
+    };
+    return builder;
+  };
+  // The fake answers only the calls the access store makes, so it stands in for the whole client type.
+  const client = {
+    from: (table: string) => builderFor(`from:${table}`),
+    rpc: (name: string) => builderFor(`rpc:${name}`),
+  } as unknown as SupabaseClient<Database>;
+  return { store: createAccessStore(client), calls };
+}
+
+const retriedReads = [
+  {
+    name: "hasConsented",
+    query: "from:profiles",
+    answer: ok({ assistant_consent_at: "2026-10-01T00:00:00Z" }),
+    read: (store: AccessStore) => store.hasConsented(userId),
+    result: true,
+  },
+  {
+    name: "hasEntitlement",
+    query: "rpc:has_entitlement",
+    answer: ok(true),
+    read: (store: AccessStore) => store.hasEntitlement(userId),
+    result: true,
+  },
+  {
+    name: "dailyTurns",
+    query: "rpc:assistant_access",
+    answer: ok({ daily_turns: 15 }),
+    read: (store: AccessStore) => store.dailyTurns(userId),
+    result: 15,
+  },
+  {
+    name: "turnsStartedSince",
+    query: "from:assistant_turns",
+    answer: ok(null, 3),
+    read: (store: AccessStore) => store.turnsStartedSince(userId, midnightEve),
+    result: 3,
+  },
+  {
+    name: "spendThisMonth",
+    query: "rpc:assistant_spend_this_month",
+    answer: ok(250),
+    read: (store: AccessStore) => store.spendThisMonth(),
+    result: 250,
+  },
+];
+
+Deno.test(
+  "every idempotent read retries once after a 502, and answers the second try",
+  async () => {
+    for (const { name, query, answer, read, result } of retriedReads) {
+      const { store, calls } = scriptedClient({ [query]: [badGateway, answer] });
+
+      assertEquals(await read(store), result, name);
+      assertEquals(calls, [query, query], name);
+    }
+  },
+);
+
+Deno.test("a read also retries after a 503 or a connection error", async () => {
+  for (const first of [unavailable, connectionError]) {
+    const query = "rpc:assistant_spend_this_month";
+    const { store, calls } = scriptedClient({ [query]: [first, ok(250)] });
+
+    assertEquals(await store.spendThisMonth(), 250);
+    assertEquals(calls.length, 2);
+  }
+});
+
+Deno.test(
+  "a read that fails twice throws after one retry, with the status and no message",
+  async () => {
+    for (const { name, query, read } of retriedReads) {
+      const { store, calls } = scriptedClient({ [query]: [badGateway, badGateway] });
+
+      await assertRejects(() => read(store), Error, "502");
+      assertEquals(calls, [query, query], name);
+    }
+  },
+);
+
+Deno.test("a read that fails for any other reason is not retried", async () => {
+  const query = "rpc:assistant_spend_this_month";
+  for (const failed of [
+    serverError,
+    { error: { message: "denied", code: "42501" }, status: 403 },
+  ]) {
+    const { store, calls } = scriptedClient({ [query]: [failed, ok(250)] });
+
+    await assertRejects(() => store.spendThisMonth());
+    assertEquals(calls, [query]);
+  }
+});
+
+Deno.test("consumeTurn is a write that adds a hit, so it is never retried", async () => {
+  const query = "rpc:consume_rate_limit";
+  for (const failed of [badGateway, unavailable, connectionError]) {
+    const { store, calls } = scriptedClient({ [query]: [failed, ok({ allowed: true })] });
+
+    await assertRejects(() => store.consumeTurn(userId, 15));
+    assertEquals(calls, [query]);
+  }
 });

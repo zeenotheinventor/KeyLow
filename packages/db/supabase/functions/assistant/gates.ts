@@ -86,8 +86,28 @@ function firstOfNextMonth(now: Date): string {
     .slice(0, 10);
 }
 
-function failure(operation: string, error: { code?: string } | null): Error {
-  return new Error(`assistant access ${operation} failed ${error?.code ?? "unknown"}`);
+// The code PostgREST sent, or the HTTP status when there is none, as a gateway error has no code.
+function failure(operation: string, error: { code?: string } | null, status?: number): Error {
+  return new Error(
+    `assistant access ${operation} failed ${error?.code || (status ? status : "unknown")}`,
+  );
+}
+
+// Status 0 is a connection error, 502 and 503 are the gateway or PostgREST not answering. Kong can
+// reuse a kept-alive connection that PostgREST has just closed, which answers 502 once. supabase-js
+// retries GET reads on 503 and 520 itself, but never a 502 and never an rpc call, which is a POST.
+const retriedStatuses = [0, 502, 503];
+
+// Runs a read again once when it failed in a way that says nothing about the data. Only reads go
+// through this: `consumeTurn` adds a hit, so repeating it could count a turn twice.
+async function readWithOneRetry<Answer extends { error: unknown; status: number }>(
+  read: () => PromiseLike<Answer>,
+): Promise<Answer> {
+  const first = await read();
+  if (first.error !== null && retriedStatuses.includes(first.status)) {
+    return await read();
+  }
+  return first;
 }
 
 // The service client reads what the caller cannot: `assistant_access` and `has_entitlement` are
@@ -96,32 +116,31 @@ function failure(operation: string, error: { code?: string } | null): Error {
 export function createAccessStore(client: SupabaseClient<Database>): AccessStore {
   return {
     async hasConsented(userId) {
-      const { data, error } = await client
-        .from("profiles")
-        .select("assistant_consent_at")
-        .eq("id", userId)
-        .maybeSingle();
+      const { data, error, status } = await readWithOneRetry(() =>
+        client.from("profiles").select("assistant_consent_at").eq("id", userId).maybeSingle(),
+      );
       if (error !== null) {
-        throw failure("read consent", error);
+        throw failure("read consent", error, status);
       }
       return data?.assistant_consent_at != null;
     },
 
     async hasEntitlement(userId) {
-      const { data, error } = await client.rpc("has_entitlement", {
-        p_user_id: userId,
-        p_feature: "assistant",
-      });
+      const { data, error, status } = await readWithOneRetry(() =>
+        client.rpc("has_entitlement", { p_user_id: userId, p_feature: "assistant" }),
+      );
       if (error !== null) {
-        throw failure("read entitlement", error);
+        throw failure("read entitlement", error, status);
       }
       return data;
     },
 
     async dailyTurns(userId) {
-      const { data, error } = await client.rpc("assistant_access", { p_user_id: userId }).single();
+      const { data, error, status } = await readWithOneRetry(() =>
+        client.rpc("assistant_access", { p_user_id: userId }).single(),
+      );
       if (error !== null) {
-        throw failure("read access", error);
+        throw failure("read access", error, status);
       }
       // The generated type says number, but the unlimited plan returns null.
       const dailyTurns: number | null = data.daily_turns;
@@ -148,21 +167,25 @@ export function createAccessStore(client: SupabaseClient<Database>): AccessStore
     // count. A deleted conversation cascades its turns away, which leaves the count behind. The `turn`
     // route stays authoritative: it consumes from the bucket itself.
     async turnsStartedSince(userId, since) {
-      const { count, error } = await client
-        .from("assistant_turns")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", userId)
-        .gte("created_at", since.toISOString());
+      const { count, error, status } = await readWithOneRetry(() =>
+        client
+          .from("assistant_turns")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", userId)
+          .gte("created_at", since.toISOString()),
+      );
       if (error !== null) {
-        throw failure("count turns", error);
+        throw failure("count turns", error, status);
       }
       return count ?? 0;
     },
 
     async spendThisMonth() {
-      const { data, error } = await client.rpc("assistant_spend_this_month");
+      const { data, error, status } = await readWithOneRetry(() =>
+        client.rpc("assistant_spend_this_month"),
+      );
       if (error !== null) {
-        throw failure("read spend", error);
+        throw failure("read spend", error, status);
       }
       return Number(data);
     },
