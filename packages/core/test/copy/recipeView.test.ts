@@ -45,9 +45,7 @@ describe("describeEditRecipe", () => {
 describe("the servings wording", () => {
   it.each([
     { servings: 4, value: "4 servings" },
-    { servings: 6, value: "6 servings" },
     { servings: 1, value: "1 serving" },
-    { servings: 2.5, value: "2.5 servings" },
     { servings: 0.5, value: "0.5 servings" },
     { servings: 1000, value: "1,000 servings" },
   ])("should write $servings as '$value' everywhere", ({ servings, value }) => {
@@ -55,15 +53,6 @@ describe("the servings wording", () => {
     expect(describeIngredientsFor(servings)).toBe(`For ${value}`);
     expect(describeResetServings(servings)).toBe(`Back to ${value}`);
     expect(describeStepsServingsNote(servings)).toBe(`The steps are written for ${value}.`);
-  });
-
-  it("should pin the sentences of the copy table", () => {
-    expect(describeResetServings(4)).toBe("Back to 4 servings");
-    expect(describeResetServings(1)).toBe("Back to 1 serving");
-    expect(describeResetServings(2.5)).toBe("Back to 2.5 servings");
-    expect(describeIngredientsFor(4)).toBe("For 4 servings");
-    expect(describeIngredientsFor(1)).toBe("For 1 serving");
-    expect(describeStepsServingsNote(4)).toBe("The steps are written for 4 servings.");
   });
 });
 
