@@ -1,7 +1,8 @@
 import { act, cleanup, screen, waitFor, within } from "@testing-library/react-native";
 import { setUpTests } from "react-native-reanimated";
 
-import { ONLY_THE_DATE, SHEET_NOW, renderWeighInSheet } from "../support/weighInSheetHarness";
+import { installVirtualClock } from "../support/virtualClock";
+import { SHEET_NOW, renderWeighInSheet } from "../support/weighInSheetHarness";
 import {
   createWeightQueryClient,
   resetWeightBackend,
@@ -30,16 +31,16 @@ const saveButton = () => screen.getByRole("button", { name: /^Sav/ });
 
 describe("the weigh-in sheet, date and time", () => {
   beforeEach(() => {
-    jest.useFakeTimers({ now: SHEET_NOW, doNotFake: [...ONLY_THE_DATE] });
+    installVirtualClock({ now: SHEET_NOW });
     resetWeightBackend();
     queryClient = createWeightQueryClient();
   });
 
   afterEach(async () => {
-    jest.useRealTimers();
     jest.restoreAllMocks();
     await cleanup();
     queryClient.clear();
+    jest.useRealTimers();
   });
 
   async function typeWeight(user: Awaited<ReturnType<typeof renderSheet>>["user"], text: string) {

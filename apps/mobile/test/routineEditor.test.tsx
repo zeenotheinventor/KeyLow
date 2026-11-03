@@ -27,6 +27,7 @@ import { resetRouterMock, routerMock } from "./support/expoRouterMock";
 import { compileKitStyles } from "./support/kitStyles";
 import { registerAppStyles } from "./support/nativeWindStyles";
 import { pushPullLegsDraft } from "./support/routineEditorFixtures";
+import { installVirtualClock } from "./support/virtualClock";
 
 import type { RoutineDraft } from "@keylow/core/training";
 
@@ -98,6 +99,7 @@ describe("the routine editor", () => {
   });
 
   beforeEach(() => {
+    installVirtualClock();
     registerAppStyles(kitStyles);
     resetRouterMock();
     mockHold.isHeld = false;
@@ -106,6 +108,7 @@ describe("the routine editor", () => {
   afterEach(async () => {
     await cleanup();
     jest.restoreAllMocks();
+    jest.useRealTimers();
   });
 
   describe("a saved routine", () => {

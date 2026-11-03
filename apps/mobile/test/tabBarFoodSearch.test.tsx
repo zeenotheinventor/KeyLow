@@ -15,6 +15,7 @@ import {
 } from "./foods/support/apiClientMock";
 import { compileKitStyles } from "./support/kitStyles";
 import { registerAppStyles } from "./support/nativeWindStyles";
+import { installVirtualClock } from "./support/virtualClock";
 
 jest.mock("@react-native-async-storage/async-storage", () => ({
   __esModule: true,
@@ -94,24 +95,8 @@ async function renderApp(location: string) {
   await render(<ExpoRoot context={getMockContext(routes)} location={location} />);
 }
 
-// 12:40 on Thursday 15 October 2026 in London. Only the clock is faked: the router answers in real time.
+// 12:40 on Thursday 15 October 2026 in London.
 const NOW = new Date("2026-10-15T11:40:30Z");
-const realTimers = [
-  "hrtime",
-  "nextTick",
-  "performance",
-  "queueMicrotask",
-  "requestAnimationFrame",
-  "cancelAnimationFrame",
-  "requestIdleCallback",
-  "cancelIdleCallback",
-  "setImmediate",
-  "clearImmediate",
-  "setInterval",
-  "clearInterval",
-  "setTimeout",
-  "clearTimeout",
-] as const;
 
 // What the read of the profile's time zone says. A test changes it to let the zone arrive while the bar is up.
 type ZoneRead = { data: string | null | undefined; isPending: boolean; isError: boolean };
@@ -156,7 +141,7 @@ describe("the tab bar's routes into food search", () => {
   });
 
   beforeEach(() => {
-    jest.useFakeTimers({ now: NOW, doNotFake: [...realTimers] });
+    installVirtualClock({ now: NOW });
     diaryReportsItsDay = true;
     registerAppStyles(kitStyles);
     resetApiClientMock();

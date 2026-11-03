@@ -29,6 +29,7 @@ import {
   signInProgramEditClient,
 } from "./support/programEditBackend";
 import { pressTwiceInTheSameMoment } from "./support/sameTickPress";
+import { installVirtualClock } from "./support/virtualClock";
 
 import type * as ApiClientModule from "@keylow/api-client";
 import type { EditProgramInput } from "@keylow/api-client";
@@ -65,24 +66,6 @@ jest.mock(
   () =>
     jest.requireActual<{ default: unknown }>("react-native-safe-area-context/jest/mock").default,
 );
-
-// Moves the date the screen reads to the day a test names and leaves every timer running.
-const ONLY_THE_DATE = [
-  "hrtime",
-  "nextTick",
-  "performance",
-  "queueMicrotask",
-  "requestAnimationFrame",
-  "cancelAnimationFrame",
-  "requestIdleCallback",
-  "cancelIdleCallback",
-  "setImmediate",
-  "clearImmediate",
-  "setInterval",
-  "clearInterval",
-  "setTimeout",
-  "clearTimeout",
-] as const;
 
 const FRIDAY_23_OCTOBER = "2026-10-23T09:00:00Z";
 const ADULT_BIRTH_DATE = "1991-03-14";
@@ -200,15 +183,15 @@ describe("the Edit programme screen", () => {
         },
       };
     });
-    jest.useFakeTimers({ now: new Date(FRIDAY_23_OCTOBER), doNotFake: [...ONLY_THE_DATE] });
+    installVirtualClock({ now: new Date(FRIDAY_23_OCTOBER) });
     await signInProgramEditClient();
   });
 
   afterEach(async () => {
-    jest.useRealTimers();
     jest.restoreAllMocks();
     await cleanup();
     queryClient.clear();
+    jest.useRealTimers();
   });
 
   describe("while it reads", () => {
@@ -551,9 +534,7 @@ describe("the Edit programme screen", () => {
 
       await renderEditProgramme();
       // Lets any read that was wrongly started reach the fake database.
-      await act(async () => {
-        await new Promise((resolve) => setTimeout(resolve, 0));
-      });
+      await act(() => jest.advanceTimersByTimeAsync(0));
 
       expect(screen.getByRole("status", { name: "Loading your programme" })).toBeOnTheScreen();
       expect(
@@ -721,9 +702,7 @@ describe("the Edit programme screen", () => {
 
       await cleanup();
       await release();
-      await act(async () => {
-        await new Promise((resolve) => setTimeout(resolve, 0));
-      });
+      await act(() => jest.advanceTimersByTimeAsync(0));
 
       expect(programEditBackend.programWrites).toHaveLength(1);
       expect(routerMock.back).not.toHaveBeenCalled();

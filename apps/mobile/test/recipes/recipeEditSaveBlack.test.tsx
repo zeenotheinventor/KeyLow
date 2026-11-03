@@ -29,6 +29,7 @@ import {
   requestsTo,
   resetDiaryBackend,
 } from "../support/diaryBackend";
+import { installVirtualClock } from "../support/virtualClock";
 
 import type { RecipeViewRecipe } from "../../components/RecipeView";
 import type { FoodSearchResult, FoodWithPortionsState } from "@keylow/api-client";
@@ -206,6 +207,7 @@ const pathOf = () => {
 
 describe("saving an edited recipe", () => {
   beforeEach(() => {
+    installVirtualClock();
     resetDiaryBackend();
     queryClient = createDiaryQueryClient();
     diaryBackend.recipes = [recipeRowOf(chickenAndRiceRecipe)];
@@ -217,6 +219,7 @@ describe("saving an edited recipe", () => {
       onlineManager.setOnline(true);
     });
     queryClient.clear();
+    jest.useRealTimers();
   });
 
   async function openEditorFromLibrary() {
@@ -320,6 +323,7 @@ async function addOnions(user: Awaited<ReturnType<typeof walkFrom>>) {
 
 describe("every way into the editor of a saved recipe", () => {
   beforeEach(() => {
+    installVirtualClock();
     resetDiaryBackend();
     queryClient = createDiaryQueryClient();
   });
@@ -330,6 +334,7 @@ describe("every way into the editor of a saved recipe", () => {
       onlineManager.setOnline(true);
     });
     queryClient.clear();
+    jest.useRealTimers();
   });
 
   it("new recipe, Save, Edit, add, Save: back on the view, then the library", async () => {

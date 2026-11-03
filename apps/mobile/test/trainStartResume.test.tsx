@@ -33,6 +33,7 @@ import {
   trainWrites,
   trainWritesClient,
 } from "./support/trainWritesBackend";
+import { installVirtualClock } from "./support/virtualClock";
 
 import type { QueryClient } from "@tanstack/react-query";
 
@@ -71,24 +72,6 @@ async function renderRoute() {
   );
 }
 
-// Moves the date a start reads at the press to the golden Thursday and leaves every timer running.
-const ONLY_THE_DATE = [
-  "hrtime",
-  "nextTick",
-  "performance",
-  "queueMicrotask",
-  "requestAnimationFrame",
-  "cancelAnimationFrame",
-  "requestIdleCallback",
-  "cancelIdleCallback",
-  "setImmediate",
-  "clearImmediate",
-  "setInterval",
-  "clearInterval",
-  "setTimeout",
-  "clearTimeout",
-] as const;
-
 const goOffline = () =>
   act(() => {
     onlineManager.setOnline(false);
@@ -111,17 +94,17 @@ describe("starting, resuming and logging a session from the Train tab", () => {
     resetTrainBackend();
     resetTrainWrites();
     mockNow = new Date("2026-10-15T16:55:00Z");
-    jest.useFakeTimers({ now: mockNow, doNotFake: [...ONLY_THE_DATE] });
+    installVirtualClock({ now: mockNow });
   });
 
   afterEach(async () => {
-    jest.useRealTimers();
     jest.restoreAllMocks();
     await cleanup();
     await act(() => {
       onlineManager.setOnline(true);
     });
     queryClient.clear();
+    jest.useRealTimers();
   });
 
   describe("on the golden Thursday before Legs", () => {
@@ -211,6 +194,8 @@ describe("starting, resuming and logging a session from the Train tab", () => {
       await waitFor(() => {
         expect(routerMock.push).toHaveBeenCalledTimes(1);
       });
+      // React Query tells the screen on a zero-delay timer, so let that tick run on the fake clock.
+      await act(() => jest.advanceTimersByTimeAsync(0));
       expect(
         screen.queryByRole("button", { name: /Start Legs/, busy: true }),
       ).not.toBeOnTheScreen();

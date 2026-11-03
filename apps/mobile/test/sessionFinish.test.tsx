@@ -34,6 +34,7 @@ import {
   snapshotOf,
 } from "./support/sessionGoldenLegs";
 import { resetTrainBackend, trainBackend } from "./support/trainBackend";
+import { installVirtualClock } from "./support/virtualClock";
 
 import type { SessionScreenProps } from "../components/SessionScreen";
 import type { QueryClient } from "@tanstack/react-query";
@@ -132,6 +133,7 @@ describe("finishing a session", () => {
   });
 
   beforeEach(() => {
+    installVirtualClock();
     registerAppStyles(kitStyles);
     resetTrainBackend();
     resetFinishWrites();
@@ -145,6 +147,7 @@ describe("finishing a session", () => {
       onlineManager.setOnline(true);
     });
     queryClient.clear();
+    jest.useRealTimers();
   });
 
   describe("the Finish button", () => {
