@@ -4,6 +4,7 @@ import { join } from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import { canvasSets } from "../src/canvasSets.ts";
 import { checkBoards } from "../src/checkBoards.ts";
 
 const canvas = {
@@ -103,5 +104,65 @@ describe("checkBoards", () => {
     write("tokens/kilo-tokens.css");
     write("README.md");
     expect(checkBoards(directory)).toMatchObject({ missing: [], extra: [] });
+  });
+});
+
+describe("checkBoards with the widgets canvas set", () => {
+  const widgetCanvas = {
+    order: ["Main.dc.html", "QuickLog.dc.html", "States.dc.html"],
+    boards: {
+      "Main.dc.html": { x: 0, y: 0, w: 1280, h: 980, title: "a" },
+      "QuickLog.dc.html": { x: 1360, y: 0, w: 1280, h: 980, title: "b" },
+      "States.dc.html": { x: 0, y: 1100, w: 1280, h: 1180, title: "c" },
+    },
+    notes: {},
+  };
+
+  function writeBothExports(): void {
+    writeCompleteExport();
+    write("source-widgets/project/canvas.json", JSON.stringify(widgetCanvas));
+    for (const file of widgetCanvas.order) {
+      write(`source-widgets/project/${file}`);
+    }
+    for (const state of ["dashboard", "quick-log"]) {
+      write(`widgets/${state}.png`);
+      write(`widgets/${state}.html`);
+    }
+    write("widgets/README.md");
+  }
+
+  it("should count the boards and screens of both canvases and leave out a board the names omit", () => {
+    writeBothExports();
+    expect(checkBoards(directory, canvasSets)).toEqual({
+      boardCount: 4,
+      screenCount: 2,
+      missing: [],
+      extra: [],
+    });
+  });
+
+  it("should list a widgets image that is missing", () => {
+    writeBothExports();
+    rmSync(join(directory, "widgets/quick-log.png"));
+    expect(checkBoards(directory, canvasSets).missing).toEqual(["widgets/quick-log.png"]);
+  });
+
+  it("should list a verbatim widgets source file that is missing, including the board that is not exported", () => {
+    writeBothExports();
+    rmSync(join(directory, "source-widgets/project/States.dc.html"));
+    expect(checkBoards(directory, canvasSets).missing).toEqual([
+      "source-widgets/project/States.dc.html",
+    ]);
+  });
+
+  it("should list an exported image for the board that is not exported", () => {
+    writeBothExports();
+    write("widgets/states.png");
+    expect(checkBoards(directory, canvasSets).extra).toEqual(["widgets/states.png"]);
+  });
+
+  it("should not take the widgets source folder for a screen", () => {
+    writeBothExports();
+    expect(checkBoards(directory, canvasSets).extra).toEqual([]);
   });
 });

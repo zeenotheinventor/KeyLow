@@ -6,6 +6,7 @@ import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { listBoards, parseCanvas } from "../src/boards.ts";
+import { canvasSets, widgetsCanvasSet } from "../src/canvasSets.ts";
 import { checkBoards } from "../src/checkBoards.ts";
 import { extractProposals } from "../src/proposals.ts";
 import { deviceScaleFactor } from "../src/renderBoard.ts";
@@ -17,6 +18,10 @@ const canvas = parseCanvas(
   JSON.parse(readFileSync(join(designDirectory, "source/project/canvas.json"), "utf8")),
 );
 const boards = listBoards(canvas);
+const widgetCanvas = parseCanvas(
+  JSON.parse(readFileSync(join(designDirectory, "source-widgets/project/canvas.json"), "utf8")),
+);
+const widgetBoards = listBoards(widgetCanvas, widgetsCanvasSet.boardNames);
 
 // These two boards are the Ki-Lo mark on a plain background, with a line of text on the second.
 // They use no design system component.
@@ -36,9 +41,9 @@ function listFilesBelow(directory: string): string[] {
 
 describe("the committed design export", () => {
   it("should have a PNG, an HTML page and a README for every board in canvas.json and nothing else", () => {
-    expect(checkBoards(designDirectory)).toEqual({
-      boardCount: 115,
-      screenCount: 9,
+    expect(checkBoards(designDirectory, canvasSets)).toEqual({
+      boardCount: 118,
+      screenCount: 10,
       missing: [],
       extra: [],
     });
@@ -63,14 +68,66 @@ describe("the committed design export", () => {
     },
   );
 
-  it.each(boards.map((board) => [`${board.slug}/${board.state}`, board] as const))(
-    "%s should be listed in its screen README with its image",
-    (_name, board) => {
-      const readme = readFileSync(join(designDirectory, board.slug, "README.md"), "utf8");
-      expect(readme).toContain(`![${board.slug} ${board.state}](${board.state}.png)`);
-      expect(readme).toContain(`[${board.state}.html](${board.state}.html)`);
+  it.each(
+    [...boards, ...widgetBoards].map((board) => [`${board.slug}/${board.state}`, board] as const),
+  )("%s should be listed in its screen README with its image", (_name, board) => {
+    const readme = readFileSync(join(designDirectory, board.slug, "README.md"), "utf8");
+    expect(readme).toContain(`![${board.slug} ${board.state}](${board.state}.png)`);
+    expect(readme).toContain(`[${board.state}.html](${board.state}.html)`);
+  });
+
+  it("should export the widget boards A, B and C and not board D", () => {
+    expect(widgetBoards.map((board) => `${board.slug}/${board.state}`)).toEqual([
+      "widgets/dashboard",
+      "widgets/quick-log",
+      "widgets/lock-screen",
+    ]);
+  });
+
+  it.each(widgetBoards.map((board) => [`${board.slug}/${board.state}`, board] as const))(
+    "%s should be a PNG of the board size at the export scale",
+    (name, board) => {
+      expect(pngSize(join(designDirectory, `${name}.png`))).toEqual({
+        width: board.width * deviceScaleFactor,
+        height: board.height * deviceScaleFactor,
+      });
     },
   );
+
+  it.each(widgetBoards.map((board) => `${board.slug}/${board.state}`))(
+    "%s should be a static page with no runtime or network trace and no token stylesheet",
+    (name) => {
+      const html = readFileSync(join(designDirectory, `${name}.html`), "utf8");
+      expect(findPageProblems(html, { requiresTokens: false })).toEqual([]);
+      expect(html).not.toContain("kilo-tokens.css");
+    },
+  );
+
+  it("should name every widget frame in the widgets README", () => {
+    const readme = readFileSync(join(designDirectory, "widgets/README.md"), "utf8");
+    for (const frame of [
+      "Today ring",
+      "Today with macros",
+      "This week",
+      "Body heat",
+      "Today at a glance",
+      "Body map",
+      "Light appearance",
+      "Log grid",
+      "Today plus logging",
+      "Log again",
+      "Weigh in",
+      "Start training",
+      "Log a set",
+      "Circular rings",
+      "Rectangular",
+      "Inline",
+      "Live activity",
+      "Dynamic Island",
+    ]) {
+      expect(readme).toContain(frame);
+    }
+  });
 
   it("should link the packages/tokens stylesheet that exists, from every page", () => {
     const stylesheet = join(repositoryRoot, "packages/tokens/css/kilo-tokens.css");

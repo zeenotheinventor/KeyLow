@@ -11,6 +11,10 @@ export type ScreenReadmeInput = {
   boards: readonly Board[];
   pageTitles: ReadonlyMap<string, string>;
   notes: readonly string[];
+  // The canvas source folder under docs/design. Defaults to the M2 canvas.
+  sourceFolder?: string;
+  // Replaces the sentence about the frames of a mobile or web board.
+  layoutNote?: string;
 };
 
 function quote(text: string): string {
@@ -20,11 +24,12 @@ function quote(text: string): string {
     .join("\n");
 }
 
-function renderBoard(board: Board, pageTitle: string): string {
+function renderBoard(board: Board, pageTitle: string, input: ScreenReadmeInput): string {
   const layoutNote =
-    board.layout === "mobile"
+    input.layoutNote ??
+    (board.layout === "mobile"
       ? "Dark on the left, light on the right."
-      : "1280 dark, 1280 light, 375 dark, 375 light, from left to right.";
+      : "1280 dark, 1280 light, 375 dark, 375 light, from left to right.");
   return [
     `### ${board.state}`,
     "",
@@ -32,7 +37,7 @@ function renderBoard(board: Board, pageTitle: string): string {
     "",
     `![${board.slug} ${board.state}](${board.state}.png)`,
     "",
-    `Open [${board.state}.html](${board.state}.html) in a browser, or read the source [${board.fileName}](../source/project/${board.fileName}).`,
+    `Open [${board.state}.html](${board.state}.html) in a browser, or read the source [${board.fileName}](../${input.sourceFolder ?? "source"}/project/${board.fileName}).`,
   ].join("\n");
 }
 
@@ -49,7 +54,7 @@ function renderBoardsSection(input: ScreenReadmeInput): string {
     "## Boards",
     "",
     ...input.boards.flatMap((board) => [
-      renderBoard(board, input.pageTitles.get(board.fileName) ?? board.canvasTitle),
+      renderBoard(board, input.pageTitles.get(board.fileName) ?? board.canvasTitle, input),
       "",
     ]),
     boardsEnd,

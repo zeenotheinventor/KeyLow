@@ -4,8 +4,9 @@ import { proposalsStylesheetHref, tokensStylesheetHref } from "./assets.ts";
 export type StaticPageInput = {
   lang: string;
   title: string;
-  tokensHref: string;
-  proposalsHref: string;
+  // Both left out for a canvas that does not use the Ki-Lo tokens.
+  tokensHref?: string;
+  proposalsHref?: string;
   fontsHref: string;
   styles: readonly string[];
   boardHtml: string;
@@ -35,8 +36,9 @@ export function buildStaticPage(input: StaticPageInput): string {
     "<head>",
     '<meta charset="utf-8">',
     `<title>${escapeText(input.title)}</title>`,
-    `<link rel="stylesheet" href="${input.tokensHref}">`,
-    `<link rel="stylesheet" href="${input.proposalsHref}">`,
+    ...[input.tokensHref, input.proposalsHref]
+      .filter((href) => href !== undefined)
+      .map((href) => `<link rel="stylesheet" href="${href}">`),
     `<link rel="stylesheet" href="${escapeText(input.fontsHref)}">`,
     ...styleBlocks,
     "</head>",
@@ -52,7 +54,15 @@ export function buildStaticPage(input: StaticPageInput): string {
 const fetchingUrlPattern =
   /<(?:img|source|video|audio|iframe|embed|script|link)\b[^>]*?\b(?:src|href)="(https?:\/\/[^"]+)"/g;
 
-export function findPageProblems(html: string): string[] {
+export type PageCheckOptions = {
+  // False for a canvas that does not use the Ki-Lo tokens, such as the widget boards.
+  requiresTokens: boolean;
+};
+
+export function findPageProblems(
+  html: string,
+  options: PageCheckOptions = { requiresTokens: true },
+): string[] {
   const problems: string[] = [];
   if (html.includes("<script")) {
     problems.push("contains a script tag");
@@ -72,14 +82,16 @@ export function findPageProblems(html: string): string[] {
       problems.push(`requests ${url}`);
     }
   }
-  if (!html.includes("var(--")) {
-    problems.push("uses no design token (var(--...))");
-  }
-  if (!html.includes(`href="${tokensStylesheetHref}"`)) {
-    problems.push(`does not link ${tokensStylesheetHref}`);
-  }
-  if (!html.includes(`href="${proposalsStylesheetHref}"`)) {
-    problems.push(`does not link ${proposalsStylesheetHref}`);
+  if (options.requiresTokens) {
+    if (!html.includes("var(--")) {
+      problems.push("uses no design token (var(--...))");
+    }
+    if (!html.includes(`href="${tokensStylesheetHref}"`)) {
+      problems.push(`does not link ${tokensStylesheetHref}`);
+    }
+    if (!html.includes(`href="${proposalsStylesheetHref}"`)) {
+      problems.push(`does not link ${proposalsStylesheetHref}`);
+    }
   }
   if (html.includes('href="../tokens/kilo-tokens.css"')) {
     problems.push("links the retired docs/design/tokens/kilo-tokens.css");

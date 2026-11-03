@@ -70,6 +70,37 @@ describe("listBoards", () => {
   });
 });
 
+describe("listBoards with explicit board names", () => {
+  const widgetCanvas = parseCanvas({
+    order: ["Main.dc.html", "QuickLog.dc.html", "States.dc.html"],
+    boards: {
+      "Main.dc.html": board(0, 0, 1280, 980),
+      "QuickLog.dc.html": board(1360, 0, 1280, 980),
+      "States.dc.html": board(0, 1100, 1280, 1180),
+    },
+    notes: {},
+  });
+  const boards = listBoards(widgetCanvas, {
+    "Main.dc.html": { slug: "widgets", state: "dashboard" },
+    "QuickLog.dc.html": { slug: "widgets", state: "quick-log" },
+  });
+
+  it("should name each listed board from the given names", () => {
+    expect(boards.map((entry) => [entry.fileName, entry.slug, entry.state])).toEqual([
+      ["Main.dc.html", "widgets", "dashboard"],
+      ["QuickLog.dc.html", "widgets", "quick-log"],
+    ]);
+  });
+
+  it("should leave out a board the names do not list", () => {
+    expect(boards.map((entry) => entry.fileName)).not.toContain("States.dc.html");
+  });
+
+  it("should classify a board that is not 820 wide as web", () => {
+    expect(boards[0]?.layout).toBe("web");
+  });
+});
+
 describe("listScreens", () => {
   it("should list each slug once in canvas order", () => {
     expect(listScreens(listBoards(parseCanvas(canvasJson)))).toEqual(["food-search", "web"]);

@@ -67,7 +67,9 @@ function serialiseBoard(): SerialisedBoard {
       element.removeAttribute("class");
     }
   });
-  const fonts = document.head.querySelector('link[href^="https://fonts.googleapis.com"]');
+  const fonts = document.head.querySelector(
+    'link[rel="stylesheet"][href^="https://fonts.googleapis.com"]',
+  );
   const styles = [...document.head.querySelectorAll("style[data-dc-tpl]")]
     .map((style) => style.textContent.trim())
     .filter((text, index, all) => all.indexOf(text) === index);
