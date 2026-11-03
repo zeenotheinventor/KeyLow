@@ -15,6 +15,7 @@ import {
   setupClient,
   signInSetupClient,
 } from "../../support/setupBackend";
+import { installVirtualClock } from "../../support/virtualClock";
 
 import type { SetupMode } from "../../../components/SetupScreen";
 import type { QueryClient } from "@tanstack/react-query";
@@ -26,24 +27,6 @@ import type { QueryClient } from "@tanstack/react-query";
 // The region the device reports, which the units of the body step start from when the profile has none.
 // Each test file's expo-localization mock reads it, so a test can change it.
 export const deviceRegion: { current: string | null } = { current: "GB" };
-
-// Moves the date the screen reads to the canvas's day and leaves every timer running.
-const ONLY_THE_DATE = [
-  "hrtime",
-  "nextTick",
-  "performance",
-  "queueMicrotask",
-  "requestAnimationFrame",
-  "cancelAnimationFrame",
-  "requestIdleCallback",
-  "cancelIdleCallback",
-  "setImmediate",
-  "clearImmediate",
-  "setInterval",
-  "clearInterval",
-  "setTimeout",
-  "clearTimeout",
-] as const;
 
 let queryClient: QueryClient;
 
@@ -179,6 +162,7 @@ export function registerWizardHooks() {
   });
 
   beforeEach(async () => {
+    installVirtualClock({ now: new Date("2026-10-23T12:00:00Z") });
     registerAppStyles(kitStyles);
     resetRouterMock();
     resetSetupBackend();
@@ -193,14 +177,13 @@ export function registerWizardHooks() {
     });
     deviceTimeZone("UTC");
     deviceRegion.current = "GB";
-    jest.useFakeTimers({ now: new Date("2026-10-23T12:00:00Z"), doNotFake: [...ONLY_THE_DATE] });
     await signInSetupClient();
   });
 
   afterEach(async () => {
-    jest.useRealTimers();
     jest.restoreAllMocks();
     await cleanup();
     queryClient.clear();
+    jest.useRealTimers();
   });
 }

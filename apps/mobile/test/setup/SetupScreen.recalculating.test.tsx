@@ -464,9 +464,7 @@ describe("the setup wizard", () => {
             "PATCH profiles",
           ]);
         });
-        await act(async () => {
-          await new Promise((resolve) => setTimeout(resolve, 50));
-        });
+        await act(() => jest.advanceTimersByTimeAsync(50));
 
         expect(routerMock.replace).not.toHaveBeenCalled();
       });
@@ -681,9 +679,7 @@ describe("the setup wizard", () => {
         await waitFor(() => {
           expect(setupBackend.writes).toEqual(["PATCH programs", "PATCH profiles"]);
         });
-        await act(async () => {
-          await new Promise((resolve) => setTimeout(resolve, 50));
-        });
+        await act(() => jest.advanceTimersByTimeAsync(50));
 
         expect(routerMock.back).not.toHaveBeenCalled();
         expect(routerMock.replace).not.toHaveBeenCalled();
