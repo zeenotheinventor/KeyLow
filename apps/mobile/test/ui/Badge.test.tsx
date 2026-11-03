@@ -218,7 +218,7 @@ describe("Badge", () => {
       },
     );
 
-    it("should set the success status text in the success ink, a darker green in light", async () => {
+    it("should set the success status text in the success ink", async () => {
       await renderBadge({ children: "Status", tone: "success" }, "dark");
 
       expect(await screen.findByText("Status")).toHaveStyle({ color: colorOf("success-ink") });
@@ -234,10 +234,56 @@ describe("Badge", () => {
     });
   });
 
-  // Light is the one scheme where Badge picks a different text class for a status tone: a status colour is too
-  // faint for small text, so the text is the primary text colour, and success uses its darker ink.
+  // Light is the one scheme where Badge picks a different text class (`scheme === "light" && tone !== "neutral"`): a
+  // status colour is too faint for small text, so the text is the primary text colour, and success uses its darker
+  // ink. The neutral and source badges keep their secondary text in light, which only a light run can check.
   describe("in the light scheme", () => {
     const colorOf = (name: Parameters<typeof resolvedColor>[1]) => resolvedColor("light", name);
+
+    it("should draw a source badge on the sheet surface with a hairline border, in secondary text", async () => {
+      await renderBadge({ kind: "source", source: "cofid" }, "light");
+      await screen.findByText("UK CoFID");
+
+      expect(
+        viewsDrawn({
+          height: 20,
+          backgroundColor: colorOf("surface-sheet"),
+          borderColor: colorOf("border"),
+          borderWidth: 1,
+        }),
+      ).toHaveLength(1);
+      expect(screen.getByText("UK CoFID")).toHaveStyle({ color: colorOf("text-secondary") });
+    });
+
+    it("should draw a neutral status the same way, with no visible border", async () => {
+      await renderBadge({ children: "Default" }, "light");
+      await screen.findByText("Default");
+
+      expect(
+        viewsDrawn({
+          height: 20,
+          backgroundColor: colorOf("surface-sheet"),
+          borderColor: transparent,
+          borderWidth: 1,
+        }),
+      ).toHaveLength(1);
+      expect(screen.getByText("Default")).toHaveStyle({ color: colorOf("text-secondary") });
+    });
+
+    it("should draw a hairline border on a neutral status when it is asked to be outlined", async () => {
+      await renderBadge({ children: "86 %", outlined: true }, "light");
+      await screen.findByText("86 %");
+
+      expect(
+        viewsDrawn({
+          height: 20,
+          backgroundColor: colorOf("surface-sheet"),
+          borderColor: colorOf("border"),
+          borderWidth: 1,
+        }),
+      ).toHaveLength(1);
+      expect(screen.getByText("86 %")).toHaveStyle({ color: colorOf("text-secondary") });
+    });
 
     it.each(coloredTones.filter((tone) => tone !== "success"))(
       "should set the %s status text in the primary text colour, because a status colour is not text in light",

@@ -134,8 +134,8 @@ describe("IncompleteDaysChip", () => {
     });
   });
 
-  // Light keeps the warning words: they are the primary text colour there, a different token from dark's warning
-  // colour. The fills and the success words ask for the same token in both schemes, so the dark run covers them.
+  // Light keeps the warning words, which are the primary text colour there, and the success words. In dark
+  // `success-ink` is the same colour as `success`, so only a light run notices a plain class standing in for the ink.
   describe("in the light scheme", () => {
     // Warning is too faint as light-mode text, so its words fall back to the primary text colour there.
     it("should colour the words of a warning chip in the warning ink", async () => {
@@ -143,6 +143,14 @@ describe("IncompleteDaysChip", () => {
 
       expect(screen.getByText("1 incomplete day this week")).toHaveStyle({
         color: resolvedColor("light", "text-primary"),
+      });
+    });
+
+    it("should colour the words of a success chip in the success ink", async () => {
+      await renderChip({ count: 0 }, "light");
+
+      expect(screen.getByText("All days complete this week")).toHaveStyle({
+        color: resolvedColor("light", "success-ink"),
       });
     });
   });

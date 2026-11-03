@@ -429,6 +429,38 @@ describe("Banner", () => {
     );
   });
 
+  // Light keeps the two ink call sites. In dark `warning-ink` and `accent-ink` are the same colour as `warning` and
+  // `accent`, so only a light run notices a plain class standing in for an ink class.
+  describe("in the light scheme", () => {
+    it("should set the review title and action in the warning ink", async () => {
+      await renderBanner(
+        {
+          variant: "review",
+          action: { label: "Copy to your foods", onPress: () => undefined },
+        },
+        "light",
+      );
+      const ink = resolvedColor("light", "warning-ink");
+
+      expect(await screen.findByText("Needs review")).toHaveStyle({ color: ink });
+      expect(screen.getByText("Copy to your foods")).toHaveStyle({ color: ink });
+    });
+
+    it.each(["offline", "info"] as const)(
+      "should set the %s action in the accent ink, as the boards draw it",
+      async (variant) => {
+        await renderBanner(
+          { variant, action: { label: "Set target", onPress: () => undefined } },
+          "light",
+        );
+
+        expect(await screen.findByText("Set target")).toHaveStyle({
+          color: resolvedColor("light", "accent-ink"),
+        });
+      },
+    );
+  });
+
   describe("layout", () => {
     // The M3 boards draw the quiet notice with `padding: var(--space-3)`: 12 on every side.
     it.each(["offline", "info"] as const)(

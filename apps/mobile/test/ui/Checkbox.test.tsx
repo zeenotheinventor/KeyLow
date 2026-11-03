@@ -390,7 +390,7 @@ describe("Checkbox", () => {
       expect(drawings()[0]).toHaveProp("stroke", themes.dark["accent-foreground"]);
     });
 
-    it("should draw a link in the accent ink at 14 over 20, which is the primary text colour in light", async () => {
+    it("should draw a link in the accent ink at 14 over 20", async () => {
       await renderCheckbox({ label: acceptanceLabel(jest.fn(), jest.fn()) }, "dark");
 
       expect(screen.getByRole("link", { name: "Terms" })).toHaveStyle({

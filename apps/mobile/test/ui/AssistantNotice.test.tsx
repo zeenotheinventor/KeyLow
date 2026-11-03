@@ -235,5 +235,13 @@ describe("AssistantNotice", () => {
       expect(tile()).toHaveStyle({ backgroundColor: themes.dark["accent-muted"] });
       expect(drawings()[0]).toHaveProp("stroke", themes.dark["accent-ink"]);
     });
+
+    it("should draw an accent notice with a hairline border and an accent tile in light", async () => {
+      await renderNotice({ tone: "accent" }, "light");
+
+      expect(box()).toHaveStyle({ borderColor: resolvedColor("light", "border") });
+      expect(tile()).toHaveStyle({ backgroundColor: themes.light["accent-muted"] });
+      expect(drawings()[0]).toHaveProp("stroke", themes.light["accent-ink"]);
+    });
   });
 });

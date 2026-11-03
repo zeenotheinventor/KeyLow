@@ -165,7 +165,7 @@ describe("Icon", () => {
 
     // The design's `--accent-ink` is lime in dark and the primary text colour in light, because lime on a
     // light surface is too faint for a thin glyph. It is the `accent-ink` token.
-    it("should take the accent ink tone as lime in dark and the primary text colour in light", async () => {
+    it("should take the accent ink tone as lime in dark", async () => {
       await render(inScheme("dark", <Icon label="Search" name="Search" tone="accent-ink" />));
 
       expect(screen.getByRole("img", { name: "Search" })).toHaveProp("stroke", themes.dark.accent);
@@ -181,8 +181,9 @@ describe("Icon", () => {
     });
   });
 
-  // Light keeps the accent ink alone: it is the one tone whose light colour is a different token (the primary text
-  // colour) from dark's (lime). Every other tone asks for the same token in both schemes, so the dark run covers it.
+  // Light keeps the three ink tones. Accent ink is a different token in light (the primary text colour) from dark's
+  // (lime). In dark `warning-ink` and `success-ink` are the same colour as `warning` and `success`, so only a light run
+  // notices a plain tone standing in for an ink one. Every other tone asks for the same token in both schemes.
   describe("in the light scheme", () => {
     // The design's `--accent-ink` is lime in dark and the primary text colour in light, because lime on a
     // light surface is too faint for a thin glyph. It is the `accent-ink` token.
@@ -192,6 +193,17 @@ describe("Icon", () => {
       expect(screen.getByRole("img", { name: "Search" })).toHaveProp(
         "stroke",
         themes.light["text-primary"],
+      );
+    });
+
+    const inkTones = tones.filter(({ tone }) => tone === "warning-ink" || tone === "success-ink");
+
+    it.each(inkTones)("should take the $tone tone from its token", async ({ tone, colorName }) => {
+      await render(inScheme("light", <Icon label="Search" name="Search" tone={tone} />));
+
+      expect(screen.getByRole("img", { name: "Search" })).toHaveProp(
+        "stroke",
+        themes.light[colorName],
       );
     });
   });

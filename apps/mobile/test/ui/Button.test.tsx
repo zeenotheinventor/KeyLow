@@ -419,7 +419,7 @@ describe("Button", () => {
         });
       });
 
-      it("should be lime in dark and the primary text colour in light", async () => {
+      it("should be lime in dark", async () => {
         await renderButton({ variant: "ghost", tone: "accent-ink" }, "dark");
         await screen.findByRole("button", { name: "Add entry" });
 

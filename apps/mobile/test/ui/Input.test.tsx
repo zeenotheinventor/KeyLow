@@ -566,6 +566,32 @@ describe("Input", () => {
     });
   });
 
+  // Light keeps the two warning captions. In dark `warning-ink` is the same colour as `warning`, so only a light run
+  // notices a plain class standing in for the ink class.
+  describe("in the light scheme", () => {
+    it("should draw the missing note's icon in warning and write the words in the warning ink", async () => {
+      await renderInput({ missingNote: "Not given by the source" }, "light");
+
+      expect(await screen.findByText("Not given by the source")).toHaveStyle({
+        color: resolvedColor("light", "warning-ink"),
+      });
+      expect(drawings()[0]).toHaveProp("stroke", themes.light.warning);
+      expect(drawings()[0]).toHaveProp("width", 14);
+    });
+
+    it("should draw a warning helper's triangle at 16 in warning and write the words in the warning ink", async () => {
+      await renderInput({ helper: "Macros add up to 311 kcal", helperTone: "warning" }, "light");
+
+      expect(await screen.findByText("Macros add up to 311 kcal")).toHaveStyle({
+        color: resolvedColor("light", "warning-ink"),
+        fontSize: 12,
+        lineHeight: 16,
+      });
+      expect(drawings()[0]).toHaveProp("stroke", themes.light.warning);
+      expect(drawings()[0]).toHaveProp("width", 16);
+    });
+  });
+
   describe("FieldError", () => {
     function renderFieldError(scheme: ThemeScheme = "dark") {
       return render(

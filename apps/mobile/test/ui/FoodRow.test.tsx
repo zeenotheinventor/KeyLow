@@ -445,7 +445,7 @@ describe("FoodRow", () => {
       });
     });
 
-    it("should draw the spinner in the accent ink: lime in dark, the primary text colour in light", async () => {
+    it("should draw the spinner in the accent ink: lime in dark", async () => {
       await renderRow({ busyLabel: "Adding to your foods", macros: undefined }, "dark");
 
       await waitFor(() => {

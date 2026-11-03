@@ -88,17 +88,18 @@ describe("Body3D", () => {
     },
   );
 
-  // Light is not repeated here: the palette the looks are built from is the one the colours test above already
-  // checks in both themes, and `looksOf` has no scheme code of its own.
-  it("should give the canvas the looks BodyFigure's reading gives, in the dark theme", async () => {
-    const values = { chest_upper: 5, quads: 2 };
+  it.each<ThemeScheme>(["dark", "light"])(
+    "should give the canvas the looks BodyFigure's reading gives, in the %s theme",
+    async (scheme) => {
+      const values = { chest_upper: 5, quads: 2 };
 
-    await renderBody({ scale: "heat", values }, "dark");
+      await renderBody({ scale: "heat", values }, scheme);
 
-    expect(mockCanvas).toHaveBeenLastCalledWith(
-      expect.objectContaining({ looks: looksOf("heat", values, bodyMapPalette("dark")) }),
-    );
-  });
+      expect(mockCanvas).toHaveBeenLastCalledWith(
+        expect.objectContaining({ looks: looksOf("heat", values, bodyMapPalette(scheme)) }),
+      );
+    },
+  );
 
   it("should draw every muscle at rest on heat when it is given no values", async () => {
     await renderBody();

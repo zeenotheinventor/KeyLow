@@ -372,6 +372,14 @@ describe("FoodRow in the food log", () => {
         color: resolvedColor("dark", "warning-ink"),
       });
     });
+
+    it("should write Needs review in the warning ink in the light scheme", async () => {
+      await renderRow(reviewProps, "light");
+
+      expect(await screen.findByText("Needs review")).toHaveStyle({
+        color: resolvedColor("light", "warning-ink"),
+      });
+    });
   });
 
   describe("the diary", () => {
