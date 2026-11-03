@@ -77,8 +77,7 @@ export function AssistantThread({ thread, onTryAgain, onAskAgain }: AssistantThr
           label={ASSISTANT_SHEET.quickRepliesLabel}
           layout="wrap"
           options={askAgainOptions}
-          value={null}
-          onChange={() => undefined}
+          selection="action"
           onChipPress={onAskAgain}
         />
       ) : null}

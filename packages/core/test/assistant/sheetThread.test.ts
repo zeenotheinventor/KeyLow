@@ -153,6 +153,48 @@ describe("buildAssistantSheetThread", () => {
       ).toHaveLength(5);
     });
 
+    it("should keep drawing the stream when a read during it already holds your message", () => {
+      const withYourMessage: AssistantThreadItem[] = [
+        ...storedItems,
+        { kind: "user", id: "u3", text: "What did I eat yesterday?" },
+      ];
+      const thread = build({
+        items: withYourMessage,
+        sent,
+        live: liveTurn({ text: "Yesterday, porridge" }),
+        isStreaming: true,
+      });
+
+      expect(thread.entries.map((entry) => entry.key)).toEqual([
+        "u1",
+        "u2",
+        "r2",
+        "sent:you",
+        "sent:reply",
+      ]);
+    });
+
+    it("should draw your first message and its stream once when a read holds it in a conversation that had none", () => {
+      const thread = build({
+        items: [{ kind: "user", id: "u1", text: "Hello" }],
+        sent: { text: "Hello", afterItemId: null },
+        live: liveTurn({ text: "Hi" }),
+        isStreaming: true,
+      });
+
+      expect(thread.entries.map((entry) => entry.key)).toEqual(["sent:you", "sent:reply"]);
+    });
+
+    it("should leave the stored conversation to draw the turn once it has ended and the read holds it", () => {
+      const thread = build({
+        items: [...storedItems, { kind: "user", id: "u3", text: "What did I eat yesterday?" }],
+        sent,
+        live: liveTurn({ text: "Yesterday, porridge" }),
+      });
+
+      expect(thread.entries.map((entry) => entry.key)).toEqual(["u1", "u2", "r2", "u3"]);
+    });
+
     it("should draw a person's first message in a conversation that has no items", () => {
       const thread = build({
         sent: { text: "Hello", afterItemId: null },
@@ -262,7 +304,13 @@ describe("buildAssistantSheetThread", () => {
 });
 
 describe("canSendAssistantMessage", () => {
-  const ready = { text: "Log a banana", isStreaming: false, isOnline: true };
+  const ready = {
+    text: "Log a banana",
+    isStreaming: false,
+    isOnline: true,
+    isThreadKnown: true,
+    isThreadFetching: false,
+  };
 
   it("should allow a message with words, while online and not streaming", () => {
     expect(canSendAssistantMessage(ready)).toBe(true);
@@ -278,5 +326,13 @@ describe("canSendAssistantMessage", () => {
 
   it("should not allow a message while offline", () => {
     expect(canSendAssistantMessage({ ...ready, isOnline: false })).toBe(false);
+  });
+
+  it("should not allow a message before the conversation is read, which would start a new one", () => {
+    expect(canSendAssistantMessage({ ...ready, isThreadKnown: false })).toBe(false);
+  });
+
+  it("should not allow a message while the conversation is being read again", () => {
+    expect(canSendAssistantMessage({ ...ready, isThreadFetching: true })).toBe(false);
   });
 });

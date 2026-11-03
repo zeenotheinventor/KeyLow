@@ -7,7 +7,7 @@ import { buildAssistantSheetThread, canSendAssistantMessage } from "@keylow/core
 import { ASSISTANT_OFFLINE, ASSISTANT_SHEET } from "@keylow/core/copy";
 import { fetch as streamingFetch } from "expo/fetch";
 import { useEffect, useRef, useState } from "react";
-import { AccessibilityInfo, Platform, View } from "react-native";
+import { AccessibilityInfo, View } from "react-native";
 
 import { AssistantEmpty } from "./AssistantEmpty";
 import { AssistantThread } from "./AssistantThread";
@@ -53,11 +53,28 @@ export function AssistantSheet({ open, onClose, localDate }: AssistantSheetProps
   const isThreadKnown = conversation.isSuccess || conversation.isError;
   const isEmpty = thread.entries.length === 0;
 
-  // iOS ignores a live region, so a screen reader hears the finished answer once, when it is complete.
-  // Android reads the live region itself.
+  // Once the answer has ended and the stored conversation has moved past where the message was sent, the
+  // stored conversation holds the turn, so the message sent from here is let go. If it were kept, the thread
+  // going empty again (a new conversation, or every conversation deleted) would draw the old message back.
+  if (sent !== null && !isStreaming && (items?.at(-1)?.id ?? null) !== sent.afterItemId) {
+    setSent(null);
+  }
+
+  const canSendWords = (words: string) =>
+    canSendAssistantMessage({
+      text: words,
+      isStreaming,
+      isOnline,
+      isThreadKnown,
+      isThreadFetching: conversation.isFetching,
+    });
+
+  // The streaming message is not a live region (Android would read all of it again for each chunk, and iOS
+  // ignores a live region), so a screen reader hears the finished answer once, on both, when it is complete.
+  // An answer that was stopped by closing the sheet is not read, because the person closed it.
   const wasStreaming = useRef(false);
   useEffect(() => {
-    if (wasStreaming.current && !isStreaming && Platform.OS === "ios") {
+    if (wasStreaming.current && !isStreaming) {
       const answer = live === null || live.stopped ? "" : live.text.trim();
       if (answer !== "") {
         AccessibilityInfo.announceForAccessibility(answer);
@@ -68,7 +85,7 @@ export function AssistantSheet({ open, onClose, localDate }: AssistantSheetProps
 
   function sendMessage(words: string) {
     const text = words.trim();
-    if (!canSendAssistantMessage({ text, isStreaming, isOnline })) {
+    if (!canSendWords(text)) {
       return;
     }
     setSent({ text, afterItemId: items?.at(-1)?.id ?? null });
@@ -78,8 +95,10 @@ export function AssistantSheet({ open, onClose, localDate }: AssistantSheetProps
   }
 
   function sendDraft() {
-    sendMessage(draft);
-    setDraft("");
+    if (canSendWords(draft)) {
+      sendMessage(draft);
+      setDraft("");
+    }
   }
 
   function sendLastMessageAgain() {
@@ -114,6 +133,7 @@ export function AssistantSheet({ open, onClose, localDate }: AssistantSheetProps
         {/* The header brings its own side padding, so it goes out to the sheet's edges. */}
         <View className="-mx-4">
           <SheetHeader
+            variant="quiet"
             leading={{
               icon: "SquarePen",
               label: ASSISTANT_SHEET.newConversationLabel,
@@ -138,7 +158,10 @@ export function AssistantSheet({ open, onClose, localDate }: AssistantSheetProps
         >
           {isEmpty ? (
             isThreadKnown ? (
-              <AssistantEmpty isDisabled={!isOnline} onStarterPress={sendMessage} />
+              <AssistantEmpty
+                isDisabled={!isOnline || conversation.isFetching}
+                onStarterPress={sendMessage}
+              />
             ) : null
           ) : (
             <AssistantThread
@@ -159,7 +182,7 @@ export function AssistantSheet({ open, onClose, localDate }: AssistantSheetProps
           )}
           <Composer
             isFieldDisabled={!isOnline}
-            isSendDisabled={!canSendAssistantMessage({ text: draft, isStreaming, isOnline })}
+            isSendDisabled={!canSendWords(draft)}
             placeholder={
               isOnline ? ASSISTANT_SHEET.composerPlaceholder : ASSISTANT_OFFLINE.fieldText
             }

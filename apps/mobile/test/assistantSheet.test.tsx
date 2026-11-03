@@ -1,6 +1,14 @@
 import { onlineManager } from "@tanstack/react-query";
-import { act, cleanup, render, screen, userEvent, waitFor } from "@testing-library/react-native";
-import { AccessibilityInfo, Platform } from "react-native";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  userEvent,
+  waitFor,
+} from "@testing-library/react-native";
+import { AccessibilityInfo, BackHandler, Platform } from "react-native";
 import { setUpTests } from "react-native-reanimated";
 
 import { AssistantSheet } from "../components/AssistantSheet";
@@ -33,13 +41,14 @@ type FakeConversation = {
   data: { conversationId: string | null; items: AssistantThreadItem[] } | undefined;
   isSuccess: boolean;
   isError: boolean;
+  isFetching: boolean;
 };
 const mockAssistant: {
   conversation: FakeConversation;
   turn: { send: jest.Mock; stop: jest.Mock; live: AssistantLiveTurn | null; isStreaming: boolean };
   newConversation: { mutateAsync: jest.Mock; isPending: boolean };
 } = {
-  conversation: { data: undefined, isSuccess: false, isError: false },
+  conversation: { data: undefined, isSuccess: false, isError: false, isFetching: false },
   turn: { send: jest.fn(), stop: jest.fn(), live: null, isStreaming: false },
   newConversation: { mutateAsync: jest.fn(), isPending: false },
 };
@@ -76,6 +85,7 @@ const loadedConversation = (items: AssistantThreadItem[], conversationId = CONVE
     data: { conversationId, items },
     isSuccess: true,
     isError: false,
+    isFetching: false,
   };
 };
 
@@ -129,7 +139,12 @@ describe("the assistant sheet", () => {
   beforeEach(() => {
     installVirtualClock();
     onClose = jest.fn();
-    mockAssistant.conversation = { data: undefined, isSuccess: false, isError: false };
+    mockAssistant.conversation = {
+      data: undefined,
+      isSuccess: false,
+      isError: false,
+      isFetching: false,
+    };
     mockAssistant.turn = { send: jest.fn(), stop: jest.fn(), live: null, isStreaming: false };
     mockAssistant.newConversation = { mutateAsync: jest.fn(), isPending: false };
   });
@@ -242,6 +257,7 @@ describe("the assistant sheet", () => {
         data: { conversationId: null, items: [] },
         isSuccess: true,
         isError: false,
+        isFetching: false,
       };
       await renderSheet();
 
@@ -254,7 +270,12 @@ describe("the assistant sheet", () => {
     });
 
     it("should not draw the empty sheet while the conversation is still loading", async () => {
-      mockAssistant.conversation = { data: undefined, isSuccess: false, isError: false };
+      mockAssistant.conversation = {
+        data: undefined,
+        isSuccess: false,
+        isError: false,
+        isFetching: false,
+      };
       await renderSheet();
 
       expect(
@@ -370,13 +391,12 @@ describe("the assistant sheet", () => {
       expect(announce).toHaveBeenCalledWith(arrived);
     });
 
-    it("should leave the announcing to the live region on Android", async () => {
-      const announce = jest.spyOn(AccessibilityInfo, "announceForAccessibility");
-      // The platform's mock is one function for the whole file, so what earlier tests announced is cleared.
-      announce.mockClear();
+    it("should read the finished answer on Android too, where the streaming message is not a live region", async () => {
       const originalOs = Platform.OS;
       Platform.OS = "android";
       try {
+        const announce = jest.spyOn(AccessibilityInfo, "announceForAccessibility");
+        announce.mockClear();
         const rendered = await renderStreaming();
         mockAssistant.turn = {
           ...mockAssistant.turn,
@@ -385,10 +405,33 @@ describe("the assistant sheet", () => {
         };
         await rendered.rerender(sheetTree());
 
-        expect(announce).not.toHaveBeenCalled();
+        expect(announce).toHaveBeenCalledTimes(1);
+        expect(announce).toHaveBeenCalledWith(arrived);
       } finally {
         Platform.OS = originalOs;
       }
+    });
+
+    it("should not announce an answer that was stopped by closing the sheet", async () => {
+      const announce = jest.spyOn(AccessibilityInfo, "announceForAccessibility");
+      announce.mockClear();
+      const rendered = await renderStreaming();
+      mockAssistant.turn = {
+        ...mockAssistant.turn,
+        live: liveTurn({ text: arrived, stopped: true }),
+        isStreaming: false,
+      };
+      await rendered.rerender(sheetTree());
+
+      expect(announce).not.toHaveBeenCalled();
+    });
+
+    it("should not announce while the answer is still arriving", async () => {
+      const announce = jest.spyOn(AccessibilityInfo, "announceForAccessibility");
+      announce.mockClear();
+      await renderStreaming();
+
+      expect(announce).not.toHaveBeenCalled();
     });
   });
 
@@ -465,7 +508,7 @@ describe("the assistant sheet", () => {
       await renderStopped();
       mockAssistant.turn.send.mockClear();
 
-      await userSetup().press(screen.getByRole("radio", { name: "Ask again" }));
+      await userSetup().press(screen.getByRole("button", { name: "Ask again" }));
 
       expect(mockAssistant.turn.send).toHaveBeenCalledTimes(1);
       expect(mockAssistant.turn.send).toHaveBeenCalledWith(question, {
@@ -479,7 +522,7 @@ describe("the assistant sheet", () => {
       await renderSheet();
 
       expect(screen.getByText("Stopped when you closed the assistant")).toBeOnTheScreen();
-      expect(screen.getByRole("radio", { name: "Ask again" })).toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Ask again" })).toBeOnTheScreen();
     });
   });
 
@@ -613,6 +656,7 @@ describe("the assistant sheet", () => {
         data: { conversationId: null, items: [] },
         isSuccess: true,
         isError: false,
+        isFetching: false,
       };
       const rendered = await renderSheet();
       await sendFromSheet(rendered, "Hello there");
@@ -801,6 +845,240 @@ describe("the assistant sheet", () => {
       await goOffline();
 
       expect(screen.getByRole("button", { name: "Copy yesterday to today" })).toBeDisabled();
+    });
+  });
+
+  describe("the message sent from this sheet, over the stored conversation", () => {
+    const message = "What did I eat yesterday?";
+
+    it("should draw the message and its reply under the stored items, in order", async () => {
+      loadedConversation(earlierThread);
+      const rendered = await renderSheet();
+      await sendFromSheet(rendered, message);
+      mockAssistant.turn = {
+        ...mockAssistant.turn,
+        live: liveTurn({ text: "Porridge with banana" }),
+        isStreaming: true,
+      };
+      await rendered.rerender(sheetTree());
+
+      const drawn = [
+        "What's left for today?",
+        "You have 1,693 kcal and 117 g of protein left today.",
+        message,
+        "Porridge with banana",
+      ].map((words) => screen.getByText(words));
+      const order = screen.getAllByText(/./).filter((node) => drawn.includes(node));
+
+      expect(order).toEqual(drawn);
+    });
+
+    it("should keep drawing the message and the arriving reply when a read in the middle of the stream returns your message", async () => {
+      loadedConversation(earlierThread);
+      const rendered = await renderSheet();
+      await sendFromSheet(rendered, message);
+      mockAssistant.turn = {
+        ...mockAssistant.turn,
+        live: liveTurn({ text: "Porridge with" }),
+        isStreaming: true,
+      };
+      // The function stored your message when the turn began, so a read during the stream already holds it.
+      loadedConversation([...earlierThread, userItem("u2", message)]);
+      await rendered.rerender(sheetTree());
+
+      expect(screen.getAllByText(message)).toHaveLength(1);
+      expect(screen.getByText("Porridge with")).toBeOnTheScreen();
+    });
+
+    it("should draw nothing old once the stored conversation is empty again", async () => {
+      loadedConversation([]);
+      const rendered = await renderSheet();
+      await sendFromSheet(rendered, "A first message");
+      mockAssistant.turn = {
+        ...mockAssistant.turn,
+        live: liveTurn({ text: "A first answer", outcome: "complete" }),
+        isStreaming: false,
+      };
+      // The turn is stored, so the stored conversation holds it and the message sent from here is let go.
+      loadedConversation([userItem("u1", "A first message"), replyItem("r1", "A first answer")]);
+      await rendered.rerender(sheetTree());
+      // Then every conversation is deleted, and the person is left with an empty one.
+      loadedConversation([], "00000000-0000-4000-8000-0000000000c2");
+      await rendered.rerender(sheetTree());
+
+      expect(
+        screen.getByRole("heading", { name: "Log food or ask about your diary" }),
+      ).toBeOnTheScreen();
+      expect(screen.queryByText("A first message")).not.toBeOnTheScreen();
+      expect(screen.queryByText("A first answer")).not.toBeOnTheScreen();
+    });
+
+    it("should not hide a turn whose message was never stored, because the stored conversation did not move", async () => {
+      loadedConversation(earlierThread);
+      const rendered = await renderSheet();
+      await sendFromSheet(rendered, message);
+      mockAssistant.turn = {
+        ...mockAssistant.turn,
+        live: liveTurn({ notice: { code: "turn_failed" }, outcome: "failed" }),
+        isStreaming: false,
+      };
+      await rendered.rerender(sheetTree());
+
+      expect(screen.getByText(message)).toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Try again" })).toBeOnTheScreen();
+    });
+  });
+
+  describe("sending before the conversation is read", () => {
+    it("should keep Send off, even with words typed, until the conversation has been read", async () => {
+      mockAssistant.conversation = {
+        data: undefined,
+        isSuccess: false,
+        isError: false,
+        isFetching: true,
+      };
+      await renderSheet();
+      await typeMessage("Log a banana");
+
+      expect(sendButton()).toBeDisabled();
+    });
+
+    it("should keep Send off while the conversation is being read again", async () => {
+      loadedConversation(earlierThread);
+      mockAssistant.conversation.isFetching = true;
+      await renderSheet();
+      await typeMessage("Log a banana");
+
+      expect(sendButton()).toBeDisabled();
+    });
+
+    it("should keep the starters off while the conversation is being read again", async () => {
+      loadedConversation([]);
+      mockAssistant.conversation.isFetching = true;
+      await renderSheet();
+
+      expect(screen.getByRole("button", { name: "Copy yesterday to today" })).toBeDisabled();
+    });
+
+    it("should allow Send when the conversation could not be read, while online", async () => {
+      mockAssistant.conversation = {
+        data: undefined,
+        isSuccess: false,
+        isError: true,
+        isFetching: false,
+      };
+      await renderSheet();
+      await typeMessage("Log a banana");
+
+      expect(sendButton()).toBeEnabled();
+    });
+  });
+
+  describe("every way of closing stops a streaming answer", () => {
+    async function renderStreaming() {
+      loadedConversation([]);
+      const rendered = await renderSheet();
+      await sendFromSheet(rendered, "What did I eat yesterday?");
+      mockAssistant.turn = {
+        ...mockAssistant.turn,
+        live: liveTurn({ text: "Yesterday, porridge with" }),
+        isStreaming: true,
+      };
+      await rendered.rerender(sheetTree());
+    }
+
+    it("should stop it on the Android back button", async () => {
+      const addListener = jest.spyOn(BackHandler, "addEventListener");
+      await renderStreaming();
+
+      const pressBack = addListener.mock.calls.at(-1)?.[1];
+      pressBack?.({ type: "hardwareBackPress", timeStamp: 0 });
+
+      expect(mockAssistant.turn.stop).toHaveBeenCalledTimes(1);
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it("should stop it on a press on the dimmed diary", async () => {
+      await renderStreaming();
+      const dim = screen
+        .getAllByRole("button", { includeHiddenElements: true })
+        .find((button) => button.props["aria-hidden"] === true);
+
+      expect(dim).toBeDefined();
+      if (dim !== undefined) {
+        await userSetup().press(dim);
+      }
+
+      expect(mockAssistant.turn.stop).toHaveBeenCalledTimes(1);
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it("should stop it on the screen reader's escape gesture", async () => {
+      await renderStreaming();
+
+      const dialog = screen
+        .getAllByLabelText("Assistant")
+        .find((node) => node.props.role === "dialog");
+
+      expect(dialog).toBeDefined();
+      if (dialog !== undefined) {
+        await fireEvent(dialog, "accessibilityEscape");
+      }
+
+      expect(mockAssistant.turn.stop).toHaveBeenCalledTimes(1);
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("the composer", () => {
+    it("should show the board's placeholder while online", async () => {
+      loadedConversation(earlierThread);
+      await renderSheet();
+
+      expect(screen.getByPlaceholderText("Log food or ask about your diary")).toBeOnTheScreen();
+    });
+  });
+
+  describe("New conversation, what it lets go of", () => {
+    it("should clear a draft that was typed and not sent", async () => {
+      loadedConversation(earlierThread);
+      mockAssistant.newConversation.mutateAsync.mockResolvedValue({ conversationId: "new" });
+      await renderSheet();
+      await typeMessage("Words not sent");
+
+      await userSetup().press(newConversationButton());
+
+      expect(screen.getByLabelText("Message")).toHaveDisplayValue("");
+    });
+
+    it("should drop the message sent from this sheet, so it does not come back when the thread is empty again", async () => {
+      loadedConversation([]);
+      mockAssistant.newConversation.mutateAsync.mockResolvedValue({ conversationId: "new" });
+      const rendered = await renderSheet();
+      await sendFromSheet(rendered, "A message sent from here");
+      mockAssistant.turn = {
+        ...mockAssistant.turn,
+        live: liveTurn({ text: "An answer", outcome: "complete" }),
+      };
+      await rendered.rerender(sheetTree());
+
+      await userSetup().press(newConversationButton());
+      loadedConversation([], "00000000-0000-4000-8000-0000000000c2");
+      await rendered.rerender(sheetTree());
+
+      expect(
+        screen.getByRole("heading", { name: "Log food or ask about your diary" }),
+      ).toBeOnTheScreen();
+      expect(screen.queryByText("A message sent from here")).not.toBeOnTheScreen();
+      expect(screen.queryByText("An answer")).not.toBeOnTheScreen();
+    });
+
+    it("should be off while the new conversation is being started", async () => {
+      loadedConversation(earlierThread);
+      mockAssistant.newConversation.isPending = true;
+      await renderSheet();
+
+      expect(newConversationButton()).toBeDisabled();
     });
   });
 

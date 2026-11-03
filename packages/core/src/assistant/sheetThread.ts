@@ -18,8 +18,10 @@ export type AssistantSheetLiveTurn = {
 
 /**
  * The message the person sent from this sheet, and the id of the last stored item when they sent it
- * (null for a conversation with none). Once the stored conversation has an item after that one, it holds
- * the turn and this message is no longer drawn on top of it.
+ * (null for a conversation with none). While the answer arrives it is always drawn, with the stored items
+ * after that one left out, because the function stores your message at the start of the turn and a read
+ * during the stream returns it. Once the answer has ended and the stored conversation has an item after
+ * that one, the stored conversation holds the turn and this message is no longer drawn.
  */
 export type AssistantSheetSent = { text: string; afterItemId: string | null };
 
@@ -128,6 +130,18 @@ function lastMessageOf(entries: readonly AssistantSheetEntry[]): string | null {
   return null;
 }
 
+// The stored items up to and including the one the message was sent after. None for a conversation that had none.
+function itemsThrough(
+  items: readonly AssistantThreadItem[],
+  afterItemId: string | null,
+): readonly AssistantThreadItem[] {
+  if (afterItemId === null) {
+    return [];
+  }
+  const position = items.findIndex((item) => item.id === afterItemId);
+  return position < 0 ? items : items.slice(0, position + 1);
+}
+
 /** The thread the sheet draws, oldest first. */
 export function buildAssistantSheetThread({
   items,
@@ -135,11 +149,14 @@ export function buildAssistantSheetThread({
   live,
   isStreaming,
 }: BuildInput): AssistantSheetThread {
-  const isSentShown = sent !== null && sent.afterItemId === (items.at(-1)?.id ?? null);
-  const drafts = [
-    ...storedEntries(items),
-    ...(isSentShown ? sentEntries(sent, live, isStreaming) : []),
-  ];
+  const isSentShown =
+    sent !== null && (isStreaming || sent.afterItemId === (items.at(-1)?.id ?? null));
+  const drafts = isSentShown
+    ? [
+        ...storedEntries(isStreaming ? itemsThrough(items, sent.afterItemId) : items),
+        ...sentEntries(sent, live, isStreaming),
+      ]
+    : storedEntries(items);
   const entries = drafts.map((entry, position): AssistantSheetEntry =>
     entry.kind === "notice" ? { ...entry, isLatest: position === drafts.length - 1 } : entry,
   );
@@ -152,15 +169,23 @@ export function buildAssistantSheetThread({
   };
 }
 
-/** Send is on for a message with words, while the app is online and no answer is arriving. */
+/**
+ * Send is on for a message with words, while the app is online, no answer is arriving, and the stored
+ * conversation has been read (a read that failed counts) and is not being read again. Before that the
+ * conversation's id is not known, and a message would start a new conversation by accident.
+ */
 export function canSendAssistantMessage({
   text,
   isStreaming,
   isOnline,
+  isThreadKnown,
+  isThreadFetching,
 }: {
   text: string;
   isStreaming: boolean;
   isOnline: boolean;
+  isThreadKnown: boolean;
+  isThreadFetching: boolean;
 }): boolean {
-  return text.trim() !== "" && !isStreaming && isOnline;
+  return text.trim() !== "" && !isStreaming && isOnline && isThreadKnown && !isThreadFetching;
 }
