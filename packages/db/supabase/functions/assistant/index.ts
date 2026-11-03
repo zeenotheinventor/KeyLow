@@ -1,0 +1,51 @@
+// assistant: the one Edge Function behind the in-app assistant. It checks who may take a turn
+// (the kill switch, consent, the entitlement, the daily turns, the monthly spend), and serves the
+// status, turn, conversations and undo routes. The turn loop itself plugs into `runTurn`.
+//
+// Things to know when changing this file:
+// - Every failed gate is a typed notice with a code, never words. The app words it from core.
+// - Nothing here logs or reports the message text. A log line holds the user, the route, the gate
+//   and the duration.
+import { requireUser } from "../_shared/auth.ts";
+import { toolRegistry } from "../_shared/assistant/registry.ts";
+import { createActionStore } from "../_shared/assistant/store.ts";
+import { undoAction } from "../_shared/assistant/undo.ts";
+import { createCallerClient, createServiceClient } from "../_shared/clients.ts";
+import { handle } from "../_shared/http.ts";
+import { reportError } from "../_shared/report.ts";
+import { createAccessStore } from "./gates.ts";
+import { createAssistantHandler } from "./routes.ts";
+import { runTurn } from "./runTurn.ts";
+import { createTurnStore } from "./turnStore.ts";
+
+import type { ToolContext } from "../_shared/assistant/tool.ts";
+
+const nilId = "00000000-0000-0000-0000-000000000000";
+
+Deno.serve(
+  handle("assistant", (request) => {
+    const service = createServiceClient();
+    const handler = createAssistantHandler({
+      authenticate: requireUser,
+      access: createAccessStore(service),
+      turns: createTurnStore(service),
+      undoWith: (undoRequest, userId) => {
+        // Undo runs outside a turn, so the context carries a nil turn and no message.
+        const context: ToolContext = {
+          caller: createCallerClient(undoRequest),
+          actions: createActionStore(service),
+          userId,
+          turn: { id: nilId, conversationId: nilId, userMessageText: null },
+          registry: toolRegistry,
+          allowedTools: undefined,
+          reportError,
+        };
+        return (actionId) => undoAction(context, actionId);
+      },
+      runTurn,
+      now: () => new Date(),
+      report: reportError,
+    });
+    return handler(request);
+  }),
+);
