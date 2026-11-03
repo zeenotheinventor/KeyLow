@@ -203,7 +203,8 @@ select is(
     'role text not null',
     'content jsonb not null',
     'seq integer not null',
-    'created_at timestamp with time zone not null default now()'
+    'created_at timestamp with time zone not null default now()',
+    'display jsonb'
   ],
   'assistant_messages has the amendment''s columns, types, nullability and defaults'
 );

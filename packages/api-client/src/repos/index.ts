@@ -166,3 +166,18 @@ export {
 export type { ShoppingSourceRecipe } from "./shoppingList";
 export { getAssistantConsent, getAssistantStatus, setAssistantConsent } from "./assistant";
 export type { AssistantConsent, AssistantStatus } from "./assistant";
+export {
+  assistantTargetSources,
+  createAssistantConversation,
+  deleteAllAssistantConversations,
+  getLatestAssistantConversation,
+  readAssistantActions,
+  undoAssistantActions,
+} from "./assistantConversations";
+export type {
+  AssistantActionsRead,
+  AssistantConversationRead,
+  AssistantTargetRead,
+  AssistantTargetSource,
+  AssistantUndoResult,
+} from "./assistantConversations";
