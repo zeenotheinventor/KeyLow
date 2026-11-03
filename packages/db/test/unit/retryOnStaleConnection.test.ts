@@ -62,6 +62,39 @@ describe("retryOnStaleConnection", () => {
       expect(baseFetch).toHaveBeenCalledTimes(2);
     });
 
+    it("should cancel the discarded response body before it retries", async () => {
+      const events: string[] = [];
+      // Response.clone() swaps the original's body for a new stream, so the body the wrapper is
+      // expected to cancel is handed out by this subclass, with a cancel callback that records it.
+      class BadGatewayWithCancelSpy extends Response {
+        readonly trackedBody = new ReadableStream<Uint8Array<ArrayBuffer>>({
+          cancel: () => {
+            events.push("cancel");
+          },
+        });
+
+        constructor() {
+          super(kongMessage, { status: 502 });
+        }
+
+        override get body() {
+          return this.trackedBody;
+        }
+      }
+      const baseFetch = vi
+        .fn<typeof fetch>()
+        .mockResolvedValueOnce(new BadGatewayWithCancelSpy())
+        .mockImplementationOnce(() => {
+          events.push("retry");
+          return Promise.resolve(okResponse());
+        });
+      const retrying = retryOnStaleConnection(baseFetch, 0);
+
+      await retrying(url, init);
+
+      expect(events).toEqual(["cancel", "retry"]);
+    });
+
     it("should send the same request again", async () => {
       const { baseFetch, retrying } = wrapped(kongPlainTextBadGateway(), okResponse());
 
@@ -89,6 +122,66 @@ describe("retryOnStaleConnection", () => {
     });
   });
 
+  describe("when the request is not for PostgREST", () => {
+    it.each([
+      ["a function call", "http://127.0.0.1:54321/functions/v1/off-lookup"],
+      ["an auth call", "http://127.0.0.1:54321/auth/v1/admin/users"],
+    ])("should not retry the gateway 502 on %s", async (_label, address) => {
+      const bad = kongPlainTextBadGateway();
+      const { baseFetch, retrying } = wrapped(bad, okResponse());
+
+      const response = await retrying(address, init);
+
+      expect(response).toBe(bad);
+      expect(baseFetch).toHaveBeenCalledTimes(1);
+    });
+
+    it("should not retry a connection reset on an auth call", async () => {
+      const reset = connectionReset();
+      const { baseFetch, retrying } = wrapped(reset, okResponse());
+
+      await expect(retrying("http://127.0.0.1:54321/auth/v1/signup", init)).rejects.toBe(reset);
+      expect(baseFetch).toHaveBeenCalledTimes(1);
+    });
+
+    it("should not retry when the address is a URL object for a function", async () => {
+      const bad = kongPlainTextBadGateway();
+      const { baseFetch, retrying } = wrapped(bad, okResponse());
+
+      const response = await retrying(new URL("http://127.0.0.1:54321/functions/v1/x"), init);
+
+      expect(response).toBe(bad);
+      expect(baseFetch).toHaveBeenCalledTimes(1);
+    });
+
+    it("should retry when the address is a URL object for PostgREST", async () => {
+      const { baseFetch, retrying } = wrapped(kongPlainTextBadGateway(), okResponse());
+
+      const response = await retrying(
+        new URL("http://127.0.0.1:54321/rest/v1/rpc/day_totals"),
+        init,
+      );
+
+      expect(response.status).toBe(200);
+      expect(baseFetch).toHaveBeenCalledTimes(2);
+    });
+
+    it("should retry a bodiless request object for PostgREST and not one for a function", async () => {
+      const postgrest = wrapped(kongPlainTextBadGateway(), okResponse());
+      const functions = wrapped(kongPlainTextBadGateway(), okResponse());
+
+      const retried = await postgrest.retrying(new Request(url));
+      const passedThrough = await functions.retrying(
+        new Request("http://127.0.0.1:54321/functions/v1/x"),
+      );
+
+      expect(retried.status).toBe(200);
+      expect(postgrest.baseFetch).toHaveBeenCalledTimes(2);
+      expect(passedThrough.status).toBe(502);
+      expect(functions.baseFetch).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe("when the connection is reset", () => {
     it.each([
       ["ECONNRESET", connectionReset],
@@ -101,6 +194,16 @@ describe("retryOnStaleConnection", () => {
 
       expect(response.status).toBe(200);
       expect(baseFetch).toHaveBeenCalledTimes(2);
+    });
+
+    it("should stop walking a circular cause chain", async () => {
+      const first = new Error("outer");
+      const second = new Error("inner", { cause: first });
+      Object.assign(first, { cause: second });
+      const { baseFetch, retrying } = wrapped(first, okResponse());
+
+      await expect(retrying(url, init)).rejects.toBe(first);
+      expect(baseFetch).toHaveBeenCalledTimes(1);
     });
 
     it("should retry when the reset is a bare error without a cause", async () => {
