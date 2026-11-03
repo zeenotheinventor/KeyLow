@@ -1,3 +1,4 @@
+import { useFunctionsUrl } from "@keylow/api-client";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { act, render, screen, userEvent } from "@testing-library/react-native";
 import { Text } from "react-native";
@@ -63,8 +64,17 @@ function ScreenThatShowsAToast() {
     </Text>
   );
 }
+// Stands for a screen that calls an Edge Function with its own fetch, as the assistant sheet does.
+function ScreenThatReadsTheFunctionsUrl() {
+  return <Text>{useFunctionsUrl()}</Text>;
+}
 function MockStack() {
-  return <ScreenThatShowsAToast />;
+  return (
+    <>
+      <ScreenThatShowsAToast />
+      <ScreenThatReadsTheFunctionsUrl />
+    </>
+  );
 }
 MockStack.Screen = function MockScreen() {
   return null;
@@ -101,6 +111,7 @@ jest.mock("../lib/sentry/fatalRestart", () => ({ installFatalRestart: jest.fn() 
 jest.mock("../lib/supabase", () => ({
   supabase: jest.requireActual<{ mockSupabaseClient: unknown }>("./support/supabaseMock")
     .mockSupabaseClient,
+  functionsUrl: "http://192.168.1.10:54321/functions/v1",
 }));
 
 describe("the app root", () => {
@@ -154,6 +165,12 @@ describe("the app root", () => {
     await user.press(await screen.findByRole("button", { name: "Show toast" }));
 
     expect(await screen.findByRole("status")).toHaveTextContent("Targets saved");
+  });
+
+  it("should give the screens the base URL of the Edge Functions, for the calls that need their own fetch", async () => {
+    await render(<RootLayout />);
+
+    expect(await screen.findByText("http://192.168.1.10:54321/functions/v1")).toBeOnTheScreen();
   });
 
   it("should read the stored diary cache, so the screens find it", async () => {

@@ -8,6 +8,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ReactNode } from "react";
 
 const SupabaseContext = createContext<SupabaseClient<Database> | null>(null);
+const FunctionsUrlContext = createContext<string | null>(null);
 
 /**
  * The provider outlives a sign-out (the phone keeps one for the whole process), so without this
@@ -41,10 +42,20 @@ function resetCacheWhenTheUserChanges(client: SupabaseClient<Database>, queryCli
 type KeyLowProviderProps = {
   client: SupabaseClient<Database>;
   queryClient?: QueryClient;
+  /**
+   * The base URL of the Edge Functions (`https://<project>.supabase.co/functions/v1`). Only the hooks that
+   * call a function with their own fetch read it, because the Supabase client does not give its URL out.
+   */
+  functionsUrl?: string | undefined;
   children: ReactNode;
 };
 
-export function KeyLowProvider({ client, queryClient, children }: KeyLowProviderProps) {
+export function KeyLowProvider({
+  client,
+  queryClient,
+  functionsUrl,
+  children,
+}: KeyLowProviderProps) {
   // The queryClient prop is read once, on the first render. Changing it later has no effect.
   const [resolvedQueryClient] = useState(() => queryClient ?? new QueryClient());
 
@@ -55,7 +66,9 @@ export function KeyLowProvider({ client, queryClient, children }: KeyLowProvider
 
   return (
     <SupabaseContext.Provider value={client}>
-      <QueryClientProvider client={resolvedQueryClient}>{children}</QueryClientProvider>
+      <FunctionsUrlContext.Provider value={functionsUrl ?? null}>
+        <QueryClientProvider client={resolvedQueryClient}>{children}</QueryClientProvider>
+      </FunctionsUrlContext.Provider>
     </SupabaseContext.Provider>
   );
 }
@@ -68,4 +81,14 @@ export function useSupabase(): SupabaseClient<Database> {
   }
 
   return client;
+}
+
+export function useFunctionsUrl(): string {
+  const functionsUrl = useContext(FunctionsUrlContext);
+
+  if (functionsUrl === null) {
+    throw new Error("useFunctionsUrl needs the functionsUrl prop on the KeyLowProvider");
+  }
+
+  return functionsUrl;
 }

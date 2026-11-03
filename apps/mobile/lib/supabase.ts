@@ -25,6 +25,9 @@ const supabaseAnonKey = requireEnvironmentValue(
   process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
 );
 
+/** Where the Edge Functions are served. A hook that calls one with its own fetch (a streamed reply) needs it, because the client does not give its URL out. */
+export const functionsUrl = `${supabaseUrl.replace(/\/+$/, "")}/functions/v1`;
+
 // PKCE needs a secure random verifier, so the shim goes in before the client exists.
 installCryptoShim();
 

@@ -9,11 +9,12 @@ import type { ReactNode } from "react";
 /**
  * A provider around a Supabase client (a fresh one unless given) and a query client that never
  * retries on its own. A hook that sets its own `retry` still retries, after `retryDelayMs` (0 by
- * default, so a test does not wait for the real back-off).
+ * default, so a test does not wait for the real back-off). `functionsUrl` is what a hook that calls an
+ * Edge Function with its own fetch reads.
  */
 export function createWrapper(
   client: SupabaseClient<Database> = createTestClient(),
-  { retryDelayMs = 0 }: { retryDelayMs?: number } = {},
+  { retryDelayMs = 0, functionsUrl }: { retryDelayMs?: number; functionsUrl?: string } = {},
 ) {
   const queryClient = createQueryClient({
     defaultOptions: {
@@ -23,7 +24,7 @@ export function createWrapper(
   });
 
   const wrapper = ({ children }: { children: ReactNode }) => (
-    <KeyLowProvider client={client} queryClient={queryClient}>
+    <KeyLowProvider client={client} queryClient={queryClient} functionsUrl={functionsUrl}>
       {children}
     </KeyLowProvider>
   );
