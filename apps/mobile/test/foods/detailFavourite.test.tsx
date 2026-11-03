@@ -5,16 +5,18 @@ import { onlineManager } from "@tanstack/react-query";
 import { act, render, screen, userEvent } from "@testing-library/react-native";
 import { setUpTests } from "react-native-reanimated";
 
-import { foodFixture, resetApiClientMock, savedFoodId } from "./support/apiClientMock";
+import {
+  favouriteFoods,
+  foodFixture,
+  mockToggleFavouriteFood,
+  mockUseFavouriteFoods,
+  resetApiClientMock,
+  savedFoodId,
+} from "./support/apiClientMock";
 import FoodDetailRoute from "../../app/foods/[id]/index";
 import { ToastProvider, sheetHeaderHeight } from "../../components/ui";
 import { ThemeProvider } from "../../lib/theme";
 import { resetRouterMock, routerMock } from "../support/expoRouterMock";
-import {
-  favouriteFoods,
-  mockToggleFavouriteFood,
-  mockUseFavouriteFoods,
-} from "../support/favouritesMock";
 import { compileKitStyles } from "../support/kitStyles";
 import { registerAppStyles } from "../support/nativeWindStyles";
 
@@ -92,7 +94,7 @@ describe("the favourite heart on the food detail header", () => {
   });
 
   it("should be filled and named Remove from favourites when the food is a favourite", async () => {
-    favouriteFoods.current = { data: [savedFavourite], isSuccess: true };
+    favouriteFoods.current = { data: [savedFavourite], isPending: false, isError: false };
 
     await renderDetail();
 
@@ -130,7 +132,7 @@ describe("the favourite heart on the food detail header", () => {
   });
 
   it("should unfavourite the food on a tap when it is a favourite, with its own toast", async () => {
-    favouriteFoods.current = { data: [savedFavourite], isSuccess: true };
+    favouriteFoods.current = { data: [savedFavourite], isPending: false, isError: false };
     const user = await renderDetail();
 
     await user.press(removeHeart());
@@ -181,7 +183,7 @@ describe("the favourite heart on the food detail header", () => {
   });
 
   it("should be disabled until the favourites have been read, so it never guesses the state", async () => {
-    favouriteFoods.current = { data: undefined, isSuccess: false };
+    favouriteFoods.current = { data: undefined, isPending: true, isError: false };
 
     await renderDetail();
 

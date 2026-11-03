@@ -12,14 +12,14 @@ import { chickenAndRiceRecipe } from "./recipeViewFixtures";
 import { RecipeView } from "../../components/RecipeView";
 import { ToastProvider, sheetHeaderHeight } from "../../components/ui";
 import { ThemeProvider } from "../../lib/theme";
-import { createDiaryQueryClient, resetDiaryBackend } from "../support/diaryBackend";
-import { resetRouterMock } from "../support/expoRouterMock";
 import {
   favouriteRecipes,
   mockToggleFavouriteRecipe,
   mockUseFavouriteRecipes,
-  resetFavouritesMock,
-} from "../support/favouritesMock";
+  resetApiClientMock,
+} from "../foods/support/apiClientMock";
+import { createDiaryQueryClient, resetDiaryBackend } from "../support/diaryBackend";
+import { resetRouterMock } from "../support/expoRouterMock";
 import { compileKitStyles } from "../support/kitStyles";
 import { registerAppStyles } from "../support/nativeWindStyles";
 import { recipeWritesClient } from "../support/recipeWritesBackend";
@@ -47,7 +47,7 @@ jest.mock(
 jest.mock("../../lib/useReadsEnabled", () => ({ useReadsEnabled: () => true }));
 jest.mock("@keylow/api-client", () => ({
   ...jest.requireActual<object>("@keylow/api-client"),
-  ...jest.requireActual<{ mockFavouriteHooks: object }>("../support/favouritesMock")
+  ...jest.requireActual<{ mockFavouriteHooks: object }>("../foods/support/apiClientMock")
     .mockFavouriteHooks,
 }));
 
@@ -115,7 +115,7 @@ describe("the favourite heart on the recipe view header", () => {
     registerAppStyles(kitStyles);
     resetRouterMock();
     resetDiaryBackend();
-    resetFavouritesMock();
+    resetApiClientMock();
     jest.mocked(useSafeAreaInsets).mockReturnValue({ top: 0, right: 0, bottom: 0, left: 0 });
     jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(false);
     jest.spyOn(AccessibilityInfo, "announceForAccessibility").mockImplementation(() => undefined);
@@ -142,7 +142,7 @@ describe("the favourite heart on the recipe view header", () => {
   });
 
   it("should be filled in the accent and named Remove from favourites when the recipe is a favourite", async () => {
-    favouriteRecipes.current = { data: [savedFavourite], isSuccess: true };
+    favouriteRecipes.current = { data: [savedFavourite], isPending: false, isError: false };
 
     await showView();
 
@@ -185,7 +185,7 @@ describe("the favourite heart on the recipe view header", () => {
   });
 
   it("should unfavourite the recipe on a tap when it is a favourite, with its own toast", async () => {
-    favouriteRecipes.current = { data: [savedFavourite], isSuccess: true };
+    favouriteRecipes.current = { data: [savedFavourite], isPending: false, isError: false };
     const user = await showView();
 
     await user.press(removeHeart());

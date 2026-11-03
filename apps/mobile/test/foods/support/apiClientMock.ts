@@ -1,8 +1,6 @@
 import { TERMS_VERSION } from "@keylow/core/copy";
 import { buildFood, buildFoodPortion } from "@keylow/core/testing";
 
-import { mockFavouriteHooks, resetFavouritesMock } from "../../support/favouritesMock";
-
 import type * as ApiClient from "@keylow/api-client";
 import type {
   CreatedFood,
@@ -15,6 +13,7 @@ import type {
   RecentFood,
   RecipeLogEntry,
   RecipeState,
+  RecipeSummary,
 } from "@keylow/api-client";
 import type { Food, FoodPortion } from "@keylow/core/schemas";
 
@@ -84,14 +83,36 @@ export const favouriteFoods: { current: QueryState<FavouriteFood[]> } = {
 export const favouriteRecipes: { current: QueryState<FavouriteRecipe[]> } = {
   current: { data: [], isPending: false, isError: false },
 };
+// What the real query reports once it has read: `isSuccess` is worked out from the state a test sets.
+type FavouriteRead<Entry> = QueryState<Entry[]> & { isSuccess: boolean };
+const readOf = <Entry>(state: QueryState<Entry[]>): FavouriteRead<Entry> => ({
+  ...state,
+  isSuccess: state.data !== undefined && !state.isPending && !state.isError,
+});
 export const mockUseFavouriteFoods = jest.fn<
-  QueryState<FavouriteFood[]>,
+  FavouriteRead<FavouriteFood>,
   [{ enabled?: boolean }?]
 >();
 export const mockUseFavouriteRecipes = jest.fn<
-  QueryState<FavouriteRecipe[]>,
+  FavouriteRead<FavouriteRecipe>,
   [{ enabled?: boolean }?]
 >();
+// The heart's toggles, which resolve unless a test makes one reject. A test reads what they were asked.
+export const mockToggleFavouriteFood = jest.fn<
+  Promise<void>,
+  [{ food: Food; favourite: boolean }]
+>();
+export const mockToggleFavouriteRecipe = jest.fn<
+  Promise<void>,
+  [{ recipe: RecipeSummary; favourite: boolean }]
+>();
+/** The four favourites hooks, for a test that mocks `@keylow/api-client` itself and keeps the rest real. */
+export const mockFavouriteHooks = {
+  useFavouriteFoods: mockUseFavouriteFoods,
+  useFavouriteRecipes: mockUseFavouriteRecipes,
+  useToggleFavouriteFood: () => ({ mutateAsync: mockToggleFavouriteFood }),
+  useToggleFavouriteRecipe: () => ({ mutateAsync: mockToggleFavouriteRecipe }),
+};
 // The options the two terms-gated reads were asked with, so a test can see whether they were enabled.
 export const mockUseProfileTimeZone = jest.fn<
   QueryState<string | null>,
@@ -143,7 +164,6 @@ function foodWithPortionsState(): FoodWithPortionsState {
 }
 
 export function resetApiClientMock(): void {
-  resetFavouritesMock();
   mockCreateFood.mockReset();
   mockUpdateFood.mockReset();
   mockLogFood.mockReset();
@@ -159,9 +179,13 @@ export function resetApiClientMock(): void {
   favouriteFoods.current = { data: [], isPending: false, isError: false };
   favouriteRecipes.current = { data: [], isPending: false, isError: false };
   mockUseFavouriteFoods.mockReset();
-  mockUseFavouriteFoods.mockImplementation(() => favouriteFoods.current);
+  mockUseFavouriteFoods.mockImplementation(() => readOf(favouriteFoods.current));
   mockUseFavouriteRecipes.mockReset();
-  mockUseFavouriteRecipes.mockImplementation(() => favouriteRecipes.current);
+  mockUseFavouriteRecipes.mockImplementation(() => readOf(favouriteRecipes.current));
+  mockToggleFavouriteFood.mockReset();
+  mockToggleFavouriteFood.mockResolvedValue(undefined);
+  mockToggleFavouriteRecipe.mockReset();
+  mockToggleFavouriteRecipe.mockResolvedValue(undefined);
   mockGetFood.mockReset();
   mockGetFood.mockResolvedValue(foodFixture);
   mockListFoodPortions.mockReset();
@@ -189,15 +213,13 @@ export function resetApiClientMock(): void {
 // Only the hooks are replaced.
 export const mockApiClient = {
   ...jest.requireActual<typeof ApiClient>("@keylow/api-client"),
-  ...mockFavouriteHooks,
   useCreateFood: () => ({ mutateAsync: mockCreateFood }),
   useUpdateFood: () => ({ mutateAsync: mockUpdateFood }),
   useLogFood: () => ({ mutateAsync: mockLogFood }),
   useLogRecipeServing: () => ({ mutateAsync: mockLogRecipe }),
   useProfileTimeZone: mockUseProfileTimeZone,
   useRecentFoods: mockUseRecentFoods,
-  useFavouriteFoods: mockUseFavouriteFoods,
-  useFavouriteRecipes: mockUseFavouriteRecipes,
+  ...mockFavouriteHooks,
   useDeleteEntry: () => ({ mutateAsync: mockDeleteEntry }),
   // The client is not used by these tests, but the stored diary cache listens to its auth events.
   useSupabase: () => ({
