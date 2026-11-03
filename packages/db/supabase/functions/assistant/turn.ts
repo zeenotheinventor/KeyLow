@@ -59,10 +59,45 @@ export const MCP_REQUEST_TIMEOUT_MILLISECONDS = 20_000;
 // plans (https://supabase.com/docs/guides/functions/limits, checked 2026-11-03). The plan is not recorded in
 // the repository, so the shorter limit is the one used. The SDK default of 10 minutes would outlast it. One
 // retry is kept for a dropped connection or a 529, so a call that never answers costs 2 x 60 s at most.
-// This bounds the wait for the response headers only. It does not bound a stream that stalls after it
-// started, nor the turn as a whole: a turn deadline and an idle watchdog belong to KEY-795.
+// This bounds the wait for the response headers only. A stream that stalls after it started, and the turn
+// as a whole, are bounded by `TURN_DEADLINE_MILLISECONDS` and `MODEL_STREAM_IDLE_MILLISECONDS` below.
 export const MODEL_REQUEST_TIMEOUT_MILLISECONDS = 60_000;
 const MODEL_MAX_RETRIES = 1;
+
+// The Edge Function's wall clock on the free plan, the shorter of the two (150 s free, 400 s paid, from
+// https://supabase.com/docs/guides/functions/limits, checked 2026-11-03).
+const WALL_CLOCK_MILLISECONDS = 150_000;
+
+// A step that takes no signal (`connect`, `listTools`, `callTool`) cannot be cut short, and a read retries
+// once, so the longest one is two attempts of `MCP_REQUEST_TIMEOUT_MILLISECONDS`. A write never retries,
+// so this is its worst case too.
+const WORST_UNINTERRUPTIBLE_STEP_MILLISECONDS = 2 * MCP_REQUEST_TIMEOUT_MILLISECONDS;
+
+// What is left for `conclude` (cards, `finishTurn`, `close`, the failed notice) and for the clock being a
+// little off.
+const CONCLUDE_MARGIN_MILLISECONDS = 10_000;
+
+// A turn that passes this ends failed. 150 s - 40 s - 10 s = 100 s, so a tool call that starts just before
+// the deadline can still run its worst case and the turn still ends inside the wall clock.
+export const TURN_DEADLINE_MILLISECONDS =
+  WALL_CLOCK_MILLISECONDS - WORST_UNINTERRUPTIBLE_STEP_MILLISECONDS - CONCLUDE_MARGIN_MILLISECONDS;
+
+// The longest the model stream may be silent, from the response headers on, before the call is cut. Every
+// stream event counts (a block start, a text chunk, a tool input fragment, a ping), so the normal gap is
+// well under a second, except for a tool input the API buffers before it sends it. 30 s is far more than
+// that, and under a third of the deadline, so one stalled call cannot use the whole turn. It is a
+// judgement, not a measurement: KEY-795 measures the steps.
+export const MODEL_STREAM_IDLE_MILLISECONDS = 30_000;
+
+export type TurnLimits = {
+  deadlineMilliseconds: number;
+  streamIdleMilliseconds: number;
+};
+
+const DEFAULT_LIMITS: TurnLimits = {
+  deadlineMilliseconds: TURN_DEADLINE_MILLISECONDS,
+  streamIdleMilliseconds: MODEL_STREAM_IDLE_MILLISECONDS,
+};
 
 // The SDK parses a streamed tool input as it arrives, and a model that emits invalid JSON makes the stream
 // fail with a plain `AnthropicError` whose cause is a `SyntaxError`, never an API error. That one failure
@@ -113,11 +148,19 @@ type Ending = { status: FinalTurnStatus; code: string };
 const ending = (status: FinalTurnStatus, code: string = status): Ending => ({ status, code });
 const failedEnding = (code: string): Ending => ending("failed", code);
 
+// The two ways a turn can run too long. Each is the `code` of its failed ending.
+type LimitCode = "turn_deadline" | "stream_idle";
+
 type Run = {
   context: TurnContext;
   stream: EventStream;
   // Aborts when the app closes the sheet or its request ends.
   signal: AbortSignal;
+  limits: TurnLimits;
+  // Aborts when the deadline passes or the model stream goes quiet. Apart from `signal`, so the two stay
+  // apart: the reader going away is a stop, a limit is a failure.
+  limitSignal: AbortController;
+  limitCode: LimitCode | null;
   dependencies: TurnDependencies;
   counts: { modelCalls: number; toolCalls: number };
   unparseableInputRetries: number;
@@ -139,6 +182,26 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 // The SDK's objects as plain JSON, for the rows. Nothing is added or reordered.
 const toJson = (value: unknown): Json => JSON.parse(JSON.stringify(value));
+
+function hitLimit(run: Run, code: LimitCode): void {
+  // The first limit is the reason. The abort that follows can only be the same turn ending.
+  run.limitCode ??= code;
+  run.limitSignal.abort();
+}
+
+// Why the step in flight, or the next one, must not go on: the reader went away (a stop, which wins over a
+// limit that fired as well) or a limit passed (a failure, reported with a code and no content). Null when
+// the turn may go on.
+function interruption(run: Run): Ending | null {
+  if (run.signal.aborted) {
+    return ending("stopped");
+  }
+  if (run.limitCode === null) {
+    return null;
+  }
+  run.dependencies.report("assistant", "internal_error", new Error(run.limitCode));
+  return failedEnding(run.limitCode);
+}
 
 function emit(run: Run, event: AssistantStreamEvent): void {
   writeEvent(run.stream, event, run.dependencies.report);
@@ -251,9 +314,10 @@ const isToolInputParseError = (caught: unknown): boolean =>
   caught.cause instanceof SyntaxError;
 
 type ModelOutcome =
-  { kind: "message"; message: Anthropic.Message } | { kind: "stopped" } | { kind: "retry" };
+  { kind: "message"; message: Anthropic.Message } | { kind: "interrupted" } | { kind: "retry" };
 
-// One streamed model call. The text goes to the app as it arrives.
+// One streamed model call. The text goes to the app as it arrives. The call is cut short by the reader
+// going away, by the turn's deadline, and by the stream going quiet for `streamIdleMilliseconds`.
 async function callModel(
   run: Run,
   session: Session,
@@ -261,7 +325,19 @@ async function callModel(
 ): Promise<ModelOutcome> {
   const startedAt = performance.now();
   run.counts.modelCalls += 1;
-  const modelStream = session.client.messages.stream(request, { signal: run.signal });
+  const modelStream = session.client.messages.stream(request, {
+    signal: AbortSignal.any([run.signal, run.limitSignal.signal]),
+  });
+  // Armed when the response headers arrive (`connect`, before the first stream event) and pushed back by
+  // every stream event after it (`streamEvent`: message_start, each block start, delta and stop, the
+  // message_delta, message_stop and ping).
+  let idleTimer: ReturnType<typeof setTimeout> | undefined;
+  const watchForSilence = () => {
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(() => hitLimit(run, "stream_idle"), run.limits.streamIdleMilliseconds);
+  };
+  modelStream.on("connect", watchForSilence);
+  modelStream.on("streamEvent", watchForSilence);
   let textStarted = false;
   let textEmitted = false;
   modelStream.on("text", (delta, snapshot) => {
@@ -277,16 +353,21 @@ async function callModel(
   try {
     message = await modelStream.finalMessage();
   } catch (caught) {
+    clearTimeout(idleTimer);
     // The call failed before any usage arrived, and it is still one call.
     await recordCall(run, startedAt, null).catch((recordFailure: unknown) =>
       run.dependencies.report("assistant", "internal_error", recordFailure),
     );
-    if (run.signal.aborted || caught instanceof Anthropic.APIUserAbortError) {
+    if (
+      run.signal.aborted ||
+      run.limitCode !== null ||
+      caught instanceof Anthropic.APIUserAbortError
+    ) {
       const partial = (modelStream.currentMessage?.content ?? []).flatMap((block) =>
         block.type === "text" && nonBlank(block.text) ? [{ type: "text", text: block.text }] : [],
       );
       await storeAssistantContent(run, partial);
-      return { kind: "stopped" };
+      return { kind: "interrupted" };
     }
     if (
       !isToolInputParseError(caught) ||
@@ -298,6 +379,7 @@ async function callModel(
     run.unparseableInputRetries += 1;
     return { kind: "retry" };
   }
+  clearTimeout(idleTimer);
   run.unparseableInputRetries = 0;
   // A good response is kept whatever happens to its usage row.
   await recordCall(run, startedAt, message).catch((recordFailure: unknown) =>
@@ -412,8 +494,9 @@ async function runToolUse(
   responseText: string,
 ): Promise<Ending | null> {
   const { id, name, input } = toolUse;
-  if (run.signal.aborted) {
-    return ending("stopped");
+  const interrupted = interruption(run);
+  if (interrupted !== null) {
+    return interrupted;
   }
   if (name === ASK_USER_TOOL) {
     const question = askUserTool.input.safeParse(input);
@@ -469,16 +552,17 @@ async function runModelCalls(run: Run, session: Session): Promise<Ending> {
   const { userId, conversationId } = run.context;
   const { turns } = run.dependencies;
   while (run.counts.modelCalls < MAX_MODEL_CALLS) {
-    if (run.signal.aborted) {
-      return ending("stopped");
+    const interrupted = interruption(run);
+    if (interrupted !== null) {
+      return interrupted;
     }
     const { messages } = await turns.readConversation(userId, conversationId, {
       excludeMessageId: NO_MESSAGE_ID,
     });
     const request = buildTurnRequest({ tools: session.tools, messages: toApiMessages(messages) });
     const outcome = await callModel(run, session, request);
-    if (outcome.kind === "stopped") {
-      return ending("stopped");
+    if (outcome.kind === "interrupted") {
+      return interruption(run) ?? ending("stopped");
     }
     if (outcome.kind === "retry") {
       continue;
@@ -627,13 +711,19 @@ async function conclude(run: Run, reached: Ending): Promise<Ending> {
   return final;
 }
 
-export function createRunTurn(dependencies: TurnDependencies): RunTurn {
+export function createRunTurn(
+  dependencies: TurnDependencies,
+  limits: TurnLimits = DEFAULT_LIMITS,
+): RunTurn {
   return async (context, stream) => {
     const startedAt = performance.now();
     const run: Run = {
       context,
       stream,
       signal: AbortSignal.any([stream.signal, context.request.signal]),
+      limits,
+      limitSignal: new AbortController(),
+      limitCode: null,
       dependencies,
       counts: { modelCalls: 0, toolCalls: 0 },
       unparseableInputRetries: 0,
@@ -646,6 +736,11 @@ export function createRunTurn(dependencies: TurnDependencies): RunTurn {
       turnId: context.turnId,
       conversationId: context.conversationId,
     });
+    // From the start of the turn, so the work before the first model call counts.
+    const deadlineTimer = setTimeout(
+      () => hitLimit(run, "turn_deadline"),
+      limits.deadlineMilliseconds,
+    );
     let reached: Ending;
     try {
       reached = await takeTurn(run);
@@ -653,6 +748,8 @@ export function createRunTurn(dependencies: TurnDependencies): RunTurn {
       // A code and a stack, never the content: the error type is all the report keeps.
       dependencies.report("assistant", "internal_error", caught);
       reached = failedEnding("error");
+    } finally {
+      clearTimeout(deadlineTimer);
     }
     const final = await conclude(run, reached);
     const milliseconds = Math.round(performance.now() - startedAt);
