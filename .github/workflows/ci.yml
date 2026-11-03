@@ -421,18 +421,32 @@ jobs:
   # checked with is `next build` here. `tsc` alone does not find everything `next build` does, which
   # runs its own type-check and compile pass and has failed on a pull request that passed the gate.
   # Every route is rendered on demand, so the build needs no Supabase environment variables.
+  # The Vitest run was the long pole (about two and a half minutes, sharing the cores with lint and
+  # type-check for the first of them), so the job runs as three parallel legs: "static" lints,
+  # type-checks and builds, and the other two each run half the Vitest files (`--shard`, split by file).
+  # `checks` needs `web`, which waits for every leg, so the required check is unchanged.
   web:
+    name: web (${{ matrix.part }})
     needs: scope
     if: needs.scope.outputs.web == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        part: [static, 1/2, 2/2]
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
-      - name: Lint, type-check and test the web app
-        run: pnpm turbo run lint typecheck test --filter=@keylow/web --only
+      - name: Lint and type-check the web app
+        if: matrix.part == 'static'
+        run: pnpm turbo run lint typecheck --filter=@keylow/web --only
       - name: Build the web app
+        if: matrix.part == 'static'
         run: pnpm turbo run build --filter=@keylow/web --only
+      - name: Test the web app (shard ${{ matrix.part }})
+        if: matrix.part != 'static'
+        run: pnpm turbo run test --filter=@keylow/web --only -- --shard=${{ matrix.part }}
 
   # Builds the web Storybook, so a broken story or a Storybook config that no longer matches Next
   # fails the pull request.
