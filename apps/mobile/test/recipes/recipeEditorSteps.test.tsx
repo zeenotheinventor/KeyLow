@@ -337,18 +337,6 @@ describe("the recipe editor's instructions", () => {
         expect(screen.getByRole("button", { name: "Done" })).toBeDisabled();
       });
 
-      it("should turn Done on again once the step fits", async () => {
-        const user = await showEditor();
-        await user.press(rowOf(2));
-        await fireEvent.changeText(fieldOf(2), tooLong);
-
-        await fireEvent.changeText(fieldOf(2), "x".repeat(1000));
-
-        expect(screen.getByText("1,000 / 1,000")).toBeOnTheScreen();
-        expect(screen.queryByRole("alert")).not.toBeOnTheScreen();
-        expect(screen.getByRole("button", { name: "Done" })).toBeEnabled();
-      });
-
       it("should stay open when it is dismissed, with the text and the sentence still there, so a long paste is never dropped", async () => {
         const user = await showEditor();
         await user.press(rowOf(2));

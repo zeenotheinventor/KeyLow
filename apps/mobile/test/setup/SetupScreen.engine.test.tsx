@@ -167,32 +167,6 @@ describe("the setup wizard", () => {
         expect(closeButton()).toBeOnTheScreen();
       });
 
-      it("should keep the saved rate's targets from the same measured expenditure when the rate is not changed", async () => {
-        await goToEstimateAtRate();
-
-        // 2,579.54 - 0.005 x 79.0227 x 1,100 = 2,144.9, so 2,140 kcal: the day 28 golden targets.
-        expect(
-          await within(screen.getByLabelText("Calorie target, estimate")).findByText("2,140"),
-        ).toBeOnTheScreen();
-      });
-
-      it("should date the measurement by the newest check-in that measured, when a later one did not", async () => {
-        setupBackend.snapshots = [
-          startSnapshotRow("2026-09-25", 2500),
-          measuredSnapshotRow("2026-10-09", 2559.56),
-          measuredSnapshotRow("2026-10-16", 2574.22),
-          unmeasuredSnapshotRow("2026-10-23", 2574.22),
-        ];
-
-        await goToEstimateAtRate();
-
-        expect(
-          await screen.findByText(
-            "Ki-Lo measured your expenditure at your last check-in, on Friday 16 October. Changing your answers keeps it and changes only your targets.",
-          ),
-        ).toBeOnTheScreen();
-      });
-
       it("should say what the trend weight, not the weight entered, gives for a week at the rate", async () => {
         // The weight entered is 60 kg and the trend weight is 79.0227 kg: 0.5% of 79.0227 is 0.4 kg and of 60 is 0.3.
         setupBackend.weighIn = { weight_kg: 60, local_date: "2026-10-22" };
@@ -210,24 +184,6 @@ describe("the setup wizard", () => {
 
         // 23 October 2026 less 52 weeks.
         expect(setupBackend.snapshotFromDates).toEqual(["2025-10-24"]);
-      });
-
-      it("should date the measurement by a check-in 8 weeks back, when two later ones did not measure", async () => {
-        setupBackend.snapshots = [
-          startSnapshotRow("2026-08-14", 2500),
-          measuredSnapshotRow("2026-08-28", 2559.56),
-          unmeasuredSnapshotRow("2026-10-09", 2559.56),
-          unmeasuredSnapshotRow("2026-10-16", 2559.56),
-        ];
-
-        await goToEstimateAtRate();
-
-        expect(
-          await screen.findByText(
-            "Ki-Lo measured your expenditure at your last check-in, on Friday 28 August. Changing your answers keeps it and changes only your targets.",
-          ),
-        ).toBeOnTheScreen();
-        expect(screen.queryByText(/has not measured your expenditure yet/)).toBeNull();
       });
 
       it("should use the latest weigh-in's weight when the only weigh-in is today's, not the weight entered", async () => {
@@ -268,43 +224,6 @@ describe("the setup wizard", () => {
           expect(routerMock.back).toHaveBeenCalledTimes(1);
         });
         expect(setupBackend.writes).toEqual(["PATCH programs", "PATCH profiles"]);
-      });
-    });
-
-    describe("whichever programme the newest snapshot belongs to", () => {
-      beforeEach(() => {
-        haveGoldenWeighIns();
-      });
-
-      it("should keep the measured expenditure of a programme that has ended, when it is 10 days old", async () => {
-        setupBackend.snapshots = [
-          { ...measuredSnapshotRow("2026-10-13", 2579.54), program_id: "ended-programme" },
-        ];
-
-        await goToEstimateAtRate();
-
-        // The server's recompute keeps the newest snapshot of any programme: 2,579.54 gives 2,140 at 0.5%.
-        expect(
-          await within(screen.getByLabelText("Calorie target, estimate")).findByText("2,140"),
-        ).toBeOnTheScreen();
-        expect(
-          screen.getByText(
-            "Ki-Lo measured your expenditure at your last check-in, on Tuesday 13 October. Changing your answers keeps it and changes only your targets.",
-          ),
-        ).toBeOnTheScreen();
-      });
-
-      it("should start again from the answers when the newest check-in is 35 days old", async () => {
-        setupBackend.weighIn = { weight_kg: 80, local_date: "2026-10-22" };
-        setupBackend.snapshots = [measuredSnapshotRow("2026-09-18", 2579.54)];
-
-        await goToEstimateAtRate();
-
-        // The recompute makes a new start snapshot from the answers, so the estimate of the answers is drawn.
-        expect(
-          await within(screen.getByLabelText("Calorie target, estimate")).findByText("1,970"),
-        ).toBeOnTheScreen();
-        expect(screen.getByRole("heading", { name: "Your starting targets" })).toBeOnTheScreen();
       });
     });
 

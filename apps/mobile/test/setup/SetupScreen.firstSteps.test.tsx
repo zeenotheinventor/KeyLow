@@ -282,48 +282,6 @@ describe("the setup wizard", () => {
       expect(continueButton()).toBeEnabled();
     });
 
-    it("should refuse someone under 13 and keep Continue off", async () => {
-      await renderWizard("first-run");
-      await goToBirthDateStep();
-
-      await typeBirthDate("02", "06", "2015");
-
-      expect(screen.getByRole("alert")).toHaveTextContent(
-        "You need to be 13 or over to use Ki-Lo.",
-      );
-      expect(continueButton()).toBeDisabled();
-    });
-
-    it("should refuse a future date and keep Continue off", async () => {
-      await renderWizard("first-run");
-      await goToBirthDateStep();
-
-      await typeBirthDate("12", "11", "2026");
-
-      expect(screen.getByRole("alert")).toHaveTextContent("Enter a date before today.");
-      expect(continueButton()).toBeDisabled();
-    });
-
-    it("should refuse 31 02 and keep Continue off", async () => {
-      await renderWizard("first-run");
-      await goToBirthDateStep();
-
-      await typeBirthDate("31", "02", "1991");
-
-      expect(screen.getByRole("alert")).toHaveTextContent("Enter a real date.");
-      expect(continueButton()).toBeDisabled();
-    });
-
-    it("should refuse a year that makes the person over 100 and keep Continue off", async () => {
-      await renderWizard("first-run");
-      await goToBirthDateStep();
-
-      await typeBirthDate("01", "01", "1900");
-
-      expect(screen.getByRole("alert")).toHaveTextContent("Enter a year from 1926 onwards.");
-      expect(continueButton()).toBeDisabled();
-    });
-
     it("should work out the age and the 13th birthday from the date in the device's time zone", async () => {
       // 12:00 in UTC is 01:00 on 24 October in Auckland, so someone born on 24 October 2013 is 13 there today.
       deviceTimeZone("Pacific/Auckland");

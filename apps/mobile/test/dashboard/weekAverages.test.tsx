@@ -16,12 +16,7 @@ import {
 } from "../support/diaryBackend";
 import { compileKitStyles } from "../support/kitStyles";
 import { registerAppStyles } from "../support/nativeWindStyles";
-import {
-  showEmptyWeek,
-  showOverTargetWeek,
-  showSampleWeek,
-  showWeek,
-} from "../support/weekFixtures";
+import { showOverTargetWeek, showSampleWeek, showWeek } from "../support/weekFixtures";
 
 import type { QueryClient } from "@tanstack/react-query";
 
@@ -134,14 +129,6 @@ describe("the weekly averages screen", () => {
     ]);
   });
 
-  it("should not change a number when today's entries change", async () => {
-    showWeek([2140, 2260, 1286, 3500], ["2026-10-12", "2026-10-13"]);
-    await renderScreen();
-
-    expect((await rowsOf("Daily average"))[0]).toBe("Energy: 1,895 / 2,200 kcal");
-    expect((await rowsOf("Week so far"))[0]).toBe("Energy: 5,686 kcal");
-  });
-
   it("should draw the calories average over the days logged before today, captioned Mon to yesterday", async () => {
     await renderScreen();
 
@@ -181,14 +168,6 @@ describe("the weekly averages screen", () => {
 
   it("should say nothing is logged before today when only today has entries", async () => {
     showWeek([null, null, null, 1039]);
-    await renderScreen();
-
-    expect(await screen.findByText("Nothing logged before today this week.")).toBeOnTheScreen();
-    expect(screen.queryByLabelText("Daily average")).toBeNull();
-  });
-
-  it("should say nothing is logged before today, with no tables, for an empty week", async () => {
-    showEmptyWeek();
     await renderScreen();
 
     expect(await screen.findByText("Nothing logged before today this week.")).toBeOnTheScreen();

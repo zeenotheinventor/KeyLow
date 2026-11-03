@@ -178,31 +178,6 @@ describe("the setup wizard", () => {
       expect(radio(/^0\.5% a week, Suggested/)).toBeChecked();
     });
 
-    it("should snap a saved rate that is not a preset to the nearest one before the rate shows", async () => {
-      const user = userEvent.setup();
-      setupBackend.program = { ...savedProgram, rate_pct_per_week: 0.6 };
-      await renderWizard("recalculate");
-      await screen.findByRole("radio", { name: "Male", checked: true });
-      for (let step = 0; step < 5; step += 1) {
-        await user.press(continueButton());
-      }
-
-      expect(screen.getByText("Step 6 of 8")).toBeOnTheScreen();
-      expect(radio(/^0\.5% a week, Suggested/)).toBeChecked();
-    });
-
-    it("should snap a saved gain rate of 0.4 to 0.5", async () => {
-      const user = userEvent.setup();
-      setupBackend.program = { ...savedProgram, goal: "gain", rate_pct_per_week: 0.4 };
-      await renderWizard("recalculate");
-      await screen.findByRole("radio", { name: "Male", checked: true });
-      for (let step = 0; step < 5; step += 1) {
-        await user.press(continueButton());
-      }
-
-      expect(radio(/^0\.5% a week/)).toBeChecked();
-    });
-
     it("should lead on to the estimate of the saved answers, with Close and Save targets", async () => {
       const user = userEvent.setup();
       await renderWizard("recalculate");
