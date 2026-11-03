@@ -8,3 +8,5 @@ export * from "./undoState";
 export * from "./changes";
 export * from "./cards";
 export * from "./sheetThread";
+export * from "./cardPresentation";
+export * from "./describeInLog";

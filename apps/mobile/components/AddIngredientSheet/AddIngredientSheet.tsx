@@ -12,6 +12,7 @@ import type { AddIngredientSheetProps, ChosenFood } from "./types";
  * written here: Add to recipe hands the ingredient to the editor, whose draft is the editor's until Save.
  */
 export function AddIngredientSheet({
+  initialQuery,
   chosen,
   onChoose,
   onBackToResults,
@@ -33,6 +34,7 @@ export function AddIngredientSheet({
         importantForAccessibility={chosen === undefined ? "auto" : "no-hide-descendants"}
       >
         <FoodSearch
+          initialQuery={initialQuery}
           ingredient={{
             onOpenRecent: (recent) => {
               choose({ foodId: recent.foodId, recent });

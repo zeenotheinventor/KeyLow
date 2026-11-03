@@ -11,12 +11,14 @@ import {
   canSendAssistantMessage,
   describeAssistantComposer,
   isAssistantStatusKnown,
+  isSentTurnStored,
   isStaleStreamGateNotice,
   resolveAssistantSheetAccess,
   resolveAssistantTimeZone,
 } from "@keylow/core";
 import { ASSISTANT_OFFLINE, ASSISTANT_SHEET, SAVE_FAILED_BANNER } from "@keylow/core/copy";
 import { fetch as streamingFetch } from "expo/fetch";
+import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { AccessibilityInfo, View } from "react-native";
 
@@ -24,11 +26,12 @@ import { AssistantEmpty } from "./AssistantEmpty";
 import { AssistantThread } from "./AssistantThread";
 import { Composer } from "./Composer";
 import { ConsentCard } from "./ConsentCard";
+import { assistantCardHref } from "../../lib/assistantCardRoutes";
 import { useIsOnline } from "../../lib/connectivity";
-import { Banner, BottomSheet, SheetHeader, SheetScrollView, useToast } from "../ui";
+import { Badge, Banner, BottomSheet, SheetHeader, SheetScrollView, Text, useToast } from "../ui";
 
 import type { AssistantSheetProps } from "./types";
-import type { AssistantSheetSent } from "@keylow/core";
+import type { AssistantCardLink, AssistantSheetSent } from "@keylow/core";
 import type { ComponentRef } from "react";
 
 const deviceTimeZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -36,7 +39,8 @@ const deviceTimeZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
 // The boards' open height leaves the diary's header showing, 106 of 844 points from the top. The sheet drags
 // up to full height, which starts 54 points from the top.
 const SNAP_POINTS = ["87%", "94%"];
-// The consent card opens at full height (`assistant · consent-needed`, 54 points from the top).
+// The consent card opens at full height (`assistant · consent-needed`, 54 points from the top), and so does
+// the sheet opened from Describe (`assistant · describe`).
 const OPEN_SNAP_INDEX = 0;
 const FULL_HEIGHT_SNAP_INDEX = 1;
 
@@ -56,8 +60,9 @@ const threadClassNames = {
  * card, a disabled composer under a limit) is `resolveAssistantSheetAccess`. The status is read again each
  * time the sheet opens.
  */
-export function AssistantSheet({ open, onClose, localDate }: AssistantSheetProps) {
+export function AssistantSheet({ open, onClose, localDate, describeAt }: AssistantSheetProps) {
   const isOnline = useIsOnline();
+  const router = useRouter();
   const conversation = useAssistantConversation({ enabled: open });
   const status = useAssistantStatus();
   const setConsent = useSetAssistantConsent();
@@ -90,7 +95,7 @@ export function AssistantSheet({ open, onClose, localDate }: AssistantSheetProps
     isStreaming,
     accessNotice: access.kind === "limited" ? access.notice : null,
   });
-  const composer = describeAssistantComposer({ access, isOnline, timeZone });
+  const composer = describeAssistantComposer({ access, isOnline, timeZone, describeAt });
 
   // The turn on screen and what it left, for the read on open below, which finishes after the render that
   // started it.
@@ -133,10 +138,12 @@ export function AssistantSheet({ open, onClose, localDate }: AssistantSheetProps
   const isThreadKnown = conversation.isSuccess || conversation.isError;
   const isEmpty = thread.entries.length === 0;
 
-  // Once the answer has ended and the stored conversation has moved past where the message was sent, the
-  // stored conversation holds the turn, so the message sent from here is let go. If it were kept, the thread
-  // going empty again (a new conversation, or every conversation deleted) would draw the old message back.
-  if (sent !== null && !isStreaming && (items?.at(-1)?.id ?? null) !== sent.afterItemId) {
+  // Once the answer has ended and the stored conversation holds the turn (a reply or a notice after
+  // where the message was sent), the message sent from here is let go. If it were kept, the thread going
+  // empty again (a new conversation, or every conversation deleted) would draw the old message back. A read
+  // that holds only your message, or your message and a card while words are to come, does not count, or the
+  // reply would vanish until the next read.
+  if (sent !== null && !isStreaming && isSentTurnStored(items ?? [], sent.afterItemId, live)) {
     setSent(null);
   }
 
@@ -172,7 +179,7 @@ export function AssistantSheet({ open, onClose, localDate }: AssistantSheetProps
     setSent({ text, afterItemId: items?.at(-1)?.id ?? null });
     // The thread's own conversation, or the one the first turn started, which is not read yet.
     const conversationId = conversation.data?.conversationId ?? live?.conversationId ?? null;
-    void send(text, { conversationId, localDate });
+    void send(text, { conversationId, localDate, localTime: describeAt });
   }
 
   function sendDraft() {
@@ -204,6 +211,12 @@ export function AssistantSheet({ open, onClose, localDate }: AssistantSheetProps
       stop();
     }
     onClose();
+  }
+
+  // The sheet closes first, so the screen the link opens is not under it.
+  function openCardLink(target: AssistantCardLink["target"]) {
+    close();
+    router.push(assistantCardHref(target));
   }
 
   function turnOnAssistant() {
@@ -242,6 +255,7 @@ export function AssistantSheet({ open, onClose, localDate }: AssistantSheetProps
     if (isEmpty) {
       return isThreadKnown ? (
         <AssistantEmpty
+          describeAt={describeAt}
           isDisabled={!isOnline || conversation.isFetching}
           onStarterPress={sendMessage}
         />
@@ -253,6 +267,7 @@ export function AssistantSheet({ open, onClose, localDate }: AssistantSheetProps
         timeZone={timeZone}
         onAskAgain={sendLastMessageAgain}
         onTryAgain={sendLastMessageAgain}
+        onOpenCardLink={openCardLink}
       />
     );
   }
@@ -261,7 +276,11 @@ export function AssistantSheet({ open, onClose, localDate }: AssistantSheetProps
     <BottomSheet
       label={ASSISTANT_SHEET.title}
       open={open}
-      snapIndex={access.kind === "consent" ? FULL_HEIGHT_SNAP_INDEX : OPEN_SNAP_INDEX}
+      snapIndex={
+        access.kind === "consent" || describeAt !== undefined
+          ? FULL_HEIGHT_SNAP_INDEX
+          : OPEN_SNAP_INDEX
+      }
       snapPoints={SNAP_POINTS}
       onClose={close}
     >
@@ -306,7 +325,16 @@ export function AssistantSheet({ open, onClose, localDate }: AssistantSheetProps
                 variant="offline"
               />
             )}
+            {composer.hint === undefined ? null : (
+              <View className="flex-row items-center gap-2">
+                <Badge outlined>{composer.hint.chip}</Badge>
+                <Text tone="muted" variant="caption">
+                  {composer.hint.text}
+                </Text>
+              </View>
+            )}
             <Composer
+              isAutoFocused={describeAt !== undefined}
               isFieldDisabled={composer.isFieldDisabled}
               isSendDisabled={!canSendWords(draft)}
               placeholder={composer.placeholder}

@@ -72,6 +72,8 @@ jest.mock("@keylow/api-client", () => ({
   }),
   useSetAssistantConsent: () => ({ mutate: jest.fn(), isPending: false }),
   useProfileTimeZone: () => ({ data: "Europe/London" }),
+  // The card's Undo is tested with the real hook in assistantActionCards.test.tsx.
+  useUndoAssistantAction: () => ({ mutateAsync: jest.fn(), isPending: false }),
 }));
 
 setUpTests();
@@ -577,6 +579,10 @@ describe("the assistant sheet", () => {
         "Close",
         "You: 2 eggs and toast at 8:10",
         "2 eggs and toast at 8:10",
+        "Logged 2 eggs and toast at 08:10",
+        "Undo",
+        "Undo",
+        "232 kcal · P 15 g · C 17 g · F 10 g",
         "You: What's left for today?",
         "What's left for today?",
         "Assistant: You have 1,693 kcal and 117 g of protein left today.",
@@ -586,11 +592,12 @@ describe("the assistant sheet", () => {
       ]);
     });
 
-    it("should leave the card out, which a later ticket draws, and never show its data", async () => {
+    it("should draw the card as sent, with its Undo, between the messages", async () => {
       await renderSheet();
 
-      expect(screen.queryByText("Logged 2 eggs and toast at 08:10")).not.toBeOnTheScreen();
-      expect(screen.queryByText(/232 kcal/)).not.toBeOnTheScreen();
+      expect(screen.getByText("Logged 2 eggs and toast at 08:10")).toBeOnTheScreen();
+      expect(screen.getByText("232 kcal · P 15 g · C 17 g · F 10 g")).toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Undo" })).toBeOnTheScreen();
     });
 
     it("should have Send on for a message typed", async () => {

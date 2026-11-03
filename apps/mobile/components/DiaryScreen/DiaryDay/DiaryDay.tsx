@@ -16,7 +16,7 @@ import { useIsOnline } from "../../../lib/connectivity";
 import { foodSearchHref } from "../../../lib/navigation";
 import { useNow } from "../../../lib/useNow";
 import { setViewedDay } from "../../../lib/viewedDay";
-import { AssistantSheet } from "../../AssistantSheet";
+import { useOpenAssistant } from "../../AssistantSheetHost";
 import { ErrorState, Text, WeekStrip } from "../../ui";
 import { DatePickerSheet } from "../DatePickerSheet";
 import { DiaryDayContent } from "../DiaryDayContent";
@@ -46,7 +46,8 @@ function readHour(value: string | undefined): number | undefined {
 /**
  * One day of the diary and the week around it, once the profile's time zone is known: the header, the
  * week strip and, under it, the day, with the sheets the header opens (the date picker, and the menu
- * with Copy yesterday, and the assistant's chat sheet) and the actions on the day (delete with Undo, copy, and marking it complete).
+ * with Copy yesterday), the button that opens the assistant's chat sheet, and the actions on the day (delete
+ * with Undo, copy, and marking it complete).
  * It also says once, in a toast, when a check-in has set a new calorie target.
  * Nothing is read while `isReadEnabled` is false, because the terms gate is up over the app. Until the
  * first day has loaded a skeleton stands in for the whole body. After that the header and the strip stay
@@ -64,10 +65,8 @@ export function DiaryDay({ timeZone, isReadEnabled }: DiaryDayProps) {
   const [hasLoadedADay, setHasLoadedADay] = useState(false);
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isAssistantOpen, setIsAssistantOpen] = useState(false);
-  // The assistant's hooks start when it is first opened, and it stays mounted from then on, so a stream that
-  // was stopped by closing the sheet is still there, marked stopped, when it is opened again.
-  const [hasOpenedAssistant, setHasOpenedAssistant] = useState(false);
+  // The assistant's sheet is the app's one, held above the tabs and Log food, so Describe opens the same sheet.
+  const openAssistant = useOpenAssistant();
 
   const today = toLocalDate(now, timeZone);
   const viewedDate = selectedDate ?? today;
@@ -217,8 +216,7 @@ export function DiaryDay({ timeZone, isReadEnabled }: DiaryDayProps) {
       moreLabel={DIARY_MORE_LABEL}
       title={title}
       onAssistant={() => {
-        setHasOpenedAssistant(true);
-        setIsAssistantOpen(true);
+        openAssistant({ localDate: viewedDate });
       }}
       onChooseDate={() => {
         setIsPickerOpen(true);
@@ -264,15 +262,6 @@ export function DiaryDay({ timeZone, isReadEnabled }: DiaryDayProps) {
           setIsPickerOpen(false);
         }}
       />
-      {hasOpenedAssistant ? (
-        <AssistantSheet
-          localDate={viewedDate}
-          open={isAssistantOpen}
-          onClose={() => {
-            setIsAssistantOpen(false);
-          }}
-        />
-      ) : null}
       <DiaryMoreSheet
         isCopyDisabled={!isOnline || isCopying || previousDayQuery.isPending}
         isYesterdayEmpty={isYesterdayEmpty}

@@ -6,6 +6,7 @@ import { useUpdatedToast } from "./useUpdatedToast";
 import { useSentryTrail } from "../../lib/sentry/useSentryTrail";
 import { useTheme } from "../../lib/theme";
 import { useHideSplashAfterUpdateCheck } from "../../lib/updates";
+import { AssistantSheetHost } from "../AssistantSheetHost";
 
 /**
  * What the root layout shows once the session is known and the theme applied: the screens in the theme's
@@ -13,7 +14,8 @@ import { useHideSplashAfterUpdateCheck } from "../../lib/updates";
  * on the light one. It also lets the splash screen go once the check for a newer update has settled, so
  * the screens are ready behind it by then. An update that is found downloads behind the splash screen, and
  * the first start on a new update says so in a toast, once the splash screen has gone. It leaves the
- * trail a report shows, of the screens, the app state and the keyboard.
+ * trail a report shows, of the screens, the app state and the keyboard. It also holds the assistant's sheet
+ * above the screens, so the diary's button opens it over the tabs.
  */
 export function RootNavigator() {
   const { scheme, colors } = useTheme();
@@ -24,20 +26,25 @@ export function RootNavigator() {
   return (
     <View className="flex-1 bg-background">
       <StatusBar style={scheme === "dark" ? "light" : "dark"} />
-      <Stack
-        screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}
-      >
-        {/* The food search sheet covers the tabs and slides up from the bottom. */}
-        <Stack.Screen
-          name="foods"
-          options={{ presentation: "fullScreenModal", animation: "slide_from_bottom" }}
-        />
-        {/* The active session covers the tabs and slides up, and hiding it slides it back down. */}
-        <Stack.Screen
-          name="session"
-          options={{ presentation: "fullScreenModal", animation: "slide_from_bottom" }}
-        />
-      </Stack>
+      <AssistantSheetHost>
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: colors.background },
+          }}
+        >
+          {/* The food search sheet covers the tabs and slides up from the bottom. */}
+          <Stack.Screen
+            name="foods"
+            options={{ presentation: "fullScreenModal", animation: "slide_from_bottom" }}
+          />
+          {/* The active session covers the tabs and slides up, and hiding it slides it back down. */}
+          <Stack.Screen
+            name="session"
+            options={{ presentation: "fullScreenModal", animation: "slide_from_bottom" }}
+          />
+        </Stack>
+      </AssistantSheetHost>
     </View>
   );
 }

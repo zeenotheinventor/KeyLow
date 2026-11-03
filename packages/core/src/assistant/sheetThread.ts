@@ -1,6 +1,7 @@
 import { ASSISTANT_OFFLINE, describeAssistantNotice } from "../copy/assistantNotices";
-import { ASSISTANT_SHEET } from "../copy/assistantSheet";
+import { ASSISTANT_DESCRIBE, ASSISTANT_SHEET, describeLogsAt } from "../copy/assistantSheet";
 
+import type { AssistantCard } from "./card";
 import type { AssistantNotice } from "./notice";
 import type { AssistantThreadItem } from "./thread";
 import type { DescribableAssistantNotice } from "../copy/assistantNotices";
@@ -8,13 +9,16 @@ import type { DescribableAssistantNotice } from "../copy/assistantNotices";
 /*
  * What the assistant sheet draws in its thread (`assistant · empty`, `streaming`, `conversation`,
  * `unavailable`): the stored conversation, and under it the message sent from this sheet with the reply
- * as it arrives. The cards, questions, confirmations and answer lines of the stored thread are drawn by
- * later tickets, so they are left out here, never shown as raw data.
+ * as it arrives. The questions, confirmations and answer lines of the stored thread are drawn by later
+ * tickets, so they are left out here, never shown as raw data. The action cards are drawn here, with the
+ * state of their Undo given by `describeAssistantCard`.
  */
 
 /** What the sheet needs of the turn being written: the part of `AssistantLiveTurn` it draws. */
 export type AssistantSheetLiveTurn = {
   text: string;
+  /** The writes the turn has made so far, each with its Undo. */
+  cards: readonly AssistantCard[];
   stopped: boolean;
   notice: AssistantNotice | null;
 };
@@ -23,13 +27,16 @@ export type AssistantSheetLiveTurn = {
  * The message the person sent from this sheet, and the id of the last stored item when they sent it
  * (null for a conversation with none). While the answer arrives it is always drawn, with the stored items
  * after that one left out, because the function stores your message at the start of the turn and a read
- * during the stream returns it. Once the answer has ended and the stored conversation has an item after
- * that one, the stored conversation holds the turn and this message is no longer drawn.
+ * during the stream returns it. It stays drawn after the answer has ended, until the stored conversation
+ * holds an item that ends the turn after that one (`isSentTurnStored`): a read that landed during the
+ * stream holds your message, or your message and a card, and letting go of the reply then would leave
+ * it missing until the next read.
  */
 export type AssistantSheetSent = { text: string; afterItemId: string | null };
 
 export type AssistantSheetEntry =
   | { kind: "you"; key: string; text: string }
+  | { kind: "card"; key: string; card: AssistantCard }
   | {
       kind: "assistant";
       key: string;
@@ -82,6 +89,8 @@ function storedEntries(items: readonly AssistantThreadItem[]): DraftEntry[] {
     switch (item.kind) {
       case "user":
         return [{ kind: "you", key: item.id, text: item.text }];
+      case "card":
+        return [{ kind: "card", key: item.id, card: item.card }];
       case "reply":
         return [
           {
@@ -110,6 +119,9 @@ function sentEntries(
   const entries: DraftEntry[] = [{ kind: "you", key: "sent:you", text: sent.text }];
   if (live === null) {
     return entries;
+  }
+  for (const [position, card] of live.cards.entries()) {
+    entries.push({ kind: "card", key: `sent:card:${position}`, card });
   }
   if (live.text.trim() !== "" || live.stopped || isStreaming) {
     const paragraphs = paragraphsOf(live.text);
@@ -161,6 +173,38 @@ function itemsThrough(
   return position < 0 ? items : items.slice(0, position + 1);
 }
 
+/**
+ * Whether the stored conversation holds the turn the message sent from the sheet started. It does once an
+ * item that ends the turn follows the message: a reply, a notice, or a question (a clarify or a confirm,
+ * which end the turn, with no words after them). Your own message does not count, and
+ * neither does a card on its own, because the function stores a card as the tool returns it, before the
+ * words that follow, so a read during the stream can hold your message and the card with the reply still
+ * to come. A turn that made no words has no reply to wait for, so there a stored card counts. An item the
+ * message was sent after that is no longer there means the conversation was replaced, which holds nothing
+ * of the turn.
+ */
+export function isSentTurnStored(
+  items: readonly AssistantThreadItem[],
+  afterItemId: string | null,
+  live: Pick<AssistantSheetLiveTurn, "text"> | null,
+): boolean {
+  const position = afterItemId === null ? -1 : items.findIndex((item) => item.id === afterItemId);
+  if (afterItemId !== null && position < 0) {
+    return true;
+  }
+  const hasWords = live !== null && live.text.trim() !== "";
+  return items
+    .slice(position + 1)
+    .some(
+      (item) =>
+        item.kind === "reply" ||
+        item.kind === "notice" ||
+        item.kind === "clarify" ||
+        item.kind === "confirm" ||
+        (item.kind === "card" && !hasWords),
+    );
+}
+
 /** The thread the sheet draws, oldest first. */
 export function buildAssistantSheetThread({
   items,
@@ -170,10 +214,10 @@ export function buildAssistantSheetThread({
   accessNotice = null,
 }: BuildInput): AssistantSheetThread {
   const isSentShown =
-    sent !== null && (isStreaming || sent.afterItemId === (items.at(-1)?.id ?? null));
+    sent !== null && (isStreaming || !isSentTurnStored(items, sent.afterItemId, live));
   const drafts = isSentShown
     ? [
-        ...storedEntries(isStreaming ? itemsThrough(items, sent.afterItemId) : items),
+        ...storedEntries(itemsThrough(items, sent.afterItemId)),
         ...sentEntries(sent, live, isStreaming),
       ]
     : storedEntries(items);
@@ -308,22 +352,36 @@ export function resolveAssistantSheetAccess({
 }
 
 export type AssistantComposerLook =
-  { isShown: false } | { isShown: true; isFieldDisabled: boolean; placeholder: string };
+  | { isShown: false }
+  | {
+      isShown: true;
+      isFieldDisabled: boolean;
+      placeholder: string;
+      /** The line over the field, from Describe only, and only while the field takes typing. */
+      hint?: { chip: string; text: string };
+    };
 
 /**
  * The composer under the thread: gone for the consent card and while the status is read, off with the
  * notice's own words when the assistant is limited (in the person's time zone), off with the offline
- * words while offline, else on with the sheet's placeholder.
+ * words while offline, else on with the sheet's placeholder. Opened from Describe (`describeAt` is the
+ * time it logs at) it asks for a meal instead, and says when the meal is logged while the field is on.
  */
 export function describeAssistantComposer({
   access,
   isOnline,
   timeZone,
+  describeAt,
 }: {
   access: AssistantSheetAccess;
   isOnline: boolean;
   timeZone: string;
+  describeAt?: string | undefined;
 }): AssistantComposerLook {
+  const placeholder =
+    describeAt === undefined
+      ? ASSISTANT_SHEET.composerPlaceholder
+      : ASSISTANT_DESCRIBE.composerPlaceholder;
   switch (access.kind) {
     case "checking":
     case "consent":
@@ -332,18 +390,20 @@ export function describeAssistantComposer({
       return {
         isShown: true,
         isFieldDisabled: true,
-        placeholder:
-          describeAssistantNotice(access.notice, timeZone).fieldText ??
-          ASSISTANT_SHEET.composerPlaceholder,
+        placeholder: describeAssistantNotice(access.notice, timeZone).fieldText ?? placeholder,
       };
     case "open":
-      return isOnline
-        ? {
-            isShown: true,
-            isFieldDisabled: false,
-            placeholder: ASSISTANT_SHEET.composerPlaceholder,
-          }
-        : { isShown: true, isFieldDisabled: true, placeholder: ASSISTANT_OFFLINE.fieldText };
+      if (!isOnline) {
+        return { isShown: true, isFieldDisabled: true, placeholder: ASSISTANT_OFFLINE.fieldText };
+      }
+      return {
+        isShown: true,
+        isFieldDisabled: false,
+        placeholder,
+        ...(describeAt === undefined
+          ? {}
+          : { hint: { chip: describeLogsAt(describeAt), text: ASSISTANT_DESCRIBE.hintText } }),
+      };
   }
 }
 

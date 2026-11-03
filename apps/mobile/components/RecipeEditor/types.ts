@@ -8,4 +8,6 @@ export type RecipeEditorProps = {
   existing?: RecipeEditorExisting | undefined;
   /** The name a new recipe starts with, such as the word typed into the library's search. */
   initialName?: string | undefined;
+  /** Opens the add-ingredient search over the editor with this word typed into it, such as the food of an imported line that matched nothing. */
+  initialIngredientSearch?: string | undefined;
 };
