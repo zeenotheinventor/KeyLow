@@ -10,13 +10,26 @@ const withoutNegativeZero = (value: number): number => value + 0;
 export const groupThousands = (digits: string): string =>
   digits.replace(THREE_DIGITS_BEFORE_THE_END, ",");
 
+/** Calories as the Diary prints them, but as a number: whole. */
+export const roundCalories = (kcal: number): number => withoutNegativeZero(Math.round(kcal));
+
+/** Grams as the Diary prints them, but as a number: one decimal only when the absolute value is under 10, otherwise whole. */
+export const roundGrams = (grams: number): number =>
+  Math.abs(grams) < 10
+    ? withoutNegativeZero(Math.round(grams * 10) / 10)
+    : withoutNegativeZero(Math.round(grams));
+
+/** Kilograms as a weigh-in or a trend prints them, but as a number: one decimal. */
+export const roundKilograms = (kilograms: number): number =>
+  withoutNegativeZero(Math.round(kilograms * 10) / 10);
+
 /**
  * Calories: a whole number with a thousands separator, so `2480` reads `2,480`. Matches the design
  * system's `Format.calories` for every finite input, except that a value rounding to zero reads
  * `0` where `toLocaleString` would print `-0`.
  */
 export const formatCalories = (kcal: number): string => {
-  const rounded = withoutNegativeZero(Math.round(kcal));
+  const rounded = roundCalories(kcal);
   const unsigned = groupThousands(String(Math.abs(rounded)));
   return rounded < 0 ? `-${unsigned}` : unsigned;
 };
@@ -25,7 +38,7 @@ export const formatCalories = (kcal: number): string => {
 export const formatGrams = (grams: number): string =>
   Math.abs(grams) < 10
     ? (Math.round(grams * 10) / 10).toFixed(1).replace(/\.0$/, "")
-    : String(withoutNegativeZero(Math.round(grams)));
+    : String(roundGrams(grams));
 
 /** Weight: always one decimal, in kg, lb or st. */
 export const formatWeight = (value: number, unit: WeightUnit = "kg"): string =>
