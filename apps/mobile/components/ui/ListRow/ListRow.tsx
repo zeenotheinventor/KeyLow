@@ -125,11 +125,14 @@ export function ListRow({
     </>
   );
 
-  // The switch is the row's one control, so the row is a plain view and the switch keeps its own name.
+  // The switch is the row's one control, so the row is a plain view and the switch keeps its own name. The
+  // visible title is hidden from a screen reader, which would otherwise read it and then the switch's name.
   if (toggle !== undefined) {
     return (
       <View className={rowClassName}>
-        {contents}
+        <View aria-hidden className="min-w-0 flex-1 flex-row items-center gap-3">
+          {contents}
+        </View>
         <Switch
           disabled={toggle.disabled}
           isOn={toggle.isOn}

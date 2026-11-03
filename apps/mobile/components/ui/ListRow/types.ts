@@ -109,7 +109,8 @@ export type ListRowToggle = {
 /**
  * A row with the kit's `Switch` at the end, as the Assistant settings board draws "Use the assistant". The row
  * itself goes nowhere and has no chevron, and the switch is the one control, named by `toggle.label`, so the
- * row is not folded into one button and a screen reader reaches the switch.
+ * row is not folded into one button and a screen reader reaches the switch. The visible title and subtitle are
+ * hidden from a screen reader, so `toggle.label` says all of it.
  */
 export type ListRowWithToggleProps = ListRowBaseProps & {
   toggle: ListRowToggle;

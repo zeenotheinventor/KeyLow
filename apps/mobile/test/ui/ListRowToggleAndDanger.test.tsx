@@ -52,8 +52,22 @@ describe("ListRow with a switch", () => {
       toggle: { isOn: false, label: "Use the assistant", onValueChange: () => undefined },
     });
 
-    expect(screen.getByText("Use the assistant")).toBeOnTheScreen();
+    expect(
+      screen.getByText("Use the assistant", { includeHiddenElements: true }),
+    ).toBeOnTheScreen();
     expect(screen.getByRole("switch", { name: "Use the assistant" })).not.toBeChecked();
+  });
+
+  it("should leave the visible title out of the accessibility tree, so the switch is the one stop", async () => {
+    await renderRow({
+      title: "Use the assistant",
+      subtitle: "Off until you turn it on",
+      toggle: { isOn: false, label: "Use the assistant", onValueChange: () => undefined },
+    });
+
+    expect(screen.queryByText("Use the assistant")).not.toBeOnTheScreen();
+    expect(screen.queryByText("Off until you turn it on")).not.toBeOnTheScreen();
+    expect(screen.getAllByLabelText("Use the assistant")).toHaveLength(1);
   });
 
   it("should draw the switch on when it is on", async () => {
