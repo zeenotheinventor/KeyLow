@@ -49,9 +49,9 @@ A board is `<screen>/<state>`, taken from the canvas file name. `food-search.res
 | [`web`](web/README.md)                   | Web login and app shell.                                                      |
 | [`web-foods`](web-foods/README.md)       | Web Foods page: search, barcode lookup, your foods.                           |
 | [`web-food`](web-food/README.md)         | Web food detail and food form.                                                |
-| [`widgets`](widgets/README.md)           | Phone widgets: `dashboard`, `quick-log`, `lock-screen`.                       |
+| [`widgets`](widgets/README.md)           | Phone widgets: `dashboard`, `quick-log`, `lock-screen`, `states`.             |
 
-There are 115 M2 boards, plus the 3 widget boards, whose canvas is kept in `source-widgets/`. A state with `proposal` in its name (`history-proposal`, `quantity-proposal-m3`, `label-scan-proposal-m3`) is a labelled proposal for M3 and is not built in M2. The component files (`*Screen.dc.html`) hold the markup for a screen's states and are not boards. They stay in `source/project/`.
+There are 115 M2 boards, plus the 4 widget boards, whose canvas is kept in `source-widgets/`. A state with `proposal` in its name (`history-proposal`, `quantity-proposal-m3`, `label-scan-proposal-m3`) is a labelled proposal for M3 and is not built in M2. The component files (`*Screen.dc.html`) hold the markup for a screen's states and are not boards. They stay in `source/project/`.
 
 ## The token chain
 

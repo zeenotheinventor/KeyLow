@@ -4,8 +4,10 @@ import { join } from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { canvasSets } from "../src/canvasSets.ts";
+import { canvasSets, m2CanvasSet } from "../src/canvasSets.ts";
 import { checkBoards } from "../src/checkBoards.ts";
+
+import type { CanvasSet } from "../src/canvasSets.ts";
 
 const canvas = {
   order: ["Main.dc.html", "food-search.loading.dc.html", "FoodSearchScreen.dc.html"],
@@ -107,33 +109,78 @@ describe("checkBoards", () => {
   });
 });
 
-describe("checkBoards with the widgets canvas set", () => {
-  const widgetCanvas = {
-    order: ["Main.dc.html", "QuickLog.dc.html", "States.dc.html"],
-    boards: {
-      "Main.dc.html": { x: 0, y: 0, w: 1280, h: 980, title: "a" },
-      "QuickLog.dc.html": { x: 1360, y: 0, w: 1280, h: 980, title: "b" },
-      "States.dc.html": { x: 0, y: 1100, w: 1280, h: 1180, title: "c" },
-    },
-    notes: {},
-  };
+function writeWidgetsExport(
+  canvasFiles: readonly string[],
+  exportedStates: readonly string[],
+): void {
+  const board = (index: number) => ({ x: index * 1360, y: 0, w: 1280, h: 980, title: `t${index}` });
+  write(
+    "source-widgets/project/canvas.json",
+    JSON.stringify({
+      order: canvasFiles,
+      boards: Object.fromEntries(canvasFiles.map((file, index) => [file, board(index)])),
+      notes: {},
+    }),
+  );
+  for (const file of canvasFiles) {
+    write(`source-widgets/project/${file}`);
+  }
+  for (const state of exportedStates) {
+    write(`widgets/${state}.png`);
+    write(`widgets/${state}.html`);
+  }
+  write("widgets/README.md");
+}
 
-  function writeBothExports(): void {
+describe("checkBoards with the real widgets canvas set", () => {
+  const files = ["Main.dc.html", "QuickLog.dc.html", "LockScreen.dc.html", "States.dc.html"];
+  const states = ["dashboard", "quick-log", "lock-screen", "states"];
+
+  it("should count all four widget boards with the M2 boards and report nothing", () => {
     writeCompleteExport();
-    write("source-widgets/project/canvas.json", JSON.stringify(widgetCanvas));
-    for (const file of widgetCanvas.order) {
-      write(`source-widgets/project/${file}`);
-    }
-    for (const state of ["dashboard", "quick-log"]) {
-      write(`widgets/${state}.png`);
-      write(`widgets/${state}.html`);
-    }
-    write("widgets/README.md");
+    writeWidgetsExport(files, states);
+    expect(checkBoards(directory, canvasSets)).toEqual({
+      boardCount: 6,
+      screenCount: 2,
+      missing: [],
+      extra: [],
+    });
+  });
+
+  it("should list the states image when it is missing", () => {
+    writeCompleteExport();
+    writeWidgetsExport(files, states);
+    rmSync(join(directory, "widgets/states.png"));
+    expect(checkBoards(directory, canvasSets).missing).toEqual(["widgets/states.png"]);
+  });
+
+  it("should not take the widgets source folder for a screen", () => {
+    writeCompleteExport();
+    writeWidgetsExport(files, states);
+    expect(checkBoards(directory, canvasSets).extra).toEqual([]);
+  });
+});
+
+describe("checkBoards with a canvas set whose names leave a board out", () => {
+  const files = ["Main.dc.html", "QuickLog.dc.html", "Spare.dc.html"];
+  const setWithSpareLeftOut: CanvasSet = {
+    sourceFolder: "source-widgets",
+    boardNames: {
+      "Main.dc.html": { slug: "widgets", state: "dashboard" },
+      "QuickLog.dc.html": { slug: "widgets", state: "quick-log" },
+    },
+    linksTokens: false,
+  };
+  const sets = [m2CanvasSet, setWithSpareLeftOut];
+
+  function writeExport(): void {
+    writeCompleteExport();
+    writeWidgetsExport(files, ["dashboard", "quick-log"]);
   }
 
-  it("should count the boards and screens of both canvases and leave out a board the names omit", () => {
-    writeBothExports();
-    expect(checkBoards(directory, canvasSets)).toEqual({
+  it("should not count the board the names omit", () => {
+    writeExport();
+    expect(checkBoards(directory, sets)).toEqual({
       boardCount: 4,
       screenCount: 2,
       missing: [],
@@ -142,27 +189,20 @@ describe("checkBoards with the widgets canvas set", () => {
   });
 
   it("should list a widgets image that is missing", () => {
-    writeBothExports();
+    writeExport();
     rmSync(join(directory, "widgets/quick-log.png"));
-    expect(checkBoards(directory, canvasSets).missing).toEqual(["widgets/quick-log.png"]);
+    expect(checkBoards(directory, sets).missing).toEqual(["widgets/quick-log.png"]);
   });
 
-  it("should list a verbatim widgets source file that is missing, including the board that is not exported", () => {
-    writeBothExports();
-    rmSync(join(directory, "source-widgets/project/States.dc.html"));
-    expect(checkBoards(directory, canvasSets).missing).toEqual([
-      "source-widgets/project/States.dc.html",
-    ]);
+  it("should still require the verbatim source of the board the names omit", () => {
+    writeExport();
+    rmSync(join(directory, "source-widgets/project/Spare.dc.html"));
+    expect(checkBoards(directory, sets).missing).toEqual(["source-widgets/project/Spare.dc.html"]);
   });
 
-  it("should list an exported image for the board that is not exported", () => {
-    writeBothExports();
-    write("widgets/states.png");
-    expect(checkBoards(directory, canvasSets).extra).toEqual(["widgets/states.png"]);
-  });
-
-  it("should not take the widgets source folder for a screen", () => {
-    writeBothExports();
-    expect(checkBoards(directory, canvasSets).extra).toEqual([]);
+  it("should list an exported image for the board the names omit", () => {
+    writeExport();
+    write("widgets/spare.png");
+    expect(checkBoards(directory, sets).extra).toEqual(["widgets/spare.png"]);
   });
 });

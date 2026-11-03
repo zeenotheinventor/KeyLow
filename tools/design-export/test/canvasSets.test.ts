@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { canvasSets, m2CanvasSet, widgetsCanvasSet } from "../src/canvasSets.ts";
 
 describe("canvasSets", () => {
-  it("should keep the M2 canvas in source, with the token stylesheets and the Main board name", () => {
+  it("should keep the M2 canvas in source, with the token stylesheets", () => {
     expect(m2CanvasSet).toEqual({ sourceFolder: "source", linksTokens: true });
   });
 
@@ -12,11 +12,12 @@ describe("canvasSets", () => {
     expect(widgetsCanvasSet.linksTokens).toBe(false);
   });
 
-  it("should name boards A, B and C and leave out board D until it is approved", () => {
+  it("should name boards A, B, C and D", () => {
     expect(widgetsCanvasSet.boardNames).toEqual({
       "Main.dc.html": { slug: "widgets", state: "dashboard" },
       "QuickLog.dc.html": { slug: "widgets", state: "quick-log" },
       "LockScreen.dc.html": { slug: "widgets", state: "lock-screen" },
+      "States.dc.html": { slug: "widgets", state: "states" },
     });
   });
 
