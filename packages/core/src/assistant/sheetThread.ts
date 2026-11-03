@@ -28,9 +28,9 @@ export type AssistantSheetLiveTurn = {
  * (null for a conversation with none). While the answer arrives it is always drawn, with the stored items
  * after that one left out, because the function stores your message at the start of the turn and a read
  * during the stream returns it. It stays drawn after the answer has ended, until the stored conversation
- * holds an item that is not yours after that one (`isSentTurnStored`): a read that landed during the
- * stream holds your message alone, and letting go of the reply then would leave it missing until the
- * next read.
+ * holds an item that ends the turn after that one (`isSentTurnStored`): a read that landed during the
+ * stream holds your message, or your message and a card, and letting go of the reply then would leave
+ * it missing until the next read.
  */
 export type AssistantSheetSent = { text: string; afterItemId: string | null };
 
@@ -174,20 +174,30 @@ function itemsThrough(
 }
 
 /**
- * Whether the stored conversation holds the turn the message sent from the sheet started: it has an item
- * that is not yours after the item the message was sent after. The turn's first stored item is your
- * message, which a read during the stream returns, so that one does not count. An item the message was
- * sent after that is no longer there means the conversation was replaced, which holds nothing of the turn.
+ * Whether the stored conversation holds the turn the message sent from the sheet started. It does once an
+ * item that ends the turn follows the message: a reply or a notice. Your own message does not count, and
+ * neither does a card on its own, because the function stores a card as the tool returns it, before the
+ * words that follow, so a read during the stream can hold your message and the card with the reply still
+ * to come. A turn that made no words has no reply to wait for, so there a stored card counts. An item the
+ * message was sent after that is no longer there means the conversation was replaced, which holds nothing
+ * of the turn.
  */
 export function isSentTurnStored(
   items: readonly AssistantThreadItem[],
   afterItemId: string | null,
+  live: Pick<AssistantSheetLiveTurn, "text"> | null,
 ): boolean {
   const position = afterItemId === null ? -1 : items.findIndex((item) => item.id === afterItemId);
   if (afterItemId !== null && position < 0) {
     return true;
   }
-  return items.slice(position + 1).some((item) => item.kind !== "user");
+  const hasWords = live !== null && live.text.trim() !== "";
+  return items
+    .slice(position + 1)
+    .some(
+      (item) =>
+        item.kind === "reply" || item.kind === "notice" || (item.kind === "card" && !hasWords),
+    );
 }
 
 /** The thread the sheet draws, oldest first. */
@@ -198,7 +208,8 @@ export function buildAssistantSheetThread({
   isStreaming,
   accessNotice = null,
 }: BuildInput): AssistantSheetThread {
-  const isSentShown = sent !== null && (isStreaming || !isSentTurnStored(items, sent.afterItemId));
+  const isSentShown =
+    sent !== null && (isStreaming || !isSentTurnStored(items, sent.afterItemId, live));
   const drafts = isSentShown
     ? [
         ...storedEntries(itemsThrough(items, sent.afterItemId)),

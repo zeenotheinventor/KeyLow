@@ -137,11 +137,12 @@ export function AssistantSheet({ open, onClose, localDate }: AssistantSheetProps
   const isThreadKnown = conversation.isSuccess || conversation.isError;
   const isEmpty = thread.entries.length === 0;
 
-  // Once the answer has ended and the stored conversation holds the turn (an item that is not yours after
+  // Once the answer has ended and the stored conversation holds the turn (a reply or a notice after
   // where the message was sent), the message sent from here is let go. If it were kept, the thread going
   // empty again (a new conversation, or every conversation deleted) would draw the old message back. A read
-  // that holds only your message does not count, or the reply would vanish until the next read.
-  if (sent !== null && !isStreaming && isSentTurnStored(items ?? [], sent.afterItemId)) {
+  // that holds only your message, or your message and a card while words are to come, does not count, or the
+  // reply would vanish until the next read.
+  if (sent !== null && !isStreaming && isSentTurnStored(items ?? [], sent.afterItemId, live)) {
     setSent(null);
   }
 

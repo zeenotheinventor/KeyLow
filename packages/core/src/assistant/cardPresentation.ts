@@ -82,6 +82,9 @@ export function undoOutcomeOfResults(
     : "unavailable";
 }
 
+// Undo archives a recipe and deletes a food, so once a card is undone only a link to the diary still leads somewhere.
+const isLinkToDiary = (link: AssistantCardLink): boolean => link.target.screen === "diary_day";
+
 // The cards that make or copy diary entries, which Undo cannot take back once the entries were changed.
 const KINDS_OF_DIARY_ENTRIES: ReadonlySet<AssistantCardKind> = new Set(["logged", "day_copied"]);
 
@@ -124,7 +127,7 @@ export function describeAssistantCard(
       rows: [],
       total: null,
       note: null,
-      link: card.link,
+      link: card.link !== null && isLinkToDiary(card.link) ? card.link : null,
       undo: { state: "done", label: ASSISTANT_CARD_WORDS.undoneTitle },
     };
   }

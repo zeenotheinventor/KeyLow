@@ -463,13 +463,22 @@ describe("the action cards in the assistant sheet", () => {
       );
     });
 
-    it("should keep the link on a card after its Undo", async () => {
+    it("should drop the link to a recipe once the card is undone, as Undo archives it", async () => {
       await showCard(recipeCreatedCard);
 
       await userSetup().press(undoButton());
       await screen.findByText("Undone");
 
-      expect(screen.getByRole("button", { name: "Open in recipe editor" })).toBeOnTheScreen();
+      expect(screen.queryByRole("button", { name: "Open in recipe editor" })).not.toBeOnTheScreen();
+    });
+
+    it("should keep the link to a day of the diary once the card is undone", async () => {
+      await showCard(dayCopiedWithLinkCard);
+
+      await userSetup().press(undoButton());
+      await screen.findByText("Undone");
+
+      expect(screen.getByRole("button", { name: "Open the day" })).toBeOnTheScreen();
     });
   });
 
@@ -497,6 +506,34 @@ describe("the action cards in the assistant sheet", () => {
       expect(screen.getAllByText("Done.")).toHaveLength(1);
       expect(screen.getAllByText("Logged 2 eggs and toast at 08:10")).toHaveLength(1);
       expect(screen.getAllByText("2 eggs and toast at 8:10")).toHaveLength(1);
+    });
+  });
+
+  describe("the reply after a stream whose mid-stream read held your message and the card", () => {
+    it("should keep the reply on screen until the thread holds the reply", async () => {
+      const rendered = await sendFromSheet("2 eggs and toast at 8:10");
+      mockAssistant.live = liveTurn({ cards: [loggedCard], text: "Done.", outcome: "complete" });
+      mockAssistant.isStreaming = true;
+      await rendered.rerender(sheetTree());
+      // The function stores the card as the tool returns it, so a read during the stream holds it.
+      mockAssistant.items = [
+        { kind: "user", id: "u1", text: "2 eggs and toast at 8:10" },
+        { kind: "card", id: "c1", card: loggedCard },
+      ];
+      mockAssistant.isStreaming = false;
+      await rendered.rerender(sheetTree());
+
+      expect(screen.getByText("Done.")).toBeOnTheScreen();
+      expect(screen.getAllByText("Logged 2 eggs and toast at 08:10")).toHaveLength(1);
+
+      mockAssistant.items = [
+        ...mockAssistant.items,
+        { kind: "reply", id: "r1", text: "Done.", answerMeta: null, stopped: false },
+      ];
+      await rendered.rerender(sheetTree());
+
+      expect(screen.getAllByText("Done.")).toHaveLength(1);
+      expect(screen.getAllByText("Logged 2 eggs and toast at 08:10")).toHaveLength(1);
     });
   });
 

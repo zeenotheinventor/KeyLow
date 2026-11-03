@@ -215,7 +215,7 @@ describe("buildAssistantSheetThread", () => {
       ]);
     });
 
-    it("should leave the stored conversation to draw the turn once it holds an item that is not yours after the message", () => {
+    it("should leave the stored conversation to draw the turn once it holds a reply after the message", () => {
       const thread = build({
         items: [
           ...storedItems,
@@ -236,7 +236,7 @@ describe("buildAssistantSheetThread", () => {
       ]);
     });
 
-    it("should leave the stored conversation to draw a turn whose first stored item is a card", () => {
+    it("should keep drawing the reply when a read during the stream holds your message and the card but not the reply yet", () => {
       const thread = build({
         items: [
           ...storedItems,
@@ -244,7 +244,29 @@ describe("buildAssistantSheetThread", () => {
           { kind: "card", id: "c3", card: loggedCard },
         ],
         sent,
-        live: liveTurn(),
+        live: liveTurn({ cards: [loggedCard], text: "Done." }),
+      });
+
+      expect(thread.entries.map((entry) => entry.key)).toEqual([
+        "u1",
+        "c1",
+        "u2",
+        "r2",
+        "sent:you",
+        "sent:card:0",
+        "sent:reply",
+      ]);
+    });
+
+    it("should leave the stored conversation to draw a turn that made a card and no words", () => {
+      const thread = build({
+        items: [
+          ...storedItems,
+          { kind: "user", id: "u3", text: "Log a banana" },
+          { kind: "card", id: "c3", card: loggedCard },
+        ],
+        sent,
+        live: liveTurn({ cards: [loggedCard] }),
       });
 
       expect(thread.entries.map((entry) => entry.key)).toEqual([
@@ -668,27 +690,49 @@ describe("isSentTurnStored", () => {
     answerMeta: null,
     stopped: false,
   });
+  const card = (id: string): AssistantThreadItem => ({ kind: "card", id, card: loggedCard });
+  const withWords = { text: "Done." };
+  const withoutWords = { text: "" };
 
   it("should not hold the turn while the only item after the message is your own", () => {
-    expect(isSentTurnStored([reply("r1"), user("u2")], "r1")).toBe(false);
+    expect(isSentTurnStored([reply("r1"), user("u2")], "r1", withWords)).toBe(false);
   });
 
-  it("should hold the turn once an item that is not yours follows the message", () => {
-    expect(isSentTurnStored([reply("r1"), user("u2"), reply("r2")], "r1")).toBe(true);
+  it("should hold the turn once a reply follows the message", () => {
+    expect(isSentTurnStored([reply("r1"), user("u2"), reply("r2")], "r1", withWords)).toBe(true);
   });
 
-  it("should hold the turn once a card follows the message", () => {
+  it("should hold the turn once a notice follows the message", () => {
     expect(
-      isSentTurnStored([reply("r1"), { kind: "card", id: "c2", card: loggedCard }], "r1"),
+      isSentTurnStored(
+        [reply("r1"), user("u2"), { kind: "notice", id: "n2", notice: turnFailed }],
+        "r1",
+        withoutWords,
+      ),
     ).toBe(true);
   });
 
+  it("should not hold the turn on a card alone while the turn has words to come", () => {
+    expect(isSentTurnStored([reply("r1"), user("u2"), card("c2")], "r1", withWords)).toBe(false);
+  });
+
+  it("should hold a turn that made a card and no words on the card, because no reply will be stored", () => {
+    expect(isSentTurnStored([reply("r1"), user("u2"), card("c2")], "r1", withoutWords)).toBe(true);
+    expect(isSentTurnStored([reply("r1"), user("u2"), card("c2")], "r1", null)).toBe(true);
+  });
+
+  it("should treat words of spaces as no words", () => {
+    expect(isSentTurnStored([reply("r1"), user("u2"), card("c2")], "r1", { text: "  " })).toBe(
+      true,
+    );
+  });
+
   it("should not hold the first turn of a conversation that had no items while only your message is stored", () => {
-    expect(isSentTurnStored([user("u1")], null)).toBe(false);
-    expect(isSentTurnStored([user("u1"), reply("r1")], null)).toBe(true);
+    expect(isSentTurnStored([user("u1")], null, withWords)).toBe(false);
+    expect(isSentTurnStored([user("u1"), reply("r1")], null, withWords)).toBe(true);
   });
 
   it("should hold nothing of the turn when the item it was sent after is gone", () => {
-    expect(isSentTurnStored([], "r1")).toBe(true);
+    expect(isSentTurnStored([], "r1", withWords)).toBe(true);
   });
 });

@@ -146,10 +146,30 @@ describe("describeAssistantCard, an undone card", () => {
     });
   });
 
-  it("should keep the link, which stays after an Undo", () => {
-    expect(describeAssistantCard({ ...recipeCreatedCard, undo: "undone" }).link).toEqual(
-      recipeCreatedCard.link,
-    );
+  it("should drop the link to a recipe, which Undo archives", () => {
+    expect(describeAssistantCard({ ...recipeCreatedCard, undo: "undone" }).link).toBeNull();
+  });
+
+  it("should drop the link that opens a recipe's add-ingredient search", () => {
+    expect(describeAssistantCard({ ...recipeUnresolvedCard, undo: "undone" }).link).toBeNull();
+  });
+
+  it("should drop the link to a food, which Undo deletes", () => {
+    expect(describeAssistantCard({ ...foodCreatedCard, undo: "undone" }).link).toBeNull();
+  });
+
+  it("should keep a link to a day of the diary, which Undo leaves", () => {
+    const link = {
+      label: "Open the day",
+      target: { screen: "diary_day", localDate: "2026-10-25" },
+    } as const;
+
+    expect(describeAssistantCard({ ...dayCopiedCard, link, undo: "undone" }).link).toEqual(link);
+  });
+
+  it("should drop the link as soon as an Undo has come back undone", () => {
+    expect(describeAssistantCard(recipeCreatedCard).link).toEqual(recipeCreatedCard.link);
+    expect(describeAssistantCard(recipeCreatedCard, "undone").link).toBeNull();
   });
 
   it("should draw no line under Undone when the card has none", () => {
