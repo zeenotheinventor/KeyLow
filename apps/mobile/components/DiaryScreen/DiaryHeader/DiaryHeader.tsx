@@ -7,15 +7,17 @@ import { IconButton, Text } from "../../ui";
 import type { DiaryHeaderProps } from "./types";
 
 /**
- * The top of the diary, as the board draws it: the title (Today, or the day) and two 44 point icon buttons,
- * the calendar, which opens the date picker, and more, which opens the menu with Copy yesterday. The
- * buttons are drawn without a press while the diary has not yet got its time zone, because neither could
- * act on a day yet.
+ * The top of the diary, as the board draws it: the title (Today, or the day) and three 44 point icon buttons,
+ * the assistant, which opens the chat sheet, the calendar, which opens the date picker, and more, which opens
+ * the menu with Copy yesterday. The buttons are drawn without a press while the diary has not yet got its
+ * time zone, because none could act on a day yet.
  */
 export function DiaryHeader({
   title,
+  assistantLabel,
   chooseDateLabel,
   moreLabel,
+  onAssistant,
   onChooseDate,
   onMore,
 }: DiaryHeaderProps) {
@@ -28,6 +30,7 @@ export function DiaryHeader({
         <Text className="min-w-0 flex-1" role="heading" variant="h1">
           {title}
         </Text>
+        <IconButton icon="Sparkles" label={assistantLabel} onPress={onAssistant} />
         <IconButton icon="Calendar" label={chooseDateLabel} onPress={onChooseDate} />
         <IconButton icon="Ellipsis" label={moreLabel} onPress={onMore} />
       </View>
