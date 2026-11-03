@@ -23,6 +23,7 @@ export function Composer({
   isSendDisabled,
   isFieldDisabled,
   placeholder,
+  isAutoFocused = false,
 }: ComposerProps) {
   const { colors } = useTheme();
   const [isFocused, setIsFocused] = useState(false);
@@ -37,6 +38,7 @@ export function Composer({
           // `aria-disabled={false}` would turn a locked field's input back on.
           aria-disabled={isFieldDisabled ? true : undefined}
           aria-label={ASSISTANT_SHEET.composerLabel}
+          autoFocus={isAutoFocused}
           className="max-h-[144px] min-w-0 p-0 text-body font-normal text-text-primary"
           cursorColor={colors["text-primary"]}
           editable={!isFieldDisabled}

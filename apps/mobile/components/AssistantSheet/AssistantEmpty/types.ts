@@ -3,4 +3,6 @@ export type AssistantEmptyProps = {
   onStarterPress: (words: string) => void;
   /** Dims the starters and stops them responding, while the assistant cannot be reached. */
   isDisabled: boolean;
+  /** The time Describe logs at, when the sheet was opened from Log food: its intro is drawn in place of the starters. */
+  describeAt?: string | undefined;
 };
