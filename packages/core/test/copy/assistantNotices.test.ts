@@ -8,6 +8,7 @@ import {
   ASSISTANT_STOPPED,
   describeAssistantNotice,
   describeAssistantStatus,
+  describeResetTime,
 } from "../../src/copy";
 
 // Checked by `tsc` (the package's typecheck script), not at runtime: the consent notice is not a notice,
@@ -19,7 +20,10 @@ expectTypeOf<{ code: "consent_needed" }>().not.toExtend<
 describe("describeAssistantNotice", () => {
   it("should word the day limit as assistant · day-limit prints it", () => {
     expect(
-      describeAssistantNotice({ code: "day_limit", resetsAt: "2026-10-26T00:00:00Z" }),
+      describeAssistantNotice(
+        { code: "day_limit", resetsAt: "2026-10-26T00:00:00Z" },
+        "Europe/London",
+      ),
     ).toEqual({
       title: "You have used today's turns",
       body: "The assistant is back at midnight. Logging, search and quick add work as normal.",
@@ -28,8 +32,20 @@ describe("describeAssistantNotice", () => {
     });
   });
 
+  it("should word the day limit's time in British Summer Time as 1 am", () => {
+    const dayLimit = describeAssistantNotice(
+      { code: "day_limit", resetsAt: "2026-07-02T00:00:00Z" },
+      "Europe/London",
+    );
+
+    expect([dayLimit.body, dayLimit.fieldText]).toEqual([
+      "The assistant is back at 1 am. Logging, search and quick add work as normal.",
+      "Back at 1 am",
+    ]);
+  });
+
   it("should word the missing entitlement as assistant · plus prints it", () => {
-    expect(describeAssistantNotice({ code: "plus" })).toEqual({
+    expect(describeAssistantNotice({ code: "plus" }, "Europe/London")).toEqual({
       title: "The assistant is part of Ki-Lo Plus",
       body: "Your account does not include Ki-Lo Plus at the moment. Logging, search and quick add work as normal.",
       fieldText: "Not on your account",
@@ -38,7 +54,9 @@ describe("describeAssistantNotice", () => {
   });
 
   it("should word resting until 1 November as assistant · resting prints it", () => {
-    expect(describeAssistantNotice({ code: "resting", resumesOn: "2026-11-01" })).toEqual({
+    expect(
+      describeAssistantNotice({ code: "resting", resumesOn: "2026-11-01" }, "Europe/London"),
+    ).toEqual({
       title: "The assistant is resting until 1 November",
       body: "It has reached this month's limit. Your conversations are kept. Everything else in Ki-Lo works as normal.",
       fieldText: "Back on 1 November",
@@ -47,7 +65,10 @@ describe("describeAssistantNotice", () => {
   });
 
   it("should build the resting day from resumesOn", () => {
-    const resting = describeAssistantNotice({ code: "resting", resumesOn: "2027-01-01" });
+    const resting = describeAssistantNotice(
+      { code: "resting", resumesOn: "2027-01-01" },
+      "Europe/London",
+    );
 
     expect([resting.title, resting.fieldText]).toEqual([
       "The assistant is resting until 1 January",
@@ -56,7 +77,7 @@ describe("describeAssistantNotice", () => {
   });
 
   it("should word the kill switch as assistant · unavailable (left) prints it", () => {
-    expect(describeAssistantNotice({ code: "switched_off" })).toEqual({
+    expect(describeAssistantNotice({ code: "switched_off" }, "Europe/London")).toEqual({
       title: "The assistant is switched off for now",
       body: "Try again later. Everything else in Ki-Lo works as normal.",
       fieldText: "Switched off for now",
@@ -65,12 +86,31 @@ describe("describeAssistantNotice", () => {
   });
 
   it("should word a failed turn as assistant · unavailable (middle) prints it, composer left on", () => {
-    expect(describeAssistantNotice({ code: "turn_failed" })).toEqual({
+    expect(describeAssistantNotice({ code: "turn_failed" }, "Europe/London")).toEqual({
       title: "That answer did not come through",
       body: "Nothing was changed. Check your connection and try again.",
       fieldText: null,
       button: "Try again",
     });
+  });
+});
+
+describe("describeResetTime", () => {
+  // The server resets at midnight UTC, so the same instant reads differently in each person's zone.
+  it.each([
+    { zone: "Europe/London", resetsAt: "2026-10-26T00:00:00Z", words: "midnight" },
+    { zone: "UTC", resetsAt: "2026-10-26T00:00:00Z", words: "midnight" },
+    { zone: "Europe/London", resetsAt: "2026-07-02T00:00:00Z", words: "1 am" },
+    { zone: "America/New_York", resetsAt: "2026-12-02T00:00:00Z", words: "7 pm" },
+    { zone: "Pacific/Auckland", resetsAt: "2026-07-02T00:00:00Z", words: "noon" },
+    { zone: "Asia/Kolkata", resetsAt: "2026-07-02T00:00:00Z", words: "5:30 am" },
+    { zone: "Asia/Tokyo", resetsAt: "2026-07-02T00:00:00Z", words: "9 am" },
+  ])("should read $resetsAt in $zone as $words", ({ zone, resetsAt, words }) => {
+    expect(describeResetTime(resetsAt, zone)).toBe(words);
+  });
+
+  it("should read it in UTC when the time zone is not one", () => {
+    expect(describeResetTime("2026-07-02T00:00:00Z", "Not/AZone")).toBe("midnight");
   });
 });
 

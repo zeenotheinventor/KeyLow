@@ -1,3 +1,6 @@
+import { ASSISTANT_OFFLINE, describeAssistantNotice } from "../copy/assistantNotices";
+import { ASSISTANT_SHEET } from "../copy/assistantSheet";
+
 import type { AssistantNotice } from "./notice";
 import type { AssistantThreadItem } from "./thread";
 import type { DescribableAssistantNotice } from "../copy/assistantNotices";
@@ -55,6 +58,11 @@ type BuildInput = {
   sent: AssistantSheetSent | null;
   live: AssistantSheetLiveTurn | null;
   isStreaming: boolean;
+  /**
+   * The notice that limits the assistant now (`AssistantSheetAccess` `limited`), drawn at the end of the
+   * thread unless the thread already ends in that very notice. Null when nothing limits it.
+   */
+  accessNotice?: DescribableAssistantNotice | null;
 };
 
 // An entry before it knows whether it ends the thread.
@@ -120,6 +128,17 @@ function sentEntries(
   return entries;
 }
 
+// The instant or day a notice lifts at, which tells today's limit from an earlier one of the same code.
+const liftsAt = (notice: DescribableAssistantNotice): string | null =>
+  notice.code === "day_limit"
+    ? notice.resetsAt
+    : notice.code === "resting"
+      ? notice.resumesOn
+      : null;
+
+const isSameNotice = (first: DescribableAssistantNotice, second: DescribableAssistantNotice) =>
+  first.code === second.code && liftsAt(first) === liftsAt(second);
+
 function lastMessageOf(entries: readonly AssistantSheetEntry[]): string | null {
   for (let position = entries.length - 1; position >= 0; position -= 1) {
     const entry = entries[position];
@@ -148,6 +167,7 @@ export function buildAssistantSheetThread({
   sent,
   live,
   isStreaming,
+  accessNotice = null,
 }: BuildInput): AssistantSheetThread {
   const isSentShown =
     sent !== null && (isStreaming || sent.afterItemId === (items.at(-1)?.id ?? null));
@@ -157,8 +177,15 @@ export function buildAssistantSheetThread({
         ...sentEntries(sent, live, isStreaming),
       ]
     : storedEntries(items);
-  const entries = drafts.map((entry, position): AssistantSheetEntry =>
-    entry.kind === "notice" ? { ...entry, isLatest: position === drafts.length - 1 } : entry,
+  const lastDraft = drafts.at(-1);
+  const isAccessNoticeDrawn =
+    accessNotice === null ||
+    (lastDraft?.kind === "notice" && isSameNotice(lastDraft.notice, accessNotice));
+  const allDrafts: DraftEntry[] = isAccessNoticeDrawn
+    ? drafts
+    : [...drafts, { kind: "notice", key: "access:notice", notice: accessNotice }];
+  const entries = allDrafts.map((entry, position): AssistantSheetEntry =>
+    entry.kind === "notice" ? { ...entry, isLatest: position === allDrafts.length - 1 } : entry,
   );
   const last = entries.at(-1);
 
@@ -180,12 +207,153 @@ export function canSendAssistantMessage({
   isOnline,
   isThreadKnown,
   isThreadFetching,
+  access,
 }: {
   text: string;
   isStreaming: boolean;
   isOnline: boolean;
   isThreadKnown: boolean;
   isThreadFetching: boolean;
+  access: AssistantSheetAccess;
 }): boolean {
-  return text.trim() !== "" && !isStreaming && isOnline && isThreadKnown && !isThreadFetching;
+  return (
+    text.trim() !== "" &&
+    !isStreaming &&
+    isOnline &&
+    isThreadKnown &&
+    !isThreadFetching &&
+    access.kind === "open"
+  );
+}
+
+/** A notice that stops the assistant taking a turn. A failed turn is not one, because the composer stays on. */
+export type LimitingAssistantNotice = Exclude<DescribableAssistantNotice, { code: "turn_failed" }>;
+
+/**
+ * What the sheet lets the person do: `checking` until the status is read, `consent` for the consent card
+ * with no composer (`assistant · consent-needed`), `limited` with the thread's notice and a disabled
+ * composer (`day-limit`, `plus`, `resting`, `unavailable`), or `open`.
+ */
+export type AssistantSheetAccess =
+  | { kind: "checking" }
+  | { kind: "consent" }
+  | { kind: "open" }
+  | { kind: "limited"; notice: LimitingAssistantNotice };
+
+const accessOfNotice = (notice: AssistantNotice | null): AssistantSheetAccess | null => {
+  if (notice === null || notice.code === "turn_failed") {
+    return null;
+  }
+  return notice.code === "consent_needed" ? { kind: "consent" } : { kind: "limited", notice };
+};
+
+/**
+ * Whether a notice left by a turn that has ended is out of date once the status has been read again. The
+ * gate notices (consent, the day limit, Ki-Lo Plus, resting, switched off) store no turn, so the stored
+ * conversation never moves past them and nothing else lets them go: a day limit would lock the composer
+ * the next day, and the consent card would stay after consent was given in Settings. A failed turn is
+ * not a gate. It stays, with its Try again.
+ */
+export function isStaleStreamGateNotice({
+  streamNotice,
+  isStreaming,
+}: {
+  streamNotice: AssistantNotice | null;
+  isStreaming: boolean;
+}): boolean {
+  return !isStreaming && accessOfNotice(streamNotice) !== null;
+}
+
+/**
+ * Whether the sheet may stop waiting for the status. A read that succeeded or failed for good is known, and
+ * so is one that has failed once, because the next try is seconds away (the turn route stays the authority).
+ * Offline the read cannot run at all, and holding the sheet back for it would leave it blank.
+ */
+export function isAssistantStatusKnown({
+  isSuccess,
+  isError,
+  failureCount,
+  isOnline,
+}: {
+  isSuccess: boolean;
+  isError: boolean;
+  failureCount: number;
+  isOnline: boolean;
+}): boolean {
+  return isSuccess || isError || failureCount > 0 || !isOnline;
+}
+
+/**
+ * Which state the sheet is in. A notice in the stream of the turn on screen wins over the status read
+ * (the stream is the authority, so a day limit shows even when the status said open, and it shows before
+ * the status has been read). A failed turn in either leaves the assistant open.
+ */
+export function resolveAssistantSheetAccess({
+  statusNotice,
+  isStatusKnown,
+  streamNotice,
+}: {
+  statusNotice: AssistantNotice | null;
+  isStatusKnown: boolean;
+  streamNotice: AssistantNotice | null;
+}): AssistantSheetAccess {
+  const fromStream = accessOfNotice(streamNotice);
+  if (fromStream !== null) {
+    return fromStream;
+  }
+  if (!isStatusKnown) {
+    return { kind: "checking" };
+  }
+  return accessOfNotice(statusNotice) ?? { kind: "open" };
+}
+
+export type AssistantComposerLook =
+  { isShown: false } | { isShown: true; isFieldDisabled: boolean; placeholder: string };
+
+/**
+ * The composer under the thread: gone for the consent card and while the status is read, off with the
+ * notice's own words when the assistant is limited (in the person's time zone), off with the offline
+ * words while offline, else on with the sheet's placeholder.
+ */
+export function describeAssistantComposer({
+  access,
+  isOnline,
+  timeZone,
+}: {
+  access: AssistantSheetAccess;
+  isOnline: boolean;
+  timeZone: string;
+}): AssistantComposerLook {
+  switch (access.kind) {
+    case "checking":
+    case "consent":
+      return { isShown: false };
+    case "limited":
+      return {
+        isShown: true,
+        isFieldDisabled: true,
+        placeholder:
+          describeAssistantNotice(access.notice, timeZone).fieldText ??
+          ASSISTANT_SHEET.composerPlaceholder,
+      };
+    case "open":
+      return isOnline
+        ? {
+            isShown: true,
+            isFieldDisabled: false,
+            placeholder: ASSISTANT_SHEET.composerPlaceholder,
+          }
+        : { isShown: true, isFieldDisabled: true, placeholder: ASSISTANT_OFFLINE.fieldText };
+  }
+}
+
+/**
+ * The time zone the sheet words times in: the profile's, the device's until the profile is read, and UTC
+ * for a profile with no zone, which is how logging reads one.
+ */
+export function resolveAssistantTimeZone(
+  profileTimeZone: string | null | undefined,
+  deviceTimeZone: string,
+): string {
+  return profileTimeZone === undefined ? deviceTimeZone : (profileTimeZone ?? "UTC");
 }
