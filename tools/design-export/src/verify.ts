@@ -11,6 +11,7 @@ import { parseArgs } from "node:util";
 import { chromium } from "playwright";
 
 import { listBoards, parseCanvas } from "./boards.ts";
+import { canvasSets } from "./canvasSets.ts";
 import { differingPixelPercent } from "./diff.ts";
 import { deviceScaleFactor } from "./renderBoard.ts";
 import { isAllowedRequestUrl } from "./staticPage.ts";
@@ -80,12 +81,20 @@ function renderReport(results: readonly BoardResult[]): string {
   );
 }
 
-const canvas = parseCanvas(
-  JSON.parse(readFileSync(join(designDirectory, "source/project/canvas.json"), "utf8")),
-);
-const boards = listBoards(canvas).filter(
-  (board) => only === undefined || board.slug === only || `${board.slug}/${board.state}` === only,
-);
+const boards = canvasSets
+  .flatMap((set) =>
+    listBoards(
+      parseCanvas(
+        JSON.parse(
+          readFileSync(join(designDirectory, set.sourceFolder, "project/canvas.json"), "utf8"),
+        ),
+      ),
+      set.boardNames,
+    ),
+  )
+  .filter(
+    (board) => only === undefined || board.slug === only || `${board.slug}/${board.state}` === only,
+  );
 const browser = await chromium.launch();
 const results: BoardResult[] = [];
 try {

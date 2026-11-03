@@ -1,4 +1,5 @@
 // Reads the canvas index (canvas.json) and turns it into the list of exported boards.
+import type { BoardName } from "./canvasSets.ts";
 
 export type CanvasBoard = {
   x: number;
@@ -111,11 +112,35 @@ const componentFilePattern = /^[A-Z][A-Za-z]*\.dc\.html$/;
 const boardFilePattern = /^(?<slug>[a-z][a-z-]*)\.(?<state>[a-z0-9][a-z0-9-]*)\.dc\.html$/;
 const mobileBoardWidth = 820;
 
-export function listBoards(canvas: Canvas): Board[] {
+function toBoard(fileName: string, name: BoardName, entry: CanvasBoard): Board {
+  return {
+    fileName,
+    slug: name.slug,
+    state: name.state,
+    layout: entry.w === mobileBoardWidth ? "mobile" : "web",
+    width: entry.w,
+    height: entry.h,
+    x: entry.x,
+    y: entry.y,
+    canvasTitle: entry.title,
+  };
+}
+
+export function listBoards(
+  canvas: Canvas,
+  boardNames?: Readonly<Record<string, BoardName>>,
+): Board[] {
   const boards: Board[] = [];
   for (const fileName of canvas.order) {
     const entry = canvas.boards[fileName];
     if (entry === undefined) {
+      continue;
+    }
+    if (boardNames !== undefined) {
+      const name = boardNames[fileName];
+      if (name !== undefined) {
+        boards.push(toBoard(fileName, name, entry));
+      }
       continue;
     }
     const isMain = fileName === mainBoardFile;
@@ -130,17 +155,7 @@ export function listBoards(canvas: Canvas): Board[] {
     if (slug === undefined || state === undefined) {
       throw new Error(`canvas.json: cannot read a screen and state from ${fileName}`);
     }
-    boards.push({
-      fileName,
-      slug,
-      state,
-      layout: entry.w === mobileBoardWidth ? "mobile" : "web",
-      width: entry.w,
-      height: entry.h,
-      x: entry.x,
-      y: entry.y,
-      canvasTitle: entry.title,
-    });
+    boards.push(toBoard(fileName, { slug, state }, entry));
   }
   return boards;
 }

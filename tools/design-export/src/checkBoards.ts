@@ -3,6 +3,10 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 
 import { listBoards, listScreens, parseCanvas } from "./boards.ts";
+import { m2CanvasSet } from "./canvasSets.ts";
+
+import type { Canvas } from "./boards.ts";
+import type { CanvasSet } from "./canvasSets.ts";
 
 export type BoardCheck = {
   boardCount: number;
@@ -11,11 +15,11 @@ export type BoardCheck = {
   extra: string[];
 };
 
-// Folders under docs/design that hold no screen.
-const nonScreenEntries = new Set(["design-system", "tokens", "source"]);
+// Folders under docs/design that hold no screen, besides each canvas source folder.
+const nonScreenFolders = ["design-system", "tokens"];
 const exportedBoardFile = /\.(?:png|html)$/;
 
-function listScreenFiles(designDirectory: string): string[] {
+function listScreenFiles(designDirectory: string, nonScreenEntries: ReadonlySet<string>): string[] {
   const files: string[] = [];
   for (const entry of readdirSync(designDirectory)) {
     const path = join(designDirectory, entry);
@@ -31,17 +35,28 @@ function listScreenFiles(designDirectory: string): string[] {
   return files;
 }
 
-function listSourceFiles(designDirectory: string): string[] {
-  return readdirSync(join(designDirectory, "source/project"))
+function listSourceFiles(designDirectory: string, set: CanvasSet): string[] {
+  return readdirSync(join(designDirectory, set.sourceFolder, "project"))
     .filter((file) => file.endsWith(".dc.html"))
-    .map((file) => `source/project/${file}`);
+    .map((file) => `${set.sourceFolder}/project/${file}`);
 }
 
-export function checkBoards(designDirectory: string): BoardCheck {
-  const canvas = parseCanvas(
-    JSON.parse(readFileSync(join(designDirectory, "source/project/canvas.json"), "utf8")),
+function readCanvas(designDirectory: string, set: CanvasSet): Canvas {
+  return parseCanvas(
+    JSON.parse(
+      readFileSync(join(designDirectory, set.sourceFolder, "project/canvas.json"), "utf8"),
+    ),
   );
-  const boards = listBoards(canvas);
+}
+
+// The default is the M2 canvas alone. The command line and the committed-output test pass every set.
+export function checkBoards(
+  designDirectory: string,
+  sets: readonly CanvasSet[] = [m2CanvasSet],
+): BoardCheck {
+  const nonScreenEntries = new Set([...nonScreenFolders, ...sets.map((set) => set.sourceFolder)]);
+  const canvases = sets.map((set) => ({ set, canvas: readCanvas(designDirectory, set) }));
+  const boards = canvases.flatMap(({ set, canvas }) => listBoards(canvas, set.boardNames));
   const screens = listScreens(boards);
   const expected = [
     ...boards.flatMap((board) => [
@@ -50,13 +65,16 @@ export function checkBoards(designDirectory: string): BoardCheck {
     ]),
     ...screens.map((slug) => `${slug}/README.md`),
   ];
-  const expectedSource = canvas.order.map((fileName) => `source/project/${fileName}`);
+  const expectedSource = canvases.flatMap(({ set, canvas }) =>
+    canvas.order.map((fileName) => `${set.sourceFolder}/project/${fileName}`),
+  );
   const missing = [...expected, ...expectedSource].filter(
     (path) => !existsSync(join(designDirectory, path)),
   );
   const expectedPaths = new Set([...expected, ...expectedSource]);
-  const extra = [...listScreenFiles(designDirectory), ...listSourceFiles(designDirectory)].filter(
-    (path) => !expectedPaths.has(path),
-  );
+  const extra = [
+    ...listScreenFiles(designDirectory, nonScreenEntries),
+    ...sets.flatMap((set) => listSourceFiles(designDirectory, set)),
+  ].filter((path) => !expectedPaths.has(path));
   return { boardCount: boards.length, screenCount: screens.length, missing, extra };
 }

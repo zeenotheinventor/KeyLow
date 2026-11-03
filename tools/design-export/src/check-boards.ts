@@ -5,6 +5,7 @@
 import { resolve } from "node:path";
 import { parseArgs } from "node:util";
 
+import { canvasSets } from "./canvasSets.ts";
 import { checkBoards } from "./checkBoards.ts";
 
 const { values } = parseArgs({
@@ -12,7 +13,7 @@ const { values } = parseArgs({
     design: { type: "string", default: resolve(import.meta.dirname, "../../../docs/design") },
   },
 });
-const result = checkBoards(resolve(values.design));
+const result = checkBoards(resolve(values.design), canvasSets);
 console.log(`${result.boardCount} boards in ${result.screenCount} screens.`);
 for (const path of result.missing) {
   console.log(`missing: ${path}`);

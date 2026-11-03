@@ -65,3 +65,25 @@ describe("mergeScreenReadme", () => {
     expect(mergeScreenReadme(first, input)).toBe(first);
   });
 });
+
+describe("mergeScreenReadme for a canvas kept in another source folder", () => {
+  const widgets: ScreenReadmeInput = {
+    ...input,
+    slug: "widgets",
+    boards: [board("dashboard", "Main.dc.html")],
+    sourceFolder: "source-widgets",
+    layoutNote: "Frames side by side on one dark board.",
+  };
+
+  it("should link the board source in that folder", () => {
+    expect(mergeScreenReadme(undefined, widgets)).toContain(
+      "(../source-widgets/project/Main.dc.html)",
+    );
+  });
+
+  it("should describe the layout with the given note instead of the dark and light one", () => {
+    const readme = mergeScreenReadme(undefined, widgets);
+    expect(readme).toContain("Frames side by side on one dark board.");
+    expect(readme).not.toContain("Dark on the left");
+  });
+});
