@@ -38,6 +38,8 @@ runs:
     - name: Enable pnpm
       id: pnpm
       shell: bash
+      env:
+        COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
       run: |
         corepack enable pnpm
         version=$(pnpm --version)
@@ -48,8 +50,9 @@ runs:
     # only for versions that differ from the root. The paths are the workspaces of
     # pnpm-workspace.yaml, and they must be the same in the save step below. The key is exact only,
     # with no restore-keys, because a node_modules of another lockfile is not an install of this one.
-    # It holds the OS, the architecture, the pnpm version, and a hash of .nvmrc (the Node major) and
-    # the lockfile.
+    # It holds the OS, the architecture, the pnpm version, and a hash of .nvmrc (the Node major), the
+    # lockfile, and .npmrc and pnpm-workspace.yaml, because the linker (node-linker=hoisted) changes
+    # the layout without changing the lockfile.
     - name: Restore node_modules
       id: node-modules-cache
       uses: actions/cache/restore@v6
@@ -59,7 +62,14 @@ runs:
           apps/*/node_modules
           packages/*/node_modules
           tools/*/node_modules
-        key: node-modules-${{ runner.os }}-x64-pnpm${{ steps.pnpm.outputs.version }}-${{ hashFiles('.nvmrc', 'pnpm-lock.yaml') }}
+        key: node-modules-${{ runner.os }}-x64-pnpm${{ steps.pnpm.outputs.version }}-${{ hashFiles('.nvmrc', 'pnpm-lock.yaml', '.npmrc', 'pnpm-workspace.yaml') }}
+    # A hit skips `pnpm install --frozen-lockfile`, which is what fails a package.json that has a
+    # dependency the lockfile lacks, so this step checks the lockfile alone. It reads only the
+    # manifests, needs neither node_modules nor a store (--offline), and takes under a second.
+    - name: Check the lockfile matches the manifests
+      if: steps.node-modules-cache.outputs.cache-hit == 'true'
+      shell: bash
+      run: pnpm install --frozen-lockfile --lockfile-only --ignore-scripts --offline
     - name: Find the pnpm store
       id: pnpm-store
       if: steps.node-modules-cache.outputs.cache-hit != 'true'
@@ -102,4 +112,4 @@ runs:
           apps/*/node_modules
           packages/*/node_modules
           tools/*/node_modules
-        key: node-modules-${{ runner.os }}-x64-pnpm${{ steps.pnpm.outputs.version }}-${{ hashFiles('.nvmrc', 'pnpm-lock.yaml') }}
+        key: node-modules-${{ runner.os }}-x64-pnpm${{ steps.pnpm.outputs.version }}-${{ hashFiles('.nvmrc', 'pnpm-lock.yaml', '.npmrc', 'pnpm-workspace.yaml') }}
