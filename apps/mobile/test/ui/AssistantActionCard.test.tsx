@@ -188,6 +188,12 @@ describe("AssistantActionCard", () => {
       expect(drawings()[0]).toHaveProp("stroke", themes.dark.success);
     });
 
+    it("should be drawn in the success colour by default in light", async () => {
+      await renderCard({}, "light");
+
+      expect(drawings()[0]).toHaveProp("stroke", themes.light.success);
+    });
+
     it("should take the tone it is given in dark", async () => {
       await renderCard({ iconTone: "muted" }, "dark");
 

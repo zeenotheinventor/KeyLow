@@ -569,6 +569,39 @@ describe("Input", () => {
   // Light keeps the two warning captions. In dark `warning-ink` is the same colour as `warning`, so only a light run
   // notices a plain class standing in for the ink class.
   describe("in the light scheme", () => {
+    const colorOf = (name: ColorName) => resolvedColor("light", name);
+    const boxOf = (style: Record<string, unknown>) => viewsDrawn({ minHeight: 44, ...style });
+
+    it("should be a 44 point box on the raised surface with a hairline border, rounded medium, padded 16", async () => {
+      await renderInput({}, "light");
+      await screen.findByLabelText("Name");
+
+      const [box] = boxOf({
+        backgroundColor: colorOf("surface-raised"),
+        borderColor: colorOf("border"),
+        borderWidth: 1,
+        borderRadius: 12,
+      });
+      expect(box).toHaveStyle({
+        flexDirection: "row",
+        alignItems: "center",
+        paddingLeft: 16,
+        paddingRight: 16,
+      });
+    });
+
+    it("should turn its border to the accent while it has focus, and back when it loses it", async () => {
+      await renderInput({}, "light");
+      const field = await screen.findByLabelText("Name");
+      expect(boxOf({ borderColor: colorOf("accent") })).toHaveLength(0);
+
+      await fireEvent(field, "focus");
+      expect(boxOf({ borderColor: colorOf("accent") })).toHaveLength(1);
+
+      await fireEvent(field, "blur");
+      expect(boxOf({ borderColor: colorOf("accent") })).toHaveLength(0);
+    });
+
     it("should draw the missing note's icon in warning and write the words in the warning ink", async () => {
       await renderInput({ missingNote: "Not given by the source" }, "light");
 

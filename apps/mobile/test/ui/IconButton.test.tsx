@@ -353,6 +353,19 @@ describe("IconButton", () => {
       expect(drawings()[0]).toHaveProp("strokeWidth", 2.25);
     });
 
+    it("should hold a 36 point accent circle inside the target, with the plus in accent-foreground at 20 points and a 2.25 stroke, in the light scheme", async () => {
+      await renderIconButton({ variant: "primary", icon: "Plus" }, "light");
+
+      await screen.findByRole("button", { name: "Close" });
+      expect(primaryCircle()).toHaveLength(1);
+      expect(primaryCircle()[0]).toHaveStyle({
+        backgroundColor: resolvedColor("light", "accent"),
+      });
+      expect(drawings()[0]).toHaveProp("stroke", themes.light["accent-foreground"]);
+      expect(drawings()[0]).toHaveProp("width", iconSize.md);
+      expect(drawings()[0]).toHaveProp("strokeWidth", 2.25);
+    });
+
     it("should keep the accent-foreground plus whatever tone is asked for", async () => {
       await renderIconButton({ variant: "primary", icon: "Plus", tone: "secondary" });
 
@@ -421,6 +434,17 @@ describe("IconButton", () => {
       expect(drawings()[0]).toHaveProp("stroke", themes.dark["accent-ink"]);
     });
 
+    it("should draw an accent muted fill, an accent border and an accent ink glyph, in the light scheme", async () => {
+      await renderIconButton({ isSelected: true }, "light");
+
+      expect(await screen.findByRole("button", { name: "Close", selected: true })).toHaveStyle({
+        backgroundColor: themes.light["accent-muted"],
+        borderColor: resolvedColor("light", "accent"),
+        borderWidth: 1,
+      });
+      expect(drawings()[0]).toHaveProp("stroke", themes.light["accent-ink"]);
+    });
+
     it("should keep the raised surface, the border and the primary text glyph when not selected, in the dark scheme", async () => {
       await renderIconButton({ isSelected: false }, "dark");
 
@@ -465,6 +489,19 @@ describe("IconButton", () => {
       const button = await screen.findByRole("button", { name: "Close" });
       expect(button).toHaveStyle({ backgroundColor: transparent });
       expect(button.props.style).not.toHaveProperty("borderWidth", 1);
+    });
+  });
+
+  // Light keeps the raised fill of the secondary variant, which shares its dark value with a token that differs in light.
+  describe("in the light scheme", () => {
+    it("should draw the secondary variant on a raised surface with a border", async () => {
+      await renderIconButton({ variant: "secondary" }, "light");
+
+      expect(await screen.findByRole("button", { name: "Close" })).toHaveStyle({
+        backgroundColor: resolvedColor("light", "surface-raised"),
+        borderColor: resolvedColor("light", "border"),
+        borderWidth: 1,
+      });
     });
   });
 });

@@ -342,4 +342,42 @@ describe("ChipGroup", () => {
       );
     });
   });
+
+  // Light keeps the two chip looks whose tokens share a dark value with ones that differ in light.
+  describe("in the light scheme", () => {
+    const colorOf = (name: Parameters<typeof resolvedColor>[1]) => resolvedColor("light", name);
+
+    it("should draw an unchosen chip 36 points high as a pill on the raised surface with a hairline border, padded 12 across", async () => {
+      await renderUnits({ value: "ml" }, "light");
+      await screen.findByLabelText("Unit");
+
+      const chips = viewsDrawn({
+        height: 36,
+        backgroundColor: colorOf("surface-raised"),
+        borderColor: colorOf("border"),
+        borderWidth: 1,
+        borderRadius: 999,
+      });
+      expect(chips).toHaveLength(2);
+      expect(chips[0]).toHaveStyle({ paddingLeft: 12, paddingRight: 12 });
+    });
+
+    it("should fill the chosen chip with the accent and write on it in the accent foreground", async () => {
+      await renderUnits({ value: "ml" }, "light");
+      await screen.findByLabelText("Unit");
+
+      expect(
+        viewsDrawn({
+          height: 36,
+          backgroundColor: colorOf("accent"),
+          borderColor: colorOf("accent"),
+          borderRadius: 999,
+        }),
+      ).toHaveLength(1);
+      expect(screen.getByText("ml")).toHaveStyle({
+        color: colorOf("accent-foreground"),
+        fontFamily: "Geist-SemiBold",
+      });
+    });
+  });
 });

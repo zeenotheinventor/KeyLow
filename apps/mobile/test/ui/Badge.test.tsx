@@ -299,5 +299,19 @@ describe("Badge", () => {
 
       expect(await screen.findByText("Status")).toHaveStyle({ color: colorOf("success-ink") });
     });
+
+    // The dots of the accent, success and warning tones use a token that shares its dark value with ones that differ in
+    // light, so only a light run can tell the right class from a wrong one.
+    it.each(["accent", "success", "warning"] as const)(
+      "should draw the %s dot in the tone's colour in both schemes",
+      async (tone) => {
+        await renderBadge({ children: "Status", tone, dot: true }, "light");
+        await screen.findByText("Status");
+
+        expect(
+          viewsDrawn({ width: 6, height: 6, backgroundColor: colorOf(tone), borderRadius: 999 }),
+        ).toHaveLength(1);
+      },
+    );
   });
 });

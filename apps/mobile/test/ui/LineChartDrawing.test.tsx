@@ -329,4 +329,15 @@ describe("LineChart drawing", () => {
       expect(drawn("Scatter")[1]?.color).toBe(themes.dark["chart-marker"]);
     });
   });
+
+  // Light keeps the chart tokens, whose marker shares its dark value with tokens that differ in light.
+  describe("in the light scheme", () => {
+    it("should draw the line, the points and the marker in the chart tokens", async () => {
+      await drawLineChart([40, 45, 50], {}, "light");
+
+      expect(drawn("Line")[0]?.color).toBe(themes.light["chart-trend"]);
+      expect(drawn("Scatter")[0]?.color).toBe(themes.light["chart-point"]);
+      expect(drawn("Scatter")[1]?.color).toBe(themes.light["chart-marker"]);
+    });
+  });
 });

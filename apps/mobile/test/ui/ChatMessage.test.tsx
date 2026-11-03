@@ -321,4 +321,42 @@ describe("ChatMessage", () => {
       }
     });
   });
+
+  // Light keeps the two cases whose tokens share a dark value with ones that differ in light.
+  describe("in the light scheme", () => {
+    const colorOf = (name: Parameters<typeof resolvedColor>[1]) => resolvedColor("light", name);
+
+    it("should draw your message as a bubble on the page background with a hairline border, at the right", async () => {
+      await renderMessage(yourMessage, "light");
+      await screen.findByText("What did I eat yesterday?");
+
+      const [bubble] = viewsDrawn({
+        backgroundColor: colorOf("background"),
+        borderColor: colorOf("border"),
+        borderWidth: 1,
+      });
+      expect(bubble).toHaveStyle({
+        alignSelf: "flex-end",
+        maxWidth: 288,
+        paddingLeft: 14,
+        paddingRight: 14,
+        paddingTop: 10,
+        paddingBottom: 10,
+        borderRadius: 12,
+        borderBottomRightRadius: 6,
+      });
+    });
+
+    it("should draw the caret as a 2 point rounded block in the accent, 2 points after the word", async () => {
+      await renderMessage({ ...answer, isStreaming: true }, "light");
+      await screen.findByText("Second invented paragraph.");
+
+      const [caret] = viewsDrawn(caretStyle);
+      expect(caret).toHaveStyle({
+        backgroundColor: colorOf("accent"),
+        borderRadius: 1,
+        marginLeft: 2,
+      });
+    });
+  });
 });

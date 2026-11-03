@@ -310,4 +310,44 @@ describe("DatePicker", () => {
       });
     });
   });
+
+  // Light keeps the cells that use a token sharing its dark value with one that differs in light.
+  describe("the look in light", () => {
+    it("should ring today in the accent, with no fill when another day is chosen", async () => {
+      await renderPicker({ selectedDate: "2026-10-09" }, "light");
+
+      const todayCell = screen.getByRole("button", { name: "15 October, today" });
+      expect(todayCell).toHaveStyle({
+        borderWidth: 2,
+        borderColor: resolvedColor("light", "accent"),
+      });
+      expect(todayCell).not.toHaveStyle({ backgroundColor: resolvedColor("light", "accent") });
+    });
+
+    it("should fill the chosen day with the accent and write its number in accent-foreground", async () => {
+      await renderPicker({ selectedDate: "2026-10-09" }, "light");
+
+      const cell = screen.getByRole("button", { name: "9 October, selected" });
+      expect(cell).toHaveStyle({ backgroundColor: resolvedColor("light", "accent") });
+      expect(within(cell).getByText("9")).toHaveStyle({
+        color: resolvedColor("light", "accent-foreground"),
+        fontWeight: "600",
+      });
+    });
+
+    it("should draw the complete dot 4 points across, in the success colour", async () => {
+      await renderPicker({}, "light");
+
+      expect(
+        within(screen.getByRole("button", { name: "12 October, complete" })).getByTestId(
+          "complete-dot",
+          { includeHiddenElements: true },
+        ),
+      ).toHaveStyle({
+        width: 4,
+        height: 4,
+        backgroundColor: resolvedColor("light", "success"),
+      });
+    });
+  });
 });
