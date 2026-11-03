@@ -77,18 +77,20 @@ const READ_PLANS: { [Table in AccountExportTable]: ReadPlan<Table> } = {
  * Every row of one table that belongs to the user, as stored: all columns, soft-deleted rows included.
  * The owner filter is explicit on every table, on top of row-level security, because the select
  * policies of `foods`, `food_portions`, `exercises` and `exercise_muscles` also return the shared
- * reference rows. Read a page at a time, ordered by the key, until a page comes back short.
+ * reference rows. Read a page at a time, ordered by the key. A short page proves nothing, because the
+ * server may cap a page below the size asked for, so the read goes on from where the last page ended
+ * and stops only on an empty page. That costs one extra request per table and never cuts a table short.
  */
-export async function readOwnRows(
+export async function readOwnRows<Table extends AccountExportTable>(
   client: SupabaseClient<Database>,
   userId: string,
-  table: AccountExportTable,
-  ownerColumn: string,
-  orderColumns: readonly string[],
+  table: Table,
+  ownerColumn: ReadPlan<Table>["ownerColumn"],
+  orderColumns: ReadPlan<Table>["orderColumns"],
 ): Promise<AccountExportRow[]> {
   const rows: AccountExportRow[] = [];
 
-  for (let offset = 0; ; offset += PAGE_SIZE) {
+  for (let offset = 0; ; offset = rows.length) {
     let query = client
       .from(table)
       .select("*")
@@ -107,12 +109,22 @@ export async function readOwnRows(
       throw new AccountExportError(table, "invalid_rows");
     }
 
-    rows.push(...page.data);
-
-    if (page.data.length < PAGE_SIZE) {
+    if (page.data.length === 0) {
       return rows;
     }
+
+    rows.push(...page.data);
   }
+}
+
+/** One table read with its own plan, so the columns are checked against that table. */
+async function readPlannedTable<Table extends AccountExportTable>(
+  client: SupabaseClient<Database>,
+  userId: string,
+  table: Table,
+): Promise<{ table: Table; rows: AccountExportRow[] }> {
+  const { ownerColumn, orderColumns } = READ_PLANS[table];
+  return { table, rows: await readOwnRows(client, userId, table, ownerColumn, orderColumns) };
 }
 
 async function* readTables(
@@ -120,8 +132,7 @@ async function* readTables(
   userId: string,
 ): AsyncGenerator<{ table: AccountExportTable; rows: AccountExportRow[] }> {
   for (const table of ACCOUNT_EXPORT_TABLES) {
-    const { ownerColumn, orderColumns } = READ_PLANS[table];
-    yield { table, rows: await readOwnRows(client, userId, table, ownerColumn, orderColumns) };
+    yield await readPlannedTable(client, userId, table);
   }
 }
 

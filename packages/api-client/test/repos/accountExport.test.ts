@@ -81,15 +81,16 @@ const weighInRows = (count: number, offset: number) =>
     deleted_at: null,
   }));
 
-const pageOf = (url: URL, total: number) => {
+/** A page as the server cuts it: at most `limit` rows, and at most `cap` when the server caps pages lower. */
+const pageOf = (url: URL, total: number, cap = Number.POSITIVE_INFINITY) => {
   const offset = Number(url.searchParams.get("offset") ?? 0);
   const limit = Number(url.searchParams.get("limit") ?? 1000);
-  return weighInRows(Math.max(0, Math.min(limit, total - offset)), offset);
+  return weighInRows(Math.max(0, Math.min(limit, cap, total - offset)), offset);
 };
 
 describe("readOwnRows", () => {
   it("should read every column of the rows of the owner, with the owner filter and a stable order", async () => {
-    answerTables({ weigh_ins: () => weighInRows(2, 0) });
+    answerTables({ weigh_ins: (url) => pageOf(url, 2) });
 
     const rows = await readOwnRows(
       await signedInClient(),
@@ -104,6 +105,29 @@ describe("readOwnRows", () => {
     expect(url?.searchParams.get("select")).toBe("*");
     expect(url?.searchParams.get("user_id")).toBe(`eq.${SIGNED_IN_USER_ID}`);
     expect(url?.searchParams.get("order")).toBe("id.asc");
+  });
+
+  it("should only accept columns that belong to the table", () => {
+    const readWithWrongOwnerColumn = async () =>
+      readOwnRows(
+        await signedInClient(),
+        SIGNED_IN_USER_ID,
+        "weigh_ins",
+        // @ts-expect-error `owner_id` is not a column of `weigh_ins`.
+        "owner_id",
+        ["id"],
+      );
+    const readWithWrongOrderColumn = async () =>
+      readOwnRows(
+        await signedInClient(),
+        SIGNED_IN_USER_ID,
+        "weigh_ins",
+        "user_id",
+        // @ts-expect-error `local_dat` is not a column of `weigh_ins`.
+        ["local_dat"],
+      );
+
+    expect([readWithWrongOwnerColumn, readWithWrongOrderColumn]).toHaveLength(2);
   });
 
   it("should not filter out soft-deleted rows", async () => {
@@ -125,7 +149,7 @@ describe("readOwnRows", () => {
     expect(restRequests[0]?.url.searchParams.get("order")).toBe("user_id.asc,local_date.asc");
   });
 
-  it("should read a table in pages until a page comes back short, and join them", async () => {
+  it("should read a table in pages until a page comes back empty, and join them", async () => {
     answerTables({ weigh_ins: (url) => pageOf(url, 2001) });
 
     const rows = await readOwnRows(
@@ -142,7 +166,23 @@ describe("readOwnRows", () => {
       "0",
       "1000",
       "2000",
+      "2001",
     ]);
+  });
+
+  it("should return every row when the server caps a page below the size asked for", async () => {
+    answerTables({ weigh_ins: (url) => pageOf(url, 1300, 500) });
+
+    const rows = await readOwnRows(
+      await signedInClient(),
+      SIGNED_IN_USER_ID,
+      "weigh_ins",
+      "user_id",
+      ["id"],
+    );
+
+    expect(rows).toHaveLength(1300);
+    expect(new Set(rows.map((row) => row.id)).size).toBe(1300);
   });
 
   it("should ask for one more page when the last page is exactly full", async () => {
@@ -163,7 +203,7 @@ describe("readOwnRows", () => {
 
 describe("readMyDataByTable", () => {
   it("should yield every table once, in schema order, each filtered to the signed in user", async () => {
-    answerTables({ weigh_ins: () => weighInRows(1, 0) });
+    answerTables({ weigh_ins: (url) => pageOf(url, 1) });
 
     const tables: AccountExportTable[] = [];
     const rowCounts: Record<string, number> = {};
@@ -205,7 +245,7 @@ describe("readMyDataByTable", () => {
 
 describe("exportMyData", () => {
   it("should return an object that the account export schema accepts", async () => {
-    answerTables({ weigh_ins: () => weighInRows(3, 0) });
+    answerTables({ weigh_ins: (url) => pageOf(url, 3) });
 
     const data = await exportMyData(await signedInClient());
 
@@ -258,7 +298,7 @@ describe("a failed export", () => {
   };
 
   it("should name the table and the code and carry no row value or database message", async () => {
-    answerTables({ weigh_ins: () => weighInRows(1, 0) });
+    answerTables({ weigh_ins: (url) => pageOf(url, 1) });
     server.use(
       http.get(`${REST_URL}/food_log_entries`, () =>
         postgrestError(500, "XX000", RECOGNISABLE_DATABASE_MESSAGE, {
