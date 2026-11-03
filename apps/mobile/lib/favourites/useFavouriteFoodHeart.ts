@@ -7,15 +7,21 @@ import { useFavouriteHeart } from "./useFavouriteHeart";
 import type { SheetHeaderControl } from "../../components/ui";
 import type { Food } from "@keylow/core/schemas";
 
-/** The heart of the food detail header, whose stack header the toast sits under. */
-export function useFavouriteFoodHeart(food: Food): SheetHeaderControl {
+/**
+ * The heart of a food's header, whose toast sits under that header. The food detail's is the stack header, which
+ * is the default, and the portion picker's is the sheet header.
+ */
+export function useFavouriteFoodHeart(
+  food: Food,
+  headerHeight: number = sheetHeaderHeight.stack,
+): SheetHeaderControl {
   const favourites = useFavouriteFoods({ enabled: useReadsEnabled() });
   const { mutateAsync } = useToggleFavouriteFood();
 
   return useFavouriteHeart({
     isFavourite: favourites.data?.some((favourite) => favourite.foodId === food.id) ?? false,
     isRead: favourites.isSuccess,
-    headerHeight: sheetHeaderHeight.stack,
+    headerHeight,
     toggle: (isFavourite) => mutateAsync({ food, favourite: isFavourite }),
   });
 }

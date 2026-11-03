@@ -106,6 +106,7 @@ export function RecipePortionPicker(
 
   return (
     <PortionPickerShell
+      headerControl={props.favouriteHeart}
       controls={
         <>
           <NumericInput

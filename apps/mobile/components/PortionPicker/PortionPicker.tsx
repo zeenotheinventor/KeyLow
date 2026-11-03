@@ -138,6 +138,7 @@ function FoodPortionPicker(props: FoodPortionPickerProps) {
 
   return (
     <PortionPickerShell
+      headerControl={props.favouriteHeart}
       controls={
         <>
           <NumericInput

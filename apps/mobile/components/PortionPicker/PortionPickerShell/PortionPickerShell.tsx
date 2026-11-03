@@ -20,6 +20,7 @@ import type { PortionPickerShellProps } from "./types";
 export function PortionPickerShell({
   title,
   onBack,
+  headerControl,
   time,
   isNow,
   showsTime,
@@ -50,6 +51,7 @@ export function PortionPickerShell({
           <SheetHeader
             leading={{ icon: "ChevronLeft", label: FOOD_FORM.back, onPress: onBack }}
             title={title}
+            {...(headerControl === undefined ? {} : { trailing: headerControl })}
           />
           <ScrollView
             className="flex-1"

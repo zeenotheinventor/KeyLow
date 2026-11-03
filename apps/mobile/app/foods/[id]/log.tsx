@@ -26,7 +26,7 @@ import { useEffect, useRef, useState } from "react";
 import { AccessibilityInfo } from "react-native";
 
 import { FoodLoadState } from "../../../components/FoodLoadState";
-import { PortionPicker } from "../../../components/PortionPicker";
+import { FavouriteFoodPortionPicker } from "../../../components/PortionPicker";
 import { useToast } from "../../../components/ui";
 import { amountForPicker, amountLastLogged } from "../../../lib/amountLastLogged";
 import { useIsOnline } from "../../../lib/connectivity";
@@ -227,7 +227,7 @@ export default function PortionPickerRoute() {
     );
 
     return (
-      <PortionPicker
+      <FavouriteFoodPortionPicker
         food={food}
         initialAmount={rowAmount === undefined ? undefined : amountForPicker(rowAmount)}
         mode="edit-plate"
@@ -242,7 +242,7 @@ export default function PortionPickerRoute() {
 
   if (logContext !== undefined) {
     return (
-      <PortionPicker
+      <FavouriteFoodPortionPicker
         food={food}
         initialAmount={initialAmount}
         isPlateLogging={plate.isLogging}
@@ -259,7 +259,7 @@ export default function PortionPickerRoute() {
   }
 
   return (
-    <PortionPicker
+    <FavouriteFoodPortionPicker
       food={food}
       hasSaveError={hasSaveError}
       isNow

@@ -1,3 +1,4 @@
+import type { SheetHeaderControl } from "../../ui";
 import type { ReactNode } from "react";
 
 /** What the Time row holds: the time as `HH:mm`, and whether it still reads "Now". */
@@ -10,6 +11,8 @@ export type PortionPickerShellProps = {
   /** The name under Back: the food's or the recipe's. */
   title: string;
   onBack: () => void;
+  /** A control drawn at the right of the header, such as the favourite heart. */
+  headerControl?: SheetHeaderControl | undefined;
   /** The Time row's starting time as `HH:mm`. */
   time: string;
   /** The row starts out reading "Now". */
