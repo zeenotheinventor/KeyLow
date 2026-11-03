@@ -8,8 +8,9 @@ export type AnthropicTool = {
   name: string;
   description: string;
   input_schema: JsonSchemaObject;
-  // Grammar-constrained input, which needs additionalProperties false at every level.
-  strict: true;
+  // Grammar-constrained input, which needs additionalProperties false at every level. Left out for a
+  // tool that opted out, because the API caps strict tools, optional and union parameters per request.
+  strict?: true;
   eager_input_streaming: true;
 };
 
@@ -73,7 +74,7 @@ function firstOpenObject(schema: unknown, place: string): string | null {
   return null;
 }
 
-// Both `strict` and `eager_input_streaming` are set, as the ticket asks. The Messages API docs do not say
+// A strict tool sets both `strict` and `eager_input_streaming`, as the ticket asks. The Messages API docs do not say
 // the two cannot be combined and the tool reference says the properties compose, but no request has been
 // sent with both yet, so the first live run (KEY-682) confirms it. If the API refuses, drop the second.
 export function toAnthropicTools(tools: readonly ListedTool[]): AnthropicTool[] {
@@ -86,7 +87,7 @@ export function toAnthropicTools(tools: readonly ListedTool[]): AnthropicTool[] 
       name: tool.name,
       description: tool.description,
       input_schema: tool.inputSchema,
-      strict: true,
+      ...(tool.strict ? { strict: true as const } : {}),
       eager_input_streaming: true,
     };
   });

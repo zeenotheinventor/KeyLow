@@ -57,3 +57,4 @@ export * from "./program";
 export * from "./plate";
 export * from "./shoppingList";
 export * from "./assistantNotices";
+export * from "./assistantEntryCards";

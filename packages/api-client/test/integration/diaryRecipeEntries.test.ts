@@ -103,6 +103,10 @@ describe("the diary reads, copies, edits and deletes a recipe entry against the 
     return data;
   };
 
+  /** The row without `updated_at`, which the database moves on every update, so a restored row is compared by its other columns. */
+  const withoutStamp = (row: Awaited<ReturnType<typeof rowOf>>) =>
+    Object.fromEntries(Object.entries(row ?? {}).filter(([column]) => column !== "updated_at"));
+
   /** What makes an entry what it was when logged. */
   const frozenOf = (row: Awaited<ReturnType<typeof rowOf>>) => ({
     snapshot: row?.snapshot,
@@ -357,7 +361,11 @@ describe("the diary reads, copies, edits and deletes a recipe entry against the 
 
       await restoreLogEntry(user.client, logged.id);
 
-      expect(await rowOf(logged.id)).toEqual(before);
+      const restored = await rowOf(logged.id);
+      expect(withoutStamp(restored)).toEqual(withoutStamp(before));
+      expect(Date.parse(restored?.updated_at ?? "")).toBeGreaterThan(
+        Date.parse(deleted?.updated_at ?? ""),
+      );
       expect((await getDiaryDay(user.client, deleteDay)).entries).toEqual([logged]);
     });
   });

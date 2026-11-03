@@ -1,6 +1,9 @@
+import { formatClockTime, isValidTimeZone } from "@keylow/core/dates";
 import { z } from "zod";
 
 import { invokeEdgeFunction } from "../edge";
+import { ENTRY_COLUMNS } from "./diaryRows";
+import { getMyTimeZone } from "./targets";
 
 import type { Database } from "../database.types";
 import type {
@@ -97,6 +100,37 @@ export type AssistantTargetSource = (
   ids: string[],
 ) => Promise<AssistantTargetRead[]>;
 
+const loggedEntryRowSchema = z.looseObject({
+  id: z.string(),
+  logged_at: z.iso.datetime({ offset: true }),
+  updated_at: z.string(),
+});
+
+/**
+ * Reads diary entries by id, deleted ones too, because the row of an undone log is a deleted entry. The
+ * change time is `updated_at`, which the database stamps on every update (ADR 0003, Amendment 14,
+ * addendum of 2026-11-03). Each row also carries `clock_time`, the entry's time on the person's own clock,
+ * which the words of the cards and the changes list print.
+ */
+const readLoggedEntries: AssistantTargetSource = async (client, ids) => {
+  const [entries, timeZone] = await Promise.all([
+    client.from("food_log_entries").select(`${ENTRY_COLUMNS},updated_at`).in("id", ids),
+    getMyTimeZone(client),
+  ]);
+  if (entries.error) {
+    throw repoError("load what the assistant changed", entries.error);
+  }
+  const zone = timeZone !== null && isValidTimeZone(timeZone) ? timeZone : "UTC";
+  return entries.data.map((entry) => {
+    const row = loggedEntryRowSchema.parse(entry);
+    return {
+      id: row.id,
+      updatedAt: row.updated_at,
+      row: { ...row, clock_time: formatClockTime(new Date(row.logged_at), zone) },
+    };
+  });
+};
+
 /**
  * The target tables whose rows are read back, keyed by `assistant_actions.target_table`. A write ticket
  * (KEY-688, 693, 694, 697) adds its table here with the change time its inverse compares, and its card
@@ -105,7 +139,7 @@ export type AssistantTargetSource = (
  * offered until the inverse itself answers `undo_unavailable`.
  */
 export const assistantTargetSources: ReadonlyMap<string, AssistantTargetSource> = new Map([
-  // ["food_log_entries", readLoggedEntries],
+  ["food_log_entries", readLoggedEntries],
 ]);
 
 export type AssistantActionsRead = {

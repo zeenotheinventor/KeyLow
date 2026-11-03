@@ -8,7 +8,9 @@ import { z } from "zod";
 import {
   logFood,
   logQuickEntry,
+  readLogEntryStamps,
   restoreLogEntry,
+  softDeleteLogEntries,
   softDeleteLogEntry,
   updateLogEntry,
 } from "../../src/repos/diaryWrites";
@@ -211,6 +213,85 @@ describe("softDeleteLogEntry", () => {
     await expect(softDeleteLogEntry(createTestClient(), id)).rejects.toThrow(
       "Could not delete the entry: unavailable",
     );
+  });
+});
+
+describe("softDeleteLogEntries", () => {
+  const first = "11111111-1111-4111-8111-111111111111";
+  const second = "22222222-2222-4222-8222-222222222222";
+
+  it("should delete the live entries in one update and answer their ids and stamps", async () => {
+    answerEntryWrites([
+      { id: first, updated_at: "2026-11-03T08:10:00.123456+00:00" },
+      { id: second, updated_at: "2026-11-03T08:10:00.123456+00:00" },
+    ]);
+
+    const stamps = await softDeleteLogEntries(createTestClient(), [first, second]);
+
+    expect(stamps).toEqual([
+      { id: first, updatedAt: "2026-11-03T08:10:00.123456+00:00" },
+      { id: second, updatedAt: "2026-11-03T08:10:00.123456+00:00" },
+    ]);
+    const writes = writesTo("food_log_entries");
+    expect(writes).toHaveLength(1);
+    expect(writes[0]?.method).toBe("PATCH");
+    expect(writes[0]?.url.searchParams.get("id")).toBe(`in.(${first},${second})`);
+    expect(writes[0]?.url.searchParams.get("deleted_at")).toBe("is.null");
+    expect(Object.keys(writes[0]?.body ?? {})).toEqual(["deleted_at"]);
+  });
+
+  it("should delete only the entries still stamped as given, when the stamp is given", async () => {
+    answerEntryWrites([{ id: first, updated_at: "2026-11-03T08:11:00+00:00" }]);
+
+    await softDeleteLogEntries(createTestClient(), [first], {
+      onlyIfUpdatedAt: "2026-11-03T08:10:00.123456+00:00",
+    });
+
+    const [write] = writesTo("food_log_entries");
+    expect(write?.url.searchParams.get("updated_at")).toBe("eq.2026-11-03T08:10:00.123456+00:00");
+  });
+
+  it("should answer only the entries that were the caller's and live, and make no request for no ids", async () => {
+    answerEntryWrites([{ id: first, updated_at: "2026-11-03T08:10:00+00:00" }]);
+
+    expect(await softDeleteLogEntries(createTestClient(), [first, second])).toHaveLength(1);
+    recorded.length = 0;
+    expect(await softDeleteLogEntries(createTestClient(), [])).toEqual([]);
+    expect(writesTo("food_log_entries")).toEqual([]);
+  });
+
+  it("should throw an error that names the failed write when the database refuses", async () => {
+    server.use(
+      http.patch(`${REST_URL}/food_log_entries`, () => postgrestError(500, "XX000", "unavailable")),
+    );
+
+    await expect(softDeleteLogEntries(createTestClient(), [first])).rejects.toThrow(
+      "Could not delete the entries",
+    );
+  });
+});
+
+describe("readLogEntryStamps", () => {
+  const first = "11111111-1111-4111-8111-111111111111";
+
+  it("should read the stamp and the deleted state of the entries, live or deleted", async () => {
+    const reads: URL[] = [];
+    server.use(
+      http.get(`${REST_URL}/food_log_entries`, ({ request }) => {
+        reads.push(new URL(request.url));
+        return postgrestRows(request, [
+          { id: first, updated_at: "2026-11-03T08:10:00+00:00", deleted_at: null },
+        ]);
+      }),
+    );
+
+    const stamps = await readLogEntryStamps(createTestClient(), [first]);
+
+    expect(stamps).toEqual([
+      { id: first, updatedAt: "2026-11-03T08:10:00+00:00", isDeleted: false },
+    ]);
+    expect(reads[0]?.searchParams.get("select")).toBe("id,updated_at,deleted_at");
+    expect(reads[0]?.searchParams.get("id")).toBe(`in.(${first})`);
   });
 });
 

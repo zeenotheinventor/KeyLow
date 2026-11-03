@@ -18,6 +18,10 @@ export type ToolTurn = {
   conversationId: string;
   // The text of the message that started the turn. Null when the turn has none, and then no write runs.
   userMessageText: string | null;
+  // The day the turn's sheet was opened on, and the hour the Describe sheet knows, if any. A write
+  // defaults to them when the person names no day or time.
+  localDate: string;
+  localTime: string | null;
 };
 
 export type ToolContext = {
@@ -53,6 +57,11 @@ type ToolBase<Input> = {
   description: string;
   input: ZodType<Input>;
   annotations: ToolAnnotations;
+  // Whether the Messages API holds the model to the schema. Strict by default. The API caps the strict
+  // tools of a request at 20 and their optional and union parameters at 24 and 16 (see `strictLimits` in
+  // `registry.test.ts`), so a tool with many nullable fields opts out with `false`. The executor
+  // validates every input with zod whatever this says.
+  strict?: boolean;
 };
 
 // Methods and not function properties, so a tool of one input type is a tool of the registry's list.
@@ -243,6 +252,9 @@ export function strictSchemaProblem(tool: ToolDefinition): string | null {
     ? null
     : `Tool ${tool.name} has an input schema with ${feature}, which a strict tool schema cannot hold`;
 }
+
+// Where `tools/list` says whether a tool is strict, in the tool's `_meta`.
+export const strictMetaKey = "kilo/strict";
 
 export const confirmationIdKey = "confirmation_id";
 

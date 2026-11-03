@@ -38,6 +38,8 @@ async function send(user: TestUser, turn: string, message: unknown): Promise<Rep
     headers: {
       Authorization: `Bearer ${user.accessToken}`,
       "X-Kilo-Allowed-Tools": allowedTools,
+      "X-Kilo-Local-Date": "2026-11-03",
+      "X-Kilo-Local-Time": "08:10",
       "Content-Type": "application/json",
       Accept: "application/json, text/event-stream",
     },

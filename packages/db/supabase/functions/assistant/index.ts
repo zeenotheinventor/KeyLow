@@ -30,12 +30,18 @@ Deno.serve(
       access: createAccessStore(service),
       turns: createTurnStore(service),
       undoWith: (undoRequest, userId) => {
-        // Undo runs outside a turn, so the context carries a nil turn and no message.
+        // Undo runs outside a turn, so the context carries a nil turn, no message and no day.
         const context: ToolContext = {
           caller: createCallerClient(undoRequest),
           actions: createActionStore(service),
           userId,
-          turn: { id: nilId, conversationId: nilId, userMessageText: null },
+          turn: {
+            id: nilId,
+            conversationId: nilId,
+            userMessageText: null,
+            localDate: "1970-01-01",
+            localTime: null,
+          },
           registry: toolRegistry,
           allowedTools: undefined,
           reportError,

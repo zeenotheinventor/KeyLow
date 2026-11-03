@@ -1,7 +1,8 @@
-import { assertEquals, assertThrows } from "@std/assert";
+import { assert, assertEquals, assertThrows } from "@std/assert";
 import { z } from "zod";
 
 import { createRegistry, toolRegistry } from "./registry.ts";
+import { toJsonSchema } from "./tool.ts";
 
 import type { ReadToolDefinition, ToolDefinition, WriteToolDefinition } from "./tool.ts";
 
@@ -75,24 +76,111 @@ Deno.test("a name that is not lower snake case is refused", () => {
 });
 
 Deno.test(
-  "the real registry lists the food reads and then the diary reads in order, all read-only",
+  "the real registry lists the food reads, the diary reads and then the diary writes in order",
   () => {
     assertEquals(
-      toolRegistry.list.map((tool) => tool.name),
+      toolRegistry.list.map((tool) => [tool.name, tool.kind]),
       [
-        "search_foods",
-        "get_food",
-        "get_recipes",
-        "get_day",
-        "get_range_totals",
-        "get_entries",
-        "get_weigh_ins",
+        ["search_foods", "read"],
+        ["get_food", "read"],
+        ["get_recipes", "read"],
+        ["get_day", "read"],
+        ["get_range_totals", "read"],
+        ["get_entries", "read"],
+        ["get_weigh_ins", "read"],
+        ["log_entry", "write"],
+        ["update_entry", "write"],
+        ["delete_entry", "write"],
       ],
     );
     assertEquals(
-      toolRegistry.list.map((tool) => [tool.kind, tool.annotations.readOnlyHint]),
-      toolRegistry.list.map(() => ["read", true]),
+      toolRegistry.list.map((tool) => tool.annotations.readOnlyHint),
+      toolRegistry.list.map((tool) => tool.kind === "read"),
     );
+  },
+);
+
+// The Messages API caps what the strict tools of one request hold together: 20 tools, 24 optional
+// parameters and 16 parameters with a union type (`anyOf` or a type array), counted across all of
+// their schemas. https://platform.claude.com/docs/en/build-with-claude/structured-outputs.md
+// (section "Explicit limits"). A tool that would break a cap sets `strict: false`.
+const strictLimits = { tools: 20, optionalParameters: 24, unionParameters: 16 } as const;
+
+type Schema = Record<string, unknown>;
+const isSchema = (value: unknown): value is Schema =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+// Counts the parameters under a schema: every property of an object, however deep, and the items of arrays.
+function countParameters(schema: unknown): { optional: number; union: number } {
+  const total = { optional: 0, union: 0 };
+  if (!isSchema(schema)) {
+    return total;
+  }
+  const properties = isSchema(schema["properties"]) ? schema["properties"] : {};
+  const required = Array.isArray(schema["required"]) ? schema["required"] : [];
+  for (const [name, property] of Object.entries(properties)) {
+    total.optional += required.includes(name) ? 0 : 1;
+    total.union +=
+      isSchema(property) && (Array.isArray(property["anyOf"]) || Array.isArray(property["type"]))
+        ? 1
+        : 0;
+    const inner = countParameters(
+      isSchema(property) && Array.isArray(property["anyOf"])
+        ? property["anyOf"].find((branch) => isSchema(branch) && branch["type"] !== "null")
+        : property,
+    );
+    total.optional += inner.optional;
+    total.union += inner.union;
+  }
+  const items = countParameters(schema["items"]);
+  return { optional: total.optional + items.optional, union: total.union + items.union };
+}
+
+function strictBudgetOf(tools: readonly ToolDefinition[]) {
+  const strictTools = tools.filter((tool) => tool.strict !== false);
+  const counts = strictTools.map((tool) => countParameters(toJsonSchema(tool)));
+  return {
+    tools: strictTools.length,
+    optionalParameters: counts.reduce((sum, count) => sum + count.optional, 0),
+    unionParameters: counts.reduce((sum, count) => sum + count.union, 0),
+  };
+}
+
+Deno.test("the strict tools of the registry stay inside what one request may hold", () => {
+  const budget = strictBudgetOf(toolRegistry.list);
+
+  assert(budget.tools <= strictLimits.tools, `${budget.tools} strict tools`);
+  assert(budget.optionalParameters <= strictLimits.optionalParameters, JSON.stringify(budget));
+  assert(budget.unionParameters <= strictLimits.unionParameters, JSON.stringify(budget));
+});
+
+Deno.test(
+  "the budget counts a nullable and a confirmation id as union parameters, and skips a tool that is not strict",
+  () => {
+    const nullable = {
+      ...read("nullable_tool"),
+      input: z.object({
+        note: z.string().nullable(),
+        nested: z.object({ n: z.number().nullable() }),
+      }),
+    };
+    const confirmed = { ...write("confirmed_tool"), needsConfirmation: () => true };
+
+    assertEquals(strictBudgetOf([nullable]), {
+      tools: 1,
+      optionalParameters: 0,
+      unionParameters: 2,
+    });
+    assertEquals(strictBudgetOf([confirmed]), {
+      tools: 1,
+      optionalParameters: 0,
+      unionParameters: 1,
+    });
+    assertEquals(strictBudgetOf([{ ...nullable, strict: false }]), {
+      tools: 0,
+      optionalParameters: 0,
+      unionParameters: 0,
+    });
   },
 );
 

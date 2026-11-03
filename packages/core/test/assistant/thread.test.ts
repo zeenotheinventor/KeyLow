@@ -216,10 +216,17 @@ describe("threadFromMessages, the undo state of a card", () => {
 });
 
 describe("threadFromMessages, merging the cards of one turn", () => {
+  const first = {
+    ...loggedCard,
+    actionIds: [firstActionId],
+    title: "Logged 2 eggs at 08:10",
+    rows: loggedCard.rows.slice(0, 1),
+  };
   const second = {
     ...loggedCard,
     actionIds: [secondActionId],
-    rows: loggedCard.rows.slice(0, 1),
+    title: "Logged toast at 08:10",
+    rows: loggedCard.rows.slice(1),
   };
   const mergedTurn = (resultsBetween: "none" | "reply") => [
     userMessage("m1", firstTurnId, "2 eggs, and a coffee"),
@@ -231,7 +238,7 @@ describe("threadFromMessages, merging the cards of one turn", () => {
       {
         toolUseId: "call-1",
         source: "log_entry",
-        outcome: { card: { ...loggedCard, actionIds: [firstActionId] } },
+        outcome: { card: first },
       },
       { toolUseId: "call-2", source: "log_entry", outcome: { card: second } },
     ]),
@@ -245,7 +252,10 @@ describe("threadFromMessages, merging the cards of one turn", () => {
       { kind: "user" },
       {
         kind: "card",
-        card: { actionIds: [firstActionId, secondActionId], title: "Logged 2 entries" },
+        card: {
+          actionIds: [firstActionId, secondActionId],
+          title: "Logged 2 eggs and toast at 08:10",
+        },
       },
     ]);
   });
