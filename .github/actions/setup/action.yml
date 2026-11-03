@@ -1,5 +1,5 @@
 name: Set up the workspace
-description: Installs pnpm, Node and the workspace dependencies, with the pnpm store restored from the cache.
+description: Installs pnpm, Node and the workspace dependencies, restored from the node_modules cache or, on a miss, installed from the pnpm store cache.
 
 # Run actions/checkout first, a local action is read from the checked out files.
 #
@@ -12,7 +12,7 @@ description: Installs pnpm, Node and the workspace dependencies, with the pnpm s
 
 inputs:
   save-store:
-    description: Save the pnpm store when the exact key was not restored. Only one job of a run should set this.
+    description: Save the pnpm store and node_modules when their exact keys were not restored. Only one job of a run should set this.
     default: "false"
 
 runs:
@@ -36,33 +36,70 @@ runs:
     # `pnpm` runs. pnpm/action-setup ran pnpm's self-installer instead, which took 3 to 13 s.
     # The version is printed so that every job's log shows which pnpm it ran.
     - name: Enable pnpm
+      id: pnpm
       shell: bash
       run: |
         corepack enable pnpm
-        pnpm --version
+        version=$(pnpm --version)
+        echo "pnpm ${version}"
+        echo "version=${version}" >> "$GITHUB_OUTPUT"
+    # node_modules is restored whole, so a hit needs no store and no install. The linker is hoisted
+    # (.npmrc), so the root node_modules holds every package, and a workspace has its own node_modules
+    # only for versions that differ from the root. The paths are the workspaces of
+    # pnpm-workspace.yaml, and they must be the same in the save step below. The key is exact only,
+    # with no restore-keys, because a node_modules of another lockfile is not an install of this one.
+    # It holds the OS, the architecture, the pnpm version, and a hash of .nvmrc (the Node major) and
+    # the lockfile.
+    - name: Restore node_modules
+      id: node-modules-cache
+      uses: actions/cache/restore@v6
+      with:
+        path: |
+          node_modules
+          apps/*/node_modules
+          packages/*/node_modules
+          tools/*/node_modules
+        key: node-modules-${{ runner.os }}-x64-pnpm${{ steps.pnpm.outputs.version }}-${{ hashFiles('.nvmrc', 'pnpm-lock.yaml') }}
     - name: Find the pnpm store
       id: pnpm-store
+      if: steps.node-modules-cache.outputs.cache-hit != 'true'
       shell: bash
       run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
     # Every run restores. The exact key is the store for this lockfile. The prefix falls back to the
     # newest earlier store, and `pnpm install` fetches whatever the lockfile has beyond it.
     - name: Restore the pnpm store
       id: pnpm-store-cache
+      if: steps.node-modules-cache.outputs.cache-hit != 'true'
       uses: actions/cache/restore@v6
       with:
         path: ${{ steps.pnpm-store.outputs.path }}
         key: node-cache-${{ runner.os }}-x64-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
         restore-keys: node-cache-${{ runner.os }}-x64-pnpm-
     - name: Install the dependencies
+      if: steps.node-modules-cache.outputs.cache-hit != 'true'
       shell: bash
       run: |
         node --version
         pnpm install --frozen-lockfile --ignore-scripts
     # Only a push to main saves, and only when the exact key was not restored. Saving here, right
-    # after the install, keeps the store complete and out of reach of a later failing check.
+    # after the install, keeps the store complete and out of reach of a later failing check. The
+    # store is restored only on a node_modules miss, so a node_modules hit must not count as a store
+    # miss: the check on node_modules keeps this step from saving a store it never restored.
     - name: Save the pnpm store
-      if: inputs.save-store == 'true' && github.event_name == 'push' && steps.pnpm-store-cache.outputs.cache-hit != 'true'
+      if: inputs.save-store == 'true' && github.event_name == 'push' && steps.node-modules-cache.outputs.cache-hit != 'true' && steps.pnpm-store-cache.outputs.cache-hit != 'true'
       uses: actions/cache/save@v6
       with:
         path: ${{ steps.pnpm-store.outputs.path }}
         key: node-cache-${{ runner.os }}-x64-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
+    # The same rule for node_modules, which is saved after the install and before any check can write
+    # into it. The paths and the key are those of the restore step.
+    - name: Save node_modules
+      if: inputs.save-store == 'true' && github.event_name == 'push' && steps.node-modules-cache.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v6
+      with:
+        path: |
+          node_modules
+          apps/*/node_modules
+          packages/*/node_modules
+          tools/*/node_modules
+        key: node-modules-${{ runner.os }}-x64-pnpm${{ steps.pnpm.outputs.version }}-${{ hashFiles('.nvmrc', 'pnpm-lock.yaml') }}
