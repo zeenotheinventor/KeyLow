@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { assistantTurnRequestSchema } from "../../src/assistant";
+import { ASSISTANT_MAX_TEXT_LENGTH, assistantTurnRequestSchema } from "../../src/assistant";
 
 const conversationId = "00000000-0000-4000-8000-0000000000c1";
 
@@ -32,6 +32,51 @@ describe("assistantTurnRequestSchema", () => {
       assistantTurnRequestSchema.safeParse({
         conversationId,
         text: "",
+        localDate: "2026-10-25",
+        localTime: null,
+      }).success,
+    ).toBe(false);
+  });
+
+  it.each(["   ", "\n\t "])("should reject a message of only whitespace (%j)", (text) => {
+    expect(
+      assistantTurnRequestSchema.safeParse({
+        conversationId,
+        text,
+        localDate: "2026-10-25",
+        localTime: null,
+      }).success,
+    ).toBe(false);
+  });
+
+  it("should trim the spaces around a message", () => {
+    expect(
+      assistantTurnRequestSchema.parse({
+        conversationId,
+        text: "  two eggs \n",
+        localDate: "2026-10-25",
+        localTime: null,
+      }).text,
+    ).toBe("two eggs");
+  });
+
+  it("should allow a message of the longest length", () => {
+    expect(ASSISTANT_MAX_TEXT_LENGTH).toBe(2000);
+    expect(
+      assistantTurnRequestSchema.safeParse({
+        conversationId,
+        text: "a".repeat(ASSISTANT_MAX_TEXT_LENGTH),
+        localDate: "2026-10-25",
+        localTime: null,
+      }).success,
+    ).toBe(true);
+  });
+
+  it("should reject a message one character over the longest length", () => {
+    expect(
+      assistantTurnRequestSchema.safeParse({
+        conversationId,
+        text: "a".repeat(ASSISTANT_MAX_TEXT_LENGTH + 1),
         localDate: "2026-10-25",
         localTime: null,
       }).success,
