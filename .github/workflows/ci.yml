@@ -351,8 +351,11 @@ jobs:
   # with --only, so the packages the app depends on are not linted and type-checked again, `core` does
   # that.
   # The mobile tests were the long pole of every full run (about ten minutes, lint and type-check
-  # included, on one runner), so the job runs as four parallel legs: "static" lints, type-checks and
-  # runs Expo doctor, and the other three each run a third of the Jest files (`--shard`, split by file).
+  # included, on one runner), so the job runs as seven parallel legs: "static" lints, type-checks and
+  # runs Expo doctor, and the other six each run a size-weighted sixth of the Jest files (`--shard`).
+  # Jest's own split hashes the file path, which ignores cost, so apps/mobile/test/support/shardSequencer.js
+  # (the `testSequencer` in apps/mobile/jest.config.js) deals the files out by size on disk instead, largest
+  # first, into the lightest leg. Every leg works out the same split, with no data file to keep up to date.
   # `checks` needs `mobile`, which waits for every leg, so the required check is unchanged.
   mobile:
     name: mobile (${{ matrix.part }})
@@ -363,7 +366,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        part: [static, 1/3, 2/3, 3/3]
+        part: [static, 1/6, 2/6, 3/6, 4/6, 5/6, 6/6]
     steps:
       - uses: actions/checkout@v7
         with:
@@ -374,7 +377,7 @@ jobs:
       # transformer config, so restoring one from a near miss is safe: stale entries are never read.
       # The path is the cacheDirectory in apps/mobile/jest.config.js. Pull requests only restore it,
       # and the step that saves it runs on a push to main (see the header). Each shard transforms a
-      # different third of the files, so each keeps its own cache (the leg's index is in the key).
+      # different sixth of the files, so each keeps its own cache (the leg's index is in the key).
       - name: Restore the mobile Jest cache
         id: jest-cache
         if: matrix.part != 'static'
