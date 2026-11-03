@@ -146,5 +146,12 @@ Deno.test(
 Deno.test("softDeleteLogEntry throws when the entry is not visible to the caller", async () => {
   const { client } = stubClient(() => ({ data: null, error: null }));
 
-  await assertRejects(() => softDeleteLogEntry(client, entryId), Error, entryId);
+  // The message says the entry was not found and, to keep an id out of logs, does not name it.
+  const error = await assertRejects(
+    () => softDeleteLogEntry(client, entryId),
+    Error,
+    "The entry was not found",
+  );
+  assertEquals(error.name, "EntryNotFoundError");
+  assertEquals(error.message.includes(entryId), false);
 });
