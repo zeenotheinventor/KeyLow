@@ -22,6 +22,7 @@ import { createDiaryQueryClient, diaryClient, resetDiaryBackend } from "../suppo
 import { resetRouterMock, routerMock } from "../support/expoRouterMock";
 import { compileKitStyles } from "../support/kitStyles";
 import { registerAppStyles } from "../support/nativeWindStyles";
+import { installVirtualClock } from "../support/virtualClock";
 
 import type { RecipeState, ShoppingPreviewState } from "@keylow/api-client";
 import type { ShoppingItem } from "@keylow/core/shopping";
@@ -161,6 +162,7 @@ describe("the shopping list screens", () => {
   });
 
   beforeEach(() => {
+    installVirtualClock();
     registerAppStyles(kitStyles);
     resetRouterMock();
     resetDiaryBackend();
@@ -188,6 +190,7 @@ describe("the shopping list screens", () => {
     });
     queryClient.clear();
     jest.restoreAllMocks();
+    jest.useRealTimers();
   });
 
   describe("the list", () => {

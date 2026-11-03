@@ -11,6 +11,7 @@ import { resetRouterMock, routerMock } from "../support/expoRouterMock";
 import { fakeHealthImport } from "../support/fakeHealthImport";
 import { createFakeHealthProvider } from "../support/fakeHealthProvider";
 import { screenWords } from "../support/screenWords";
+import { installVirtualClock } from "../support/virtualClock";
 import {
   bodyMeasurementRow,
   createWeightQueryClient,
@@ -125,10 +126,7 @@ function textOf(part: unknown): string {
   }
 }
 
-const settle = () =>
-  act(async () => {
-    await new Promise((resolve) => setTimeout(resolve, 50));
-  });
+const settle = () => act(() => jest.advanceTimersByTimeAsync(50));
 
 const weightFigure = (span = "90 days") =>
   screen.queryByRole("image", { name: new RegExp(`^Weight over the last ${span}, trend `) });
@@ -138,6 +136,7 @@ const sectionHeading = () => screen.queryByRole("heading", { name: "Body composi
 
 describe("the Weight screen's Weight / Composition switch", () => {
   beforeEach(() => {
+    installVirtualClock();
     resetRouterMock();
     resetWeightBackend();
     fakeHealthImport.reset();
@@ -155,9 +154,8 @@ describe("the Weight screen's Weight / Composition switch", () => {
 
   afterEach(async () => {
     jest.restoreAllMocks();
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 0));
-    });
+    await act(() => jest.advanceTimersByTimeAsync(0));
+    jest.useRealTimers();
   });
 
   describe("when Health Connect is connected", () => {

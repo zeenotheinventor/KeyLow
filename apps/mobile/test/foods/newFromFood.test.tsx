@@ -15,6 +15,7 @@ import {
 import NewFoodRoute from "../../app/foods/new";
 import { ThemeProvider } from "../../lib/theme";
 import { resetRouterMock, routerMock } from "../support/expoRouterMock";
+import { installVirtualClock } from "../support/virtualClock";
 
 import type { Food } from "@keylow/core/schemas";
 
@@ -72,11 +73,16 @@ async function save(user: Awaited<ReturnType<typeof renderCopy>>) {
 
 describe("new food screen, copying a food with the from parameter", () => {
   beforeEach(() => {
+    installVirtualClock();
     resetRouterMock();
     resetApiClientMock();
     routerMock.searchParams = { from: savedFoodId };
     Object.assign(foodQuery, { data: suspectFood });
     mockCreateFood.mockResolvedValue({ food: { ...foodFixture, id: copiedFoodId }, portions: [] });
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   it("should load the food to copy and its portions by the id in the parameter", async () => {

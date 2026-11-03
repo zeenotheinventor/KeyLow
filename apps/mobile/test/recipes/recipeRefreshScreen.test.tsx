@@ -37,6 +37,7 @@ import {
   refreshBackend,
   resetRefreshBackend,
 } from "../support/recipeRefreshBackend";
+import { installVirtualClock } from "../support/virtualClock";
 
 import type { QueryClient } from "@tanstack/react-query";
 
@@ -112,6 +113,7 @@ describe("the refresh screen", () => {
   });
 
   beforeEach(() => {
+    installVirtualClock();
     registerAppStyles(kitStyles);
     resetRouterMock();
     resetDiaryBackend();
@@ -129,6 +131,7 @@ describe("the refresh screen", () => {
     });
     queryClient.clear();
     jest.restoreAllMocks();
+    jest.useRealTimers();
   });
 
   describe("the diff", () => {

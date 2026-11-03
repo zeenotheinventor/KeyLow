@@ -26,6 +26,7 @@ import {
 } from "./support/routineStatusBackend";
 import { pressTwiceInTheSameMoment } from "./support/sameTickPress";
 import { resetTrainBackend } from "./support/trainBackend";
+import { installVirtualClock } from "./support/virtualClock";
 
 import type { StoredRoutine } from "./support/routineStatusBackend";
 import type { QueryClient } from "@tanstack/react-query";
@@ -122,6 +123,7 @@ describe("a routine's status", () => {
   });
 
   beforeEach(() => {
+    installVirtualClock();
     registerAppStyles(kitStyles);
     resetTrainBackend();
     resetRoutineStatusBackend();
@@ -136,6 +138,7 @@ describe("a routine's status", () => {
       onlineManager.setOnline(true);
     });
     queryClient.clear();
+    jest.useRealTimers();
   });
 
   describe("making a routine active", () => {

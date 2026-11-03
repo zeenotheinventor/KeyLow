@@ -25,6 +25,7 @@ import {
   showProgramWithoutSnapshot,
 } from "./support/programBackend";
 import { mockSupabaseClient, resetSupabaseMock } from "./support/supabaseMock";
+import { installVirtualClock } from "./support/virtualClock";
 
 const mockStorageItems = new Map<string, string>();
 const mockSetItem = jest.fn((key: string, value: string) => {
@@ -107,6 +108,7 @@ async function renderMore() {
 
 describe("the More screen", () => {
   beforeEach(() => {
+    installVirtualClock();
     resetRouterMock();
     resetSupabaseMock();
     resetDiaryBackend();
@@ -117,6 +119,10 @@ describe("the More screen", () => {
     resetDashboardBodyChartForTests();
     resetBodyFigureForTests();
     deviceScheme.current = "light";
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   describe("its sections", () => {
