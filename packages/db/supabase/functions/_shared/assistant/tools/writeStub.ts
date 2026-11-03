@@ -14,10 +14,11 @@ export type WriteStub = {
   caller: SupabaseClient<Database>;
   tables: Record<string, Row[]>;
   calls: WriteCall[];
-  // The next statement that writes to this table fails, once.
-  failNextWriteTo(table: string): void;
-  // The next read of this table fails, once.
-  failNextReadFrom(table: string): void;
+  // The next statement that writes to this table fails, `times` times in a row (once by default).
+  // `afterWrites` lets that many writes to the table land first, for a failure part way through a run.
+  failNextWriteTo(table: string, afterWrites?: number, times?: number): void;
+  // The next read of this table fails, once. `afterReads` lets that many reads of the table answer first.
+  failNextReadFrom(table: string, afterReads?: number): void;
   // Runs once, just before the next write to this table, as another request could between two steps.
   beforeNextWriteTo(table: string, change: () => void): void;
 };
@@ -33,8 +34,8 @@ export function writeStub(
     Object.entries(initial).map(([table, rows]) => [table, rows.map((row) => ({ ...row }))]),
   );
   const calls: WriteCall[] = [];
-  const failing = new Set<string>();
-  const failingReads = new Set<string>();
+  const failing = new Map<string, { afterWrites: number; times: number }>();
+  const failingReads = new Map<string, number>();
   const beforeWrite = new Map<string, () => void>();
   let statement = 0;
   let nextId = 1;
@@ -66,15 +67,29 @@ export function writeStub(
 
     const run = (): { data: unknown; error: { code: string; message: string } | null } => {
       calls.push({ table, method: operation, ...(operation === "update" ? { patch } : {}) });
-      if (operation === "select" && failingReads.delete(table)) {
-        return { data: null, error: { code: "XX000", message: "unavailable" } };
+      if (operation === "select" && failingReads.has(table)) {
+        const readsToLetAnswer = failingReads.get(table) ?? 0;
+        if (readsToLetAnswer === 0) {
+          failingReads.delete(table);
+          return { data: null, error: { code: "XX000", message: "unavailable" } };
+        }
+        failingReads.set(table, readsToLetAnswer - 1);
       }
       if (operation !== "select") {
         beforeWrite.get(table)?.();
         beforeWrite.delete(table);
       }
-      if (operation !== "select" && failing.delete(table)) {
-        return { data: null, error: { code: "XX000", message: "unavailable" } };
+      if (operation !== "select" && failing.has(table)) {
+        const plan = failing.get(table) ?? { afterWrites: 0, times: 1 };
+        if (plan.afterWrites === 0) {
+          if (plan.times <= 1) {
+            failing.delete(table);
+          } else {
+            failing.set(table, { afterWrites: 0, times: plan.times - 1 });
+          }
+          return { data: null, error: { code: "XX000", message: "unavailable" } };
+        }
+        failing.set(table, { ...plan, afterWrites: plan.afterWrites - 1 });
       }
       const rows = (tables[table] ??= []);
       let affected: Row[];
@@ -86,6 +101,7 @@ export function writeStub(
             created_at: stampOf(statement),
             updated_at: stampOf(statement),
             deleted_at: null,
+            ...(table === "day_logs" ? { note: null } : {}),
             user_id: options.callerUserId,
             ...row,
             kcal: (row["nutrients"] as { kcal?: number } | undefined)?.kcal ?? null,
@@ -163,11 +179,11 @@ export function writeStub(
     caller: client as unknown as SupabaseClient<Database>,
     tables,
     calls,
-    failNextWriteTo: (table) => {
-      failing.add(table);
+    failNextWriteTo: (table, afterWrites = 0, times = 1) => {
+      failing.set(table, { afterWrites, times });
     },
-    failNextReadFrom: (table) => {
-      failingReads.add(table);
+    failNextReadFrom: (table, afterReads = 0) => {
+      failingReads.set(table, afterReads);
     },
     beforeNextWriteTo: (table, change) => {
       beforeWrite.set(table, change);

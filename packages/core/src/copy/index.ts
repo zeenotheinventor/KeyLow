@@ -59,4 +59,5 @@ export * from "./shoppingList";
 export * from "./assistantNotices";
 export * from "./assistantEntryCards";
 export * from "./foodReminders";
+export * from "./assistantDayCards";
 export * from "./widgets";

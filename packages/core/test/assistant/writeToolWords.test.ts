@@ -11,7 +11,7 @@ import {
 import { buildLogEntry } from "../../src/diary";
 import { buildFood, buildFoodPortion } from "../../src/testing";
 
-import type { CardEntry } from "../../src/assistant";
+import type { AssistantChangeTarget, CardEntry } from "../../src/assistant";
 
 const secondActionId = "00000000-0000-4000-8000-0000000000d3";
 
@@ -24,7 +24,7 @@ describe("describeAssistantChange", () => {
     ["delete_entry", 1, "Deleted 1 entry"],
     ["delete_entry", 3, "Deleted 3 entries"],
     ["copy_day", 1, "Copied a day"],
-    ["set_day_complete", 1, "Marked a day complete"],
+    ["set_day_complete", 1, "Changed whether a day is complete"],
     ["create_recipe", 1, "Added a recipe"],
     ["update_recipe", 1, "Updated a recipe"],
     ["archive_recipe", 1, "Archived a recipe"],
@@ -35,6 +35,19 @@ describe("describeAssistantChange", () => {
       title,
       detail: null,
     });
+  });
+
+  it("should word a copied day by the entries its rows still hold, and plainly once they are gone", () => {
+    const rows: AssistantChangeTarget[] = ["a", "b", "c"].map((id) => ({
+      id,
+      row: { id, item_type: "quick" },
+    }));
+    const copied = (targets: AssistantChangeTarget[]) =>
+      describeAssistantChange({ tool: "copy_day", actionCount: 1, targets });
+
+    expect(copied(rows)).toEqual({ title: "Copied 3 entries", detail: null });
+    expect(copied(rows.slice(0, 1))).toEqual({ title: "Copied 1 entry", detail: null });
+    expect(copied([{ id: "a", row: null }])).toEqual({ title: "Copied a day", detail: null });
   });
 
   it("should word a tool it does not know as a plain change", () => {

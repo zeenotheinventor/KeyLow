@@ -139,6 +139,12 @@ const sumOf = (values: readonly (number | null)[]): number | null => {
   return known.length === 0 ? null : known.reduce((total, value) => total + value, 0);
 };
 
+/** "1,940 kcal", the calories of the entries that have a figure, or null when none has. */
+export function describeCardTotalKcal(cards: readonly CardEntry[]): string | null {
+  const kcal = sumOf(cards.map(({ entry }) => entry.nutrients.kcal));
+  return kcal === null ? null : `${formatCalories(kcal)} kcal`;
+}
+
 /** "232 kcal · P 15 g · C 17 g · F 10 g". A figure no entry gave is left out, never written as 0. */
 export function describeCardTotal(cards: readonly CardEntry[]): string | null {
   const nutrients = cards.map(({ entry }) => entry.nutrients);

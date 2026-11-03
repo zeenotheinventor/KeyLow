@@ -1,4 +1,7 @@
+export { confirmCopyButtons, confirmCopyQuestion } from "./confirmCopy";
 export { confirmDeleteButtons, confirmDeleteQuestion } from "./confirmDelete";
+export { buildDayCompletedCard } from "./dayCompleted";
+export { buildDayCopiedCard } from "./dayCopied";
 export { buildDeletedCard } from "./deleted";
 export {
   cardEntryOfRow,
