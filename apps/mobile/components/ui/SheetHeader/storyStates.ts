@@ -12,6 +12,7 @@ export const storyStates = [
   "TwoControlsDisabled",
   "ControlAndSlot",
   "LongTitle",
+  "TitleAtStart",
   "WithoutLeading",
   "WithoutLeadingWithClose",
   "WithPlateChip",

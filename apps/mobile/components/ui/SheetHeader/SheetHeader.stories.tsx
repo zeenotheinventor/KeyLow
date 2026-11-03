@@ -154,6 +154,11 @@ export const LongTitle: Story = {
   },
 };
 
+// The changes screen: a title too long to centre between two ends sits at the start, beside the back control.
+export const TitleAtStart: Story = {
+  args: { title: "What the assistant changed", leading: back, isTitleAtStart: true },
+};
+
 // The setup's first step: no Back and no Close. The empty 44 point slot keeps the title in the middle, and
 // the subtitle carries the step.
 export const WithoutLeading: Story = {

@@ -4,7 +4,9 @@ export type {
   ListRowMacro,
   ListRowProps,
   ListRowToggle,
+  ListRowTrailing,
   ListRowToPressProps,
   ListRowWithControlProps,
   ListRowWithToggleProps,
+  ListRowWithTrailingProps,
 } from "./types";

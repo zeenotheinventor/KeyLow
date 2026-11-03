@@ -41,6 +41,7 @@ export function ListRow({
   variant,
   ref,
   toggle,
+  trailing,
   children,
 }: ListRowProps) {
   const isFooter = variant === "footer";
@@ -139,6 +140,43 @@ export function ListRow({
           label={toggle.label}
           onValueChange={toggle.onValueChange}
         />
+      </View>
+    );
+  }
+
+  // A row with an action or a label at the end. The words on the left are one group, and with an action the
+  // button is a stop of its own, which a group around both would fold away. The 4 points taken back on the
+  // right leave the board's 8 beside the button or the label, which bring 12 of their own.
+  if (trailing !== undefined) {
+    const wordsName = [title, subtitle, trailing.kind === "label" ? trailing.label : undefined]
+      .filter(Boolean)
+      .join(", ");
+    return (
+      <View className={`${rowClassName} -mr-1`}>
+        <View
+          accessible
+          aria-label={wordsName}
+          className="min-w-0 flex-1 flex-row items-center gap-3"
+        >
+          {contents}
+          {trailing.kind === "label" ? (
+            <Text className="shrink-0 px-3" tone="muted" variant="caption">
+              {trailing.label}
+            </Text>
+          ) : null}
+        </View>
+        {trailing.kind === "action" ? (
+          <PressableSurface
+            busy={trailing.busy}
+            className="h-control-sm shrink-0 justify-center rounded-small px-3"
+            label={`${trailing.label}, ${title}`}
+            onPress={trailing.onPress}
+          >
+            <Text tone="accent-ink" variant="label-small">
+              {trailing.label}
+            </Text>
+          </PressableSurface>
+        ) : null}
       </View>
     );
   }

@@ -17,8 +17,11 @@ type ListRowBaseProps = {
   /** A leading icon, by name, in a small tile. */
   icon?: IconName | undefined;
   title: string;
-  /** `danger` draws the title in the danger colour, for a row that throws something away, such as Delete all conversations. */
-  titleTone?: "danger" | undefined;
+  /**
+   * `danger` draws the title in the danger colour, for a row that throws something away, such as Delete all
+   * conversations. `secondary` mutes it, for a row that is done with, such as an undone change.
+   */
+  titleTone?: "primary" | "danger" | "secondary" | undefined;
   /**
    * Draws the macro's (or the calories') colour as an 8 point key before the title, as the Targets screen's Protein, Carbohydrate
    * and Fat rows do. It is decoration, so the row's accessible name is unchanged.
@@ -78,6 +81,7 @@ export type ListRowToPressProps = ListRowBaseProps & {
   /** The row's button, so a screen can move a screen reader's focus to it. */
   ref?: Ref<View> | undefined;
   toggle?: undefined;
+  trailing?: undefined;
   children?: undefined;
 };
 
@@ -94,6 +98,7 @@ export type ListRowWithControlProps = ListRowBaseProps & {
   variant?: undefined;
   ref?: undefined;
   toggle?: undefined;
+  trailing?: undefined;
   children?: ReactNode;
 };
 
@@ -119,7 +124,33 @@ export type ListRowWithToggleProps = ListRowBaseProps & {
   trailingIcon?: undefined;
   variant?: undefined;
   ref?: undefined;
+  trailing?: undefined;
   children?: undefined;
 };
 
-export type ListRowProps = ListRowToPressProps | ListRowWithControlProps | ListRowWithToggleProps;
+/**
+ * What a row of the changes list draws after its words. `action` is a text button in the accent ink, as the
+ * assistant's cards draw their Undo, named for its row, `busy` while it runs. `label` is plain muted words,
+ * such as "Undone" or "Can't undo", read as part of the row's one name.
+ */
+export type ListRowTrailing =
+  | { kind: "action"; label: string; onPress: () => void; busy?: boolean | undefined }
+  | { kind: "label"; label: string };
+
+/**
+ * A row that goes nowhere, with an action or a label at the end, as `assistant-settings · changes` draws
+ * its rows. With an action the words on the left are one named group and the button is its own stop.
+ */
+export type ListRowWithTrailingProps = ListRowBaseProps & {
+  trailing: ListRowTrailing;
+  onPress?: undefined;
+  loading?: undefined;
+  trailingIcon?: undefined;
+  variant?: undefined;
+  ref?: undefined;
+  toggle?: undefined;
+  children?: undefined;
+};
+
+export type ListRowProps =
+  ListRowToPressProps | ListRowWithControlProps | ListRowWithToggleProps | ListRowWithTrailingProps;
