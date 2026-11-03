@@ -15,7 +15,7 @@ import { handle } from "../_shared/http.ts";
 import { reportError } from "../_shared/report.ts";
 import { createAccessStore } from "./gates.ts";
 import { createAssistantHandler } from "./routes.ts";
-import { createModelClient, createRunTurn } from "./turn.ts";
+import { createModelClient, createRunTurn, createToolListCache } from "./turn.ts";
 import { createTurnStore } from "./turnStore.ts";
 import { recordUsage } from "./usage.ts";
 
@@ -24,6 +24,9 @@ import { connectToolServer } from "../_shared/assistant/mcpClient.ts";
 import type { ToolContext } from "../_shared/assistant/tool.ts";
 
 const nilId = "00000000-0000-0000-0000-000000000000";
+
+// One for the life of the function instance, because a request builds the handler anew.
+const toolListCache = createToolListCache();
 
 Deno.serve(
   handle("assistant", (request) => {
@@ -54,6 +57,7 @@ Deno.serve(
       },
       runTurn: createRunTurn({
         turns,
+        toolListCache,
         recordUsage: (call) => recordUsage(service, call),
         connect: connectToolServer,
         // Made per turn from the secrets, so a missing key ends that turn and never stops the boot.

@@ -1387,6 +1387,63 @@ Deno.test("a stream cut by the deadline leaves its idle timer cleared", async ()
 // ---- Connection and requests ----
 
 Deno.test(
+  "the tool list is read once for the function instance, and later turns hand it to the connection",
+  async () => {
+    await withHarness({ responses: [reply("One."), reply("Two.")] }, async (harness) => {
+      await harness.take("first question");
+      await harness.take("second question");
+
+      assertEquals(harness.connections[0]?.log, ["listTools", "close"]);
+      assertEquals(harness.connections[1]?.log, ["close"]);
+      assertEquals(harness.connectOptions[0]?.knownTools, undefined);
+      assertEquals(
+        harness.connectOptions[1]?.knownTools?.map((tool) => tool.name),
+        fakeTools.map((tool) => tool.name),
+      );
+      // The model is sent the same tools, in the same order, with and without the list call.
+      const [first, second] = harness.mock.json();
+      assertEquals(second?.["tools"], first?.["tools"]);
+    });
+  },
+);
+
+Deno.test("an empty tool list is not cached, so the next turn reads the list again", async () => {
+  await withHarness({ tools: [], responses: [reply("One."), reply("Two.")] }, async (harness) => {
+    await harness.take("first question");
+    await harness.take("second question");
+
+    assertEquals(harness.connections[0]?.log, ["listTools", "close"]);
+    assertEquals(harness.connections[1]?.log, ["listTools", "close"]);
+    assertEquals(harness.connectOptions[1]?.knownTools, undefined);
+  });
+});
+
+Deno.test(
+  "an unknown_tool result drops the cached list, so the next turn reads it again",
+  async () => {
+    await withHarness(
+      {
+        responses: [
+          callTools([{ id: "u1", name: "search_foods", input: { query: "egg" } }]),
+          reply("Sorry."),
+          reply("Fine."),
+          reply("Fine again."),
+        ],
+        answers: { search_foods: errorResult("search_foods", "unknown_tool") },
+      },
+      async (harness) => {
+        await harness.take("first question");
+        await harness.take("second question");
+        await harness.take("third question");
+
+        assertEquals(harness.connections[1]?.log, ["listTools", "close"]);
+        assertEquals(harness.connections[2]?.log, ["close"]);
+      },
+    );
+  },
+);
+
+Deno.test(
   "listTools runs once per turn before any callTool, and connectToolServer gets the turn's options",
   async () => {
     const hasActionCalls: string[] = [];

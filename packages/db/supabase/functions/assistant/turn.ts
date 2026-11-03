@@ -33,6 +33,7 @@ import { endAsFailed, writeEvent } from "./sse.ts";
 import type { AnthropicTool } from "../_shared/assistant/adapters/anthropic.ts";
 import type {
   ConnectToolServerOptions,
+  ListedTool,
   ToolCallResult,
   ToolConnection,
 } from "../_shared/assistant/mcpClient.ts";
@@ -131,8 +132,33 @@ export function createModelClient(read: (name: string) => string | undefined): A
   });
 }
 
+// The tools the `mcp` function lists are the same for every turn of a deployment (ADR 0006: `tools/list` is
+// never filtered per turn). On the served local stack `initialize` plus `tools/list` took a median of 0.75 s
+// per turn, 0.2 s of it the list (KEY-795), so the list is read once for the life of the function instance.
+// A tool call that the executor answers `unknown_tool` drops it, so the next turn reads the list again
+// (KEY-675's rule).
+export type ToolListCache = {
+  read(): readonly ListedTool[] | null;
+  write(tools: readonly ListedTool[]): void;
+  drop(): void;
+};
+
+export function createToolListCache(): ToolListCache {
+  let cached: readonly ListedTool[] | null = null;
+  return {
+    read: () => cached,
+    write(tools) {
+      cached = tools;
+    },
+    drop() {
+      cached = null;
+    },
+  };
+}
+
 export type TurnDependencies = {
   turns: TurnStore;
+  toolListCache: ToolListCache;
   recordUsage(call: UsageToRecord): Promise<void>;
   connect(options: ConnectToolServerOptions): Promise<ToolConnection>;
   createModelClient(): Anthropic | null;
@@ -545,6 +571,10 @@ async function runToolUse(
   run.counts.toolCalls += 1;
   // Once. A throw is a `McpClientError`, the turn ends, and the call is not made again.
   const result = await session.connection.callTool(name, input);
+  if (result.outcome.status === "error" && result.outcome.code === "unknown_tool") {
+    // The deployment moved on from the list this instance holds.
+    run.dependencies.toolListCache.drop();
+  }
   return await finishCall(run, toolUse, result, responseText);
 }
 
@@ -647,6 +677,7 @@ async function takeTurn(run: Run): Promise<Ending> {
     pendingConfirmationTool: previousTurn?.pendingTool ?? null,
     tools: dependencies.availableTools,
   });
+  const cachedTools = dependencies.toolListCache.read();
   const connection = await dependencies.connect({
     functionsBaseUrl,
     turnId: context.turnId,
@@ -656,10 +687,19 @@ async function takeTurn(run: Run): Promise<Ending> {
     localTime: context.localTime,
     turnHasAction: (turnId) => turns.turnHasAction(turnId),
     requestTimeoutMilliseconds: MCP_REQUEST_TIMEOUT_MILLISECONDS,
+    ...(cachedTools === null ? {} : { knownTools: cachedTools }),
   });
   try {
     // Before any call, so a tool the list did not name is treated as a write.
-    const tools = toAnthropicTools(await connection.listTools());
+    let listedTools = cachedTools;
+    if (listedTools === null) {
+      listedTools = await connection.listTools();
+      // An empty list is never kept: it would leave every later turn on this instance with no tools.
+      if (listedTools.length > 0) {
+        dependencies.toolListCache.write(listedTools);
+      }
+    }
+    const tools = toAnthropicTools(listedTools);
     return await runModelCalls(run, {
       client,
       connection,

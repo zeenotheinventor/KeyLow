@@ -5,7 +5,7 @@
 import { McpClientError } from "../_shared/assistant/mcpClient.ts";
 import { wrapUntrusted } from "../_shared/assistant/untrusted.ts";
 import { createEventStream } from "./sse.ts";
-import { createModelClient, createRunTurn } from "./turn.ts";
+import { createModelClient, createRunTurn, createToolListCache } from "./turn.ts";
 import { createTurnStore } from "./turnStore.ts";
 import { fakeSupabase } from "./testing.ts";
 import { recordUsage } from "./usage.ts";
@@ -397,6 +397,7 @@ export async function createHarness(options: HarnessOptions): Promise<Harness> {
   const written: string[] = [];
   const dependencies: TurnDependencies = {
     turns: options.wrapTurns?.(turns) ?? turns,
+    toolListCache: createToolListCache(),
     recordUsage: (call) =>
       options.failUsage === true
         ? Promise.reject(new Error("the usage insert failed"))
