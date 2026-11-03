@@ -615,6 +615,14 @@ describe("FoodRow in the food log", () => {
       expect(trash).toHaveProp("stroke", themes.dark["text-on-status"]);
     });
 
+    it("should draw the trash in the on-status colour in the light scheme", async () => {
+      await renderDiaryRow({ onDelete: () => undefined, startsSwiped: true }, "light");
+
+      await screen.findByRole("button", { name: "Delete" });
+      const [trash] = drawings();
+      expect(trash).toHaveProp("stroke", themes.light["text-on-status"]);
+    });
+
     it("should be open while the screen says it is swiped, and say when a swipe changes it", async () => {
       const onSwipedChange = jest.fn();
       const view = await renderDiaryRow({

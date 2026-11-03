@@ -130,9 +130,9 @@ describe("Badge", () => {
     });
   });
 
-  // The light scheme repeats only what its own branch changes (the status text colour), below. The fills, borders
-  // and dots ask for the same token in both schemes, so the dark run is the one that guards them and the
-  // `packages/tokens` tests guard the light values.
+  // The light scheme, below, repeats what its own branch changes (the status text colour) and the dots whose token
+  // shares a dark value with another. The other fills and borders ask for the same token in both schemes, so the
+  // dark run guards them and the `packages/tokens` tests guard the light values.
   describe("in the dark scheme", () => {
     const colorOf = (name: Parameters<typeof resolvedColor>[1]) => resolvedColor("dark", name);
 
@@ -299,5 +299,19 @@ describe("Badge", () => {
 
       expect(await screen.findByText("Status")).toHaveStyle({ color: colorOf("success-ink") });
     });
+
+    // The dots of the accent, success and warning tones use a token that shares its dark value with ones that differ in
+    // light, so only a light run can tell the right class from a wrong one.
+    it.each(["accent", "success", "warning"] as const)(
+      "should draw the %s dot in the tone's colour",
+      async (tone) => {
+        await renderBadge({ children: "Status", tone, dot: true }, "light");
+        await screen.findByText("Status");
+
+        expect(
+          viewsDrawn({ width: 6, height: 6, backgroundColor: colorOf(tone), borderRadius: 999 }),
+        ).toHaveLength(1);
+      },
+    );
   });
 });

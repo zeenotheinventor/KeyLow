@@ -80,6 +80,16 @@ describe("Card", () => {
     });
   });
 
+  describe("in the light scheme", () => {
+    it("should sit on the raised surface at the raised level", async () => {
+      await renderCard({ level: "raised" }, "light");
+
+      expect(await screen.findByLabelText("Today")).toHaveStyle({
+        backgroundColor: resolvedColor("light", "surface-raised"),
+      });
+    });
+  });
+
   describe("the border", () => {
     it("should be the hairline by default, in the dark scheme", async () => {
       await renderCard({}, "dark");
@@ -95,6 +105,15 @@ describe("Card", () => {
 
       expect(screen.getByLabelText("Today")).toHaveStyle({
         borderColor: resolvedColor("dark", "accent"),
+        borderWidth: 1,
+      });
+    });
+
+    it("should be the accent when asked, in the light scheme", async () => {
+      await renderCard({ border: "accent" }, "light");
+
+      expect(screen.getByLabelText("Today")).toHaveStyle({
+        borderColor: resolvedColor("light", "accent"),
         borderWidth: 1,
       });
     });

@@ -183,7 +183,8 @@ describe("Icon", () => {
 
   // Light keeps the three ink tones. Accent ink is a different token in light (the primary text colour) from dark's
   // (lime). In dark `warning-ink` and `success-ink` are the same colour as `warning` and `success`, so only a light run
-  // notices a plain tone standing in for an ink one. Every other tone asks for the same token in both schemes.
+  // notices a plain tone standing in for an ink one. It also keeps the accent, success and text-on-success tones, whose
+  // tokens share a dark value with ones that differ in light.
   describe("in the light scheme", () => {
     // The design's `--accent-ink` is lime in dark and the primary text colour in light, because lime on a
     // light surface is too faint for a thin glyph. It is the `accent-ink` token.
@@ -196,15 +197,20 @@ describe("Icon", () => {
       );
     });
 
-    const inkTones = tones.filter(({ tone }) => tone === "warning-ink" || tone === "success-ink");
+    const lightTones = tones.filter(({ tone }) =>
+      ["warning-ink", "success-ink", "accent", "success", "text-on-success"].includes(tone),
+    );
 
-    it.each(inkTones)("should take the $tone tone from its token", async ({ tone, colorName }) => {
-      await render(inScheme("light", <Icon label="Search" name="Search" tone={tone} />));
+    it.each(lightTones)(
+      "should take the $tone tone from its token",
+      async ({ tone, colorName }) => {
+        await render(inScheme("light", <Icon label="Search" name="Search" tone={tone} />));
 
-      expect(screen.getByRole("img", { name: "Search" })).toHaveProp(
-        "stroke",
-        themes.light[colorName],
-      );
-    });
+        expect(screen.getByRole("img", { name: "Search" })).toHaveProp(
+          "stroke",
+          themes.light[colorName],
+        );
+      },
+    );
   });
 });

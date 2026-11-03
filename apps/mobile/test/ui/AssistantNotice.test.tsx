@@ -220,6 +220,14 @@ describe("AssistantNotice", () => {
       expect(drawings()[0]).toHaveProp("stroke", themes.dark["text-secondary"]);
     });
 
+    it("should draw a neutral notice with a hairline border and a raised tile in light", async () => {
+      await renderNotice({}, "light");
+
+      expect(box()).toHaveStyle({ borderColor: resolvedColor("light", "border") });
+      expect(tile()).toHaveStyle({ backgroundColor: resolvedColor("light", "surface-raised") });
+      expect(drawings()[0]).toHaveProp("stroke", themes.light["text-secondary"]);
+    });
+
     it("should draw a danger notice with a danger border, tile and icon in dark", async () => {
       await renderNotice({ tone: "danger" }, "dark");
 

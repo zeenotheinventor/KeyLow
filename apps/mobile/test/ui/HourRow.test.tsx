@@ -9,6 +9,7 @@ import { resolvedColor } from "../support/themeColor";
 import { viewsDrawn } from "../support/viewsDrawn";
 
 import type { HourRowProps } from "../../components/ui";
+import type { ThemeScheme } from "@keylow/tokens";
 
 jest.mock("@react-native-async-storage/async-storage", () => ({
   __esModule: true,
@@ -38,10 +39,12 @@ function loggedFood(name: string, caption: string) {
 const porridge = loggedFood("Porridge oats", "08:05 · 50 g");
 const milk = loggedFood("Semi-skimmed milk", "08:05 · 200 ml");
 
-async function renderHourRow(props: Partial<HourRowProps> = {}) {
+type RowOptions = Partial<HourRowProps> & { scheme?: ThemeScheme };
+
+async function renderHourRow({ scheme = "dark", ...props }: RowOptions = {}) {
   const onAdd = jest.fn();
   await render(
-    <ThemeProvider fixedPreference="dark">
+    <ThemeProvider fixedPreference={scheme}>
       <HourRow hour={8} isNow={false} label="08:00" onAdd={onAdd} {...props} />
     </ThemeProvider>,
   );
@@ -181,6 +184,28 @@ describe("HourRow", () => {
         paddingRight: 12,
       });
     });
+
+    it("should carry a 6 point accent dot only for the current hour in light", async () => {
+      await renderHourRow({ hour: 11, label: "11:00", isNow: true, scheme: "light" });
+
+      expect(
+        viewsDrawn({ width: 6, height: 6, backgroundColor: resolvedColor("light", "accent") }),
+      ).toHaveLength(1);
+    });
+
+    it("should be a 28 point pill on the raised surface with a 1 point border in light", async () => {
+      await renderHourRow({ scheme: "light" });
+
+      expect(screen.getByLabelText("08:00")).toHaveStyle({
+        height: 28,
+        borderRadius: 999,
+        borderWidth: 1,
+        borderColor: resolvedColor("light", "border"),
+        backgroundColor: resolvedColor("light", "surface-raised"),
+        paddingLeft: 12,
+        paddingRight: 12,
+      });
+    });
   });
 
   describe("an hour with foods", () => {
@@ -250,6 +275,21 @@ describe("HourRow", () => {
           borderWidth: 1,
           backgroundColor: resolvedColor("dark", "surface-raised"),
           borderColor: resolvedColor("dark", "border-strong"),
+        }),
+      ).toHaveLength(1);
+    });
+
+    it("should draw a 7 point node on the line, raised fill and strong border, in light", async () => {
+      await renderHourRow({ scheme: "light" });
+
+      expect(
+        viewsDrawn({
+          width: 7,
+          height: 7,
+          borderRadius: 999,
+          borderWidth: 1,
+          backgroundColor: resolvedColor("light", "surface-raised"),
+          borderColor: resolvedColor("light", "border-strong"),
         }),
       ).toHaveLength(1);
     });

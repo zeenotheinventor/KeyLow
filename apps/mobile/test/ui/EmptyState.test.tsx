@@ -183,6 +183,13 @@ describe("EmptyState", () => {
       expect(tile()).toHaveStyle({ backgroundColor: resolvedColor("dark", "surface-raised") });
       expect(drawings()[0]).toHaveProp("stroke", themes.dark["text-muted"]);
     });
+
+    it("should be the raised surface with a muted icon in the light scheme", async () => {
+      await renderEmptyState({}, "light");
+
+      expect(tile()).toHaveStyle({ backgroundColor: resolvedColor("light", "surface-raised") });
+      expect(drawings()[0]).toHaveProp("stroke", themes.light["text-muted"]);
+    });
   });
 
   describe("as a card, as the training boards draw their empty states", () => {

@@ -543,10 +543,28 @@ describe("Button", () => {
     });
   });
 
-  // Light keeps the one case that expects a different token from dark: the ghost button's accent ink is lime in dark
-  // and the primary text colour in light. The rest of the button asks for the same token in both schemes, so the
-  // dark run covers it and `packages/tokens` pins the light values.
+  // Light keeps the ghost button's accent ink, which is lime in dark and the primary text colour in light, and the
+  // variant rows whose fills and labels share a dark value with another token. The rest asks for the same token in
+  // both schemes, so the dark run covers it and `packages/tokens` pins the light values.
   describe("in the light scheme", () => {
+    // The fills and label colours below share a dark value with a token that differs in light, so only a light
+    // run can tell the right class from a wrong one.
+    it.each(variants.filter(({ variant }) => variant !== "ghost"))(
+      "should draw the $variant variant from its tokens",
+      async ({ variant, background, border, label }) => {
+        await renderButton({ variant }, "light");
+
+        expect(await screen.findByRole("button", { name: "Add entry" })).toHaveStyle({
+          backgroundColor:
+            background === "transparent" ? transparent : resolvedColor("light", background),
+          borderColor: border === "transparent" ? transparent : resolvedColor("light", border),
+          borderWidth: 1,
+          borderRadius: 12,
+        });
+        expect(screen.getByText("Add entry")).toHaveStyle({ color: resolvedColor("light", label) });
+      },
+    );
+
     describe("the ghost accent ink look", () => {
       it("should be lime in dark and the primary text colour in light", async () => {
         await renderButton({ variant: "ghost", tone: "accent-ink" }, "light");

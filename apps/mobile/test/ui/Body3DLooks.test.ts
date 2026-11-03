@@ -156,3 +156,17 @@ describe("looksOf in the dark theme", () => {
     expect(looks.abs.glowColor).toBe(looks.chest_upper.glowColor);
   });
 });
+
+// Light keeps the role scale's rest colour, which is the heat scale's first step and shares its dark value with
+// tokens that differ in light.
+describe("looksOf in the light theme", () => {
+  const palette = bodyMapPalette("light");
+
+  it("should read a muscle at rest on the role scale as not warm and any role as warm", () => {
+    expect(looksOf("role", {}, palette).abs.warmth).toBe(0);
+    expect(looksOf("role", { abs: 0 }, palette).abs.warmth).toBe(0);
+    for (const role of [1, 2, 3]) {
+      expect(looksOf("role", { abs: role }, palette).abs.warmth).toBe(1);
+    }
+  });
+});

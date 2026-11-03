@@ -430,8 +430,34 @@ describe("Banner", () => {
   });
 
   // Light keeps the two ink call sites. In dark `warning-ink` and `accent-ink` are the same colour as `warning` and
-  // `accent`, so only a light run notices a plain class standing in for an ink class.
+  // `accent`, so only a light run notices a plain class standing in for an ink class. It also keeps the review border and
+  // icon and the quiet raised fill, whose tokens share a dark value with ones that differ in light.
   describe("in the light scheme", () => {
+    it("should draw the review variant on the warning tint, with a warning border and icon", async () => {
+      await renderBanner({ variant: "review" }, "light");
+
+      expect(await screen.findByTestId("banner-box")).toHaveStyle({
+        backgroundColor: themes.light["warning-muted"],
+        borderColor: resolvedColor("light", "warning"),
+        borderWidth: 1,
+      });
+      expect(drawings()[0]).toHaveProp("stroke", themes.light.warning);
+    });
+
+    it.each(["offline", "info"] as const)(
+      "should draw the %s variant quietly: the raised surface, a hairline border, a secondary icon",
+      async (variant) => {
+        await renderBanner({ variant }, "light");
+
+        expect(await screen.findByTestId("banner-box")).toHaveStyle({
+          backgroundColor: resolvedColor("light", "surface-raised"),
+          borderColor: resolvedColor("light", "border"),
+          borderWidth: 1,
+        });
+        expect(drawings()[0]).toHaveProp("stroke", themes.light["text-secondary"]);
+      },
+    );
+
     it("should set the review title and action in the warning ink", async () => {
       await renderBanner(
         {
