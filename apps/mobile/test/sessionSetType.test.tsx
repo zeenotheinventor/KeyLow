@@ -32,6 +32,7 @@ import {
   trainBackend,
   trainClient,
 } from "./support/trainBackend";
+import { installVirtualClock } from "./support/virtualClock";
 
 import type { QueryClient } from "@tanstack/react-query";
 
@@ -113,6 +114,7 @@ describe("changing the type of a logged set from the session screen", () => {
   });
 
   beforeEach(() => {
+    installVirtualClock();
     registerAppStyles(kitStyles);
     resetTrainBackend();
     trainBackend.routine = legsRoutine;
@@ -127,6 +129,7 @@ describe("changing the type of a logged set from the session screen", () => {
       onlineManager.setOnline(true);
     });
     queryClient.clear();
+    jest.useRealTimers();
   });
 
   describe("the mark of a row", () => {

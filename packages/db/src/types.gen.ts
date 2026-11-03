@@ -656,6 +656,7 @@ export type Database = {
           resolved_grams: number | null;
           snapshot: Json;
           unit: string | null;
+          updated_at: string;
           user_id: string;
         };
         Insert: {
@@ -674,6 +675,7 @@ export type Database = {
           resolved_grams?: number | null;
           snapshot: Json;
           unit?: string | null;
+          updated_at?: string;
           user_id?: string;
         };
         Update: {
@@ -692,6 +694,7 @@ export type Database = {
           resolved_grams?: number | null;
           snapshot?: Json;
           unit?: string | null;
+          updated_at?: string;
           user_id?: string;
         };
         Relationships: [

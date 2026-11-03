@@ -1,4 +1,9 @@
+import { cardEntryOfRow, describeCardName, sharedClockTime } from "./cards";
+import { describeLoggedTitle, describeLoggedUndone } from "../copy/assistantEntryCards";
+import { formatCalories, formatGrams } from "../format/numbers";
+
 import type { AssistantCard, AssistantCardKind } from "./card";
+import type { CardEntry } from "./cards";
 
 /*
  * The words a write tool gives to something the app builds from several writes at once: a card that
@@ -70,17 +75,97 @@ type AssistantChangeBuilder = (input: AssistantChangeInput) => AssistantChangeWo
 
 type AssistantCardMerger = (cards: readonly AssistantCard[]) => AssistantCard;
 
+const entries = (count: number): string => (count === 1 ? "1 entry" : `${count} entries`);
+
+// The entries a change's rows hold. The rows come from `readLoggedEntries`, which adds `clock_time`, so
+// the zone given here is only for a row without it.
+const entriesOfTargets = (targets: readonly AssistantChangeTarget[]): CardEntry[] =>
+  targets.flatMap(({ row }) => {
+    const entry = row === null ? null : cardEntryOfRow(row, "UTC");
+    return entry === null ? [] : [entry];
+  });
+
+// "Logged 2 eggs and toast at 08:10" with "2 entries" under it, as the changes board words a log. A
+// change whose rows are gone or unreadable falls back to the plain words.
+const describeLoggedEntries: AssistantChangeBuilder = ({ actionCount, targets }) => {
+  const logged = entriesOfTargets(targets);
+  if (logged.length === 0) {
+    return { title: plainTitles.logged(actionCount), detail: null };
+  }
+  return {
+    title: describeLoggedTitle(logged.map(describeCardName), sharedClockTime(logged)),
+    detail: logged.length >= 2 ? entries(logged.length) : null,
+  };
+};
+
+const loggedTitlePattern = /^Logged (.+?)(?: at (\d{2}:\d{2}))?$/;
+const totalPartPattern = /^(?:(\d[\d,]*) kcal|([PCF]) (\d+(?:\.\d)?) g)$/;
+
+// Adds up the figures printed in the totals of the cards. Each card printed rounded figures, so the sum
+// of grams can differ by a gram from the sum of the unrounded entries.
+function sumOfTotals(cards: readonly AssistantCard[]): string | null {
+  const sums = { kcal: 0, P: 0, C: 0, F: 0 };
+  const seen = new Set<string>();
+  for (const card of cards) {
+    if (card.totalText === null) {
+      return null;
+    }
+    for (const part of card.totalText.split(" · ")) {
+      const match = totalPartPattern.exec(part);
+      if (match === null) {
+        return null;
+      }
+      const [, kcal, letter, grams] = match;
+      if (kcal !== undefined) {
+        sums.kcal += Number(kcal.replaceAll(",", ""));
+        seen.add("kcal");
+      } else if (letter === "P" || letter === "C" || letter === "F") {
+        sums[letter] += Number(grams);
+        seen.add(letter);
+      }
+    }
+  }
+  const parts = [
+    seen.has("kcal") ? `${formatCalories(sums.kcal)} kcal` : null,
+    ...(["P", "C", "F"] as const).map((letter) =>
+      seen.has(letter) ? `${letter} ${formatGrams(sums[letter])} g` : null,
+    ),
+  ].filter((part): part is string => part !== null);
+  return parts.length === 0 ? null : parts.join(" · ");
+}
+
+// Two `log_entry` calls in one turn are one card: "Logged 2 eggs and toast at 08:10". Each call's card is
+// worded by `buildLoggedCard`, so its title is taken apart again here.
+function mergeLoggedCards(cards: readonly AssistantCard[]): AssistantCard {
+  const [first] = cards;
+  const parts = cards.map((card) => loggedTitlePattern.exec(card.title));
+  const names = parts.map((part) => part?.[1]);
+  if (first === undefined || names.some((name) => name === undefined)) {
+    return plainMerge(cards);
+  }
+  const times = new Set(parts.map((part) => part?.[2] ?? null));
+  const [onlyTime] = [...times];
+  const clockTime = times.size === 1 && onlyTime !== undefined ? onlyTime : null;
+  const joined = names.filter((name): name is string => name !== undefined);
+  return {
+    ...first,
+    actionIds: cards.flatMap((card) => card.actionIds),
+    title: describeLoggedTitle(joined, clockTime),
+    rows: cards.flatMap((card) => card.rows),
+    totalText: sumOfTotals(cards),
+    undoneSub: describeLoggedUndone(joined, clockTime),
+  };
+}
+
 // A write ticket adds its tool here, with the board's words for its rows.
 const changeBuilders: Readonly<Partial<Record<AssistantWriteTool, AssistantChangeBuilder>>> = {
-  // log_entry: describeLoggedEntries,
+  log_entry: describeLoggedEntries,
 };
 
 // A write ticket adds its kind here when the board words several calls as one card.
 const cardMergers: Readonly<Partial<Record<AssistantCardKind, AssistantCardMerger>>> = {
-  // logged: mergeLoggedCards,
+  logged: mergeLoggedCards,
 };
-
-const entries = (count: number): string => (count === 1 ? "1 entry" : `${count} entries`);
 
 const plainTitles: Record<AssistantCardKind, (count: number) => string> = {
   logged: (count) => `Logged ${entries(count)}`,
@@ -125,7 +210,15 @@ export function mergeAssistantCards(
   if (merge !== undefined) {
     return merge(cards);
   }
+  return plainMerge(cards);
+}
+
+function plainMerge(cards: readonly AssistantCard[]): AssistantCard {
+  const [first] = cards;
   const actionIds = cards.flatMap((card) => card.actionIds);
+  if (first === undefined) {
+    throw new Error("There are no cards to merge");
+  }
   return {
     ...first,
     actionIds,

@@ -28,6 +28,8 @@ type CallOptions = {
   // The turn id in the URL. Null leaves the parameter out.
   turn?: string | null;
   allowedTools?: string;
+  // The day of the turn's sheet. Null leaves the header out.
+  localDate?: string | null;
 };
 
 // The stateless transport answers as one server-sent event or as plain JSON.
@@ -57,6 +59,9 @@ async function callMcp(body: unknown, options: CallOptions = {}): Promise<McpRes
       ...(options.allowedTools === undefined
         ? {}
         : { "X-Kilo-Allowed-Tools": options.allowedTools }),
+      ...(options.localDate === null
+        ? {}
+        : { "X-Kilo-Local-Date": options.localDate ?? "2026-11-03" }),
     },
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(30_000),
@@ -321,6 +326,13 @@ describe("who may call", () => {
 
   it("answers 400 to a call with no turn", async () => {
     const response = await callMcp(listTools, { user: a.user });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toMatchObject({ error: { code: "invalid_request" } });
+  });
+
+  it("answers 400 to a call with no local date", async () => {
+    const response = await callMcp(listTools, { user: a.user, turn: aTurn, localDate: null });
 
     expect(response.status).toBe(400);
     expect(response.body).toMatchObject({ error: { code: "invalid_request" } });

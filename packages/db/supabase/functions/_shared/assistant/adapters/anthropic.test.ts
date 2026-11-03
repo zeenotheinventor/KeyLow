@@ -11,14 +11,48 @@ const tools: ListedTool[] = toolRegistry.list.map((tool) => ({
   description: tool.description,
   inputSchema: toJsonSchema(tool),
   readOnlyHint: tool.annotations.readOnlyHint,
+  strict: tool.strict !== false,
 }));
 
 function toolWith(inputSchema: ListedTool["inputSchema"]): ListedTool {
-  return { name: "shaped", description: "A shaped tool.", inputSchema, readOnlyHint: true };
+  return {
+    name: "shaped",
+    description: "A shaped tool.",
+    inputSchema,
+    readOnlyHint: true,
+    strict: true,
+  };
 }
 
 Deno.test(
-  "every tool is strict, in the order of the list, with the Messages API field names",
+  "a strict tool says strict and a tool that opted out leaves the field out, in the same key order",
+  () => {
+    const [strictTool, plainTool] = toAnthropicTools([
+      toolWith({ type: "object", properties: {}, additionalProperties: false }),
+      {
+        ...toolWith({ type: "object", properties: {}, additionalProperties: false }),
+        strict: false,
+      },
+    ]);
+
+    assertEquals(Object.keys(strictTool ?? {}), [
+      "name",
+      "description",
+      "input_schema",
+      "strict",
+      "eager_input_streaming",
+    ]);
+    assertEquals(Object.keys(plainTool ?? {}), [
+      "name",
+      "description",
+      "input_schema",
+      "eager_input_streaming",
+    ]);
+  },
+);
+
+Deno.test(
+  "every tool that did not opt out is strict, in the order of the list, with the Messages API field names",
   () => {
     const converted = toAnthropicTools(tools);
 
@@ -34,8 +68,8 @@ Deno.test(
       eager_input_streaming: true,
     });
     assertEquals(
-      converted.map((tool) => tool.strict),
-      tools.map(() => true),
+      converted.map((tool) => tool.strict === true),
+      tools.map((tool) => tool.strict),
     );
   },
 );

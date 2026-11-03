@@ -133,6 +133,10 @@ describe("logging a recipe serving against the local stack with real user JWTs",
     return data;
   };
 
+  /** The row without `updated_at`, which the database moves on every update, so a restored row is compared by its other columns. */
+  const withoutStamp = (row: Awaited<ReturnType<typeof rowOf>>) =>
+    Object.fromEntries(Object.entries(row ?? {}).filter(([column]) => column !== "updated_at"));
+
   /** The five columns that make an entry what it was when logged. */
   const frozenOf = (row: Awaited<ReturnType<typeof rowOf>>) => ({
     snapshot: row?.snapshot,
@@ -402,7 +406,11 @@ describe("logging a recipe serving against the local stack with real user JWTs",
 
         await restoreLogEntry(userA.client, byGrams);
 
-        expect(await rowOf(byGrams)).toEqual(before);
+        const restoredRow = await rowOf(byGrams);
+        expect(withoutStamp(restoredRow)).toEqual(withoutStamp(before));
+        expect(Date.parse(restoredRow?.updated_at ?? "")).toBeGreaterThan(
+          Date.parse(deleted?.updated_at ?? ""),
+        );
         const restored = await totalsOfDay();
         expect(restored.entry_count).toBe(4);
         expect(restored.totals).toEqual(sumEntries(await rowsOfDay()));

@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted, 2026-09-22. Amendment 1 appended 2026-10-07. Amendment 2 appended 2026-10-15. Amendment 3 appended 2026-10-15. Amendment 4 appended 2026-10-15. Amendment 5 appended 2026-10-15. Amendment 6 appended 2026-10-15. Amendment 7 appended 2026-10-15. Amendment 8 appended 2026-10-16. Amendment 9 appended 2026-10-18. Amendment 10 appended 2026-10-23. Amendment 11 appended 2026-10-23. Amendment 12 appended 2026-10-23. Amendment 13 appended 2026-10-23. Amendment 14 appended 2026-10-26. Amendment 15 appended 2026-10-29.
+Accepted, 2026-09-22. Amendment 1 appended 2026-10-07. Amendment 2 appended 2026-10-15. Amendment 3 appended 2026-10-15. Amendment 4 appended 2026-10-15. Amendment 5 appended 2026-10-15. Amendment 6 appended 2026-10-15. Amendment 7 appended 2026-10-15. Amendment 8 appended 2026-10-16. Amendment 9 appended 2026-10-18. Amendment 10 appended 2026-10-23. Amendment 11 appended 2026-10-23. Amendment 12 appended 2026-10-23. Amendment 13 appended 2026-10-23. Amendment 14 appended 2026-10-26, with addenda of 2026-11-03. Amendment 15 appended 2026-10-29.
 
 ## Context
 
@@ -2073,6 +2073,14 @@ From ADR 0003, the decision (e) of KEY-185 (conversations stored per user, with 
 ### Addendum to Amendment 14 (`assistant_messages.display`, 2026-11-03)
 
 Recorded under the KEY-686 review. The executor puts only a tool's model-facing `data` in the `text` of a result, and the card, the confirmation, the citation and the estimate live in the structured outcome that never reaches the model, so the raw `content` of a stored message can never rebuild the thread. `assistant_messages` therefore gains `display jsonb null`. On the user-role message that carries `tool_result` blocks it is a map keyed by `tool_use_id`, `{ [toolUseId]: { card?, confirm?, citation?, estimate? } }`, where `confirm` is `{ confirmationId, question, confirmLabel, cancelLabel, tone }` from the executor's `needs_confirmation` outcome and the write tool's words. It is null on every other message and is never replayed to the model, so the prompt cache is unaffected. It is health data, like `content`. The service role already holds `select`, `insert` and `update` on the table and the owner `select` policy covers every column, so no grant or policy changes. The migration adds the column only, inserts no row and applies to any data. The turn loop (KEY-682) writes it with the message, and `useAssistantConversation` (KEY-686) reads it.
+
+### Addendum to Amendment 14 (`food_log_entries.updated_at`, 2026-11-03)
+
+Recorded under KEY-688 (the assistant's diary write tools). This deviates from Amendment 1, which says "there is no `updated_at` on any table". The reason: Undo of `log_entry`, `delete_entry` and the card's "Undo is off" state both need to know whether the person changed an entry after the assistant did, and `assistant_actions.target_updated_at` can only hold an instant (Amendment 14: ids and one date, never a value). Before this addendum nothing on `food_log_entries` moved when an entry was edited: an edit rewrites `quantity`, `unit`, `portion_id`, `resolved_grams`, `snapshot`, `nutrients` and `logged_at`, and `created_at` never changes. Using `deleted_at` or `logged_at` as the stamp would miss an amount edit, and a multi-row delete stamps each row with its own client clock.
+
+`food_log_entries` therefore gains `updated_at timestamptz not null default now()`, set to `now()` by a `before update` trigger (`food_log_entries_stamp_updated_at`, security invoker, empty `search_path`, execute revoked from every role). Every writer is covered, including a restore, and a client cannot choose the value: the column has no insert or update grant. One `update` statement over several rows gives them all the transaction's one `now()`, and the repo `softDeleteLogEntries` is written as one such statement, so a multi-row assistant action records one `target_updated_at` that equals every row's `updated_at`. The assistant's tools read the stamp back after the write and record it, and the changes list reads `updated_at` back through `assistantTargetSources`. A mismatch means the person changed the entry since, and Undo answers `undo_unavailable`.
+
+It is not a health value. The migration adds one column with a default, so the existing rows are filled with the migration's time and it applies to a database that holds any data. No other table gains the column. `update_entry` has no Undo in M8, so it records the stamp only so that its changes row can read "changed since" like the others.
 
 ### Consequences of Amendment 14
 

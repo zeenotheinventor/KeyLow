@@ -234,6 +234,8 @@ export function createFakeContext(
     allowedTools?: ReadonlySet<string> | undefined;
     userMessageText?: string | null;
     turn?: { id: string; conversationId: string };
+    localDate?: string;
+    localTime?: string | null;
   } = {},
 ): FakeContext {
   const store = overrides.store ?? createFakeActionStore();
@@ -247,6 +249,8 @@ export function createFakeContext(
       conversationId: overrides.turn?.conversationId ?? conversationId,
       userMessageText:
         "userMessageText" in overrides ? (overrides.userMessageText ?? null) : "log my lunch",
+      localDate: overrides.localDate ?? "2026-11-03",
+      localTime: "localTime" in overrides ? (overrides.localTime ?? null) : "08:10",
     },
     registry: createRegistry(tools),
     allowedTools:

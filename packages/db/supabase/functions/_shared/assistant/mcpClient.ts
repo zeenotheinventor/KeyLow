@@ -15,6 +15,8 @@ import {
 } from "@modelcontextprotocol/client";
 import { z } from "zod";
 
+import { strictMetaKey } from "./tool.ts";
+
 import type { JsonSchemaObject } from "./tool.ts";
 
 const functionPath = "/functions/v1/mcp";
@@ -47,6 +49,8 @@ export type ListedTool = {
   inputSchema: JsonSchemaObject;
   // A tool that does not say it only reads is treated as a write.
   readOnlyHint: boolean;
+  // Whether the model's API should hold the tool to its schema. A tool that does not say it opted out.
+  strict: boolean;
 };
 
 // The executor's outcome, which `mcp` returns as `structuredContent`. Only the turn loop reads it.
@@ -74,6 +78,9 @@ export type ConnectToolServerOptions = {
   // The caller's JWT as received.
   accessToken: string;
   allowedTools: readonly string[];
+  // The day the turn's sheet was opened on, and the hour when it knows one. A write defaults to them.
+  localDate: string;
+  localTime: string | null;
   // Whether the turn has an `assistant_actions` row, read with the service client by the caller.
   turnHasAction: TurnHasAction;
   requestTimeoutMilliseconds?: number;
@@ -173,6 +180,8 @@ async function openClient(options: ConnectToolServerOptions): Promise<Client> {
       headers: {
         Authorization: `Bearer ${options.accessToken}`,
         "X-Kilo-Allowed-Tools": options.allowedTools.join(","),
+        "X-Kilo-Local-Date": options.localDate,
+        ...(options.localTime === null ? {} : { "X-Kilo-Local-Time": options.localTime }),
       },
     },
   });
@@ -257,6 +266,7 @@ export async function connectToolServer(
             description: tool.description ?? "",
             inputSchema: tool.inputSchema,
             readOnlyHint: tool.annotations?.readOnlyHint === true,
+            strict: tool._meta?.[strictMetaKey] !== false,
           }));
         },
       }).then((tools) => {

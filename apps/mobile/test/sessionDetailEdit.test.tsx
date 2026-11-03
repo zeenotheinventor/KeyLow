@@ -37,6 +37,7 @@ import {
   sessionDetailBackend,
 } from "./support/sessionDetailBackend";
 import { trainBackend } from "./support/trainBackend";
+import { installVirtualClock } from "./support/virtualClock";
 
 import type { QueryClient } from "@tanstack/react-query";
 
@@ -117,6 +118,7 @@ describe("editing a past session from the session detail", () => {
   });
 
   beforeEach(() => {
+    installVirtualClock();
     registerAppStyles(kitStyles);
     resetHistoryBackend();
     resetHistoryEditBackend();
@@ -134,6 +136,7 @@ describe("editing a past session from the session detail", () => {
       onlineManager.setOnline(true);
     });
     queryClient.clear();
+    jest.useRealTimers();
   });
 
   describe("a set", () => {

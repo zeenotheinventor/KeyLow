@@ -27,6 +27,7 @@ import { programClient, resetProgramBackend, showGoldenProgram } from "./support
 import { pressTwiceInTheSameMoment } from "./support/sameTickPress";
 import { resolvedColor } from "./support/themeColor";
 import { viewsDrawn } from "./support/viewsDrawn";
+import { installVirtualClock } from "./support/virtualClock";
 
 import type { QueryClient } from "@tanstack/react-query";
 import type { TestInstance } from "test-renderer";
@@ -113,6 +114,7 @@ describe("the Targets screen while a programme runs", () => {
   });
 
   beforeEach(async () => {
+    installVirtualClock();
     registerAppStyles(kitStyles);
     resetRouterMock();
     resetDiaryBackend();
@@ -126,6 +128,7 @@ describe("the Targets screen while a programme runs", () => {
     jest.restoreAllMocks();
     await cleanup();
     queryClient.clear();
+    jest.useRealTimers();
   });
 
   describe("the engine state", () => {

@@ -20,6 +20,7 @@ import {
 } from "./support/sessionGoldenLegs";
 import { resetTrainBackend, trainBackend } from "./support/trainBackend";
 import { resetTrainWrites, trainWrites, trainWritesClient } from "./support/trainWritesBackend";
+import { installVirtualClock } from "./support/virtualClock";
 
 import type { QueryClient } from "@tanstack/react-query";
 
@@ -86,6 +87,7 @@ describe("discarding a session from the active session screen", () => {
   });
 
   beforeEach(() => {
+    installVirtualClock();
     registerAppStyles(kitStyles);
     resetTrainBackend();
     resetTrainWrites();
@@ -100,6 +102,7 @@ describe("discarding a session from the active session screen", () => {
       onlineManager.setOnline(true);
     });
     queryClient.clear();
+    jest.useRealTimers();
   });
 
   it("should draw no More control when the screen is given nothing to do after a discard", async () => {
@@ -261,7 +264,7 @@ describe("discarding a session from the active session screen", () => {
     await act(() => {
       onlineManager.setOnline(true);
     });
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    await act(() => jest.advanceTimersByTimeAsync(100));
     expect(trainWrites.deletedIds).toEqual([]);
     expect(onDiscarded).not.toHaveBeenCalled();
     expect(trainBackend.activeSession).not.toBeNull();

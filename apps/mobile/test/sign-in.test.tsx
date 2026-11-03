@@ -10,6 +10,7 @@ import {
 } from "./support/googleSignInMock";
 import { renderAuthScreen } from "./support/renderAuthScreen";
 import { resetSupabaseMock, mockSupabaseClient } from "./support/supabaseMock";
+import { installVirtualClock } from "./support/virtualClock";
 import SignInRoute from "../app/(auth)/sign-in";
 
 jest.mock("@react-native-async-storage/async-storage", () => ({
@@ -40,6 +41,7 @@ async function fillAndSubmit(email: string, password: string) {
 
 describe("sign-in screen", () => {
   beforeEach(() => {
+    installVirtualClock();
     resetRouterMock();
     resetSupabaseMock();
     resetGoogleSignInMock();
@@ -49,6 +51,7 @@ describe("sign-in screen", () => {
 
   afterEach(() => {
     jest.restoreAllMocks();
+    jest.useRealTimers();
   });
 
   it("should ask for an email and a password when the form is empty", async () => {

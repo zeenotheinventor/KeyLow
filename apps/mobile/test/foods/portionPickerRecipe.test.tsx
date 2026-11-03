@@ -11,6 +11,7 @@ import { ThemeProvider } from "../../lib/theme";
 import { trackFieldSelection } from "../support/amountFieldSelection";
 import { compileKitStyles } from "../support/kitStyles";
 import { registerAppStyles } from "../support/nativeWindStyles";
+import { installVirtualClock } from "../support/virtualClock";
 
 import type { PortionPickerProps } from "../../components/PortionPicker";
 
@@ -69,7 +70,12 @@ describe("PortionPicker in recipe mode", () => {
   });
 
   beforeEach(() => {
+    installVirtualClock();
     registerAppStyles(kitStyles);
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   describe("one serving, as portion · recipe-serving draws it", () => {
