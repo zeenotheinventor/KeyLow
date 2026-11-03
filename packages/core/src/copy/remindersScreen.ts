@@ -1,5 +1,5 @@
 /**
- * The Reminders screen, reached from More: a Training group with a switch for each of the three training
+ * The Reminders screen, reached from More: a Training group with a switch for each of the five training
  * reminders and the time of the train one, a Food group with the food reminder's switch and time, and the
  * notices for a phone that has turned notifications off or a build that cannot show them. No board draws
  * it. The reminders' own words, the ones on the lock screen, are in `trainingReminders` and
@@ -10,7 +10,7 @@ export const REMINDERS_SCREEN = {
   back: "Back",
   /** The headings over the two groups of switches. */
   groups: { training: "Training", food: "Food" },
-  /** In the order the screen draws them: train, progress, ease. The times in the helper lines are pinned to the planner's by a test. */
+  /** In the order the screen draws them: train, progress, ease, missed, checkin. The times and the number of days in the helper lines are pinned to the planner's by a test. */
   reminders: [
     {
       type: "train",
@@ -26,6 +26,16 @@ export const REMINDERS_SCREEN = {
       type: "ease",
       title: "Take it easy",
       helper: "At 8am on a planned day, when your muscles still need rest.",
+    },
+    {
+      type: "missed",
+      title: "Missed a day",
+      helper: "The morning after a planned day you missed, a nudge to get back to it.",
+    },
+    {
+      type: "checkin",
+      title: "Check in",
+      helper: "After three planned days missed in a row, once.",
     },
   ],
   /** The food reminder, in the group after the training ones. */
