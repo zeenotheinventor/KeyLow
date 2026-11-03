@@ -643,3 +643,162 @@ Deno.test("turnHasAction throws rather than answer false when the read fails", a
 
   await assertRejects(() => store.turnHasAction(turnId), Error, "XX000");
 });
+
+// ---- Compaction (KEY-706) ----
+
+const noteText = "Logged 2 large eggs (100 g) on 2026-11-02 at 08:00.";
+const compactedRow = (overrides: Row = {}): Row => ({
+  ...conversationRow,
+  compaction_summary: noteText,
+  compacted_through_turn_id: earlierTurnId,
+  ...overrides,
+});
+
+Deno.test(
+  "readConversation answers the conversation's note, and null when it has none",
+  async () => {
+    const withNote = build({ tables: { assistant_conversations: [compactedRow()] } });
+    const without = build({ tables: { assistant_conversations: [conversationRow] } });
+    const options = { excludeMessageId: messageId };
+
+    assertEquals(
+      (await withNote.store.readConversation(userId, conversationId, options)).compaction,
+      {
+        summary: noteText,
+        throughTurnId: earlierTurnId,
+      },
+    );
+    assertEquals(
+      (await without.store.readConversation(userId, conversationId, options)).compaction,
+      null,
+    );
+    const read = withNote.operations.find(
+      (operation) => operation.table === "assistant_conversations",
+    );
+    assertEquals(read?.filters, { id: conversationId, user_id: userId });
+  },
+);
+
+Deno.test(
+  "readCompactionState answers the note, the updated_at it saw and whether a turn is open",
+  async () => {
+    const idle = build({
+      tables: {
+        assistant_conversations: [compactedRow()],
+        assistant_turns: [turnRow({ status: "complete" })],
+      },
+    });
+    const busy = build({
+      tables: { assistant_conversations: [conversationRow], assistant_turns: [turnRow()] },
+    });
+
+    assertEquals(await idle.store.readCompactionState(userId, conversationId), {
+      note: { summary: noteText, throughTurnId: earlierTurnId },
+      updatedAt: minutesAgo(30),
+      turnIsOpen: false,
+    });
+    assertEquals(await busy.store.readCompactionState(userId, conversationId), {
+      note: null,
+      updatedAt: minutesAgo(30),
+      turnIsOpen: true,
+    });
+  },
+);
+
+Deno.test("readCompactionState throws for a conversation the user does not own", async () => {
+  const { store } = build({ tables: { assistant_conversations: [conversationRow] } });
+
+  await assertRejects(() => store.readCompactionState(otherUserId, conversationId));
+});
+
+const compactionInput = (seen: string, summary = noteText) => ({
+  summary,
+  throughTurnId: turnId,
+  seenUpdatedAt: seen,
+});
+
+Deno.test(
+  "storeCompaction sets the note and turn, writes a new updated_at, and answers true",
+  async () => {
+    const { store, tables, operations } = build({
+      tables: {
+        assistant_conversations: [conversationRow, { ...conversationRow, id: otherConversationId }],
+      },
+    });
+
+    const stored = await store.storeCompaction(
+      userId,
+      conversationId,
+      compactionInput(minutesAgo(30)),
+    );
+
+    assertEquals(stored, true);
+    const [own, other] = tables["assistant_conversations"] ?? [];
+    assertEquals(own?.["compaction_summary"], noteText);
+    assertEquals(own?.["compacted_through_turn_id"], turnId);
+    assertEquals(own?.["updated_at"], now.toISOString());
+    assertEquals(other?.["compaction_summary"], undefined);
+    const write = operations.find((operation) => operation.kind === "update");
+    assertEquals(write?.filters, {
+      id: conversationId,
+      user_id: userId,
+      updated_at: minutesAgo(30),
+    });
+  },
+);
+
+Deno.test(
+  "storeCompaction leaves the conversation alone and answers false when a turn started since",
+  async () => {
+    const { store, tables } = build({ tables: { assistant_conversations: [conversationRow] } });
+
+    const stored = await store.storeCompaction(
+      userId,
+      conversationId,
+      compactionInput(minutesAgo(31)),
+    );
+
+    assertEquals(stored, false);
+    assertEquals(tables["assistant_conversations"]?.[0], conversationRow);
+  },
+);
+
+Deno.test("storeCompaction never touches the messages", async () => {
+  const messages = [existingMessage(1), existingMessage(2)];
+  const { store, tables, operations } = build({
+    tables: { assistant_conversations: [conversationRow], assistant_messages: messages },
+  });
+  const before = JSON.stringify(tables["assistant_messages"]);
+
+  await store.storeCompaction(userId, conversationId, compactionInput(minutesAgo(30)));
+
+  assertEquals(JSON.stringify(tables["assistant_messages"]), before);
+  assertEquals(
+    operations.filter((operation) => operation.table === "assistant_messages"),
+    [],
+  );
+});
+
+Deno.test("storeCompaction throws the code of a failed write and never the note", async () => {
+  const { store } = build({
+    tables: { assistant_conversations: [conversationRow] },
+    failures: [
+      {
+        table: "assistant_conversations",
+        kind: "update",
+        error: { code: "42501", message: noteText },
+      },
+    ],
+  });
+
+  const error = await store
+    .storeCompaction(userId, conversationId, compactionInput(minutesAgo(30)))
+    .then(
+      () => null,
+      (caught: unknown) => caught,
+    );
+
+  assertInstanceOf(error, Error);
+  assertEquals(error.message.includes("42501"), true);
+  assertEquals(error.message.includes("eggs"), false);
+});

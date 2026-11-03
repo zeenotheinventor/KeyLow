@@ -19,16 +19,18 @@ import { askUserTool } from "../_shared/assistant/tools/askUser.ts";
 import { wrapUntrusted } from "../_shared/assistant/untrusted.ts";
 import { assistantCardSchema, mergeAssistantCards, withActionIds } from "../_shared/core.ts";
 import { allowedToolsFor } from "./allowlist.ts";
+import { COMPACTION_TIMEOUT_MILLISECONDS, planCompaction, promptTokensOf } from "./compact.ts";
 import { confirmWordsFor } from "./confirmWords.ts";
 import {
   buildTurnRequest,
   contextBlock,
   MODEL,
   openToolUses,
-  toApiMessages,
+  toApiMessagesWithNote,
   userContent,
 } from "./prompt.ts";
 import { endAsFailed, writeEvent } from "./sse.ts";
+import { NO_MESSAGE_ID } from "./turnStore.ts";
 
 import type { AnthropicTool } from "../_shared/assistant/adapters/anthropic.ts";
 import type {
@@ -94,6 +96,8 @@ export const MODEL_STREAM_IDLE_MILLISECONDS = 45_000;
 export type TurnLimits = {
   deadlineMilliseconds: number;
   streamIdleMilliseconds: number;
+  // The compaction call that follows a turn (KEY-706). It is outside the deadline above, so it has its own.
+  compactionTimeoutMilliseconds?: number;
 };
 
 const DEFAULT_LIMITS: TurnLimits = {
@@ -111,9 +115,6 @@ const CLARIFY_FIELD_HINT = "Or say it your way";
 
 const ASK_USER_TOOL = "ask_user";
 const IMPORT_RECIPE_TOOL = "import_recipe_from_url";
-
-// `readConversation` leaves out one message. A nil id is on no row, so the whole conversation is read.
-const NO_MESSAGE_ID = "00000000-0000-0000-0000-000000000000";
 
 // Made per turn, so a missing key ends that turn and never stops the function booting.
 export function createModelClient(read: (name: string) => string | undefined): Anthropic | null {
@@ -160,6 +161,9 @@ export type TurnDependencies = {
   turns: TurnStore;
   toolListCache: ToolListCache;
   recordUsage(call: UsageToRecord): Promise<void>;
+  // Keeps the runtime alive for work that outlives the response, which is the compaction. The task catches
+  // its own errors.
+  runInBackground(task: Promise<unknown>): void;
   connect(options: ConnectToolServerOptions): Promise<ToolConnection>;
   createModelClient(): Anthropic | null;
   // The tools the allowlist chooses from: the registry's, by name and read-only hint.
@@ -180,6 +184,8 @@ type LimitCode = "turn_deadline" | "stream_idle";
 
 type Run = {
   context: TurnContext;
+  // `performance.now()` when the turn began.
+  startedAt: number;
   stream: EventStream;
   // Aborts when the app closes the sheet or its request ends.
   signal: AbortSignal;
@@ -190,6 +196,8 @@ type Run = {
   limitCode: LimitCode | null;
   dependencies: TurnDependencies;
   counts: { modelCalls: number; toolCalls: number };
+  // The prompt of the last model call that answered, which is what the next request's size will start from.
+  lastPromptTokens: number | null;
   unparseableInputRetries: number;
   // Consecutive cards of one kind with nothing said between them, merged when they are written.
   pendingCards: AssistantCard[];
@@ -408,6 +416,7 @@ async function callModel(
   }
   clearTimeout(idleTimer);
   run.unparseableInputRetries = 0;
+  run.lastPromptTokens = promptTokensOf(message.usage);
   // A good response is kept whatever happens to its usage row.
   await recordCall(run, startedAt, message).catch((recordFailure: unknown) =>
     run.dependencies.report("assistant", "internal_error", recordFailure),
@@ -587,12 +596,12 @@ async function runModelCalls(run: Run, session: Session): Promise<Ending> {
     if (interrupted !== null) {
       return interrupted;
     }
-    const { messages } = await turns.readConversation(userId, conversationId, {
+    const { messages, compaction } = await turns.readConversation(userId, conversationId, {
       excludeMessageId: NO_MESSAGE_ID,
     });
     const request = buildTurnRequest({
       tools: session.tools,
-      messages: toApiMessages(messages, run.context.turnId),
+      messages: toApiMessagesWithNote(messages, compaction, run.context.turnId),
     });
     const outcome = await callModel(run, session, request);
     if (outcome.kind === "interrupted") {
@@ -714,6 +723,23 @@ async function takeTurn(run: Run): Promise<Ending> {
   }
 }
 
+// The compaction of a turn that ended complete, ready to run, or null when its prompt is not over the threshold
+// or there is nothing to do.
+async function planTurnCompaction(run: Run): Promise<(() => Promise<void>) | null> {
+  const { context, dependencies, limits } = run;
+  if (run.lastPromptTokens === null) {
+    return null;
+  }
+  return await planCompaction(dependencies, {
+    userId: context.userId,
+    conversationId: context.conversationId,
+    turnId: context.turnId,
+    promptTokens: run.lastPromptTokens,
+    millisecondsLeft: WALL_CLOCK_MILLISECONDS - (performance.now() - run.startedAt),
+    timeoutMilliseconds: limits.compactionTimeoutMilliseconds ?? COMPACTION_TIMEOUT_MILLISECONDS,
+  });
+}
+
 // The cards, the answer meta, the status and the closing events. The status is final before `done` is
 // written, so the app that reads the thread on `done` finds it. A `finishTurn` that throws is reported and
 // does not change how the turn ended.
@@ -737,6 +763,9 @@ async function conclude(run: Run, reached: Ending): Promise<Ending> {
   } catch (caught) {
     dependencies.report("assistant", "internal_error", caught);
   }
+  // Decided before `done`, so the person cannot start the next turn before the conversation is read, and run
+  // after it, so the person never waits.
+  const compaction = final.status === "complete" ? await planTurnCompaction(run) : null;
   switch (final.status) {
     case "complete":
     case "clarify":
@@ -752,6 +781,9 @@ async function conclude(run: Run, reached: Ending): Promise<Ending> {
       // Nobody is reading, so there is no `done`.
       break;
   }
+  if (compaction !== null) {
+    dependencies.runInBackground(compaction());
+  }
   return final;
 }
 
@@ -763,6 +795,7 @@ export function createRunTurn(
     const startedAt = performance.now();
     const run: Run = {
       context,
+      startedAt,
       stream,
       signal: AbortSignal.any([stream.signal, context.request.signal]),
       limits,
@@ -770,6 +803,7 @@ export function createRunTurn(
       limitCode: null,
       dependencies,
       counts: { modelCalls: 0, toolCalls: 0 },
+      lastPromptTokens: null,
       unparseableInputRetries: 0,
       pendingCards: [],
       citations: [],

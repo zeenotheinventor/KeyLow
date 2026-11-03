@@ -74,7 +74,10 @@ describe("runCli arguments", () => {
     [["--budget", "0"], "--budget must be a whole number of tokens above 0"],
     [["--budget=-5"], "--budget must be a whole number of tokens above 0"],
     [["--budget", "1.5"], "--budget must be a whole number of tokens above 0"],
-    [["--set", "nonsense"], 'Unknown set "nonsense". The sets are ask, describe, redTeam.'],
+    [
+      ["--set", "nonsense"],
+      'Unknown set "nonsense". The sets are ask, describe, redTeam, compaction.',
+    ],
     [["--surprise"], "Unknown or incomplete option."],
   ])("should refuse %j with a clear message", async (argv, message) => {
     const output = await runCli(argv, withKey, dependencies);

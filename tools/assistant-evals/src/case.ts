@@ -12,9 +12,27 @@ export type GradeContext = Readonly<{
 /** A grader is deterministic: it reads tool calls, statuses, rows and numbers, and never asks a model. */
 export type Grader = (context: GradeContext) => Promise<GradeOutcome>;
 
+/** One earlier turn of a seeded conversation: the person's words and the assistant's reply, as plain text. */
+export type SeedTurn = Readonly<{ user: string; assistant: string }>;
+
+/** What a case may do besides send messages, for the eval user of the run. */
+export type CaseEnvironment = Readonly<{
+  /** Stores complete, text-only turns as a new conversation of the eval user and answers its id. */
+  seedConversation: (turns: readonly SeedTurn[]) => Promise<string>;
+  /** Resolves once the conversation has a compaction note, and rejects when none is stored in time. */
+  waitForCompaction: (conversationId: string) => Promise<void>;
+}>;
+
 export type EvalCase = Readonly<{
   id: string;
   set: EvalSetName;
+  /** Runs before the first message and answers the conversation it goes into. Left out, the first message opens one. */
+  setup?: (environment: CaseEnvironment) => Promise<string>;
+  /** Runs after each turn has been read, for a case that must wait for something before its next message. */
+  afterTurn?: (
+    turn: Readonly<{ index: number; result: TurnResult }>,
+    environment: CaseEnvironment,
+  ) => Promise<void>;
   /** One or more user turns, sent in order into one conversation. */
   messages: readonly [string, ...string[]];
   /** The case passes when every grader passes. */

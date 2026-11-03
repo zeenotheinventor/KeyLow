@@ -16,6 +16,9 @@ export type NewMessage = {
   display?: Json | null;
 };
 
+// `readConversation` leaves out one message. A nil id is on no row, so the whole conversation is read.
+export const NO_MESSAGE_ID = "00000000-0000-0000-0000-000000000000";
+
 export type FinalTurnStatus = Exclude<AssistantTurnStatus, "open">;
 
 export type StoredMessage = Omit<AssistantStoredMessage, "turnStatus">;
@@ -24,6 +27,18 @@ export type PreviousTurn = {
   status: AssistantTurnStatus;
   // The tool the turn was waiting on a confirmation for, from `pending_confirmation`.
   pendingTool: string | null;
+};
+
+// Ki-Lo's note of the turns up to and including `throughTurnId`, as `assistant_conversations` stores it
+// (KEY-706). The replay in `prompt.ts` sends it in place of those turns.
+export type ConversationNote = { summary: string; throughTurnId: string };
+
+// What compaction reads before it decides to run: the stored note, the `updated_at` the conversation had
+// then (the value the store compares against), and whether a turn is running.
+export type CompactionState = {
+  note: ConversationNote | null;
+  updatedAt: string;
+  turnIsOpen: boolean;
 };
 
 export type TurnStore = {
@@ -49,7 +64,21 @@ export type TurnStore = {
     userId: string,
     conversationId: string,
     options: { excludeMessageId: string },
-  ): Promise<{ messages: StoredMessage[]; previousTurn: PreviousTurn | null }>;
+  ): Promise<{
+    messages: StoredMessage[];
+    previousTurn: PreviousTurn | null;
+    // The note the replay sends in place of the turns it covers, or null before the first compaction.
+    compaction: ConversationNote | null;
+  }>;
+  readCompactionState(userId: string, conversationId: string): Promise<CompactionState>;
+  // Stores the note and the turn it runs up to, only if the conversation's `updated_at` is still the value
+  // compaction saw, and writes a new one. A turn that started since has moved it, so the answer is false and
+  // nothing changed. `assistant_messages` is never written.
+  storeCompaction(
+    userId: string,
+    conversationId: string,
+    input: { summary: string; throughTurnId: string; seenUpdatedAt: string },
+  ): Promise<boolean>;
   readTimeZone(userId: string): Promise<string>;
   // Sets the status only while the turn is open, so a late ending never overwrites the first.
   finishTurn(userId: string, turnId: string, status: FinalTurnStatus): Promise<void>;
@@ -280,6 +309,28 @@ export function createTurnStore(
     return { status, pendingTool: pending.success ? pending.data.tool : null };
   }
 
+  async function readConversationRow(userId: string, conversationId: string) {
+    const { data, error } = await client
+      .from("assistant_conversations")
+      .select("compaction_summary, compacted_through_turn_id, updated_at")
+      .eq("id", conversationId)
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (error !== null) {
+      throw failure("read the conversation", error);
+    }
+    return data;
+  }
+
+  // The columns are null together or set together (a check on the table), so one null means no note.
+  function noteOf(
+    row: { compaction_summary: string | null; compacted_through_turn_id: string | null } | null,
+  ): ConversationNote | null {
+    return row?.compaction_summary != null && row.compacted_through_turn_id != null
+      ? { summary: row.compaction_summary, throughTurnId: row.compacted_through_turn_id }
+      : null;
+  }
+
   return {
     async createConversation(userId) {
       const { data, error } = await client
@@ -356,7 +407,44 @@ export function createTurnStore(
     async readConversation(userId, conversationId, { excludeMessageId }) {
       const messages = await readMessages(userId, conversationId, excludeMessageId);
       const previousTurn = await readPreviousTurn(userId, conversationId, excludeMessageId);
-      return { messages, previousTurn };
+      const compaction = noteOf(await readConversationRow(userId, conversationId));
+      return { messages, previousTurn, compaction };
+    },
+
+    async readCompactionState(userId, conversationId) {
+      const row = await readConversationRow(userId, conversationId);
+      if (row === null) {
+        throw failure("find the conversation", null);
+      }
+      const { data, error } = await client
+        .from("assistant_turns")
+        .select("id")
+        .eq("conversation_id", conversationId)
+        .eq("user_id", userId)
+        .eq("status", "open")
+        .limit(1);
+      if (error !== null) {
+        throw failure("read open turns for compaction", error);
+      }
+      return { note: noteOf(row), updatedAt: row.updated_at, turnIsOpen: data.length > 0 };
+    },
+
+    async storeCompaction(userId, conversationId, { summary, throughTurnId, seenUpdatedAt }) {
+      const { data, error } = await client
+        .from("assistant_conversations")
+        .update({
+          compaction_summary: summary,
+          compacted_through_turn_id: throughTurnId,
+          updated_at: now().toISOString(),
+        })
+        .eq("id", conversationId)
+        .eq("user_id", userId)
+        .eq("updated_at", seenUpdatedAt)
+        .select("id");
+      if (error !== null) {
+        throw failure("store the compaction", error);
+      }
+      return data.length > 0;
     },
 
     async readTimeZone(userId) {

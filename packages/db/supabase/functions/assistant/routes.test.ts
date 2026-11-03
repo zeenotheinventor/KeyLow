@@ -79,6 +79,8 @@ function fake(options: FakeOptions = {}): Fake {
     appendMessages: unused,
     setUserMessageContent: unused,
     readConversation: unused,
+    readCompactionState: unused,
+    storeCompaction: unused,
     readTimeZone: unused,
     finishTurn: unused,
     turnHasAction: unused,

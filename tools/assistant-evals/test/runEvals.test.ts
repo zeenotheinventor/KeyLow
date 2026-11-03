@@ -11,7 +11,7 @@ import {
 import { runEvals } from "../src/runEvals.ts";
 
 import type { ScriptedTurn } from "./helpers.ts";
-import type { EvalCase } from "../src/case.ts";
+import type { CaseEnvironment, EvalCase } from "../src/case.ts";
 
 const simpleCase = (id: string, overrides: Partial<EvalCase> = {}): EvalCase => ({
   id,
@@ -390,5 +390,110 @@ describe("runEvals", () => {
       ]);
       expect(report.cases[0]?.failures).toEqual(["the case took longer than 30 ms"]);
     });
+  });
+});
+
+describe("runEvals with a case that sets up and waits", () => {
+  const environmentThatLogs = (log: string[]): CaseEnvironment => ({
+    seedConversation: (turns) => {
+      log.push(`seed ${turns.length}`);
+      return Promise.resolve("seeded-conversation");
+    },
+    waitForCompaction: (conversationId) => {
+      log.push(`wait ${conversationId}`);
+      return Promise.resolve();
+    },
+  });
+
+  it("should send the first message into the conversation that setup answered", async () => {
+    const log: string[] = [];
+    const stack = scriptedStack([costing(1, { conversationId: "seeded-conversation" })]);
+
+    await runEvals({
+      cases: [
+        simpleCase("seeded", {
+          setup: (environment) =>
+            environment.seedConversation([{ user: "hi", assistant: "hello" }]),
+        }),
+      ],
+      ...stack,
+      environment: environmentThatLogs(log),
+      budgetTokens: 1_000_000,
+    });
+
+    expect(stack.driver.sent).toEqual([
+      { conversationId: "seeded-conversation", text: "How much protein did I eat?" },
+    ]);
+    expect(log).toEqual(["seed 1"]);
+  });
+
+  it("should run afterTurn after each turn, before the next message, with its index and result", async () => {
+    const log: string[] = [];
+    const stack = scriptedStack([
+      costing(1, { conversationId: "conversation-a", turnId: "first-turn" }),
+      costing(1, { conversationId: "conversation-a" }),
+    ]);
+
+    const report = await runEvals({
+      cases: [
+        simpleCase("waits", {
+          messages: ["first", "second"],
+          afterTurn: ({ index, result }, environment) => {
+            log.push(`after ${index} ${result.turnId} sent ${stack.driver.sent.length}`);
+            return index === 0
+              ? environment.waitForCompaction(result.conversationId)
+              : Promise.resolve();
+          },
+        }),
+      ],
+      ...stack,
+      environment: environmentThatLogs(log),
+      budgetTokens: 1_000_000,
+    });
+
+    expect(log).toEqual([
+      "after 0 first-turn sent 1",
+      "wait conversation-a",
+      expect.stringMatching(/^after 1 turn-\d+ sent 2$/),
+    ]);
+    expect(report.cases[0]?.status).toBe("passed");
+  });
+
+  it("should end the case as an error, not a miss, when the wait fails", async () => {
+    const stack = scriptedStack([costing(1), costing(1)]);
+
+    const report = await runEvals({
+      cases: [
+        simpleCase("never-compacts", {
+          messages: ["first", "second"],
+          afterTurn: () => Promise.reject(new Error("no note was stored within 60000 ms")),
+        }),
+      ],
+      ...stack,
+      environment: environmentThatLogs([]),
+      budgetTokens: 1_000_000,
+    });
+
+    expect(report.cases[0]).toMatchObject({
+      status: "error",
+      failures: ["the run failed: no note was stored within 60000 ms"],
+    });
+    expect(stack.driver.sent).toHaveLength(1);
+  });
+
+  it("should end the case as an error when it needs an environment the session does not have", async () => {
+    const stack = scriptedStack([costing(1)]);
+
+    const report = await runEvals({
+      cases: [simpleCase("needs-one", { setup: () => Promise.resolve("never") })],
+      ...stack,
+      budgetTokens: 1_000_000,
+    });
+
+    expect(report.cases[0]).toMatchObject({
+      status: "error",
+      failures: ["the case needs a session with a case environment"],
+    });
+    expect(stack.driver.sent).toHaveLength(0);
   });
 });
