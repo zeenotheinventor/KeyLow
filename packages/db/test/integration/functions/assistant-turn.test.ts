@@ -21,6 +21,25 @@ import type { AssistantStreamEvent } from "@keylow/core";
  * an assertion message.
  */
 
+// Values nobody would type by chance, so a request that carried a profile field is found by its value.
+const profileValues = {
+  birth_date: "1983-02-17",
+  height_cm: 187.3,
+  timezone: "Pacific/Auckland",
+  target_kcal: 2347,
+  target_protein_g: 151.3,
+  target_carbs_g: 263.7,
+  target_fat_g: 71.9,
+  onboarding_weight_kg: 83.7,
+};
+
+async function giveProfileValues(user: TestUser): Promise<void> {
+  const { error } = await user.client.from("profiles").update(profileValues).eq("id", user.id);
+  if (error) {
+    throw new Error("Could not set the profile values", { cause: error });
+  }
+}
+
 const markerOf = () => `kl795${crypto.randomUUID().replaceAll("-", "").slice(0, 12)}`;
 
 // Letters only, because the word is searched as text.
@@ -131,6 +150,7 @@ beforeAll(async () => {
     newAssistantUser("assistant-turn"),
     newAssistantUser("assistant-turn"),
   ]);
+  await Promise.all([giveProfileValues(searcher), giveProfileValues(logger)]);
   bystander = await newAssistantUser("assistant-turn");
   await ownedFood(searcher);
   searchToolUseId = `toolu_${crypto.randomUUID().replaceAll("-", "")}`;
@@ -216,10 +236,8 @@ describe("a turn that calls search_foods and then answers", () => {
     const rows = await storedMessages(searchTurn);
 
     expect(rows.map(({ role }) => role)).toEqual(["user", "assistant", "user", "assistant"]);
-    expect(rows.map(({ seq }) => seq)).toEqual(
-      [...rows.map(({ seq }) => seq)].sort((a, b) => a - b),
-    );
-    expect(new Set(rows.map(({ seq }) => seq)).size).toBe(4);
+    // Contiguous from 1, so no message was lost or stored twice.
+    expect(rows.map(({ seq }) => seq)).toEqual([1, 2, 3, 4]);
     const [userRow, toolUseRow, toolResultRow, answerRow] = rows;
     // The context block first, the words last.
     const userBlocks = blocksOf(userRow?.content);
@@ -338,9 +356,25 @@ describe("the requests the model received", () => {
     }
   });
 
-  it("holds no profile field name as a key", () => {
-    const profileFields = [
-      "activity",
+  it("holds none of the profile's values", () => {
+    const values = [
+      profileValues.birth_date,
+      String(profileValues.height_cm),
+      String(profileValues.target_kcal),
+      String(profileValues.target_protein_g),
+      String(profileValues.target_carbs_g),
+      String(profileValues.target_fat_g),
+      String(profileValues.onboarding_weight_kg),
+    ];
+    const bodies = allRequests().map((request) => JSON.stringify(request));
+
+    for (const body of bodies) {
+      expect(values.filter((value) => body.includes(value))).toEqual([]);
+    }
+  });
+
+  it("holds no profile column name, as text or as a key", () => {
+    const underscored = [
       "assistant_consent_at",
       "assistant_consent_version",
       "birth_date",
@@ -349,7 +383,6 @@ describe("the requests the model received", () => {
       "height_cm",
       "onboarding_completed_at",
       "onboarding_weight_kg",
-      "sex",
       "target_carbs_g",
       "target_fat_g",
       "target_kcal",
@@ -357,12 +390,31 @@ describe("the requests the model received", () => {
       "targets_updated_at",
       "terms_accepted_at",
       "terms_version",
-      "timezone",
       "weight_unit",
     ];
+    // Words that also occur in prose, so only a key counts.
+    const generic = ["activity", "sex", "timezone"];
+    const bodies = allRequests().map((request) => JSON.stringify(request));
     const keys = new Set(allRequests().flatMap(keysOf));
 
-    expect(profileFields.filter((field) => keys.has(field))).toEqual([]);
+    expect(underscored.filter((name) => bodies.some((body) => body.includes(name)))).toEqual([]);
+    expect(generic.filter((name) => keys.has(name))).toEqual([]);
+  });
+
+  it("holds the time zone only in the context block, which is there by design", () => {
+    for (const turn of [searchTurn, logTurn]) {
+      for (const request of turn.requests) {
+        const messages = request["messages"];
+        const first: unknown = Array.isArray(messages) ? messages[0] : undefined;
+        const contextBlock = blocksOf(isRecord(first) ? first["content"] : undefined)[0];
+        const contextText = String(contextBlock?.["text"]);
+
+        expect(contextText).toContain(profileValues.timezone);
+        expect(
+          JSON.stringify(request).split(JSON.stringify(contextText).slice(1, -1)).join(""),
+        ).not.toContain(profileValues.timezone);
+      }
+    }
   });
 
   it("holds no MCP connector, beta, sampling or thinking-budget parameter", () => {
