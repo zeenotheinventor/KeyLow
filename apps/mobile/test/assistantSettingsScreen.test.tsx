@@ -1,4 +1,5 @@
-import { LEGAL_URLS, SAVE_FAILED_BANNER } from "@keylow/core/copy";
+import { DELETE_FAILED_BANNER, LEGAL_URLS, SAVE_FAILED_BANNER } from "@keylow/core/copy";
+import { controlHeight, touchTarget } from "@keylow/tokens";
 import { act, render, screen, userEvent, within } from "@testing-library/react-native";
 import { Linking } from "react-native";
 
@@ -6,6 +7,9 @@ import AssistantSettingsRoute from "../app/(tabs)/more/assistant";
 import { ToastProvider } from "../components/ui";
 import { ThemeProvider } from "../lib/theme";
 import { resetRouterMock, routerMock } from "./support/expoRouterMock";
+import { compileKitStyles } from "./support/kitStyles";
+import { registerAppStyles } from "./support/nativeWindStyles";
+import { resolvedColor } from "./support/themeColor";
 
 type MutationOptions = { onSuccess?: () => void; onError?: () => void };
 
@@ -51,12 +55,12 @@ const FIRST_PARAGRAPH =
 const SECOND_PARAGRAPH =
   "To do this, your messages and the Ki-Lo data the assistant reads are sent to Anthropic, the company that runs its AI model, as Ki-Lo's processor. Anthropic keeps them for up to 30 days. Ki-Lo keeps your conversations until you delete them.";
 const DIALOG_BODY =
-  "This removes every conversation with the assistant. Changes it made to your diary and recipes stay, and you can still undo them from What the assistant changed.";
+  "This removes every conversation with the assistant. Changes it made to your diary and recipes stay.";
 
 async function renderSettings() {
   const user = userEvent.setup();
   await render(
-    <ThemeProvider>
+    <ThemeProvider fixedPreference="dark">
       <ToastProvider>
         <AssistantSettingsRoute />
       </ToastProvider>
@@ -68,7 +72,14 @@ async function renderSettings() {
 const switchRow = () => screen.getByRole("switch", { name: "Use the assistant" });
 
 describe("the Assistant settings screen", () => {
+  let kitStyles: string;
+
+  beforeAll(async () => {
+    kitStyles = await compileKitStyles("", ["components/AssistantSettingsScreen"]);
+  });
+
   beforeEach(() => {
+    registerAppStyles(kitStyles);
     resetRouterMock();
     mockAssistant.consent = { data: { isOn: false } };
     mockAssistant.setConsent = {
@@ -94,6 +105,21 @@ describe("the Assistant settings screen", () => {
       expect(screen.getByRole("heading", { name: "Assistant" })).toBeOnTheScreen();
       await user.press(screen.getByRole("button", { name: "Back to More" }));
       expect(routerMock.back).toHaveBeenCalledTimes(1);
+    });
+
+    it("should draw the sheet header the board draws: a raised, bordered back control and a centred h2 title", async () => {
+      await renderSettings();
+
+      expect(screen.getByRole("button", { name: "Back to More" })).toHaveStyle({
+        height: controlHeight.md,
+        width: touchTarget,
+        borderWidth: 1,
+      });
+      expect(screen.getByRole("heading", { name: "Assistant" })).toHaveStyle({
+        fontSize: 20,
+        lineHeight: 26,
+        textAlign: "center",
+      });
     });
 
     it("should go to More when there is no screen to go back to", async () => {
@@ -123,26 +149,27 @@ describe("the Assistant settings screen", () => {
       expect(screen.getByText(SECOND_PARAGRAPH)).toBeOnTheScreen();
     });
 
-    it("should have no conversations group and no Delete all conversations row", async () => {
+    // The board draws the group only when on. It is shown off as well, because the consent card promises
+    // conversations are kept until the person deletes them, so turning the assistant off must not hide Delete.
+    it("should still offer Delete all conversations, which the board draws only when on", async () => {
       await renderSettings();
 
-      expect(screen.queryByRole("heading", { name: "Your conversations" })).not.toBeOnTheScreen();
+      expect(screen.getByRole("heading", { name: "Your conversations" })).toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Delete all conversations" })).toBeOnTheScreen();
       expect(
-        screen.queryByRole("button", { name: "Delete all conversations" }),
-      ).not.toBeOnTheScreen();
-      expect(
-        screen.queryByText("Deleting conversations does not undo the changes in them."),
-      ).not.toBeOnTheScreen();
+        screen.getByText("Deleting conversations does not undo the changes in them."),
+      ).toBeOnTheScreen();
     });
 
-    it("should be headed What it does and Assistant alone", async () => {
+    it("should be headed Assistant, What it does and Your conversations, in that order", async () => {
       await renderSettings();
 
       const headings = screen.getAllByRole("heading");
 
-      expect(headings).toHaveLength(2);
+      expect(headings).toHaveLength(3);
       expect(headings[0]).toHaveTextContent("Assistant");
       expect(headings[1]).toHaveTextContent("What it does");
+      expect(headings[2]).toHaveTextContent("Your conversations");
     });
   });
 
@@ -278,13 +305,18 @@ describe("the Assistant settings screen", () => {
     });
   });
 
+  // The assistant is off here, as the default, because Delete all conversations is offered either way.
   describe("Delete all conversations", () => {
-    beforeEach(() => {
-      mockAssistant.consent = { data: { isOn: true } };
-    });
-
     const deleteRow = () => screen.getByRole("button", { name: "Delete all conversations" });
     const dialog = () => screen.queryByLabelText("Delete all conversations?");
+
+    it("should draw the row's title in the danger colour", async () => {
+      await renderSettings();
+
+      expect(screen.getByText("Delete all conversations")).toHaveStyle({
+        color: resolvedColor("dark", "danger"),
+      });
+    });
 
     it("should open no dialog until the row is pressed", async () => {
       await renderSettings();
@@ -340,7 +372,7 @@ describe("the Assistant settings screen", () => {
       });
 
       expect(dialog()).not.toBeOnTheScreen();
-      expect(screen.getByText(SAVE_FAILED_BANNER)).toBeOnTheScreen();
+      expect(screen.getByText(DELETE_FAILED_BANNER)).toBeOnTheScreen();
       expect(deleteRow()).toBeOnTheScreen();
     });
 

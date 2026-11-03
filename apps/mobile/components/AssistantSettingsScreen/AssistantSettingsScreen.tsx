@@ -7,6 +7,7 @@ import {
   ASSISTANT_CONSENT_CARD,
   ASSISTANT_DELETE_ALL_DIALOG,
   ASSISTANT_SETTINGS,
+  DELETE_FAILED_BANNER,
   LEGAL_URLS,
   SAVE_FAILED_BANNER,
   describeAssistantConsentCaption,
@@ -28,6 +29,13 @@ const saveFailedToast = {
   icon: "CircleAlert",
 } as const;
 
+// NOT ON THE CANVAS: no board draws the failure of a delete, so these words await Zee.
+const deleteFailedToast = {
+  message: DELETE_FAILED_BANNER,
+  tone: "danger",
+  icon: "CircleAlert",
+} as const;
+
 function openPrivacyPolicy() {
   // A device with no browser rejects, and there is nothing else to do about it, so the screen stays as it is.
   Linking.openURL(LEGAL_URLS.privacy).catch(() => undefined);
@@ -36,7 +44,7 @@ function openPrivacyPolicy() {
 /**
  * The Assistant settings screen, pushed from More (`assistant-settings · consent`): the switch that turns the
  * assistant on, with its caption, what it does in the consent card's own words and the Privacy policy link,
- * and, once it is on, Delete all conversations behind a confirmation. The switch is off until the setting
+ * and Delete all conversations behind a confirmation, on or off. The switch is off until the setting
  * has been read, and busy while a change is being saved. The sheet is told through the hook: turning the
  * assistant on or off reads its status again before the change is done. "What the assistant changed" is
  * the next ticket's row, with the screen it opens.
@@ -69,7 +77,7 @@ export function AssistantSettingsScreen() {
       },
       onError: () => {
         setIsAskingToDelete(false);
-        toast.show(saveFailedToast);
+        toast.show(deleteFailedToast);
       },
     });
   }
@@ -83,7 +91,6 @@ export function AssistantSettingsScreen() {
       <SheetHeader
         leading={{ icon: "ChevronLeft", label: ASSISTANT_SETTINGS.back, onPress: goBack }}
         title={ASSISTANT_SETTINGS.title}
-        variant="stack"
       />
       <ScrollView className="flex-1" contentContainerClassName="gap-4 px-4 pb-6 pt-1">
         <View className="gap-2">
@@ -143,25 +150,26 @@ export function AssistantSettingsScreen() {
             </View>
           </Card>
         </View>
-        {isOn ? (
-          <View className="gap-2">
-            <GroupedList title={ASSISTANT_SETTINGS.yourConversations}>
-              <ListRow
-                chevron={false}
-                title={ASSISTANT_SETTINGS.deleteAllLabel}
-                titleTone="danger"
-                onPress={() => {
-                  setIsAskingToDelete(true);
-                }}
-              />
-            </GroupedList>
-            <View className="px-1">
-              <Text tone="muted" variant="caption">
-                {ASSISTANT_SETTINGS.deleteAllCaption}
-              </Text>
-            </View>
+        {/* The board draws this group only when the assistant is on. It is drawn off as well, a recommended
+            departure awaiting Zee: the consent card promises conversations are kept until the person deletes
+            them, so someone who turns the assistant off must still be able to. */}
+        <View className="gap-2">
+          <GroupedList title={ASSISTANT_SETTINGS.yourConversations}>
+            <ListRow
+              chevron={false}
+              title={ASSISTANT_SETTINGS.deleteAllLabel}
+              titleTone="danger"
+              onPress={() => {
+                setIsAskingToDelete(true);
+              }}
+            />
+          </GroupedList>
+          <View className="px-1">
+            <Text tone="muted" variant="caption">
+              {ASSISTANT_SETTINGS.deleteAllCaption}
+            </Text>
           </View>
-        ) : null}
+        </View>
       </ScrollView>
       <ConfirmDialog
         body={ASSISTANT_DELETE_ALL_DIALOG.body}

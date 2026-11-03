@@ -42,11 +42,19 @@ export const ASSISTANT_SETTINGS = {
 
 /**
  * The confirmation before Delete all conversations. The boards draw none, and the delete cannot be undone, so
- * this is KEY-695's recommendation and awaits Zee. Its frame is added to the canvas later.
+ * this is KEY-695's recommendation and awaits Zee. Its frame is added to the canvas later. The body does not
+ * name "What the assistant changed", which KEY-696 adds next. KEY-696 puts the Undo sentence back when that
+ * screen exists.
  */
 export const ASSISTANT_DELETE_ALL_DIALOG = {
   title: "Delete all conversations?",
-  body: "This removes every conversation with the assistant. Changes it made to your diary and recipes stay, and you can still undo them from What the assistant changed.",
+  body: "This removes every conversation with the assistant. Changes it made to your diary and recipes stay.",
   confirmLabel: "Delete",
   cancelLabel: "Keep them",
 } as const;
+
+/**
+ * The toast when Delete all conversations fails, after `COPY_FAILED_BANNER`'s wording. NOT ON THE CANVAS: no
+ * board draws it, so it awaits Zee.
+ */
+export const DELETE_FAILED_BANNER = "Not deleted. Check your connection and try again.";

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   ASSISTANT_DELETE_ALL_DIALOG,
+  DELETE_FAILED_BANNER,
   ASSISTANT_SETTINGS,
   describeAssistantConsentCaption,
   describeAssistantMoreRow,
@@ -65,9 +66,15 @@ describe("ASSISTANT_DELETE_ALL_DIALOG", () => {
   it("should carry the recommended confirmation the boards do not draw yet", () => {
     expect(ASSISTANT_DELETE_ALL_DIALOG).toEqual({
       title: "Delete all conversations?",
-      body: "This removes every conversation with the assistant. Changes it made to your diary and recipes stay, and you can still undo them from What the assistant changed.",
+      body: "This removes every conversation with the assistant. Changes it made to your diary and recipes stay.",
       confirmLabel: "Delete",
       cancelLabel: "Keep them",
     });
+  });
+});
+
+describe("DELETE_FAILED_BANNER", () => {
+  it("should say the delete did not happen, after the copy failure banner's wording", () => {
+    expect(DELETE_FAILED_BANNER).toBe("Not deleted. Check your connection and try again.");
   });
 });
