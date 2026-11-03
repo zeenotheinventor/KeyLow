@@ -118,3 +118,38 @@ Where the sources disagree, the order is: Zee's rulings, then the Ki-Lo design s
 - **Edit and copy loading, load error and not-found reuse `loading`, `error` and `not-found`** (orchestrator call, 2026-10-13). The food form has no boards of its own for those states.
 - **`quantity-proposal-m3` is not M2 scope.** MacroFactor pins a quantity field, unit chips and "Add" to detail. That needs logging, so it is drawn as an M3 proposal only.
 - **Not shown on purpose:** the barcode, saturated fat, sugars, salt and micronutrients, and a converted-from-kilojoules label (Zee, 2026-10-15: stays off, see ADR 0003 Amendment 2).
+- **Favourites (Zee, 2026-11-03).** Drawn by hand and approved by Zee on 2026-11-03, see "Favourites proposal" below. Food detail gets a heart icon button in the header, between the title and Close. Outline means not a favourite, and its name is "Add to favourites". Filled, in `--accent` (Zee: green, in line with the visual language, not red), means a favourite, and its name is "Remove from favourites". A tap toggles it at once (optimistic, rolled back with an error toast if the write fails) and shows a toast: "Added to favourites" or "Removed from favourites". Zee wrote the copy in American spelling. It is British here, as AGENTS.md asks. Recipes get the same heart, see [`../recipe-view/proposals/README.md`](../recipe-view/proposals/README.md). Foods and recipes share one cap of 30 favourites. A deleted or archived food or recipe drops out of the favourites. The log search strip is in [`../food-search/README.md`](../food-search/README.md).
+
+## Favourites proposal
+
+These boards are drawn by hand from the exported `own-food` board, not exported from the canvas, so they live in `proposals/` where `tools/design-export` does not look for boards. Zee approved them on 2026-11-03. Each PNG is 820 by 844 at device pixel ratio 2, dark on the left and light on the right, like the exported boards.
+
+### favourite-off
+
+Own food, not a favourite: the outline heart in the header, named "Add to favourites".
+
+![food-detail favourite-off](proposals/favourite-off.png)
+
+Open [proposals/favourite-off.html](proposals/favourite-off.html) in a browser.
+
+### favourite-on
+
+Right after the tap: the heart is filled in `--accent`, its name is now "Remove from favourites", and the toast says "Added to favourites".
+
+![food-detail favourite-on](proposals/favourite-on.png)
+
+Open [proposals/favourite-on.html](proposals/favourite-on.html) in a browser.
+
+### favourite-removed
+
+Right after a second tap: the outline heart again, and the toast says "Removed from favourites".
+
+![food-detail favourite-removed](proposals/favourite-removed.png)
+
+Open [proposals/favourite-removed.html](proposals/favourite-removed.html) in a browser.
+
+### Settled with Zee (2026-11-03)
+
+- **Toast placement.** The kit's Toast sits under the status bar, which is on top of the sheet header and would hide the heart that was just tapped. The boards draw it just under the header instead, so the heart stays visible and can be tapped again to undo. That needs a placement option on the kit's ToastProvider.
+- **Filled heart.** The kit's Icon draws outlines only. A filled heart needs a fill option on Icon (Lucide supports it). The fill is `--accent`, lime in dark and green in light, as Zee asked.
+- **No Undo on the toast.** Tapping the heart again is the undo, so the toast has no action.
