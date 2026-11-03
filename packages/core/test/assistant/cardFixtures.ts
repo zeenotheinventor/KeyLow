@@ -166,6 +166,75 @@ export const dayCopiedCard: AssistantCard = {
   undoneSub: "Removed 8 copied entries from today",
 };
 
+/** `assistant-card · recipe-created`: a recipe made from typed ingredients, the per-serving numbers as the sub. */
+export const recipeCreatedCard: AssistantCard = {
+  actionIds: [firstActionId],
+  kind: "recipe_created",
+  title: "Added recipe Chicken and rice, 4 servings",
+  sub: "Per serving 550 kcal · P 37 g · C 79 g · F 8.6 g",
+  rows: [],
+  totalText: null,
+  note: null,
+  link: { label: "Open in recipe editor", target: { screen: "recipe_editor", recipeId } },
+  undo: "available",
+  undoneSub: "Removed recipe Chicken and rice",
+};
+
+/** `assistant-card · food-created`: a food of the person's own, not logged. */
+export const foodCreatedCard: AssistantCard = {
+  actionIds: [firstActionId],
+  kind: "food_created",
+  title: "Added food My protein bar",
+  sub: "Yours · 1 bar",
+  rows: [
+    {
+      name: "Per bar",
+      amountText: "P 20 g · C 19 g · F 6 g",
+      time: null,
+      kcalText: "210 kcal",
+      match: null,
+      matchedFood: null,
+      estimate: false,
+    },
+  ],
+  totalText: null,
+  note: "Not logged yet. Say when you had it, or log it from search.",
+  link: {
+    label: "Open in your foods",
+    target: { screen: "own_food", foodId: "00000000-0000-4000-8000-0000000000f1" },
+  },
+  undo: "available",
+  undoneSub: "Removed food My protein bar",
+};
+
+/** `assistant-card · targets-changed`: after a yes on the change-targets question. */
+export const targetsChangedCard: AssistantCard = {
+  actionIds: [firstActionId],
+  kind: "targets_changed",
+  title: "Changed your calorie target to 2,000 kcal",
+  sub: "Was 2,140 kcal from your programme",
+  rows: [],
+  totalText: null,
+  note: "Your programme has ended, so Ki-Lo stops adjusting your targets each week. Undo puts back 2,140 kcal and your programme.",
+  link: null,
+  undo: "available",
+  undoneSub: "Put back 2,140 kcal and your programme",
+};
+
+/** `assistant · confirm`, after a yes: three entries deleted. */
+export const deletedCard: AssistantCard = {
+  actionIds: [firstActionId],
+  kind: "deleted",
+  title: "3 entries deleted",
+  sub: "Chicken and rice, Greek yoghurt, apple · 13:00",
+  rows: [],
+  totalText: null,
+  note: null,
+  link: null,
+  undo: "available",
+  undoneSub: "Put back 3 entries at 13:00",
+};
+
 export const cardBoards = [
   {
     board: "assistant-card · logged",

@@ -6,6 +6,7 @@ import {
   canSendAssistantMessage,
   describeAssistantComposer,
   isAssistantStatusKnown,
+  isSentTurnStored,
   isStaleStreamGateNotice,
   resolveAssistantSheetAccess,
   resolveAssistantTimeZone,
@@ -22,6 +23,7 @@ const turnFailed: AssistantNotice = { code: "turn_failed" };
 
 const liveTurn = (overrides: Partial<AssistantSheetLiveTurn> = {}): AssistantSheetLiveTurn => ({
   text: "",
+  cards: [],
   stopped: false,
   notice: null,
   ...overrides,
@@ -45,9 +47,10 @@ const build = (input: Partial<Parameters<typeof buildAssistantSheetThread>[0]> =
 
 describe("buildAssistantSheetThread", () => {
   describe("a stored conversation", () => {
-    it("should draw your messages and the assistant's words and leave out what later tickets draw", () => {
+    it("should draw your messages, the assistant's words and its cards, and leave out what later tickets draw", () => {
       expect(build({ items: storedItems }).entries).toEqual([
         { kind: "you", key: "u1", text: "2 eggs and toast at 8:10" },
+        { kind: "card", key: "c1", card: { ...loggedCard, undo: "available" } },
         { kind: "you", key: "u2", text: "What's left for today?" },
         {
           kind: "assistant",
@@ -159,7 +162,7 @@ describe("buildAssistantSheetThread", () => {
 
       expect(
         build({ items: moved, sent, live: liveTurn({ text: "Porridge." }) }).entries,
-      ).toHaveLength(5);
+      ).toHaveLength(6);
     });
 
     it("should keep drawing the stream when a read during it already holds your message", () => {
@@ -176,6 +179,7 @@ describe("buildAssistantSheetThread", () => {
 
       expect(thread.entries.map((entry) => entry.key)).toEqual([
         "u1",
+        "c1",
         "u2",
         "r2",
         "sent:you",
@@ -194,14 +198,84 @@ describe("buildAssistantSheetThread", () => {
       expect(thread.entries.map((entry) => entry.key)).toEqual(["sent:you", "sent:reply"]);
     });
 
-    it("should leave the stored conversation to draw the turn once it has ended and the read holds it", () => {
+    it("should keep drawing the reply after the stream ends while the read holds only your message, so it does not vanish", () => {
       const thread = build({
         items: [...storedItems, { kind: "user", id: "u3", text: "What did I eat yesterday?" }],
         sent,
         live: liveTurn({ text: "Yesterday, porridge" }),
       });
 
-      expect(thread.entries.map((entry) => entry.key)).toEqual(["u1", "u2", "r2", "u3"]);
+      expect(thread.entries.map((entry) => entry.key)).toEqual([
+        "u1",
+        "c1",
+        "u2",
+        "r2",
+        "sent:you",
+        "sent:reply",
+      ]);
+    });
+
+    it("should leave the stored conversation to draw the turn once it holds an item that is not yours after the message", () => {
+      const thread = build({
+        items: [
+          ...storedItems,
+          { kind: "user", id: "u3", text: "What did I eat yesterday?" },
+          { kind: "reply", id: "r3", text: "Porridge.", answerMeta: null, stopped: false },
+        ],
+        sent,
+        live: liveTurn({ text: "Porridge." }),
+      });
+
+      expect(thread.entries.map((entry) => entry.key)).toEqual([
+        "u1",
+        "c1",
+        "u2",
+        "r2",
+        "u3",
+        "r3",
+      ]);
+    });
+
+    it("should leave the stored conversation to draw a turn whose first stored item is a card", () => {
+      const thread = build({
+        items: [
+          ...storedItems,
+          { kind: "user", id: "u3", text: "Log a banana" },
+          { kind: "card", id: "c3", card: loggedCard },
+        ],
+        sent,
+        live: liveTurn(),
+      });
+
+      expect(thread.entries.map((entry) => entry.key)).toEqual([
+        "u1",
+        "c1",
+        "u2",
+        "r2",
+        "u3",
+        "c3",
+      ]);
+    });
+
+    it("should draw a card that arrived in the stream between your message and the reply", () => {
+      const thread = build({
+        items: storedItems,
+        sent,
+        live: liveTurn({ cards: [loggedCard], text: "Done." }),
+        isStreaming: true,
+      });
+
+      expect(thread.entries.slice(-3)).toEqual([
+        { kind: "you", key: "sent:you", text: "What did I eat yesterday?" },
+        { kind: "card", key: "sent:card:0", card: loggedCard },
+        expect.objectContaining({ kind: "assistant", key: "sent:reply" }),
+      ]);
+    });
+
+    it("should draw a card that arrived alone, with no reply words after it", () => {
+      const thread = build({ items: storedItems, sent, live: liveTurn({ cards: [loggedCard] }) });
+
+      expect(thread.entries.slice(-2).map((entry) => entry.kind)).toEqual(["you", "card"]);
     });
 
     it("should draw a person's first message in a conversation that has no items", () => {
@@ -319,7 +393,13 @@ describe("buildAssistantSheetThread with the notice that limits the assistant no
   it("should draw the notice under the earlier messages, as the latest", () => {
     const { entries } = build({ items: storedItems, accessNotice: dayLimit });
 
-    expect(entries.map((entry) => entry.kind)).toEqual(["you", "you", "assistant", "notice"]);
+    expect(entries.map((entry) => entry.kind)).toEqual([
+      "you",
+      "card",
+      "you",
+      "assistant",
+      "notice",
+    ]);
     expect(entries.at(-1)).toMatchObject({ kind: "notice", notice: dayLimit, isLatest: true });
   });
 
@@ -363,7 +443,7 @@ describe("buildAssistantSheetThread with the notice that limits the assistant no
   });
 
   it("should draw nothing extra when there is no such notice", () => {
-    expect(build({ items: storedItems, accessNotice: null }).entries).toHaveLength(3);
+    expect(build({ items: storedItems, accessNotice: null }).entries).toHaveLength(4);
   });
 });
 
@@ -576,5 +656,39 @@ describe("isAssistantStatusKnown", () => {
     { name: "an app that is offline, where the read cannot run", change: { isOnline: false } },
   ])("should be known for $name", ({ change }) => {
     expect(isAssistantStatusKnown({ ...unread, ...change })).toBe(true);
+  });
+});
+
+describe("isSentTurnStored", () => {
+  const user = (id: string): AssistantThreadItem => ({ kind: "user", id, text: "Hello" });
+  const reply = (id: string): AssistantThreadItem => ({
+    kind: "reply",
+    id,
+    text: "Hi",
+    answerMeta: null,
+    stopped: false,
+  });
+
+  it("should not hold the turn while the only item after the message is your own", () => {
+    expect(isSentTurnStored([reply("r1"), user("u2")], "r1")).toBe(false);
+  });
+
+  it("should hold the turn once an item that is not yours follows the message", () => {
+    expect(isSentTurnStored([reply("r1"), user("u2"), reply("r2")], "r1")).toBe(true);
+  });
+
+  it("should hold the turn once a card follows the message", () => {
+    expect(
+      isSentTurnStored([reply("r1"), { kind: "card", id: "c2", card: loggedCard }], "r1"),
+    ).toBe(true);
+  });
+
+  it("should not hold the first turn of a conversation that had no items while only your message is stored", () => {
+    expect(isSentTurnStored([user("u1")], null)).toBe(false);
+    expect(isSentTurnStored([user("u1"), reply("r1")], null)).toBe(true);
+  });
+
+  it("should hold nothing of the turn when the item it was sent after is gone", () => {
+    expect(isSentTurnStored([], "r1")).toBe(true);
   });
 });

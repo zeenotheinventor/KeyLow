@@ -93,7 +93,11 @@ type Exit = { href: string; how: "dismiss" | "replace" };
  * back alike. It holds no sums of its own: the card, the checks, the sentences and what counts as a change
  * are core's.
  */
-export function RecipeEditor({ existing, initialName }: RecipeEditorProps) {
+export function RecipeEditor({
+  existing,
+  initialName,
+  initialIngredientSearch,
+}: RecipeEditorProps) {
   const router = useRouter();
   const toast = useToast();
   const isOnline = useIsOnline();
@@ -118,7 +122,9 @@ export function RecipeEditor({ existing, initialName }: RecipeEditorProps) {
   );
   const stepCount = useRef(0);
   // The food search for a new ingredient, over the editor, and the food whose amount step it has open.
-  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [isAddOpen, setIsAddOpen] = useState(initialIngredientSearch !== undefined);
+  // The word the search opens with, only the first time: a search opened by the Add row starts empty.
+  const [searchStartsWith, setSearchStartsWith] = useState(initialIngredientSearch);
   const [chosenFood, setChosenFood] = useState<ChosenFood | undefined>(undefined);
   // The scan the Add ingredient search has open, if one is: the scanner is a route over the editor, and
   // this is the id it answers with.
@@ -310,6 +316,7 @@ export function RecipeEditor({ existing, initialName }: RecipeEditorProps) {
     Keyboard.dismiss();
     toast.dismiss();
     setChosenFood(undefined);
+    setSearchStartsWith(undefined);
     setIsAddOpen(true);
   }
 
@@ -325,6 +332,7 @@ export function RecipeEditor({ existing, initialName }: RecipeEditorProps) {
   function closeAddIngredient() {
     shouldFocusAddRow.current = true;
     setChosenFood(undefined);
+    setSearchStartsWith(undefined);
     setIsAddOpen(false);
   }
 
@@ -626,6 +634,7 @@ export function RecipeEditor({ existing, initialName }: RecipeEditorProps) {
         <View accessibilityViewIsModal className="absolute inset-0 bg-background">
           <AddIngredientSheet
             chosen={chosenFood}
+            initialQuery={searchStartsWith}
             onAdd={addIngredientToDraft}
             onBackToResults={() => {
               setChosenFood(undefined);

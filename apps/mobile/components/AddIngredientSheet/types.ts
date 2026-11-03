@@ -8,6 +8,8 @@ export type ChosenFood = {
 };
 
 export type AddIngredientSheetProps = {
+  /** The word the search opens with. Leave it out for an empty search. */
+  initialQuery?: string | undefined;
   /** The food whose amount step is open, if one is. Otherwise the search is. The caller owns it so the back button can step back. */
   chosen: ChosenFood | undefined;
   onChoose: (chosen: ChosenFood) => void;

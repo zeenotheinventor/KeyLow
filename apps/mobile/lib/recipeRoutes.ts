@@ -20,6 +20,13 @@ export const newRecipePath = (name?: string): string => {
 /** The editor for a saved recipe. */
 export const editRecipePath = (id: string): string => `${RECIPE_SCREENS_BASE}/${id}/edit`;
 
+/** The query parameter that opens the editor's add-ingredient search on a word, such as an imported line's food. */
+export const ADD_INGREDIENT_QUERY_PARAMETER = "addIngredient";
+
+/** The editor for a saved recipe, with its add-ingredient search open on `query`. */
+export const editRecipeAddIngredientPath = (id: string, query: string): string =>
+  `${editRecipePath(id)}?${ADD_INGREDIENT_QUERY_PARAMETER}=${encodeURIComponent(query)}`;
+
 /** The recipe view, the screen a library row opens and where the editor's Back and Save lead. */
 export const recipePath = (id: string): string => `${RECIPE_SCREENS_BASE}/${id}`;
 
