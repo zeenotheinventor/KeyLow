@@ -17,6 +17,8 @@ type ListRowBaseProps = {
   /** A leading icon, by name, in a small tile. */
   icon?: IconName | undefined;
   title: string;
+  /** `danger` draws the title in the danger colour, for a row that throws something away, such as Delete all conversations. */
+  titleTone?: "danger" | undefined;
   /**
    * Draws the macro's (or the calories') colour as an 8 point key before the title, as the Targets screen's Protein, Carbohydrate
    * and Fat rows do. It is decoration, so the row's accessible name is unchanged.
@@ -75,6 +77,7 @@ export type ListRowToPressProps = ListRowBaseProps & {
   variant?: "footer" | undefined;
   /** The row's button, so a screen can move a screen reader's focus to it. */
   ref?: Ref<View> | undefined;
+  toggle?: undefined;
   children?: undefined;
 };
 
@@ -90,7 +93,32 @@ export type ListRowWithControlProps = ListRowBaseProps & {
   trailingIcon?: undefined;
   variant?: undefined;
   ref?: undefined;
+  toggle?: undefined;
   children?: ReactNode;
 };
 
-export type ListRowProps = ListRowToPressProps | ListRowWithControlProps;
+export type ListRowToggle = {
+  isOn: boolean;
+  /** The switch's accessible name, such as "Use the assistant". */
+  label: string;
+  onValueChange: (isOn: boolean) => void;
+  /** Dims the switch and stops it responding, while the choice is being saved. */
+  disabled?: boolean | undefined;
+};
+
+/**
+ * A row with the kit's `Switch` at the end, as the Assistant settings board draws "Use the assistant". The row
+ * itself goes nowhere and has no chevron, and the switch is the one control, named by `toggle.label`, so the
+ * row is not folded into one button and a screen reader reaches the switch.
+ */
+export type ListRowWithToggleProps = ListRowBaseProps & {
+  toggle: ListRowToggle;
+  onPress?: undefined;
+  loading?: undefined;
+  trailingIcon?: undefined;
+  variant?: undefined;
+  ref?: undefined;
+  children?: undefined;
+};
+
+export type ListRowProps = ListRowToPressProps | ListRowWithControlProps | ListRowWithToggleProps;

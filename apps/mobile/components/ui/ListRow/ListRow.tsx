@@ -7,6 +7,7 @@ import { ButtonSpinner } from "../Button";
 import { useGroupedRowPosition } from "../GroupedList";
 import { Icon } from "../Icon";
 import { PressableSurface } from "../PressableSurface";
+import { Switch } from "../Switch";
 import { Text } from "../Text";
 
 import type { ListRowMacro, ListRowProps } from "./types";
@@ -23,6 +24,7 @@ const macroKeyClassName: Record<ListRowMacro, string> = {
 export function ListRow({
   icon,
   title,
+  titleTone,
   macro,
   subtitle,
   badge,
@@ -38,6 +40,7 @@ export function ListRow({
   disabled = false,
   variant,
   ref,
+  toggle,
   children,
 }: ListRowProps) {
   const isFooter = variant === "footer";
@@ -73,7 +76,11 @@ export function ListRow({
         />
       )}
       <View className={isCompact ? "flex-1" : "flex-1 gap-[2px]"}>
-        <Text numberOfLines={1} variant={isCompact ? "label-small" : "body-strong"}>
+        <Text
+          numberOfLines={1}
+          tone={titleTone ?? "primary"}
+          variant={isCompact ? "label-small" : "body-strong"}
+        >
           {title}
         </Text>
         {subtitle === undefined ? null : (
@@ -117,6 +124,21 @@ export function ListRow({
       ) : null}
     </>
   );
+
+  // The switch is the row's one control, so the row is a plain view and the switch keeps its own name.
+  if (toggle !== undefined) {
+    return (
+      <View className={rowClassName}>
+        {contents}
+        <Switch
+          disabled={toggle.disabled}
+          isOn={toggle.isOn}
+          label={toggle.label}
+          onValueChange={toggle.onValueChange}
+        />
+      </View>
+    );
+  }
 
   // `null`, `undefined` and `false` draw nothing, so a conditional control that is off leaves a plain row.
   if (Children.toArray(children).length > 0) {
