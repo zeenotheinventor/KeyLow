@@ -43,6 +43,7 @@ import { resetCameraMock } from "../support/expoCameraMock";
 import { registerAppStyles } from "../support/nativeWindStyles";
 import { fakeSession, mockSupabaseClient, resetSupabaseMock } from "../support/supabaseMock";
 import { resolvedColor } from "../support/themeColor";
+import { installVirtualClock } from "../support/virtualClock";
 
 import type { UseFoodByBarcodeOptions } from "@keylow/api-client";
 
@@ -208,6 +209,7 @@ describe("leaving the food sheet with foods on the plate", () => {
   });
 
   beforeEach(() => {
+    installVirtualClock();
     registerAppStyles(styles);
     jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(false);
     jest.spyOn(AccessibilityInfo, "announceForAccessibility").mockReturnValue();
@@ -234,6 +236,7 @@ describe("leaving the food sheet with foods on the plate", () => {
 
   afterEach(() => {
     jest.restoreAllMocks();
+    jest.useRealTimers();
   });
 
   describe("the header's Close", () => {

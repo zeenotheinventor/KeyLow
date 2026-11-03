@@ -36,6 +36,7 @@ import {
 } from "./support/sessionDetailBackend";
 import { expectTextsInOrder } from "./support/textsInOrder";
 import { trainBackend } from "./support/trainBackend";
+import { installVirtualClock } from "./support/virtualClock";
 
 import type { QueryClient } from "@tanstack/react-query";
 
@@ -144,11 +145,7 @@ async function renderDetail() {
 
 // A sheet that closes leaves the screen when its exit has run, so one still there after that has stayed open.
 async function waitForTheSheetToHaveLeft() {
-  await act(async () => {
-    await new Promise((resolve) => {
-      setTimeout(resolve, motionDuration.standard + 100);
-    });
-  });
+  await act(() => jest.advanceTimersByTimeAsync(motionDuration.standard + 100));
 }
 
 const latPulldownCard = () => within(screen.getByLabelText("Wide-Grip Lat Pulldown"));
@@ -178,6 +175,7 @@ describe("adding sets and exercises to a past session from the session detail", 
   });
 
   beforeEach(() => {
+    installVirtualClock();
     registerAppStyles(kitStyles);
     resetHistoryBackend();
     resetHistoryEditBackend();
@@ -195,6 +193,7 @@ describe("adding sets and exercises to a past session from the session detail", 
       onlineManager.setOnline(true);
     });
     queryClient.clear();
+    jest.useRealTimers();
   });
 
   describe("Add set under an exercise", () => {

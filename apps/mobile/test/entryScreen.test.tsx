@@ -26,6 +26,7 @@ import { entryBackend, entryClient, resetEntryBackend } from "./support/entryBac
 import { resetRouterMock, routerMock } from "./support/expoRouterMock";
 import { compileKitStyles } from "./support/kitStyles";
 import { registerAppStyles } from "./support/nativeWindStyles";
+import { installVirtualClock } from "./support/virtualClock";
 
 import type { FoodPortion } from "@keylow/core/schemas";
 import type { QueryClient } from "@tanstack/react-query";
@@ -147,6 +148,7 @@ describe("the entry screen", () => {
   });
 
   beforeEach(() => {
+    installVirtualClock();
     registerAppStyles(kitStyles);
     resetRouterMock();
     resetEntryBackend();
@@ -161,6 +163,7 @@ describe("the entry screen", () => {
       onlineManager.setOnline(true);
     });
     queryClient.clear();
+    jest.useRealTimers();
   });
 
   describe("a logged food", () => {
@@ -1073,9 +1076,7 @@ describe("the entry screen", () => {
           true,
         );
       });
-      await act(async () => {
-        await new Promise((resolve) => setTimeout(resolve, 50));
-      });
+      await act(() => jest.advanceTimersByTimeAsync(50));
     }
 
     beforeEach(() => {

@@ -32,6 +32,7 @@ import { resetRouterMock, routerMock } from "./support/expoRouterMock";
 import { compileKitStyles } from "./support/kitStyles";
 import { registerAppStyles } from "./support/nativeWindStyles";
 import { expectTextsInOrder } from "./support/textsInOrder";
+import { installVirtualClock } from "./support/virtualClock";
 
 import type { QueryClient } from "@tanstack/react-query";
 
@@ -122,6 +123,7 @@ describe("the diary's actions", () => {
   });
 
   beforeEach(() => {
+    installVirtualClock();
     registerAppStyles(kitStyles);
     resetRouterMock();
     resetDiaryBackend();
@@ -135,6 +137,7 @@ describe("the diary's actions", () => {
       onlineManager.setOnline(true);
     });
     queryClient.clear();
+    jest.useRealTimers();
   });
 
   describe("deleting a food", () => {
@@ -145,6 +148,8 @@ describe("the diary's actions", () => {
 
       expect(await screen.findByRole("status", { name: "Entry deleted" })).toBeOnTheScreen();
       expect(screen.getByRole("button", { name: "Undo" })).toBeOnTheScreen();
+      // React Query tells the list on a zero-delay timer, so let that tick run on the fake clock.
+      await act(() => jest.advanceTimersByTimeAsync(0));
       expect(
         screen.queryByRole("button", { name: /^Chicken breast, grilled/ }),
       ).not.toBeOnTheScreen();
@@ -165,6 +170,8 @@ describe("the diary's actions", () => {
       });
 
       expect(await screen.findByRole("status", { name: "Entry deleted" })).toBeOnTheScreen();
+      // React Query tells the list on a zero-delay timer, so let that tick run on the fake clock.
+      await act(() => jest.advanceTimersByTimeAsync(0));
       expect(screen.queryByLabelText(recipeName)).not.toBeOnTheScreen();
 
       await user.press(screen.getByRole("button", { name: "Undo" }));
@@ -402,9 +409,7 @@ describe("the diary's actions", () => {
         );
         expect(readsOfYesterday).toHaveLength(2);
       });
-      await act(async () => {
-        await new Promise((resolve) => setTimeout(resolve, 100));
-      });
+      await act(() => jest.advanceTimersByTimeAsync(100));
       expect(screen.queryByText(/^Copied/)).not.toBeOnTheScreen();
       expect(diaryBackend.writes).toEqual([]);
     });

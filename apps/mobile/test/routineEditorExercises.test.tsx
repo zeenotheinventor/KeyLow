@@ -29,6 +29,7 @@ import { pushPullLegsExerciseNames } from "./support/routineExerciseFixtures";
 import { expectTextsInOrder } from "./support/textsInOrder";
 import { resetTrainBackend, trainBackend, trainClient } from "./support/trainBackend";
 import { viewsDrawn } from "./support/viewsDrawn";
+import { installVirtualClock } from "./support/virtualClock";
 
 import type { ExerciseNames } from "../components/RoutineEditor";
 import type { RoutineDraft } from "@keylow/core/training";
@@ -147,6 +148,7 @@ describe("the exercises of a day in the routine editor", () => {
   });
 
   beforeEach(() => {
+    installVirtualClock();
     registerAppStyles(kitStyles);
     resetRouterMock();
     resetTrainBackend();
@@ -159,6 +161,7 @@ describe("the exercises of a day in the routine editor", () => {
       onlineManager.setOnline(true);
     });
     queryClient.clear();
+    jest.useRealTimers();
   });
 
   describe("an open day", () => {
