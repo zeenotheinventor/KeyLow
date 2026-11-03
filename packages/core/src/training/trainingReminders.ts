@@ -2,7 +2,12 @@ import { LOADED_HEAT_PERCENT } from "./bodyMapValues";
 import { heatPercentOf } from "./heatReadout";
 import { muscleState, parseMoment } from "./muscleState";
 import { TRAINING_PARAMS_V2 } from "./params";
-import { describeTrainingReminder, TRAINING_REMINDER_VARIANTS } from "../copy/trainingReminders";
+import {
+  describeTrainingReminder,
+  NAMED_TRAIN_REMINDER_VARIANTS,
+  TRAIN_REMINDER_NAMES_ROUTINE_DAY,
+  TRAINING_REMINDER_VARIANTS,
+} from "../copy/trainingReminders";
 import { addCalendarDays, dayNumber, daysSinceMonday } from "../dates/calendarDay";
 import { parseClockTime } from "../dates/clockTime";
 import { instantAtLocalTime } from "../dates/instantAtLocalTime";
@@ -41,10 +46,13 @@ export const DEFAULT_TRAINING_REMINDER_SETTINGS: TrainingReminderSettings = {
 
 /**
  * A routine day as the reminders read it. A `PlanRoutine` day fits. A null weekday means any day, which
- * has no date to remind on, so it is never reminded.
+ * has no date to remind on, so it is never reminded. The `name` is the routine day's own, and only
+ * "Time to train" says it, behind `TRAIN_REMINDER_NAMES_ROUTINE_DAY`. It is read to build the body and is
+ * never stored with the plan (ADR 0005, health data).
  */
 export type TrainingReminderRoutineDay = Readonly<{
   weekday: number | null;
+  name?: string;
   exercises: readonly Readonly<{
     muscles: readonly Pick<ExerciseMuscleEntry, "muscle_id" | "role">[];
   }>[];
@@ -74,6 +82,11 @@ export type TrainingReminderInput = Readonly<{
   weeklyGain: boolean;
   /** The id of the variant last delivered for each type, or null when none has been. */
   lastVariantIds: Readonly<Record<TrainingReminderType, string | null>>;
+  /**
+   * Whether "Time to train" names the routine day. Left out, `TRAIN_REMINDER_NAMES_ROUTINE_DAY`. The app
+   * leaves it out, so the one constant is the switch. A test sets it to see both sides of the switch.
+   */
+  namesRoutineDay?: boolean;
 }>;
 
 export type PlannedTrainingReminder = Readonly<{
@@ -99,7 +112,13 @@ export const EASE_REMINDER_TIME = { hour: 8, minute: 0 };
 export const PROGRESS_REMINDER_TIME = { hour: 19, minute: 0 };
 const SUNDAY = 6;
 
-type Candidate = { type: TrainingReminderType; date: string; fireAt: Date };
+type Candidate = {
+  type: TrainingReminderType;
+  date: string;
+  fireAt: Date;
+  /** The routine day's name, set for "Time to train" only. */
+  dayName?: string | undefined;
+};
 
 /**
  * Whether an exercise of the week of the latest trained week went up: a heavier load (no load counts as
@@ -125,13 +144,29 @@ const primaryMusclesOf = (day: TrainingReminderRoutineDay): MuscleId[] =>
     muscles.filter(({ role }) => role === "primary").map(({ muscle_id }) => muscle_id),
   );
 
+/**
+ * The name to say in "Time to train": the routine day's, trimmed. Undefined when the naming is off or the
+ * name is missing or blank, which sends the reminder to the generic variants.
+ */
+const spokenDayName = (
+  day: TrainingReminderRoutineDay,
+  namesRoutineDay: boolean,
+): string | undefined => {
+  const name = day.name?.trim();
+  return namesRoutineDay && name !== undefined && name !== "" ? name : undefined;
+};
+
 /** The id of the variant for a fire date: the date's own, moved on by one when it is the one used just before. */
 const variantFor = (
   type: TrainingReminderType,
   date: string,
   previousId: string | null,
+  dayName: string | undefined,
 ): string => {
-  const variants = TRAINING_REMINDER_VARIANTS[type];
+  const variants =
+    type === "train" && dayName !== undefined
+      ? NAMED_TRAIN_REMINDER_VARIANTS
+      : TRAINING_REMINDER_VARIANTS[type];
   const byDate = dayNumber(date) % variants.length;
   const byDateVariant = variants[byDate];
   const chosen =
@@ -156,7 +191,9 @@ const variantFor = (
  *   even when 08:00 has passed and it cannot fire any more. Only today and tomorrow are judged, on purpose:
  *   beyond tomorrow the heat cannot stay that high, so a later day only ever gets "Time to train".
  * - Each variant is picked by the fire date, and never the one delivered last or the one before it in the
- *   plan. A variant is named by its id, which the app stores once it is delivered.
+ *   plan. A variant is named by its id, which the app stores once it is delivered. "Time to train" on a
+ *   day with a name that is not blank picks from the named variants and says the name, while
+ *   `TRAIN_REMINDER_NAMES_ROUTINE_DAY` is on. Otherwise it picks from the generic ones.
  *
  * Throws a `RangeError` naming the rule when `now` is not an ISO timestamp with a zone, `timeZone` is not
  * an IANA name or `trainTime` is not HH:MM.
@@ -171,6 +208,7 @@ export const planTrainingReminders = ({
   params = TRAINING_PARAMS_V2,
   weeklyGain,
   lastVariantIds,
+  namesRoutineDay = TRAIN_REMINDER_NAMES_ROUTINE_DAY,
 }: TrainingReminderInput): PlannedTrainingReminder[] => {
   const nowMilliseconds = parseMoment(now);
   if (!isValidTimeZone(timeZone)) {
@@ -206,9 +244,14 @@ export const planTrainingReminders = ({
   );
 
   const candidates: Candidate[] = [];
-  const pushIfAhead = (type: TrainingReminderType, date: string, fireAt: Date): void => {
+  const pushIfAhead = (
+    type: TrainingReminderType,
+    date: string,
+    fireAt: Date,
+    dayName?: string,
+  ): void => {
     if (fireAt.getTime() > nowMilliseconds) {
-      candidates.push({ type, date, fireAt });
+      candidates.push({ type, date, fireAt, dayName });
     }
   };
 
@@ -222,7 +265,7 @@ export const planTrainingReminders = ({
       if (eased) {
         pushIfAhead("ease", date, fireTime(date, EASE_REMINDER_TIME));
       } else if (settings.trainEnabled) {
-        pushIfAhead("train", date, fireTime(date, trainTime));
+        pushIfAhead("train", date, fireTime(date, trainTime), spokenDayName(day, namesRoutineDay));
       }
     }
     if (settings.progressEnabled && weeklyGain && weekday === SUNDAY) {
@@ -233,10 +276,10 @@ export const planTrainingReminders = ({
   const lastUsed = { ...lastVariantIds };
   return candidates
     .sort((first, second) => first.fireAt.getTime() - second.fireAt.getTime())
-    .map(({ type, date, fireAt }) => {
-      const variantId = variantFor(type, date, lastUsed[type]);
+    .map(({ type, date, fireAt, dayName }) => {
+      const variantId = variantFor(type, date, lastUsed[type], dayName);
       lastUsed[type] = variantId;
-      const { title, body } = describeTrainingReminder(type, variantId);
+      const { title, body } = describeTrainingReminder(type, variantId, dayName);
       return { type, fireAt: fireAt.toISOString(), variantId, title, body };
     });
 };

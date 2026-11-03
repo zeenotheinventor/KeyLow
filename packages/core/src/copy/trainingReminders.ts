@@ -1,6 +1,9 @@
 /*
- * The words of the three training reminders (KEY-509). They show on the lock screen, so they are generic:
- * no muscle, exercise or day is named (the health data rule), and the detail waits inside the app.
+ * The words of the three training reminders (KEY-509). They show on the lock screen, so they name no
+ * muscle, exercise or weekday (the health data rule), and the detail waits inside the app. One exception:
+ * the routine day's own name, which the person chose, may appear in "Time to train" only, behind
+ * `TRAIN_REMINDER_NAMES_ROUTINE_DAY` (Zee, 2026-11-03, pending confirmation). "Take it easy" and "See your
+ * progress" stay generic.
  */
 
 export const TRAINING_REMINDER_TYPES = ["train", "progress", "ease"] as const;
@@ -62,16 +65,57 @@ export const TRAINING_REMINDER_VARIANTS: Readonly<
 };
 
 /**
- * The words of one variant of a reminder, by its id. Throws a `RangeError` naming the rule when the id is
- * not one of the variants of its type.
+ * The one switch for naming the routine day in "Time to train". Off, the planner returns exactly the
+ * generic copy, with the generic ids. A working decision awaiting Zee's confirmation (2026-11-03), so
+ * flipping it must be the only change needed.
+ */
+export const TRAIN_REMINDER_NAMES_ROUTINE_DAY = true;
+
+/** Where the routine day's name goes in a named body. Each named body has exactly one. */
+export const TRAINING_REMINDER_DAY_SLOT = "{day}";
+
+/**
+ * The bodies of "Time to train" that name the routine day, each a template with one day slot. They have
+ * ids of their own, so turning the naming off and on again never remaps an id of the generic set. Never
+ * reuse or change the meaning of an id: add a new body with a new id instead.
+ */
+export const NAMED_TRAIN_REMINDER_VARIANTS: readonly TrainingReminderVariant[] = [
+  { id: "train-named-1", body: "{day} is ready when you are. Come and enjoy it." },
+  { id: "train-named-2", body: "A good day for {day}. Take it at your own pace." },
+  { id: "train-named-3", body: "{day} is waiting for you. Any effort counts." },
+  { id: "train-named-4", body: "A little time for yourself, and {day} is all set." },
+  { id: "train-named-5", body: "Whenever you are ready, {day} is there for you." },
+  { id: "train-named-6", body: "Show up as you are. A steady {day} is a good one." },
+  { id: "train-named-7", body: "{day} is ready for today. Start whenever suits you." },
+  { id: "train-named-8", body: "A little progress today is still progress. Go for {day}." },
+];
+
+const isNamed = (dayName: string | undefined): dayName is string =>
+  dayName !== undefined && dayName.trim() !== "";
+
+/**
+ * The words of one variant of a reminder, by its id. A named variant needs the routine day's name, and a
+ * generic one ignores it. Throws a `RangeError` naming the rule when the id is not one of the variants of
+ * its type, or is a named one and the name is blank or missing.
  */
 export const describeTrainingReminder = (
   type: TrainingReminderType,
   variantId: string,
+  dayName?: string,
 ): TrainingReminderCopy => {
-  const variant = TRAINING_REMINDER_VARIANTS[type].find(({ id }) => id === variantId);
-  if (variant === undefined) {
+  const title = TRAINING_REMINDER_TITLES[type];
+  const generic = TRAINING_REMINDER_VARIANTS[type].find(({ id }) => id === variantId);
+  if (generic !== undefined) {
+    return { title, body: generic.body };
+  }
+  const named =
+    type === "train" ? NAMED_TRAIN_REMINDER_VARIANTS.find(({ id }) => id === variantId) : undefined;
+  if (named === undefined) {
     throw new RangeError("A training reminder variant id must be one of the variants of its type");
   }
-  return { title: TRAINING_REMINDER_TITLES[type], body: variant.body };
+  if (!isNamed(dayName)) {
+    throw new RangeError("A named training reminder variant needs the name of the routine day");
+  }
+  // Split and join, not replace: a name with "$&" in it must stay as typed.
+  return { title, body: named.body.split(TRAINING_REMINDER_DAY_SLOT).join(dayName.trim()) };
 };

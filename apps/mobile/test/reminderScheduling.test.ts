@@ -1,3 +1,5 @@
+import { TRAIN_REMINDER_NAMES_ROUTINE_DAY, TRAINING_REMINDER_TITLES } from "@keylow/core/copy";
+
 import {
   readScheduledReminders,
   scheduleReminderPlan,
@@ -355,17 +357,28 @@ describe("scheduling the reminders", () => {
   });
 
   describe("the health data rule", () => {
-    it("should put no name, load or digit in any scheduled content", async () => {
+    it("should put no exercise, load or digit in any scheduled content, and the day's name in Time to train only", async () => {
       await scheduleReminderPlan(input());
 
       expect(notificationsState.scheduled.size).toBeGreaterThan(0);
       for (const { content } of notificationsState.scheduled.values()) {
         const words = `${content.title ?? ""} ${content.body ?? ""}`;
         expect(words).not.toContain(RECOGNISABLE_EXERCISE);
-        expect(words).not.toContain(RECOGNISABLE_DAY);
-        expect(words).not.toMatch(/\d/);
+        expect(words.includes(RECOGNISABLE_DAY)).toBe(
+          content.title === TRAINING_REMINDER_TITLES.train
+            ? TRAIN_REMINDER_NAMES_ROUTINE_DAY
+            : false,
+        );
+        const wordsWithoutDayName = words.replace(RECOGNISABLE_DAY, "");
+        expect(wordsWithoutDayName).not.toMatch(/\d/);
         expect(words.toLowerCase()).not.toContain("chest");
       }
+    });
+
+    it("should keep the day's name out of the stored plan", async () => {
+      await scheduleReminderPlan(input());
+
+      expect([...mockStorageItems.values()].join(" ")).not.toContain(RECOGNISABLE_DAY);
     });
 
     it("should throw a fixed message, with no name or number in it, when the system refuses", async () => {
