@@ -20,14 +20,14 @@ export type CanvasSet = {
 
 export const m2CanvasSet: CanvasSet = { sourceFolder: "source", linksTokens: true };
 
-// The widget boards use raw hex and no token stylesheet. Board D (States.dc.html) is not approved
-// yet, so it is left out here and added once Zee approves it.
+// The widget boards use raw hex and no token stylesheet.
 export const widgetsCanvasSet: CanvasSet = {
   sourceFolder: "source-widgets",
   boardNames: {
     "Main.dc.html": { slug: "widgets", state: "dashboard" },
     "QuickLog.dc.html": { slug: "widgets", state: "quick-log" },
     "LockScreen.dc.html": { slug: "widgets", state: "lock-screen" },
+    "States.dc.html": { slug: "widgets", state: "states" },
   },
   layoutNote: "One board with its frames side by side, each in the theme it shows.",
   linksTokens: false,

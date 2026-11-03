@@ -42,7 +42,7 @@ function listFilesBelow(directory: string): string[] {
 describe("the committed design export", () => {
   it("should have a PNG, an HTML page and a README for every board in canvas.json and nothing else", () => {
     expect(checkBoards(designDirectory, canvasSets)).toEqual({
-      boardCount: 118,
+      boardCount: 119,
       screenCount: 10,
       missing: [],
       extra: [],
@@ -76,11 +76,12 @@ describe("the committed design export", () => {
     expect(readme).toContain(`[${board.state}.html](${board.state}.html)`);
   });
 
-  it("should export the widget boards A, B and C and not board D", () => {
+  it("should export the widget boards A, B, C and D", () => {
     expect(widgetBoards.map((board) => `${board.slug}/${board.state}`)).toEqual([
       "widgets/dashboard",
       "widgets/quick-log",
       "widgets/lock-screen",
+      "widgets/states",
     ]);
   });
 
@@ -124,6 +125,15 @@ describe("the committed design export", () => {
       "Inline",
       "Live activity",
       "Dynamic Island",
+      "Signed out",
+      "No data yet",
+      "Offline or out of date",
+      "No calorie target",
+      "Rest day or no programme",
+      "No recent foods",
+      "Logged with Undo",
+      "Couldn't log",
+      "Session changed",
     ]) {
       expect(readme).toContain(frame);
     }
