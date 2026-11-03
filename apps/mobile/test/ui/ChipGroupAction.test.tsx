@@ -21,7 +21,7 @@ const replyOptions = [
   { value: "other", label: "Another reply" },
 ] as const;
 
-function renderReplies(onChipPress: (value: Reply) => void) {
+function renderReplies(onChipPress: (value: Reply) => void, disabled?: boolean) {
   return render(
     <ThemeProvider fixedPreference="dark">
       <ChipGroup
@@ -29,6 +29,7 @@ function renderReplies(onChipPress: (value: Reply) => void) {
         layout="wrap"
         options={replyOptions}
         selection="action"
+        disabled={disabled}
         onChipPress={onChipPress}
       />
     </ThemeProvider>,
@@ -72,5 +73,28 @@ describe("ChipGroup as quick replies, with selection action", () => {
 
     expect(onChipPress).toHaveBeenCalledTimes(2);
     expect(onChipPress).toHaveBeenCalledWith("ask-again");
+  });
+
+  it("should stop responding to presses and say so to a screen reader when disabled", async () => {
+    const user = userEvent.setup();
+    const onChipPress = jest.fn();
+    await renderReplies(onChipPress, true);
+
+    await user.press(screen.getByRole("button", { name: "Ask again" }));
+
+    expect(onChipPress).not.toHaveBeenCalled();
+    for (const button of screen.getAllByRole("button")) {
+      expect(button).toBeDisabled();
+    }
+  });
+
+  it("should respond to presses as before when disabled is left off", async () => {
+    const user = userEvent.setup();
+    const onChipPress = jest.fn();
+    await renderReplies(onChipPress, false);
+
+    await user.press(screen.getByRole("button", { name: "Ask again" }));
+
+    expect(onChipPress).toHaveBeenCalledTimes(1);
   });
 });

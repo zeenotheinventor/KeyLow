@@ -8,6 +8,7 @@ import {
 } from "@keylow/api-client";
 import {
   buildAssistantSheetThread,
+  canAnswerAssistantQuestion,
   canSendAssistantMessage,
   describeAssistantComposer,
   isAssistantStatusKnown,
@@ -95,7 +96,13 @@ export function AssistantSheet({ open, onClose, localDate, describeAt }: Assista
     isStreaming,
     accessNotice: access.kind === "limited" ? access.notice : null,
   });
-  const composer = describeAssistantComposer({ access, isOnline, timeZone, describeAt });
+  const composer = describeAssistantComposer({
+    access,
+    isOnline,
+    timeZone,
+    describeAt,
+    fieldHint: thread.fieldHint,
+  });
 
   // The turn on screen and what it left, for the read on open below, which finishes after the render that
   // started it.
@@ -147,15 +154,14 @@ export function AssistantSheet({ open, onClose, localDate, describeAt }: Assista
     setSent(null);
   }
 
-  const canSendWords = (words: string) =>
-    canSendAssistantMessage({
-      text: words,
-      isStreaming,
-      isOnline,
-      isThreadKnown,
-      isThreadFetching: conversation.isFetching,
-      access,
-    });
+  const sendState = {
+    isStreaming,
+    isOnline,
+    isThreadKnown,
+    isThreadFetching: conversation.isFetching,
+    access,
+  };
+  const canSendWords = (words: string) => canSendAssistantMessage({ text: words, ...sendState });
 
   // The streaming message is not a live region (Android would read all of it again for each chunk, and iOS
   // ignores a live region), so a screen reader hears the finished answer once, on both, when it is complete.
@@ -268,6 +274,8 @@ export function AssistantSheet({ open, onClose, localDate, describeAt }: Assista
         onAskAgain={sendLastMessageAgain}
         onTryAgain={sendLastMessageAgain}
         onOpenCardLink={openCardLink}
+        canAnswer={canAnswerAssistantQuestion(sendState)}
+        onAnswer={sendMessage}
       />
     );
   }

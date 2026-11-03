@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { loggedCard } from "./cardFixtures";
 import {
   buildAssistantSheetThread,
+  canAnswerAssistantQuestion,
   canSendAssistantMessage,
   describeAssistantComposer,
   isAssistantStatusKnown,
@@ -24,6 +25,8 @@ const turnFailed: AssistantNotice = { code: "turn_failed" };
 const liveTurn = (overrides: Partial<AssistantSheetLiveTurn> = {}): AssistantSheetLiveTurn => ({
   text: "",
   cards: [],
+  clarify: null,
+  confirm: null,
   stopped: false,
   notice: null,
   ...overrides,
@@ -62,27 +65,9 @@ describe("buildAssistantSheetThread", () => {
       ]);
     });
 
-    it("should leave out a question, a confirmation and the consent notice, never drawing raw data", () => {
+    it("should leave out the consent notice, never drawing raw data", () => {
       const items: AssistantThreadItem[] = [
         { kind: "user", id: "u1", text: "Some chicken" },
-        {
-          kind: "clarify",
-          id: "q1",
-          question: "How much?",
-          quickReplies: ["100 g"],
-          fieldHint: null,
-          answered: false,
-        },
-        {
-          kind: "confirm",
-          id: "k1",
-          confirmationId: "00000000-0000-4000-8000-0000000000a1",
-          question: "Delete it?",
-          confirmLabel: "Delete",
-          cancelLabel: "Keep",
-          tone: "danger",
-          answered: false,
-        },
         { kind: "notice", id: "n1", notice: { code: "consent_needed" } },
       ];
 
@@ -120,7 +105,12 @@ describe("buildAssistantSheetThread", () => {
     });
 
     it("should be empty for a person with no conversation", () => {
-      expect(build()).toEqual({ entries: [], lastMessage: null, canAskAgain: false });
+      expect(build()).toEqual({
+        entries: [],
+        lastMessage: null,
+        canAskAgain: false,
+        fieldHint: null,
+      });
     });
   });
 
@@ -408,6 +398,312 @@ describe("buildAssistantSheetThread", () => {
   });
 });
 
+describe("buildAssistantSheetThread with a question", () => {
+  const CONFIRMATION_ID = "00000000-0000-4000-8000-0000000000a1";
+  const CLARIFY_QUESTION = "How much chicken and how much rice? Pick one, or say it your way.";
+  const QUICK_REPLIES = [
+    "1 chicken breast, 150 g rice",
+    "1 chicken breast, 200 g rice",
+    "2 chicken thighs, 200 g rice",
+  ];
+  const DELETE_QUESTION =
+    "Delete 3 entries at 13:00 today? Chicken and rice, Greek yoghurt and an apple.";
+
+  type ClarifyItem = Extract<AssistantThreadItem, { kind: "clarify" }>;
+  const clarifyItem = (overrides: Partial<ClarifyItem> = {}): ClarifyItem => ({
+    kind: "clarify",
+    id: "q1",
+    question: CLARIFY_QUESTION,
+    quickReplies: QUICK_REPLIES,
+    fieldHint: "Or say it your way",
+    answered: false,
+    ...overrides,
+  });
+  const confirmItem = (answered = false): AssistantThreadItem => ({
+    kind: "confirm",
+    id: "k1",
+    confirmationId: CONFIRMATION_ID,
+    question: DELETE_QUESTION,
+    confirmLabel: "Delete 3 entries",
+    cancelLabel: "Keep them",
+    tone: "danger",
+    answered,
+  });
+  const askedItems = (question: AssistantThreadItem): AssistantThreadItem[] => [
+    { kind: "user", id: "u1", text: "Some chicken and rice for lunch" },
+    question,
+  ];
+  const deleteReply: AssistantThreadItem = {
+    kind: "reply",
+    id: "r1",
+    text: DELETE_QUESTION,
+    answerMeta: null,
+    stopped: false,
+  };
+
+  describe("a stored clarifying question", () => {
+    it("should draw the question as the assistant's words, then its quick replies as sent", () => {
+      expect(build({ items: askedItems(clarifyItem()) }).entries).toEqual([
+        { kind: "you", key: "u1", text: "Some chicken and rice for lunch" },
+        {
+          kind: "assistant",
+          key: "q1:question",
+          paragraphs: [CLARIFY_QUESTION],
+          isStreaming: false,
+          isStopped: false,
+        },
+        { kind: "quickReplies", key: "q1", options: QUICK_REPLIES },
+      ]);
+    });
+
+    it("should draw only the question, with no quick replies, once a later turn exists", () => {
+      expect(
+        build({ items: askedItems(clarifyItem({ answered: true })) }).entries.map(
+          (entry) => entry.kind,
+        ),
+      ).toEqual(["you", "assistant"]);
+    });
+
+    it("should draw the question and no quick replies when it offers none", () => {
+      const items = askedItems(clarifyItem({ quickReplies: [] }));
+
+      expect(build({ items }).entries.map((entry) => entry.kind)).toEqual(["you", "assistant"]);
+    });
+
+    it("should draw the question once when the model's reply before it says the same words", () => {
+      const items: AssistantThreadItem[] = [
+        { kind: "user", id: "u1", text: "Some chicken and rice for lunch" },
+        { kind: "reply", id: "r1", text: CLARIFY_QUESTION, answerMeta: null, stopped: false },
+        clarifyItem(),
+      ];
+
+      expect(build({ items }).entries.map((entry) => entry.kind)).toEqual([
+        "you",
+        "assistant",
+        "quickReplies",
+      ]);
+    });
+  });
+
+  describe("a stored confirmation", () => {
+    it("should draw the question once, with the buttons as sent, when the reply before it asked it", () => {
+      const items = [...askedItems(deleteReply), confirmItem()];
+
+      expect(build({ items }).entries).toEqual([
+        { kind: "you", key: "u1", text: "Some chicken and rice for lunch" },
+        {
+          kind: "assistant",
+          key: "r1",
+          paragraphs: [DELETE_QUESTION],
+          isStreaming: false,
+          isStopped: false,
+        },
+        {
+          kind: "confirm",
+          key: "k1",
+          confirmLabel: "Delete 3 entries",
+          cancelLabel: "Keep them",
+          tone: "danger",
+        },
+      ]);
+    });
+
+    it("should draw the question itself when no reply before it says the same words", () => {
+      expect(
+        build({ items: askedItems(confirmItem()) }).entries.map((entry) => entry.kind),
+      ).toEqual(["you", "assistant", "confirm"]);
+    });
+
+    it("should draw only the question, with no buttons, once a later turn exists", () => {
+      expect(
+        build({ items: askedItems(confirmItem(true)) }).entries.map((entry) => entry.kind),
+      ).toEqual(["you", "assistant"]);
+    });
+
+    it("should draw only the reply that asked, with no buttons, once a later turn exists", () => {
+      const items = [...askedItems(deleteReply), confirmItem(true)];
+
+      expect(build({ items }).entries.map((entry) => entry.kind)).toEqual(["you", "assistant"]);
+    });
+
+    it("should draw the question once when the reply has words before it", () => {
+      const items: AssistantThreadItem[] = [
+        { kind: "user", id: "u1", text: "Delete everything from lunch today" },
+        {
+          kind: "reply",
+          id: "r1",
+          text: `Looking at lunch.\n\n${DELETE_QUESTION}`,
+          answerMeta: null,
+          stopped: false,
+        },
+        confirmItem(),
+      ];
+
+      expect(build({ items }).entries.map((entry) => entry.kind)).toEqual([
+        "you",
+        "assistant",
+        "confirm",
+      ]);
+    });
+
+    it("should draw the question when the reply only mentions its words in the middle", () => {
+      const items: AssistantThreadItem[] = [
+        { kind: "user", id: "u1", text: "Delete everything from lunch today" },
+        {
+          kind: "reply",
+          id: "r1",
+          text: `${DELETE_QUESTION}\n\nTake your time.`,
+          answerMeta: null,
+          stopped: false,
+        },
+        confirmItem(),
+      ];
+
+      expect(build({ items }).entries.map((entry) => entry.kind)).toEqual([
+        "you",
+        "assistant",
+        "assistant",
+        "confirm",
+      ]);
+    });
+  });
+
+  describe("a question in the turn being written", () => {
+    const sent = { text: "Some chicken and rice for lunch", afterItemId: null };
+
+    it("should draw a live clarifying question with its quick replies, not yet answered", () => {
+      const thread = build({
+        sent,
+        live: liveTurn({
+          clarify: {
+            question: CLARIFY_QUESTION,
+            quickReplies: QUICK_REPLIES,
+            fieldHint: "Or say it your way",
+          },
+        }),
+      });
+
+      expect(thread.entries).toEqual([
+        { kind: "you", key: "sent:you", text: "Some chicken and rice for lunch" },
+        {
+          kind: "assistant",
+          key: "sent:clarify:question",
+          paragraphs: [CLARIFY_QUESTION],
+          isStreaming: false,
+          isStopped: false,
+        },
+        { kind: "quickReplies", key: "sent:clarify", options: QUICK_REPLIES },
+      ]);
+    });
+
+    it("should draw a live confirmation's question once when the reply has words before it", () => {
+      const thread = build({
+        sent,
+        live: liveTurn({
+          text: `Looking at lunch.\n\n${DELETE_QUESTION}`,
+          confirm: {
+            question: DELETE_QUESTION,
+            confirmLabel: "Delete 3 entries",
+            cancelLabel: "Keep them",
+            tone: "danger",
+          },
+        }),
+      });
+
+      expect(thread.entries.map((entry) => entry.kind)).toEqual(["you", "assistant", "confirm"]);
+    });
+
+    it("should draw a live confirmation's question once, from the reply that asked it", () => {
+      const thread = build({
+        sent,
+        live: liveTurn({
+          text: DELETE_QUESTION,
+          confirm: {
+            question: DELETE_QUESTION,
+            confirmLabel: "Delete 3 entries",
+            cancelLabel: "Keep them",
+            tone: "danger",
+          },
+        }),
+      });
+
+      expect(thread.entries.map((entry) => entry.kind)).toEqual(["you", "assistant", "confirm"]);
+      expect(thread.entries[2]).toEqual({
+        kind: "confirm",
+        key: "sent:confirm",
+        confirmLabel: "Delete 3 entries",
+        cancelLabel: "Keep them",
+        tone: "danger",
+      });
+    });
+  });
+
+  describe("the message that answers a question", () => {
+    it("should draw the stored question without its quick replies while the next turn is drawn", () => {
+      const items = askedItems(clarifyItem());
+      const thread = build({
+        items,
+        sent: { text: "1 chicken breast, 200 g rice", afterItemId: "q1" },
+        live: liveTurn(),
+        isStreaming: true,
+      });
+
+      expect(thread.entries.some((entry) => entry.kind === "quickReplies")).toBe(false);
+      expect(thread.entries.at(-1)).toMatchObject({ kind: "assistant", isStreaming: true });
+    });
+
+    it("should draw the stored confirmation without its buttons while the next turn is drawn", () => {
+      const thread = build({
+        items: askedItems(confirmItem()),
+        sent: { text: "Keep them", afterItemId: "k1" },
+        live: liveTurn(),
+        isStreaming: true,
+      });
+
+      expect(thread.entries.some((entry) => entry.kind === "confirm")).toBe(false);
+    });
+  });
+
+  describe("the field hint", () => {
+    it("should be the question's while it waits for an answer", () => {
+      expect(build({ items: askedItems(clarifyItem()) }).fieldHint).toBe("Or say it your way");
+    });
+
+    it("should be none once it is answered", () => {
+      expect(build({ items: askedItems(clarifyItem({ answered: true })) }).fieldHint).toBeNull();
+    });
+
+    it("should be none for a confirmation, which has no field hint", () => {
+      expect(build({ items: askedItems(confirmItem()) }).fieldHint).toBeNull();
+    });
+
+    it("should be none for a question with no field hint", () => {
+      const items = askedItems(clarifyItem({ fieldHint: null }));
+
+      expect(build({ items }).fieldHint).toBeNull();
+    });
+
+    it("should be the live question's", () => {
+      const thread = build({
+        sent: { text: "Some chicken", afterItemId: null },
+        live: liveTurn({
+          clarify: {
+            question: CLARIFY_QUESTION,
+            quickReplies: [],
+            fieldHint: "Or say it your way",
+          },
+        }),
+      });
+
+      expect(thread.fieldHint).toBe("Or say it your way");
+    });
+
+    it("should be none for a conversation with no question", () => {
+      expect(build({ items: storedItems }).fieldHint).toBeNull();
+    });
+  });
+});
+
 describe("buildAssistantSheetThread with the notice that limits the assistant now", () => {
   const plus = { code: "plus" } as const;
   const dayLimit = { code: "day_limit", resetsAt: "2026-10-26T00:00:00Z" } as const;
@@ -512,6 +808,30 @@ describe("canSendAssistantMessage", () => {
   });
 });
 
+describe("canAnswerAssistantQuestion", () => {
+  const ready = {
+    isStreaming: false,
+    isOnline: true,
+    isThreadKnown: true,
+    isThreadFetching: false,
+    access: { kind: "open" } satisfies AssistantSheetAccess,
+  };
+
+  it("should allow an answer while online, not streaming and with the conversation read", () => {
+    expect(canAnswerAssistantQuestion(ready)).toBe(true);
+  });
+
+  it.each([
+    { name: "an answer arriving", change: { isStreaming: true } },
+    { name: "being offline", change: { isOnline: false } },
+    { name: "the conversation not being read yet", change: { isThreadKnown: false } },
+    { name: "the conversation being read again", change: { isThreadFetching: true } },
+    { name: "the consent card", change: { access: { kind: "consent" } } },
+  ] as const)("should not allow an answer under $name", ({ change }) => {
+    expect(canAnswerAssistantQuestion({ ...ready, ...change })).toBe(false);
+  });
+});
+
 describe("resolveAssistantSheetAccess", () => {
   const resolve = (input: Partial<Parameters<typeof resolveAssistantSheetAccess>[0]> = {}) =>
     resolveAssistantSheetAccess({
@@ -608,6 +928,28 @@ describe("describeAssistantComposer", () => {
       isFieldDisabled: true,
       placeholder: words,
     });
+  });
+
+  it("should say the field hint of a question waiting for an answer, in place of the sheet's words", () => {
+    expect(
+      describeAssistantComposer({
+        access: { kind: "open" },
+        isOnline: true,
+        timeZone: "Europe/London",
+        fieldHint: "Or say it your way",
+      }),
+    ).toEqual({ isShown: true, isFieldDisabled: false, placeholder: "Or say it your way" });
+  });
+
+  it("should keep the offline words over a field hint while offline", () => {
+    expect(
+      describeAssistantComposer({
+        access: { kind: "open" },
+        isOnline: false,
+        timeZone: "Europe/London",
+        fieldHint: "Or say it your way",
+      }),
+    ).toMatchObject({ placeholder: "Needs a connection" });
   });
 
   it.each([{ kind: "consent" }, { kind: "checking" }] as const)(

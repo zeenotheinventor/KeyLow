@@ -2,6 +2,7 @@ import { ASSISTANT_SHEET, ASSISTANT_STOPPED, describeAssistantNotice } from "@ke
 
 import { AssistantNotice, ChatMessage, ChipGroup } from "../../ui";
 import { AssistantCardEntry } from "../AssistantCardEntry";
+import { ConfirmButtons } from "../ConfirmButtons";
 
 import type { AssistantThreadProps } from "./types";
 import type { AssistantNoticeTone, IconName } from "../../ui";
@@ -23,7 +24,8 @@ const askAgainOptions = [{ value: "ask-again", label: ASSISTANT_STOPPED.askAgain
 
 /**
  * The messages and action cards of the conversation, oldest first, with the quick reply under an answer
- * that was cut short.
+ * that was cut short, the quick replies under a clarifying question, and the two buttons under a
+ * confirmation.
  * Every word comes from the thread the screen was given or from core's copy, so nothing here words a
  * message, and nothing in it decides what to show.
  */
@@ -33,6 +35,8 @@ export function AssistantThread({
   onTryAgain,
   onAskAgain,
   onOpenCardLink,
+  canAnswer,
+  onAnswer,
 }: AssistantThreadProps) {
   function renderEntry(entry: AssistantSheetEntry) {
     switch (entry.kind) {
@@ -56,6 +60,29 @@ export function AssistantThread({
             role="assistant"
             speakerLabel={ASSISTANT_SHEET.speakerAssistant}
             stoppedLabel={entry.isStopped ? ASSISTANT_STOPPED.label : undefined}
+          />
+        );
+      case "quickReplies":
+        return (
+          <ChipGroup
+            disabled={!canAnswer}
+            key={entry.key}
+            label={ASSISTANT_SHEET.quickRepliesLabel}
+            layout="wrap"
+            options={entry.options.map((reply) => ({ value: reply, label: reply }))}
+            selection="action"
+            onChipPress={onAnswer}
+          />
+        );
+      case "confirm":
+        return (
+          <ConfirmButtons
+            cancelLabel={entry.cancelLabel}
+            confirmLabel={entry.confirmLabel}
+            isDisabled={!canAnswer}
+            key={entry.key}
+            tone={entry.tone}
+            onAnswer={onAnswer}
           />
         );
       case "notice": {
