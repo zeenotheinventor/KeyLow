@@ -16,7 +16,7 @@ Out of scope for M8: photo logging, voice input, push notifications or proactive
 
 ### Host and client (Q1)
 
-The `assistant` Edge Function is the MCP host. It holds the Anthropic key. On each turn it connects to the `mcp` Edge Function as an MCP client (the MCP TypeScript SDK, Streamable HTTP, inside Supabase) with the user's JWT in the `Authorization` header and the turn id in the URL. It lists the tools, hands them to the Messages API as ordinary client tools (`strict: true`, in a fixed order so the prompt cache holds), runs every `tool_use` through the client's `callTool`, feeds the results back, and loops until the model ends its turn.
+The `assistant` Edge Function is the MCP host. It holds the Anthropic key. On each turn it connects to the `mcp` Edge Function as an MCP client (the MCP TypeScript SDK, Streamable HTTP, inside Supabase) with the user's JWT in the `Authorization` header and the turn id in the URL. It lists the tools, hands them to the Messages API as ordinary client tools (`strict: true` unless a tool opts out to stay inside the API's caps, in a fixed order so the prompt cache holds), runs every `tool_use` through the client's `callTool`, feeds the results back, and loops until the model ends its turn.
 
 - The user's JWT never leaves Supabase. Nothing reaches Anthropic except the model request itself.
 - There is no `mcp_servers`, no `mcp_toolset` and no `mcp-client-2025-11-20` beta anywhere. The Messages API MCP connector is not used.
@@ -102,7 +102,7 @@ These come from the health-data rules in `AGENTS.md`.
 | Coaching, later                | Opus 5.5 (`claude-opus-5-5`)   | After M6, not part of M8's build                       |
 
 - Never send `temperature`, `top_p` or `top_k`. On API version `2026-10-21` any value is a 400 on every model.
-- `tool_choice` is always `auto`, with the rules in the system prompt and `strict: true` on every tool. A forced tool choice is a 400 on Opus 5.5.
+- `tool_choice` is always `auto`, with the rules in the system prompt and `strict: true` on every tool, except a tool that opts out to stay inside the API's caps on strict tools (KEY-688: strict by default, and the executor validates every input either way). A forced tool choice is a 400 on Opus 5.5.
 - Haiku 5.5 takes adaptive thinking with `output_config.effort`. It has no `budget_tokens` and no prefill. Opus 5.5 cannot have thinking disabled, so effort is its control.
 - Refusals: on `stop_reason: "refusal"` the turn loop runs no tool from that response and ends the turn with the turn status `refused` and the `turn_failed` notice (an error ending is `failed`, a refusal stop is `refused`, and both send that notice). Haiku 5.5 has no server-side `fallbacks` (a `fallbacks` list is a 400), so M8 handles the refusal itself. `fallbacks` belongs to the coaching wave on Opus 5.5.
 - Streamed client tools get eager input streaming, which moves validation to the client. Every tool input is validated before it is sent to the server, an invalid input goes back as an `is_error` tool result, and a `tool_use` under `stop_reason: "max_tokens"` is never run.

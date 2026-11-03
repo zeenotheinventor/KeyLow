@@ -2,6 +2,7 @@
 // bundle behind it is written by `bundle-core-for-deno` and typed by the @ts-self-types pragma in
 // it, so a missing or stale bundle fails `deno check` here. Export what a function needs.
 export type {
+  AssistantCard,
   AssistantCardDraft,
   AssistantNotice,
   CardEntry,
@@ -30,6 +31,9 @@ export type {
 } from "./core/index.js";
 export {
   addCalendarDays,
+  assistantCardSchema,
+  mergeAssistantCards,
+  withActionIds,
   buildDeletedCard,
   buildLoggedCard,
   buildUpdatedCard,

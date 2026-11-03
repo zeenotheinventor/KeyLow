@@ -91,3 +91,18 @@ Deno.test("endAsFailed writes its own done once, and a second call writes nothin
     { type: "done", outcome: "failed" },
   ]);
 });
+
+Deno.test(
+  "the stream's signal aborts when the reader goes away, and not when the turn closes it",
+  async () => {
+    const gone = createEventStream();
+    const finished = createEventStream();
+
+    await gone.body.cancel();
+    finished.stream.close();
+
+    assertEquals(gone.stream.closed, true);
+    assertEquals(gone.stream.signal.aborted, true);
+    assertEquals(finished.stream.signal.aborted, false);
+  },
+);

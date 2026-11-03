@@ -3,7 +3,6 @@ import { assertEquals } from "@std/assert";
 import { spyOnConsole } from "../_shared/assistant/testing.ts";
 import { error } from "../_shared/http.ts";
 import { createAssistantHandler } from "./routes.ts";
-import { runTurn as runStubTurn } from "./runTurn.ts";
 import { writeEvent } from "./sse.ts";
 import { ConversationBusyError } from "./turnStore.ts";
 
@@ -11,7 +10,7 @@ import type { UndoResult } from "../_shared/assistant/undo.ts";
 import type { ReportError } from "../_shared/report.ts";
 import type { AccessStore } from "./gates.ts";
 import type { AssistantDependencies } from "./routes.ts";
-import type { RunTurn } from "./runTurn.ts";
+import type { RunTurn, TurnContext } from "./runTurn.ts";
 import type { TurnStore } from "./turnStore.ts";
 
 const userId = "00000000-0000-4000-8000-0000000000a1";
@@ -91,7 +90,13 @@ function fake(options: FakeOptions = {}): Fake {
     options.runTurn ??
     ((context, stream) => {
       turnsRun.push(context.turnId);
-      return runStubTurn(context, stream);
+      writeEvent(stream, {
+        type: "turn",
+        turnId: context.turnId,
+        conversationId: context.conversationId,
+      });
+      writeEvent(stream, { type: "done", outcome: "complete" });
+      return Promise.resolve();
     });
   const dependencies: AssistantDependencies = {
     authenticate: (_request) =>
@@ -240,6 +245,23 @@ Deno.test(
     assertEquals(made.started, [{ userId, conversationId, text: secretText }]);
   },
 );
+
+Deno.test("the turn loop gets the id of the user message the turn stored", async () => {
+  const contexts: TurnContext[] = [];
+  const { dependencies } = fake({
+    runTurn: (context) => {
+      contexts.push(context);
+      return Promise.resolve();
+    },
+  });
+
+  await (await call(dependencies, "turn", { body: turnBody })).text();
+
+  assertEquals(
+    contexts.map((context) => context.userMessageId),
+    [userMessageId],
+  );
+});
 
 Deno.test("a turn in an existing conversation does not create another", async () => {
   const made = fake();

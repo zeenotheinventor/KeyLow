@@ -10,6 +10,8 @@ import type { ReportError } from "../_shared/report.ts";
 export type EventStream = {
   // True once the stream has ended or the reader went away. Nothing is written after that.
   readonly closed: boolean;
+  // Aborts when the reader goes away (the app closed the sheet), so a turn can stop its model call.
+  readonly signal: AbortSignal;
   // True once a `done` event was written. A turn has exactly one, so nothing is written after it.
   readonly done: boolean;
   write(text: string): void;
@@ -22,13 +24,16 @@ export function createEventStream(): { stream: EventStream; body: ReadableStream
   let controller!: ReadableStreamDefaultController<Uint8Array>;
   let closed = false;
   let done = false;
+  const readerGone = new AbortController();
   const body = new ReadableStream<Uint8Array>({
     start(started) {
       controller = started;
     },
-    // The app closed the sheet. The turn goes on to its own end, and what it writes is dropped.
+    // The app closed the sheet. The turn sees `signal` abort and stops after the step in flight, and what
+    // it writes meanwhile is dropped.
     cancel() {
       closed = true;
+      readerGone.abort();
     },
   });
   const stream: EventStream = {
@@ -38,6 +43,7 @@ export function createEventStream(): { stream: EventStream; body: ReadableStream
     get done() {
       return done;
     },
+    signal: readerGone.signal,
     write(text) {
       if (!closed) {
         controller.enqueue(encoder.encode(text));

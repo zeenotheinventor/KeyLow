@@ -18,7 +18,7 @@ import type { JsonSchemaObject } from "../_shared/assistant/tool.ts";
 import type { AssistantStoredMessage } from "../_shared/core.ts";
 import type Anthropic from "@anthropic-ai/sdk";
 
-const MODEL = "claude-haiku-5-5";
+export const MODEL = "claude-haiku-5-5";
 
 // Thinking shares this cap with the reply and the tool inputs. A reply is a few lines and a write call
 // is a few hundred tokens, so 8,000 leaves room for thinking at the effort below and bounds what one
