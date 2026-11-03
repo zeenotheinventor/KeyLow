@@ -292,4 +292,39 @@ describe("SegmentedControl", () => {
       expect(viewsDrawn({ flexGrow: 1, flexShrink: 1, flexBasis: "0%" })).toHaveLength(3);
     });
   });
+
+  // The chosen label is written in `background`, which has the same dark value as `accent-foreground` and
+  // `text-on-status`, and the track is `surface-raised`, which shares its dark value with `skeleton-base`. Only
+  // the light run tells them from a swap.
+  describe("in the light scheme", () => {
+    it("should be a 44 point track on the raised surface with a hairline border, padded 3 inside it", async () => {
+      await renderBasis({ value: "per-100-g" }, "light");
+      await screen.findByLabelText("Nutrition basis");
+
+      const [track] = viewsDrawn({
+        height: 44,
+        backgroundColor: resolvedColor("light", "surface-raised"),
+        borderColor: resolvedColor("light", "border"),
+        borderWidth: 1,
+        borderRadius: 12,
+      });
+      expect(track).toHaveStyle({ flexDirection: "row", padding: 3 });
+    });
+
+    it("should fill the chosen segment with the primary text colour and write on it in the background colour", async () => {
+      await renderBasis({ value: "per-100-g" }, "light");
+      await screen.findByLabelText("Nutrition basis");
+
+      expect(
+        viewsDrawn({
+          height: 36,
+          backgroundColor: resolvedColor("light", "text-primary"),
+          borderRadius: 9,
+        }),
+      ).toHaveLength(1);
+      expect(screen.getByText("Per 100 g")).toHaveStyle({
+        color: resolvedColor("light", "background"),
+      });
+    });
+  });
 });

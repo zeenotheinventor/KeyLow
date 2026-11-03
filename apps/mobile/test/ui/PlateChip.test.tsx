@@ -141,8 +141,24 @@ describe("PlateChip", () => {
   });
 
   // The count is set in `accent-ink`, which is the accent in dark and the primary text colour in light, so only
-  // the light run tells it from a plain `accent` count. The pill's tokens are the same in both schemes.
+  // the light run tells it from a plain `accent` count. The pill's border is `accent`, which shares its dark value
+  // with `role-primary` and others, so it needs the light run too.
   describe("in the light scheme", () => {
+    it("should draw a 36 point pill in the accent fill with an accent border", async () => {
+      await renderChip({}, "light");
+      await screen.findByText("4");
+
+      expect(
+        viewsDrawn({
+          height: 36,
+          borderRadius: 999,
+          borderWidth: 1,
+          borderColor: resolvedColor("light", "accent"),
+          backgroundColor: themes.light["accent-muted"],
+        }),
+      ).toHaveLength(1);
+    });
+
     it("should write the count in the accent ink, semibold", async () => {
       await renderChip({}, "light");
 

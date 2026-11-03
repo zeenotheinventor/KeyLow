@@ -518,4 +518,17 @@ describe("SheetHeader", () => {
       expect(screen.queryByTestId("sheet-header-trailing-slot")).not.toBeOnTheScreen();
     });
   });
+
+  // The controls are `surface-raised`, which shares its dark value with `skeleton-base`, so only the light run
+  // tells it from a swap.
+  describe("in the light scheme", () => {
+    it("should draw the sheet header's controls on the raised surface", async () => {
+      await renderHeader(searchHeader, "light");
+
+      expect(await screen.findByRole("button", { name: "Close" })).toHaveStyle({
+        backgroundColor: resolvedColor("light", "surface-raised"),
+        borderColor: resolvedColor("light", "border"),
+      });
+    });
+  });
 });

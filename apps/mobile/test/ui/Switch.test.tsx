@@ -281,4 +281,59 @@ describe("Switch", () => {
       ).toHaveLength(1);
     });
   });
+
+  // The on knob is `accent-foreground` and the on track is `accent`. Each shares its dark value with other
+  // tokens, so only the light run tells them from a swap.
+  describe("in the light scheme", () => {
+    const colorOf = (name: Parameters<typeof resolvedColor>[1]) => resolvedColor("light", name);
+
+    it("should draw an off switch as a 44 by 26 pill in the strong border colour, with a primary knob at the left", async () => {
+      await renderSwitch({ isOn: false }, "light");
+      await screen.findByRole("switch", { name: "Default portion" });
+
+      expect(
+        viewsDrawn({
+          width: 44,
+          height: 26,
+          borderRadius: 999,
+          backgroundColor: colorOf("border-strong"),
+        }),
+      ).toHaveLength(1);
+      expect(
+        viewsDrawn({
+          width: 20,
+          height: 20,
+          borderRadius: 999,
+          backgroundColor: colorOf("text-primary"),
+          position: "absolute",
+          top: 3,
+          left: 3,
+        }),
+      ).toHaveLength(1);
+    });
+
+    it("should draw an on switch as an accent pill with an accent foreground knob at the right", async () => {
+      await renderSwitch({ isOn: true }, "light");
+      await screen.findByRole("switch", { name: "Default portion" });
+
+      expect(
+        viewsDrawn({
+          width: 44,
+          height: 26,
+          borderRadius: 999,
+          backgroundColor: colorOf("accent"),
+        }),
+      ).toHaveLength(1);
+      expect(
+        viewsDrawn({
+          width: 20,
+          height: 20,
+          backgroundColor: colorOf("accent-foreground"),
+          position: "absolute",
+          top: 3,
+          left: 21,
+        }),
+      ).toHaveLength(1);
+    });
+  });
 });

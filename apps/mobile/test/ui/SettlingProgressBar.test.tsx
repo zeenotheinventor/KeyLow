@@ -185,4 +185,19 @@ describe("SettlingProgressBar", () => {
       expect(bar.children[0]).toHaveStyle({ backgroundColor: resolvedColor("dark", "warning") });
     });
   });
+
+  // The track is `surface-raised` and the fill is `warning`. Each shares its dark value with other tokens
+  // (`skeleton-base`, `warning-ink`, `gap-ahead`), so only the light run tells them from a swap.
+  describe("in the light scheme", () => {
+    it("should draw a 6 point track on the raised surface with a warning fill", async () => {
+      await renderBar({}, "light");
+      const bar = screen.getByRole("progressbar");
+
+      expect(bar).toHaveStyle({
+        height: 6,
+        backgroundColor: resolvedColor("light", "surface-raised"),
+      });
+      expect(bar.children[0]).toHaveStyle({ backgroundColor: resolvedColor("light", "warning") });
+    });
+  });
 });

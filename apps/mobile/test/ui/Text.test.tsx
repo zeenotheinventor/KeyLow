@@ -183,6 +183,25 @@ describe("Text", () => {
     });
   });
 
+  // `accent-foreground` and `on-status` share their dark value with `background`, `text-on-accent` and others,
+  // so only the light run tells them from a swap. The three text levels differ from every other token in dark.
+  describe("in the light scheme", () => {
+    it.each(tones.filter(({ tone }) => tone === "accent-foreground" || tone === "on-status"))(
+      "should colour the $tone tone from its token",
+      async ({ tone, colorName }) => {
+        await render(
+          <ThemeProvider fixedPreference="light">
+            <Text tone={tone}>Toned</Text>
+          </ThemeProvider>,
+        );
+
+        expect(await screen.findByText("Toned")).toHaveStyle({
+          color: resolvedColor("light", colorName),
+        });
+      },
+    );
+  });
+
   // The design's `--warning-ink` is the warning colour in dark and the primary text colour in light,
   // where warning is too faint for text (Q14). It is the `warning-ink` token.
   describe("the warning ink tone in the dark scheme", () => {

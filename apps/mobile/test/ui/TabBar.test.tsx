@@ -312,7 +312,8 @@ describe("TabBar", () => {
   });
 
   // The iOS label is lime in dark and the primary text colour in light (`scheme === "light"` in TabItem), so the
-  // light run is the one that tells the branch apart. Everything else asks for the same token in both schemes.
+  // light run is the one that tells the branch apart. The add button and the underline are `accent`, which shares
+  // its dark value with `focus-ring`, `role-primary` and others, so only the light run tells them from a swap.
   describe("the iOS idiom in the light scheme", () => {
     it("should draw the selected destination as accent ink, lime in dark and the primary text in light", async () => {
       await renderTabBar({ activeKey: "diary" }, "light");
@@ -322,6 +323,29 @@ describe("TabBar", () => {
         fontFamily: "Geist-SemiBold",
         fontSize: 10,
       });
+    });
+
+    it("should draw the add button as a 48 point accent circle with the accent foreground plus", async () => {
+      await renderTabBar({}, "light");
+
+      expect(await screen.findByRole("button", { name: "Find food" })).toHaveStyle({
+        width: 48,
+        height: 48,
+        borderRadius: 999,
+        backgroundColor: resolvedColor("light", "accent"),
+      });
+      expect(viewsDrawn({ width: 48, height: 48 }).length).toBeGreaterThan(0);
+    });
+
+    it("should draw the underline in the accent colour, 28 by 2, slanted 20 degrees", async () => {
+      await renderTabBar({}, "light");
+
+      expect(await screen.findByTestId("tab-bar-underline")).toHaveStyle({
+        width: 28,
+        height: 2,
+        backgroundColor: resolvedColor("light", "accent"),
+      });
+      expect(skewOf(underline())).toBe("-20deg");
     });
   });
 
@@ -595,6 +619,21 @@ describe("TabBar", () => {
       // Diary is after the plus, so it is the third slot, 200 points in, and each slot is 100 wide.
       expect(animatedTranslateXPoints(slide())).toBeCloseTo(200, 3);
       expect(viewsDrawn({ width: 100 }).length).toBeGreaterThan(0);
+    });
+  });
+
+  // The Android bar is `surface-raised`, which shares its dark value with `skeleton-base`, so only the light run
+  // tells it from a swap.
+  describe("the Android idiom in the light scheme", () => {
+    it("should be a 64 point bar on the raised surface, with no hairline and no underline", async () => {
+      await renderTabBar({ platform: "android" }, "light");
+
+      expect(await screen.findByLabelText("Main")).toHaveStyle({
+        backgroundColor: resolvedColor("light", "surface-raised"),
+      });
+      expect(screen.getByLabelText("Main")).not.toHaveStyle({ borderTopWidth: 1 });
+      expect(screen.getByRole("tab", { name: "Diary" })).toHaveStyle({ height: 64 });
+      expect(screen.queryByTestId("tab-bar-underline")).not.toBeOnTheScreen();
     });
   });
 });

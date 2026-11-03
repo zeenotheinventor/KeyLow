@@ -167,4 +167,29 @@ describe("TimeRow", () => {
       });
     });
   });
+
+  // The field is `surface-raised` and its open border is `accent`. Each shares its dark value with other tokens
+  // (`skeleton-base`, `focus-ring`), so only the light run tells them from a swap.
+  describe("in the light scheme", () => {
+    it("should be a raised field at least 44 high, with a hairline border and the medium radius", async () => {
+      await renderRow({}, "light");
+
+      expect(await screen.findByRole("button")).toHaveStyle({
+        minHeight: touchTarget,
+        backgroundColor: resolvedColor("light", "surface-raised"),
+        borderColor: resolvedColor("light", "border"),
+        borderWidth: 1,
+        borderRadius: 12,
+      });
+    });
+
+    it("should turn its border accent while the picker is open", async () => {
+      await renderRow({ open: true }, "light");
+
+      expect(await screen.findByRole("button")).toHaveStyle({
+        borderColor: resolvedColor("light", "accent"),
+        borderWidth: 1,
+      });
+    });
+  });
 });

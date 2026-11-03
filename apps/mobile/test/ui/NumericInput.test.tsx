@@ -489,4 +489,35 @@ describe("NumericInput", () => {
       expect(viewsDrawn({ opacity: 0.5 })).toHaveLength(0);
     });
   });
+
+  // The box is `surface-raised` and the focus border is `accent`, both from the shared TextField. Each shares its
+  // dark value with other tokens (`skeleton-base`, `focus-ring`), so only the light run tells them from a swap.
+  describe("in the light scheme", () => {
+    const colorOf = (name: ColorName) => resolvedColor("light", name);
+
+    it("should be the food form boards' 44 point box by default: 12 across, with 6 between the digits and the unit", async () => {
+      await renderNumericInput({}, "light");
+      await screen.findByLabelText("Energy (kcal)");
+
+      const [box] = viewsDrawn({
+        minHeight: 44,
+        backgroundColor: colorOf("surface-raised"),
+        borderColor: colorOf("border"),
+        borderRadius: 12,
+      });
+      expect(box).toHaveStyle({ paddingLeft: 12, paddingRight: 12, columnGap: 6 });
+    });
+
+    it("should turn its border to the accent while it has focus, and to danger with an error", async () => {
+      await renderNumericInput({}, "light");
+      const field = await screen.findByLabelText("Energy (kcal)");
+
+      await fireEvent(field, "focus");
+      expect(viewsDrawn({ minHeight: 44, borderColor: colorOf("accent") })).toHaveLength(1);
+
+      await screen.unmount();
+      await renderNumericInput({ error: "Energy is required" }, "light");
+      expect(viewsDrawn({ minHeight: 44, borderColor: colorOf("danger") })).toHaveLength(1);
+    });
+  });
 });

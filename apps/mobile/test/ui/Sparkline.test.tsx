@@ -151,8 +151,16 @@ describe("Sparkline", () => {
   });
 
   // The positive tone is the success ink, which is the success colour in dark and a darker green in light, so only
-  // the light run tells the line (`line`) and the dot (`dot`) of that tone from a plain `success`.
+  // the light run tells the line (`line`) and the dot (`dot`) of that tone from a plain `success`. The neutral dot
+  // is `chart-marker`, which shares its dark value with `accent` and others.
   describe("in the light scheme", () => {
+    it("should draw the neutral line in the trend token and its dot in the marker token", async () => {
+      await renderSparkline([40, 45, 50], {}, "light");
+
+      expect(drawn("Path")[0]?.props.color).toBe(themes.light["chart-trend"]);
+      expect(drawn("Circle")[0]?.props.color).toBe(themes.light["chart-marker"]);
+    });
+
     it("should draw a positive line in the success ink and a negative one in the danger colour", async () => {
       await renderSparkline([40, 45, 50], { tone: "positive" }, "light");
 

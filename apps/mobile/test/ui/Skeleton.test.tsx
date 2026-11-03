@@ -545,14 +545,32 @@ describe("Skeleton", () => {
   });
 
   // The shine gradient is built in code from the theme's palette (`themes[scheme]` in the provider), not a class,
-  // so one light case proves the light palette reaches it. The other bones and cards are classes.
+  // so one light case proves the light palette reaches it. The bone and the ring ask for `skeleton-base`, which
+  // has the same dark value as `surface-raised`, so only the light run tells them apart. The other cards are
+  // tokens no other token shares in dark.
   describe("in the light scheme", () => {
+    it("should draw every bone in the skeleton base colour", async () => {
+      await renderSkeleton({ variant: "row" }, "light");
+
+      for (const bone of bones()) {
+        expect(bone).toHaveStyle({ backgroundColor: resolvedColor("light", "skeleton-base") });
+      }
+    });
+
     it("should shine in the skeleton shine token, fading to clear at both edges", async () => {
       await renderSkeleton({ variant: "row" }, "light");
 
       const [band] = screen.getAllByTestId("skeleton-shine-band", hidden);
       expect(band).toHaveStyle({
         experimental_backgroundImage: `linear-gradient(100deg, transparent, ${themes.light["skeleton-shine"]}, transparent)`,
+      });
+    });
+
+    it("should draw the nutrition card's ring in the skeleton base colour", async () => {
+      await renderSkeleton({ variant: "nutritionCard" }, "light");
+
+      expect(screen.getByTestId("skeleton-ring", hidden)).toHaveStyle({
+        borderColor: resolvedColor("light", "skeleton-base"),
       });
     });
   });

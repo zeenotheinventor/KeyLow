@@ -184,6 +184,19 @@ describe("Toast", () => {
   // the light run is the one that tells the branches apart. The icon tones and the filled variant ask for the same
   // token in both schemes.
   describe("in the light scheme", () => {
+    // The success and warning icons share their dark values with `success-ink`, `warning-ink` and `gap-ahead`.
+    it.each([
+      { tone: "success", colorName: "success" },
+      { tone: "warning", colorName: "warning" },
+    ] as const)(
+      "should colour the icon with the $tone tone and nothing else",
+      async ({ tone, colorName }) => {
+        await renderToast({ icon: "Check", tone }, "light");
+
+        expect(drawings()[0]).toHaveProp("stroke", themes.light[colorName]);
+      },
+    );
+
     // The design draws the action in `--accent-ink`, which is lime in dark and the primary text colour in
     // light. The token is not in main yet, so the kit resolves it here until it lands.
     it("should draw the action as accent ink, lime in dark and the primary text in light", async () => {
@@ -269,6 +282,49 @@ describe("Toast", () => {
 
         expect(await screen.findByText("View")).toHaveStyle({
           color: resolvedColor("dark", "text-on-success"),
+        });
+      });
+    });
+
+    // The filled card is `success` and its words, icon and action are `text-on-success`. Each shares its dark
+    // value with other tokens (`success-ink`, `text-on-status`, `background`), so only the light run tells them
+    // from a swap.
+    describe("in the light scheme", () => {
+      const filled = {
+        variant: "success-filled",
+        icon: "Check",
+        actionLabel: "View",
+        onAction: () => undefined,
+      } as const;
+
+      it("should fill the card with the success colour", async () => {
+        await renderToast(filled, "light");
+
+        expect(await screen.findByTestId("toast-box")).toHaveStyle({
+          backgroundColor: resolvedColor("light", "success"),
+          borderColor: resolvedColor("light", "success"),
+        });
+      });
+
+      it("should draw the words in the ink for the success fill", async () => {
+        await renderToast(filled, "light");
+
+        expect(await screen.findByText("Entry deleted")).toHaveStyle({
+          color: resolvedColor("light", "text-on-success"),
+        });
+      });
+
+      it("should draw the icon in the ink for the success fill, whatever the tone", async () => {
+        await renderToast({ ...filled, tone: "danger" }, "light");
+
+        expect(drawings()[0]).toHaveProp("stroke", themes.light["text-on-success"]);
+      });
+
+      it("should draw the action in the ink for the success fill, not lime or the primary text", async () => {
+        await renderToast(filled, "light");
+
+        expect(await screen.findByText("View")).toHaveStyle({
+          color: resolvedColor("light", "text-on-success"),
         });
       });
     });

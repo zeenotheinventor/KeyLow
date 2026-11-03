@@ -198,4 +198,40 @@ describe("TextArea", () => {
       });
     });
   });
+
+  // The box is `surface-raised` and the focus border is `accent`. Each shares its dark value with other tokens
+  // (`skeleton-base`, `focus-ring`), so only the light run tells them from a swap.
+  describe("in the light scheme", () => {
+    const colorOf = (name: ColorName) => resolvedColor("light", name);
+    const boxOf = (style: Record<string, unknown>) => viewsDrawn({ minHeight: 96, ...style });
+
+    it("should be a 96 point box on the raised surface with a hairline border, rounded medium, padded 12 across and 10 down", async () => {
+      await renderTextArea({}, "light");
+      await screen.findByLabelText("Step 3 text");
+
+      const [box] = boxOf({
+        backgroundColor: colorOf("surface-raised"),
+        borderColor: colorOf("border"),
+        borderWidth: 1,
+        borderRadius: 12,
+      });
+      expect(box).toHaveStyle({
+        paddingLeft: 12,
+        paddingRight: 12,
+        paddingTop: 10,
+        paddingBottom: 10,
+      });
+    });
+
+    it("should turn its border to the accent while it has focus, and back when it loses it", async () => {
+      await renderTextArea({}, "light");
+      const field = await screen.findByLabelText("Step 3 text");
+
+      await fireEvent(field, "focus");
+      expect(boxOf({ borderColor: colorOf("accent") })).toHaveLength(1);
+
+      await fireEvent(field, "blur");
+      expect(boxOf({ borderColor: colorOf("accent") })).toHaveLength(0);
+    });
+  });
 });

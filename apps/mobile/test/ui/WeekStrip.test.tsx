@@ -358,4 +358,31 @@ describe("WeekStrip", () => {
       expect(JSON.stringify(screen.toJSON())).toContain(`"stroke":"${themes.dark.success}"`);
     });
   });
+
+  // The selected pill is `surface-raised` with `border-strong`, the dot is `accent` and the tick is `success`.
+  // Each shares its dark value with other tokens, so only the light run tells them from a swap.
+  describe("its colours in light", () => {
+    it("should fill the selected pill with surface-raised and give it the strong border", async () => {
+      await renderStrip({ scheme: "light" });
+
+      expect(screen.getByRole("button", { name: "Thursday 15 October, today" })).toHaveStyle({
+        backgroundColor: resolvedColor("light", "surface-raised"),
+        borderColor: resolvedColor("light", "border-strong"),
+      });
+    });
+
+    it("should draw the dot in the accent colour", async () => {
+      await renderStrip({ scheme: "light" });
+
+      expect(screen.getByTestId("today-dot", hidden)).toHaveStyle({
+        backgroundColor: resolvedColor("light", "accent"),
+      });
+    });
+
+    it("should draw the tick in the success colour", async () => {
+      await renderStrip({ scheme: "light" });
+
+      expect(JSON.stringify(screen.toJSON())).toContain(`"stroke":"${themes.light.success}"`);
+    });
+  });
 });

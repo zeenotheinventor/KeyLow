@@ -191,7 +191,7 @@ describe("SearchLauncher", () => {
         borderColor: resolvedColor("dark", "border"),
         borderWidth: 1,
         borderRadius: 12,
-        boxShadow: elevation["dark"].card,
+        boxShadow: elevation.dark.card,
       });
       expect(fields).toHaveLength(1);
     });
@@ -232,6 +232,25 @@ describe("SearchLauncher", () => {
       const control = await screen.findByRole("button", { name: "Scan barcode" });
       expect(control).toHaveStyle({ height: 36, width: 36 });
       expect(control).toHaveProp("hitSlop", 4);
+    });
+  });
+
+  // The field is `surface-raised`, which shares its dark value with `skeleton-base`, so only the light run
+  // tells it from a swap.
+  describe("the look in the light scheme", () => {
+    it("should be a 44 point field on the raised surface: bordered, rounded medium, with the card elevation", async () => {
+      await renderLauncher({}, "light");
+      await screen.findByText("Search for a food");
+
+      const fields = viewsDrawn({
+        height: 44,
+        backgroundColor: resolvedColor("light", "surface-raised"),
+        borderColor: resolvedColor("light", "border"),
+        borderWidth: 1,
+        borderRadius: 12,
+        boxShadow: elevation.light.card,
+      });
+      expect(fields).toHaveLength(1);
     });
   });
 });

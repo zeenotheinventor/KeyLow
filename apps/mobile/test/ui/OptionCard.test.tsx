@@ -497,4 +497,63 @@ describe("OptionCard", () => {
       expect(screen.getByText("a week")).toHaveStyle({ color: colorOf("text-muted") });
     });
   });
+
+  // The radio and its mark use `accent`, `accent-foreground` and `border-strong`. Each shares its dark value with
+  // other tokens (`focus-ring`, `role-primary`, `text-on-status`, `heat-0`), so only the light run tells them
+  // from a swap. One case per site: the card border, the second line, the empty ring, and the chosen mark with its dot.
+  describe("in the light scheme", () => {
+    const colorOf = (name: ColorName) => resolvedColor("light", name);
+
+    it("should draw an empty radio ring in the strong border colour when it is not chosen", async () => {
+      await renderCard(female, "light");
+      await screen.findByRole("radio");
+
+      const [ring] = viewsDrawn({ width: 20, height: 20, borderRadius: 999 });
+      expect(ring).toHaveStyle({
+        borderColor: colorOf("border-strong"),
+        backgroundColor: "#00000000",
+      });
+      expect(
+        viewsDrawn({ width: 8, height: 8, backgroundColor: colorOf("accent-foreground") }),
+      ).toHaveLength(0);
+    });
+
+    it("should be an accent border on the muted accent fill when it is chosen", async () => {
+      await renderCard({ ...female, checked: true }, "light");
+
+      expect(await screen.findByRole("radio")).toHaveStyle({
+        backgroundColor: themes.light["accent-muted"],
+        borderColor: colorOf("accent"),
+      });
+    });
+
+    it("should draw a second accent line inside the border, so the chosen border reads 2 points", async () => {
+      await renderCard({ ...female, checked: true }, "light");
+      await screen.findByRole("radio");
+
+      expect(
+        viewsDrawn({
+          position: "absolute",
+          inset: 0,
+          borderColor: colorOf("accent"),
+          borderWidth: 1,
+          borderRadius: 11,
+        }),
+      ).toHaveLength(1);
+    });
+
+    it("should fill the radio with the accent and put an 8 point dot of the accent foreground in it when it is chosen", async () => {
+      await renderCard({ ...female, checked: true }, "light");
+      await screen.findByRole("radio");
+
+      const [ring] = viewsDrawn({ width: 20, height: 20, borderRadius: 999 });
+      expect(ring).toHaveStyle({
+        borderColor: colorOf("accent"),
+        backgroundColor: colorOf("accent"),
+      });
+      expect(
+        viewsDrawn({ width: 8, height: 8, backgroundColor: colorOf("accent-foreground") }),
+      ).toHaveLength(1);
+    });
+  });
 });
