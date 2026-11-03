@@ -33,6 +33,7 @@ import { entryClient, resetEntryBackend } from "./support/entryBackend";
 import { resetRouterMock, routerMock } from "./support/expoRouterMock";
 import { compileKitStyles } from "./support/kitStyles";
 import { registerAppStyles } from "./support/nativeWindStyles";
+import { installVirtualClock } from "./support/virtualClock";
 
 import type { LogEntry } from "@keylow/api-client";
 import type { QueryClient } from "@tanstack/react-query";
@@ -176,6 +177,7 @@ describe("the entry screen for a logged recipe", () => {
   });
 
   beforeEach(() => {
+    installVirtualClock();
     registerAppStyles(kitStyles);
     resetRouterMock();
     resetEntryBackend();
@@ -190,6 +192,7 @@ describe("the entry screen for a logged recipe", () => {
       onlineManager.setOnline(true);
     });
     queryClient.clear();
+    jest.useRealTimers();
   });
 
   describe("one serving", () => {
@@ -462,9 +465,7 @@ describe("the entry screen for a logged recipe", () => {
 
       expect(await screen.findByRole("status", { name: "Entry deleted" })).toBeOnTheScreen();
       // A second delete would queue behind the first, so give it the time to reach the database.
-      await act(async () => {
-        await new Promise((resolve) => setTimeout(resolve, 50));
-      });
+      await act(() => jest.advanceTimersByTimeAsync(50));
       expect(updates()).toHaveLength(1);
       expect(routerMock.back).toHaveBeenCalledTimes(1);
     });

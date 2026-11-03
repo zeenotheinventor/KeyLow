@@ -29,6 +29,7 @@ import {
 import { resetRouterMock, routerMock } from "../support/expoRouterMock";
 import { compileKitStyles } from "../support/kitStyles";
 import { registerAppStyles } from "../support/nativeWindStyles";
+import { installVirtualClock } from "../support/virtualClock";
 
 import type { QueryClient } from "@tanstack/react-query";
 
@@ -51,24 +52,8 @@ jest.mock(
 
 setUpTests();
 
-// 12:40 in London on Thursday 15 October 2026. Only the clock is faked: the fake database answers in real time.
+// 12:40 in London on Thursday 15 October 2026.
 const openedAt = new Date("2026-10-15T11:40:30Z");
-const realTimers = [
-  "hrtime",
-  "nextTick",
-  "performance",
-  "queueMicrotask",
-  "requestAnimationFrame",
-  "cancelAnimationFrame",
-  "requestIdleCallback",
-  "cancelIdleCallback",
-  "setImmediate",
-  "clearImmediate",
-  "setInterval",
-  "clearInterval",
-  "setTimeout",
-  "clearTimeout",
-] as const;
 
 let queryClient: QueryClient;
 
@@ -142,7 +127,7 @@ describe("the quick add route", () => {
   });
 
   beforeEach(() => {
-    jest.useFakeTimers({ now: openedAt, doNotFake: [...realTimers] });
+    installVirtualClock({ now: openedAt });
     registerAppStyles(kitStyles);
     resetRouterMock();
     resetDiaryBackend();

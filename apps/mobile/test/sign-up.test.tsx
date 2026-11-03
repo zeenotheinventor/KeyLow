@@ -7,6 +7,7 @@ import { resetRouterMock } from "./support/expoRouterMock";
 import { googleIdToken, mockGoogleSignin, resetGoogleSignInMock } from "./support/googleSignInMock";
 import { renderAuthScreen } from "./support/renderAuthScreen";
 import { fakeSession, resetSupabaseMock, mockSupabaseClient } from "./support/supabaseMock";
+import { installVirtualClock } from "./support/virtualClock";
 import SignUpRoute from "../app/(auth)/sign-up";
 
 jest.mock("@react-native-async-storage/async-storage", () => ({
@@ -44,9 +45,14 @@ async function fillAndSubmit(email: string, password: string) {
 
 describe("sign-up screen", () => {
   beforeEach(() => {
+    installVirtualClock();
     resetRouterMock();
     resetSupabaseMock();
     resetGoogleSignInMock();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   it("should reject a malformed email and a short password without calling Supabase", async () => {

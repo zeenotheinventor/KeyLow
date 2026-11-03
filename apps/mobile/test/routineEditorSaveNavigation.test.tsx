@@ -47,6 +47,7 @@ import {
 } from "./support/routineStoreBackend";
 import { expectTextsInOrder } from "./support/textsInOrder";
 import { loggedSession, resetTrainBackend, trainBackend } from "./support/trainBackend";
+import { installVirtualClock } from "./support/virtualClock";
 
 // The routine editor inside the real navigator, from the Train home to a saved routine on the routines list:
 // the Routines link, Create routine on the no routine card and on the empty list, Edit routine on the list,
@@ -131,10 +132,7 @@ async function openTrain() {
 }
 
 // Lets the stack settle after a screen is pushed or popped.
-const settle = () =>
-  act(async () => {
-    await new Promise((resolve) => setTimeout(resolve, 500));
-  });
+const settle = () => act(() => jest.advanceTimersByTimeAsync(500));
 
 const nameField = () => screen.findByLabelText(ROUTINE_EDITOR.nameLabel);
 
@@ -159,6 +157,7 @@ describe("the routine editor from the Train home to the routines list", () => {
   });
 
   beforeEach(() => {
+    installVirtualClock();
     registerAppStyles(kitStyles);
     resetDiaryBackend();
     resetTrainBackend();
@@ -170,6 +169,7 @@ describe("the routine editor from the Train home to the routines list", () => {
   afterEach(async () => {
     await cleanup();
     queryClient.clear();
+    jest.useRealTimers();
   });
 
   it("should take a person with no routine from the Train home to a saved routine in the list", async () => {

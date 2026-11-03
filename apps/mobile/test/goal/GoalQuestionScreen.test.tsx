@@ -11,6 +11,7 @@ import { compileKitStyles } from "../support/kitStyles";
 import { expectAccessibleNamesInOrder } from "../support/namesInOrder";
 import { registerAppStyles } from "../support/nativeWindStyles";
 import { resolvedColor } from "../support/themeColor";
+import { installVirtualClock } from "../support/virtualClock";
 
 import type { GoalDraftAnswers, GoalQuestionScreenProps } from "../../components/GoalQuestionnaire";
 
@@ -65,6 +66,7 @@ describe("GoalQuestionScreen", () => {
   });
 
   beforeEach(() => {
+    installVirtualClock();
     registerAppStyles(kitStyles);
     resetRouterMock();
     backPressHandlers.length = 0;
@@ -81,6 +83,7 @@ describe("GoalQuestionScreen", () => {
   afterEach(async () => {
     await cleanup();
     jest.restoreAllMocks();
+    jest.useRealTimers();
   });
 
   describe("the goal question", () => {

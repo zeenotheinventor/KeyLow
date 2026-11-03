@@ -12,6 +12,7 @@ import { finishClient, finishWrites, resetFinishWrites } from "./support/finishB
 import { legsRoutine, goldenLegsOpen } from "./support/sessionGoldenLegs";
 import { resetTrainBackend, trainBackend } from "./support/trainBackend";
 import { resetTrainWrites, trainWrites } from "./support/trainWritesBackend";
+import { installVirtualClock } from "./support/virtualClock";
 
 jest.mock("@react-native-async-storage/async-storage", () => ({
   __esModule: true,
@@ -60,12 +61,17 @@ function RouteThatCloses() {
 
 describe("the session route", () => {
   beforeEach(() => {
+    installVirtualClock();
     resetRouterMock();
     resetTrainBackend();
     resetTrainWrites();
     resetFinishWrites();
     trainBackend.routine = legsRoutine;
     trainBackend.activeSession = goldenLegsOpen();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   it("should go back to the tab it came from when the session is hidden", async () => {

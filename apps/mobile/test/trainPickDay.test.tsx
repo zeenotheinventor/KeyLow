@@ -22,6 +22,7 @@ import {
   tuesdayPull,
 } from "./support/trainGoldenWeek";
 import { resetTrainWrites, trainWrites, trainWritesClient } from "./support/trainWritesBackend";
+import { installVirtualClock } from "./support/virtualClock";
 
 import type { QueryClient } from "@tanstack/react-query";
 
@@ -77,24 +78,6 @@ async function renderRoute() {
   );
 }
 
-// Moves the date a start reads at the press to the golden Thursday and leaves every timer running.
-const ONLY_THE_DATE = [
-  "hrtime",
-  "nextTick",
-  "performance",
-  "queueMicrotask",
-  "requestAnimationFrame",
-  "cancelAnimationFrame",
-  "requestIdleCallback",
-  "cancelIdleCallback",
-  "setImmediate",
-  "clearImmediate",
-  "setInterval",
-  "clearInterval",
-  "setTimeout",
-  "clearTimeout",
-] as const;
-
 const PULL_ROW = "Pull, 1 exercise · 3 sets, Tuesday";
 const LEGS_ROW = "Legs, 5 exercises · 16 sets, Thursday";
 
@@ -116,24 +99,24 @@ describe("Pick day on the Train tab", () => {
   });
 
   beforeEach(() => {
+    mockNow = new Date("2026-10-15T16:55:00Z");
+    installVirtualClock({ now: mockNow });
     registerAppStyles(kitStyles);
     resetRouterMock();
     resetTrainBackend();
     resetTrainWrites();
-    mockNow = new Date("2026-10-15T16:55:00Z");
-    jest.useFakeTimers({ now: mockNow, doNotFake: [...ONLY_THE_DATE] });
     trainBackend.routine = goldenRoutine;
     trainBackend.weekSessions = [mondayPush, tuesdayPull];
   });
 
   afterEach(async () => {
-    jest.useRealTimers();
     jest.restoreAllMocks();
     await cleanup();
     await act(() => {
       onlineManager.setOnline(true);
     });
     queryClient.clear();
+    jest.useRealTimers();
   });
 
   describe("on the golden Thursday before Legs", () => {

@@ -29,6 +29,7 @@ import {
   storedRoutine,
 } from "./support/routineStatusBackend";
 import { pressTwiceInTheSameMoment } from "./support/sameTickPress";
+import { installVirtualClock } from "./support/virtualClock";
 
 import type { QueryClient } from "@tanstack/react-query";
 
@@ -110,6 +111,7 @@ describe("archiving a routine from its editor", () => {
   });
 
   beforeEach(() => {
+    installVirtualClock();
     registerAppStyles(kitStyles);
     resetDiaryBackend();
     resetRoutineStatusBackend();
@@ -122,6 +124,7 @@ describe("archiving a routine from its editor", () => {
       onlineManager.setOnline(true);
     });
     queryClient.clear();
+    jest.useRealTimers();
   });
 
   describe("the More control", () => {

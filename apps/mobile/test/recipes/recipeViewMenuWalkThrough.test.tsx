@@ -21,6 +21,7 @@ import { ToastProvider } from "../../components/ui";
 import { ThemeProvider } from "../../lib/theme";
 import { createDiaryQueryClient, diaryBackend, resetDiaryBackend } from "../support/diaryBackend";
 import { recipeWritesClient } from "../support/recipeWritesBackend";
+import { installVirtualClock } from "../support/virtualClock";
 
 import type { QueryClient } from "@tanstack/react-query";
 
@@ -108,6 +109,7 @@ const tabBar = () => screen.queryByLabelText("Main");
 
 describe("the recipe view's More menu, walked", () => {
   beforeEach(() => {
+    installVirtualClock();
     resetDiaryBackend();
     queryClient = createDiaryQueryClient();
   });
@@ -118,6 +120,7 @@ describe("the recipe view's More menu, walked", () => {
       onlineManager.setOnline(true);
     });
     queryClient.clear();
+    jest.useRealTimers();
   });
 
   describe("Duplicate", () => {

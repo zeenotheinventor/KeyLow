@@ -26,6 +26,7 @@ import {
   refreshBackend,
   resetRefreshBackend,
 } from "../support/recipeRefreshBackend";
+import { installVirtualClock } from "../support/virtualClock";
 
 import type { QueryClient } from "@tanstack/react-query";
 
@@ -116,6 +117,7 @@ async function chooseSixServings(user: User) {
 
 describe("Refresh ingredients, walked from the recipe view", () => {
   beforeEach(() => {
+    installVirtualClock();
     resetDiaryBackend();
     resetRefreshBackend();
     queryClient = createDiaryQueryClient();
@@ -127,6 +129,7 @@ describe("Refresh ingredients, walked from the recipe view", () => {
       onlineManager.setOnline(true);
     });
     queryClient.clear();
+    jest.useRealTimers();
   });
 
   it("should open over the view with no tab bar, and show the change", async () => {
