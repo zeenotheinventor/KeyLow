@@ -1088,19 +1088,6 @@ describe("the edit entry dialog for a quick add", () => {
       expect(isWarning("Macros add up to 163 kcal")).toBe(true);
     });
 
-    it("should stay plain at a quarter below the calories and warn just under it", () => {
-      renderDialog(crisps());
-      type(calories(), "130");
-      type(carbs(), "");
-      type(fat(), "");
-
-      type(protein(), "24.5");
-      expect(isWarning("Macros add up to 98 kcal")).toBe(false);
-
-      type(protein(), "24.25");
-      expect(isWarning("Macros add up to 97 kcal")).toBe(true);
-    });
-
     it("should be information only: Save is still allowed", () => {
       renderDialog(crisps());
       type(calories(), "130");

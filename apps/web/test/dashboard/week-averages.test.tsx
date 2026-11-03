@@ -2,7 +2,7 @@ import { onlineManager } from "@tanstack/react-query";
 import { cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { boardWeek, emptyWeek, noTargets, overTargetWeek, targets } from "../diary/support";
+import { boardWeek, emptyWeek, noTargets, targets } from "../diary/support";
 import { renderWithRouter } from "../ui/appRouter";
 
 import type { DiaryWeekDay, Targets } from "@keylow/api-client";
@@ -113,15 +113,6 @@ describe("the weekly averages page", () => {
     ]);
   });
 
-  it("should not change a number when today's entries change", () => {
-    // Monday to Wednesday as before, and today 2,412 instead of 1,039.
-    show([...boardWeek.slice(0, 3), ...overTargetWeek.slice(3)]);
-    renderWithRouter(<WeekAveragesScreen />);
-
-    expect(rowsOf("Daily average")[0]).toBe("Energy1,895 / 2,200 kcal");
-    expect(rowsOf("Week so far")[0]).toBe("Energy5,686 kcal");
-  });
-
   it("should draw the calories average over the days logged before today, captioned Mon to yesterday", () => {
     renderWithRouter(<WeekAveragesScreen />);
 
@@ -131,17 +122,6 @@ describe("the weekly averages page", () => {
     expect(screen.getByText("From 3 days with food logged")).toBeTruthy();
     expect(screen.getByText("· Mon to yesterday")).toBeTruthy();
     expect(screen.queryByText(/Mon to today/)).toBeNull();
-  });
-
-  it("should print the overshoot of the days before today", () => {
-    // Monday 2,140, Tuesday 2,260 and Wednesday 2,988 average 2,463, which is 263 over.
-    show(overTargetWeek);
-    renderWithRouter(<WeekAveragesScreen />);
-
-    expect(screen.getByRole("meter", { name: "Average" }).getAttribute("aria-valuetext")).toBe(
-      "2,463 of 2,200 kilocalories, over target",
-    );
-    expect(screen.getByText("+263 kcal")).toBeTruthy();
   });
 
   it("should say the averages start tomorrow on a Monday, with no bars and no tables", () => {

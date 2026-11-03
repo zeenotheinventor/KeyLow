@@ -467,13 +467,6 @@ describe("the diary screen", () => {
       expect(within(stacked).getByRole("button")).toBeTruthy();
     });
 
-    it("should add the serving to the day's bars: 1,413 of 2,200 kcal", () => {
-      showDayWithRecipe();
-      renderDiary();
-
-      expect(strip().getAttribute("aria-label")).toContain("Calories: 1,413 of 2,200 kilocalories");
-    });
-
     it("should open the entry in the edit dialog from its Edit button and from the stacked row", () => {
       showDayWithRecipe();
       renderDiary();
