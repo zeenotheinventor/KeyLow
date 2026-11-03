@@ -484,6 +484,11 @@ Deno.test(
           },
         ]);
         assertEquals(result.events.at(-1), { type: "done", outcome: "confirm" });
+        // Nothing is written after the confirm but the done, and no answer meta.
+        assertEquals(
+          typesOf(result.events).filter((type) => type !== "text"),
+          ["turn", "confirm", "done"],
+        );
         assertEquals(harness.mock.bodies.length, 1);
         assertEquals(
           harness.connections[0]?.calls.map((call) => call.name),
@@ -650,6 +655,11 @@ Deno.test(
         ]);
         assertEquals(turnStatuses(harness), ["refused"]);
         assertEquals(rowsOfRole(harness, "assistant").length, 1);
+        // A refusal can cut a call off mid-input, so the call is not stored.
+        assertEquals(
+          blocksOf(rowsOfRole(harness, "assistant")[0]?.content).map((block) => block["type"]),
+          ["text"],
+        );
         assertEquals(harness.connections[0]?.closeCount, 1);
       },
     );
@@ -1041,8 +1051,16 @@ Deno.test("an abort during a tool call stores that result and makes no further c
 Deno.test(
   "listTools runs once per turn before any callTool, and connectToolServer gets the turn's options",
   async () => {
+    const hasActionCalls: string[] = [];
     await withHarness(
       {
+        wrapTurns: (turns) => ({
+          ...turns,
+          turnHasAction: (turnId) => {
+            hasActionCalls.push(turnId);
+            return Promise.resolve(true);
+          },
+        }),
         responses: [
           callTools([
             { id: "s1", name: "search_foods", input: { query: "egg" } },
@@ -1070,8 +1088,9 @@ Deno.test(
         assertEquals(options?.localDate, "2026-11-03");
         assertEquals(options?.localTime, "13:00");
         assertEquals(options?.functionsBaseUrl, "http://127.0.0.1:54321");
-        assertEquals(typeof options?.turnHasAction, "function");
-        assertEquals(await options?.turnHasAction(result.turnId), false);
+        // It reaches the store's own read, with the turn's id.
+        assertEquals(await options?.turnHasAction(result.turnId), true);
+        assertEquals(hasActionCalls, [result.turnId]);
         assert(options?.allowedTools.includes("search_foods"));
         assertEquals(options?.allowedTools.includes("import_recipe_from_url"), false);
       },
@@ -1301,6 +1320,8 @@ Deno.test(
 
     assertEquals(client?.baseURL, "http://127.0.0.1:9999");
     assertEquals(client?.timeout, MODEL_REQUEST_TIMEOUT_MILLISECONDS);
+    // The SDK logs the raw data of a stream event it cannot parse, which would be message content.
+    assertEquals(client?.logLevel, "off");
     // Two attempts of the timeout fit inside the shortest wall-clock limit of an Edge Function (150 s).
     assert((client?.maxRetries ?? 0) + 1 <= 2);
     assert(MODEL_REQUEST_TIMEOUT_MILLISECONDS * ((client?.maxRetries ?? 0) + 1) < 150_000);
@@ -1342,5 +1363,234 @@ Deno.test(
     assertStringIncludes(summaries[0] ?? "", "toolCalls=1");
     assertStringIncludes(summaries[0] ?? "", "ending=complete");
     assert(/\d+ms$/.test(summaries[0] ?? ""));
+  },
+);
+
+// ---- Turns that fail early, and the tool_result-first rule ----
+
+Deno.test(
+  "a turn that fails before its message is rewritten does not break the conversation for the next turn",
+  async () => {
+    let timeZoneReads = 0;
+    await withHarness(
+      {
+        wrapTurns: (turns) => ({
+          ...turns,
+          readTimeZone: (userId) => {
+            timeZoneReads += 1;
+            return timeZoneReads === 2
+              ? Promise.reject(new Error("the time zone could not be read"))
+              : turns.readTimeZone(userId);
+          },
+        }),
+        responses: [
+          callTools([
+            {
+              id: "a1",
+              name: "ask_user",
+              input: { question: "How much rice?", quick_replies: ["150 g"] },
+            },
+          ]),
+          reply("Logged."),
+        ],
+      },
+      async (harness) => {
+        await harness.take("log rice");
+        const failed = await harness.take("hello?");
+        await harness.take("150 g");
+
+        assertEquals(failed.events.at(-1), { type: "done", outcome: "failed" });
+        assertEquals(harness.mock.bodies.length, 2);
+        const messages = harness.mock.json()[1]?.["messages"];
+        const sent = Array.isArray(messages) ? messages.filter(isRecord) : [];
+        assertEquals(
+          sent.map((message) => message["role"]),
+          ["user", "assistant", "user"],
+        );
+        const [first] = blocksOf(sent.at(-1)?.["content"]);
+        assertEquals(first?.["type"], "tool_result");
+        assertEquals(first?.["tool_use_id"], "a1");
+        assertEquals(turnStatuses(harness), ["clarify", "failed", "complete"]);
+      },
+    );
+  },
+);
+
+// ---- Retrying an unparseable tool input ----
+
+Deno.test(
+  "a tool input the SDK cannot parse is not re-issued once text of that call has been shown",
+  async () => {
+    await withHarness(
+      {
+        responses: [
+          callTools([{ id: "s1", name: "search_foods", rawJson: '{"query" "egg"}' }], "Looking"),
+          reply("Found it."),
+        ],
+      },
+      async (harness) => {
+        const result = await harness.take("find an egg");
+
+        assertEquals(result.events.at(-1), { type: "done", outcome: "failed" });
+        assertEquals(harness.mock.bodies.length, 1);
+        assertEquals(textOf(result.events), "Looking");
+        assertEquals(turnStatuses(harness), ["failed"]);
+      },
+    );
+  },
+);
+
+Deno.test("an SDK error that is not a JSON parse error is not re-issued", async () => {
+  await withHarness(
+    {
+      responses: [
+        { blocks: [{ type: "text", text: "Hel" }], stopReason: "end_turn", endWithoutStop: true },
+        reply("Hello."),
+      ],
+    },
+    async (harness) => {
+      const result = await harness.take("hi");
+
+      assertEquals(result.events.at(-1), { type: "done", outcome: "failed" });
+      assertEquals(harness.mock.bodies.length, 1);
+    },
+  );
+  await withHarness(
+    {
+      responses: [{ blocks: [], stopReason: "end_turn", endWithoutStop: true }, reply("Hello.")],
+    },
+    async (harness) => {
+      const result = await harness.take("hi");
+
+      assertEquals(result.events.at(-1), { type: "done", outcome: "failed" });
+      assertEquals(harness.mock.bodies.length, 1);
+    },
+  );
+});
+
+// ---- Usage, structured outcomes ----
+
+Deno.test(
+  "a usage insert that fails on a good response is reported and the turn goes on",
+  async () => {
+    await withHarness({ failUsage: true, responses: [reply("Hello there")] }, async (harness) => {
+      const result = await harness.take("hi");
+
+      assertEquals(result.events.at(-1), { type: "done", outcome: "complete" });
+      assertEquals(rowsOfRole(harness, "assistant").length, 1);
+      assertEquals(turnStatuses(harness), ["complete"]);
+      assertEquals(harness.reports.length, 1);
+    });
+  },
+);
+
+Deno.test(
+  "a structured outcome the loop cannot read is reported, and a null one is not",
+  async () => {
+    await withHarness(
+      {
+        responses: [
+          callTools([{ id: "g1", name: "get_day", input: { local_date: "2026-11-03" } }]),
+          reply("Done."),
+        ],
+        answers: { get_day: okResult({ structured: "not an object" }) },
+      },
+      async (harness) => {
+        const result = await harness.take("What did I eat today?");
+
+        assertEquals(result.events.at(-1), { type: "done", outcome: "complete" });
+        assertEquals(harness.reports.length, 1);
+      },
+    );
+    await withHarness(
+      {
+        responses: [
+          callTools([{ id: "g1", name: "get_day", input: { local_date: "2026-11-03" } }]),
+          reply("Done."),
+        ],
+        answers: { get_day: okResult({ structured: null }) },
+      },
+      async (harness) => {
+        await harness.take("What did I eat today?");
+
+        assertEquals(harness.reports, []);
+      },
+    );
+  },
+);
+
+// ---- The answer meta only goes with a complete answer ----
+
+Deno.test(
+  "no answer meta is sent when the turn ends in a clarify, a confirm, a failure or a stop",
+  async () => {
+    const read = callTools([{ id: "g1", name: "get_day", input: { local_date: "2026-11-02" } }]);
+    const cited = okResult({
+      structured: {
+        citation: "Based on 3 entries, 2 Nov",
+        estimate: "Trend weight is an estimate",
+      },
+    });
+    const endings: [string, HarnessOptions][] = [
+      [
+        "clarify",
+        {
+          responses: [
+            read,
+            callTools([
+              { id: "a1", name: "ask_user", input: { question: "Which?", quick_replies: [] } },
+            ]),
+          ],
+          answers: { get_day: cited },
+        },
+      ],
+      [
+        "confirm",
+        {
+          responses: [
+            read,
+            callTools([{ id: "d1", name: "delete_entry", input: { ids: entryIds } }], "Delete?"),
+          ],
+          answers: {
+            get_day: cited,
+            delete_entry: confirmationResult("delete_entry", confirmationId),
+          },
+        },
+      ],
+      [
+        "failed",
+        {
+          responses: [read, { blocks: [], stopReason: "end_turn", httpStatus: 400 }],
+          answers: { get_day: cited },
+        },
+      ],
+    ];
+    for (const [name, options] of endings) {
+      await withHarness(options, async (harness) => {
+        const result = await harness.take("How did I do on Monday and what should I delete?");
+
+        assertEquals(typesOf(result.events).includes("answer_meta"), false, name);
+        assertEquals(typesOf(result.events).includes("done"), true, name);
+      });
+    }
+    let run: ReturnType<Harness["start"]> | undefined;
+    await withHarness(
+      {
+        responses: [read, reply("never asked for")],
+        answers: {
+          get_day: async () => {
+            await run?.cancel();
+            return cited;
+          },
+        },
+      },
+      async (harness) => {
+        run = harness.start("How did I do on Monday?");
+        const result = await run.finished;
+
+        assertEquals(turnStatuses(harness), ["stopped"]);
+        assertEquals(typesOf(result.events).includes("answer_meta"), false, "stopped");
+      },
+    );
   },
 );

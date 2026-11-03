@@ -322,6 +322,36 @@ Deno.test("a stored tool_result message and the next user message become one mes
 });
 
 Deno.test(
+  "tool_result blocks come first in a user message joined from rows, whatever the row order",
+  () => {
+    // A turn that failed before its message was rewritten left its raw text row behind the open call.
+    const history = [
+      userText("log some rice"),
+      stored("assistant", [toolUse("call-1", "ask_user")]),
+      stored("user", [{ type: "text", text: "a message a failed turn left" }], "turn-2"),
+      stored(
+        "user",
+        userContent({ openToolUses: [{ id: "call-1", name: "ask_user" }], context, text: "150 g" }),
+        "turn-3",
+      ),
+    ];
+
+    const joined = toApiMessages(history).at(-1)?.content;
+
+    assert(Array.isArray(joined));
+    assertEquals(
+      joined.map((block) => block.type),
+      ["tool_result", "text", "text", "text"],
+    );
+    assertEquals(
+      joined.flatMap((block) => (block.type === "text" ? [block.text.slice(0, 5)] : [])),
+      ["a mes", context.text.slice(0, 5), "150 g"],
+    );
+    assertEquals(joined[0]?.type === "tool_result" ? joined[0].tool_use_id : null, "call-1");
+  },
+);
+
+Deno.test(
   "roles alternate in every replay of a conversation that ends in a confirm and a clarify",
   () => {
     const history = [

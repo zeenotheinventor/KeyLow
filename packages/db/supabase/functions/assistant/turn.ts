@@ -59,11 +59,14 @@ export const MCP_REQUEST_TIMEOUT_MILLISECONDS = 20_000;
 // plans (https://supabase.com/docs/guides/functions/limits, checked 2026-11-03). The plan is not recorded in
 // the repository, so the shorter limit is the one used. The SDK default of 10 minutes would outlast it. One
 // retry is kept for a dropped connection or a 529, so a call that never answers costs 2 x 60 s at most.
+// This bounds the wait for the response headers only. It does not bound a stream that stalls after it
+// started, nor the turn as a whole: a turn deadline and an idle watchdog belong to KEY-795.
 export const MODEL_REQUEST_TIMEOUT_MILLISECONDS = 60_000;
 const MODEL_MAX_RETRIES = 1;
 
 // The SDK parses a streamed tool input as it arrives, and a model that emits invalid JSON makes the stream
-// fail with a plain `AnthropicError`, never an API error. That one failure is re-issued, a few times.
+// fail with a plain `AnthropicError` whose cause is a `SyntaxError`, never an API error. That one failure
+// is re-issued, a few times, and only while the app has been shown none of the call's text.
 const MAX_UNPARSEABLE_INPUT_RETRIES = 2;
 
 // The words under the field when the assistant asks a question (`assistant · clarify`), the same as core's.
@@ -87,6 +90,8 @@ export function createModelClient(read: (name: string) => string | undefined): A
     ...(baseURL === undefined || baseURL === "" ? {} : { baseURL }),
     timeout: MODEL_REQUEST_TIMEOUT_MILLISECONDS,
     maxRetries: MODEL_MAX_RETRIES,
+    // The SDK logs the raw data of a stream event it cannot parse, and that is message content.
+    logLevel: "off",
   });
 }
 
@@ -238,6 +243,13 @@ async function recordCall(
   });
 }
 
+// The SDK's failure to parse a streamed tool input: an `AnthropicError` caused by a `SyntaxError`. An API
+// error, a dropped connection and a stream that ended early are not.
+const isToolInputParseError = (caught: unknown): boolean =>
+  caught instanceof Anthropic.AnthropicError &&
+  !(caught instanceof Anthropic.APIError) &&
+  caught.cause instanceof SyntaxError;
+
 type ModelOutcome =
   { kind: "message"; message: Anthropic.Message } | { kind: "stopped" } | { kind: "retry" };
 
@@ -251,7 +263,9 @@ async function callModel(
   run.counts.modelCalls += 1;
   const modelStream = session.client.messages.stream(request, { signal: run.signal });
   let textStarted = false;
+  let textEmitted = false;
   modelStream.on("text", (delta, snapshot) => {
+    textEmitted = true;
     if (!textStarted && nonBlank(snapshot)) {
       // The cards so far are written before the words that follow them.
       textStarted = true;
@@ -275,7 +289,8 @@ async function callModel(
       return { kind: "stopped" };
     }
     if (
-      caught instanceof Anthropic.APIError ||
+      !isToolInputParseError(caught) ||
+      textEmitted ||
       run.unparseableInputRetries >= MAX_UNPARSEABLE_INPUT_RETRIES
     ) {
       throw caught;
@@ -284,7 +299,10 @@ async function callModel(
     return { kind: "retry" };
   }
   run.unparseableInputRetries = 0;
-  await recordCall(run, startedAt, message);
+  // A good response is kept whatever happens to its usage row.
+  await recordCall(run, startedAt, message).catch((recordFailure: unknown) =>
+    run.dependencies.report("assistant", "internal_error", recordFailure),
+  );
   return { kind: "message", message };
 }
 
@@ -330,6 +348,14 @@ async function finishCall(
     return null;
   }
   const structured = structuredSchema.safeParse(outcome.structured);
+  if (!structured.success && outcome.structured !== null) {
+    // A tool answered something the loop cannot read, which is a bug in the tool.
+    run.dependencies.report(
+      "assistant",
+      "internal_error",
+      new Error("a structured outcome cannot be read"),
+    );
+  }
   const entry: Display = {};
   let card: AssistantCard | null = null;
   if (structured.success) {
@@ -498,6 +524,28 @@ function bearerToken(request: Request): string | null {
 async function takeTurn(run: Run): Promise<Ending> {
   const { context, dependencies } = run;
   const { turns } = dependencies;
+  // First what needs no connection and no key, ending in the rewrite of the user message. A turn that fails
+  // after that leaves a message the next turn can join, and a turn that fails before it leaves the raw text,
+  // which `toApiMessages` puts behind the open results.
+  const timeZone = await turns.readTimeZone(context.userId);
+  const { messages: history, previousTurn } = await turns.readConversation(
+    context.userId,
+    context.conversationId,
+    { excludeMessageId: context.userMessageId },
+  );
+  const content = userContent({
+    openToolUses: openToolUses(history),
+    context: contextBlock({
+      now: dependencies.now().toISOString(),
+      timeZone,
+      localDate: context.localDate,
+      localTime: context.localTime,
+    }),
+    text: context.text,
+  });
+  // Before the first model call, or the new message would sit after a call with no result.
+  await turns.setUserMessageContent(context.userId, context.userMessageId, toJson(content));
+
   const client = dependencies.createModelClient();
   const functionsBaseUrl = dependencies.functionsBaseUrl();
   const accessToken = bearerToken(context.request);
@@ -509,12 +557,6 @@ async function takeTurn(run: Run): Promise<Ending> {
     );
     return failedEnding("not_configured");
   }
-  const timeZone = await turns.readTimeZone(context.userId);
-  const { messages: history, previousTurn } = await turns.readConversation(
-    context.userId,
-    context.conversationId,
-    { excludeMessageId: context.userMessageId },
-  );
   const allowedTools = allowedToolsFor({
     text: context.text,
     pendingConfirmationTool: previousTurn?.pendingTool ?? null,
@@ -533,18 +575,6 @@ async function takeTurn(run: Run): Promise<Ending> {
   try {
     // Before any call, so a tool the list did not name is treated as a write.
     const tools = toAnthropicTools(await connection.listTools());
-    const content = userContent({
-      openToolUses: openToolUses(history),
-      context: contextBlock({
-        now: dependencies.now().toISOString(),
-        timeZone,
-        localDate: context.localDate,
-        localTime: context.localTime,
-      }),
-      text: context.text,
-    });
-    // Before the first model call, or the new message would sit after a call with no result.
-    await turns.setUserMessageContent(context.userId, context.userMessageId, toJson(content));
     return await runModelCalls(run, {
       client,
       connection,

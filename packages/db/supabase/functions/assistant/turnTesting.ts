@@ -37,6 +37,8 @@ export type ScriptedResponse = {
   holdAfterFirstText?: boolean;
   // An error reply instead of a stream.
   httpStatus?: number;
+  // Ends the stream after its blocks, with no message_delta or message_stop.
+  endWithoutStop?: boolean;
 };
 
 export type ModelMock = {
@@ -123,6 +125,9 @@ function eventsOf(response: ScriptedResponse, index: number): { head: string[]; 
     }),
     sse("message_stop", { type: "message_stop" }),
   );
+  if (response.endWithoutStop === true) {
+    return { head: events.slice(0, -2), tail: [] };
+  }
   if (response.holdAfterFirstText !== true) {
     return { head: events, tail: [] };
   }
@@ -341,6 +346,8 @@ export type HarnessOptions = {
   apiKey?: string | null;
   now?: Date;
   wrapTurns?: (turns: TurnStore) => TurnStore;
+  // Makes every usage insert fail.
+  failUsage?: boolean;
 };
 
 export async function createHarness(options: HarnessOptions): Promise<Harness> {
@@ -374,7 +381,10 @@ export async function createHarness(options: HarnessOptions): Promise<Harness> {
   const written: string[] = [];
   const dependencies: TurnDependencies = {
     turns: options.wrapTurns?.(turns) ?? turns,
-    recordUsage: (call) => recordUsage(database.client, call),
+    recordUsage: (call) =>
+      options.failUsage === true
+        ? Promise.reject(new Error("the usage insert failed"))
+        : recordUsage(database.client, call),
     connect(connectionOptions) {
       connectOptions.push(connectionOptions);
       const connection = fakeConnection(tools, options.answers ?? {});
