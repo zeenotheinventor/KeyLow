@@ -1,4 +1,5 @@
 import {
+  useAssistantChanges,
   useAssistantConsent,
   useDeleteAllAssistantConversations,
   useSetAssistantConsent,
@@ -18,6 +19,7 @@ import { useState } from "react";
 import { Linking, Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { useOpenOnce } from "../../lib/useOpenOnce";
 import { Card, ConfirmDialog, GroupedList, ListRow, SheetHeader, Text, useToast } from "../ui";
 
 // The link is a line of text, so it reaches the 44 point touch target by hit slop.
@@ -44,17 +46,18 @@ function openPrivacyPolicy() {
 /**
  * The Assistant settings screen, pushed from More (`assistant-settings · consent`): the switch that turns the
  * assistant on, with its caption, what it does in the consent card's own words and the Privacy policy link,
- * and Delete all conversations behind a confirmation, on or off. The switch is off until the setting
+ * and the Your conversations group, on or off: "What the assistant changed", with its count, and Delete all
+ * conversations behind a confirmation. The switch is off until the setting
  * has been read, and busy while a change is being saved. The sheet is told through the hook: turning the
- * assistant on or off reads its status again before the change is done. "What the assistant changed" is
- * the next ticket's row, with the screen it opens.
- */
+ * assistant on or off reads its status again before the change is done. */
 export function AssistantSettingsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const consent = useAssistantConsent();
   const setConsent = useSetAssistantConsent();
   const deleteAll = useDeleteAllAssistantConversations();
+  const changes = useAssistantChanges();
+  const openOnce = useOpenOnce();
   const toast = useToast();
   const [isAskingToDelete, setIsAskingToDelete] = useState(false);
   const isRead = consent.data !== undefined;
@@ -155,6 +158,16 @@ export function AssistantSettingsScreen() {
             them, so someone who turns the assistant off must still be able to. */}
         <View className="gap-2">
           <GroupedList title={ASSISTANT_SETTINGS.yourConversations}>
+            <ListRow
+              title={ASSISTANT_SETTINGS.changesRowLabel}
+              value={changes.data?.count.toString()}
+              valueLook="quiet"
+              onPress={() => {
+                openOnce(() => {
+                  router.push("/more/assistant/changes");
+                });
+              }}
+            />
             <ListRow
               chevron={false}
               title={ASSISTANT_SETTINGS.deleteAllLabel}
