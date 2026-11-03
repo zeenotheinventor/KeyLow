@@ -13,11 +13,22 @@
 // Endpoints the functions call:
 //   GET  /api/v2/product/<code>
 //   GET  /cgi/search.pl?search_terms=<words>
+//   POST /anthropic/v1/messages    the Messages API, streamed, from a script a test registers
+// Control endpoints for the Messages API, used by the test side (anthropicMock.ts). A script is keyed by
+// a marker the test puts in its user text, so parallel suites never mix. `reset` leaves them alone,
+// because it would wipe the scripts of a suite running at the same time.
+//   POST /__mock/anthropic/register   register the replies for a marker
+//   GET  /__mock/anthropic/requests   the request bodies recorded for ?marker=
+//   POST /__mock/anthropic/forget     forget the replies and requests of a marker
 import { readFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { text } from "node:stream/consumers";
 import { setTimeout as delay } from "node:timers/promises";
 
+import { isScriptedReplyList } from "./anthropicMock";
+import { defaultReply, messageStreamOf } from "./anthropicStream";
+
+import type { ModelRequestBody, ScriptedReply } from "./anthropicMock";
 import type {
   RecordedCall,
   RecordedSearchCall,
@@ -175,6 +186,50 @@ function toSearchRegistration(body: unknown): RegisterSearch {
   };
 }
 
+// The Messages API's own error body, with a fixed message so a request is never quoted back.
+function sendModelError(
+  response: ServerResponse,
+  status: number,
+  type: string,
+  message: string,
+): void {
+  send(response, status, { type: "error", error: { type, message } });
+}
+
+// The key the request carries: `x-api-key` (the API's documented header) or a bearer token, which is how
+// the SDK in the `assistant` function sends it. Empty when there is none.
+function apiKeyOf(request: IncomingMessage): string {
+  const header = request.headers["x-api-key"];
+  if (typeof header === "string" && header !== "") {
+    return header;
+  }
+  return (request.headers.authorization ?? "").replace(/^Bearer\s*/i, "");
+}
+
+// A marker is found in the body text, so a short one would match by accident.
+const MIN_MARKER_LENGTH = 8;
+
+function toScriptRegistration(body: unknown): { marker: string; replies: ScriptedReply[] } {
+  if (
+    !isRecord(body) ||
+    typeof body["marker"] !== "string" ||
+    body["marker"].length < MIN_MARKER_LENGTH ||
+    !isScriptedReplyList(body["replies"])
+  ) {
+    throw new Error(
+      `A script needs a marker of at least ${MIN_MARKER_LENGTH} characters and a list of replies`,
+    );
+  }
+  return { marker: body["marker"], replies: body["replies"] };
+}
+
+function toMarker(body: unknown): string {
+  if (!isRecord(body) || typeof body["marker"] !== "string") {
+    throw new Error("A request needs a string marker");
+  }
+  return body["marker"];
+}
+
 export type OffMockServer = {
   /** The port the server listens on, which is the one the operating system chose for port 0. */
   port: number;
@@ -198,6 +253,45 @@ export function startOffMock(port: number): Promise<OffMockServer> {
   const searchAnswers = new Map<string, Answer>();
   const calls: RecordedCall[] = [];
   const searchCalls: RecordedSearchCall[] = [];
+  const modelScripts = new Map<string, ScriptedReply[]>();
+  const modelRequests = new Map<string, ModelRequestBody[]>();
+
+  // Streams the reply the request's marker scripts, or the default reply when no registered marker is in
+  // the body. The function only ever sends streamed requests with an API key.
+  async function answerMessages(request: IncomingMessage, response: ServerResponse): Promise<void> {
+    if (apiKeyOf(request) === "") {
+      sendModelError(response, 401, "authentication_error", "invalid x-api-key");
+      return;
+    }
+    const bodyText = await text(request);
+    const body: unknown = JSON.parse(bodyText);
+    if (!isRecord(body) || body["stream"] !== true) {
+      sendModelError(
+        response,
+        400,
+        "invalid_request_error",
+        "the mock only answers streamed requests",
+      );
+      return;
+    }
+    const marker = [...modelScripts.keys()].find((registered) => bodyText.includes(registered));
+    let reply = defaultReply;
+    let index = 0;
+    if (marker !== undefined) {
+      const recorded = modelRequests.get(marker) ?? [];
+      recorded.push(body);
+      modelRequests.set(marker, recorded);
+      index = recorded.length - 1;
+      const scripted = modelScripts.get(marker)?.[index];
+      if (scripted === undefined) {
+        sendModelError(response, 400, "invalid_request_error", "the script has no reply left");
+        return;
+      }
+      reply = scripted;
+    }
+    response.writeHead(200, { "Content-Type": "text/event-stream", "Cache-Control": "no-cache" });
+    response.end(messageStreamOf(reply, index));
+  }
 
   async function route(request: IncomingMessage, response: ServerResponse): Promise<void> {
     const url = new URL(request.url ?? "/", "http://mock.local");
@@ -230,6 +324,28 @@ export function startOffMock(port: number): Promise<OffMockServer> {
         200,
         calls.filter((call) => code === null || call.code === code),
       );
+      return;
+    }
+    if (request.method === "POST" && url.pathname === "/anthropic/v1/messages") {
+      await answerMessages(request, response);
+      return;
+    }
+    if (request.method === "POST" && url.pathname === "/__mock/anthropic/register") {
+      const { marker, replies } = toScriptRegistration(await readJson(request));
+      modelScripts.set(marker, replies);
+      modelRequests.set(marker, []);
+      send(response, 204, null);
+      return;
+    }
+    if (request.method === "GET" && url.pathname === "/__mock/anthropic/requests") {
+      send(response, 200, modelRequests.get(url.searchParams.get("marker") ?? "") ?? []);
+      return;
+    }
+    if (request.method === "POST" && url.pathname === "/__mock/anthropic/forget") {
+      const marker = toMarker(await readJson(request));
+      modelScripts.delete(marker);
+      modelRequests.delete(marker);
+      send(response, 204, null);
       return;
     }
     if (request.method === "POST" && url.pathname === "/__mock/reset") {

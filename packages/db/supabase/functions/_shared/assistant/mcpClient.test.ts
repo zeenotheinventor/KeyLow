@@ -361,6 +361,26 @@ Deno.test("a failed read call is retried once when the turn has no action row", 
   });
 });
 
+Deno.test(
+  "a failed read call is still retried when the tools were handed in and never listed",
+  async () => {
+    await withServer({ dropReply: firstMatch(isMethod("tools/call")) }, async (server) => {
+      const listing = await connectToolServer(connectionOptions(server));
+      const knownTools = await listing.listTools();
+      await listing.close();
+      const listsBefore = requestsFor(server, "tools/list").length;
+      const connection = await connectToolServer(connectionOptions(server, { knownTools }));
+
+      const result = await connection.callTool(readToolName, { note: "hello" });
+
+      assertEquals(result.outcome.status, "ok");
+      assertEquals(server.toolRuns, [readToolName, readToolName]);
+      assertEquals(requestsFor(server, "tools/list").length, listsBefore);
+      await connection.close();
+    });
+  },
+);
+
 Deno.test("a read call that fails twice is mcp_unreachable after one retry", async () => {
   await withServer({ dropReply: isMethod("tools/call") }, async (server) => {
     const connection = await connectToolServer(connectionOptions(server));

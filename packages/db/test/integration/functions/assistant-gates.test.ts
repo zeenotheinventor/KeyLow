@@ -1,12 +1,12 @@
-import { parseAssistantEvent } from "@keylow/core";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 
+import { callAssistant, eventsOf, newAssistantUser, turnBody } from "../support/assistantClient";
 import { requireServedFunction } from "../support/functionsLane";
 import { adminClient } from "../support/stack";
-import { createTestUser, deleteCreatedTestUsers } from "../support/users";
+import { deleteCreatedTestUsers } from "../support/users";
 
+import type { AssistantResponse } from "../support/assistantClient";
 import type { TestUser } from "../support/users";
-import type { AssistantStreamEvent } from "@keylow/core";
 
 /*
  * The `assistant` function's routes and access gates over HTTP, against the served function, with
@@ -15,37 +15,13 @@ import type { AssistantStreamEvent } from "@keylow/core";
  * parallel. They are proved in the Deno tests (`assistant/gates.test.ts`), as is `plus`, because no
  * live user can lack the entitlement while the free plan is the default.
  *
- * A turn that passes the gates opens with the `turn` event. The turn loop runs after the gates and
- * fails the turn here, because the local stack has no Messages API key, so the suite checks the first
- * event only (KEY-795 tightens it once the Messages API mock answers).
+ * A turn that passes the gates runs the turn loop against the Messages API mock, which answers one short
+ * text reply when no script is registered, so a passing turn streams exactly `turn`, `text` and `done
+ * complete`.
  * The suite assumes the run does not cross UTC midnight, because the daily turns come back then.
  */
 
-const consentVersion = "integration-test";
 const freeDailyTurns = 15;
-
-type AssistantResponse = { status: number; headers: Headers; text: string };
-
-async function callAssistant(
-  route: string,
-  options: { method?: "GET" | "POST"; user?: TestUser; body?: unknown } = {},
-): Promise<AssistantResponse> {
-  const { apiUrl, anonKey } = inject("stack");
-  const method = options.method ?? "POST";
-  const response = await fetch(`${apiUrl}/functions/v1/assistant/${route}`, {
-    method,
-    headers: {
-      apikey: anonKey,
-      "Content-Type": "application/json",
-      ...(options.user === undefined
-        ? {}
-        : { Authorization: `Bearer ${options.user.accessToken}` }),
-    },
-    body: method === "GET" ? null : JSON.stringify(options.body ?? {}),
-    signal: AbortSignal.timeout(20_000),
-  });
-  return { status: response.status, headers: response.headers, text: await response.text() };
-}
 
 function conversationIdFrom(response: AssistantResponse): string {
   const body: unknown = JSON.parse(response.text);
@@ -60,45 +36,18 @@ function conversationIdFrom(response: AssistantResponse): string {
   throw new Error("The conversations route answered without a conversation id");
 }
 
-function eventsOf(response: AssistantResponse): AssistantStreamEvent[] {
-  return response.text
-    .split("\n\n")
-    .filter((block) => block !== "")
-    .map((block) => {
-      const parsed = parseAssistantEvent(block.replace(/^data: /, ""));
-      if (!parsed.ok) {
-        throw new Error(`The stream held an event that is not one: ${parsed.reason}`);
-      }
-      return parsed.event;
-    });
-}
-
-const turnBody = (text = "two eggs on toast") => ({
-  conversationId: null,
-  text,
-  localDate: "2026-10-25",
-  localTime: null,
-});
-
 const takeTurn = (user: TestUser) =>
   callAssistant("turn", { user, body: turnBody() }).then(eventsOf);
 
-async function newUser(options: { consented?: boolean } = {}): Promise<TestUser> {
-  const user = await createTestUser("assistant-gates");
-  if (options.consented !== false) {
-    const { error } = await user.client
-      .from("profiles")
-      .update({
-        assistant_consent_at: new Date().toISOString(),
-        assistant_consent_version: consentVersion,
-      })
-      .eq("id", user.id);
-    if (error) {
-      throw new Error("Could not record the consent", { cause: error });
-    }
-  }
-  return user;
-}
+// The events of a turn that passed the gates and met the mock's default reply.
+const passingTurn = [
+  expect.objectContaining({ type: "turn" }),
+  { type: "text", delta: "Noted." },
+  { type: "done", outcome: "complete" },
+];
+
+const newUser = (options: { consented?: boolean } = {}) =>
+  newAssistantUser("assistant-gates", options);
 
 async function countTurns(user: TestUser): Promise<number> {
   const { count, error } = await adminClient()
@@ -246,15 +195,14 @@ describe("the daily turns of the free plan", () => {
     const user = await newUser();
 
     for (let turn = 1; turn < freeDailyTurns; turn += 1) {
-      const events = await takeTurn(user);
-      expect(events[0]?.type).toBe("turn");
+      expect(await takeTurn(user)).toEqual(passingTurn);
     }
     // Looking costs nothing: three status calls, and the 15th turn is still allowed.
     for (let look = 0; look < 3; look += 1) {
       const status = await callAssistant("status", { method: "GET", user });
       expect(JSON.parse(status.text)).toEqual({ notice: null });
     }
-    expect((await takeTurn(user))[0]?.type).toBe("turn");
+    expect(await takeTurn(user)).toEqual(passingTurn);
 
     const dayLimit = { code: "day_limit", resetsAt: nextUtcMidnightInstant() };
     const afterFifteen = await callAssistant("status", { method: "GET", user });
@@ -267,7 +215,7 @@ describe("the daily turns of the free plan", () => {
     // No turn row for the refused turn.
     expect(await countTurns(user)).toBe(freeDailyTurns);
     expect(await bucketWasEmpty(user)).toBe(false);
-  }, 120_000);
+  }, 180_000);
 });
 
 describe("the unlimited plan", () => {
@@ -281,15 +229,14 @@ describe("the unlimited plan", () => {
     }
 
     for (let turn = 1; turn <= freeDailyTurns + 1; turn += 1) {
-      const events = await takeTurn(user);
-      expect(events[0]?.type).toBe("turn");
+      expect(await takeTurn(user)).toEqual(passingTurn);
     }
 
     expect(await countTurns(user)).toBe(freeDailyTurns + 1);
     expect(await bucketWasEmpty(user)).toBe(true);
     const status = await callAssistant("status", { method: "GET", user });
     expect(JSON.parse(status.text)).toEqual({ notice: null });
-  }, 120_000);
+  }, 180_000);
 });
 
 describe("conversations", () => {

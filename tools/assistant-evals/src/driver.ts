@@ -8,7 +8,7 @@ export type SendMessageInput = Readonly<{
 
 /**
  * Sends one user message to the assistant and resolves to the result once its stream has ended. The HTTP
- * driver against the served `assistant` function is added by the turn-loop ticket (KEY-682).
+ * driver against the served `assistant` function is `httpDriver.ts`.
  */
 export type TurnDriver = Readonly<{
   sendMessage: (input: SendMessageInput) => Promise<TurnResult>;

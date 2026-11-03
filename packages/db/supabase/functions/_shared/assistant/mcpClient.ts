@@ -84,6 +84,9 @@ export type ConnectToolServerOptions = {
   // Whether the turn has an `assistant_actions` row, read with the service client by the caller.
   turnHasAction: TurnHasAction;
   requestTimeoutMilliseconds?: number;
+  // A list the caller already holds. The connection then knows which tools only read, for the retry rule,
+  // without a `tools/list` round trip of its own.
+  knownTools?: readonly ListedTool[];
 };
 
 export type ToolConnection = {
@@ -250,9 +253,12 @@ export async function connectToolServer(
   });
   const timeout = options.requestTimeoutMilliseconds ?? DEFAULT_REQUEST_TIMEOUT_MSEC;
   // What the last list said, to tell a read from a write when a call fails. The list itself is fetched
-  // again on every call to `listTools` and the SDK's own cache is bypassed. One round trip measured 1.6 ms
-  // on loopback only, so production is unmeasured until KEY-682.
-  const listed = new Map<string, ListedTool>();
+  // again on every call to `listTools` and the SDK's own cache is bypassed. On the served local stack the
+  // round trip measured 0.2 s at the median (KEY-795), because every request to `mcp` pays the JWT check
+  // and a turn lookup, so the turn loop keeps the list between turns and hands it in as `knownTools`.
+  const listed = new Map<string, ListedTool>(
+    (options.knownTools ?? []).map((tool) => [tool.name, tool]),
+  );
 
   return {
     listTools: () =>
