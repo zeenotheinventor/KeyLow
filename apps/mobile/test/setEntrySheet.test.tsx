@@ -21,6 +21,7 @@ import { pressInTheSameMoment } from "./support/sameTickPress";
 import { exerciseIdOf, GOLDEN_SESSION_ID } from "./support/sessionGoldenLegs";
 import { resetSetEntryBackend, setEntryBackend, setEntryClient } from "./support/setEntryBackend";
 import { resetTrainBackend } from "./support/trainBackend";
+import { installVirtualClock } from "./support/virtualClock";
 
 import type { SetEntryOpening, SetEntrySheetProps } from "../components/SetEntrySheet";
 import type { SetPrefill, SetType } from "@keylow/core/training";
@@ -124,6 +125,7 @@ describe("the set entry sheet", () => {
   });
 
   beforeEach(() => {
+    installVirtualClock();
     registerAppStyles(kitStyles);
     resetTrainBackend();
     resetSetEntryBackend();
@@ -142,6 +144,7 @@ describe("the set entry sheet", () => {
     jest.restoreAllMocks();
     await cleanup();
     queryClient.clear();
+    jest.useRealTimers();
   });
 
   describe("opening on the golden leg press set 3", () => {

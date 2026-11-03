@@ -12,6 +12,7 @@ import {
 import NewFoodRoute from "../../app/foods/new";
 import { ThemeProvider } from "../../lib/theme";
 import { resetRouterMock, routerMock } from "../support/expoRouterMock";
+import { installVirtualClock } from "../support/virtualClock";
 
 jest.mock("@react-native-async-storage/async-storage", () => ({
   __esModule: true,
@@ -65,8 +66,13 @@ async function save(user: User) {
 
 describe("new food screen", () => {
   beforeEach(() => {
+    installVirtualClock();
     resetRouterMock();
     resetApiClientMock();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   describe("required fields", () => {

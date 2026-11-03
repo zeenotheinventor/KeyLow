@@ -25,6 +25,7 @@ import { resetRouterMock } from "./support/expoRouterMock";
 import { compileKitStyles } from "./support/kitStyles";
 import { registerAppStyles } from "./support/nativeWindStyles";
 import { heldCopies, recipeWritesClient } from "./support/recipeWritesBackend";
+import { installVirtualClock } from "./support/virtualClock";
 
 import type { RecipeSummary } from "@keylow/api-client";
 import type { QueryClient } from "@tanstack/react-query";
@@ -102,6 +103,7 @@ describe("the library's row menu", () => {
   });
 
   beforeEach(() => {
+    installVirtualClock();
     registerAppStyles(kitStyles);
     resetRouterMock();
     resetDiaryBackend();
@@ -120,6 +122,7 @@ describe("the library's row menu", () => {
     heldCopies.held = [];
     queryClient.clear();
     jest.restoreAllMocks();
+    jest.useRealTimers();
   });
 
   describe("More", () => {
@@ -509,6 +512,8 @@ describe("the library's row menu", () => {
       });
 
       expect(await toast("Recipe duplicated")).toBeOnTheScreen();
+      // React Query tells the list on a zero-delay timer, so let that tick run on the fake clock.
+      await act(() => jest.advanceTimersByTimeAsync(0));
       expect(rowCount()).toBe(6);
     });
 

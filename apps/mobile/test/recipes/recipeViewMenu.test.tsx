@@ -28,6 +28,7 @@ import { resetRouterMock, routerMock } from "../support/expoRouterMock";
 import { compileKitStyles } from "../support/kitStyles";
 import { registerAppStyles } from "../support/nativeWindStyles";
 import { recipeWritesClient } from "../support/recipeWritesBackend";
+import { installVirtualClock } from "../support/virtualClock";
 
 import type { RecipeViewRecipe } from "../../components/RecipeView";
 import type { RecipeSummary } from "@keylow/api-client";
@@ -123,6 +124,7 @@ describe("the recipe view's More menu", () => {
   });
 
   beforeEach(() => {
+    installVirtualClock();
     registerAppStyles(kitStyles);
     resetRouterMock();
     resetDiaryBackend();
@@ -139,6 +141,7 @@ describe("the recipe view's More menu", () => {
     });
     queryClient.clear();
     jest.restoreAllMocks();
+    jest.useRealTimers();
   });
 
   describe("More", () => {

@@ -35,6 +35,7 @@ import {
   trainBackend,
   trainClient,
 } from "./support/trainBackend";
+import { installVirtualClock } from "./support/virtualClock";
 
 import type { SessionScreenProps } from "../components/SessionScreen";
 import type { QueryClient } from "@tanstack/react-query";
@@ -105,6 +106,7 @@ describe("logging a set from the session screen", () => {
   });
 
   beforeEach(() => {
+    installVirtualClock();
     registerAppStyles(kitStyles);
     resetTrainBackend();
     trainBackend.routine = legsRoutine;
@@ -119,6 +121,7 @@ describe("logging a set from the session screen", () => {
       onlineManager.setOnline(true);
     });
     queryClient.clear();
+    jest.useRealTimers();
   });
 
   describe("the check of the next row", () => {
