@@ -226,14 +226,29 @@ jobs:
 
   # The Supabase stack and the integration suites against a real local stack, with the Edge Functions
   # served. It runs for the packages the stack, the functions and the suites read, and on every full
-  # run. The stack starts in the background before anything is installed, so its image pulls and boot
+  # run. The job runs as two legs side by side, each on its own runner with a stack of its own:
+  # "database" runs pgTAP, the database and function suites of @keylow/db and the generated types
+  # check, and "clients" runs the api-client and assistant-evals suites. The Open Food Facts mock
+  # listens on one fixed port that the function container reaches (KEY-51), so two suites that use it
+  # cannot share a stack at the same time. Two runners have two stacks and two ports, so the split keeps
+  # that rule. Only the db function suites and the api-client suite start the mock. The assistant-evals
+  # suite does not, so the "clients" leg needs no --concurrency=1. Turbo runs it after the api-client
+  # suite anyway, because the package depends on it. The tasks run with --only, so the packages they
+  # depend on are not type-checked again, `core` does that.
+  # The stack starts in the background before anything is installed, so its image pulls and boot
   # overlap the install and the core bundle, and the stack steps run even when a step before them
-  # fails, so one run reports everything.
+  # fails, so one run reports everything. `checks` needs `db`, which waits for both legs, so the
+  # required check is unchanged.
   db:
+    name: db (${{ matrix.part }})
     needs: scope
     if: needs.scope.outputs.db == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        part: [database, clients]
     # packages: read lets the job's token log in to GitHub's registry below.
     permissions:
       contents: read
@@ -263,22 +278,36 @@ jobs:
       #
       # `supabase start` keeps the services the tests and type generation need. That is the database,
       # the API gateway (kong), rest and meta (gen types). Auth always starts and cannot be excluded.
-      # Excluded: analytics and vector (log pipeline), edge-runtime and functions, imgproxy,
-      # inbucket (mail catcher), realtime, storage and studio.
+      # Everything else is left out, and the CLI is told in two ways because neither alone is enough.
+      # `-x` takes the names of the CLI's images and skips both the pull and the start of those
+      # containers. The CLI ignores a name that is not one of them with a warning, and the names
+      # analytics, functions, inbucket and storage are not, so logflare, mailpit and storage-api were
+      # pulled and started on every run. `-x` does not stop the one-off schema jobs that run the
+      # realtime and storage-api images while the database is initialised, which pulled both images
+      # for services that were excluded. The environment overrides for config.toml
+      # (SUPABASE_<SECTION>_<KEY>) switch those two services off for this step only, so
+      # packages/db/supabase/config.toml stays as local development needs it. No test reads
+      # realtime, storage or mail.
       #
       # All of it runs in the background and writes its exit status to a file, which the wait step
       # below reads. The file is written under another name and moved, so the wait step never reads
-      # it half written.
+      # it half written. The log has a time before the pulls, before `supabase start` and after it.
       - name: Start the local Supabase stack in the background
         id: start
         working-directory: packages/db
+        env:
+          SUPABASE_REALTIME_ENABLED: "false"
+          SUPABASE_STORAGE_ENABLED: "false"
         run: |
           nohup bash -c '
             (
               set -e
+              echo "$(date +%T) pulling the images"
               printf "%s\n" postgres-meta:v0.96.1 postgres-meta:v0.96.6 edge-runtime:v1.74.1 pg_prove:3.36 |
                 xargs -P 4 -I {} sh -c "for try in 1 2 3 4 5; do docker pull ghcr.io/supabase/{} && break; sleep \$((try * 5)); done; docker tag ghcr.io/supabase/{} public.ecr.aws/supabase/{}"
-              supabase start -x analytics,edge-runtime,functions,imgproxy,inbucket,realtime,storage,studio,vector
+              echo "$(date +%T) starting the stack"
+              supabase start -x edge-runtime,logflare,mailpit,studio,vector
+              echo "$(date +%T) the stack has started"
             )
             echo $? > "$RUNNER_TEMP/supabase-start.status.tmp"
             mv "$RUNNER_TEMP/supabase-start.status.tmp" "$RUNNER_TEMP/supabase-start.status"
@@ -331,13 +360,17 @@ jobs:
           done
           echo "The functions were not served within 90 seconds. The last status was $status."
           exit 1
-      # The pgTAP tests, then the Edge Function HTTP suites run against the served functions.
-      - name: Run the pgTAP tests and the function suites
-        if: ${{ !cancelled() && steps.serve.outcome == 'success' }}
-        run: pnpm turbo run test:integration
+      # The pgTAP tests, then the database suite and the Edge Function HTTP suites of @keylow/db, run
+      # against the served functions.
+      - name: Run the pgTAP tests and the db suites
+        if: ${{ matrix.part == 'database' && !cancelled() && steps.serve.outcome == 'success' }}
+        run: pnpm turbo run test:integration --filter=@keylow/db --only
+      - name: Run the api-client and assistant-evals suites
+        if: ${{ matrix.part == 'clients' && !cancelled() && steps.serve.outcome == 'success' }}
+        run: pnpm turbo run test:integration --filter=@keylow/api-client --filter=@keylow/assistant-evals --only
       # gen-types rewrites the file in place, so any difference means it was not committed.
       - name: Check the generated types are committed
-        if: ${{ !cancelled() && steps.stack.outcome == 'success' }}
+        if: ${{ matrix.part == 'database' && !cancelled() && steps.stack.outcome == 'success' }}
         run: |
           pnpm gen-types
           git diff --exit-code packages/db/src/types.gen.ts
