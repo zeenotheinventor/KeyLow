@@ -1,4 +1,9 @@
-import { ASSISTANT_OFFLINE, describeAssistantNotice } from "../copy/assistantNotices";
+import {
+  ASSISTANT_CARD_WORDS,
+  ASSISTANT_OFFLINE,
+  describeAssistantNotice,
+  describeAssistantStatus,
+} from "../copy/assistantNotices";
 import { ASSISTANT_DESCRIBE, ASSISTANT_SHEET, describeLogsAt } from "../copy/assistantSheet";
 
 import type { AssistantCard } from "./card";
@@ -9,9 +14,12 @@ import type { DescribableAssistantNotice } from "../copy/assistantNotices";
 /*
  * What the assistant sheet draws in its thread (`assistant · empty`, `streaming`, `conversation`,
  * `unavailable`): the stored conversation, and under it the message sent from this sheet with the reply
- * as it arrives. The questions, confirmations and answer lines of the stored thread are drawn by later
- * tickets, so they are left out here, never shown as raw data. The action cards are drawn here, with the
- * state of their Undo given by `describeAssistantCard`.
+ * as it arrives. The action cards are drawn here, with the state of their Undo given by
+ * `describeAssistantCard`, and so are the questions the assistant asks (`assistant · clarify` and
+ * `confirm`): its words, then the quick replies or the two buttons, which are gone once the person has
+ * sent their next message. An answer from the person's data carries its citation and, for the trend
+ * weight, its Estimate line, exactly as the tool sent them (`assistant · answer`, `answer-estimate`), and
+ * a recipe link shows the working line while its page is read (`assistant · recipe-reading`).
  */
 
 /** What the sheet needs of the turn being written: the part of `AssistantLiveTurn` it draws. */
@@ -19,6 +27,23 @@ export type AssistantSheetLiveTurn = {
   text: string;
   /** The writes the turn has made so far, each with its Undo. */
   cards: readonly AssistantCard[];
+  /** The line under the answer and the Estimate badge, sent at the end of an answer from the person's data. */
+  answerMeta: { citation: string | null; estimate: string | null } | null;
+  /** The recipe page being read, until the next event of the turn. */
+  status: { code: "reading_recipe"; host: string } | null;
+  /** The question that ended the turn, with the words in the field and up to three quick replies. */
+  clarify: {
+    question: string;
+    quickReplies: readonly string[];
+    fieldHint: string | null;
+  } | null;
+  /** The confirmation that ended the turn. Its question is the text of the reply that asked it. */
+  confirm: {
+    question: string;
+    confirmLabel: string;
+    cancelLabel: string;
+    tone: "danger" | "primary";
+  } | null;
   stopped: boolean;
   notice: AssistantNotice | null;
 };
@@ -34,15 +59,42 @@ export type AssistantSheetLiveTurn = {
  */
 export type AssistantSheetSent = { text: string; afterItemId: string | null };
 
+/** The Estimate badge and the muted line beside it, such as "Estimate" and "Trend weight is an estimate". */
+export type AssistantSheetEstimate = { badgeLabel: string; label: string };
+
 export type AssistantSheetEntry =
   | { kind: "you"; key: string; text: string }
   | { kind: "card"; key: string; card: AssistantCard }
+  | {
+      /** The quick replies under a clarifying question, each sent as your message when pressed. */
+      kind: "quickReplies";
+      key: string;
+      options: string[];
+    }
+  | {
+      /** The two buttons under a confirmation: yes first, then the cancel. Each is sent as your message. */
+      kind: "confirm";
+      key: string;
+      confirmLabel: string;
+      cancelLabel: string;
+      tone: "danger" | "primary";
+    }
   | {
       kind: "assistant";
       key: string;
       paragraphs: string[];
       isStreaming: boolean;
       isStopped: boolean;
+      /** The line naming the data the answer used, exactly as the tool sent it, else null. */
+      citation: string | null;
+      /** The Estimate badge for an answer built on an estimate, else null. */
+      estimate: AssistantSheetEstimate | null;
+    }
+  | {
+      /** The working line under your message while a recipe page is read. */
+      kind: "status";
+      key: string;
+      text: string;
     }
   | {
       kind: "notice";
@@ -58,6 +110,10 @@ export type AssistantSheetThread = {
   lastMessage: string | null;
   /** Whether the thread ends in an answer that was cut short, which offers the Ask again quick reply. */
   canAskAgain: boolean;
+  /** The words in the empty field while a clarifying question waits for its answer ("Or say it your way"), else null. */
+  fieldHint: string | null;
+  /** Whether the sheet is to be at full height, which a recipe import card needs so its ingredient list shows. */
+  needsFullHeight: boolean;
 };
 
 type BuildInput = {
@@ -84,31 +140,135 @@ const isDescribable = (notice: AssistantNotice): notice is DescribableAssistantN
 const paragraphsOf = (text: string): string[] =>
   text.split(/\n{2,}/).filter((paragraph) => paragraph.trim() !== "");
 
-function storedEntries(items: readonly AssistantThreadItem[]): DraftEntry[] {
-  return items.flatMap((item): DraftEntry[] => {
+/** The lines under an answer, as the event sent them. Nothing is worded, counted or rounded here. */
+const answerLinesOf = (
+  meta: { citation: string | null; estimate: string | null } | null,
+): Pick<Extract<AssistantSheetEntry, { kind: "assistant" }>, "citation" | "estimate"> => ({
+  citation: meta?.citation ?? null,
+  estimate:
+    meta === null || meta.estimate === null
+      ? null
+      : { badgeLabel: ASSISTANT_CARD_WORDS.estimateLabel, label: meta.estimate },
+});
+
+/** A recipe made from a link: its lines say which food each matched, which a recipe made from typed ingredients has none of. */
+const isRecipeImportCard = (card: AssistantCard): boolean =>
+  card.kind === "recipe_created" && card.rows.some((row) => row.match !== null);
+
+// Whether the paragraphs of a reply end with the paragraphs of a question: the question of a confirmation is
+// the text of the reply that asked it, and the live reply joins every step's words, so words can come first.
+function endsWithWords(reply: readonly string[], question: readonly string[]): boolean {
+  const replyWords = reply.map((paragraph) => paragraph.trim());
+  const questionWords = question.map((paragraph) => paragraph.trim());
+  return (
+    questionWords.length > 0 &&
+    questionWords.length <= replyWords.length &&
+    questionWords.every(
+      (paragraph, position) =>
+        paragraph === replyWords[replyWords.length - questionWords.length + position],
+    )
+  );
+}
+
+/**
+ * A question as the assistant's words, unless the entry before it is a reply that ends in the same words:
+ * the question of a confirmation is the text of the reply that asked it, which is drawn already.
+ */
+function questionEntries(
+  key: string,
+  question: string,
+  previous: DraftEntry | undefined,
+): DraftEntry[] {
+  const paragraphs = paragraphsOf(question);
+  if (previous?.kind === "assistant" && endsWithWords(previous.paragraphs, paragraphs)) {
+    return [];
+  }
+  return [
+    {
+      kind: "assistant",
+      key: `${key}:question`,
+      paragraphs,
+      isStreaming: false,
+      isStopped: false,
+      ...answerLinesOf(null),
+    },
+  ];
+}
+
+// An answered question keeps its words and loses its buttons: the boards draw your answer under it and
+// nothing else (`assistant · confirm-yes`, `confirm-no`, `clarify` right).
+function clarifyEntries(
+  key: string,
+  clarify: NonNullable<AssistantSheetLiveTurn["clarify"]>,
+  isAnswered: boolean,
+  previous: DraftEntry | undefined,
+): DraftEntry[] {
+  const question = questionEntries(key, clarify.question, previous);
+  return isAnswered || clarify.quickReplies.length === 0
+    ? question
+    : [...question, { kind: "quickReplies", key, options: [...clarify.quickReplies] }];
+}
+
+function confirmEntries(
+  key: string,
+  confirm: NonNullable<AssistantSheetLiveTurn["confirm"]>,
+  isAnswered: boolean,
+  previous: DraftEntry | undefined,
+): DraftEntry[] {
+  const question = questionEntries(key, confirm.question, previous);
+  return isAnswered
+    ? question
+    : [
+        ...question,
+        {
+          kind: "confirm",
+          key,
+          confirmLabel: confirm.confirmLabel,
+          cancelLabel: confirm.cancelLabel,
+          tone: confirm.tone,
+        },
+      ];
+}
+
+/** `isAllAnswered`: the person has sent a message after these items, so every question in them is answered. */
+function storedEntries(items: readonly AssistantThreadItem[], isAllAnswered = false): DraftEntry[] {
+  const entries: DraftEntry[] = [];
+  for (const item of items) {
     switch (item.kind) {
       case "user":
-        return [{ kind: "you", key: item.id, text: item.text }];
+        entries.push({ kind: "you", key: item.id, text: item.text });
+        break;
       case "card":
-        return [{ kind: "card", key: item.id, card: item.card }];
+        entries.push({ kind: "card", key: item.id, card: item.card });
+        break;
       case "reply":
-        return [
-          {
-            kind: "assistant",
-            key: item.id,
-            paragraphs: paragraphsOf(item.text),
-            isStreaming: false,
-            isStopped: item.stopped,
-          },
-        ];
+        entries.push({
+          kind: "assistant",
+          key: item.id,
+          paragraphs: paragraphsOf(item.text),
+          isStreaming: false,
+          isStopped: item.stopped,
+          ...answerLinesOf(item.answerMeta),
+        });
+        break;
+      case "clarify":
+        entries.push(
+          ...clarifyEntries(item.id, item, item.answered || isAllAnswered, entries.at(-1)),
+        );
+        break;
+      case "confirm":
+        entries.push(
+          ...confirmEntries(item.id, item, item.answered || isAllAnswered, entries.at(-1)),
+        );
+        break;
       case "notice":
-        return isDescribable(item.notice)
-          ? [{ kind: "notice", key: item.id, notice: item.notice }]
-          : [];
-      default:
-        return [];
+        if (isDescribable(item.notice)) {
+          entries.push({ kind: "notice", key: item.id, notice: item.notice });
+        }
+        break;
     }
-  });
+  }
+  return entries;
 }
 
 function sentEntries(
@@ -123,16 +283,29 @@ function sentEntries(
   for (const [position, card] of live.cards.entries()) {
     entries.push({ kind: "card", key: `sent:card:${position}`, card });
   }
-  if (live.text.trim() !== "" || live.stopped || isStreaming) {
+  // While a recipe page is read no words arrive, so there is no caret to draw, and the working line stands in.
+  const status = isStreaming ? live.status : null;
+  const isWriting = isStreaming && status === null;
+  if (live.text.trim() !== "" || live.stopped || isWriting) {
     const paragraphs = paragraphsOf(live.text);
     entries.push({
       kind: "assistant",
       key: "sent:reply",
       // One empty paragraph draws the caret alone, before the first words arrive.
-      paragraphs: isStreaming && paragraphs.length === 0 ? [""] : paragraphs,
-      isStreaming,
+      paragraphs: isWriting && paragraphs.length === 0 ? [""] : paragraphs,
+      isStreaming: isWriting,
       isStopped: live.stopped && !isStreaming,
+      ...answerLinesOf(live.answerMeta),
     });
+  }
+  if (status !== null) {
+    entries.push({ kind: "status", key: "sent:status", text: describeAssistantStatus(status) });
+  }
+  if (live.clarify !== null) {
+    entries.push(...clarifyEntries("sent:clarify", live.clarify, false, entries.at(-1)));
+  }
+  if (live.confirm !== null) {
+    entries.push(...confirmEntries("sent:confirm", live.confirm, false, entries.at(-1)));
   }
   if (live.notice !== null && isDescribable(live.notice)) {
     entries.push({ kind: "notice", key: "sent:notice", notice: live.notice });
@@ -205,6 +378,20 @@ export function isSentTurnStored(
     );
 }
 
+// The words the field shows while a clarifying question waits: the live turn's, or the stored thread's last item.
+// Once your next message is sent the question is answered, and the turn being written has none of its own yet.
+function fieldHintOf(
+  items: readonly AssistantThreadItem[],
+  isSentShown: boolean,
+  live: AssistantSheetLiveTurn | null,
+): string | null {
+  if (isSentShown) {
+    return live?.clarify?.fieldHint ?? null;
+  }
+  const last = items.at(-1);
+  return last?.kind === "clarify" && !last.answered ? last.fieldHint : null;
+}
+
 /** The thread the sheet draws, oldest first. */
 export function buildAssistantSheetThread({
   items,
@@ -217,7 +404,7 @@ export function buildAssistantSheetThread({
     sent !== null && (isStreaming || !isSentTurnStored(items, sent.afterItemId, live));
   const drafts = isSentShown
     ? [
-        ...storedEntries(itemsThrough(items, sent.afterItemId)),
+        ...storedEntries(itemsThrough(items, sent.afterItemId), true),
         ...sentEntries(sent, live, isStreaming),
       ]
     : storedEntries(items);
@@ -237,32 +424,52 @@ export function buildAssistantSheetThread({
     entries,
     lastMessage: lastMessageOf(entries),
     canAskAgain: last?.kind === "assistant" && last.isStopped && !last.isStreaming,
+    fieldHint: fieldHintOf(items, isSentShown, live),
+    needsFullHeight: entries.some(
+      (entry) => entry.kind === "card" && isRecipeImportCard(entry.card),
+    ),
   };
 }
 
 /**
- * Send is on for a message with words, while the app is online, no answer is arriving, and the stored
- * conversation has been read (a read that failed counts) and is not being read again. Before that the
- * conversation's id is not known, and a message would start a new conversation by accident.
+ * Send is on for a message with words, while the app is online, no answer is arriving, no recipe page is
+ * being read, and the stored conversation has been read (a read that failed counts) and is not being read
+ * again. Before that the conversation's id is not known, and a message would start a new conversation by
+ * accident.
  */
 export function canSendAssistantMessage({
   text,
-  isStreaming,
-  isOnline,
-  isThreadKnown,
-  isThreadFetching,
-  access,
-}: {
-  text: string;
+  ...state
+}: { text: string } & AssistantSendState): boolean {
+  return text.trim() !== "" && canAnswerAssistantQuestion(state);
+}
+
+type AssistantSendState = {
   isStreaming: boolean;
   isOnline: boolean;
   isThreadKnown: boolean;
   isThreadFetching: boolean;
+  /** The turn's status is `reading_recipe`: a recipe page is being read, until the next event of the turn. */
+  isReadingRecipe: boolean;
   access: AssistantSheetAccess;
-}): boolean {
+};
+
+/**
+ * Whether a message could be sent now, whatever it says, which is when a quick reply or a confirm button
+ * can be pressed: the rule of `canSendAssistantMessage` without the words. A press that would be refused is
+ * dimmed instead, so it never does nothing silently.
+ */
+export function canAnswerAssistantQuestion({
+  isStreaming,
+  isOnline,
+  isThreadKnown,
+  isThreadFetching,
+  isReadingRecipe,
+  access,
+}: AssistantSendState): boolean {
   return (
-    text.trim() !== "" &&
     !isStreaming &&
+    !isReadingRecipe &&
     isOnline &&
     isThreadKnown &&
     !isThreadFetching &&
@@ -372,16 +579,20 @@ export function describeAssistantComposer({
   isOnline,
   timeZone,
   describeAt,
+  fieldHint = null,
 }: {
   access: AssistantSheetAccess;
   isOnline: boolean;
   timeZone: string;
   describeAt?: string | undefined;
+  /** The words of a clarifying question waiting for its answer, which the field shows in place of its own. */
+  fieldHint?: string | null | undefined;
 }): AssistantComposerLook {
   const placeholder =
-    describeAt === undefined
+    fieldHint ??
+    (describeAt === undefined
       ? ASSISTANT_SHEET.composerPlaceholder
-      : ASSISTANT_DESCRIBE.composerPlaceholder;
+      : ASSISTANT_DESCRIBE.composerPlaceholder);
   switch (access.kind) {
     case "checking":
     case "consent":

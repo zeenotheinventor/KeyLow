@@ -97,6 +97,24 @@ describe("useAssistantConsent", () => {
     });
   });
 
+  it("should make no request while it is disabled, as under the terms gate", async () => {
+    let reads = 0;
+    server.use(
+      http.get(`${REST_URL}/profiles`, ({ request }) => {
+        reads += 1;
+        return postgrestRows(request, [stored]);
+      }),
+    );
+    const { wrapper } = await renderSignedIn();
+
+    const { result } = renderHook(() => useAssistantConsent({ enabled: false }), { wrapper });
+
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(result.current.fetchStatus).toBe("idle");
+    expect(result.current.data).toBeUndefined();
+    expect(reads).toBe(0);
+  });
+
   it("should read the assistant as off when there is no profile row", async () => {
     server.use(http.get(`${REST_URL}/profiles`, () => HttpResponse.json([])));
     const { wrapper } = await renderSignedIn();

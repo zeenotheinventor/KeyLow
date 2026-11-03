@@ -8,6 +8,7 @@ import {
 } from "@keylow/api-client";
 import {
   buildAssistantSheetThread,
+  canAnswerAssistantQuestion,
   canSendAssistantMessage,
   describeAssistantComposer,
   isAssistantStatusKnown,
@@ -40,7 +41,8 @@ const deviceTimeZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
 // up to full height, which starts 54 points from the top.
 const SNAP_POINTS = ["87%", "94%"];
 // The consent card opens at full height (`assistant · consent-needed`, 54 points from the top), and so does
-// the sheet opened from Describe (`assistant · describe`).
+// the sheet opened from Describe (`assistant · describe`) and a thread holding a recipe import card
+// (`assistant · recipe-import`, `recipe-unresolved`), so its ingredient list shows.
 const OPEN_SNAP_INDEX = 0;
 const FULL_HEIGHT_SNAP_INDEX = 1;
 
@@ -95,7 +97,13 @@ export function AssistantSheet({ open, onClose, localDate, describeAt }: Assista
     isStreaming,
     accessNotice: access.kind === "limited" ? access.notice : null,
   });
-  const composer = describeAssistantComposer({ access, isOnline, timeZone, describeAt });
+  const composer = describeAssistantComposer({
+    access,
+    isOnline,
+    timeZone,
+    describeAt,
+    fieldHint: thread.fieldHint,
+  });
 
   // The turn on screen and what it left, for the read on open below, which finishes after the render that
   // started it.
@@ -147,15 +155,16 @@ export function AssistantSheet({ open, onClose, localDate, describeAt }: Assista
     setSent(null);
   }
 
-  const canSendWords = (words: string) =>
-    canSendAssistantMessage({
-      text: words,
-      isStreaming,
-      isOnline,
-      isThreadKnown,
-      isThreadFetching: conversation.isFetching,
-      access,
-    });
+  const sendState = {
+    isStreaming,
+    isOnline,
+    isThreadKnown,
+    isThreadFetching: conversation.isFetching,
+    // The turn's status clears with its next event, so the reading is over as soon as anything else arrives.
+    isReadingRecipe: (live?.status ?? null) !== null,
+    access,
+  };
+  const canSendWords = (words: string) => canSendAssistantMessage({ text: words, ...sendState });
 
   // The streaming message is not a live region (Android would read all of it again for each chunk, and iOS
   // ignores a live region), so a screen reader hears the finished answer once, on both, when it is complete.
@@ -177,8 +186,12 @@ export function AssistantSheet({ open, onClose, localDate, describeAt }: Assista
       return;
     }
     setSent({ text, afterItemId: items?.at(-1)?.id ?? null });
-    // The thread's own conversation, or the one the first turn started, which is not read yet.
-    const conversationId = conversation.data?.conversationId ?? live?.conversationId ?? null;
+    // A settled read is the truth, so after Delete all conversations it is null and the dead id the live turn
+    // still holds is not reused. The one the first turn started stands in only while the read is unknown or failed.
+    const conversationId =
+      conversation.isSuccess && !conversation.isFetching
+        ? conversation.data.conversationId
+        : (conversation.data?.conversationId ?? live?.conversationId ?? null);
     void send(text, { conversationId, localDate, localTime: describeAt });
   }
 
@@ -268,6 +281,8 @@ export function AssistantSheet({ open, onClose, localDate, describeAt }: Assista
         onAskAgain={sendLastMessageAgain}
         onTryAgain={sendLastMessageAgain}
         onOpenCardLink={openCardLink}
+        canAnswer={canAnswerAssistantQuestion(sendState)}
+        onAnswer={sendMessage}
       />
     );
   }
@@ -277,7 +292,7 @@ export function AssistantSheet({ open, onClose, localDate, describeAt }: Assista
       label={ASSISTANT_SHEET.title}
       open={open}
       snapIndex={
-        access.kind === "consent" || describeAt !== undefined
+        access.kind === "consent" || describeAt !== undefined || thread.needsFullHeight
           ? FULL_HEIGHT_SNAP_INDEX
           : OPEN_SNAP_INDEX
       }

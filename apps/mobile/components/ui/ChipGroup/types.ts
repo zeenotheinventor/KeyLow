@@ -60,5 +60,7 @@ export type ChipGroupActionProps<Value extends string> = Omit<
   "onChipPress"
 > & {
   selection: "action";
+  /** Dims every chip to 40 percent and stops it responding, for a quick reply to a question that has been answered. */
+  disabled?: boolean | undefined;
   onChipPress: (value: Value) => void;
 };

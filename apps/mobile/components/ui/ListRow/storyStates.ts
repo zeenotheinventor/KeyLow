@@ -13,4 +13,6 @@ export const storyStates = [
   "Disabled",
   "Footer",
   "WithControl",
+  "DangerTitle",
+  "WithToggle",
 ];

@@ -76,6 +76,22 @@ describe("useDeleteAllAssistantConversations", () => {
     expect(queryClient.getQueryState(queryKey)?.isInvalidated).toBe(true);
   });
 
+  it("should leave a closed sheet's thread empty on its first render, before any read", async () => {
+    installAssistantFake(server, createAssistantFakeState());
+    const { queryClient, wrapper } = createWrapper();
+    // The sheet is closed, so its read is disabled and only the thread from its last open is cached.
+    queryClient.setQueryData(keys.assistant.conversation, { conversationId: "old", items: [] });
+    renderHook(() => useAssistantConversation({ enabled: false }), { wrapper });
+    const { result: deleteAll } = renderHook(() => useDeleteAllAssistantConversations(), {
+      wrapper,
+    });
+
+    await act(() => deleteAll.current.mutateAsync());
+    const { result: opened } = renderHook(() => useAssistantConversation(), { wrapper });
+
+    expect(opened.current.data).toEqual({ conversationId: null, items: [] });
+  });
+
   it("should delete the conversations and leave the sheet with no thread", async () => {
     const state = createAssistantFakeState();
     installAssistantFake(server, state);

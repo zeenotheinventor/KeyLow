@@ -591,6 +591,43 @@ describe("the More screen", () => {
     });
   });
 
+  describe("Assistant", () => {
+    it("should be the first row in Settings, off until the person turns it on, with its icon and a chevron", async () => {
+      await renderMore();
+
+      const settings = within(screen.getByLabelText("Settings"));
+      const row = await settings.findByRole("button", {
+        name: "Assistant, Off until you turn it on, Off",
+      });
+
+      expect(row).toBeEnabled();
+      expect(drawingsIn(row)).toHaveLength(2);
+      expect(settings.getAllByRole("button")[0]).toBe(row);
+      expect(within(row).getByText("Off until you turn it on")).toBeOnTheScreen();
+      expect(within(row).getByText("Off")).toBeOnTheScreen();
+    });
+
+    it("should say On, with what the assistant does, once the person has turned it on", async () => {
+      Object.assign(diaryBackend.terms, { assistant_consent_at: "2026-10-26T10:00:00Z" });
+      await renderMore();
+
+      expect(
+        await within(screen.getByLabelText("Settings")).findByRole("button", {
+          name: "Assistant, Log and ask in your own words, On",
+        }),
+      ).toBeOnTheScreen();
+    });
+
+    it("should open the Assistant settings screen inside this tab when pressed", async () => {
+      const user = userEvent.setup();
+      await renderMore();
+
+      await user.press(await screen.findByRole("button", { name: /^Assistant/ }));
+
+      expect(routerMock.push).toHaveBeenCalledWith("/more/assistant");
+    });
+  });
+
   describe("Reminders", () => {
     it("should be an enabled row in Settings, above About, with its icon and a chevron", async () => {
       await renderMore();

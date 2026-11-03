@@ -1,5 +1,10 @@
-import { useProgramSummary, useTargets } from "@keylow/api-client";
-import { MORE_SCREEN, TAB_TITLES, describeNextCheckInSubtitle } from "@keylow/core/copy";
+import { useAssistantConsent, useProgramSummary, useTargets } from "@keylow/api-client";
+import {
+  MORE_SCREEN,
+  TAB_TITLES,
+  describeAssistantMoreRow,
+  describeNextCheckInSubtitle,
+} from "@keylow/core/copy";
 import { formatCalories } from "@keylow/core/format";
 import { useRouter } from "expo-router";
 import { ScrollView, View } from "react-native";
@@ -20,6 +25,8 @@ import { useReadsEnabled } from "../../../lib/useReadsEnabled";
 // let Ki-Lo set the targets, and Targets says "From your programme" while the programme's targets are in force.
 // Recipes is Nutrition's last row and opens the recipe library inside this tab, where it moved from the bar.
 // Weight opens the Weight screen inside this tab, Appearance, the Body map and the Dashboard body map are set here, and Sign out is Account's one row.
+// Assistant is the first row of Settings and opens its settings screen inside this tab, its sub line and value
+// following whether the assistant is on, and none until that is read.
 // Reminders and About are under Settings and open their screens. No board draws Reminders, and its icon is the
 // clock because the kit has no bell.
 export default function MoreRoute() {
@@ -27,7 +34,9 @@ export default function MoreRoute() {
   const isReadEnabled = useReadsEnabled();
   const targets = useTargets({ enabled: isReadEnabled });
   const programSummary = useProgramSummary({ enabled: isReadEnabled });
+  const assistantConsent = useAssistantConsent({ enabled: isReadEnabled });
   const openOnce = useOpenOnce();
+  const assistantRow = describeAssistantMoreRow(assistantConsent.data?.isOn);
   const kcalTarget = targets.data?.kcal ?? null;
   const program = programSummary.data?.program;
   // Nothing is said until the read is in, and a programme with no check-in date yet has nothing to say.
@@ -99,6 +108,18 @@ export default function MoreRoute() {
           />
         </GroupedList>
         <GroupedList title={MORE_SCREEN.settings.title}>
+          <ListRow
+            icon="Sparkles"
+            subtitle={assistantRow.subtitle}
+            title={assistantRow.title}
+            value={assistantRow.value}
+            valueLook="quiet"
+            onPress={() => {
+              openOnce(() => {
+                router.push("/more/assistant");
+              });
+            }}
+          />
           <AppearanceSetting />
           <BodyMapRendererSetting />
           <DashboardBodyChartSetting />

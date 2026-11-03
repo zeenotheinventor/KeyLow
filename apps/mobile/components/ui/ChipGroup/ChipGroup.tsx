@@ -127,7 +127,8 @@ function chipChoice<Value extends string>(
  * values, to which each press adds the chip or from which it takes it out.
  *
  * With `selection="action"` the chips are one-shot buttons in a plain group, for a quick reply: nothing is
- * chosen, no chip is ever drawn selected, and `onChipPress` does the work.
+ * chosen, no chip is ever drawn selected, and `onChipPress` does the work. `disabled` dims them and stops
+ * them responding, for a reply to a question that has been answered.
  */
 export function ChipGroup<Value extends string>(props: ChipGroupAnyProps<Value>) {
   const { label, options, layout = "scroll", className = "" } = props;
@@ -136,6 +137,7 @@ export function ChipGroup<Value extends string>(props: ChipGroupAnyProps<Value>)
       props.selection === "single" || props.selection === undefined ? "single" : props.selection
     ];
   const lineHeight = useCappedLineHeight(labelLineHeight, maxFontScale);
+  const isDisabled = props.selection === "action" && props.disabled === true;
 
   const chips = options.map((option) => {
     const { isChosen, haptic, press } = chipChoice(props, option.value);
@@ -145,7 +147,8 @@ export function ChipGroup<Value extends string>(props: ChipGroupAnyProps<Value>)
       <PressableSurface
         key={option.value}
         checked={props.selection === "action" ? undefined : isChosen}
-        className={`${chipSizeClassName[layout]} items-center justify-center rounded-pill border ${look.chipClassName}`}
+        className={`${chipSizeClassName[layout]} items-center justify-center rounded-pill border ${look.chipClassName} ${isDisabled ? "opacity-40" : ""}`}
+        disabled={isDisabled}
         haptic={haptic}
         hitSlop={layout === "wrap" ? wrapChipHitSlop : undefined}
         label={option.label}
