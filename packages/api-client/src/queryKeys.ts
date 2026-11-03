@@ -271,4 +271,12 @@ export const keys = {
     completeDays: (month: string) => ["diary", "complete-days", month] as const,
     recentFoods: ["diary", "recent-foods"] as const,
   },
+  /** The assistant's reads. Every key sits under `["assistant"]`, so one invalidation of `keys.assistant.all` refreshes them all. */
+  assistant: {
+    all: ["assistant"] as const,
+    consent: ["assistant", "consent"] as const,
+    status: ["assistant", "status"] as const,
+    conversation: ["assistant", "conversation"] as const,
+    changes: ["assistant", "changes"] as const,
+  },
 };

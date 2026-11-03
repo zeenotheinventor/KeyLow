@@ -1,6 +1,6 @@
 export type { Database } from "./database.types";
 export { invokeEdgeFunction } from "./edge";
-export { KeyLowProvider, useSupabase } from "./KeyLowProvider";
+export { KeyLowProvider, useFunctionsUrl, useSupabase } from "./KeyLowProvider";
 export { keys } from "./queryKeys";
 export { addToLibrary, libraryNames, setLibraryFlag, summaryOf } from "./recipeCache";
 export { CustomFoodValidationError } from "./customFoodInput";
@@ -388,3 +388,13 @@ export {
   setShoppingItemChecked,
 } from "./repos";
 export type { ShoppingSourceRecipe } from "./repos";
+export {
+  useAssistantConsent,
+  useAssistantStatus,
+  useAssistantTurn,
+  useSetAssistantConsent,
+} from "./hooks";
+export { getAssistantConsent, getAssistantStatus, setAssistantConsent } from "./repos";
+export type { AssistantConsent, AssistantStatus } from "./repos";
+export type { AssistantLiveTurn } from "./assistantLiveTurn";
+export type { StreamingFetch, StreamingResponse } from "./runAssistantTurn";

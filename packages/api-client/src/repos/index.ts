@@ -162,3 +162,5 @@ export {
   setShoppingItemChecked,
 } from "./shoppingList";
 export type { ShoppingSourceRecipe } from "./shoppingList";
+export { getAssistantConsent, getAssistantStatus, setAssistantConsent } from "./assistant";
+export type { AssistantConsent, AssistantStatus } from "./assistant";

@@ -18,7 +18,7 @@ import { createQueryClient } from "../lib/diaryCache";
 import { setUpReminderNotifications } from "../lib/notifications";
 import { installFatalRestart } from "../lib/sentry/fatalRestart";
 import { initSentry } from "../lib/sentry/init";
-import { readStoredUserId, supabase } from "../lib/supabase";
+import { functionsUrl, readStoredUserId, supabase } from "../lib/supabase";
 import { ThemeProvider } from "../lib/theme";
 import { holdSplashScreen } from "../lib/updates";
 
@@ -70,7 +70,7 @@ function RootLayout() {
     <GestureHandlerRootView className="flex-1">
       <SafeAreaProvider>
         <ThemeProvider>
-          <KeyLowProvider client={supabase} queryClient={queryClient}>
+          <KeyLowProvider client={supabase} queryClient={queryClient} functionsUrl={functionsUrl}>
             <PersistedDiaryCache readStoredUserId={readStoredUserId}>
               <AuthGate readStoredUserId={readStoredUserId}>
                 <ToastProvider>
