@@ -186,8 +186,12 @@ export function AssistantSheet({ open, onClose, localDate, describeAt }: Assista
       return;
     }
     setSent({ text, afterItemId: items?.at(-1)?.id ?? null });
-    // The thread's own conversation, or the one the first turn started, which is not read yet.
-    const conversationId = conversation.data?.conversationId ?? live?.conversationId ?? null;
+    // A settled read is the truth, so after Delete all conversations it is null and the dead id the live turn
+    // still holds is not reused. The one the first turn started stands in only while the read is unknown or failed.
+    const conversationId =
+      conversation.isSuccess && !conversation.isFetching
+        ? conversation.data.conversationId
+        : (conversation.data?.conversationId ?? live?.conversationId ?? null);
     void send(text, { conversationId, localDate, localTime: describeAt });
   }
 

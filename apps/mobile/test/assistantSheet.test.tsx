@@ -674,11 +674,11 @@ describe("the assistant sheet", () => {
   });
 
   describe("the message sent from this sheet", () => {
-    it("should send into the conversation the first turn started while the thread is not read yet", async () => {
+    it("should send into the conversation the first turn started while the thread cannot be read", async () => {
       mockAssistant.conversation = {
-        data: { conversationId: null, items: [] },
-        isSuccess: true,
-        isError: false,
+        data: undefined,
+        isSuccess: false,
+        isError: true,
         isFetching: false,
       };
       const rendered = await renderSheet();
@@ -695,6 +695,37 @@ describe("the assistant sheet", () => {
 
       expect(mockAssistant.turn.send).toHaveBeenCalledWith("And another", {
         conversationId: CONVERSATION_ID,
+        localDate: OPENED_ON,
+      });
+    });
+
+    it("should start a new conversation, not reuse the live turn's, once the thread is read as deleted", async () => {
+      mockAssistant.conversation = {
+        data: { conversationId: CONVERSATION_ID, items: earlierThread },
+        isSuccess: true,
+        isError: false,
+        isFetching: false,
+      };
+      mockAssistant.turn = {
+        ...mockAssistant.turn,
+        live: liveTurn({ text: "Hi", outcome: "complete" }),
+      };
+      const rendered = await renderSheet();
+      // Delete all conversations in Settings, which leaves the sheet's read empty and settled.
+      mockAssistant.conversation = {
+        data: { conversationId: null, items: [] },
+        isSuccess: true,
+        isError: false,
+        isFetching: false,
+      };
+      await rendered.rerender(sheetTree());
+      mockAssistant.turn.send.mockClear();
+
+      await typeMessage("After deleting");
+      await userSetup().press(sendButton());
+
+      expect(mockAssistant.turn.send).toHaveBeenCalledWith("After deleting", {
+        conversationId: null,
         localDate: OPENED_ON,
       });
     });

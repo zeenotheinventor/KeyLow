@@ -4,10 +4,13 @@ import { useSupabase } from "../KeyLowProvider";
 import { keys } from "../queryKeys";
 import { deleteAllAssistantConversations } from "../repos/assistantConversations";
 
+import type { AssistantConversation } from "./useAssistantConversation";
+
 /**
  * "Delete all conversations" in the assistant settings. The turns and messages go with them, and what the
- * assistant changed stays in the changes list, which Undo still works from. The thread read is refreshed
- * and shows no conversation, and every other assistant read is refreshed as well.
+ * assistant changed stays in the changes list, which Undo still works from. The thread read is set to
+ * no conversation at once, so a sheet that is closed opens empty, and every assistant read is refreshed
+ * after that.
  */
 export function useDeleteAllAssistantConversations() {
   const client = useSupabase();
@@ -15,6 +18,14 @@ export function useDeleteAllAssistantConversations() {
 
   return useMutation({
     mutationFn: () => deleteAllAssistantConversations(client),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: keys.assistant.all }),
+    onSuccess: () => {
+      // A closed sheet's read is disabled, and invalidating does not refetch a disabled read, so it would open
+      // on the deleted thread until its refetch landed. The thread is known to be empty, so it is set first.
+      queryClient.setQueryData<AssistantConversation>(keys.assistant.conversation, {
+        conversationId: null,
+        items: [],
+      });
+      return queryClient.invalidateQueries({ queryKey: keys.assistant.all });
+    },
   });
 }

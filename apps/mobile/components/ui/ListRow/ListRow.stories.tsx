@@ -5,7 +5,7 @@ import { Card } from "../Card";
 import { SegmentedControl } from "../SegmentedControl";
 import { ListRow } from "./ListRow";
 
-import type { ListRowToPressProps, ListRowWithControlProps } from "./types";
+import type { ListRowToPressProps, ListRowWithControlProps, ListRowWithToggleProps } from "./types";
 import type { Meta, StoryObj } from "@storybook/react-native";
 
 const meta = {
@@ -167,4 +167,29 @@ export const WithControl: StoryObj<Meta<ListRowWithControlProps>> = {
       <AppearanceChoice />
     </ListRow>
   ),
+};
+
+// The Assistant settings screen's Delete all conversations row: the title in the danger colour and no chevron.
+export const DangerTitle: Story = {
+  args: {
+    icon: undefined,
+    title: "Delete all conversations",
+    titleTone: "danger",
+    chevron: false,
+    onPress: () => undefined,
+  },
+};
+
+// A switch at the end, kept by the screen, so the story keeps it too and a press moves it.
+function UseTheAssistant({ title }: { title: string }) {
+  const [isOn, setIsOn] = useState(false);
+
+  return <ListRow title={title} toggle={{ isOn, label: title, onValueChange: setIsOn }} />;
+}
+
+// The Assistant settings screen's "Use the assistant" row: a title and the kit's switch, and no icon or chevron.
+// Its props are the row with a toggle, which takes no press, so it has a story type of its own.
+export const WithToggle: StoryObj<Meta<ListRowWithToggleProps>> = {
+  args: { title: "Use the assistant" },
+  render: (args) => <UseTheAssistant title={args.title} />,
 };
