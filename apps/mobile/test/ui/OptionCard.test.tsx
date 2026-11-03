@@ -52,8 +52,6 @@ function renderCard(props: OptionCardProps, scheme: ThemeScheme = "dark") {
 // What NativeWind hands over for an opacity of 0.4, which is a 32 bit float.
 const dimmed = Math.fround(0.4);
 
-const schemes: ThemeScheme[] = ["dark", "light"];
-
 describe("OptionCard", () => {
   let kitStyles: string;
 
@@ -254,11 +252,11 @@ describe("OptionCard", () => {
       expect(mockImpact).not.toHaveBeenCalled();
     });
 
-    describe.each(schemes)("in the %s scheme", (scheme) => {
-      const colorOf = (name: ColorName) => resolvedColor(scheme, name);
+    describe("in the dark scheme", () => {
+      const colorOf = (name: ColorName) => resolvedColor("dark", name);
 
       it("should draw an empty square in the strong border colour when it is not checked", async () => {
-        await renderCard(vTaper, scheme);
+        await renderCard(vTaper, "dark");
         await screen.findByRole("checkbox");
 
         const [square] = viewsDrawn({ width: 20, height: 20, borderRadius: 6 });
@@ -269,10 +267,10 @@ describe("OptionCard", () => {
       });
 
       it("should fill the square with the accent and an accent border on the muted fill when it is checked", async () => {
-        await renderCard({ ...vTaper, checked: true }, scheme);
+        await renderCard({ ...vTaper, checked: true }, "dark");
 
         expect(await screen.findByRole("checkbox")).toHaveStyle({
-          backgroundColor: themes[scheme]["accent-muted"],
+          backgroundColor: themes.dark["accent-muted"],
           borderColor: colorOf("accent"),
         });
         const [square] = viewsDrawn({ width: 20, height: 20, borderRadius: 6 });
@@ -401,12 +399,12 @@ describe("OptionCard", () => {
     });
   });
 
-  describe.each(schemes)("in the %s scheme", (scheme) => {
+  describe("in the dark scheme", () => {
     // NativeWind resolves a solid colour to an rgba string, and a translucent one to the token as written.
-    const colorOf = (name: ColorName) => resolvedColor(scheme, name);
+    const colorOf = (name: ColorName) => resolvedColor("dark", name);
 
     it("should be a surface with a hairline border when it is not chosen", async () => {
-      await renderCard(female, scheme);
+      await renderCard(female, "dark");
 
       expect(await screen.findByRole("radio")).toHaveStyle({
         backgroundColor: colorOf("surface"),
@@ -415,7 +413,7 @@ describe("OptionCard", () => {
     });
 
     it("should draw an empty radio ring in the strong border colour when it is not chosen", async () => {
-      await renderCard(female, scheme);
+      await renderCard(female, "dark");
       await screen.findByRole("radio");
 
       const [ring] = viewsDrawn({ width: 20, height: 20, borderRadius: 999 });
@@ -429,16 +427,16 @@ describe("OptionCard", () => {
     });
 
     it("should be an accent border on the muted accent fill when it is chosen", async () => {
-      await renderCard({ ...female, checked: true }, scheme);
+      await renderCard({ ...female, checked: true }, "dark");
 
       expect(await screen.findByRole("radio")).toHaveStyle({
-        backgroundColor: themes[scheme]["accent-muted"],
+        backgroundColor: themes.dark["accent-muted"],
         borderColor: colorOf("accent"),
       });
     });
 
     it("should draw a second accent line inside the border, so the chosen border reads 2 points", async () => {
-      await renderCard({ ...female, checked: true }, scheme);
+      await renderCard({ ...female, checked: true }, "dark");
       await screen.findByRole("radio");
 
       // The line is a layer with no role, so it is found by its look. It fills the card inside the 1 point
@@ -455,14 +453,14 @@ describe("OptionCard", () => {
     });
 
     it("should draw no second line when it is not chosen", async () => {
-      await renderCard(female, scheme);
+      await renderCard(female, "dark");
       await screen.findByRole("radio");
 
       expect(viewsDrawn({ position: "absolute", borderWidth: 1 })).toHaveLength(0);
     });
 
     it("should fill the radio with the accent and put an 8 point dot of the accent foreground in it when it is chosen", async () => {
-      await renderCard({ ...female, checked: true }, scheme);
+      await renderCard({ ...female, checked: true }, "dark");
       await screen.findByRole("radio");
 
       const [ring] = viewsDrawn({ width: 20, height: 20, borderRadius: 999 });
@@ -476,7 +474,7 @@ describe("OptionCard", () => {
     });
 
     it("should set the title in strong body text and the description in secondary caption text", async () => {
-      await renderCard(rate, scheme);
+      await renderCard(rate, "dark");
 
       expect(await screen.findByText("0.5% a week")).toHaveStyle({
         fontFamily: "Geist-SemiBold",
@@ -490,13 +488,72 @@ describe("OptionCard", () => {
     });
 
     it("should set the value in strong body text and its caption in muted text", async () => {
-      await renderCard(rate, scheme);
+      await renderCard(rate, "dark");
 
       expect(await screen.findByText("0.4 kg")).toHaveStyle({
         fontFamily: "Geist-SemiBold",
         color: colorOf("text-primary"),
       });
       expect(screen.getByText("a week")).toHaveStyle({ color: colorOf("text-muted") });
+    });
+  });
+
+  // The radio and its mark use `accent`, `accent-foreground` and `border-strong`. Each shares its dark value with
+  // other tokens (`focus-ring`, `role-primary`, `text-on-status`, `heat-0`), so only the light run tells them
+  // from a swap. One case per site: the card border, the second line, the empty ring, and the chosen mark with its dot.
+  describe("in the light scheme", () => {
+    const colorOf = (name: ColorName) => resolvedColor("light", name);
+
+    it("should draw an empty radio ring in the strong border colour when it is not chosen", async () => {
+      await renderCard(female, "light");
+      await screen.findByRole("radio");
+
+      const [ring] = viewsDrawn({ width: 20, height: 20, borderRadius: 999 });
+      expect(ring).toHaveStyle({
+        borderColor: colorOf("border-strong"),
+        backgroundColor: "#00000000",
+      });
+      expect(
+        viewsDrawn({ width: 8, height: 8, backgroundColor: colorOf("accent-foreground") }),
+      ).toHaveLength(0);
+    });
+
+    it("should be an accent border on the muted accent fill when it is chosen", async () => {
+      await renderCard({ ...female, checked: true }, "light");
+
+      expect(await screen.findByRole("radio")).toHaveStyle({
+        backgroundColor: themes.light["accent-muted"],
+        borderColor: colorOf("accent"),
+      });
+    });
+
+    it("should draw a second accent line inside the border, so the chosen border reads 2 points", async () => {
+      await renderCard({ ...female, checked: true }, "light");
+      await screen.findByRole("radio");
+
+      expect(
+        viewsDrawn({
+          position: "absolute",
+          inset: 0,
+          borderColor: colorOf("accent"),
+          borderWidth: 1,
+          borderRadius: 11,
+        }),
+      ).toHaveLength(1);
+    });
+
+    it("should fill the radio with the accent and put an 8 point dot of the accent foreground in it when it is chosen", async () => {
+      await renderCard({ ...female, checked: true }, "light");
+      await screen.findByRole("radio");
+
+      const [ring] = viewsDrawn({ width: 20, height: 20, borderRadius: 999 });
+      expect(ring).toHaveStyle({
+        borderColor: colorOf("accent"),
+        backgroundColor: colorOf("accent"),
+      });
+      expect(
+        viewsDrawn({ width: 8, height: 8, backgroundColor: colorOf("accent-foreground") }),
+      ).toHaveLength(1);
     });
   });
 });

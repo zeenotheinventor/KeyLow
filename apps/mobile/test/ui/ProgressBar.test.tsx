@@ -166,11 +166,11 @@ describe("ProgressBar", () => {
     });
   });
 
-  describe.each<ThemeScheme>(["dark", "light"])("in the %s theme", (scheme) => {
+  describe("in the dark theme", () => {
     it("should be a track on the border colour", async () => {
-      await renderBar({ value: 40 }, scheme);
+      await renderBar({ value: 40 }, "dark");
 
-      expect(bar()).toHaveStyle({ backgroundColor: resolvedColor(scheme, "border") });
+      expect(bar()).toHaveStyle({ backgroundColor: resolvedColor("dark", "border") });
     });
   });
 });

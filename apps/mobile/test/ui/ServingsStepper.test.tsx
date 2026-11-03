@@ -51,8 +51,6 @@ function drawings() {
 
 const field = () => screen.getByRole("adjustable", { name: "Servings" });
 
-const schemes: ThemeScheme[] = ["dark", "light"];
-
 describe("ServingsStepper", () => {
   let kitStyles: string;
 
@@ -283,12 +281,12 @@ describe("ServingsStepper", () => {
       expect(screen.getByRole("alert")).toHaveStyle({ alignSelf: "flex-end", textAlign: "right" });
     });
 
-    describe.each(schemes)("in the %s scheme", (scheme) => {
+    describe("in the dark scheme", () => {
       it("should turn the field's border to danger", async () => {
-        await renderStepper({ error: "Enter whole servings from 1 to 1,000." }, scheme);
+        await renderStepper({ error: "Enter whole servings from 1 to 1,000." }, "dark");
         await screen.findByRole("adjustable", { name: "Servings" });
 
-        expect(viewsDrawn({ borderColor: resolvedColor(scheme, "danger") })).toHaveLength(1);
+        expect(viewsDrawn({ borderColor: resolvedColor("dark", "danger") })).toHaveLength(1);
       });
     });
   });

@@ -25,8 +25,6 @@ async function renderRow(props: Partial<TimeRowProps> = {}, scheme: ThemeScheme 
   return { onPress };
 }
 
-const schemes: ThemeScheme[] = ["dark", "light"];
-
 describe("TimeRow", () => {
   let kitStyles: string;
 
@@ -138,34 +136,59 @@ describe("TimeRow", () => {
     });
   });
 
-  describe.each(schemes)("in the %s scheme", (scheme) => {
+  describe("in the dark scheme", () => {
     it("should be a raised field at least 44 high, with a hairline border and the medium radius", async () => {
-      await renderRow({}, scheme);
+      await renderRow({}, "dark");
 
       expect(await screen.findByRole("button")).toHaveStyle({
         minHeight: touchTarget,
-        backgroundColor: resolvedColor(scheme, "surface-raised"),
-        borderColor: resolvedColor(scheme, "border"),
+        backgroundColor: resolvedColor("dark", "surface-raised"),
+        borderColor: resolvedColor("dark", "border"),
         borderWidth: 1,
         borderRadius: 12,
       });
     });
 
     it("should turn its border accent while the picker is open", async () => {
-      await renderRow({ open: true }, scheme);
+      await renderRow({ open: true }, "dark");
 
       expect(await screen.findByRole("button")).toHaveStyle({
-        borderColor: resolvedColor(scheme, "accent"),
+        borderColor: resolvedColor("dark", "accent"),
         borderWidth: 1,
       });
     });
 
     it("should pad 16 at the start and 12 at the end, as the board does", async () => {
-      await renderRow({}, scheme);
+      await renderRow({}, "dark");
 
       expect(await screen.findByRole("button")).toHaveStyle({
         paddingLeft: 16,
         paddingRight: 12,
+      });
+    });
+  });
+
+  // The field is `surface-raised` and its open border is `accent`. Each shares its dark value with other tokens
+  // (`skeleton-base`, `focus-ring`), so only the light run tells them from a swap.
+  describe("in the light scheme", () => {
+    it("should be a raised field at least 44 high, with a hairline border and the medium radius", async () => {
+      await renderRow({}, "light");
+
+      expect(await screen.findByRole("button")).toHaveStyle({
+        minHeight: touchTarget,
+        backgroundColor: resolvedColor("light", "surface-raised"),
+        borderColor: resolvedColor("light", "border"),
+        borderWidth: 1,
+        borderRadius: 12,
+      });
+    });
+
+    it("should turn its border accent while the picker is open", async () => {
+      await renderRow({ open: true }, "light");
+
+      expect(await screen.findByRole("button")).toHaveStyle({
+        borderColor: resolvedColor("light", "accent"),
+        borderWidth: 1,
       });
     });
   });

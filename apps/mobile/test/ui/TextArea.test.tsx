@@ -29,8 +29,6 @@ function renderTextArea(props: Partial<TextAreaProps> = {}, scheme: ThemeScheme 
   );
 }
 
-const schemes: ThemeScheme[] = ["dark", "light"];
-
 describe("TextArea", () => {
   let kitStyles: string;
 
@@ -147,12 +145,12 @@ describe("TextArea", () => {
     });
   });
 
-  describe.each(schemes)("in the %s scheme", (scheme) => {
-    const colorOf = (name: ColorName) => resolvedColor(scheme, name);
+  describe("in the dark scheme", () => {
+    const colorOf = (name: ColorName) => resolvedColor("dark", name);
     const boxOf = (style: Record<string, unknown>) => viewsDrawn({ minHeight: 96, ...style });
 
     it("should be a 96 point box on the raised surface with a hairline border, rounded medium, padded 12 across and 10 down", async () => {
-      await renderTextArea({}, scheme);
+      await renderTextArea({}, "dark");
       await screen.findByLabelText("Step 3 text");
 
       const [box] = boxOf({
@@ -170,7 +168,7 @@ describe("TextArea", () => {
     });
 
     it("should turn its border to the accent while it has focus, and back when it loses it", async () => {
-      await renderTextArea({}, scheme);
+      await renderTextArea({}, "dark");
       const field = await screen.findByLabelText("Step 3 text");
 
       await fireEvent(field, "focus");
@@ -181,23 +179,59 @@ describe("TextArea", () => {
     });
 
     it("should turn its border to danger when it has an error", async () => {
-      await renderTextArea({ error: "Too long." }, scheme);
+      await renderTextArea({ error: "Too long." }, "dark");
       await screen.findByLabelText("Step 3 text");
 
       expect(boxOf({ borderColor: colorOf("danger") })).toHaveLength(1);
     });
 
     it("should write the counter muted, and in danger once it is over", async () => {
-      await renderTextArea({ counter: "201 / 1,000" }, scheme);
+      await renderTextArea({ counter: "201 / 1,000" }, "dark");
       expect(await screen.findByText("201 / 1,000")).toHaveStyle({
         color: colorOf("text-muted"),
       });
       await screen.unmount();
 
-      await renderTextArea({ counter: "1,001 / 1,000", isOverLimit: true }, scheme);
+      await renderTextArea({ counter: "1,001 / 1,000", isOverLimit: true }, "dark");
       expect(await screen.findByText("1,001 / 1,000")).toHaveStyle({
         color: colorOf("danger"),
       });
+    });
+  });
+
+  // The box is `surface-raised` and the focus border is `accent`. Each shares its dark value with other tokens
+  // (`skeleton-base`, `focus-ring`), so only the light run tells them from a swap.
+  describe("in the light scheme", () => {
+    const colorOf = (name: ColorName) => resolvedColor("light", name);
+    const boxOf = (style: Record<string, unknown>) => viewsDrawn({ minHeight: 96, ...style });
+
+    it("should be a 96 point box on the raised surface with a hairline border, rounded medium, padded 12 across and 10 down", async () => {
+      await renderTextArea({}, "light");
+      await screen.findByLabelText("Step 3 text");
+
+      const [box] = boxOf({
+        backgroundColor: colorOf("surface-raised"),
+        borderColor: colorOf("border"),
+        borderWidth: 1,
+        borderRadius: 12,
+      });
+      expect(box).toHaveStyle({
+        paddingLeft: 12,
+        paddingRight: 12,
+        paddingTop: 10,
+        paddingBottom: 10,
+      });
+    });
+
+    it("should turn its border to the accent while it has focus, and back when it loses it", async () => {
+      await renderTextArea({}, "light");
+      const field = await screen.findByLabelText("Step 3 text");
+
+      await fireEvent(field, "focus");
+      expect(boxOf({ borderColor: colorOf("accent") })).toHaveLength(1);
+
+      await fireEvent(field, "blur");
+      expect(boxOf({ borderColor: colorOf("accent") })).toHaveLength(0);
     });
   });
 });

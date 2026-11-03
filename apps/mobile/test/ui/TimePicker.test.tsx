@@ -390,19 +390,19 @@ describe("TimePicker", () => {
     });
   });
 
-  describe.each<ThemeScheme>(["dark", "light"])("in the %s scheme", (scheme) => {
+  describe("in the dark scheme", () => {
     it("should set the chosen row on accent-muted in the accent ink", async () => {
-      await renderPicker({}, scheme);
+      await renderPicker({}, "dark");
 
       const row = chosen(hours());
-      expect(row).toHaveStyle({ backgroundColor: themes[scheme]["accent-muted"] });
+      expect(row).toHaveStyle({ backgroundColor: themes.dark["accent-muted"] });
       expect(within(row).getByText("12")).toHaveStyle({
-        color: resolvedColor(scheme, "accent-ink"),
+        color: resolvedColor("dark", "accent-ink"),
       });
     });
 
     it("should fade the neighbours of the chosen row to 80 percent and the rest to 50", async () => {
-      await renderPicker({}, scheme);
+      await renderPicker({}, "dark");
       const options = within(hours()).getAllByRole("option");
 
       expect(options[12]).toHaveStyle({ opacity: 1 });
@@ -413,9 +413,24 @@ describe("TimePicker", () => {
     });
 
     it("should make each row 44 high", async () => {
-      await renderPicker({}, scheme);
+      await renderPicker({}, "dark");
 
       expect(chosen(hours())).toHaveStyle({ height: 44 });
+    });
+  });
+
+  // The chosen row's text is `accent-ink`, the same colour as `accent` in dark and the primary text colour in
+  // light, so only the light run tells the ink from a plain accent. The fade and the row height are the same in
+  // both schemes.
+  describe("in the light scheme", () => {
+    it("should set the chosen row on accent-muted in the accent ink", async () => {
+      await renderPicker({}, "light");
+
+      const row = chosen(hours());
+      expect(row).toHaveStyle({ backgroundColor: themes.light["accent-muted"] });
+      expect(within(row).getByText("12")).toHaveStyle({
+        color: resolvedColor("light", "accent-ink"),
+      });
     });
   });
 });

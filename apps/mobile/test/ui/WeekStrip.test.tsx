@@ -57,8 +57,6 @@ async function swipe(fromX: number, toX: number, fromY = 20, toY = 20) {
   await fireEvent(strip, "touchEnd", { nativeEvent: { pageX: toX, pageY: toY } });
 }
 
-const schemes: ThemeScheme[] = ["dark", "light"];
-
 describe("WeekStrip", () => {
   let kitStyles: string;
 
@@ -321,43 +319,70 @@ describe("WeekStrip", () => {
     });
   });
 
-  describe.each(schemes)("its colours in %s", (scheme) => {
+  describe("its colours in dark", () => {
     it("should fill the selected pill with surface-raised and give it the strong border", async () => {
-      await renderStrip({ scheme });
+      await renderStrip();
 
       expect(screen.getByRole("button", { name: "Thursday 15 October, today" })).toHaveStyle({
-        backgroundColor: resolvedColor(scheme, "surface-raised"),
-        borderColor: resolvedColor(scheme, "border-strong"),
+        backgroundColor: resolvedColor("dark", "surface-raised"),
+        borderColor: resolvedColor("dark", "border-strong"),
       });
     });
 
     it("should give a pill that is not selected the plain border and no fill", async () => {
-      await renderStrip({ scheme });
+      await renderStrip();
       const pill = screen.getByRole("button", { name: "Wednesday 14 October" });
 
-      expect(pill).toHaveStyle({ borderColor: resolvedColor(scheme, "border") });
-      expect(pill).not.toHaveStyle({ backgroundColor: resolvedColor(scheme, "surface-raised") });
+      expect(pill).toHaveStyle({ borderColor: resolvedColor("dark", "border") });
+      expect(pill).not.toHaveStyle({ backgroundColor: resolvedColor("dark", "surface-raised") });
     });
 
     it("should set the date in the primary text colour and the day in muted", async () => {
-      await renderStrip({ scheme });
+      await renderStrip();
 
-      expect(screen.getByText("14")).toHaveStyle({ color: resolvedColor(scheme, "text-primary") });
-      expect(screen.getByText("We")).toHaveStyle({ color: resolvedColor(scheme, "text-muted") });
+      expect(screen.getByText("14")).toHaveStyle({ color: resolvedColor("dark", "text-primary") });
+      expect(screen.getByText("We")).toHaveStyle({ color: resolvedColor("dark", "text-muted") });
     });
 
     it("should draw the dot in the accent colour", async () => {
-      await renderStrip({ scheme });
+      await renderStrip();
 
       expect(screen.getByTestId("today-dot", hidden)).toHaveStyle({
-        backgroundColor: resolvedColor(scheme, "accent"),
+        backgroundColor: resolvedColor("dark", "accent"),
       });
     });
 
     it("should draw the tick in the success colour", async () => {
-      await renderStrip({ scheme });
+      await renderStrip();
 
-      expect(JSON.stringify(screen.toJSON())).toContain(`"stroke":"${themes[scheme].success}"`);
+      expect(JSON.stringify(screen.toJSON())).toContain(`"stroke":"${themes.dark.success}"`);
+    });
+  });
+
+  // The selected pill is `surface-raised` with `border-strong`, the dot is `accent` and the tick is `success`.
+  // Each shares its dark value with other tokens, so only the light run tells them from a swap.
+  describe("its colours in light", () => {
+    it("should fill the selected pill with surface-raised and give it the strong border", async () => {
+      await renderStrip({ scheme: "light" });
+
+      expect(screen.getByRole("button", { name: "Thursday 15 October, today" })).toHaveStyle({
+        backgroundColor: resolvedColor("light", "surface-raised"),
+        borderColor: resolvedColor("light", "border-strong"),
+      });
+    });
+
+    it("should draw the dot in the accent colour", async () => {
+      await renderStrip({ scheme: "light" });
+
+      expect(screen.getByTestId("today-dot", hidden)).toHaveStyle({
+        backgroundColor: resolvedColor("light", "accent"),
+      });
+    });
+
+    it("should draw the tick in the success colour", async () => {
+      await renderStrip({ scheme: "light" });
+
+      expect(JSON.stringify(screen.toJSON())).toContain(`"stroke":"${themes.light.success}"`);
     });
   });
 });
