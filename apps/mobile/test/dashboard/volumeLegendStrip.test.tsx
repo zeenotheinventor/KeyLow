@@ -7,8 +7,6 @@ import { registerAppStyles } from "../support/nativeWindStyles";
 import { expectTextsInOrder } from "../support/textsInOrder";
 import { resolvedColor } from "../support/themeColor";
 
-import type { ThemeScheme } from "@keylow/tokens";
-
 jest.mock("@react-native-async-storage/async-storage", () => ({
   __esModule: true,
   default: { getItem: () => Promise.resolve(null), setItem: () => Promise.resolve() },
@@ -27,9 +25,9 @@ function styleProperty(style: unknown, name: string): unknown {
   return typeof style === "object" && style !== null ? propOf(style, name) : undefined;
 }
 
-async function renderStrip(scheme: ThemeScheme = "dark") {
+async function renderStrip() {
   await render(
-    <ThemeProvider fixedPreference={scheme}>
+    <ThemeProvider fixedPreference="dark">
       <BodyMapLegend scale="volume" variant="strip" />
     </ThemeProvider>,
   );
@@ -69,26 +67,23 @@ describe("the compact volume legend", () => {
     ]);
   });
 
-  it.each(["dark", "light"] as const)(
-    "should draw the five bands from High down to Not trained in the %s volume tokens",
-    async (scheme) => {
-      const legend = await renderStrip(scheme);
+  it("should draw the five bands from High down to Not trained in the dark volume tokens", async () => {
+    const legend = await renderStrip();
 
-      expect(
-        swatchesOf(legend).map((swatch) => styleProperty(swatch.props.style, "backgroundColor")),
-      ).toEqual(
-        (
-          [
-            "volume-high",
-            "volume-productive",
-            "volume-growing",
-            "volume-maintaining",
-            "volume-not-trained",
-          ] as const
-        ).map((token) => resolvedColor(scheme, token)),
-      );
-    },
-  );
+    expect(
+      swatchesOf(legend).map((swatch) => styleProperty(swatch.props.style, "backgroundColor")),
+    ).toEqual(
+      (
+        [
+          "volume-high",
+          "volume-productive",
+          "volume-growing",
+          "volume-maintaining",
+          "volume-not-trained",
+        ] as const
+      ).map((token) => resolvedColor("dark", token)),
+    );
+  });
 
   it("should give only the Not trained swatch a strong border", async () => {
     const legend = await renderStrip();

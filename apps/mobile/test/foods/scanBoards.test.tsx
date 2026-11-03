@@ -20,8 +20,8 @@ import { resolvedColor } from "../support/themeColor";
 
 import type { ThemeScheme } from "@keylow/tokens";
 
-// Each state of the barcode-scan boards, in dark and light, on the real route with a mocked camera
-// and a mocked lookup. The behaviour (throttle, focus, clearing) is in scan.test.tsx.
+// Each state of the barcode-scan boards, in dark, and in light where a case needs it, on the real route with a
+// mocked camera and a mocked lookup. The behaviour (throttle, focus, clearing) is in scan.test.tsx.
 
 jest.mock(
   "expo-router",
@@ -102,7 +102,9 @@ describe("barcode scan boards", () => {
     jest.restoreAllMocks();
   });
 
-  describe.each(schemes)("in %s", (scheme) => {
+  describe("in dark", () => {
+    const scheme: ThemeScheme = "dark";
+
     describe("permission-ask", () => {
       beforeEach(() => {
         cameraMock.permission = permissions.undetermined;
@@ -203,20 +205,6 @@ describe("barcode scan boards", () => {
         });
       });
 
-      it("should draw the frame 288 by 160 inside a 2 point accent border, dimming what is outside it", async () => {
-        await renderRoute(scheme);
-
-        expect(screen.getByRole("img", { name: "Barcode viewfinder" }).children.at(-1)).toHaveStyle(
-          {
-            height: 164,
-            width: 292,
-            borderWidth: 2,
-            borderColor: resolvedColor(scheme, "accent"),
-            boxShadow: "0 0 0 999px rgba(0, 0, 0, 0.35)",
-          },
-        );
-      });
-
       it("should fill the viewfinder with the camera by a class, not an inline style", async () => {
         await renderRoute(scheme);
 
@@ -245,18 +233,6 @@ describe("barcode scan boards", () => {
         expect(screen.getByText(crisps)).toBeOnTheScreen();
         expect(screen.getByRole("status", { name: "Looking up the barcode" })).toBeOnTheScreen();
         expect(screen.queryByRole("button", { name: "Scan again" })).not.toBeOnTheScreen();
-      });
-
-      it("should take the spinner's colour from the theme", async () => {
-        await renderScanned(scheme);
-
-        // Lime in dark, and the primary text colour in light, where lime is too faint for a thin glyph.
-        // The header's two glyphs and the card's barcode come first, and the spinner is the last.
-        expect(drawings()).toHaveLength(4);
-        expect(drawings().at(-1)).toHaveProp(
-          "stroke",
-          scheme === "dark" ? themes.dark.accent : themes.light["text-primary"],
-        );
       });
 
       it("should turn its spinner round", async () => {
@@ -452,6 +428,46 @@ describe("barcode scan boards", () => {
             backgroundColor: "#00000000",
           });
         }
+      });
+    });
+  });
+
+  // The light run stays for two cases: the viewfinder's accent border, a token that shares its dark value with
+  // others (`accent-ink`, `chart-marker`, `focus-ring`, `role-primary`), so only a light run can tell a swap inside
+  // the group, and the spinner, which is lime in dark and the primary text colour in light. `packages/tokens`
+  // guards the light values themselves.
+  describe.each(schemes)("in %s", (scheme) => {
+    describe("scanning", () => {
+      it("should draw the frame 288 by 160 inside a 2 point accent border, dimming what is outside it", async () => {
+        await renderRoute(scheme);
+
+        expect(screen.getByRole("img", { name: "Barcode viewfinder" }).children.at(-1)).toHaveStyle(
+          {
+            height: 164,
+            width: 292,
+            borderWidth: 2,
+            borderColor: resolvedColor(scheme, "accent"),
+            boxShadow: "0 0 0 999px rgba(0, 0, 0, 0.35)",
+          },
+        );
+      });
+    });
+
+    describe("looking-up", () => {
+      beforeEach(() => {
+        setLookupOutcome({ isLoading: true });
+      });
+
+      it("should take the spinner's colour from the theme", async () => {
+        await renderScanned(scheme);
+
+        // Lime in dark, and the primary text colour in light, where lime is too faint for a thin glyph.
+        // The header's two glyphs and the card's barcode come first, and the spinner is the last.
+        expect(drawings()).toHaveLength(4);
+        expect(drawings().at(-1)).toHaveProp(
+          "stroke",
+          scheme === "dark" ? themes.dark.accent : themes.light["text-primary"],
+        );
       });
     });
   });

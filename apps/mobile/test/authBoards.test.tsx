@@ -17,8 +17,9 @@ import CallbackRoute from "../app/auth/callback";
 
 import type { ThemeScheme } from "@keylow/tokens";
 
-// Each state of the auth boards, in dark and light, on the real routes with a mocked backend. The
-// behaviour (what is sent, what is refused) is in sign-in.test.tsx, sign-up.test.tsx and callback.test.tsx.
+// Each state of the auth boards, in dark, and in light where a case checks a token that shares its dark value or a
+// scheme branch, on the real routes with a mocked backend. The behaviour (what is sent, what is refused) is in
+// sign-in.test.tsx, sign-up.test.tsx and callback.test.tsx.
 
 jest.mock(
   "expo-router",
@@ -84,7 +85,9 @@ describe("the auth boards", () => {
     resetGoogleSignInMock();
   });
 
-  describe.each(schemes)("in %s", (scheme) => {
+  describe("in dark", () => {
+    const scheme: ThemeScheme = "dark";
+
     describe("sign-in", () => {
       it("should lay the form out as the board does: 24 across, 56 above, 34 below, 16 between", async () => {
         await renderAuthScreen(<SignInRoute />, scheme);
@@ -108,19 +111,6 @@ describe("the auth boards", () => {
           fontSize: 28,
           lineHeight: 34,
           color: resolvedColor(scheme, "text-primary"),
-        });
-      });
-
-      it("should draw the primary button in the accent with the accent foreground, 52 high", async () => {
-        await renderAuthScreen(<SignInRoute />, scheme);
-
-        const button = screen.getByRole("button", { name: "Sign in" });
-        expect(button).toHaveStyle({
-          height: 52,
-          backgroundColor: resolvedColor(scheme, "accent"),
-        });
-        expect(screen.getByText("Sign in")).toHaveStyle({
-          color: resolvedColor(scheme, "accent-foreground"),
         });
       });
 
@@ -246,23 +236,6 @@ describe("the auth boards", () => {
           height: controlHeight.lg,
         });
       });
-
-      it("should put the footer's prompt in secondary caption text and its link underlined in the accent ink", async () => {
-        await renderAuthScreen(<SignUpRoute />, scheme);
-
-        expect(screen.getByText("Already have an account?")).toHaveStyle({
-          fontSize: 12,
-          lineHeight: 16,
-          color: resolvedColor(scheme, "text-secondary"),
-        });
-        expect(screen.getByText("Sign in")).toHaveStyle({
-          fontSize: 12,
-          lineHeight: 16,
-          textDecorationLine: "underline",
-          color: resolvedColor(scheme, scheme === "dark" ? "accent" : "text-primary"),
-        });
-        expect(screen.getByRole("link", { name: "Sign in" })).toHaveStyle({ minHeight: 44 });
-      });
     });
 
     describe("sign-up-field-errors", () => {
@@ -317,6 +290,46 @@ describe("the auth boards", () => {
         expect(
           viewsDrawn({ alignItems: "center", justifyContent: "center", rowGap: 16 }),
         ).toHaveLength(1);
+      });
+    });
+  });
+
+  // The light run stays for three cases. Two draw a token that shares its dark value with others
+  // (`accent` and `accent-foreground` on the primary button, `surface-raised` on the secondary one), so only a
+  // light run can tell a swap inside the group. The third is the footer link, which is lime in dark and the
+  // primary text colour in light. `packages/tokens` guards the light values themselves.
+  describe.each(schemes)("in %s", (scheme) => {
+    describe("sign-in", () => {
+      it("should draw the primary button in the accent with the accent foreground, 52 high", async () => {
+        await renderAuthScreen(<SignInRoute />, scheme);
+
+        const button = screen.getByRole("button", { name: "Sign in" });
+        expect(button).toHaveStyle({
+          height: 52,
+          backgroundColor: resolvedColor(scheme, "accent"),
+        });
+        expect(screen.getByText("Sign in")).toHaveStyle({
+          color: resolvedColor(scheme, "accent-foreground"),
+        });
+      });
+    });
+
+    describe("sign-up", () => {
+      it("should put the footer's prompt in secondary caption text and its link underlined in the accent ink", async () => {
+        await renderAuthScreen(<SignUpRoute />, scheme);
+
+        expect(screen.getByText("Already have an account?")).toHaveStyle({
+          fontSize: 12,
+          lineHeight: 16,
+          color: resolvedColor(scheme, "text-secondary"),
+        });
+        expect(screen.getByText("Sign in")).toHaveStyle({
+          fontSize: 12,
+          lineHeight: 16,
+          textDecorationLine: "underline",
+          color: resolvedColor(scheme, scheme === "dark" ? "accent" : "text-primary"),
+        });
+        expect(screen.getByRole("link", { name: "Sign in" })).toHaveStyle({ minHeight: 44 });
       });
     });
 
