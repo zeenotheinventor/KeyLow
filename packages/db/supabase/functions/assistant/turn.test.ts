@@ -1677,6 +1677,36 @@ Deno.test(
   },
 );
 
+Deno.test(
+  "a link typed without its scheme still gets a reading_recipe status with its host",
+  async () => {
+    await withHarness(
+      {
+        responses: [
+          callTools([
+            {
+              id: "i1",
+              name: "import_recipe_from_url",
+              input: { url: "example.com/lemon-traybake", servings: null },
+            },
+          ]),
+          reply("Imported."),
+        ],
+        answers: {
+          import_recipe_from_url: () => okResult({ name: "import_recipe_from_url" }),
+        },
+      },
+      async (created) => {
+        const result = await created.take("Add this recipe: example.com/lemon-traybake");
+
+        assertEquals(eventsOfType(result.events, "status"), [
+          { type: "status", code: "reading_recipe", host: "example.com" },
+        ]);
+      },
+    );
+  },
+);
+
 // ---- Configuration, logs ----
 
 Deno.test(

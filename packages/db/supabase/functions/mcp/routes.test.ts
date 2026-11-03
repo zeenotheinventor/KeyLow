@@ -343,6 +343,32 @@ Deno.test("a write runs under the turn and the user message the function loaded"
   assertEquals(outcome["actionId"], made.actions.actions[0]?.id);
 });
 
+Deno.test("a tool is given the recipe import's services when the function has them", async () => {
+  const seen: boolean[] = [];
+  const probe: ToolDefinition = {
+    ...fakeReadTool("read_probe").definition,
+    run(ctx) {
+      seen.push(ctx.recipeImport !== undefined);
+      return Promise.resolve({ data: { rows: [] } });
+    },
+  };
+  const services = {
+    fetchPage: () => Promise.resolve({ ok: false as const, code: "timeout" as const }),
+    parse: () => Promise.resolve({ ok: false as const, code: "failed" as const }),
+  };
+  const call = (dependencies: McpDependencies) =>
+    post(dependencies, callTool("read_probe", { note: "x" }), {
+      headers: { "x-kilo-allowed-tools": "read_probe" },
+    });
+
+  const without = fake({ registry: createRegistry([probe]) });
+  const withServices = fake({ registry: createRegistry([probe]) });
+  await call(without.dependencies);
+  await call({ ...withServices.dependencies, recipeImport: services });
+
+  assertEquals(seen, [false, true]);
+});
+
 Deno.test("a write on a turn without a user message answers no_user_message", async () => {
   const write = fakeWriteTool();
   const made = fake({ registry: createRegistry([write.definition]), userMessageText: null });

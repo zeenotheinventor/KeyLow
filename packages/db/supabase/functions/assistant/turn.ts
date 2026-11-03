@@ -54,8 +54,10 @@ import type { UsageToRecord } from "./usage.ts";
 export const MAX_MODEL_CALLS = 12;
 
 // The MCP client's default is 60 s per attempt, and a connect, a list or a read call retries once, so a hung
-// connect could take 120 s. 20 s is far more than a tool takes (the `mcp` function measured a few
-// milliseconds on loopback).
+// connect could take 120 s. 20 s is far more than most tools take (the `mcp` function measured a few
+// milliseconds on loopback). The one exception is `import_recipe_from_url`, which fetches a page and makes a
+// model call. It keeps itself inside 15 s (fetch 5 s, parse 9 s, a cutoff before it saves), so it needs no
+// longer timeout here.
 export const MCP_REQUEST_TIMEOUT_MILLISECONDS = 20_000;
 
 // Supabase Edge Functions stop a worker after 150 s of wall-clock time on the free plan and 400 s on paid
@@ -516,7 +518,11 @@ function hostOf(input: Record<string, unknown>): string | null {
     return null;
   }
   try {
-    return new URL(parsed.data.url).hostname || null;
+    // A link typed as the board shows it ("example.com/lemon-traybake") has no scheme.
+    const address = /^[a-z][a-z0-9+.-]*:\/\//i.test(parsed.data.url)
+      ? parsed.data.url
+      : `https://${parsed.data.url}`;
+    return new URL(address).hostname || null;
   } catch {
     return null;
   }

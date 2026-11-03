@@ -18,5 +18,24 @@ export const samples: Record<string, () => string[]> = {
       copy.describePerServing({ kcal: 550.25, protein_g: 37.05, carbs_g: 78.9, fat_g: 8.6 }),
       copy.describePerServing({ kcal: 300, protein_g: null, carbs_g: null, fat_g: 4 }),
     ].flatMap((sentence) => (sentence === null ? [] : [sentence])),
+  describeImportedFrom: () => [
+    copy.describeImportedFrom("https://example.com/lemon-traybake"),
+    copy.describeImportedFrom("https://www.example.com/"),
+  ],
+  describeChooseFoodFor: () => [
+    copy.describeChooseFoodFor("white wine"),
+    copy.describeChooseFoodFor("salt"),
+  ],
+  describeGuessedAmount: () => [
+    copy.describeGuessedAmount({ amount: 50, unit: "ml" }, "a splash"),
+    copy.describeGuessedAmount({ amount: 2, unit: "g" }, null),
+  ],
+  describeMatchedImportLine: () => [
+    copy.describeMatchedImportLine({ name: "Olive oil", source: "cofid" }, null),
+    copy.describeMatchedImportLine(
+      { name: "Milk, semi-skimmed", source: "cofid" },
+      "50 ml (a splash, estimated)",
+    ),
+  ],
   describeConfirmArchiveQuestion: () => [copy.describeConfirmArchiveQuestion("Chicken and rice")],
 };

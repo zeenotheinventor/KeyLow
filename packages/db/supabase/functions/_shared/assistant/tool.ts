@@ -5,6 +5,7 @@ import { toJSONSchema } from "zod";
 
 import type { Database } from "../core/database.types.ts";
 import type { ReportError } from "../report.ts";
+import type { RecipeImportServices } from "./recipeParse.ts";
 import type { ActionRecord, ActionStore, ActionTarget } from "./store.ts";
 import type { JsonValue } from "./untrusted.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -36,6 +37,9 @@ export type ToolContext = {
   // The tools this turn may call, chosen in code before the model ran. Undefined refuses every tool.
   allowedTools: ReadonlySet<string> | undefined;
   reportError: ReportError;
+  // The page fetch and the parse call of `import_recipe_from_url`. Only the `mcp` function sets it, so no
+  // other tool reaches the network, and a context without it answers that tool `tool_failed`.
+  recipeImport?: RecipeImportServices;
 };
 
 export type ToolRunOutput = {
