@@ -200,6 +200,20 @@ jobs:
       - name: Check the formatting of the whole repository
         if: matrix.part == 'format'
         run: pnpm format:check
+      # Two migrations with the same version break `supabase db push` in production: it pairs the
+      # recorded version with the wrong file. A fresh stack applies both without complaint, so the db
+      # job does not see it. This checks the merge commit, so it catches a pull request whose version
+      # is already on main. Two pull requests that pick the same version and merge before either
+      # re-runs are still caught by the run on main.
+      - name: Check every migration has its own version
+        if: matrix.part == 'format'
+        run: |
+          duplicates=$(for file in packages/db/supabase/migrations/*.sql; do basename "$file"; done |
+            sed -nE 's/^([0-9]+)_.*/\1/p' | sort | uniq -d)
+          if [ -n "$duplicates" ]; then
+            echo "::error::More than one migration has the version $duplicates. Give each its own timestamp."
+            exit 1
+          fi
       - name: Lint and type-check the packages and tools
         if: matrix.part == 'static'
         run: pnpm turbo run lint typecheck --filter='!@keylow/mobile' --filter='!@keylow/web' ${{ needs.scope.outputs.affected }}
