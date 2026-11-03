@@ -287,7 +287,9 @@ jobs:
       # for services that were excluded. The environment overrides for config.toml
       # (SUPABASE_<SECTION>_<KEY>) switch those two services off for this step only, so
       # packages/db/supabase/config.toml stays as local development needs it. No test reads
-      # realtime, storage or mail.
+      # realtime, storage or mail. Realtime and storage-api stay in `-x` as well, so a CLI that stops
+      # reading those overrides only gets slower. A migration that uses the storage or realtime schemas
+      # would fail here and not locally, which is loud, not silent.
       #
       # All of it runs in the background and writes its exit status to a file, which the wait step
       # below reads. The file is written under another name and moved, so the wait step never reads
@@ -306,7 +308,7 @@ jobs:
               printf "%s\n" postgres-meta:v0.96.1 postgres-meta:v0.96.6 edge-runtime:v1.74.1 pg_prove:3.36 |
                 xargs -P 4 -I {} sh -c "for try in 1 2 3 4 5; do docker pull ghcr.io/supabase/{} && break; sleep \$((try * 5)); done; docker tag ghcr.io/supabase/{} public.ecr.aws/supabase/{}"
               echo "$(date +%T) starting the stack"
-              supabase start -x edge-runtime,logflare,mailpit,studio,vector
+              supabase start -x edge-runtime,imgproxy,logflare,mailpit,realtime,storage-api,studio,vector
               echo "$(date +%T) the stack has started"
             )
             echo $? > "$RUNNER_TEMP/supabase-start.status.tmp"
