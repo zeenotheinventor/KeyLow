@@ -9,18 +9,29 @@ import type { IconButtonProps } from "../IconButton";
 type ControlIconSize = NonNullable<IconButtonProps["iconSize"]>;
 
 // The classes are written out so Tailwind sees them. The sheet header sits above a list with 12 points
-// under it. The stack header has 8, because the view under it brings its own spacing.
+// under it. The stack header has 8, because the view under it brings its own spacing. The quiet header is
+// the assistant sheet's: 4 above, 12 at the sides and 8 below, with clear controls in the secondary tone.
 const variants = {
   sheet: {
-    className: "pb-3",
+    className: "px-4 pt-3 pb-3",
     buttonVariant: "secondary",
+    buttonTone: "primary",
+    leadingIconSize: "md",
+    trailingIconSize: "md",
+    titleVariant: "h2",
+  },
+  quiet: {
+    className: "px-3 pt-1 pb-2",
+    buttonVariant: "ghost",
+    buttonTone: "secondary",
     leadingIconSize: "md",
     trailingIconSize: "md",
     titleVariant: "h2",
   },
   stack: {
-    className: "pb-2",
+    className: "px-4 pt-3 pb-2",
     buttonVariant: "ghost",
+    buttonTone: "primary",
     // The boards draw the stack header's glyphs larger than a control's own 20 points: 24 for back and 22
     // for close, which is off the icon scale, so it is given in points.
     leadingIconSize: "lg",
@@ -32,6 +43,7 @@ const variants = {
   {
     className: string;
     buttonVariant: IconButtonProps["variant"];
+    buttonTone: IconButtonProps["tone"];
     leadingIconSize: ControlIconSize;
     trailingIconSize: ControlIconSize;
     titleVariant: "h2" | "body-strong";
@@ -70,6 +82,7 @@ export function SheetHeader({
         disabled={control.disabled ?? false}
         key={control.label}
         label={control.label}
+        tone={look.buttonTone}
         variant={look.buttonVariant}
         onPress={control.onPress}
       />
@@ -113,10 +126,7 @@ export function SheetHeader({
   }
 
   return (
-    <View
-      className={`flex-row items-center gap-2 px-4 pt-3 ${look.className}`}
-      testID="sheet-header"
-    >
+    <View className={`flex-row items-center gap-2 ${look.className}`} testID="sheet-header">
       {hasWideSlots ? (
         <View className={wideSlotClassName} testID="sheet-header-leading-slot">
           {renderLeading()}

@@ -28,7 +28,10 @@ export type YourChatMessageProps = ChatMessageBaseProps & {
 /** The assistant's message: plain paragraphs with no bubble, and the lines an answer can carry under them. */
 export type AssistantChatMessageProps = ChatMessageBaseProps & {
   role: "assistant";
-  /** Draws the accent caret after the last word, and makes the message a polite live region. */
+  /**
+   * Draws the accent caret after the last word. The message is not a live region, so a screen reader hears
+   * nothing while it streams, and the screen announces the finished answer once.
+   */
   isStreaming?: boolean | undefined;
   /** The muted line under an answer that was cut short, such as "Stopped when you closed the assistant". */
   stoppedLabel?: string | undefined;

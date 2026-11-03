@@ -1,4 +1,4 @@
-import { controlHeight, iconSize, touchTarget } from "@keylow/tokens";
+import { controlHeight, iconSize, themes, touchTarget } from "@keylow/tokens";
 import { render, screen, userEvent } from "@testing-library/react-native";
 import { AccessibilityInfo } from "react-native";
 import { setUpTests } from "react-native-reanimated";
@@ -29,6 +29,13 @@ const stackHeader: SheetHeaderProps = {
   variant: "stack",
   title: "New food",
   leading: { icon: "ChevronLeft", label: "Back", onPress: () => undefined },
+  trailing: { icon: "X", label: "Close", onPress: () => undefined },
+};
+
+const quietHeader: SheetHeaderProps = {
+  variant: "quiet",
+  title: "Assistant",
+  leading: { icon: "SquarePen", label: "New conversation", onPress: () => undefined },
   trailing: { icon: "X", label: "Close", onPress: () => undefined },
 };
 
@@ -73,6 +80,62 @@ describe("SheetHeader", () => {
 
   afterEach(() => {
     jest.restoreAllMocks();
+  });
+
+  describe("the quiet header, which heads the assistant sheet", () => {
+    it("should draw clear controls with no fill and no border, as the board's ghost buttons are", async () => {
+      await renderHeader(quietHeader);
+
+      for (const name of ["New conversation", "Close"]) {
+        const control = screen.getByRole("button", { name });
+        expect(control).toHaveStyle({ backgroundColor: transparent });
+        expect(control.props.style).not.toHaveProperty("borderWidth", 1);
+      }
+    });
+
+    it("should draw the glyphs in the secondary text colour", async () => {
+      await renderHeader(quietHeader);
+
+      expect(drawings()).toHaveLength(2);
+      for (const drawing of drawings()) {
+        expect(drawing).toHaveProp("stroke", themes.dark["text-secondary"]);
+      }
+    });
+
+    it("should give 12 points at the sides, 4 above and 8 below", async () => {
+      await renderHeader(quietHeader);
+
+      expect(screen.getByTestId("sheet-header")).toHaveStyle({
+        paddingLeft: 12,
+        paddingRight: 12,
+        paddingTop: 4,
+        paddingBottom: 8,
+      });
+    });
+
+    it("should set the title in the h2 style, centred", async () => {
+      await renderHeader(quietHeader);
+
+      expect(screen.getByRole("heading", { name: "Assistant" })).toHaveStyle({
+        fontSize: 20,
+        lineHeight: 26,
+        textAlign: "center",
+      });
+    });
+
+    it("should dim a disabled control and stop it responding", async () => {
+      await renderHeader({
+        ...quietHeader,
+        leading: {
+          icon: "SquarePen",
+          label: "New conversation",
+          disabled: true,
+          onPress: jest.fn(),
+        },
+      });
+
+      expect(screen.getByRole("button", { name: "New conversation" })).toBeDisabled();
+    });
   });
 
   describe("the sheet header, which heads the search sheet", () => {

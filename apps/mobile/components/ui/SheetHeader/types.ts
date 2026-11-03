@@ -16,9 +16,11 @@ export type SheetHeaderControlPair = readonly [SheetHeaderControl, SheetHeaderCo
 /**
  * `sheet` is the header of the sheet itself, as the search sheet has it: raised controls and a large
  * title. `stack` is the header of a view inside the sheet, such as a food, the food form or the scanner:
- * clear controls and a compact title.
+ * clear controls and a compact title. `quiet` is the assistant sheet's: clear controls with a secondary
+ * glyph, the large title, and 4 points above, 12 at the sides and 8 below, because the grabber above it
+ * already gives the sheet its top.
  */
-export type SheetHeaderVariant = "sheet" | "stack";
+export type SheetHeaderVariant = "sheet" | "stack" | "quiet";
 
 export type SheetHeaderProps = {
   /** Defaults to `sheet`. */

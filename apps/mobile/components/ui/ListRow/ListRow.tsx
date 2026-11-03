@@ -32,6 +32,7 @@ export function ListRow({
   size,
   valueTone,
   chevron = true,
+  trailingIcon,
   onPress,
   loading = false,
   disabled = false,
@@ -109,6 +110,8 @@ export function ListRow({
         <View className="h-[18px] w-[18px] shrink-0">
           <ButtonSpinner variant="secondary" />
         </View>
+      ) : trailingIcon !== undefined && onPress !== undefined ? (
+        <Icon name={trailingIcon} size="sm" tone="muted" />
       ) : chevron && !isFooter && onPress !== undefined ? (
         <Icon name="ChevronRight" size="sm" tone="muted" />
       ) : null}

@@ -54,6 +54,16 @@ export const Scanner: Story = {
   },
 };
 
+// The assistant sheet's header: clear controls with a secondary glyph, New conversation and Close, and tighter padding.
+export const Quiet: Story = {
+  args: {
+    variant: "quiet",
+    title: "Assistant",
+    leading: { icon: "SquarePen", label: "New conversation", onPress: () => undefined },
+    trailing: close,
+  },
+};
+
 const editAndMore = [
   { icon: "Pencil", label: "Edit Chicken and rice", onPress: () => undefined },
   { icon: "Ellipsis", label: "More", onPress: () => undefined },

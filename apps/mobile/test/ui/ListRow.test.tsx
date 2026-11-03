@@ -122,6 +122,26 @@ describe("ListRow", () => {
 
       expect(drawings()).toHaveLength(1);
     });
+
+    it("should draw its trailing icon in place of the chevron, as the assistant's starters draw an arrow", async () => {
+      const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+      const onPress = jest.fn();
+      await renderRow({ icon: undefined, trailingIcon: "ArrowUp", onPress });
+
+      expect(drawings()).toHaveLength(1);
+
+      await user.press(
+        screen.getByRole("button", { name: "Greek yoghurt, 170 g, Fage, 165 kcal" }),
+      );
+
+      expect(onPress).toHaveBeenCalledTimes(1);
+    });
+
+    it("should keep its trailing icon when the chevron is turned off", async () => {
+      await renderRow({ icon: undefined, trailingIcon: "ArrowUp", chevron: false });
+
+      expect(drawings()).toHaveLength(1);
+    });
   });
 
   describe("when it goes nowhere", () => {
