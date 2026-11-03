@@ -1,4 +1,4 @@
-export const reminderTypes = ["train", "progress", "ease"] as const;
+export const reminderTypes = ["train", "progress", "ease", "food"] as const;
 
 export type ReminderType = (typeof reminderTypes)[number];
 

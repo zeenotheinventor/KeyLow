@@ -12,7 +12,11 @@ import {
   resetNotificationsMock,
 } from "./support/expoNotificationsMock";
 
-import type { ReminderPlanInputs, ScheduleReminderPlanInput } from "../lib/reminderScheduler";
+import type {
+  FoodReminderPlanInputs,
+  ReminderPlanInputs,
+  ScheduleReminderPlanInput,
+} from "../lib/reminderScheduler";
 
 const mockStorageItems = new Map<string, string>();
 
@@ -68,14 +72,16 @@ const plan = { days: [plannedDay(3), plannedDay(5), plannedDay(6)] };
 const fridayPlan = { days: [plannedDay(4)] };
 
 type PlanInputOverrides = Partial<ReminderPlanInputs> &
-  Pick<Partial<ScheduleReminderPlanInput>, "settings">;
+  Pick<Partial<ScheduleReminderPlanInput>, "settings" | "foodInputs">;
 
 const input = ({
   settings = everythingOn,
+  foodInputs = { timeZone: LONDON, loggedToday: false },
   ...overrides
 }: PlanInputOverrides = {}): ScheduleReminderPlanInput => ({
   now: NOW,
   settings,
+  foodInputs,
   inputs: {
     timeZone: LONDON,
     plan,
@@ -186,6 +192,124 @@ describe("scheduling the reminders", () => {
       );
 
       expect(scheduledFires()).toEqual([{ type: "ease", fireAt: "2026-10-23T07:00:00.000Z" }]);
+    });
+  });
+
+  describe("the food reminder", () => {
+    const foodOn = { ...defaultReminderSettings, foodEnabled: true };
+    const foodFires = () => scheduledFires().filter(({ type }) => type === "food");
+    const loggedInputs: FoodReminderPlanInputs = { timeZone: LONDON, loggedToday: true };
+
+    it("should schedule one a day at the food time, each carrying only its type", async () => {
+      await scheduleReminderPlan(input({ settings: foodOn }));
+
+      // 20:00 in London is 19:00 UTC until the clocks go back on Sunday 25 October, then 20:00 UTC.
+      expect(foodFires().map(({ fireAt }) => fireAt)).toEqual([
+        "2026-10-22T19:00:00.000Z",
+        "2026-10-23T19:00:00.000Z",
+        "2026-10-24T19:00:00.000Z",
+        "2026-10-25T20:00:00.000Z",
+        "2026-10-26T20:00:00.000Z",
+        "2026-10-27T20:00:00.000Z",
+        "2026-10-28T20:00:00.000Z",
+      ]);
+      for (const { content } of notificationsState.scheduled.values()) {
+        expect(content.data).toEqual({ type: "food" });
+      }
+    });
+
+    it("should plan at the food time of the settings", async () => {
+      await scheduleReminderPlan(input({ settings: { ...foodOn, foodTime: "21:30" } }));
+
+      expect(foodFires()[0]).toEqual({ type: "food", fireAt: "2026-10-22T20:30:00.000Z" });
+    });
+
+    it("should drop today's once something was logged today, and keep the other days", async () => {
+      await scheduleReminderPlan(input({ settings: foodOn, foodInputs: loggedInputs }));
+
+      expect(foodFires()).toHaveLength(6);
+      expect(foodFires()[0]?.fireAt).toBe("2026-10-23T19:00:00.000Z");
+    });
+
+    it("should schedule nothing for food while its switch is off", async () => {
+      await scheduleReminderPlan(input());
+
+      expect(foodFires()).toEqual([]);
+    });
+
+    it("should schedule it beside the training ones through the one replace", async () => {
+      await scheduleReminderPlan(input({ settings: { ...everythingOn, foodEnabled: true } }));
+
+      const types = new Set(scheduledFires().map(({ type }) => type));
+      expect(types).toEqual(new Set(["train", "progress", "food"]));
+    });
+
+    it("should schedule it with the training switches off and their inputs not loaded", async () => {
+      await scheduleReminderPlan({ ...input({ settings: foodOn }), inputs: null });
+
+      expect(foodFires()).toHaveLength(7);
+    });
+
+    it("should keep the schedule it has while the food inputs are not loaded", async () => {
+      await scheduleReminderPlan(input({ settings: foodOn }));
+      const before = [...notificationsState.scheduled.keys()];
+
+      await scheduleReminderPlan({ ...input({ settings: foodOn }), foodInputs: null });
+
+      expect([...notificationsState.scheduled.keys()]).toEqual(before);
+    });
+
+    it("should plan the training ones without the food inputs while the food switch is off", async () => {
+      await scheduleReminderPlan({ ...input(), foodInputs: null });
+
+      expect(scheduledFires().length).toBeGreaterThan(0);
+    });
+
+    it("should keep the training ones while the training inputs are not loaded and a switch is on", async () => {
+      await scheduleReminderPlan(input({ settings: { ...everythingOn, foodEnabled: true } }));
+      const before = [...notificationsState.scheduled.keys()];
+
+      await scheduleReminderPlan({
+        ...input({ settings: { ...everythingOn, foodEnabled: true } }),
+        inputs: null,
+      });
+
+      expect([...notificationsState.scheduled.keys()]).toEqual(before);
+    });
+
+    it("should not repeat the food wording already delivered", async () => {
+      await scheduleReminderPlan(input({ settings: foodOn }));
+      const unconstrained = (await readScheduledReminders()).find(
+        ({ type, fireAt }) => type === "food" && Date.parse(fireAt) > NOW.getTime(),
+      )?.variantId;
+      resetNotificationsMock();
+      notificationsState.permission = "granted";
+      mockStorageItems.set(
+        scheduledRemindersStorageKey,
+        JSON.stringify([
+          { type: "food", fireAt: "2026-10-21T19:00:00.000Z", variantId: unconstrained },
+        ]),
+      );
+
+      await scheduleReminderPlan(input({ settings: foodOn }));
+
+      const first = (await readScheduledReminders()).find(
+        ({ type, fireAt }) => type === "food" && Date.parse(fireAt) > NOW.getTime(),
+      );
+      expect(first?.variantId).not.toBe(unconstrained);
+    });
+
+    it("should cancel the lot when the food switch is the only one on and the permission is denied", async () => {
+      notificationsState.permission = "denied";
+      notificationsState.scheduled.set("keylow-reminder:food:1", {
+        identifier: "keylow-reminder:food:1",
+        content: {},
+        trigger: { type: "date", date: 1 },
+      });
+
+      await scheduleReminderPlan(input({ settings: foodOn }));
+
+      expect(notificationsState.scheduled.size).toBe(0);
     });
   });
 
@@ -327,7 +451,7 @@ describe("scheduling the reminders", () => {
           settings: {
             ...everythingOn,
             progressEnabled: false,
-            lastVariant: { train: unconstrained ?? null, progress: null, ease: null },
+            lastVariant: { train: unconstrained ?? null, progress: null, ease: null, food: null },
           },
         }),
       );

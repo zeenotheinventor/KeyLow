@@ -39,7 +39,7 @@ describe("the Reminders screen on a build without the notifications module", () 
 
     expect(await screen.findByText(REMINDERS_SCREEN.unavailable.title)).toBeOnTheScreen();
     expect(screen.getByText(REMINDERS_SCREEN.unavailable.body)).toBeOnTheScreen();
-    for (const { title } of REMINDERS_SCREEN.reminders) {
+    for (const { title } of [...REMINDERS_SCREEN.reminders, REMINDERS_SCREEN.food]) {
       expect(screen.getByRole("switch", { name: title })).toBeDisabled();
     }
     expect(screen.queryByText(REMINDERS_SCREEN.denied.title)).not.toBeOnTheScreen();

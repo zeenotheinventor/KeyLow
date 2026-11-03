@@ -1,14 +1,15 @@
 /**
- * The Reminders screen, reached from More: a switch for each of the three training reminders, the time of
- * the train one, and the notices for a phone that has turned notifications off or a build that cannot
- * show them. No board draws it. The reminders' own words, the ones on the lock screen, are in
- * `trainingReminders`.
+ * The Reminders screen, reached from More: a Training group with a switch for each of the three training
+ * reminders and the time of the train one, a Food group with the food reminder's switch and time, and the
+ * notices for a phone that has turned notifications off or a build that cannot show them. No board draws
+ * it. The reminders' own words, the ones on the lock screen, are in `trainingReminders` and
+ * `foodReminders`.
  */
 export const REMINDERS_SCREEN = {
   title: "Reminders",
   back: "Back",
-  /** Names the list of switches for a screen reader. */
-  listName: "Reminders",
+  /** The headings over the two groups of switches. */
+  groups: { training: "Training", food: "Food" },
   /** In the order the screen draws them: train, progress, ease. The times in the helper lines are pinned to the planner's by a test. */
   reminders: [
     {
@@ -27,8 +28,15 @@ export const REMINDERS_SCREEN = {
       helper: "At 8am on a planned day, when your muscles still need rest.",
     },
   ],
+  /** The food reminder, in the group after the training ones. */
+  food: {
+    title: "Log your food",
+    helper: "Every day at your chosen time, unless you've already logged.",
+  },
   /** The heading over the time field. The field's own name is "Time". */
   timeHeading: "Time to train reminder",
+  /** The heading over the food time field. The field's own name is "Time". */
+  foodTimeHeading: "Log your food reminder",
   denied: {
     title: "Notifications are turned off",
     body: "To get reminders, allow notifications for Ki-Lo in your phone's settings.",
