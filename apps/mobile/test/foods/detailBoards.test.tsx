@@ -20,9 +20,9 @@ import { viewsDrawn } from "../support/viewsDrawn";
 import type { Food } from "@keylow/core/schemas";
 import type { ThemeScheme } from "@keylow/tokens";
 
-// The food detail boards, in dark and light, on the real route: the values the boards give for the
-// hero card, the macro tiles, the nutrition table, the portions and the notice.
-// What the screen does is in detail.test.tsx.
+// The food detail boards, in dark, and in light where a case checks a token that shares its dark value, on the
+// real route: the values the boards give for the hero card, the macro tiles, the nutrition table, the portions
+// and the notice. What the screen does is in detail.test.tsx.
 
 jest.mock("@react-native-async-storage/async-storage", () => ({
   __esModule: true,
@@ -88,7 +88,8 @@ describe("food detail boards", () => {
     routerMock.searchParams = { id: savedFoodId };
   });
 
-  describe.each(schemes)("in the %s scheme", (scheme) => {
+  describe("in the dark scheme", () => {
+    const scheme: ThemeScheme = "dark";
     const colorOf = (name: Parameters<typeof resolvedColor>[1]) => resolvedColor(scheme, name);
 
     it("should set the name as the h1: 28 over 34 in the primary text colour", async () => {
@@ -169,42 +170,6 @@ describe("food detail boards", () => {
         fontSize: 12,
         color: colorOf("text-muted"),
       });
-    });
-
-    it("should draw each macro on a raised tile, with its colour as a dot", async () => {
-      await renderDetail(scheme);
-
-      expect(screen.getByLabelText("Protein, 8.5 g, 8 % of energy")).toHaveStyle({
-        backgroundColor: colorOf("surface-raised"),
-        borderRadius: 12,
-        paddingTop: 10,
-        paddingBottom: 10,
-        paddingLeft: 12,
-        paddingRight: 12,
-      });
-      for (const macro of ["protein", "carbs", "fat"] as const) {
-        expect(
-          viewsDrawn({
-            width: 8,
-            height: 8,
-            borderRadius: 2,
-            backgroundColor: colorOf(macro),
-          }),
-        ).toHaveLength(1);
-      }
-    });
-
-    it("should set a macro's amount as the small numeral, with its unit and share under the label", async () => {
-      await renderDetail(scheme);
-      const tile = within(screen.getByLabelText("Protein, 8.5 g, 8 % of energy"));
-
-      expect(tile.getByText("Protein")).toHaveStyle({
-        fontSize: 12,
-        color: colorOf("text-secondary"),
-      });
-      expect(tile.getByText("8.5")).toHaveStyle({ fontSize: 20, lineHeight: 24 });
-      expect(tile.getByText("g")).toHaveStyle({ fontSize: 12, color: colorOf("text-muted") });
-      expect(tile.getByText("8 %")).toHaveStyle({ fontSize: 12, color: colorOf("text-secondary") });
     });
 
     it("should draw the share in a pill with a hairline border", async () => {
@@ -331,6 +296,51 @@ describe("food detail boards", () => {
         }),
       ).toHaveLength(1);
     });
+  });
+
+  // The light run stays for three cases. Two draw a token that shares its dark value with others
+  // (`surface-raised` with `skeleton-base`, `warning` with `warning-ink` and `gap-ahead`), so only a light run
+  // can tell a swap inside the group. The third reads a neutral badge's text in light, which is the half of
+  // Badge's `scheme === "light" && tone !== "neutral"` that a dark run cannot reach. `packages/tokens` guards the
+  // light values themselves.
+  describe.each(schemes)("in the %s scheme", (scheme) => {
+    const colorOf = (name: Parameters<typeof resolvedColor>[1]) => resolvedColor(scheme, name);
+
+    it("should draw each macro on a raised tile, with its colour as a dot", async () => {
+      await renderDetail(scheme);
+
+      expect(screen.getByLabelText("Protein, 8.5 g, 8 % of energy")).toHaveStyle({
+        backgroundColor: colorOf("surface-raised"),
+        borderRadius: 12,
+        paddingTop: 10,
+        paddingBottom: 10,
+        paddingLeft: 12,
+        paddingRight: 12,
+      });
+      for (const macro of ["protein", "carbs", "fat"] as const) {
+        expect(
+          viewsDrawn({
+            width: 8,
+            height: 8,
+            borderRadius: 2,
+            backgroundColor: colorOf(macro),
+          }),
+        ).toHaveLength(1);
+      }
+    });
+
+    it("should set a macro's amount as the small numeral, with its unit and share under the label", async () => {
+      await renderDetail(scheme);
+      const tile = within(screen.getByLabelText("Protein, 8.5 g, 8 % of energy"));
+
+      expect(tile.getByText("Protein")).toHaveStyle({
+        fontSize: 12,
+        color: colorOf("text-secondary"),
+      });
+      expect(tile.getByText("8.5")).toHaveStyle({ fontSize: 20, lineHeight: 24 });
+      expect(tile.getByText("g")).toHaveStyle({ fontSize: 12, color: colorOf("text-muted") });
+      expect(tile.getByText("8 %")).toHaveStyle({ fontSize: 12, color: colorOf("text-secondary") });
+    });
 
     it("should draw the Needs review notice with the warning border and fill, and its action", async () => {
       Object.assign(portionsQuery, { data: [] });
@@ -351,11 +361,11 @@ describe("food detail boards", () => {
     });
   });
 
-  describe.each(schemes)("the failed and not found boards in the %s scheme", (scheme) => {
+  describe("the failed and not found boards in the dark scheme", () => {
     it("should keep the failed words 32 in from the sides, and lift them 96 off the bottom", async () => {
       Object.assign(foodQuery, { data: undefined, isError: true });
       await render(
-        <ThemeProvider fixedPreference={scheme}>
+        <ThemeProvider fixedPreference="dark">
           <FoodDetailRoute />
         </ThemeProvider>,
       );
@@ -367,7 +377,7 @@ describe("food detail boards", () => {
     it("should keep the not found words 32 in from the sides, and lift them 96 off the bottom", async () => {
       Object.assign(foodQuery, { data: null });
       await render(
-        <ThemeProvider fixedPreference={scheme}>
+        <ThemeProvider fixedPreference="dark">
           <FoodDetailRoute />
         </ThemeProvider>,
       );

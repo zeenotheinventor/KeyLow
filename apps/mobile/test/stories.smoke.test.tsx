@@ -55,6 +55,78 @@ function isComposedStory(value: unknown): value is ComposedStory {
 
 const schemes: ThemeScheme[] = ["dark", "light"];
 
+// The dark scheme renders every story file. The light scheme renders only the files below, whose rendered tree
+// reaches a component that branches on the scheme, so the light pass has code of its own to run. Any other
+// story draws the same tree in both schemes, and only the theme's values differ, which `packages/tokens` guards.
+// The components that branch: ActionMenuItem (`dark:` label), Badge (text by scheme), Body3D (palette and
+// lighting), BodyFigure (palette), BodyStage and BodyViewIn3D (the 3D scope's scheme), CheckboxLink and Toast
+// (ink by scheme) and TabItem (selected label by scheme). The files are found from the import graph of each story.
+const storyFilesWithSchemeCode = new Map([
+  [
+    "ArchivedRecipesView/ArchivedRecipesView.stories.tsx",
+    "ActionMenuItem and Badge branch on the scheme",
+  ],
+  ["BodyCompositionCard/BodyCompositionCard.stories.tsx", "Badge branches on the scheme"],
+  ["BodyCompositionView/BodyCompositionView.stories.tsx", "Badge branches on the scheme"],
+  [
+    "BodyMapCard/BodyMapCard.stories.tsx",
+    "Badge, Body3D, BodyFigure, BodyStage and BodyViewIn3D branch on the scheme",
+  ],
+  ["BodyView/BodyView.stories.tsx", "Body3D, BodyFigure and BodyViewIn3D branch on the scheme"],
+  [
+    "DashboardBodyChartSetting/DashboardBodyChartSetting.stories.tsx",
+    "Badge branches on the scheme",
+  ],
+  [
+    "DashboardScreen/DashboardBodyMapCard/DashboardBodyMapCard.stories.tsx",
+    "BodyFigure branches on the scheme",
+  ],
+  [
+    "ExerciseMusclesSheet/ExerciseMusclesSheet.stories.tsx",
+    "Badge, Body3D, BodyFigure, BodyStage and BodyViewIn3D branch on the scheme",
+  ],
+  ["ExerciseProgressView/ExerciseProgressView.stories.tsx", "Badge branches on the scheme"],
+  ["FoodDetail/MacroHero/MacroHero.stories.tsx", "Badge branches on the scheme"],
+  ["MusclesTrainedCard/MusclesTrainedCard.stories.tsx", "BodyFigure branches on the scheme"],
+  [
+    "RecipeLibraryView/RecipeLibraryView.stories.tsx",
+    "ActionMenuItem and Badge branch on the scheme",
+  ],
+  ["RecipeRowMenu/RecipeRowMenu.stories.tsx", "ActionMenuItem and Badge branch on the scheme"],
+  ["RoutineCard/RoutineCard.stories.tsx", "Badge branches on the scheme"],
+  ["RoutineProgressDay/RoutineProgressDay.stories.tsx", "Badge branches on the scheme"],
+  ["RoutinesView/RoutinesView.stories.tsx", "Badge branches on the scheme"],
+  ["ShoppingItemRow/ShoppingItemRow.stories.tsx", "CheckboxLink branches on the scheme"],
+  ["ShoppingListView/ShoppingListView.stories.tsx", "CheckboxLink branches on the scheme"],
+  ["TodayCard/TodayCard.stories.tsx", "Badge branches on the scheme"],
+  [
+    "TrainScreen/TrainBodyMapCard/TrainBodyMapCard.stories.tsx",
+    "BodyFigure branches on the scheme",
+  ],
+  ["WeightTrendCard/WeightTrendCard.stories.tsx", "Badge branches on the scheme"],
+  ["ui/ActionMenu/ActionMenu.stories.tsx", "ActionMenuItem branches on the scheme"],
+  ["ui/AssistantActionCard/AssistantActionCard.stories.tsx", "Badge branches on the scheme"],
+  ["ui/Badge/Badge.stories.tsx", "Badge branches on the scheme"],
+  ["ui/Body3D/Body3D.stories.tsx", "Body3D and BodyFigure branch on the scheme"],
+  ["ui/BodyFigure/BodyFigure.stories.tsx", "BodyFigure branches on the scheme"],
+  ["ui/Card/Card.stories.tsx", "Badge branches on the scheme"],
+  ["ui/ChatMessage/ChatMessage.stories.tsx", "Badge branches on the scheme"],
+  ["ui/Checkbox/Checkbox.stories.tsx", "CheckboxLink branches on the scheme"],
+  ["ui/GroupedList/GroupedList.stories.tsx", "Badge branches on the scheme"],
+  ["ui/ListRow/ListRow.stories.tsx", "Badge branches on the scheme"],
+  ["ui/MacroTile/MacroTile.stories.tsx", "Badge branches on the scheme"],
+  ["ui/OptionCard/OptionCard.stories.tsx", "Badge branches on the scheme"],
+  ["ui/SearchLauncher/SearchLauncher.stories.tsx", "TabItem branches on the scheme"],
+  ["ui/TabBar/TabBar.stories.tsx", "TabItem branches on the scheme"],
+  ["ui/Toast/Toast.stories.tsx", "Toast branches on the scheme"],
+]);
+
+function storyFilesFor(scheme: ThemeScheme): string[] {
+  return scheme === "dark"
+    ? storyFiles
+    : storyFiles.filter((storyFile) => storyFilesWithSchemeCode.has(storyFile));
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -150,8 +222,14 @@ describe("stories", () => {
     expect(elementArgs).toEqual([]);
   });
 
+  it("should list only story files that exist for the light scheme", () => {
+    expect(
+      [...storyFilesWithSchemeCode.keys()].filter((file) => !storyFiles.includes(file)),
+    ).toEqual([]);
+  });
+
   describe.each(schemes)("in the %s scheme", (scheme) => {
-    describe.each(storyFiles)("%s", (storyFile) => {
+    describe.each(storyFilesFor(scheme))("%s", (storyFile) => {
       const storyModule = jest.requireActual<StoryModule>(
         path.join(componentsDirectory, storyFile),
       );

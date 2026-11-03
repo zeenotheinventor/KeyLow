@@ -311,63 +311,16 @@ describe("the trend explainer sheet", () => {
     });
   });
 
+  // The light run stays for the two cases whose colour is a token that shares its dark value with others
+  // (`accent-ink` with `accent`, `surface-raised` with `skeleton-base`, `warning` with `warning-ink`), so only a
+  // light run can tell a swap inside the group. `packages/tokens` guards the light values themselves.
   describe.each(["dark", "light"] as const)("in the %s scheme", (scheme) => {
-    it("should set the paragraphs in secondary label text and the footer in muted caption text", async () => {
-      await renderSheet({}, { scheme });
-
-      expect(await screen.findByText(TREND_EXPLAINER.sections[0].text)).toHaveStyle({
-        fontSize: 14,
-        color: resolvedColor(scheme, "text-secondary"),
-      });
-      expect(screen.getByText(FOOTER)).toHaveStyle({
-        fontSize: 12,
-        lineHeight: 16,
-        color: resolvedColor(scheme, "text-muted"),
-      });
-    });
-
-    it("should set body fat and lean mass as the other sections are set", async () => {
-      await renderSheet({}, { scheme });
-
-      expect(await screen.findByText(TREND_EXPLAINER_BODY_SECTION.text)).toHaveStyle({
-        fontFamily: "Geist-Regular",
-        fontSize: 14,
-        lineHeight: 21,
-        color: resolvedColor(scheme, "text-secondary"),
-      });
-    });
-
-    it("should set the paragraphs in the regular weight, as the board does", async () => {
-      await renderSheet({}, { scheme });
-
-      expect(await screen.findByText(TREND_EXPLAINER.sections[0].text)).toHaveStyle({
-        fontFamily: "Geist-Regular",
-        fontSize: 14,
-      });
-    });
-
     it("should set Done in the accent ink, semibold", async () => {
       await renderSheet({}, { scheme });
 
       expect(await screen.findByText("Done")).toHaveStyle({
         color: resolvedColor(scheme, "accent-ink"),
         fontFamily: "Geist-SemiBold",
-      });
-    });
-
-    it("should set the settling title in the primary text colour", async () => {
-      await renderSheet({ settlingObservationCount: 3 }, { scheme });
-
-      expect(await screen.findByText("Your trend is settling: 3 of 7 weigh-ins")).toHaveStyle({
-        color: resolvedColor(scheme, "text-primary"),
-      });
-    });
-
-    it("should set the paragraphs 21 points apart, as the board does", async () => {
-      await renderSheet({}, { scheme });
-
-      expect(await screen.findByText(TREND_EXPLAINER.sections[0].text)).toHaveStyle({
-        lineHeight: 21,
       });
     });
 
@@ -383,9 +336,61 @@ describe("the trend explainer sheet", () => {
       });
       expect(bar.children[0]).toHaveStyle({ backgroundColor: resolvedColor(scheme, "warning") });
     });
+  });
+
+  describe("in the dark scheme", () => {
+    it("should set the paragraphs in secondary label text and the footer in muted caption text", async () => {
+      await renderSheet();
+
+      expect(await screen.findByText(TREND_EXPLAINER.sections[0].text)).toHaveStyle({
+        fontSize: 14,
+        color: resolvedColor("dark", "text-secondary"),
+      });
+      expect(screen.getByText(FOOTER)).toHaveStyle({
+        fontSize: 12,
+        lineHeight: 16,
+        color: resolvedColor("dark", "text-muted"),
+      });
+    });
+
+    it("should set body fat and lean mass as the other sections are set", async () => {
+      await renderSheet();
+
+      expect(await screen.findByText(TREND_EXPLAINER_BODY_SECTION.text)).toHaveStyle({
+        fontFamily: "Geist-Regular",
+        fontSize: 14,
+        lineHeight: 21,
+        color: resolvedColor("dark", "text-secondary"),
+      });
+    });
+
+    it("should set the paragraphs in the regular weight, as the board does", async () => {
+      await renderSheet();
+
+      expect(await screen.findByText(TREND_EXPLAINER.sections[0].text)).toHaveStyle({
+        fontFamily: "Geist-Regular",
+        fontSize: 14,
+      });
+    });
+
+    it("should set the settling title in the primary text colour", async () => {
+      await renderSheet({ settlingObservationCount: 3 });
+
+      expect(await screen.findByText("Your trend is settling: 3 of 7 weigh-ins")).toHaveStyle({
+        color: resolvedColor("dark", "text-primary"),
+      });
+    });
+
+    it("should set the paragraphs 21 points apart, as the board does", async () => {
+      await renderSheet();
+
+      expect(await screen.findByText(TREND_EXPLAINER.sections[0].text)).toHaveStyle({
+        lineHeight: 21,
+      });
+    });
 
     it("should fill the bar to 3 sevenths", async () => {
-      await renderSheet({ settlingObservationCount: 3 }, { scheme });
+      await renderSheet({ settlingObservationCount: 3 });
       const bar = await screen.findByRole("progressbar", {
         name: "Weigh-ins towards a settled trend",
       });
