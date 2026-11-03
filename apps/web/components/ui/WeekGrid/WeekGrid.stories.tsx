@@ -69,6 +69,29 @@ export const WeekWithFutureDays: Story = {
   },
 };
 
+// On the Monday of the week there is no earlier day to average, so the Average says so and shows no number.
+export const MondayOfTheWeek: Story = {
+  args: {
+    days: [
+      day("2026-10-12", [412, 30, 40, 12]),
+      ...[13, 14, 15, 16, 17, 18].map((date) => day(`2026-10-${date}`, null)),
+    ],
+    today: "2026-10-12",
+  },
+};
+
+// From Tuesday on, with only today logged, the Average has nothing to cover and says so.
+export const NothingBeforeToday: Story = {
+  args: {
+    days: [
+      day("2026-10-12", null),
+      day("2026-10-13", [412, 30, 40, 12]),
+      ...[14, 15, 16, 17, 18].map((date) => day(`2026-10-${date}`, null)),
+    ],
+    today: "2026-10-13",
+  },
+};
+
 // No target set: the calories stand alone and there is no bar.
 export const NoTarget: Story = { args: { calorieTarget: null } };
 

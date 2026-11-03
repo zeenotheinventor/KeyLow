@@ -1,7 +1,6 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 
-import { addCalendarDays } from "../../../src/dates/calendarDay";
 import { incompleteDaysThisWeek } from "../../../src/diary/rules/incompleteDaysThisWeek";
 import { weekAverage } from "../../../src/diary/rules/weekAverage";
 import { weekCaloriesBeforeToday } from "../../../src/diary/rules/weekCaloriesBeforeToday";
@@ -372,17 +371,17 @@ describe("weekSummary", () => {
       );
     });
 
-    it("should give the average the diary's week view gives up to yesterday", () => {
+    it("should give the average the diary's week view gives", () => {
       fc.assert(
         fc.property(weekArbitrary, ({ days, todayIndex, targetKcal }) => {
           const today = WEEK[todayIndex] ?? "";
 
           const summary = weekSummary({ days, today, targetKcal });
 
-          // On a Monday yesterday is in the week before, and both have nothing to average.
-          expect(summary.averageKcal).toBe(
-            weekAverage(days, addCalendarDays(today, -1))?.kcal ?? null,
-          );
+          const average = weekAverage(days, today);
+
+          // On a Monday both have nothing to average.
+          expect(summary.averageKcal).toBe(average.kind === "average" ? average.totals.kcal : null);
         }),
       );
     });

@@ -348,31 +348,110 @@ describe("WeekGrid", () => {
   });
 
   describe("the average", () => {
-    it("should cover Monday to today, leaving out the days to come", () => {
+    const noEntriesWeek = fullWeek.map((entry) => day(entry.localDate, null));
+    const onlyLoggedOn = (...dates: string[]) =>
+      fullWeek.map((entry) =>
+        dates.includes(entry.localDate) ? entry : day(entry.localDate, null),
+      );
+
+    it("should cover Monday to yesterday, leaving out today and the days to come", () => {
       renderGrid();
 
       const average = within(cellOf("Average"));
 
-      expect(average.getByText("1,681")).toBeTruthy();
-      expect(average.getByText("P 126 · C 176 · F 49 g")).toBeTruthy();
+      expect(average.getByText("1,895")).toBeTruthy();
+      expect(average.getByText("P 139 · C 191 · F 58 g")).toBeTruthy();
     });
 
-    it("should say Mon to today", () => {
-      renderGrid();
+    it("should not move when today's entries change", () => {
+      renderGrid({
+        days: fullWeek.map((entry) =>
+          entry.localDate === "2026-10-15" ? day(entry.localDate, [9000, 900, 900, 900]) : entry,
+        ),
+      });
 
-      expect(within(cellOf("Average")).getByText("Mon to today")).toBeTruthy();
+      expect(within(cellOf("Average")).getByText("1,895")).toBeTruthy();
+      expect(within(cellOf("Average")).getByText("P 139 · C 191 · F 58 g")).toBeTruthy();
     });
 
-    it("should have a bar, over the same target", () => {
+    it("should have a bar over the same target, filled to the average without today", () => {
       renderGrid();
+
+      const meter = within(cellOf("Average")).getByRole("meter", { name: "Average calories" });
+
+      expect(meter.getAttribute("aria-valuetext")).toBe("1,895 of 2,200 kilocalories");
+      expect(meter.style.getPropertyValue("--fill")).toMatch(/^86\.15/);
+    });
+
+    it("should say Mon to yesterday on the week that holds today", () => {
+      renderGrid();
+
+      expect(within(cellOf("Average")).getByText("Mon to yesterday")).toBeTruthy();
+      expect(screen.queryByText(/Mon to today/)).toBeNull();
+    });
+
+    it("should count Monday to Saturday on the Sunday", () => {
+      renderGrid({
+        days: fullWeek.map((entry) =>
+          entry.localDate > "2026-10-15" ? day(entry.localDate, [1000, 100, 100, 50]) : entry,
+        ),
+        today: "2026-10-18",
+      });
+
+      const average = within(cellOf("Average"));
+
+      expect(average.getByText("1,454")).toBeTruthy();
+      expect(average.getByText("Mon to yesterday")).toBeTruthy();
+    });
+
+    it("should count all seven days of a past week and say nothing of the range", () => {
+      renderGrid({
+        days: fullWeek.map((entry) => day(entry.localDate, [1000, 100, 100, 50])),
+        today: "2026-10-19",
+      });
+
+      const average = within(cellOf("Average"));
+
+      expect(average.getByText("1,000")).toBeTruthy();
+      expect(average.queryByText(/Mon to/)).toBeNull();
+    });
+
+    it("should say the averages start tomorrow on the Monday, with no number, bar or range", () => {
+      renderGrid({ days: onlyLoggedOn("2026-10-12"), today: "2026-10-12" });
+
+      const average = within(cellOf("Average"));
+
+      expect(average.getByText("Your averages start tomorrow.")).toBeTruthy();
+      expect(average.queryByRole("meter")).toBeNull();
+      expect(average.queryByText(/kcal|Mon to|^P /)).toBeNull();
+    });
+
+    it("should say nothing is logged before today from Tuesday, when only today is logged", () => {
+      renderGrid({ days: onlyLoggedOn("2026-10-13"), today: "2026-10-13" });
+
+      const average = within(cellOf("Average"));
+
+      expect(average.getByText("Nothing logged before today this week.")).toBeTruthy();
+      expect(average.queryByRole("meter")).toBeNull();
+      expect(average.queryByText(/kcal|Mon to|^P /)).toBeNull();
+    });
+
+    it("should say nothing is logged before today when nothing is logged at all this week", () => {
+      renderGrid({ days: noEntriesWeek });
 
       expect(
-        within(cellOf("Average")).getByRole("meter", { name: "Average calories" }),
+        within(cellOf("Average")).getByText("Nothing logged before today this week."),
       ).toBeTruthy();
     });
 
-    it("should say No entries yet when no day up to today has entries", () => {
-      renderGrid({ days: fullWeek.map((entry) => day(entry.localDate, null)) });
+    it("should say No entries yet for a past week with nothing logged", () => {
+      renderGrid({ days: noEntriesWeek, today: "2026-10-19" });
+
+      expect(within(cellOf("Average")).getByText("No entries yet")).toBeTruthy();
+    });
+
+    it("should say No entries yet for a week still to come", () => {
+      renderGrid({ days: noEntriesWeek, today: "2026-10-05" });
 
       expect(within(cellOf("Average")).getByText("No entries yet")).toBeTruthy();
     });

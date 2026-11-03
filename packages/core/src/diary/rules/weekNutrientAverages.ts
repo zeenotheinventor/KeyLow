@@ -1,3 +1,4 @@
+import { loggedDaysBeforeToday } from "./loggedDaysBeforeToday";
 import { weekCaloriesBeforeToday } from "./weekCaloriesBeforeToday";
 import { addCalendarDays, daysSinceMonday } from "../../dates/calendarDay";
 
@@ -77,8 +78,8 @@ const positiveOrNull = (value: number | null): number | null =>
  * Today is left out because it is not over yet, and a part of a day would pull the average down. A day
  * after today is left out too, and so is a day with nothing logged, because a day that was not tracked is
  * not a day of eating nothing. The days logged, the first day and the calories bar come from core
- * `weekCaloriesBeforeToday`, as the This week card's do, so the page and the card always agree. The diary's
- * week view still counts today (core `weekAverage`). On a Monday there is no earlier day, which
+ * `weekCaloriesBeforeToday`, as the This week card's do, so the page and the card always agree, and the
+ * diary's week view takes its days from the same place (core `weekAverage`). On a Monday there is no earlier day, which
  * `isFirstDay` says. A logged day with no value for a nutrient counts as 0, as it does on the day's bars
  * (core `weekDayTotals`). A nutrient no logged day gave a value for is null, shown as not given, never 0 g.
  */
@@ -87,9 +88,7 @@ export function weekNutrientAverages({
   today,
   targets,
 }: WeekNutrientAveragesInput): WeekNutrientAverages {
-  const logged = days.flatMap((day) =>
-    day.localDate < today && day.totals !== null ? [day.totals] : [],
-  );
+  const logged = loggedDaysBeforeToday(days, today);
   // Null when no logged day gave a value, which also covers a week with nothing logged.
   const totalOf = (key: WeekNutrientKey): number | null =>
     logged.every((totals) => totals[key] === null)
