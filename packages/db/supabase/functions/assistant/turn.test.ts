@@ -2174,3 +2174,77 @@ Deno.test("a turn that replays earlier turns logs no message text or thinking", 
     spy.restore();
   }
 });
+
+const turnZero: ScriptedResponse = thinkingReply("sig-turn-0", [{ type: "text", text: "Hello." }]);
+
+const signaturesInRequest = (body: Record<string, unknown> | undefined) =>
+  messagesOf(body)
+    .flatMap(thinkingBlocksOf)
+    .map((block) => block["signature"]);
+
+Deno.test(
+  "after a clarify, the next turn replays the question's thinking and no other, and the turn after replays none",
+  async () => {
+    await withHarness(
+      {
+        responses: [
+          turnZero,
+          thinkingReply("sig-question", [
+            {
+              type: "tool_use",
+              id: "a1",
+              name: "ask_user",
+              input: { question: "How much rice?", quick_replies: ["100 g", "150 g"] },
+            },
+          ]),
+          thinkingReply("sig-answer", [{ type: "text", text: "Logged." }]),
+          reply("You are welcome."),
+        ],
+      },
+      async (harness) => {
+        await harness.take("hi");
+        await harness.take("log rice");
+        await harness.take("150 g");
+        await harness.take("thanks");
+
+        const bodies = harness.mock.json();
+        assertEquals(signaturesInRequest(bodies[2]), ["sig-question"]);
+        const question = rowsOfRole(harness, "assistant")[1];
+        assertEquals(
+          JSON.stringify(messagesOf(bodies[2])[3]?.["content"]),
+          JSON.stringify(question?.content),
+        );
+        assertEquals(signaturesInRequest(bodies[3]), []);
+      },
+    );
+  },
+);
+
+Deno.test(
+  "after a confirm, the next turn replays the confirm's thinking and no other",
+  async () => {
+    await withHarness(
+      {
+        responses: [
+          turnZero,
+          thinkingReply("sig-confirm", [
+            { type: "tool_use", id: "d1", name: "delete_entry", input: { ids: entryIds } },
+          ]),
+          reply("Deleted."),
+          reply("You are welcome."),
+        ],
+        answers: { delete_entry: confirmationResult("delete_entry", confirmationId) },
+      },
+      async (harness) => {
+        await harness.take("hi");
+        await harness.take("delete my lunch");
+        await harness.take("yes");
+        await harness.take("thanks");
+
+        const bodies = harness.mock.json();
+        assertEquals(signaturesInRequest(bodies[2]), ["sig-confirm"]);
+        assertEquals(signaturesInRequest(bodies[3]), []);
+      },
+    );
+  },
+);

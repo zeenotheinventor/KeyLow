@@ -430,9 +430,11 @@ Deno.test("thinking and redacted thinking of an earlier turn are not replayed", 
     ]),
     stored("user", [toolResult("call-1")]),
     userText("log eggs", "turn-2"),
+    stored("assistant", [{ type: "text", text: "Logged." }], "turn-2"),
+    userText("and toast", "turn-3"),
   ];
 
-  const messages = toApiMessages(history, "turn-2");
+  const messages = toApiMessages(history, "turn-3");
 
   assertEquals(
     JSON.stringify(messages[1]),
@@ -494,6 +496,108 @@ Deno.test(
     assertEquals(messages[0]?.content?.length, 4);
   },
 );
+
+const signaturesOf = (messages: readonly Anthropic.MessageParam[]) =>
+  messages.flatMap((message) =>
+    typeof message.content === "string"
+      ? []
+      : message.content.flatMap((block) => (block.type === "thinking" ? [block.signature] : [])),
+  );
+
+// Turn 1 answered in full, then a turn 2 that ended on a call nobody has answered yet.
+const turnOneThenAnOpenCall = (call: ReturnType<typeof toolUse>) => [
+  userText("hi"),
+  stored("assistant", [thinking("sig-1"), { type: "text", text: "Hello" }]),
+  userText("log rice", "turn-2"),
+  stored("assistant", [thinking("sig-2"), call], "turn-2"),
+];
+
+Deno.test("after a question, only the question's thinking is replayed, byte for byte", () => {
+  const question = thinking("sig-2");
+  const history = [
+    ...turnOneThenAnOpenCall(toolUse("ask-1", "ask_user")),
+    stored(
+      "user",
+      userContent({ openToolUses: [{ id: "ask-1", name: "ask_user" }], context, text: "150 g" }),
+      "turn-3",
+    ),
+  ];
+
+  const messages = toApiMessages(history, "turn-3");
+
+  assertEquals(signaturesOf(messages), ["sig-2"]);
+  assertEquals(JSON.stringify(messages[3]?.content?.[0]), JSON.stringify(question));
+});
+
+Deno.test("after a confirm, only the confirm's thinking is replayed", () => {
+  const history = [
+    ...turnOneThenAnOpenCall(toolUse("del-1", "delete_entry")),
+    stored("user", [toolResult("del-1")], "turn-2"),
+    userText("yes", "turn-3"),
+  ];
+
+  assertEquals(signaturesOf(toApiMessages(history, "turn-3")), ["sig-2"]);
+});
+
+Deno.test("after a call that did not run, only that call's thinking is replayed", () => {
+  const history = [
+    ...turnOneThenAnOpenCall(toolUse("get-1", "get_day")),
+    stored(
+      "user",
+      userContent({ openToolUses: [{ id: "get-1", name: "get_day" }], context, text: "again" }),
+      "turn-3",
+    ),
+  ];
+
+  const messages = toApiMessages(history, "turn-3");
+
+  assertEquals(signaturesOf(messages), ["sig-2"]);
+  assertEquals(JSON.stringify(messages).includes("No result was recorded"), true);
+});
+
+Deno.test("one turn later the answered call's thinking is stripped too", () => {
+  const history = [
+    ...turnOneThenAnOpenCall(toolUse("ask-1", "ask_user")),
+    stored(
+      "user",
+      userContent({ openToolUses: [{ id: "ask-1", name: "ask_user" }], context, text: "150 g" }),
+      "turn-3",
+    ),
+    stored("assistant", [thinking("sig-3"), { type: "text", text: "Logged." }], "turn-3"),
+    userText("thanks", "turn-4"),
+  ];
+
+  assertEquals(signaturesOf(toApiMessages(history, "turn-4")), []);
+});
+
+Deno.test("a turn with no reply of its own does not pass thinking on to the turn after", () => {
+  const history = [
+    ...turnOneThenAnOpenCall(toolUse("ask-1", "ask_user")),
+    stored(
+      "user",
+      userContent({ openToolUses: [{ id: "ask-1", name: "ask_user" }], context, text: "150 g" }),
+      "turn-3",
+    ),
+    userText("hello?", "turn-4"),
+  ];
+
+  assertEquals(signaturesOf(toApiMessages(history, "turn-4")), []);
+});
+
+Deno.test("a call that is only partly answered keeps no thinking", () => {
+  const history = [
+    userText("log rice", "turn-2"),
+    stored(
+      "assistant",
+      [thinking("sig-2"), toolUse("a", "get_day"), toolUse("b", "get_day")],
+      "turn-2",
+    ),
+    stored("user", [toolResult("a")], "turn-2"),
+    userText("again", "turn-3"),
+  ];
+
+  assertEquals(signaturesOf(toApiMessages(history, "turn-3")), []);
+});
 
 Deno.test("a stored row is left as it was whatever is stripped from the request", () => {
   const history = [

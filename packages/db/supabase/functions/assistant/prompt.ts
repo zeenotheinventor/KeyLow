@@ -12,7 +12,9 @@
 // - Only the current turn's thinking blocks are sent. A Haiku 5.5 thinking block is bound to the system
 //   prompt, the tools and every message before it, so a deploy that changes any of them would make the API
 //   refuse every later request of a conversation that still holds one. Blocks made in a turn that is over
-//   are removed from the front of the history, which the API allows, and the rows are not touched.
+//   are removed from the front of the history, which the API allows, and the rows are not touched. The one
+//   exception is the last message of the turn before, when the current request answers its calls, because
+//   the API guide asks for a call and its result to travel with their thinking.
 // - The `tools` array does not change per turn. The allowlist is enforced by the executor, not here.
 import { z } from "zod";
 
@@ -213,14 +215,47 @@ const isThinking = (block: Anthropic.ContentBlockParam): boolean =>
 
 // What a stored message sends. The assistant messages of a turn that is over lose their thinking and
 // redacted thinking, and keep their text and their calls. Of the current turn they are sent as they were.
+// `keepThinking` marks the one earlier message that is the exception (below).
 function replayBlocks(
   message: StoredHistoryMessage,
   currentTurnId: string,
+  keepThinking: boolean,
 ): Anthropic.ContentBlockParam[] {
   const blocks = blocksOf(message);
-  return message.role === "assistant" && message.turnId !== currentTurnId
+  return message.role === "assistant" && message.turnId !== currentTurnId && !keepThinking
     ? blocks.filter((block) => !isThinking(block))
     : blocks;
+}
+
+// The one earlier assistant message that keeps its thinking: the last message of the turn just before the
+// current one, when every call it made is answered by the user rows that follow it. The request then holds
+// that message and its results side by side, and the API guide asks for the thinking of such a pair to go
+// back. It is a suffix of the thinking in the history, so the blocks that are sent stay in order. A question
+// the person has not answered yet (`ask_user`), a confirm and a call that did not run all end up here. It is
+// the previous turn only, so a turn with no reply of its own cannot hold old thinking in every request after.
+function messageKeepingThinking(
+  history: readonly StoredHistoryMessage[],
+  currentTurnId: string,
+): StoredHistoryMessage | undefined {
+  const previousTurnId = history.findLast((message) => message.turnId !== currentTurnId)?.turnId;
+  const index = history.findLastIndex(
+    (message) => message.role === "assistant" && message.turnId !== currentTurnId,
+  );
+  const candidate = history[index];
+  if (candidate === undefined || candidate.turnId !== previousTurnId) {
+    return undefined;
+  }
+  const callIds = blocksOf(candidate).flatMap((block) =>
+    block.type === "tool_use" ? [block.id] : [],
+  );
+  const answeredIds = new Set(
+    history
+      .slice(index + 1)
+      .filter((message) => message.role === "user")
+      .flatMap(blocksOf)
+      .flatMap((block) => (block.type === "tool_result" ? [block.tool_use_id] : [])),
+  );
+  return callIds.length > 0 && callIds.every((id) => answeredIds.has(id)) ? candidate : undefined;
 }
 
 // The stored messages as Messages API messages, in the order given (`seq`). A turn that ended on a
@@ -229,7 +264,7 @@ function replayBlocks(
 // is never sent.
 //
 // Thinking is sent for `currentTurnId` only, byte for byte, because a tool round needs its own blocks
-// back. An assistant message of an earlier turn that holds nothing else is dropped, not sent empty. That
+// back. The one exception is the message `messageKeepingThinking` names. An assistant message of an earlier turn that holds nothing else is dropped, not sent empty. That
 // is what the thread does with it too, as `threadFromMessages` shows text and calls and never thinking,
 // and the user messages either side of it are joined by the rule above, so the roles still alternate.
 // Everything else is unchanged, so every later turn replays the same bytes.
@@ -243,8 +278,9 @@ export function toApiMessages(
   currentTurnId: string,
 ): Anthropic.MessageParam[] {
   const messages: { role: "user" | "assistant"; content: Anthropic.ContentBlockParam[] }[] = [];
+  const keeping = messageKeepingThinking(history, currentTurnId);
   for (const message of history) {
-    const blocks = replayBlocks(message, currentTurnId);
+    const blocks = replayBlocks(message, currentTurnId, message === keeping);
     if (blocks.length === 0) {
       continue;
     }
