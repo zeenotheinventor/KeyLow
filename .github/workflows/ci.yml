@@ -416,6 +416,27 @@ jobs:
       - name: Print the functions serve log
         if: ${{ failure() && steps.serve.outcome != 'skipped' }}
         run: cat "$RUNNER_TEMP/functions-serve.log" || true
+      # A suite's write sometimes gets Kong's 502 ("An invalid response was received from the upstream
+      # server") on a busy run. The serve log cannot say why, so a failed leg also prints Kong's failed
+      # requests, PostgREST's log (schema cache reloads re-create its connection pool), whether any
+      # container restarted or ran out of memory, and the runner's memory. It costs nothing on a green run.
+      - name: Print the stack's logs and state
+        if: ${{ failure() && steps.stack.outcome == 'success' }}
+        run: |
+          free -m || true
+          docker ps -a --format '{{.Names}} {{.Status}}' || true
+          for container in supabase_kong_keylow supabase_rest_keylow supabase_db_keylow; do
+            docker inspect -f '{{.Name}} oom={{.State.OOMKilled}} restarts={{.RestartCount}}' "$container" || true
+          done
+          # Kong logs every request, so only the ones that did not succeed are printed, from the whole
+          # run. PostgREST logs little, and its schema cache reloads and pool resets are the lines that
+          # matter, so all of it is printed.
+          echo "::group::supabase_kong_keylow requests that did not succeed, and its errors"
+          docker logs --timestamps supabase_kong_keylow 2>&1 | grep -vE '" [23][0-9][0-9] ' || true
+          echo "::endgroup::"
+          echo "::group::supabase_rest_keylow log"
+          docker logs --timestamps supabase_rest_keylow 2>&1 || true
+          echo "::endgroup::"
 
   # The mobile app. A change to the app, to a package it uses, to the Expo doctor gate or to anything
   # under tools/ (the list generator is there) runs it, and then the whole app is checked. The tasks run
