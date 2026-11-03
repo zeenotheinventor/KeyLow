@@ -1,9 +1,11 @@
-import { LEGAL_URLS } from "@keylow/core/copy";
+import { LEGAL_URLS, SAVE_FAILED_BANNER } from "@keylow/core/copy";
+import { onlineManager } from "@tanstack/react-query";
 import { act, cleanup, render, screen, userEvent, waitFor } from "@testing-library/react-native";
 import { Linking } from "react-native";
 import { setUpTests } from "react-native-reanimated";
 
 import { AssistantSheet } from "../components/AssistantSheet";
+import { ToastProvider } from "../components/ui";
 import { ThemeProvider } from "../lib/theme";
 import { screenWords } from "./support/screenWords";
 import { installVirtualClock } from "./support/virtualClock";
@@ -20,20 +22,46 @@ jest.mock(
   () =>
     jest.requireActual<{ default: unknown }>("react-native-safe-area-context/jest/mock").default,
 );
-jest.mock("@gorhom/bottom-sheet", () =>
-  jest
-    .requireActual<{ mockBottomSheet: () => unknown }>("./support/sheetScrollViewMock")
-    .mockBottomSheet(),
-);
+// The sheet library's sheet stands in as the plain one, with a note of the snap point it was given.
+const mockSheet: { index: unknown } = { index: undefined };
+jest.mock("@gorhom/bottom-sheet", () => {
+  const { createElement, forwardRef } = jest.requireActual<typeof import("react")>("react");
+  const plain = jest
+    .requireActual<{
+      mockBottomSheet: () => {
+        default: React.ComponentType<{ index: unknown } & React.RefAttributes<unknown>>;
+      };
+    }>("./support/sheetScrollViewMock")
+    .mockBottomSheet();
+  const Recording = forwardRef<unknown, { index: unknown }>(function Recording(props, ref) {
+    mockSheet.index = props.index;
+    return createElement(plain.default, { ...props, ref });
+  });
+  return { ...plain, default: Recording };
+});
 jest.mock("expo/fetch", () => ({ fetch: jest.fn() }));
 
 // The hooks the sheet reads are the app's own and are tested in the api client. They are given invented
 // data here, so a test says what the person sees for each thing the hooks can answer.
+// A read that finished and found the status open, which is what a read on open says in most tests.
+const readSucceeded = () => jest.fn().mockResolvedValue({ isSuccess: true });
+
+function unreadStatus() {
+  return {
+    data: undefined,
+    isSuccess: false,
+    isError: false,
+    failureCount: 0,
+    refetch: readSucceeded(),
+  };
+}
+
 const mockAssistant: {
   status: {
     data: { notice: AssistantNotice | null } | undefined;
     isSuccess: boolean;
     isError: boolean;
+    failureCount: number;
     refetch: jest.Mock;
   };
   consent: { mutate: jest.Mock; isPending: boolean };
@@ -46,7 +74,7 @@ const mockAssistant: {
   turn: { send: jest.Mock; stop: jest.Mock; live: AssistantLiveTurn | null; isStreaming: boolean };
   timeZone: { data: string | null | undefined };
 } = {
-  status: { data: undefined, isSuccess: false, isError: false, refetch: jest.fn() },
+  status: unreadStatus(),
   consent: { mutate: jest.fn(), isPending: false },
   conversation: { data: undefined, isSuccess: false, isError: false, isFetching: false },
   turn: { send: jest.fn(), stop: jest.fn(), live: null, isStreaming: false },
@@ -68,7 +96,13 @@ setUpTests();
 const CONVERSATION_ID = "00000000-0000-4000-8000-0000000000c1";
 
 const statusRead = (notice: AssistantNotice | null) => {
-  mockAssistant.status = { data: { notice }, isSuccess: true, isError: false, refetch: jest.fn() };
+  mockAssistant.status = {
+    data: { notice },
+    isSuccess: true,
+    isError: false,
+    failureCount: 0,
+    refetch: readSucceeded(),
+  };
 };
 
 const loadedConversation = (items: AssistantThreadItem[]) => {
@@ -93,9 +127,11 @@ const earlierThread: AssistantThreadItem[] = [
 
 let onClose: jest.Mock;
 
-const sheetTree = () => (
+const sheetTree = (open = true) => (
   <ThemeProvider fixedPreference="dark">
-    <AssistantSheet localDate="2026-10-25" open onClose={onClose} />
+    <ToastProvider>
+      <AssistantSheet localDate="2026-10-25" open={open} onClose={onClose} />
+    </ToastProvider>
   </ThemeProvider>
 );
 
@@ -126,6 +162,9 @@ describe("the assistant sheet's access states", () => {
   afterEach(async () => {
     jest.restoreAllMocks();
     await cleanup();
+    await act(() => {
+      onlineManager.setOnline(true);
+    });
     jest.useRealTimers();
   });
 
@@ -213,6 +252,40 @@ describe("the assistant sheet's access states", () => {
       expect(mockAssistant.consent.mutate).not.toHaveBeenCalled();
     });
 
+    it("should have Turn on off and the offline banner over the card while offline", async () => {
+      await renderSheet();
+      await act(() => {
+        onlineManager.setOnline(false);
+      });
+
+      expect(screen.getByRole("button", { name: "Turn on" })).toBeDisabled();
+      expect(screen.getByText("You're offline")).toBeOnTheScreen();
+      expect(
+        screen.getByText("The assistant needs a connection. Your diary still works."),
+      ).toBeOnTheScreen();
+    });
+
+    it("should show a toast and keep the card with Turn on working when saving fails", async () => {
+      mockAssistant.consent.mutate.mockImplementation(
+        (_variables: unknown, options: { onError: () => void }) => {
+          options.onError();
+        },
+      );
+      await renderSheet();
+
+      await userSetup().press(turnOnButton());
+
+      expect(screen.getByText(SAVE_FAILED_BANNER)).toBeOnTheScreen();
+      expect(screen.getByText("Turn on the assistant")).toBeOnTheScreen();
+      expect(turnOnButton()).toBeEnabled();
+    });
+
+    it("should open at the taller snap point, which is full height", async () => {
+      await renderSheet();
+
+      expect(mockSheet.index).toBe(1);
+    });
+
     it("should show the empty sheet once the status says the assistant is on", async () => {
       const rendered = await renderSheet();
       statusRead(null);
@@ -276,27 +349,45 @@ describe("the assistant sheet's access states", () => {
 
   describe("while the status is read", () => {
     it("should draw neither the consent card, the empty sheet nor a composer", async () => {
-      mockAssistant.status = {
-        data: undefined,
-        isSuccess: false,
-        isError: false,
-        refetch: jest.fn(),
-      };
+      mockAssistant.status = unreadStatus();
       await renderSheet();
 
       expect(sheetWords()).toEqual(headerWords);
     });
 
     it("should treat a status that could not be read as open, because the turn stays the authority", async () => {
-      mockAssistant.status = {
-        data: undefined,
-        isSuccess: false,
-        isError: true,
-        refetch: jest.fn(),
-      };
+      mockAssistant.status = { ...unreadStatus(), isError: true };
       await renderSheet();
 
       expect(screen.getByLabelText("Message")).toBeOnTheScreen();
+    });
+
+    it("should stop waiting after the first failed read, which is retried for seconds", async () => {
+      mockAssistant.status = { ...unreadStatus(), failureCount: 1 };
+      await renderSheet();
+
+      expect(screen.getByLabelText("Message")).toBeOnTheScreen();
+    });
+
+    it("should stop waiting offline for a status that was never read", async () => {
+      mockAssistant.status = unreadStatus();
+      await renderSheet();
+      expect(sheetWords()).toEqual(headerWords);
+
+      await act(() => {
+        onlineManager.setOnline(false);
+      });
+
+      expect(screen.getByLabelText("Message")).toHaveProp("editable", false);
+      expect(screen.getByPlaceholderText("Needs a connection")).toBeOnTheScreen();
+    });
+  });
+
+  describe("the sheet's height", () => {
+    it("should open at the open height when the assistant is on", async () => {
+      await renderSheet();
+
+      expect(mockSheet.index).toBe(0);
     });
   });
 
@@ -390,6 +481,19 @@ describe("the assistant sheet's access states", () => {
       expect(screen.getByRole("button", { name: "Send" })).toBeDisabled();
     });
 
+    it("should keep Send off for a draft typed before the limit arrived", async () => {
+      statusRead(null);
+      const rendered = await renderSheet();
+      await userSetup().type(screen.getByLabelText("Message"), "Log a banana");
+      expect(screen.getByRole("button", { name: "Send" })).toBeEnabled();
+
+      statusRead({ code: "plus" });
+      await rendered.rerender(sheetTree());
+
+      expect(screen.getByLabelText("Message")).toHaveDisplayValue("Log a banana");
+      expect(screen.getByRole("button", { name: "Send" })).toBeDisabled();
+    });
+
     it("should leave the starters out, because the notice fills the empty thread", async () => {
       statusRead({ code: "plus" });
       await renderSheet();
@@ -426,11 +530,7 @@ describe("the assistant sheet's access states", () => {
     it("should read the status again when the sheet is opened over a mounted one", async () => {
       statusRead(null);
       const rendered = await renderSheet();
-      await rendered.rerender(
-        <ThemeProvider fixedPreference="dark">
-          <AssistantSheet localDate="2026-10-25" open={false} onClose={onClose} />
-        </ThemeProvider>,
-      );
+      await rendered.rerender(sheetTree(false));
       mockAssistant.status.refetch.mockClear();
 
       await rendered.rerender(sheetTree());
@@ -438,6 +538,64 @@ describe("the assistant sheet's access states", () => {
       await waitFor(() => {
         expect(mockAssistant.status.refetch).toHaveBeenCalledTimes(1);
       });
+      // A read already under way is let finish, not started again.
+      expect(mockAssistant.status.refetch).toHaveBeenCalledWith({ cancelRefetch: false });
+    });
+
+    it("should let go of a day limit the stream left once the next day's status says open", async () => {
+      statusRead(null);
+      loadedConversation(earlierThread);
+      mockAssistant.turn = {
+        ...mockAssistant.turn,
+        live: liveWithNotice({ code: "day_limit", resetsAt: "2026-10-26T00:00:00Z" }),
+      };
+      const rendered = await renderSheet();
+      await sendMessage(rendered, "Log a banana");
+      expect(screen.getByLabelText("Message")).toHaveProp("editable", false);
+
+      await rendered.rerender(sheetTree(false));
+      await rendered.rerender(sheetTree(true));
+
+      await waitFor(() => {
+        expect(screen.getByLabelText("Message")).toHaveProp("editable", true);
+      });
+      expect(screen.queryByText("You have used today's turns")).not.toBeOnTheScreen();
+    });
+
+    it("should keep a failed turn and its Try again over a read on open", async () => {
+      statusRead(null);
+      loadedConversation(earlierThread);
+      mockAssistant.turn = { ...mockAssistant.turn, live: liveWithNotice({ code: "turn_failed" }) };
+      const rendered = await renderSheet();
+      await sendMessage(rendered, "Log a banana");
+
+      await rendered.rerender(sheetTree(false));
+      await rendered.rerender(sheetTree(true));
+
+      await waitFor(() => {
+        expect(mockAssistant.status.refetch).toHaveBeenCalledTimes(2);
+      });
+      expect(screen.getByRole("button", { name: "Try again" })).toBeOnTheScreen();
+    });
+
+    it("should let go of the consent card the stream left once consent shows as given", async () => {
+      statusRead(null);
+      loadedConversation(earlierThread);
+      mockAssistant.turn = {
+        ...mockAssistant.turn,
+        live: liveWithNotice({ code: "consent_needed" }),
+      };
+      const rendered = await renderSheet();
+      await sendMessage(rendered, "Log a banana");
+      expect(screen.getByText("Turn on the assistant")).toBeOnTheScreen();
+
+      await rendered.rerender(sheetTree(false));
+      await rendered.rerender(sheetTree(true));
+
+      await waitFor(() => {
+        expect(screen.queryByText("Turn on the assistant")).not.toBeOnTheScreen();
+      });
+      expect(screen.getByLabelText("Message")).toHaveProp("editable", true);
     });
   });
 });

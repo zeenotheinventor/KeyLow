@@ -12,6 +12,7 @@ import { AccessibilityInfo, BackHandler, Platform } from "react-native";
 import { setUpTests } from "react-native-reanimated";
 
 import { AssistantSheet } from "../components/AssistantSheet";
+import { ToastProvider } from "../components/ui";
 import { ThemeProvider } from "../lib/theme";
 import { screenWords } from "./support/screenWords";
 import { installVirtualClock } from "./support/virtualClock";
@@ -53,6 +54,9 @@ const mockAssistant: {
   newConversation: { mutateAsync: jest.fn(), isPending: false },
 };
 
+// One function for every render, as the query's own `refetch` is, so the read on open runs once per open.
+const mockRefetchStatus = () => Promise.resolve({ isSuccess: true });
+
 jest.mock("@keylow/api-client", () => ({
   ...jest.requireActual<object>("@keylow/api-client"),
   useAssistantConversation: () => mockAssistant.conversation,
@@ -63,7 +67,8 @@ jest.mock("@keylow/api-client", () => ({
     data: { notice: null },
     isSuccess: true,
     isError: false,
-    refetch: jest.fn(),
+    failureCount: 0,
+    refetch: mockRefetchStatus,
   }),
   useSetAssistantConsent: () => ({ mutate: jest.fn(), isPending: false }),
   useProfileTimeZone: () => ({ data: "Europe/London" }),
@@ -117,7 +122,9 @@ let onClose: jest.Mock;
 // A new element each time, because React skips an element it has already rendered.
 const sheetTree = () => (
   <ThemeProvider fixedPreference="dark">
-    <AssistantSheet localDate={OPENED_ON} open onClose={onClose} />
+    <ToastProvider>
+      <AssistantSheet localDate={OPENED_ON} open onClose={onClose} />
+    </ToastProvider>
   </ThemeProvider>
 );
 

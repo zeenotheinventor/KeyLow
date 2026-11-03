@@ -118,6 +118,7 @@ export function AssistantNotice({
           {buttons.map((button) => (
             <Button
               key={button.label}
+              disabled={button.isDisabled === true}
               fullWidth
               loading={button.isBusy === true}
               variant={buttonVariants[button.kind]}

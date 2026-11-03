@@ -1,7 +1,7 @@
-import { ASSISTANT_CONSENT_CARD, LEGAL_URLS } from "@keylow/core/copy";
+import { ASSISTANT_CONSENT_CARD, ASSISTANT_OFFLINE, LEGAL_URLS } from "@keylow/core/copy";
 import { Linking } from "react-native";
 
-import { AssistantNotice } from "../../ui";
+import { AssistantNotice, Banner } from "../../ui";
 
 import type { ConsentCardProps } from "./types";
 
@@ -12,26 +12,33 @@ function openPrivacyPolicy() {
 
 /**
  * The consent card the sheet opens on before the assistant is turned on (`assistant · consent-needed`),
- * with the same words as the Settings consent row. Every word is core's `ASSISTANT_CONSENT_CARD`.
+ * with the same words as the Settings consent row. Every word is core's `ASSISTANT_CONSENT_CARD`, and the
+ * offline banner over it is the sheet's own.
  */
-export function ConsentCard({ isTurningOn, onTurnOn, onNotNow }: ConsentCardProps) {
+export function ConsentCard({ isTurningOn, isOnline, onTurnOn, onNotNow }: ConsentCardProps) {
   return (
-    <AssistantNotice
-      buttons={[
-        {
-          label: ASSISTANT_CONSENT_CARD.turnOnLabel,
-          kind: "primary",
-          isBusy: isTurningOn,
-          onPress: onTurnOn,
-        },
-        { label: ASSISTANT_CONSENT_CARD.notNowLabel, kind: "ghost", onPress: onNotNow },
-      ]}
-      icon="Sparkles"
-      link={{ label: ASSISTANT_CONSENT_CARD.privacyLinkLabel, onPress: openPrivacyPolicy }}
-      paragraphs={ASSISTANT_CONSENT_CARD.paragraphs}
-      smallPrint={ASSISTANT_CONSENT_CARD.smallPrint}
-      title={ASSISTANT_CONSENT_CARD.title}
-      tone="accent"
-    />
+    <>
+      {isOnline ? null : (
+        <Banner body={ASSISTANT_OFFLINE.body} title={ASSISTANT_OFFLINE.title} variant="offline" />
+      )}
+      <AssistantNotice
+        buttons={[
+          {
+            label: ASSISTANT_CONSENT_CARD.turnOnLabel,
+            kind: "primary",
+            isBusy: isTurningOn,
+            isDisabled: !isOnline,
+            onPress: onTurnOn,
+          },
+          { label: ASSISTANT_CONSENT_CARD.notNowLabel, kind: "ghost", onPress: onNotNow },
+        ]}
+        icon="Sparkles"
+        link={{ label: ASSISTANT_CONSENT_CARD.privacyLinkLabel, onPress: openPrivacyPolicy }}
+        paragraphs={ASSISTANT_CONSENT_CARD.paragraphs}
+        smallPrint={ASSISTANT_CONSENT_CARD.smallPrint}
+        title={ASSISTANT_CONSENT_CARD.title}
+        tone="accent"
+      />
+    </>
   );
 }

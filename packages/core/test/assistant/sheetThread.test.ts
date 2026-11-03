@@ -5,6 +5,8 @@ import {
   buildAssistantSheetThread,
   canSendAssistantMessage,
   describeAssistantComposer,
+  isAssistantStatusKnown,
+  isStaleStreamGateNotice,
   resolveAssistantSheetAccess,
   resolveAssistantTimeZone,
 } from "../../src/assistant";
@@ -525,5 +527,54 @@ describe("resolveAssistantTimeZone", () => {
 
   it("should be UTC for a profile with no zone, as logging reads it", () => {
     expect(resolveAssistantTimeZone(null, "Europe/London")).toBe("UTC");
+  });
+});
+
+describe("isStaleStreamGateNotice", () => {
+  it.each([
+    { code: "consent_needed" },
+    { code: "day_limit", resetsAt: "2026-10-26T00:00:00Z" },
+    { code: "plus" },
+    { code: "resting", resumesOn: "2026-11-01" },
+    { code: "switched_off" },
+  ] as const)(
+    "should call the $code notice left by a finished turn stale, once the status is read again",
+    (streamNotice) => {
+      expect(isStaleStreamGateNotice({ streamNotice, isStreaming: false })).toBe(true);
+    },
+  );
+
+  it("should keep a failed turn, which offers Try again and holds no gate", () => {
+    expect(isStaleStreamGateNotice({ streamNotice: turnFailed, isStreaming: false })).toBe(false);
+  });
+
+  it("should keep a notice while its turn is still streaming", () => {
+    expect(isStaleStreamGateNotice({ streamNotice: { code: "plus" }, isStreaming: true })).toBe(
+      false,
+    );
+  });
+
+  it("should have nothing to call stale without a notice", () => {
+    expect(isStaleStreamGateNotice({ streamNotice: null, isStreaming: false })).toBe(false);
+  });
+});
+
+describe("isAssistantStatusKnown", () => {
+  const unread = { isSuccess: false, isError: false, failureCount: 0, isOnline: true };
+
+  it("should not be known while the first read is under way", () => {
+    expect(isAssistantStatusKnown(unread)).toBe(false);
+  });
+
+  it.each([
+    { name: "a read that succeeded", change: { isSuccess: true } },
+    { name: "a read that failed for good", change: { isError: true } },
+    {
+      name: "a read that has failed once and is being tried again, which takes seconds",
+      change: { failureCount: 1 },
+    },
+    { name: "an app that is offline, where the read cannot run", change: { isOnline: false } },
+  ])("should be known for $name", ({ change }) => {
+    expect(isAssistantStatusKnown({ ...unread, ...change })).toBe(true);
   });
 });

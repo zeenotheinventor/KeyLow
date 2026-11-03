@@ -10,10 +10,12 @@ import {
   buildAssistantSheetThread,
   canSendAssistantMessage,
   describeAssistantComposer,
+  isAssistantStatusKnown,
+  isStaleStreamGateNotice,
   resolveAssistantSheetAccess,
   resolveAssistantTimeZone,
 } from "@keylow/core";
-import { ASSISTANT_OFFLINE, ASSISTANT_SHEET } from "@keylow/core/copy";
+import { ASSISTANT_OFFLINE, ASSISTANT_SHEET, SAVE_FAILED_BANNER } from "@keylow/core/copy";
 import { fetch as streamingFetch } from "expo/fetch";
 import { useEffect, useRef, useState } from "react";
 import { AccessibilityInfo, View } from "react-native";
@@ -23,7 +25,7 @@ import { AssistantThread } from "./AssistantThread";
 import { Composer } from "./Composer";
 import { ConsentCard } from "./ConsentCard";
 import { useIsOnline } from "../../lib/connectivity";
-import { Banner, BottomSheet, SheetHeader, SheetScrollView } from "../ui";
+import { Banner, BottomSheet, SheetHeader, SheetScrollView, useToast } from "../ui";
 
 import type { AssistantSheetProps } from "./types";
 import type { AssistantSheetSent } from "@keylow/core";
@@ -34,6 +36,9 @@ const deviceTimeZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
 // The boards' open height leaves the diary's header showing, 106 of 844 points from the top. The sheet drags
 // up to full height, which starts 54 points from the top.
 const SNAP_POINTS = ["87%", "94%"];
+// The consent card opens at full height (`assistant · consent-needed`, 54 points from the top).
+const OPEN_SNAP_INDEX = 0;
+const FULL_HEIGHT_SNAP_INDEX = 1;
 
 // The thread grows up from the composer once there is a conversation, and starts at the top when it is the
 // empty state's words.
@@ -57,6 +62,7 @@ export function AssistantSheet({ open, onClose, localDate }: AssistantSheetProps
   const status = useAssistantStatus();
   const setConsent = useSetAssistantConsent();
   const profileTimeZone = useProfileTimeZone();
+  const toast = useToast();
   const newConversation = useNewAssistantConversation();
   const { send, stop, live, isStreaming } = useAssistantTurn({ fetch: streamingFetch });
   const [draft, setDraft] = useState("");
@@ -69,7 +75,12 @@ export function AssistantSheet({ open, onClose, localDate }: AssistantSheetProps
   // the authority for what it says.
   const access = resolveAssistantSheetAccess({
     statusNotice: status.data?.notice ?? null,
-    isStatusKnown: status.isSuccess || status.isError || !isOnline,
+    isStatusKnown: isAssistantStatusKnown({
+      isSuccess: status.isSuccess,
+      isError: status.isError,
+      failureCount: status.failureCount,
+      isOnline,
+    }),
     streamNotice: sent === null ? null : (live?.notice ?? null),
   });
   const thread = buildAssistantSheetThread({
@@ -81,14 +92,42 @@ export function AssistantSheet({ open, onClose, localDate }: AssistantSheetProps
   });
   const composer = describeAssistantComposer({ access, isOnline, timeZone });
 
+  // The turn on screen and what it left, for the read on open below, which finishes after the render that
+  // started it.
+  const turnOnScreen = useRef({ live, isStreaming });
+  useEffect(() => {
+    turnOnScreen.current = { live, isStreaming };
+  });
+
   // Each time the sheet opens the status is read again, so a limit that has lifted, or consent given
-  // elsewhere, shows at once. A read already under way is let finish.
+  // elsewhere, shows at once. A read already under way is let finish. The gate notices store no turn, so
+  // the stored conversation never moves past one and nothing else would let it go: once the read has
+  // succeeded, the message sent from the sheet is let go with the notice its turn left, and the fresh
+  // status decides.
   const { refetch: refetchStatus } = status;
   useEffect(() => {
-    if (open) {
-      void refetchStatus({ cancelRefetch: false });
+    if (!open) {
+      return undefined;
     }
+    let isCurrent = true;
+    void refetchStatus({ cancelRefetch: false }).then((result) => {
+      const { live: latestLive, isStreaming: isStillStreaming } = turnOnScreen.current;
+      if (
+        isCurrent &&
+        result.isSuccess &&
+        isStaleStreamGateNotice({
+          streamNotice: latestLive?.notice ?? null,
+          isStreaming: isStillStreaming,
+        })
+      ) {
+        setSent(null);
+      }
+    });
+    return () => {
+      isCurrent = false;
+    };
   }, [open, refetchStatus]);
+
   // The thread is read once, so the empty sheet and its starters are not drawn for a moment over a
   // conversation that is still loading.
   const isThreadKnown = conversation.isSuccess || conversation.isError;
@@ -175,6 +214,10 @@ export function AssistantSheet({ open, onClose, localDate }: AssistantSheetProps
         onSuccess: () => {
           setSent(null);
         },
+        // The card stays and Turn on works again.
+        onError: () => {
+          toast.show({ message: SAVE_FAILED_BANNER, tone: "danger", icon: "CircleAlert" });
+        },
       },
     );
   }
@@ -189,6 +232,7 @@ export function AssistantSheet({ open, onClose, localDate }: AssistantSheetProps
     if (access.kind === "consent") {
       return (
         <ConsentCard
+          isOnline={isOnline}
           isTurningOn={setConsent.isPending}
           onNotNow={close}
           onTurnOn={turnOnAssistant}
@@ -214,7 +258,13 @@ export function AssistantSheet({ open, onClose, localDate }: AssistantSheetProps
   }
 
   return (
-    <BottomSheet label={ASSISTANT_SHEET.title} open={open} snapPoints={SNAP_POINTS} onClose={close}>
+    <BottomSheet
+      label={ASSISTANT_SHEET.title}
+      open={open}
+      snapIndex={access.kind === "consent" ? FULL_HEIGHT_SNAP_INDEX : OPEN_SNAP_INDEX}
+      snapPoints={SNAP_POINTS}
+      onClose={close}
+    >
       <View className="flex-1">
         {/* The header brings its own side padding, so it goes out to the sheet's edges. */}
         <View className="-mx-4">

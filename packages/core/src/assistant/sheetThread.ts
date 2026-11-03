@@ -248,6 +248,42 @@ const accessOfNotice = (notice: AssistantNotice | null): AssistantSheetAccess | 
 };
 
 /**
+ * Whether a notice left by a turn that has ended is out of date once the status has been read again. The
+ * gate notices (consent, the day limit, Ki-Lo Plus, resting, switched off) store no turn, so the stored
+ * conversation never moves past them and nothing else lets them go: a day limit would lock the composer
+ * the next day, and the consent card would stay after consent was given in Settings. A failed turn is
+ * not a gate. It stays, with its Try again.
+ */
+export function isStaleStreamGateNotice({
+  streamNotice,
+  isStreaming,
+}: {
+  streamNotice: AssistantNotice | null;
+  isStreaming: boolean;
+}): boolean {
+  return !isStreaming && accessOfNotice(streamNotice) !== null;
+}
+
+/**
+ * Whether the sheet may stop waiting for the status. A read that succeeded or failed for good is known, and
+ * so is one that has failed once, because the next try is seconds away (the turn route stays the authority).
+ * Offline the read cannot run at all, and holding the sheet back for it would leave it blank.
+ */
+export function isAssistantStatusKnown({
+  isSuccess,
+  isError,
+  failureCount,
+  isOnline,
+}: {
+  isSuccess: boolean;
+  isError: boolean;
+  failureCount: number;
+  isOnline: boolean;
+}): boolean {
+  return isSuccess || isError || failureCount > 0 || !isOnline;
+}
+
+/**
  * Which state the sheet is in. A notice in the stream of the turn on screen wins over the status read
  * (the stream is the authority, so a day limit shows even when the status said open, and it shows before
  * the status has been read). A failed turn in either leaves the assistant open.
