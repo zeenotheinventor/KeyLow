@@ -516,7 +516,7 @@ describe("the active session screen", () => {
     });
 
     it("should start a row tapped straight after a set was logged from that row's own numbers, not the last form's", async () => {
-      // The clock stands still, so the logged form is still on its way out when the next row is pressed.
+      // The sheet's exit has not finished when the next row is pressed.
       const user = userEvent.setup();
       await renderSession({}, setEntryClient);
       await user.press(await screen.findByRole("button", { name: "Leg press, set 3" }));
