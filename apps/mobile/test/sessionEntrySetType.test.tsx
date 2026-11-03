@@ -33,6 +33,7 @@ import {
   trainBackend,
   trainClient,
 } from "./support/trainBackend";
+import { installVirtualClock } from "./support/virtualClock";
 
 import type { QueryClient } from "@tanstack/react-query";
 
@@ -123,6 +124,7 @@ describe("choosing the type of a set before it is logged", () => {
   });
 
   beforeEach(() => {
+    installVirtualClock();
     registerAppStyles(kitStyles);
     resetTrainBackend();
     trainBackend.routine = legsRoutine;
@@ -137,6 +139,7 @@ describe("choosing the type of a set before it is logged", () => {
       onlineManager.setOnline(true);
     });
     queryClient.clear();
+    jest.useRealTimers();
   });
 
   describe("the Set type control", () => {
