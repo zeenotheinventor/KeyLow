@@ -1,3 +1,5 @@
+import { setAssistantConsent } from "@keylow/api-client";
+
 import { createEvalDatabase } from "./database.ts";
 import { createFixtureUser } from "./fixtureUser.ts";
 import { createHttpDriver } from "./httpDriver.ts";
@@ -34,7 +36,7 @@ async function timeZoneOf(user: FixtureUser): Promise<string | null> {
 }
 
 /**
- * The session of a run against the local stack: a new eval user with the synthetic diary, the HTTP driver
+ * The session of a run against the local stack: a new eval user with the synthetic diary and the assistant consent, the HTTP driver
  * for the served `assistant` function, and the eval user's own view of the database. Closing it removes the
  * user.
  */
@@ -42,6 +44,8 @@ export async function openLocalHttpSession(): Promise<EvalSession> {
   const stack = await readSupabaseStatus(databaseWorkdir);
   const user = await createFixtureUser(stack);
   try {
+    // Without the consent the first turn is refused with `consent_needed`. It is the app's own write.
+    await setAssistantConsent(user.client, user.id, true);
     const timeZone = await timeZoneOf(user);
     const driver = createHttpDriver({
       apiUrl: stack.apiUrl,
