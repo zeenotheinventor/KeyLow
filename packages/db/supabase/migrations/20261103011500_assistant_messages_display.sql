@@ -9,8 +9,12 @@
 -- It is health data, like the content next to it: a card holds foods, amounts and energy. Nothing here
 -- logs a row value or raises a notice with one. The migration inserts no row and every existing message
 -- starts null, so it applies to a database that holds any data.
+--
+-- This migration first shipped as version 20261103000000, the same version as food_favourites, which
+-- production had already recorded, so the deploy took this one as applied and never ran it. It now has
+-- its own version, and `if not exists` lets it run on a database that already has the column.
 
-alter table public.assistant_messages add column display jsonb;
+alter table public.assistant_messages add column if not exists display jsonb;
 
 comment on column public.assistant_messages.display is
   'On the user-role message that carries tool_result blocks: a map keyed by tool_use_id of what the app draws for that result, { card?, confirm?, citation?, estimate? }. Null on every other message. Never sent to the model.';
