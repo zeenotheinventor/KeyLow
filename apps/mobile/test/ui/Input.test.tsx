@@ -566,8 +566,9 @@ describe("Input", () => {
     });
   });
 
-  // Light keeps the two warning captions. In dark `warning-ink` is the same colour as `warning`, so only a light run
-  // notices a plain class standing in for the ink class.
+  // Light keeps the two warning captions, the raised box and the focus border. Each token here shares its dark value
+  // with another (`warning-ink` with `warning`, `surface-raised` with `skeleton-base`, `accent` with `focus-ring`), so
+  // only a light run notices the wrong one.
   describe("in the light scheme", () => {
     const colorOf = (name: ColorName) => resolvedColor("light", name);
     const boxOf = (style: Record<string, unknown>) => viewsDrawn({ minHeight: 44, ...style });
