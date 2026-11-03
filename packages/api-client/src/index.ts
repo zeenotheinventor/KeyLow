@@ -396,5 +396,21 @@ export {
 } from "./hooks";
 export { getAssistantConsent, getAssistantStatus, setAssistantConsent } from "./repos";
 export type { AssistantConsent, AssistantStatus } from "./repos";
+export {
+  useAssistantChanges,
+  useAssistantConversation,
+  useDeleteAllAssistantConversations,
+  useNewAssistantConversation,
+  useUndoAssistantAction,
+} from "./hooks";
+export type { AssistantConversation, UndoAssistantActionInput } from "./hooks";
+export {
+  createAssistantConversation,
+  deleteAllAssistantConversations,
+  getLatestAssistantConversation,
+  readAssistantActions,
+  undoAssistantActions,
+} from "./repos";
+export type { AssistantActionsRead, AssistantConversationRead, AssistantUndoResult } from "./repos";
 export type { AssistantLiveTurn } from "./assistantLiveTurn";
 export type { StreamingFetch, StreamingResponse } from "./runAssistantTurn";

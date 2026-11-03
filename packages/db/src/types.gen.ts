@@ -170,6 +170,7 @@ export type Database = {
           content: Json;
           conversation_id: string;
           created_at: string;
+          display: Json | null;
           id: string;
           role: string;
           seq: number;
@@ -180,6 +181,7 @@ export type Database = {
           content: Json;
           conversation_id: string;
           created_at?: string;
+          display?: Json | null;
           id?: string;
           role: string;
           seq: number;
@@ -190,6 +192,7 @@ export type Database = {
           content?: Json;
           conversation_id?: string;
           created_at?: string;
+          display?: Json | null;
           id?: string;
           role?: string;
           seq?: number;
