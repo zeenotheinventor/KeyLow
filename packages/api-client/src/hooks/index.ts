@@ -13,6 +13,7 @@ export { useDiaryDay } from "./useDiaryDay";
 export { useDiaryWeek } from "./useDiaryWeek";
 export { useDuplicateRecipe } from "./useDuplicateRecipe";
 export { useFavouriteFoods } from "./useFavouriteFoods";
+export { useFavouriteRecipes } from "./useFavouriteRecipes";
 export { useFood } from "./useFood";
 export { useFoodByBarcode } from "./useFoodByBarcode";
 export type {
@@ -64,6 +65,7 @@ export { useSkipSetup } from "./useSkipSetup";
 export { useTargets } from "./useTargets";
 export { useTermsAcceptance } from "./useTermsAcceptance";
 export { useToggleFavouriteFood } from "./useToggleFavouriteFood";
+export { useToggleFavouriteRecipe } from "./useToggleFavouriteRecipe";
 export { useUndoCopyDay } from "./useUndoCopyDay";
 export { useUpdateEntry } from "./useUpdateEntry";
 export { useUpdateFood } from "./useUpdateFood";

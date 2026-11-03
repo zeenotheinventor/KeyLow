@@ -1080,6 +1080,32 @@ export type Database = {
         };
         Relationships: [];
       };
+      recipe_favourites: {
+        Row: {
+          created_at: string;
+          owner_id: string;
+          recipe_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          owner_id?: string;
+          recipe_id: string;
+        };
+        Update: {
+          created_at?: string;
+          owner_id?: string;
+          recipe_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "recipe_favourites_recipe_id_fkey";
+            columns: ["recipe_id"];
+            isOneToOne: false;
+            referencedRelation: "recipes";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       recipe_ingredients: {
         Row: {
           created_at: string;
