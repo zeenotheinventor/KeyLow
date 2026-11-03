@@ -3,8 +3,8 @@ description: Installs pnpm, Node and the workspace dependencies, with the pnpm s
 
 # Run actions/checkout first, a local action is read from the checked out files.
 #
-# The pnpm version comes from "packageManager" in the root package.json (pnpm/action-setup reads it
-# when no version input is given) and the Node version comes from .nvmrc.
+# The pnpm version comes from "packageManager" in the root package.json (Corepack reads it) and the
+# Node version comes from .nvmrc.
 #
 # Installs use --ignore-scripts. LEFTHOOK=0 only disables running hooks, `lefthook install` still
 # writes them, so the flag is the way to skip the root "prepare" script. Nothing else needs install
@@ -24,7 +24,6 @@ runs:
       run: |
         nproc
         free -g
-    - uses: pnpm/action-setup@v6
     # No `cache: pnpm` here, because setup-node saves the store at the end of every job that missed,
     # pull requests included. The steps below restore and save the store themselves, under the key
     # setup-node uses (node-cache-<os>-<arch>-pnpm-<hash of the lockfile>). The key matches the
@@ -33,6 +32,14 @@ runs:
     - uses: actions/setup-node@v7
       with:
         node-version-file: .nvmrc
+    # Corepack ships with Node 22 and fetches the pnpm that "packageManager" names, the first time
+    # `pnpm` runs. pnpm/action-setup ran pnpm's self-installer instead, which took 3 to 13 s.
+    # The version is printed so that every job's log shows which pnpm it ran.
+    - name: Enable pnpm
+      shell: bash
+      run: |
+        corepack enable pnpm
+        pnpm --version
     - name: Find the pnpm store
       id: pnpm-store
       shell: bash
