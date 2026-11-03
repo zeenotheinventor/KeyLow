@@ -32,6 +32,21 @@ describe("the Reminders screen copy", () => {
     expect(EASE_REMINDER_TIME.minute).toBe(0);
   });
 
+  it("should name the food reminder and its helper, apart from the three training ones", () => {
+    expect(REMINDERS_SCREEN.food).toEqual({
+      title: "Log your food",
+      helper: "Every day at your chosen time, unless you've already logged.",
+    });
+  });
+
+  it("should head the two groups Training and Food", () => {
+    expect(REMINDERS_SCREEN.groups).toEqual({ training: "Training", food: "Food" });
+  });
+
+  it("should head the food time field with the reminder's name", () => {
+    expect(REMINDERS_SCREEN.foodTimeHeading).toBe("Log your food reminder");
+  });
+
   it("should write no em dash in any word of it", () => {
     expect(JSON.stringify(REMINDERS_SCREEN)).not.toContain("—");
   });

@@ -64,12 +64,16 @@ export function getReminderSettingsSnapshot(): ReminderSettingsSnapshot {
 
 /**
  * Changes the given fields on top of the saved ones, so a change made while loading loses nothing. A train
- * time that is not a time of day is left out and the other changes apply.
+ * or food time that is not a time of day is left out and the other changes apply.
  */
 export async function updateReminderSettings(changes: Partial<ReminderSettings>): Promise<void> {
   await startLoad();
-  const { trainTime, ...otherChanges } = changes;
-  const validChanges = isTimeOfDay(trainTime) ? { ...otherChanges, trainTime } : otherChanges;
+  const { trainTime, foodTime, ...otherChanges } = changes;
+  const validChanges = {
+    ...otherChanges,
+    ...(isTimeOfDay(trainTime) ? { trainTime } : {}),
+    ...(isTimeOfDay(foodTime) ? { foodTime } : {}),
+  };
   const next = { ...snapshot.settings, ...validChanges };
   publish({ settings: next, isLoaded: true });
   await writeReminderSettings(next);

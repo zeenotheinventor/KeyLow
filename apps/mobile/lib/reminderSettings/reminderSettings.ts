@@ -6,8 +6,11 @@ export type ReminderSettings = {
   trainEnabled: boolean;
   progressEnabled: boolean;
   easeEnabled: boolean;
+  foodEnabled: boolean;
   /** The time of day for the train reminder, as 24 hour "HH:MM". */
   trainTime: string;
+  /** The time of day for the food reminder, as 24 hour "HH:MM". */
+  foodTime: string;
   /** The id of the wording variant each reminder used last, so the next one can differ. Null before the first. */
   lastVariant: Record<ReminderType, string | null>;
 };
@@ -18,8 +21,10 @@ export const defaultReminderSettings: ReminderSettings = {
   trainEnabled: false,
   progressEnabled: false,
   easeEnabled: false,
+  foodEnabled: false,
   trainTime: "17:30",
-  lastVariant: { train: null, progress: null, ease: null },
+  foodTime: "20:00",
+  lastVariant: { train: null, progress: null, ease: null, food: null },
 };
 
 const timeOfDay = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -46,7 +51,12 @@ function variantsFrom(value: unknown): ReminderSettings["lastVariant"] {
     const entry = stored[type];
     return typeof entry === "string" && entry !== "" ? entry : null;
   };
-  return { train: variant("train"), progress: variant("progress"), ease: variant("ease") };
+  return {
+    train: variant("train"),
+    progress: variant("progress"),
+    ease: variant("ease"),
+    food: variant("food"),
+  };
 }
 
 /** Keeps each valid field of a saved record and defaults the rest, so one bad field loses nothing else. */
@@ -64,7 +74,9 @@ function parseReminderSettings(raw: string): ReminderSettings {
     trainEnabled: booleanOr(stored.trainEnabled, defaultReminderSettings.trainEnabled),
     progressEnabled: booleanOr(stored.progressEnabled, defaultReminderSettings.progressEnabled),
     easeEnabled: booleanOr(stored.easeEnabled, defaultReminderSettings.easeEnabled),
+    foodEnabled: booleanOr(stored.foodEnabled, defaultReminderSettings.foodEnabled),
     trainTime: timeOr(stored.trainTime, defaultReminderSettings.trainTime),
+    foodTime: timeOr(stored.foodTime, defaultReminderSettings.foodTime),
     lastVariant: variantsFrom(stored.lastVariant),
   };
 }
@@ -81,10 +93,10 @@ export async function readReminderSettings(): Promise<ReminderSettings> {
 
 /**
  * Settings that cannot be saved still apply for this session, so the failure is not raised. Settings
- * with a train time that is not a time of day are not saved at all.
+ * with a train or food time that is not a time of day are not saved at all.
  */
 export async function writeReminderSettings(settings: ReminderSettings): Promise<void> {
-  if (!isTimeOfDay(settings.trainTime)) {
+  if (!isTimeOfDay(settings.trainTime) || !isTimeOfDay(settings.foodTime)) {
     return;
   }
   try {

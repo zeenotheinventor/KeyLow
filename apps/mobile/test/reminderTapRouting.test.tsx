@@ -73,6 +73,19 @@ describe("tapping a reminder", () => {
       expect(goneTo()).toHaveLength(1);
     });
 
+    it("should open today's diary, a tab, for Log your food", async () => {
+      await renderHook(() => {
+        useReminderTapRouting();
+      });
+
+      await act(() => {
+        tapNotification(identifierOf("food"), { type: "food" });
+      });
+
+      expect(routerMock.navigate).toHaveBeenCalledWith("/diary");
+      expect(goneTo()).toHaveLength(1);
+    });
+
     it("should ignore a notification that is not one of ours", async () => {
       await renderHook(() => {
         useReminderTapRouting();
@@ -101,6 +114,7 @@ describe("tapping a reminder", () => {
       ["train", "/train", "navigate"],
       ["progress", "/train/routines", "push"],
       ["ease", "/body-map", "push"],
+      ["food", "/diary", "navigate"],
     ] as const)("should go to the screen of a %s reminder", async (type, path, how) => {
       leaveTapFromColdStart(identifierOf(type), { type });
 

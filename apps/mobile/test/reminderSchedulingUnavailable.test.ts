@@ -26,6 +26,7 @@ describe("scheduling the reminders on a build without the notifications module",
           heatSets: [],
           weeklyGain: false,
         },
+        foodInputs: null,
       }),
     ).resolves.toBeUndefined();
   });

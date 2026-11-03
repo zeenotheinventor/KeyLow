@@ -42,6 +42,7 @@ jest.mock(
 );
 
 const [train, progress, ease] = REMINDERS_SCREEN.reminders;
+const { food } = REMINDERS_SCREEN;
 
 let openSettings: jest.SpyInstance;
 
@@ -87,24 +88,34 @@ describe("the Reminders screen", () => {
       expect(routerMock.replace).toHaveBeenCalledWith("/(tabs)/more");
     });
 
-    it("should draw the three switches in order, all off, each with its helper line", async () => {
+    it("should draw the four switches in order, all off, each with its helper line", async () => {
       await renderReminders();
 
       expect(screen.getAllByRole("switch")).toEqual([
         switchNamed(train.title),
         switchNamed(progress.title),
         switchNamed(ease.title),
+        switchNamed(food.title),
       ]);
-      for (const reminder of [train, progress, ease]) {
+      for (const reminder of [train, progress, ease, food]) {
         expect(switchNamed(reminder.title)).not.toBeChecked();
         expect(screen.getByText(reminder.helper)).toBeOnTheScreen();
       }
     });
 
+    it("should head the two groups Training and Food", async () => {
+      await renderReminders();
+
+      expect(
+        screen.getByRole("heading", { name: REMINDERS_SCREEN.groups.training }),
+      ).toBeOnTheScreen();
+      expect(screen.getByRole("heading", { name: REMINDERS_SCREEN.groups.food })).toBeOnTheScreen();
+    });
+
     it("should show the saved switches on", async () => {
       mockStorageItems.set(
         reminderSettingsStorageKey,
-        JSON.stringify({ trainEnabled: true, easeEnabled: true }),
+        JSON.stringify({ trainEnabled: true, easeEnabled: true, foodEnabled: true }),
       );
       await renderReminders();
 
@@ -113,6 +124,16 @@ describe("the Reminders screen", () => {
       });
       expect(switchNamed(progress.title)).not.toBeChecked();
       expect(switchNamed(ease.title)).toBeChecked();
+      expect(switchNamed(food.title)).toBeChecked();
+    });
+
+    it("should show the food time, 20:00 until it is changed, under its own heading", async () => {
+      await renderReminders();
+
+      expect(
+        screen.getByRole("heading", { name: REMINDERS_SCREEN.foodTimeHeading }),
+      ).toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Time, 20:00, change" })).toBeOnTheScreen();
     });
 
     it("should show the train time, 17:30 until it is changed, in a labelled field", async () => {
@@ -134,6 +155,29 @@ describe("the Reminders screen", () => {
       });
       expect(mockExpoNotifications.requestPermissionsAsync).toHaveBeenCalledTimes(1);
       expect((await readReminderSettings()).trainEnabled).toBe(true);
+    });
+
+    it("should ask for the permission for the food switch as for the training ones", async () => {
+      const user = await renderReminders();
+
+      await user.press(switchNamed(food.title));
+
+      await waitFor(() => {
+        expect(switchNamed(food.title)).toBeChecked();
+      });
+      expect(mockExpoNotifications.requestPermissionsAsync).toHaveBeenCalledTimes(1);
+      expect((await readReminderSettings()).foodEnabled).toBe(true);
+    });
+
+    it("should keep the food switch off and show the denied notice when the person refuses", async () => {
+      notificationsState.answerToRequest = "denied";
+      const user = await renderReminders();
+
+      await user.press(switchNamed(food.title));
+
+      expect(await screen.findByText(REMINDERS_SCREEN.denied.title)).toBeOnTheScreen();
+      expect(switchNamed(food.title)).not.toBeChecked();
+      expect((await readReminderSettings()).foodEnabled).toBe(false);
     });
 
     it("should not ask again for the next switch once it is granted", async () => {
@@ -223,6 +267,52 @@ describe("the Reminders screen", () => {
       });
       expect((await readReminderSettings()).easeEnabled).toBe(false);
       expect(mockExpoNotifications.requestPermissionsAsync).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("turning the food reminder off", () => {
+    it("should turn it off and keep that, without asking for anything", async () => {
+      notificationsState.permission = "granted";
+      mockStorageItems.set(reminderSettingsStorageKey, JSON.stringify({ foodEnabled: true }));
+      const user = await renderReminders();
+      await waitFor(() => {
+        expect(switchNamed(food.title)).toBeChecked();
+      });
+
+      await user.press(switchNamed(food.title));
+
+      await waitFor(() => {
+        expect(switchNamed(food.title)).not.toBeChecked();
+      });
+      expect((await readReminderSettings()).foodEnabled).toBe(false);
+      expect(mockExpoNotifications.requestPermissionsAsync).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("the food time", () => {
+    it("should keep the time chosen in the picker, show it in the field and leave the train time", async () => {
+      const user = await renderReminders();
+
+      await user.press(screen.getByRole("button", { name: "Time, 20:00, change" }));
+      await user.press(
+        within(await screen.findByRole("spinbutton", { name: "Hours" })).getByRole("option", {
+          name: "21",
+        }),
+      );
+      await user.press(
+        within(screen.getByRole("spinbutton", { name: "Minutes" })).getByRole("option", {
+          name: "15",
+        }),
+      );
+      await user.press(screen.getByRole("button", { name: "Done" }));
+
+      expect(await screen.findByRole("button", { name: "Time, 21:15, change" })).toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Time, 17:30, change" })).toBeOnTheScreen();
+      await waitFor(async () => {
+        const saved = await readReminderSettings();
+        expect(saved.foodTime).toBe("21:15");
+        expect(saved.trainTime).toBe("17:30");
+      });
     });
   });
 
