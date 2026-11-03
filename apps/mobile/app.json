@@ -93,6 +93,90 @@
         }
       ],
       [
+        "react-native-android-widget",
+        {
+          "fonts": [
+            "./assets/fonts/Geist-Regular.ttf",
+            "./assets/fonts/Geist-Medium.ttf",
+            "./assets/fonts/Geist-SemiBold.ttf"
+          ],
+          "widgets": [
+            {
+              "name": "TodayRing",
+              "label": "Today ring",
+              "description": "Calories left today, as a ring.",
+              "minWidth": "110dp",
+              "minHeight": "110dp",
+              "targetCellWidth": 2,
+              "targetCellHeight": 2,
+              "resizeMode": "horizontal|vertical",
+              "previewImage": "./assets/widgets/today-ring.png",
+              "updatePeriodMillis": 1800000
+            },
+            {
+              "name": "TodayMacros",
+              "label": "Today with macros",
+              "description": "Calories left today, with protein, carbs and fat.",
+              "minWidth": "250dp",
+              "minHeight": "110dp",
+              "targetCellWidth": 4,
+              "targetCellHeight": 2,
+              "resizeMode": "horizontal|vertical",
+              "previewImage": "./assets/widgets/today-macros.png",
+              "updatePeriodMillis": 1800000
+            },
+            {
+              "name": "ThisWeek",
+              "label": "This week",
+              "description": "Your average this week and the days you completed.",
+              "minWidth": "250dp",
+              "minHeight": "110dp",
+              "targetCellWidth": 4,
+              "targetCellHeight": 2,
+              "resizeMode": "horizontal|vertical",
+              "previewImage": "./assets/widgets/this-week.png",
+              "updatePeriodMillis": 1800000
+            },
+            {
+              "name": "BodyHeat",
+              "label": "Body heat",
+              "description": "The three warmest muscles right now.",
+              "minWidth": "110dp",
+              "minHeight": "110dp",
+              "targetCellWidth": 2,
+              "targetCellHeight": 2,
+              "resizeMode": "horizontal|vertical",
+              "previewImage": "./assets/widgets/body-heat.png",
+              "updatePeriodMillis": 1800000
+            },
+            {
+              "name": "TodayGlance",
+              "label": "Today at a glance",
+              "description": "Today, this week and training in one widget.",
+              "minWidth": "250dp",
+              "minHeight": "250dp",
+              "targetCellWidth": 4,
+              "targetCellHeight": 4,
+              "resizeMode": "horizontal|vertical",
+              "previewImage": "./assets/widgets/today-glance.png",
+              "updatePeriodMillis": 1800000
+            },
+            {
+              "name": "BodyMap",
+              "label": "Body map",
+              "description": "Your body map on heat or weekly volume, as set in More.",
+              "minWidth": "250dp",
+              "minHeight": "110dp",
+              "targetCellWidth": 4,
+              "targetCellHeight": 2,
+              "resizeMode": "horizontal|vertical",
+              "previewImage": "./assets/widgets/body-map.png",
+              "updatePeriodMillis": 1800000
+            }
+          ]
+        }
+      ],
+      [
         "@sentry/react-native/expo",
         {
           "url": "https://de.sentry.io/",

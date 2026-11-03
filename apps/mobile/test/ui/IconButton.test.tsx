@@ -326,6 +326,31 @@ describe("IconButton", () => {
     });
   });
 
+  describe("filled", () => {
+    it("should draw the glyph filled in the accent in dark", async () => {
+      await renderIconButton({ icon: "Heart", variant: "ghost", isFilled: true }, "dark");
+
+      await screen.findByRole("button", { name: "Close" });
+      expect(drawings()[0]).toHaveProp("fill", themes.dark.accent);
+      expect(drawings()[0]).toHaveProp("stroke", themes.dark.accent);
+    });
+
+    it("should draw the glyph filled in the accent in light, which is green", async () => {
+      await renderIconButton({ icon: "Heart", variant: "ghost", isFilled: true }, "light");
+
+      await screen.findByRole("button", { name: "Close" });
+      expect(drawings()[0]).toHaveProp("fill", themes.light.accent);
+    });
+
+    it("should draw an outline in the text colour when it is not filled", async () => {
+      await renderIconButton({ icon: "Heart", variant: "ghost" }, "dark");
+
+      await screen.findByRole("button", { name: "Close" });
+      expect(drawings()[0]).toHaveProp("fill", "none");
+      expect(drawings()[0]).toHaveProp("stroke", themes.dark["text-primary"]);
+    });
+  });
+
   describe("primary", () => {
     // The circle is a view with no role of its own, so it is found by the look it was drawn with.
     function primaryCircle() {

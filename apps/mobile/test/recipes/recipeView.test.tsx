@@ -440,7 +440,7 @@ describe("the recipe view", () => {
   });
 
   describe("nothing is saved", () => {
-    it("should make no request and start no mutation however the servings change", async () => {
+    it("should make no write, and start no mutation, however the servings change", async () => {
       const { user } = await showView(chickenAndRiceRecipe);
 
       await morePressed(user);
@@ -451,7 +451,8 @@ describe("the recipe view", () => {
       await fireEvent(field(), "blur");
       await user.press(screen.getByRole("button", { name: "Back to 4 servings" }));
 
-      expect(diaryBackend.requests).toHaveLength(0);
+      // The heart reads the Terms and the favourites when the view opens. Those reads are all it asks.
+      expect(diaryBackend.requests.filter((request) => request.method !== "GET")).toHaveLength(0);
       expect(queryClient.getMutationCache().getAll()).toHaveLength(0);
     });
   });

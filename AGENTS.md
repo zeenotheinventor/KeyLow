@@ -46,9 +46,10 @@ file only points at them. Keep it under 80 lines: a rule that needs more than a 
 ## Rules the gate enforces
 
 - The source guard in `packages/config/test/source-guard/` fails raw hex outside `packages/tokens`,
-  inline `style` objects (CSS custom properties through `vars()` are the one exception), and local
-  copies of helpers that exist in `@keylow/core`. Styling is Tailwind and NativeWind utilities over
-  the tokens, nothing else.
+  inline `style` objects (CSS custom properties through `vars()` are one exception, and the Android
+  widget layouts in `apps/mobile/widgets/android/` are the other, ADR 0007, with every value from
+  `@keylow/tokens`), and local copies of helpers that exist in `@keylow/core`. Styling is Tailwind and
+  NativeWind utilities over the tokens, nothing else.
 - Tests query by accessible role and name first. A test id is a last resort.
 - Anything with a branch lives in `@keylow/core`. SQL keeps arithmetic, row-level security,
   `search_foods`, `day_totals` and `consume_rate_limit()`. Nutrient snapshots are computed in core at

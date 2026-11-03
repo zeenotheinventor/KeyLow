@@ -3,7 +3,7 @@ import { render, screen, userEvent } from "@testing-library/react-native";
 import { AccessibilityInfo } from "react-native";
 import { setUpTests } from "react-native-reanimated";
 
-import { Button, SheetHeader, Text } from "../../components/ui";
+import { Button, SheetHeader, Text, sheetHeaderHeight } from "../../components/ui";
 import { ThemeProvider } from "../../lib/theme";
 import { compileKitStyles } from "../support/kitStyles";
 import { registerAppStyles } from "../support/nativeWindStyles";
@@ -66,6 +66,12 @@ function expectButtonsInOrder(names: readonly string[]) {
   });
 }
 
+describe("sheetHeaderHeight", () => {
+  it("should be the 44 point controls with each variant's padding, as the boards draw them", () => {
+    expect(sheetHeaderHeight).toEqual({ sheet: 68, quiet: 56, stack: 64 });
+  });
+});
+
 describe("SheetHeader", () => {
   let kitStyles: string;
 
@@ -81,6 +87,22 @@ describe("SheetHeader", () => {
   afterEach(() => {
     jest.restoreAllMocks();
   });
+
+  it.each([
+    { variant: "sheet", header: searchHeader, paddingTop: 12 },
+    { variant: "quiet", header: quietHeader, paddingTop: 4 },
+    { variant: "stack", header: stackHeader, paddingTop: 12 },
+  ] as const)(
+    "is as tall as sheetHeaderHeight says for the $variant header: 44 point controls and its padding",
+    async ({ variant, header, paddingTop }) => {
+      await renderHeader(header);
+
+      expect(screen.getByTestId("sheet-header")).toHaveStyle({
+        paddingTop,
+        paddingBottom: sheetHeaderHeight[variant] - touchTarget - paddingTop,
+      });
+    },
+  );
 
   describe("the quiet header, which heads the assistant sheet", () => {
     it("should draw clear controls with no fill and no border, as the board's ghost buttons are", async () => {
@@ -145,6 +167,27 @@ describe("SheetHeader", () => {
       expect(screen.getByRole("heading", { name: "Find food" })).toBeOnTheScreen();
       expect(screen.getByRole("button", { name: "Close" })).toBeOnTheScreen();
       expect(screen.getByRole("button", { name: "Create a food" })).toBeOnTheScreen();
+    });
+
+    it("should draw three controls in the order they are given, with a filled one in the accent", async () => {
+      await renderHeader({
+        ...stackHeader,
+        title: "Chicken and rice",
+        trailing: [
+          {
+            icon: "Heart",
+            label: "Remove from favourites",
+            isFilled: true,
+            onPress: () => undefined,
+          },
+          { icon: "Pencil", label: "Edit Chicken and rice", onPress: () => undefined },
+          { icon: "Ellipsis", label: "More", onPress: () => undefined },
+        ],
+      });
+
+      expectButtonsInOrder(["Back", "Remove from favourites", "Edit Chicken and rice", "More"]);
+      expect(drawings()[1]).toHaveProp("fill", themes.dark.accent);
+      expect(drawings()[2]).toHaveProp("fill", "none");
     });
 
     it("should call the handler of the control that is pressed", async () => {

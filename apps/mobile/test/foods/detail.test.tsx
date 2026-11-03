@@ -12,6 +12,7 @@ import {
   savedFoodId,
 } from "./support/apiClientMock";
 import FoodDetailRoute from "../../app/foods/[id]/index";
+import { ToastProvider } from "../../components/ui";
 import { ThemeProvider } from "../../lib/theme";
 import { resetRouterMock, routerMock } from "../support/expoRouterMock";
 
@@ -70,7 +71,9 @@ async function renderDetail() {
   const user = userEvent.setup();
   await render(
     <ThemeProvider fixedPreference="dark">
-      <FoodDetailRoute />
+      <ToastProvider>
+        <FoodDetailRoute />
+      </ToastProvider>
     </ThemeProvider>,
   );
   return user;
@@ -537,7 +540,7 @@ describe("food detail screen", () => {
 
       await renderDetail();
 
-      expectButtons(["Back", "Close"]);
+      expectButtons(["Back", "Add to favourites", "Close"]);
       expect(screen.queryByText("Needs review")).not.toBeOnTheScreen();
     });
   });
@@ -575,7 +578,7 @@ describe("food detail screen", () => {
       expect(routerMock.push).toHaveBeenCalledTimes(1);
       expect(routerMock.push).toHaveBeenCalledWith(`/foods/new?from=${savedFoodId}`);
       expect(screen.queryByRole("button", { name: /Review and save/ })).not.toBeOnTheScreen();
-      expectButtons(["Back", "Close", "Copy to your foods"]);
+      expectButtons(["Back", "Add to favourites", "Close", "Copy to your foods"]);
     });
 
     it("should say carbohydrate still includes fibre when only the fibre of a US label is missing", async () => {

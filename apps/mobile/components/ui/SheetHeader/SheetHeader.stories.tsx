@@ -41,6 +41,39 @@ export const Detail: Story = {
   args: { variant: "stack", title: "Food", leading: back, trailing: close, isTitleHeading: false },
 };
 
+const favouriteOff = {
+  icon: "Heart",
+  label: "Add to favourites",
+  onPress: () => undefined,
+} as const;
+const favouriteOn = {
+  icon: "Heart",
+  label: "Remove from favourites",
+  isFilled: true,
+  onPress: () => undefined,
+} as const;
+
+// The food detail's header with the favourite heart between the title and Close, off and then on.
+export const DetailFavouriteOff: Story = {
+  args: {
+    variant: "stack",
+    title: "Food",
+    leading: back,
+    trailing: [favouriteOff, close],
+    isTitleHeading: false,
+  },
+};
+
+export const DetailFavouriteOn: Story = {
+  args: {
+    variant: "stack",
+    title: "Food",
+    leading: back,
+    trailing: [favouriteOn, close],
+    isTitleHeading: false,
+  },
+};
+
 export const Form: Story = {
   args: { variant: "stack", title: "New food", leading: back, trailing: close },
 };
@@ -73,6 +106,15 @@ const editAndMore = [
 // controls and the large title of the sheet header.
 export const TwoControls: Story = {
   args: { title: "Chicken and rice", leading: back, trailing: editAndMore },
+};
+
+// The recipe view's header with the heart first, before Edit and More, and the name cut to leave them room.
+export const ThreeControls: Story = {
+  args: {
+    title: "Chicken and rice",
+    leading: back,
+    trailing: [favouriteOn, editAndMore[0], editAndMore[1]],
+  },
 };
 
 export const TwoControlsStack: Story = {

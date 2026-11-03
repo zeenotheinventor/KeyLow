@@ -1,7 +1,7 @@
 import type { IconName } from "../Icon";
 import type { ReactNode } from "react";
 
-export type ToastTone = "neutral" | "success" | "warning" | "danger";
+export type ToastTone = "neutral" | "success" | "warning" | "danger" | "accent";
 
 /**
  * How the card is drawn. `default` is the sheet card, and `success-filled` fills it with the success colour
@@ -26,6 +26,14 @@ export type ToastProps = {
   /** Defaults to `default`. */
   variant?: ToastVariant | undefined;
   icon?: IconName | undefined;
+  /** Fills the icon with its tone, as the favourite toast's heart is. Defaults to false. */
+  isIconFilled?: boolean | undefined;
+  /**
+   * How far under the safe area the card sits, in points, in place of the usual 12. A toast that confirms
+   * a control in a header gives the header's height, so the card sits just under it and the control stays
+   * in view to be tapped again.
+   */
+  topOffset?: number | undefined;
   /** Defaults to true. A toast that is not open draws nothing. */
   open?: boolean | undefined;
   /**
@@ -45,7 +53,14 @@ export type ToastProps = {
 /** What a screen passes to `show`. The provider owns opening, closing and placement, at the top of the screen. */
 export type ToastOptions = Pick<
   ToastProps,
-  "message" | "actionLabel" | "onAction" | "tone" | "icon" | "variant"
+  | "message"
+  | "actionLabel"
+  | "onAction"
+  | "tone"
+  | "icon"
+  | "isIconFilled"
+  | "topOffset"
+  | "variant"
 >;
 
 export type ToastContextValue = {
