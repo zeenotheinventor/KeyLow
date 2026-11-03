@@ -24,6 +24,9 @@ type Story = StoryObj<typeof meta>;
 // One food row, which stands in for a single row while it loads.
 export const Row: Story = { args: { variant: "row" } };
 
+// The Favourites strip while it loads: five round tiles with a name bar under each, the last cut at the right edge.
+export const Favourites: Story = { args: { variant: "favourites" } };
+
 // A card of three rows, as the loading board draws a group of results.
 export const Group: Story = { args: { variant: "group" } };
 

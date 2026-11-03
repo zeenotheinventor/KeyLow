@@ -7,6 +7,7 @@ export * from "./diaryDay";
 export * from "./diaryRing";
 export * from "./errors";
 export * from "./favourites";
+export * from "./favouritesStrip";
 export * from "./foodDetail";
 export * from "./foodForm";
 export * from "./foodRow";

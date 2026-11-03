@@ -123,8 +123,17 @@ function isThemeColourStyle(value: ts.ObjectLiteralExpression): boolean {
   );
 }
 
+// The one path where `style` objects are allowed (ADR 0007, "The source guard exception"). The widget
+// library styles its primitives only with `style` objects. Raw hex stays banned there by its own rule, so
+// every colour still comes from `@keylow/tokens`. It is a path scope, not an allowlist entry, because the
+// allowlist matches exact files and fails on an unused entry.
+const ANDROID_WIDGET_DIRECTORY = "apps/mobile/widgets/android/";
+
 /** A `style` that is not a CSS custom property, an animated style or a colour from the theme. */
 export function checkInlineStyle({ path, sourceFile }: SourceContext, report: Report): void {
+  if (path.startsWith(ANDROID_WIDGET_DIRECTORY)) {
+    return;
+  }
   const readsNavigationOptions = path.startsWith("apps/");
 
   visitNodes(sourceFile, (node) => {
