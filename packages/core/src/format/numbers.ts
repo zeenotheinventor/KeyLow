@@ -40,9 +40,13 @@ export const formatGrams = (grams: number): string =>
     ? (Math.round(grams * 10) / 10).toFixed(1).replace(/\.0$/, "")
     : String(roundGrams(grams));
 
+/** A weight's number alone: always one decimal, rounded half up as every weight screen rounds. */
+export const formatWeightValue = (value: number): string =>
+  (Math.round(value * 10) / 10).toFixed(1);
+
 /** Weight: always one decimal, in kg, lb or st. */
 export const formatWeight = (value: number, unit: WeightUnit = "kg"): string =>
-  `${(Math.round(value * 10) / 10).toFixed(1)} ${unit}`;
+  `${formatWeightValue(value)} ${unit}`;
 
 /** A signed amount over or under a target in grams. A negative amount takes the true minus sign. */
 export const formatDeltaGrams = (grams: number): string => {
