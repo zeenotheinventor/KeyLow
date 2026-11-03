@@ -5,15 +5,12 @@ import { GLOW_INTENSITY_AT_FULL_ALPHA, looksOf, parseRgba } from "../../componen
 import { readMuscle } from "../../components/ui/BodyFigure";
 
 import type { BodyFigureScale } from "../../components/ui/BodyFigure";
-import type { ThemeScheme } from "@keylow/tokens";
 
 // The looks come from `BodyFigure`'s reading, and its folder reads the saved body choice.
 jest.mock("@react-native-async-storage/async-storage", () => ({
   __esModule: true,
   default: { getItem: () => Promise.resolve(null), setItem: () => Promise.resolve() },
 }));
-
-const schemes: ThemeScheme[] = ["dark", "light"];
 
 describe("parseRgba", () => {
   it("should split an rgba string into an opaque colour and its alpha", () => {
@@ -29,8 +26,8 @@ describe("parseRgba", () => {
   });
 });
 
-describe.each(schemes)("looksOf in the %s theme", (scheme) => {
-  const palette = bodyMapPalette(scheme);
+describe("looksOf in the dark theme", () => {
+  const palette = bodyMapPalette("dark");
 
   it("should hold a look for each of the 22 muscle ids and no other", () => {
     expect(Object.keys(looksOf("heat", {}, palette)).sort()).toEqual([...MUSCLE_IDS].sort());

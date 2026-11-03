@@ -70,8 +70,6 @@ function spinner() {
   return screen.getByTestId("food-row-spinner", { includeHiddenElements: true });
 }
 
-const schemes: ThemeScheme[] = ["dark", "light"];
-
 describe("FoodRow", () => {
   let kitStyles: string;
 
@@ -412,19 +410,19 @@ describe("FoodRow", () => {
     });
   });
 
-  describe.each(schemes)("in the %s scheme", (scheme) => {
+  describe("in the dark scheme", () => {
     it("should draw each macro's colour as a 6 point mark, never as the colour of its text", async () => {
-      await renderRow({}, scheme);
+      await renderRow({}, "dark");
       await screen.findByRole("button", { name: savouryName });
 
       for (const macro of ["protein", "carbs", "fat"] as const) {
-        const marks = viewsDrawn({ backgroundColor: resolvedColor(scheme, macro) });
+        const marks = viewsDrawn({ backgroundColor: resolvedColor("dark", macro) });
         expect(marks).toHaveLength(1);
         expect(marks[0]).toHaveStyle({ width: 6, height: 6, borderRadius: 2 });
       }
       for (const text of ["8 P", "25 C", "12 F"]) {
         expect(screen.getByText(text)).toHaveStyle({
-          color: resolvedColor(scheme, "text-secondary"),
+          color: resolvedColor("dark", "text-secondary"),
           fontFamily: "Geist-Medium",
           fontSize: 12,
         });
@@ -432,34 +430,47 @@ describe("FoodRow", () => {
     });
 
     it("should write the energy in the primary text colour", async () => {
-      await renderRow({}, scheme);
+      await renderRow({}, "dark");
 
       expect(await screen.findByText("250")).toHaveStyle({
-        color: resolvedColor(scheme, "text-primary"),
+        color: resolvedColor("dark", "text-primary"),
       });
     });
 
     it("should write the title in the primary text colour", async () => {
-      await renderRow({}, scheme);
+      await renderRow({}, "dark");
 
       expect(await screen.findByText("Stock")).toHaveStyle({
-        color: resolvedColor(scheme, "text-primary"),
+        color: resolvedColor("dark", "text-primary"),
       });
     });
 
     it("should draw the spinner in the accent ink: lime in dark, the primary text colour in light", async () => {
-      await renderRow({ busyLabel: "Adding to your foods", macros: undefined }, scheme);
+      await renderRow({ busyLabel: "Adding to your foods", macros: undefined }, "dark");
 
       await waitFor(() => {
         expect(spinner()).toBeTruthy();
       });
       // The food icon is drawn in the secondary text colour, so the other drawing is the spinner.
       const [foodIcon, spinnerIcon] = drawings();
-      expect(foodIcon).toHaveProp("stroke", themes[scheme]["text-secondary"]);
-      expect(spinnerIcon).toHaveProp(
-        "stroke",
-        scheme === "dark" ? themes.dark.accent : themes.light["text-primary"],
-      );
+      expect(foodIcon).toHaveProp("stroke", themes.dark["text-secondary"]);
+      expect(spinnerIcon).toHaveProp("stroke", themes.dark.accent);
+    });
+  });
+
+  // Light keeps the spinner, whose ink is a different token from dark's: lime in dark, the primary text colour in
+  // light. The rest of the row asks for the same token in both schemes, so the dark run covers it.
+  describe("in the light scheme", () => {
+    it("should draw the spinner in the accent ink: lime in dark, the primary text colour in light", async () => {
+      await renderRow({ busyLabel: "Adding to your foods", macros: undefined }, "light");
+
+      await waitFor(() => {
+        expect(spinner()).toBeTruthy();
+      });
+      // The food icon is drawn in the secondary text colour, so the other drawing is the spinner.
+      const [foodIcon, spinnerIcon] = drawings();
+      expect(foodIcon).toHaveProp("stroke", themes.light["text-secondary"]);
+      expect(spinnerIcon).toHaveProp("stroke", themes.light["text-primary"]);
     });
   });
 });

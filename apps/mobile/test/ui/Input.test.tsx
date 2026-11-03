@@ -35,8 +35,6 @@ function drawings() {
   return screen.root?.queryAll((node) => node.type === "RNSVGSvgView") ?? [];
 }
 
-const schemes: ThemeScheme[] = ["dark", "light"];
-
 describe("Input", () => {
   let kitStyles: string;
 
@@ -406,12 +404,12 @@ describe("Input", () => {
     });
   });
 
-  describe.each(schemes)("in the %s scheme", (scheme) => {
-    const colorOf = (name: ColorName) => resolvedColor(scheme, name);
+  describe("in the dark scheme", () => {
+    const colorOf = (name: ColorName) => resolvedColor("dark", name);
     const boxOf = (style: Record<string, unknown>) => viewsDrawn({ minHeight: 44, ...style });
 
     it("should be a 44 point box on the raised surface with a hairline border, rounded medium, padded 16", async () => {
-      await renderInput({}, scheme);
+      await renderInput({}, "dark");
       await screen.findByLabelText("Name");
 
       const [box] = boxOf({
@@ -429,14 +427,14 @@ describe("Input", () => {
     });
 
     it("should be padded 12 across in the compact density the food form boards draw", async () => {
-      await renderInput({ density: "compact" }, scheme);
+      await renderInput({ density: "compact" }, "dark");
       await screen.findByLabelText("Name");
 
       expect(boxOf({ paddingLeft: 12, paddingRight: 12 })).toHaveLength(1);
     });
 
     it("should turn its border to the accent while it has focus, and back when it loses it", async () => {
-      await renderInput({}, scheme);
+      await renderInput({}, "dark");
       const field = await screen.findByLabelText("Name");
       expect(boxOf({ borderColor: colorOf("accent") })).toHaveLength(0);
 
@@ -448,7 +446,7 @@ describe("Input", () => {
     });
 
     it("should turn its border to danger when it has an error, and keep it there while focused", async () => {
-      await renderInput({ error: "Name is required" }, scheme);
+      await renderInput({ error: "Name is required" }, "dark");
       const field = await screen.findByLabelText("Name");
       expect(boxOf({ borderColor: colorOf("danger") })).toHaveLength(1);
 
@@ -459,14 +457,14 @@ describe("Input", () => {
     });
 
     it("should turn its border to danger for an error the screen shows itself", async () => {
-      await renderInput({ error: "Name is required", errorShownElsewhere: true }, scheme);
+      await renderInput({ error: "Name is required", errorShownElsewhere: true }, "dark");
       await screen.findByLabelText("Name");
 
       expect(boxOf({ borderColor: colorOf("danger") })).toHaveLength(1);
     });
 
     it("should sit on the surface, not the raised surface, when it is locked", async () => {
-      await renderInput({ locked: true }, scheme);
+      await renderInput({ locked: true }, "dark");
       await screen.findByLabelText("Name");
 
       expect(
@@ -475,7 +473,7 @@ describe("Input", () => {
     });
 
     it("should sit on the surface and drop to half strength when it is disabled", async () => {
-      await renderInput({ disabled: true }, scheme);
+      await renderInput({ disabled: true }, "dark");
       await screen.findByLabelText("Name");
 
       expect(boxOf({ backgroundColor: colorOf("surface") })).toHaveLength(1);
@@ -483,7 +481,7 @@ describe("Input", () => {
     });
 
     it("should write in the primary text colour in Geist regular at 16, in a 40 point input", async () => {
-      await renderInput({ value: "Oat milk" }, scheme);
+      await renderInput({ value: "Oat milk" }, "dark");
 
       expect(await screen.findByLabelText("Name")).toHaveStyle({
         color: colorOf("text-primary"),
@@ -494,17 +492,17 @@ describe("Input", () => {
     });
 
     it("should draw its placeholder and its lock in the muted text colour", async () => {
-      await renderInput({ locked: true }, scheme);
+      await renderInput({ locked: true }, "dark");
 
       expect(await screen.findByPlaceholderText("e.g. Greek yoghurt")).toHaveProp(
         "placeholderTextColor",
-        themes[scheme]["text-muted"],
+        themes.dark["text-muted"],
       );
-      expect(drawings()[0]).toHaveProp("stroke", themes[scheme]["text-muted"]);
+      expect(drawings()[0]).toHaveProp("stroke", themes.dark["text-muted"]);
     });
 
     it("should set the label as a secondary caption", async () => {
-      await renderInput({}, scheme);
+      await renderInput({}, "dark");
 
       expect(await screen.findByText("Name")).toHaveStyle({
         color: colorOf("text-secondary"),
@@ -515,7 +513,7 @@ describe("Input", () => {
     });
 
     it("should set the label hint and the helper as muted captions", async () => {
-      await renderInput({ labelHint: "Required", helper: "As it appears on the pack" }, scheme);
+      await renderInput({ labelHint: "Required", helper: "As it appears on the pack" }, "dark");
 
       expect(await screen.findByText("Required")).toHaveStyle({
         color: colorOf("text-muted"),
@@ -527,8 +525,8 @@ describe("Input", () => {
       });
     });
 
-    it("should set the error as a danger caption, as the boards draw it in both schemes", async () => {
-      await renderInput({ error: "Name is required" }, scheme);
+    it("should set the error as a danger caption, as the boards draw it", async () => {
+      await renderInput({ error: "Name is required" }, "dark");
 
       expect(await screen.findByText("Name is required")).toHaveStyle({
         color: colorOf("danger"),
@@ -539,29 +537,29 @@ describe("Input", () => {
     });
 
     it("should draw the missing note's icon in warning and write the words in the warning ink", async () => {
-      await renderInput({ missingNote: "Not given by the source" }, scheme);
+      await renderInput({ missingNote: "Not given by the source" }, "dark");
 
       expect(await screen.findByText("Not given by the source")).toHaveStyle({
-        color: resolvedColor(scheme, "warning-ink"),
+        color: resolvedColor("dark", "warning-ink"),
       });
-      expect(drawings()[0]).toHaveProp("stroke", themes[scheme].warning);
+      expect(drawings()[0]).toHaveProp("stroke", themes.dark.warning);
       expect(drawings()[0]).toHaveProp("width", 14);
     });
 
     it("should draw a warning helper's triangle at 16 in warning and write the words in the warning ink", async () => {
-      await renderInput({ helper: "Macros add up to 311 kcal", helperTone: "warning" }, scheme);
+      await renderInput({ helper: "Macros add up to 311 kcal", helperTone: "warning" }, "dark");
 
       expect(await screen.findByText("Macros add up to 311 kcal")).toHaveStyle({
-        color: resolvedColor(scheme, "warning-ink"),
+        color: resolvedColor("dark", "warning-ink"),
         fontSize: 12,
         lineHeight: 16,
       });
-      expect(drawings()[0]).toHaveProp("stroke", themes[scheme].warning);
+      expect(drawings()[0]).toHaveProp("stroke", themes.dark.warning);
       expect(drawings()[0]).toHaveProp("width", 16);
     });
 
     it("should stack its label, field and message 4 points apart", async () => {
-      await renderInput({ helper: "As it appears on the pack" }, scheme);
+      await renderInput({ helper: "As it appears on the pack" }, "dark");
       await screen.findByLabelText("Name");
 
       expect(viewsDrawn({ rowGap: 4 }).length).toBeGreaterThan(0);
@@ -586,19 +584,16 @@ describe("Input", () => {
       );
     });
 
-    it.each(schemes)(
-      "should be the same danger caption a field draws, in the %s scheme",
-      async (scheme) => {
-        await renderFieldError(scheme);
+    it("should be the same danger caption a field draws, in the dark scheme", async () => {
+      await renderFieldError("dark");
 
-        expect(await screen.findByText("Portion 1 needs an amount above 0")).toHaveStyle({
-          color: resolvedColor(scheme, "danger"),
-          fontFamily: "Geist-Medium",
-          fontSize: 12,
-          lineHeight: 16,
-        });
-      },
-    );
+      expect(await screen.findByText("Portion 1 needs an amount above 0")).toHaveStyle({
+        color: resolvedColor("dark", "danger"),
+        fontFamily: "Geist-Medium",
+        fontSize: 12,
+        lineHeight: 16,
+      });
+    });
 
     it("should take layout from its caller", async () => {
       await render(

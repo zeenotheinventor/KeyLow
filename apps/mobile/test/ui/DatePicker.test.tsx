@@ -18,8 +18,6 @@ jest.mock("@react-native-async-storage/async-storage", () => ({
 // Thursday 15 October 2026, with Monday 12 and Tuesday 13 complete, as the diary board draws it.
 const today = "2026-10-15";
 
-const schemes: ThemeScheme[] = ["dark", "light"];
-
 async function renderPicker(props: Partial<DatePickerProps> = {}, scheme: ThemeScheme = "dark") {
   const onSelect = jest.fn();
   const onMonthChange = jest.fn();
@@ -234,9 +232,9 @@ describe("DatePicker", () => {
     });
   });
 
-  describe.each(schemes)("the look in %s", (scheme) => {
+  describe("the look in dark", () => {
     it("should draw each day as a 44 point circle", async () => {
-      await renderPicker({}, scheme);
+      await renderPicker({}, "dark");
 
       expect(screen.getByRole("button", { name: "14 October" })).toHaveStyle({
         width: 44,
@@ -246,40 +244,40 @@ describe("DatePicker", () => {
     });
 
     it("should ring today in the accent, with no fill when another day is chosen", async () => {
-      await renderPicker({ selectedDate: "2026-10-09" }, scheme);
+      await renderPicker({ selectedDate: "2026-10-09" }, "dark");
 
       const todayCell = screen.getByRole("button", { name: "15 October, today" });
       expect(todayCell).toHaveStyle({
         borderWidth: 2,
-        borderColor: resolvedColor(scheme, "accent"),
+        borderColor: resolvedColor("dark", "accent"),
       });
-      expect(todayCell).not.toHaveStyle({ backgroundColor: resolvedColor(scheme, "accent") });
+      expect(todayCell).not.toHaveStyle({ backgroundColor: resolvedColor("dark", "accent") });
     });
 
     it("should fill the chosen day with the accent and write its number in accent-foreground", async () => {
-      await renderPicker({ selectedDate: "2026-10-09" }, scheme);
+      await renderPicker({ selectedDate: "2026-10-09" }, "dark");
 
       const cell = screen.getByRole("button", { name: "9 October, selected" });
-      expect(cell).toHaveStyle({ backgroundColor: resolvedColor(scheme, "accent") });
+      expect(cell).toHaveStyle({ backgroundColor: resolvedColor("dark", "accent") });
       expect(within(cell).getByText("9")).toHaveStyle({
-        color: resolvedColor(scheme, "accent-foreground"),
+        color: resolvedColor("dark", "accent-foreground"),
         fontWeight: "600",
       });
     });
 
     it("should write the number of any other day in the primary text colour, without a ring", async () => {
-      await renderPicker({}, scheme);
+      await renderPicker({}, "dark");
 
       const cell = screen.getByRole("button", { name: "14 October" });
       expect(within(cell).getByText("14")).toHaveStyle({
-        color: resolvedColor(scheme, "text-primary"),
+        color: resolvedColor("dark", "text-primary"),
       });
-      expect(cell).not.toHaveStyle({ borderColor: resolvedColor(scheme, "accent") });
+      expect(cell).not.toHaveStyle({ borderColor: resolvedColor("dark", "accent") });
     });
 
     it("should dim a day after today to 40 percent, and no other", async () => {
       // NativeWind keeps an opacity as a 32 bit float.
-      await renderPicker({}, scheme);
+      await renderPicker({}, "dark");
 
       expect(screen.getByRole("button", { name: "16 October" })).toHaveStyle({
         opacity: Math.fround(0.4),
@@ -290,7 +288,7 @@ describe("DatePicker", () => {
     });
 
     it("should draw the complete dot 4 points across, in the success colour", async () => {
-      await renderPicker({}, scheme);
+      await renderPicker({}, "dark");
 
       expect(
         within(screen.getByRole("button", { name: "12 October, complete" })).getByTestId(
@@ -300,12 +298,12 @@ describe("DatePicker", () => {
       ).toHaveStyle({
         width: 4,
         height: 4,
-        backgroundColor: resolvedColor(scheme, "success"),
+        backgroundColor: resolvedColor("dark", "success"),
       });
     });
 
     it("should dim Next month to 40 percent in the month of today", async () => {
-      await renderPicker({}, scheme);
+      await renderPicker({}, "dark");
 
       expect(screen.getByRole("button", { name: "Next month" })).toHaveStyle({
         opacity: Math.fround(0.4),

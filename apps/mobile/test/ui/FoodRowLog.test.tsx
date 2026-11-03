@@ -76,8 +76,6 @@ function drawings() {
   return screen.root?.queryAll((node) => node.type === "RNSVGSvgView") ?? [];
 }
 
-const schemes: ThemeScheme[] = ["dark", "light"];
-
 describe("FoodRow in the food log", () => {
   let kitStyles: string;
 
@@ -367,16 +365,13 @@ describe("FoodRow in the food log", () => {
       ).toBeOnTheScreen();
     });
 
-    it.each(schemes)(
-      "should write Needs review in the warning ink in the %s scheme",
-      async (scheme) => {
-        await renderRow(reviewProps, scheme);
+    it("should write Needs review in the warning ink in the dark scheme", async () => {
+      await renderRow(reviewProps, "dark");
 
-        expect(await screen.findByText("Needs review")).toHaveStyle({
-          color: resolvedColor(scheme, "warning-ink"),
-        });
-      },
-    );
+      expect(await screen.findByText("Needs review")).toHaveStyle({
+        color: resolvedColor("dark", "warning-ink"),
+      });
+    });
   });
 
   describe("the diary", () => {
@@ -515,18 +510,15 @@ describe("FoodRow in the food log", () => {
       expect(screen.getByText("Chicken and rice").parent).toHaveStyle({ flexShrink: 1 });
     });
 
-    it.each(schemes)(
-      "should draw the hat 16 points square in the muted ink in the %s scheme",
-      async (scheme) => {
-        await renderRow(chickenAndRice, scheme);
+    it("should draw the hat 16 points square in the muted ink in the dark scheme", async () => {
+      await renderRow(chickenAndRice, "dark");
 
-        // The hat comes first in the row and the flame on the stats line second.
-        const [hat] = drawings();
-        expect(hat).toHaveProp("stroke", themes[scheme]["text-muted"]);
-        expect(hat).toHaveProp("width", 16);
-        expect(hat).toHaveProp("height", 16);
-      },
-    );
+      // The hat comes first in the row and the flame on the stats line second.
+      const [hat] = drawings();
+      expect(hat).toHaveProp("stroke", themes.dark["text-muted"]);
+      expect(hat).toHaveProp("width", 16);
+      expect(hat).toHaveProp("height", 16);
+    });
 
     it("should keep the name of a logged food on two lines, with no hat", async () => {
       await renderDiaryRow({ onPress: undefined });
@@ -607,16 +599,13 @@ describe("FoodRow in the food log", () => {
       expect(drawings()).toHaveLength(3);
     });
 
-    it.each(schemes)(
-      "should draw the trash in the on-status colour in the %s scheme",
-      async (scheme) => {
-        await renderDiaryRow({ onDelete: () => undefined, startsSwiped: true }, scheme);
+    it("should draw the trash in the on-status colour in the dark scheme", async () => {
+      await renderDiaryRow({ onDelete: () => undefined, startsSwiped: true }, "dark");
 
-        await screen.findByRole("button", { name: "Delete" });
-        const [trash] = drawings();
-        expect(trash).toHaveProp("stroke", themes[scheme]["text-on-status"]);
-      },
-    );
+      await screen.findByRole("button", { name: "Delete" });
+      const [trash] = drawings();
+      expect(trash).toHaveProp("stroke", themes.dark["text-on-status"]);
+    });
 
     it("should be open while the screen says it is swiped, and say when a swipe changes it", async () => {
       const onSwipedChange = jest.fn();

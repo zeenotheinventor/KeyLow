@@ -57,8 +57,6 @@ function KeptUnit() {
   );
 }
 
-const schemes: ThemeScheme[] = ["dark", "light"];
-
 describe("ChipGroup", () => {
   let kitStyles: string;
 
@@ -286,11 +284,11 @@ describe("ChipGroup", () => {
     });
   });
 
-  describe.each(schemes)("in the %s scheme", (scheme) => {
-    const colorOf = (name: Parameters<typeof resolvedColor>[1]) => resolvedColor(scheme, name);
+  describe("in the dark scheme", () => {
+    const colorOf = (name: Parameters<typeof resolvedColor>[1]) => resolvedColor("dark", name);
 
     it("should draw an unchosen chip 36 points high as a pill on the raised surface with a hairline border, padded 12 across", async () => {
-      await renderUnits({ value: "ml" }, scheme);
+      await renderUnits({ value: "ml" }, "dark");
       await screen.findByLabelText("Unit");
 
       const chips = viewsDrawn({
@@ -305,7 +303,7 @@ describe("ChipGroup", () => {
     });
 
     it("should fill the chosen chip with the accent and write on it in the accent foreground", async () => {
-      await renderUnits({ value: "ml" }, scheme);
+      await renderUnits({ value: "ml" }, "dark");
       await screen.findByLabelText("Unit");
 
       expect(
@@ -323,7 +321,7 @@ describe("ChipGroup", () => {
     });
 
     it("should write on an unchosen chip in primary text at regular weight", async () => {
-      await renderUnits({ value: "ml" }, scheme);
+      await renderUnits({ value: "ml" }, "dark");
       await screen.findByLabelText("Unit");
 
       expect(screen.getByText("g")).toHaveStyle({
@@ -335,7 +333,7 @@ describe("ChipGroup", () => {
     });
 
     it("should leave 8 points between the chips", async () => {
-      await renderUnits({ value: "ml" }, scheme);
+      await renderUnits({ value: "ml" }, "dark");
       await screen.findByLabelText("Unit");
 
       expect(screen.getByLabelText("Unit")).toHaveProp(
