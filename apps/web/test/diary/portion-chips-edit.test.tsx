@@ -309,6 +309,27 @@ describe("pressing a different chip in the edit dialog", () => {
       screen.getByRole("group", { name: "Energy and macros, For 1 tbsp (15 ml, 14 g)" }),
     ).toBeTruthy();
   });
+
+  it("should set an entry logged in a portion to 100 when g is pressed, not read 2 g", () => {
+    renderDialog(
+      foodEntry({
+        date: TODAY,
+        time: "12:40",
+        name: "Banana",
+        quantity: 2,
+        unit: "portion",
+        kcal: 95,
+        protein: 1.2,
+        fat: 0.1,
+        carbs: 20.3,
+      }),
+    );
+
+    fireEvent.click(screen.getByRole("radio", { name: "g" }));
+
+    expect(amountField("g")).toHaveProperty("value", "100");
+    expect(screen.getByRole("group", { name: "Energy and macros, For 100 g" })).toBeTruthy();
+  });
 });
 
 describe("the edit dialog's chips for a food that has portions", () => {

@@ -1030,6 +1030,15 @@ describe("the edit entry dialog for a quick add", () => {
       expect(screen.getByText("Enter calories.")).toBeTruthy();
     });
 
+    it("should disable Save and say Enter calories for 0", () => {
+      renderDialog(crisps());
+
+      type(calories(), "0");
+
+      expect(save()).toHaveProperty("disabled", true);
+      expect(screen.getByText("Enter calories.")).toBeTruthy();
+    });
+
     it("should not save on Enter while the calories are not above 0", () => {
       renderDialog(crisps());
       type(calories(), "0");

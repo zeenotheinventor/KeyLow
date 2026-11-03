@@ -135,6 +135,16 @@ describe("the weekly averages page", () => {
     expect(screen.getByRole("link", { name: "See each day in the diary" })).toBeTruthy();
   });
 
+  it("should say nothing is logged before today when only today has entries", () => {
+    // Thursday's 1,039 alone, with nothing on the days before it.
+    show([...emptyWeek.slice(0, 3), ...boardWeek.slice(3)]);
+    renderWithRouter(<WeekAveragesScreen />);
+
+    expect(screen.getByText("Nothing logged before today this week.")).toBeTruthy();
+    expect(screen.queryByRole("meter")).toBeNull();
+    expect(screen.queryByRole("table")).toBeNull();
+  });
+
   it("should write the averages alone when no target is set", () => {
     show(boardWeek, noTargets);
     renderWithRouter(<WeekAveragesScreen />);
