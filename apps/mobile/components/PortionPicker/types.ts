@@ -1,3 +1,4 @@
+import type { SheetHeaderControl } from "../ui";
 import type {
   ChosenAmount,
   FoodSnapshot,
@@ -37,6 +38,8 @@ export type RecipeSelection = RecipeAmount & {
 type PortionPickerBaseProps = {
   food: Food;
   onBack: () => void;
+  /** The favourite heart, drawn in the header beside the title. The pages that are not a food's own have none. */
+  favouriteHeart?: SheetHeaderControl | undefined;
 };
 
 /** What the pages that log a food at a time have beyond the base: the Time row, and saving. */
@@ -165,6 +168,8 @@ type RecipePickerBaseProps = {
    */
   recipe: RecipeOfSnapshot;
   onBack: () => void;
+  /** The favourite heart, drawn in the header beside the title. A logged entry's page has none. */
+  favouriteHeart?: SheetHeaderControl | undefined;
 };
 
 /** What the pages of a recipe that log it at a time have beyond the base: the Time row, and saving. */

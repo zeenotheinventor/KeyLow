@@ -8,7 +8,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef } from "react";
 import { AccessibilityInfo } from "react-native";
 
-import { PortionPicker } from "../../../../components/PortionPicker";
+import { FavouriteRecipePortionPicker } from "../../../../components/PortionPicker";
 import { RecipeLoadState } from "../../../../components/RecipeLoadState";
 import { readLogContext, useGoBackInFoodsSheet, withLogContext } from "../../../../lib/navigation";
 import { usePlate } from "../../../../lib/plate";
@@ -105,7 +105,7 @@ export default function RecipeAmountRoute() {
 
   if (plateRow?.kind === "recipe") {
     return (
-      <PortionPicker
+      <FavouriteRecipePortionPicker
         // A row with no valid amount keeps its unit and starts at that unit's usual amount (1 serving, or 100 g).
         amount={{
           quantity: isPlateItemValid(plateRow)
@@ -130,7 +130,7 @@ export default function RecipeAmountRoute() {
   }
 
   return (
-    <PortionPicker
+    <FavouriteRecipePortionPicker
       isPlateLogging={plate.isLogging}
       mode="recipe-to-plate"
       recipe={recipe}
