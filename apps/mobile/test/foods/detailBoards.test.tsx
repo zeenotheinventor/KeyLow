@@ -10,6 +10,7 @@ import {
   savedFoodId,
 } from "./support/apiClientMock";
 import FoodDetailRoute from "../../app/foods/[id]/index";
+import { ToastProvider } from "../../components/ui";
 import { ThemeProvider } from "../../lib/theme";
 import { resetRouterMock, routerMock } from "../support/expoRouterMock";
 import { compileKitStyles } from "../support/kitStyles";
@@ -63,7 +64,9 @@ async function renderDetail(scheme: ThemeScheme, food: Food = foodFixture) {
   Object.assign(foodQuery, { data: food });
   await render(
     <ThemeProvider fixedPreference={scheme}>
-      <FoodDetailRoute />
+      <ToastProvider>
+        <FoodDetailRoute />
+      </ToastProvider>
     </ThemeProvider>,
   );
 }
@@ -366,7 +369,9 @@ describe("food detail boards", () => {
       Object.assign(foodQuery, { data: undefined, isError: true });
       await render(
         <ThemeProvider fixedPreference="dark">
-          <FoodDetailRoute />
+          <ToastProvider>
+            <FoodDetailRoute />
+          </ToastProvider>
         </ThemeProvider>,
       );
 
@@ -378,7 +383,9 @@ describe("food detail boards", () => {
       Object.assign(foodQuery, { data: null });
       await render(
         <ThemeProvider fixedPreference="dark">
-          <FoodDetailRoute />
+          <ToastProvider>
+            <FoodDetailRoute />
+          </ToastProvider>
         </ThemeProvider>,
       );
 

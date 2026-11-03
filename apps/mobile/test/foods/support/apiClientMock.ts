@@ -1,6 +1,8 @@
 import { TERMS_VERSION } from "@keylow/core/copy";
 import { buildFood, buildFoodPortion } from "@keylow/core/testing";
 
+import { mockFavouriteHooks, resetFavouritesMock } from "../../support/favouritesMock";
+
 import type * as ApiClient from "@keylow/api-client";
 import type {
   CreatedFood,
@@ -124,6 +126,7 @@ function foodWithPortionsState(): FoodWithPortionsState {
 }
 
 export function resetApiClientMock(): void {
+  resetFavouritesMock();
   mockCreateFood.mockReset();
   mockUpdateFood.mockReset();
   mockLogFood.mockReset();
@@ -163,6 +166,7 @@ export function resetApiClientMock(): void {
 // Only the hooks are replaced.
 export const mockApiClient = {
   ...jest.requireActual<typeof ApiClient>("@keylow/api-client"),
+  ...mockFavouriteHooks,
   useCreateFood: () => ({ mutateAsync: mockCreateFood }),
   useUpdateFood: () => ({ mutateAsync: mockUpdateFood }),
   useLogFood: () => ({ mutateAsync: mockLogFood }),

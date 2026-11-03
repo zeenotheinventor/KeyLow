@@ -3,7 +3,7 @@ import { render, screen, userEvent } from "@testing-library/react-native";
 import { AccessibilityInfo } from "react-native";
 import { setUpTests } from "react-native-reanimated";
 
-import { Button, SheetHeader, Text } from "../../components/ui";
+import { Button, SheetHeader, Text, sheetHeaderHeight } from "../../components/ui";
 import { ThemeProvider } from "../../lib/theme";
 import { compileKitStyles } from "../support/kitStyles";
 import { registerAppStyles } from "../support/nativeWindStyles";
@@ -65,6 +65,12 @@ function expectButtonsInOrder(names: readonly string[]) {
     expect(buttons[position]).toHaveAccessibleName(name);
   });
 }
+
+describe("sheetHeaderHeight", () => {
+  it("should be the 44 point controls with each variant's padding, as the boards draw them", () => {
+    expect(sheetHeaderHeight).toEqual({ sheet: 68, quiet: 56, stack: 64 });
+  });
+});
 
 describe("SheetHeader", () => {
   let kitStyles: string;
@@ -145,6 +151,27 @@ describe("SheetHeader", () => {
       expect(screen.getByRole("heading", { name: "Find food" })).toBeOnTheScreen();
       expect(screen.getByRole("button", { name: "Close" })).toBeOnTheScreen();
       expect(screen.getByRole("button", { name: "Create a food" })).toBeOnTheScreen();
+    });
+
+    it("should draw three controls in the order they are given, with a filled one in the accent", async () => {
+      await renderHeader({
+        ...stackHeader,
+        title: "Chicken and rice",
+        trailing: [
+          {
+            icon: "Heart",
+            label: "Remove from favourites",
+            isFilled: true,
+            onPress: () => undefined,
+          },
+          { icon: "Pencil", label: "Edit Chicken and rice", onPress: () => undefined },
+          { icon: "Ellipsis", label: "More", onPress: () => undefined },
+        ],
+      });
+
+      expectButtonsInOrder(["Back", "Remove from favourites", "Edit Chicken and rice", "More"]);
+      expect(drawings()[1]).toHaveProp("fill", themes.dark.accent);
+      expect(drawings()[2]).toHaveProp("fill", "none");
     });
 
     it("should call the handler of the control that is pressed", async () => {

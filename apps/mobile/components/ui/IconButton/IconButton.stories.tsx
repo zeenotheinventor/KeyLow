@@ -55,6 +55,11 @@ export const Selected: Story = {
   ),
 };
 
+// The favourite heart switched on: the glyph is filled in the accent, lime in dark and green in light.
+export const Filled: Story = {
+  args: { variant: "ghost", icon: "Heart", label: "Remove from favourites", isFilled: true },
+};
+
 export const Disabled: Story = {
   render: (args) => (
     <View className="flex-row items-center gap-4">

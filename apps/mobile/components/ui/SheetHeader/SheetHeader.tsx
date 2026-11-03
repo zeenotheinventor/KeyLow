@@ -1,9 +1,10 @@
+import { touchTarget } from "@keylow/tokens";
 import { View } from "react-native";
 
 import { IconButton } from "../IconButton";
 import { Text } from "../Text";
 
-import type { SheetHeaderControl, SheetHeaderProps } from "./types";
+import type { SheetHeaderControl, SheetHeaderProps, SheetHeaderVariant } from "./types";
 import type { IconButtonProps } from "../IconButton";
 
 type ControlIconSize = NonNullable<IconButtonProps["iconSize"]>;
@@ -50,6 +51,16 @@ const variants = {
   }
 >;
 
+/**
+ * How tall each variant is: its 44 point controls with the padding above and below. A toast that confirms a
+ * control in the header sits this far under the safe area, so it is just under the header.
+ */
+export const sheetHeaderHeight = {
+  sheet: touchTarget + 12 + 12,
+  quiet: touchTarget + 4 + 8,
+  stack: touchTarget + 12 + 8,
+} as const satisfies Record<SheetHeaderVariant, number>;
+
 // The board's wide slots: 76 points at each end, which holds a control and the plate chip alike, so the
 // title between them stays in the middle of the header.
 const wideSlotClassName = "w-[76px] shrink-0 flex-row";
@@ -57,7 +68,7 @@ const wideSlotClassName = "w-[76px] shrink-0 flex-row";
 /**
  * The top of a sheet: an optional control at the left, a centred title and an optional control at the right, or two.
  * The screen gives the top inset and the header gives the 12 points under it, as the search field's dock
- * gives the 12 above the bottom inset. With two controls on the right the title is centred in the space
+ * gives the 12 above the bottom inset. With several controls on the right the title is centred in the space
  * between the left control and the pair. A control and a slot together draw the control first and the slot
  * after it, with 8 points between, and the title sits in what they leave. With `hasWideSlots` both ends are 76
  * points wide, so a trailing slot wider than a control, such as the plate chip, does not move the title.
@@ -80,6 +91,7 @@ export function SheetHeader({
         icon={control.icon}
         iconSize={iconSize}
         disabled={control.disabled ?? false}
+        isFilled={control.isFilled ?? false}
         key={control.label}
         label={control.label}
         tone={look.buttonTone}

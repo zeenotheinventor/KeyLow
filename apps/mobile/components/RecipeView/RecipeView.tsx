@@ -19,6 +19,7 @@ import { AccessibilityInfo, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useIsOnline } from "../../lib/connectivity";
+import { useFavouriteRecipeHeart } from "../../lib/favourites";
 import {
   addToListPath,
   editRecipePath,
@@ -59,6 +60,7 @@ export function RecipeView({ recipe, onBack }: RecipeViewProps) {
   const isOnline = useIsOnline();
   const insets = useSafeAreaInsets();
   const recipeActions = useRecipeActions();
+  const favouriteHeart = useFavouriteRecipeHeart(recipe);
   const pathname = usePathname();
   // Null is the recipe's own servings, so the number is never one the recipe has since stopped having.
   const [chosenServings, setChosenServings] = useState<number | null>(null);
@@ -221,8 +223,9 @@ export function RecipeView({ recipe, onBack }: RecipeViewProps) {
       <SheetHeader
         leading={{ icon: "ChevronLeft", label: FOOD_FORM.back, onPress: onBack }}
         title={recipe.name}
-        // Offline, Edit and More stay focusable and say they are disabled, and the banner says why.
+        // Offline, the heart, Edit and More stay focusable and say they are disabled, and the banner says why.
         trailing={[
+          favouriteHeart,
           {
             icon: "Pencil",
             label: describeEditRecipe(recipe.name),
