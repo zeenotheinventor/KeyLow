@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { describeWeekAveragesSubtitle, weekAverageRows } from "../../src/copy/weekAverages";
+import {
+  describeWeekAverageSentence,
+  describeWeekAveragesSubtitle,
+  weekAverageRows,
+} from "../../src/copy/weekAverages";
 
 import type { WeekNutrientAverage } from "../../src/diary/rules/weekNutrientAverages";
 
@@ -43,5 +47,17 @@ describe("describeWeekAveragesSubtitle", () => {
 
   it("should name the week alone on the Monday, which has no earlier day", () => {
     expect(describeWeekAveragesSubtitle("2026-10-12", "2026-10-12")).toBe("Week of Mon 12 Oct");
+  });
+});
+
+describe("describeWeekAverageSentence", () => {
+  it("should say the averages start tomorrow when the week starts today", () => {
+    expect(describeWeekAverageSentence("startsTomorrow")).toBe("Your averages start tomorrow.");
+  });
+
+  it("should say nothing is logged before today when the week holds today and no earlier day", () => {
+    expect(describeWeekAverageSentence("nothingBeforeToday")).toBe(
+      "Nothing logged before today this week.",
+    );
   });
 });

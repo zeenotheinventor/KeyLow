@@ -1,3 +1,4 @@
+import { loggedDaysBeforeToday } from "./loggedDaysBeforeToday";
 import { daysSinceMonday } from "../../dates/calendarDay";
 
 /** The calories bar of a week's average: the average, the target and how full and how far over the bar is. */
@@ -61,9 +62,7 @@ export function weekCaloriesBeforeToday(
   today: string,
   targetKcal: number | null,
 ): WeekCaloriesBeforeToday {
-  const logged = days.flatMap((day) =>
-    day.localDate < today && day.totals !== null ? [day.totals.kcal ?? 0] : [],
-  );
+  const logged = loggedDaysBeforeToday(days, today).map((totals) => totals.kcal ?? 0);
   const averageKcal =
     logged.length === 0 ? null : logged.reduce((sum, kcal) => sum + kcal, 0) / logged.length;
 

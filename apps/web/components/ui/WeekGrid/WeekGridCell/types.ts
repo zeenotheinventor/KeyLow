@@ -11,6 +11,10 @@ export type WeekGridCellProps = {
   href?: string | undefined;
   /** What the day added up to. Null when it has no entries. */
   totals: WeekDayTotals | null;
+  /** What an empty cell says in place of "No entries yet", such as the average's reason it has no number. */
+  emptyText?: string | undefined;
+  /** A line under the numbers, such as the range the average covers. */
+  caption?: string | undefined;
   /** The daily calorie target. Null shows the calories without a bar. */
   calorieTarget: number | null;
   /** The day is marked complete. */

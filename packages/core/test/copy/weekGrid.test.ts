@@ -16,7 +16,6 @@ describe("the week view's words", () => {
     expect(WEEK_GRID.incomplete).toBe("Incomplete");
     expect(WEEK_GRID.noEntries).toBe("No entries yet");
     expect(WEEK_GRID.average).toBe("Average");
-    expect(WEEK_GRID.averageCaption).toBe("Mon to today");
   });
 
   it("should write a day as its short weekday and date", () => {

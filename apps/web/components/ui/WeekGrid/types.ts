@@ -13,7 +13,7 @@ export type WeekGridProps = {
   label: string;
   /** The seven days, Monday to Sunday. The average is added after them. */
   days: readonly WeekGridDay[];
-  /** Today, `YYYY-MM-DD`. It is framed, the days after it are dimmed and the average stops at it. */
+  /** Today, `YYYY-MM-DD`. It is framed, the days after it are dimmed and the average leaves it out, covering Monday to yesterday. */
   today: string;
   /** The daily calorie target. Null shows the calories without a bar. */
   calorieTarget: number | null;
