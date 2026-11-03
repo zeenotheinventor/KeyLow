@@ -473,3 +473,59 @@ export async function updateMyProgram(
 
   return recomputeMyTargets(client);
 }
+
+const UNIQUE_VIOLATION = "23505";
+
+/**
+ * Puts an ended program back to active by clearing its `ended_on`, which is what the assistant's Undo of
+ * "set my calories" needs: saving your own targets ended the program (`updateMyTargets`), and taking that
+ * back must not start a new one. Only the user's most recent program (by `started_on`, then `created_at`)
+ * reopens, and only while no program is active, because one active program per user is the rule
+ * (`programs_one_active_per_user`). It writes `ended_on` and `updated_at` and nothing else, so the
+ * program's `next_checkin_date` and its open targets row are as they were. Resolves to true when the
+ * program is active again and false when it is not the one to reopen: not the user's, not the most recent,
+ * not ended, or another program is active. Row level security shows and lets a user update only their
+ * own programs, so another user's id is never the most recent and never matches. A database failure
+ * names the action and the code only.
+ */
+export async function reopenProgram(
+  client: SupabaseClient<Database>,
+  programId: string,
+): Promise<boolean> {
+  const action = "reopen your program";
+  const [latest, active] = await Promise.all([
+    client
+      .from("programs")
+      .select("id,ended_on")
+      .order("started_on", { ascending: false })
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    client.from("programs").select("id").is("ended_on", null).maybeSingle(),
+  ]);
+  if (latest.error) {
+    throw databaseError(action, latest.error);
+  }
+  if (active.error) {
+    throw databaseError(action, active.error);
+  }
+  if (latest.data?.id !== programId || latest.data.ended_on === null || active.data !== null) {
+    return false;
+  }
+
+  const { data, error } = await client
+    .from("programs")
+    .update({ ended_on: null, updated_at: new Date().toISOString() })
+    .eq("id", programId)
+    .not("ended_on", "is", null)
+    .select("id");
+  if (error) {
+    // A program that became active between the read and the write is the same refusal as above.
+    if (error.code === UNIQUE_VIOLATION) {
+      return false;
+    }
+    throw databaseError(action, error);
+  }
+  return data.length === 1;
+}

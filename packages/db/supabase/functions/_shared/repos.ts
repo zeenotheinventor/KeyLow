@@ -20,7 +20,9 @@ export type {
 } from "./repos/index.js";
 export {
   CopyDayPartialWriteError,
+  FoodsPartialWriteError,
   copyDay,
+  createFood,
   createRecipe,
   getDiaryDay,
   getDiaryWeek,
@@ -37,14 +39,17 @@ export {
   logQuickEntry,
   logRecipe,
   readLogEntryStamps,
+  reopenProgram,
   restoreLogEntry,
   searchFoods,
   searchRecipes,
   setDayComplete,
   setRecipeArchived,
+  softDeleteFood,
   softDeleteLogEntries,
   softDeleteLogEntry,
   undoCopyDay,
   updateLogEntry,
+  updateMyTargets,
   updateRecipe,
 } from "./repos/index.js";
