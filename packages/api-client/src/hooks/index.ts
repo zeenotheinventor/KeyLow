@@ -9,6 +9,8 @@ export { useCreateRecipe } from "./useCreateRecipe";
 export { useDebouncedValue } from "./useDebouncedValue";
 export { useDeleteEntry } from "./useDeleteEntry";
 export { useDeleteFood } from "./useDeleteFood";
+export { useFavouriteFoods } from "./useFavouriteFoods";
+export { useToggleFavouriteFood } from "./useToggleFavouriteFood";
 export { useDiaryDay } from "./useDiaryDay";
 export { useDiaryWeek } from "./useDiaryWeek";
 export { useDuplicateRecipe } from "./useDuplicateRecipe";

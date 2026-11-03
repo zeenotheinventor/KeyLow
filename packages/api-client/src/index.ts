@@ -23,6 +23,8 @@ export {
   useDeleteFood,
   useDiaryDay,
   useDiaryWeek,
+  useFavouriteFoods,
+  useToggleFavouriteFood,
   useDuplicateRecipe,
   useFood,
   useFoodByBarcode,
@@ -91,8 +93,11 @@ export {
   getMyTermsAcceptance,
   getMyTimeZone,
   getMyWeightUnit,
+  addFavouriteFood,
   getRecipe,
   listCompleteDays,
+  listFavouriteFoods,
+  removeFavouriteFood,
   listFoodPortions,
   listOwnFoods,
   listRecentFoods,
@@ -388,3 +393,6 @@ export {
   setShoppingItemChecked,
 } from "./repos";
 export type { ShoppingSourceRecipe } from "./repos";
+export { FavouriteRuleError } from "./errors";
+export type { FavouriteRule } from "./errors";
+export type { FavouriteFood } from "./repos";

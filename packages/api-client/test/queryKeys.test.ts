@@ -69,6 +69,10 @@ describe("keys.foods", () => {
     expect(keys.foods.own).toEqual(["foods", "own"]);
   });
 
+  it("should expose a key for the user's favourite foods, under the foods root", () => {
+    expect(keys.foods.favourites).toEqual(["foods", "favourites"]);
+  });
+
   it("should nest every foods key under the foods root so one invalidation covers them all", () => {
     const rootLength = keys.foods.all.length;
 
@@ -79,6 +83,7 @@ describe("keys.foods", () => {
       keys.foods.offSearch("chicken"),
       keys.foods.barcode("0036000291452"),
       keys.foods.own,
+      keys.foods.favourites,
     ]) {
       expect(key.slice(0, rootLength)).toEqual(keys.foods.all);
     }

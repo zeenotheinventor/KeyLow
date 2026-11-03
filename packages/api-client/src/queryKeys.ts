@@ -36,6 +36,7 @@ export const keys = {
     offSearch: (q: string) => ["foods", "off-search", q] as const,
     barcode: (code: string) => ["foods", "barcode", code] as const,
     own: ["foods", "own"] as const,
+    favourites: ["foods", "favourites"] as const,
   },
   /**
    * That a branded food was asked of `off-product` to refresh its portions, so it is asked once while the app
