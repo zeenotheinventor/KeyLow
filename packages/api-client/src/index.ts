@@ -6,6 +6,7 @@ export { addToLibrary, libraryNames, setLibraryFlag, summaryOf } from "./recipeC
 export { CustomFoodValidationError } from "./customFoodInput";
 export {
   EdgeFunctionError,
+  EntryNotFoundError,
   FavouriteRuleError,
   OffProductNotFoundError,
   RateLimitedError,

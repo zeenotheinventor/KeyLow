@@ -1,4 +1,5 @@
 import { BODY_MAP, describeHeatStep, describeShortDate, joinInWords } from "./bodyMap";
+import { DASHBOARD_LOAD_FAILED } from "./dashboard";
 import { NO_TARGET_BANNER } from "./diary";
 import { DAY_STEPPER } from "./diaryDay";
 import { CALORIE_RING } from "./diaryRing";
@@ -71,6 +72,10 @@ export const WIDGET_STATES = {
   couldntLog: {
     headline: "Couldn't log that. Nothing was saved.",
     body: "Check your connection, or log it in Ki-Lo.",
+  },
+  couldntUndo: {
+    headline: "Couldn't undo that.",
+    body: DASHBOARD_LOAD_FAILED.body,
   },
   sessionMovedOn: {
     eyebrow: "IN SESSION",

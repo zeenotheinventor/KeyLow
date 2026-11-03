@@ -54,4 +54,48 @@ describe("endSession", () => {
     expect(signOut).toHaveBeenCalledTimes(1);
     expect(signOut).toHaveBeenCalledWith({ scope: "local" });
   });
+
+  describe("the widgets", () => {
+    it("should delete the snapshot and the pending-undo record before signing out", async () => {
+      const { auth, signOut } = createAuth(null);
+      const clearWidgets = jest.fn(() => Promise.resolve());
+
+      await endSession(
+        auth,
+        jest.fn(() => Promise.resolve()),
+        clearWidgets,
+      );
+
+      expect(clearWidgets).toHaveBeenCalledTimes(1);
+      expect(clearWidgets.mock.invocationCallOrder[0]).toBeLessThan(
+        signOut.mock.invocationCallOrder[0] ?? 0,
+      );
+    });
+
+    it("should delete the widget data offline too", async () => {
+      onlineManager.setOnline(false);
+      const { auth } = createAuth(lostConnection());
+      const clearWidgets = jest.fn(() => Promise.resolve());
+
+      await endSession(
+        auth,
+        jest.fn(() => Promise.resolve()),
+        clearWidgets,
+      );
+
+      expect(clearWidgets).toHaveBeenCalledTimes(1);
+    });
+
+    it("should still sign out when the widget data cannot be deleted", async () => {
+      const { auth, signOut } = createAuth(null);
+
+      await endSession(
+        auth,
+        jest.fn(() => Promise.resolve()),
+        () => Promise.reject(new Error("storage failed")),
+      );
+
+      expect(signOut).toHaveBeenCalledTimes(1);
+    });
+  });
 });

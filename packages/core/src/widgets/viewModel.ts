@@ -1,4 +1,4 @@
-import { MILLISECONDS_PER_MINUTE, UNDO_WINDOW_MINUTES } from "./constants";
+import { MILLISECONDS_PER_MINUTE } from "./constants";
 import { readDay } from "./day";
 import { WidgetError } from "./error";
 import { openAction, startSessionPath, WIDGET_PATHS } from "./links";
@@ -14,6 +14,7 @@ import {
   ringOf,
   signedOutMessage,
 } from "./parts";
+import { isUndoWindowOpen } from "./undoWindow";
 import {
   BODY_MAP,
   describeDashboardBodyMapCard,
@@ -121,10 +122,8 @@ const openUndo = (
   if (undo?.action !== action) {
     return null;
   }
-  const elapsed = now.getTime() - new Date(undo.at).getTime();
 
-  // A record from the future (a clock moved back) is not trusted, so it is expired too.
-  return elapsed >= 0 && elapsed < UNDO_WINDOW_MINUTES * MILLISECONDS_PER_MINUTE ? undo : null;
+  return isUndoWindowOpen(undo.at, now) ? undo : null;
 };
 
 const logGridButtons = () => [
@@ -404,6 +403,16 @@ export const widgetViewModel = (
       headline: WIDGET_STATES.couldntLog.headline,
       headlineRole: "danger",
       body: WIDGET_STATES.couldntLog.body,
+      actions: [openKiLoButton("secondary")],
+    });
+  }
+  if (context.failure === "couldnt_undo" && (kind === "log_again" || kind === "training")) {
+    return message(kind, "couldnt_undo", {
+      eyebrow:
+        kind === "log_again" ? WIDGET_EYEBROWS.logAgain : WIDGET_STATES.sessionMovedOn.eyebrow,
+      headline: WIDGET_STATES.couldntUndo.headline,
+      headlineRole: "danger",
+      body: WIDGET_STATES.couldntUndo.body,
       actions: [openKiLoButton("secondary")],
     });
   }

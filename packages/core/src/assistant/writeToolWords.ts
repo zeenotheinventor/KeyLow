@@ -157,9 +157,20 @@ function mergeLoggedCards(cards: readonly AssistantCard[]): AssistantCard {
   };
 }
 
+// "Copied 8 entries". The board adds "from yesterday", but a copy's rows are on the day it was copied onto
+// and the action holds no source day, so the words stop at the count. A copy whose rows are gone is plain.
+const describeCopiedEntries: AssistantChangeBuilder = ({ actionCount, targets }) => {
+  const copied = targets.filter(({ row }) => row !== null).length;
+  return {
+    title: copied === 0 ? plainTitles.day_copied(actionCount) : `Copied ${entries(copied)}`,
+    detail: null,
+  };
+};
+
 // A write ticket adds its tool here, with the board's words for its rows.
 const changeBuilders: Readonly<Partial<Record<AssistantWriteTool, AssistantChangeBuilder>>> = {
   log_entry: describeLoggedEntries,
+  copy_day: describeCopiedEntries,
 };
 
 // A write ticket adds its kind here when the board words several calls as one card.
@@ -172,7 +183,8 @@ const plainTitles: Record<AssistantCardKind, (count: number) => string> = {
   updated: (count) => `Updated ${entries(count)}`,
   deleted: (count) => `Deleted ${entries(count)}`,
   day_copied: () => "Copied a day",
-  day_completed: () => "Marked a day complete",
+  // NOT ON THE CANVAS. The row does not say which way the call went, so it never claims "complete".
+  day_completed: () => "Changed whether a day is complete",
   recipe_created: () => "Added a recipe",
   recipe_updated: () => "Updated a recipe",
   recipe_archived: () => "Archived a recipe",

@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { EdgeFunctionError, RateLimitedError, toEdgeErrorKind } from "../src/errors";
+import {
+  EdgeFunctionError,
+  EntryNotFoundError,
+  RateLimitedError,
+  toEdgeErrorKind,
+} from "../src/errors";
 
 describe("toEdgeErrorKind", () => {
   it("should name a rate limit rate_limited", () => {
@@ -22,5 +27,15 @@ describe("toEdgeErrorKind", () => {
 
   it("should name any other error failed", () => {
     expect(toEdgeErrorKind(new Error("fetch failed"))).toBe("failed");
+  });
+});
+
+describe("EntryNotFoundError", () => {
+  it("should say the entry was not found without naming it", () => {
+    const error = new EntryNotFoundError();
+
+    expect(error).toBeInstanceOf(Error);
+    expect(error.name).toBe("EntryNotFoundError");
+    expect(error.message).toBe("The entry was not found");
   });
 });
