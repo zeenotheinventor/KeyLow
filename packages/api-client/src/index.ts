@@ -26,6 +26,7 @@ export {
   useDiaryWeek,
   useDuplicateRecipe,
   useFavouriteFoods,
+  useFavouriteRecipes,
   useFood,
   useFoodByBarcode,
   useFoodPortions,
@@ -49,6 +50,7 @@ export {
   useTargets,
   useTermsAcceptance,
   useToggleFavouriteFood,
+  useToggleFavouriteRecipe,
   useUndoCopyDay,
   useUpdateEntry,
   useUpdateFood,
@@ -81,6 +83,7 @@ export {
   MIN_SEARCH_LENGTH,
   acceptTerms,
   addFavouriteFood,
+  addFavouriteRecipe,
   copyDay,
   createFood,
   createRecipe,
@@ -98,6 +101,7 @@ export {
   getRecipe,
   listCompleteDays,
   listFavouriteFoods,
+  listFavouriteRecipes,
   listFoodPortions,
   listOwnFoods,
   listRecentFoods,
@@ -106,6 +110,7 @@ export {
   logFood,
   logQuickEntry,
   removeFavouriteFood,
+  removeFavouriteRecipe,
   replaceFoodPortions,
   restoreLogEntry,
   searchFoods,
@@ -394,7 +399,7 @@ export {
   setShoppingItemChecked,
 } from "./repos";
 export type { ShoppingSourceRecipe } from "./repos";
-export type { FavouriteFood } from "./repos";
+export type { FavouriteFood, FavouriteRecipe } from "./repos";
 export {
   useAssistantConsent,
   useAssistantStatus,

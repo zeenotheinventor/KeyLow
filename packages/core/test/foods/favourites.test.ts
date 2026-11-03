@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { MAX_FAVOURITE_FOODS } from "../../src/foods";
+import { MAX_FAVOURITES } from "../../src/foods";
 
-describe("MAX_FAVOURITE_FOODS", () => {
-  it("should be 30, the number the food_favourites trigger enforces", () => {
-    expect(MAX_FAVOURITE_FOODS).toBe(30);
+describe("MAX_FAVOURITES", () => {
+  it("should be 30, the number the food_favourites and recipe_favourites triggers enforce", () => {
+    expect(MAX_FAVOURITES).toBe(30);
   });
 });

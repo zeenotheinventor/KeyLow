@@ -57,6 +57,8 @@ export const keys = {
     /** What "Refresh ingredients" would change in one recipe. Read afresh each time, never persisted. */
     refresh: (id: string) => ["recipes", "refresh", id] as const,
     search: (q: string, archived = false) => ["recipes", "search", q, archived] as const,
+    /** The live favourite recipes, newest first. Under `all`, so archiving a recipe refreshes it. */
+    favourites: ["recipes", "favourites"] as const,
   },
   /**
    * The shopping list reads (ADR 0003, Amendment 15). A family of its own, outside `recipes` and the

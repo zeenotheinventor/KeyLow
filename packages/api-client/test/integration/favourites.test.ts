@@ -1,4 +1,4 @@
-import { MAX_FAVOURITE_FOODS } from "@keylow/core/foods";
+import { MAX_FAVOURITES } from "@keylow/core/foods";
 import { customFoodInputSchema } from "@keylow/core/schemas";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -112,7 +112,7 @@ describe("favourite foods against the local stack with real user JWTs", () => {
   it("should refuse the favourite after the cap with the typed cap error, and allow it after one is removed", async () => {
     const user = await createTestUser("key774");
     const foods = await Promise.all(
-      Array.from({ length: MAX_FAVOURITE_FOODS + 1 }, (_, index) => makeFood(user, `cap-${index}`)),
+      Array.from({ length: MAX_FAVOURITES + 1 }, (_, index) => makeFood(user, `cap-${index}`)),
     );
     const [overCap, ...atCap] = foods;
     const [held] = atCap;
@@ -129,22 +129,20 @@ describe("favourite foods against the local stack with real user JWTs", () => {
 
     expect(refused).toBeInstanceOf(FavouriteRuleError);
     expect(refused).toHaveProperty("rule", "favourite_limit");
-    expect(await ownFavourites(user)).toHaveLength(MAX_FAVOURITE_FOODS);
+    expect(await ownFavourites(user)).toHaveLength(MAX_FAVOURITES);
 
     // Favouriting one already held at the cap is still a quiet no-op.
     await addFavouriteFood(user.client, held.id);
 
     await removeFavouriteFood(user.client, held.id);
     await addFavouriteFood(user.client, overCap.id);
-    expect(await ownFavourites(user)).toHaveLength(MAX_FAVOURITE_FOODS);
+    expect(await ownFavourites(user)).toHaveLength(MAX_FAVOURITES);
   });
 
   it("should not count a favourite of a soft deleted food towards the cap", async () => {
     const user = await createTestUser("key774");
     const foods = await Promise.all(
-      Array.from({ length: MAX_FAVOURITE_FOODS + 1 }, (_, index) =>
-        makeFood(user, `live-${index}`),
-      ),
+      Array.from({ length: MAX_FAVOURITES + 1 }, (_, index) => makeFood(user, `live-${index}`)),
     );
     const [extra, deleted, ...rest] = foods;
     if (extra === undefined || deleted === undefined) {
@@ -157,7 +155,7 @@ describe("favourite foods against the local stack with real user JWTs", () => {
 
     await addFavouriteFood(user.client, extra.id);
 
-    expect(await ownFavourites(user)).toHaveLength(MAX_FAVOURITE_FOODS);
+    expect(await ownFavourites(user)).toHaveLength(MAX_FAVOURITES);
   });
 
   it("should refuse to favourite a soft deleted food again", async () => {

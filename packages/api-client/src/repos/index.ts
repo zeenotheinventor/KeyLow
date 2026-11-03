@@ -32,8 +32,15 @@ export type {
   LogQuickEntryInput,
   QuickEntryValues,
 } from "./diaryWrites";
-export { addFavouriteFood, listFavouriteFoods, removeFavouriteFood } from "./favourites";
-export type { FavouriteFood } from "./favourites";
+export {
+  addFavouriteFood,
+  addFavouriteRecipe,
+  listFavouriteFoods,
+  listFavouriteRecipes,
+  removeFavouriteFood,
+  removeFavouriteRecipe,
+} from "./favourites";
+export type { FavouriteFood, FavouriteRecipe } from "./favourites";
 export {
   FoodsPartialWriteError,
   MIN_SEARCH_LENGTH,
