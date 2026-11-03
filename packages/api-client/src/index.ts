@@ -6,11 +6,12 @@ export { addToLibrary, libraryNames, setLibraryFlag, summaryOf } from "./recipeC
 export { CustomFoodValidationError } from "./customFoodInput";
 export {
   EdgeFunctionError,
+  FavouriteRuleError,
   OffProductNotFoundError,
   RateLimitedError,
   toEdgeErrorKind,
 } from "./errors";
-export type { EdgeErrorKind } from "./errors";
+export type { EdgeErrorKind, FavouriteRule } from "./errors";
 export {
   useAcceptTerms,
   useArchiveRecipe,
@@ -24,6 +25,7 @@ export {
   useDiaryDay,
   useDiaryWeek,
   useDuplicateRecipe,
+  useFavouriteFoods,
   useFood,
   useFoodByBarcode,
   useFoodPortions,
@@ -46,6 +48,7 @@ export {
   useSyncTimeZone,
   useTargets,
   useTermsAcceptance,
+  useToggleFavouriteFood,
   useUndoCopyDay,
   useUpdateEntry,
   useUpdateFood,
@@ -77,6 +80,7 @@ export {
   FoodsPartialWriteError,
   MIN_SEARCH_LENGTH,
   acceptTerms,
+  addFavouriteFood,
   copyDay,
   createFood,
   createRecipe,
@@ -93,6 +97,7 @@ export {
   getMyWeightUnit,
   getRecipe,
   listCompleteDays,
+  listFavouriteFoods,
   listFoodPortions,
   listOwnFoods,
   listRecentFoods,
@@ -100,6 +105,7 @@ export {
   logEntries,
   logFood,
   logQuickEntry,
+  removeFavouriteFood,
   replaceFoodPortions,
   restoreLogEntry,
   searchFoods,
@@ -388,6 +394,7 @@ export {
   setShoppingItemChecked,
 } from "./repos";
 export type { ShoppingSourceRecipe } from "./repos";
+export type { FavouriteFood } from "./repos";
 export {
   useAssistantConsent,
   useAssistantStatus,

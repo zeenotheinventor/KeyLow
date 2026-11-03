@@ -86,3 +86,21 @@ export class ExerciseRuleError extends Error {
     this.rule = rule;
   }
 }
+
+/** The rules a favourite write is refused by, as stable codes. The sentence for each is screen copy. */
+export type FavouriteRule = "favourite_limit";
+
+/**
+ * A favourite the database refused for a rule the screen can explain: today only the cap of 30 per
+ * person. The message names the action and the rule and nothing else, because what a person
+ * favourites is health data.
+ */
+export class FavouriteRuleError extends Error {
+  readonly rule: FavouriteRule;
+
+  constructor(action: string, rule: FavouriteRule) {
+    super(`Could not ${action} (${rule})`, { cause: { code: rule } });
+    this.name = "FavouriteRuleError";
+    this.rule = rule;
+  }
+}

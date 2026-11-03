@@ -610,6 +610,32 @@ export type Database = {
           },
         ];
       };
+      food_favourites: {
+        Row: {
+          created_at: string;
+          food_id: string;
+          owner_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          food_id: string;
+          owner_id?: string;
+        };
+        Update: {
+          created_at?: string;
+          food_id?: string;
+          owner_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "food_favourites_food_id_fkey";
+            columns: ["food_id"];
+            isOneToOne: false;
+            referencedRelation: "foods";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       food_log_entries: {
         Row: {
           created_at: string;

@@ -9,7 +9,7 @@ type FoodInsert = Database["public"]["Tables"]["foods"]["Insert"];
 type FoodPortionInsert = Database["public"]["Tables"]["food_portions"]["Insert"];
 
 // The generated `search` column is a database-only tsvector, so it is never selected.
-const FOOD_COLUMNS = Object.keys(foodRowSchema.shape).join(",");
+export const FOOD_COLUMNS = Object.keys(foodRowSchema.shape).join(",");
 
 // The lean row `search_foods` returns: what a result list draws and groups by, the food's default
 // portion (all four default_portion_* values are null when it has none) and the relevance score.

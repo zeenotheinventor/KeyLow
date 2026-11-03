@@ -10,6 +10,7 @@ const seeded = {
   search: keys.foods.search("chicken"),
   barcode: keys.foods.barcode("5000000000017"),
   own: keys.foods.own,
+  favourites: keys.foods.favourites,
   offSearch: keys.foods.offSearch("chicken"),
 };
 
@@ -30,6 +31,7 @@ describe("invalidateFoodQueries", () => {
     expect(isInvalidated(seeded.search)).toBe(true);
     expect(isInvalidated(seeded.barcode)).toBe(true);
     expect(isInvalidated(seeded.own)).toBe(true);
+    expect(isInvalidated(seeded.favourites)).toBe(true);
     expect(isInvalidated(seeded.offSearch)).toBe(false);
     expect(isInvalidated(keys.profiles.all)).toBe(false);
   });
