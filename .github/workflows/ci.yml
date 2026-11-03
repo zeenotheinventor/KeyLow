@@ -1,18 +1,24 @@
 name: CI
 
-# The full gate, as parallel jobs. It runs on every pull request and every push to main, and on demand.
+# The full gate, as parallel jobs, most of them split into legs that run side by side on their own
+# runners. It runs on every pull request and every push to main, and on demand.
 #
-#   scope ──┬─ core ────────┐   formatting, lint, type-check and tests of the packages and tools,
-#           │               │   and the repository-wide suites
+#   scope ──┬─ core ────────┐   five legs: format, static (lint and type-check of the packages and
+#           │               │   tools), test 1/3, 2/3 and 3/3 (Vitest shards)
 #           ├─ lockfile ────┤   the lockfile duplicate check, on full runs
 #           ├─ functions ───┤   Deno type-check and lint of the Edge Functions
 #           │               │
-#           ├─ db ──────────┤   the local Supabase stack, pgTAP, the function suites, the generated
-#           │               │   types
-#           ├─ mobile ──────┼─ checks   Jest, lint and type-check of the app, the Expo
-#           │               │           doctor gate
-#           ├─ web ─────────┤   Vitest, lint, type-check and `next build` of the web app
+#           ├─ db ──────────┤   two legs, each with its own local Supabase stack: database (pgTAP,
+#           │               │   the db suites, the generated types) and clients (api-client and
+#           │               │   assistant-evals)
+#           ├─ mobile ──────┼─ checks   seven legs: static (lint, type-check, Expo doctor) and Jest
+#           │               │           1/6 to 6/6, dealt out by file size (shardSequencer.js)
+#           ├─ web ─────────┤   three legs: static (lint, type-check, `next build`) and Vitest
+#           │               │   shards 1/2 and 2/2
 #           └─ web-storybook┘   the web Storybook build
+#
+# A job with legs is one matrix, and `checks` waits for every leg of it, so a failed leg fails `checks`
+# and a skipped job counts as passed.
 #
 # `checks` is the one required check. It needs every other job, so branch protection names only
 # `checks` and a new job never has to be added to the settings. A job that `scope` skips counts as
@@ -45,11 +51,11 @@ name: CI
 # request that changes the lockfile restores the closest earlier store from main and downloads only
 # what is missing. Main's runs save both caches, and only when the exact key was not restored, so a
 # push that changes neither the lockfile nor the Jest or Babel config restores both caches and saves
-# nothing. The `core` job saves the pnpm store and the `mobile` job saves the Jest cache. A scoped push
-# can skip `mobile`, but both keys change only with the lockfile or the Jest and Babel config. A
-# lockfile change makes a full run, and a change to the Jest or Babel config affects the app, so the
-# job that saves each cache runs. A manual run restores both caches and never saves (the steps check
-# for a push).
+# nothing. The `core (static)` leg saves the pnpm store and each mobile Jest leg saves its own Jest
+# cache. A scoped push can skip `mobile`, but both keys change only with the lockfile or the Jest and
+# Babel config. A lockfile change makes a full run, and a change to the Jest or Babel config affects
+# the app, so the legs that save each cache run. A manual run restores both caches and never saves (the
+# steps check for a push).
 #
 # Setup (pnpm, Node, the store cache, the install) is the local action .github/actions/setup.
 on:
