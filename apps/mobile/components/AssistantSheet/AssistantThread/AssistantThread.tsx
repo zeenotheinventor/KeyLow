@@ -3,6 +3,7 @@ import { ASSISTANT_SHEET, ASSISTANT_STOPPED, describeAssistantNotice } from "@ke
 import { AssistantNotice, ChatMessage, ChipGroup } from "../../ui";
 import { AssistantCardEntry } from "../AssistantCardEntry";
 import { ConfirmButtons } from "../ConfirmButtons";
+import { WorkingLine } from "../WorkingLine";
 
 import type { AssistantThreadProps } from "./types";
 import type { AssistantNoticeTone, IconName } from "../../ui";
@@ -24,8 +25,9 @@ const askAgainOptions = [{ value: "ask-again", label: ASSISTANT_STOPPED.askAgain
 
 /**
  * The messages and action cards of the conversation, oldest first, with the quick reply under an answer
- * that was cut short, the quick replies under a clarifying question, and the two buttons under a
- * confirmation.
+ * that was cut short, the quick replies under a clarifying question, the two buttons under a
+ * confirmation, the citation and Estimate lines under an answer from the person's data, and the working
+ * line while a recipe page is read.
  * Every word comes from the thread the screen was given or from core's copy, so nothing here words a
  * message, and nothing in it decides what to show.
  */
@@ -60,8 +62,12 @@ export function AssistantThread({
             role="assistant"
             speakerLabel={ASSISTANT_SHEET.speakerAssistant}
             stoppedLabel={entry.isStopped ? ASSISTANT_STOPPED.label : undefined}
+            citation={entry.citation ?? undefined}
+            estimate={entry.estimate ?? undefined}
           />
         );
+      case "status":
+        return <WorkingLine key={entry.key} text={entry.text} />;
       case "quickReplies":
         return (
           <ChipGroup
