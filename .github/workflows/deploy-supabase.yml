@@ -1,11 +1,12 @@
 # Deploy to the production Supabase project (keylow-prod, eu-west-2).
 #
-# What it does: on a push to main that touches packages/db/supabase or
-# packages/core/src, and on manual dispatch, it bundles @keylow/core for Deno,
+# What it does: on a push to main that touches packages/db/supabase, the Deno bundle script,
+# packages/core/src or the api-client repos (and the few api-client files they import), and on
+# manual dispatch, it bundles @keylow/core and the api-client repos for Deno,
 # links the CLI to production, applies pending migrations with
 # `supabase db push`, then deploys Edge Functions with
-# `supabase functions deploy` when any exist. A change in core redeploys the
-# functions because each one embeds its own copy of the core bundle.
+# `supabase functions deploy` when any exist. A change in core or in the repos redeploys the
+# functions because each one embeds its own copy of those bundles.
 #
 # Release policy: continuous deployment with no approval gate. Every qualifying push to main
 # deploys straight away. Releases are meant to be gated later with feature flags, not with a
@@ -40,6 +41,14 @@ on:
     paths:
       - "packages/db/supabase/**"
       - "packages/core/src/**"
+      # What scripts/bundle-core-for-deno.ts reads for _shared/repos: the repos, plus the four
+      # api-client files they import from outside the repos folder (see the bundle script).
+      - "packages/api-client/src/repos/**"
+      - "packages/api-client/src/database.types.ts"
+      - "packages/api-client/src/edge.ts"
+      - "packages/api-client/src/errors.ts"
+      - "packages/api-client/src/weekStartOf.ts"
+      - "packages/db/scripts/bundle-core-for-deno.ts"
   workflow_dispatch:
 
 permissions:
@@ -76,9 +85,10 @@ jobs:
       - name: Install dependencies
         working-directory: .
         run: pnpm install --frozen-lockfile --ignore-scripts
-      # Writes packages/db/supabase/functions/_shared/core/, which is gitignored, so a checkout
-      # never has it. The functions import it, so it must exist before `supabase functions deploy`.
-      - name: Bundle @keylow/core for the Edge Functions
+      # Writes packages/db/supabase/functions/_shared/core/ and _shared/repos/, which are gitignored,
+      # so a checkout never has them. The functions import them, so they must exist before
+      # `supabase functions deploy`.
+      - name: Bundle @keylow/core and the api-client repos for the Edge Functions
         working-directory: .
         run: pnpm --filter @keylow/db bundle-core-for-deno
 

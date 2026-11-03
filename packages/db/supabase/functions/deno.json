@@ -11,8 +11,8 @@
     "strict": true
   },
   "lock": false,
-  "exclude": ["_shared/core/"],
+  "exclude": ["_shared/core/", "_shared/repos/"],
   "lint": {
-    "exclude": ["_shared/core/"]
+    "exclude": ["_shared/core/", "_shared/repos/"]
   }
 }
