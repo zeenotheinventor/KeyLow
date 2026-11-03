@@ -10,7 +10,10 @@ import type { ReportError } from "../_shared/report.ts";
 export type EventStream = {
   // True once the stream has ended or the reader went away. Nothing is written after that.
   readonly closed: boolean;
+  // True once a `done` event was written. A turn has exactly one, so nothing is written after it.
+  readonly done: boolean;
   write(text: string): void;
+  markDone(): void;
   close(): void;
 };
 
@@ -18,6 +21,7 @@ export function createEventStream(): { stream: EventStream; body: ReadableStream
   const encoder = new TextEncoder();
   let controller!: ReadableStreamDefaultController<Uint8Array>;
   let closed = false;
+  let done = false;
   const body = new ReadableStream<Uint8Array>({
     start(started) {
       controller = started;
@@ -31,10 +35,16 @@ export function createEventStream(): { stream: EventStream; body: ReadableStream
     get closed() {
       return closed;
     },
+    get done() {
+      return done;
+    },
     write(text) {
       if (!closed) {
         controller.enqueue(encoder.encode(text));
       }
+    },
+    markDone() {
+      done = true;
     },
     close() {
       if (!closed) {
@@ -60,14 +70,15 @@ function writeLine(stream: EventStream, event: AssistantStreamEvent): void {
   stream.write(`data: ${JSON.stringify(event)}\n\n`);
 }
 
-// Returns whether the event was written. An event that fails the contract is a bug in this function,
-// so it is reported without its content, and the turn ends as a failed one.
+// Returns whether the event was written. Nothing is written once the stream has closed or a `done`
+// has gone. An event that fails the contract is a bug in this function, so it is reported without its
+// content, and the turn ends as a failed one.
 export function writeEvent(
   stream: EventStream,
   event: AssistantStreamEvent,
   report: ReportError = reportError,
 ): boolean {
-  if (stream.closed) {
+  if (stream.closed || stream.done) {
     return false;
   }
   if (!assistantStreamEventSchema.safeParse(event).success) {
@@ -76,11 +87,19 @@ export function writeEvent(
     return false;
   }
   writeLine(stream, event);
+  if (event.type === "done") {
+    stream.markDone();
+  }
   return true;
 }
 
+// Ends a turn that has no `done` yet. After one, the turn has ended, so it writes nothing.
 export function endAsFailed(stream: EventStream): void {
+  if (stream.done) {
+    return;
+  }
   writeLine(stream, { type: "notice", notice: { code: "turn_failed" } });
   writeLine(stream, { type: "done", outcome: "failed" });
+  stream.markDone();
   stream.close();
 }

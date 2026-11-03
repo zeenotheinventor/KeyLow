@@ -7,6 +7,7 @@ export type {
   CardEntry,
   AssistantStoredMessage,
   AssistantStreamEvent,
+  AssistantTurnStatus,
   CheckinInput,
   CheckinProgram,
   CheckinResult,

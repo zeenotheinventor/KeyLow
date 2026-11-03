@@ -13,6 +13,7 @@ import { assistantTurnRequestSchema } from "../_shared/core.ts";
 import { error, json } from "../_shared/http.ts";
 import { checkAccess } from "./gates.ts";
 import { createEventStream, endAsFailed, eventResponse, writeEvent } from "./sse.ts";
+import { ConversationBusyError } from "./turnStore.ts";
 
 import type { UndoResult } from "../_shared/assistant/undo.ts";
 import type { AssistantNotice } from "../_shared/core.ts";
@@ -130,7 +131,13 @@ export function createAssistantHandler(
       return "conversation_not_found";
     }
     const conversationId = input.conversationId ?? (await turns.createConversation(userId));
-    const turnId = await turns.startTurn({ userId, conversationId, text: input.text });
+    const started = await startTurnUnlessBusy(userId, conversationId, input.text);
+    if (started === null) {
+      // A double tap or a second device. The app shows the failed-turn board, with "Try again".
+      sendNotice(stream, { code: "turn_failed" });
+      return "conversation_busy";
+    }
+    const { turnId } = started;
     await dependencies.runTurn(
       {
         userId,
@@ -144,6 +151,17 @@ export function createAssistantHandler(
       stream,
     );
     return "open";
+  }
+
+  async function startTurnUnlessBusy(userId: string, conversationId: string, text: string) {
+    try {
+      return await turns.startTurn({ userId, conversationId, text });
+    } catch (caught) {
+      if (caught instanceof ConversationBusyError) {
+        return null;
+      }
+      throw caught;
+    }
   }
 
   // Whatever the turn did, the stream ends, and a throw ends it as a failed turn.
