@@ -132,12 +132,19 @@ async function recordCall(
     );
 }
 
-// The note of one response: its text blocks, trimmed. The request has no tools and thinking is disabled, so
-// text is all a response holds.
+// Every opening or closing `conversation_summary` tag, in any case, with its attributes. The note is replayed
+// inside that tag on every later turn, and it is model output built partly from untrusted tool results, so a
+// closing tag in it would end the wrapper early and the text after it would read as outside the note. The tags
+// are removed and the text around them is kept. A note that is nothing but tags is empty and is not stored.
+const WRAPPER_TAG = /<\/?\s*conversation_summary[^>]*>?/gi;
+
+// The note of one response: its text blocks, without wrapper tags, trimmed. The request has no tools and
+// thinking is disabled, so text is all a response holds.
 const noteOf = (message: Anthropic.Message): string =>
   message.content
     .flatMap((block) => (block.type === "text" ? [block.text] : []))
     .join("")
+    .replaceAll(WRAPPER_TAG, "")
     .trim();
 
 async function writeNote(

@@ -263,6 +263,8 @@ export function toApiMessagesWithNote(
   );
   const replayed = history.slice(lastCompactedIndex + 1);
   if (lastCompactedIndex === -1 || replayed[0]?.role !== "user") {
+    // A fixed code and nothing else, so a prompt that stopped shrinking shows up in the logs.
+    console.log("assistant replay code=note_fallback");
     return toApiMessages(history);
   }
   const [first, ...rest] = joinedMessages(replayed);
