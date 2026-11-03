@@ -95,12 +95,14 @@ const fewestLoadingSets = (performedAt: string, at: string): number => {
 };
 
 describe("the settings", () => {
-  it("should default to all three off at half past five in the evening", () => {
+  it("should default to all five off at half past five in the evening", () => {
     expect(DEFAULT_TRAINING_REMINDER_SETTINGS).toEqual({
       trainEnabled: false,
       progressEnabled: false,
       easeEnabled: false,
       trainTime: "17:30",
+      missedEnabled: false,
+      checkinEnabled: false,
     });
   });
 

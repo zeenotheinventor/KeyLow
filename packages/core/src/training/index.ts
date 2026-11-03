@@ -351,8 +351,11 @@ export { routineTrendsByDay } from "./routineTrends";
 export type { RoutineDayTrends } from "./routineTrends";
 
 export {
+  CHECKIN_STREAK_DAYS,
   DEFAULT_TRAINING_REMINDER_SETTINGS,
   EASE_REMINDER_TIME,
+  MISSED_LOOKBACK_DAYS,
+  MISSED_REMINDER_TIME,
   PROGRESS_REMINDER_TIME,
   hasExerciseGainThisWeek,
   planTrainingReminders,

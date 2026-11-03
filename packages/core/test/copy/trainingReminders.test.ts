@@ -4,6 +4,7 @@ import {
   describeTrainingReminder,
   MUSCLE_NAMES,
   NAMED_TRAIN_REMINDER_VARIANTS,
+  MISSED_MERGED_REMINDER_VARIANTS,
   TRAIN_REMINDER_NAMES_ROUTINE_DAY,
   TRAINING_REMINDER_DAY_SLOT,
   TRAINING_REMINDER_TITLES,
@@ -13,8 +14,8 @@ import {
 import { bench, curl, row, squat } from "../training/plans";
 
 describe("the training reminder copy", () => {
-  it("should name the three reminder types", () => {
-    expect(TRAINING_REMINDER_TYPES).toEqual(["train", "progress", "ease"]);
+  it("should name the five reminder types", () => {
+    expect(TRAINING_REMINDER_TYPES).toEqual(["train", "progress", "ease", "missed", "checkin"]);
   });
 
   it("should have one title for each type", () => {
@@ -22,6 +23,8 @@ describe("the training reminder copy", () => {
       train: "Time to train",
       progress: "See your progress",
       ease: "Take it easy",
+      missed: "A fresh start",
+      checkin: "Checking in",
     });
   });
 
@@ -76,7 +79,7 @@ describe("the training reminder copy", () => {
     const sentences = TRAINING_REMINDER_TYPES.flatMap((type) => [
       TRAINING_REMINDER_TITLES[type],
       ...TRAINING_REMINDER_VARIANTS[type].map(({ body }) => body),
-    ]);
+    ]).concat(MISSED_MERGED_REMINDER_VARIANTS.map(({ body }) => body));
 
     for (const sentence of sentences) {
       expect(sentence).not.toMatch(/\d/);
@@ -167,6 +170,50 @@ describe("the named Time to train copy", () => {
       for (const word of wordsNotToSay) {
         expect(neutral.toLowerCase()).not.toContain(word.toLowerCase());
       }
+    }
+  });
+});
+
+describe("the missed day and check-in copy", () => {
+  it.each([
+    ["missed", 6],
+    ["checkin", 6],
+  ] as const)(
+    "should have %s bodies of its own, each with an id of its type and number",
+    (type, count) => {
+      expect(TRAINING_REMINDER_VARIANTS[type].map(({ id }) => id)).toEqual(
+        Array.from({ length: count }, (_, index) => `${type}-${index + 1}`),
+      );
+    },
+  );
+
+  it("should have 6 merged bodies for a missed day that is also a train day, with ids of their own", () => {
+    expect(MISSED_MERGED_REMINDER_VARIANTS.map(({ id }) => id)).toEqual(
+      Array.from({ length: 6 }, (_, index) => `missed-merged-${index + 1}`),
+    );
+    expect(new Set(MISSED_MERGED_REMINDER_VARIANTS.map(({ body }) => body)).size).toBe(6);
+    expect(TRAINING_REMINDER_VARIANTS.missed.map(({ id }) => id)).not.toContain("missed-merged-1");
+  });
+
+  it("should read a merged variant under the missed title, and only for missed", () => {
+    expect(describeTrainingReminder("missed", "missed-merged-2")).toEqual({
+      title: "A fresh start",
+      body: MISSED_MERGED_REMINDER_VARIANTS[1]?.body,
+    });
+    expect(() => describeTrainingReminder("checkin", "missed-merged-1")).toThrow(RangeError);
+    expect(() => describeTrainingReminder("train", "missed-merged-1")).toThrow(RangeError);
+  });
+
+  it("should keep the missed words kind, with no count of days and no weekday", () => {
+    const sentences = [
+      ...TRAINING_REMINDER_VARIANTS.missed,
+      ...TRAINING_REMINDER_VARIANTS.checkin,
+      ...MISSED_MERGED_REMINDER_VARIANTS,
+    ].map(({ body }) => body);
+
+    for (const sentence of sentences) {
+      expect(sentence).not.toMatch(/\d|\b(two|three|four|several|days)\b/i);
+      expect(sentence).not.toMatch(/\b(missed|failed|should have|behind)\b/i);
     }
   });
 });
