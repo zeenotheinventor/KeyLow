@@ -46,6 +46,7 @@ export {
   buildRecipeUpdatedCard,
   buildUpdatedCard,
   canLogRecipe,
+  canMeasureByVolume,
   cardEntryOfRow,
   clockTimeOn,
   confirmArchiveButtons,

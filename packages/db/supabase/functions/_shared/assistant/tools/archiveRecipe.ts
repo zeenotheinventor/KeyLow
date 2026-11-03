@@ -1,5 +1,5 @@
 // Archives a recipe on the user's word: it leaves the recipe list, and the diary entries logged from it
-// stay. The recipe is kept, so Undo can bring it back. The call always asks first when there is a recipe to
+// stay. The recipe is kept, so Undo can bring it back. The call asks first when there is a recipe to
 // archive, and the question and the buttons are the board's (Amendment 1 A).
 import { z } from "zod";
 
@@ -27,10 +27,11 @@ export const archiveRecipeTool: WriteToolDefinition<ArchiveRecipeInput> = {
   input: archiveRecipeInput,
   annotations: { readOnlyHint: false, destructiveHint: true },
   targetTable: "recipes",
-  // Asks only about a recipe that is there to archive: a recipe the user cannot see is answered `not_found`
-  // by `run` without a question or a button for something that cannot happen.
+  // Asks only about a recipe that is there to archive. One the user cannot see is answered `not_found`, and
+  // one that is archived already is answered as it is, by `run`, without a question or a button.
   async needsConfirmation({ id }, ctx) {
-    return (await getRecipe(ctx.caller, id)) !== null;
+    const recipe = await getRecipe(ctx.caller, id);
+    return recipe !== null && !recipe.is_archived;
   },
   async run(ctx, { id }) {
     const recipe = await getRecipe(ctx.caller, id);

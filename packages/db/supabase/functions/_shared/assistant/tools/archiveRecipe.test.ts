@@ -93,31 +93,37 @@ Deno.test("the spent confirmation archives the recipe and builds the card with U
   assertEquals(action?.targetUpdatedAt, null);
 });
 
-Deno.test("a confirmation is spent once, and is for the recipe it was asked about", async () => {
-  const { asking, confirming, stub } = archiveContexts([
-    chickenAndRice,
-    recipeRow({ id: "00000000-0000-4000-8000-0000000e9004", name: "Pasta bake" }),
-  ]);
-  const confirmationId = confirmationIdOf(
-    await executeTool(asking, "archive_recipe", { id: chickenAndRice.id }),
-  );
+Deno.test(
+  "a confirmation is for the recipe it was asked about, and a replay after archiving changes nothing",
+  async () => {
+    const { asking, confirming, stub, store } = archiveContexts([
+      chickenAndRice,
+      recipeRow({ id: "00000000-0000-4000-8000-0000000e9004", name: "Pasta bake" }),
+    ]);
+    const confirmationId = confirmationIdOf(
+      await executeTool(asking, "archive_recipe", { id: chickenAndRice.id }),
+    );
 
-  const other = await executeTool(confirming, "archive_recipe", {
-    id: "00000000-0000-4000-8000-0000000e9004",
-    confirmation_id: confirmationId,
-  });
-  const first = await executeTool(confirming, "archive_recipe", {
-    id: chickenAndRice.id,
-    confirmation_id: confirmationId,
-  });
-  const again = await executeTool(confirming, "archive_recipe", {
-    id: chickenAndRice.id,
-    confirmation_id: confirmationId,
-  });
+    const other = await executeTool(confirming, "archive_recipe", {
+      id: "00000000-0000-4000-8000-0000000e9004",
+      confirmation_id: confirmationId,
+    });
+    const first = await executeTool(confirming, "archive_recipe", {
+      id: chickenAndRice.id,
+      confirmation_id: confirmationId,
+    });
+    const again = await executeTool(confirming, "archive_recipe", {
+      id: chickenAndRice.id,
+      confirmation_id: confirmationId,
+    });
 
-  assertEquals([other.status, first.status, again.status], ["error", "ok", "error"]);
-  assertEquals(archivedFlags(stub), { "Chicken and rice": true, "Pasta bake": false });
-});
+    // Once the recipe is archived, a replay is answered plainly: it asks nothing and writes nothing.
+    assertEquals([other.status, first.status, again.status], ["error", "ok", "ok"]);
+    assertEquals(payloadOf(again), { id: chickenAndRice.id, archived: true, changed: false });
+    assertEquals(store.actions.length, 1);
+    assertEquals(archivedFlags(stub), { "Chicken and rice": true, "Pasta bake": false });
+  },
+);
 
 Deno.test(
   "a recipe that is not the user's, or not there, is not_found with no question and no write",
@@ -136,24 +142,22 @@ Deno.test(
   },
 );
 
-Deno.test("a recipe that is already archived changes nothing and leaves no action", async () => {
-  const { asking, confirming, store } = archiveContexts([
-    recipeRow({ ...chickenAndRice, is_archived: true }),
-  ]);
-  const confirmationId = confirmationIdOf(
-    await executeTool(asking, "archive_recipe", { id: chickenAndRice.id }),
-  );
+Deno.test(
+  "a recipe that is already archived is answered plainly, with no question and no action",
+  async () => {
+    const { asking, store } = archiveContexts([
+      recipeRow({ ...chickenAndRice, is_archived: true }),
+    ]);
 
-  const result = await executeTool(confirming, "archive_recipe", {
-    id: chickenAndRice.id,
-    confirmation_id: confirmationId,
-  });
+    const result = await executeTool(asking, "archive_recipe", { id: chickenAndRice.id });
 
-  assertEquals(result.status, "ok");
-  assertEquals(payloadOf(result), { id: chickenAndRice.id, archived: true, changed: false });
-  assertEquals(structuredOf(result), {});
-  assertEquals(store.actions.length, 0);
-});
+    assertEquals(result.status, "ok");
+    assertEquals(payloadOf(result), { id: chickenAndRice.id, archived: true, changed: false });
+    assertEquals(structuredOf(result), {});
+    assertEquals(store.actions.length, 0);
+    assertEquals(store.turns[0]?.pending, null);
+  },
+);
 
 Deno.test("Undo restores the recipe, and a second Undo is already_undone", async () => {
   const { asking, confirming, stub } = archiveContexts();

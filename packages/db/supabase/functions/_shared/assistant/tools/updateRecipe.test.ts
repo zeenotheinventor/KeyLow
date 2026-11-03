@@ -15,6 +15,8 @@ import {
 } from "./recipeFixtures.ts";
 import { payloadOf } from "./testing.ts";
 import { largeEggId, structuredOf } from "./writeFixtures.ts";
+
+import type { WriteStub } from "./writeStub.ts";
 import { updateRecipeTool } from "./updateRecipe.ts";
 
 // Recipes are made through the create tool, so the stored ingredients are the ones the repos build.
@@ -71,36 +73,165 @@ Deno.test(
   },
 );
 
-Deno.test("new ingredients replace the old ones and the numbers are worked out again", async () => {
-  const { ctx, id, stub } = await savedChickenAndRice();
+Deno.test(
+  "a list sent in full replaces the old one, a line left out is gone, and the numbers are worked out again",
+  async () => {
+    const { ctx, id, stub } = await savedChickenAndRice();
 
-  const result = await executeTool(ctx, "update_recipe", {
-    ...keep,
-    id,
-    ingredients: [
-      { food_id: chickenId, unit: "g", amount: 400, portion_id: null },
-      { food_id: riceId, unit: "g", amount: 200, portion_id: null },
-    ],
-  });
+    const result = await executeTool(ctx, "update_recipe", {
+      ...keep,
+      id,
+      ingredients: [
+        { food_id: chickenId, unit: "g", amount: 400, portion_id: null },
+        { food_id: riceId, unit: "g", amount: 200, portion_id: null },
+      ],
+    });
+
+    assertEquals(result.status, "ok");
+    const [after] = stub.tables["recipes"] ?? [];
+    assertEquals(
+      ((after?.["recipe_ingredients"] ?? []) as Record<string, unknown>[]).map((i) => [
+        i["position"],
+        i["food_id"],
+        i["quantity"],
+      ]),
+      [
+        [0, chickenId, 400],
+        [1, riceId, 200],
+      ],
+    );
+    // 400 g chicken is 424 kcal and 200 g rice 714 kcal, over 4 servings.
+    assertObjectMatch(payloadOf(result) as object, {
+      updated: { per_serving: { kcal: 284.5 } },
+    });
+    assertEquals(after?.["servings"], 4);
+  },
+);
+
+const lines = (...changes: Record<string, unknown>[]): Record<string, unknown>[] =>
+  chickenAndRice.ingredients.map((line, index) => ({ ...line, ...changes[index] }));
+
+const ingredientsOf = (stub: WriteStub): Record<string, unknown>[] =>
+  (stub.tables["recipes"]?.[0]?.["recipe_ingredients"] ?? []) as Record<string, unknown>[];
+const snapshotKcal = (ingredient: Record<string, unknown> | undefined) =>
+  (ingredient?.["snapshot"] as { per100: { kcal: number } } | undefined)?.per100.kcal;
+
+Deno.test(
+  "a resent line that matches a stored one keeps its stored row and snapshot, never rebuilt from the food now",
+  async () => {
+    const { ctx, id, stub } = await savedChickenAndRice();
+    const storedChicken = structuredClone(ingredientsOf(stub)[0]);
+    const storedOil = structuredClone(ingredientsOf(stub)[2]);
+    // The foods have changed since: the chicken has more calories, and the oil is another food now.
+    for (const food of stub.tables["foods"] ?? []) {
+      if (food["id"] === chickenId) {
+        food["kcal"] = 200;
+      }
+    }
+
+    const result = await executeTool(ctx, "update_recipe", {
+      ...keep,
+      id,
+      ingredients: lines({}, { amount: 300 }),
+    });
+
+    assertEquals(result.status, "ok");
+    const after = ingredientsOf(stub);
+    assertEquals(after[0], storedChicken);
+    assertEquals(snapshotKcal(after[0]), 106);
+    assertEquals(after[2], storedOil);
+    // The line that changed is rebuilt with its new amount.
+    assertObjectMatch(after[1] ?? {}, { food_id: riceId, quantity: 300, resolved_grams: 300 });
+    assertEquals(after.length, 3);
+  },
+);
+
+Deno.test(
+  "a line is matched by food, unit, amount and portion, so a changed amount is rebuilt",
+  async () => {
+    const { ctx, id, stub } = await savedChickenAndRice();
+    for (const food of stub.tables["foods"] ?? []) {
+      if (food["id"] === chickenId) {
+        food["kcal"] = 200;
+      }
+    }
+
+    await executeTool(ctx, "update_recipe", {
+      ...keep,
+      id,
+      ingredients: lines({ amount: 501 }),
+    });
+
+    assertEquals(snapshotKcal(ingredientsOf(stub)[0]), 200);
+    assertEquals(snapshotKcal(ingredientsOf(stub)[1]), 357);
+  },
+);
+
+Deno.test(
+  "an unchanged line whose food was soft-deleted still saves, and a changed one is not_found",
+  async () => {
+    const { ctx, id, stub } = await savedChickenAndRice();
+    for (const food of stub.tables["foods"] ?? []) {
+      if (food["id"] === chickenId) {
+        food["deleted_at"] = "2026-11-03T09:00:00+00:00";
+      }
+    }
+
+    const unchanged = await executeTool(ctx, "update_recipe", {
+      ...keep,
+      id,
+      ingredients: lines({}, { amount: 300 }),
+    });
+    const changed = await executeTool(ctx, "update_recipe", {
+      ...keep,
+      id,
+      ingredients: lines({ amount: 600 }),
+    });
+
+    assertObjectMatch(payloadOf(unchanged) as object, { updated: { name: "Chicken and rice" } });
+    assertEquals(ingredientsOf(stub)[0]?.["food_id"], chickenId);
+    assertEquals(ingredientsOf(stub)[0]?.["quantity"], 500);
+    assertEquals(ingredientsOf(stub)[1]?.["quantity"], 300);
+    assertEquals(payloadOf(changed), { error: "not_found", fields: ["ingredients.0.food_id"] });
+  },
+);
+
+Deno.test(
+  "a stored line is used once, so a line sent twice is rebuilt the second time",
+  async () => {
+    const { ctx, id, stub } = await savedChickenAndRice();
+    for (const food of stub.tables["foods"] ?? []) {
+      if (food["id"] === chickenId) {
+        food["kcal"] = 200;
+      }
+    }
+    const chicken = chickenAndRice.ingredients[0];
+
+    await executeTool(ctx, "update_recipe", { ...keep, id, ingredients: [chicken, chicken] });
+
+    assertEquals(
+      ingredientsOf(stub).map((ingredient) => snapshotKcal(ingredient)),
+      [106, 200],
+    );
+  },
+);
+
+Deno.test("name, cooked weight and steps survive an edit that does not name them", async () => {
+  const { ctx, id, stub } = await savedChickenAndRice();
+  Object.assign(stub.tables["recipes"]?.[0] ?? {}, { yield_grams: 1500 });
+
+  const result = await executeTool(ctx, "update_recipe", { ...keep, id, servings: 5 });
 
   assertEquals(result.status, "ok");
-  const [after] = stub.tables["recipes"] ?? [];
-  assertEquals(
-    ((after?.["recipe_ingredients"] ?? []) as Record<string, unknown>[]).map((i) => [
-      i["position"],
-      i["food_id"],
-      i["quantity"],
-    ]),
-    [
-      [0, chickenId, 400],
-      [1, riceId, 200],
-    ],
-  );
-  // 400 g chicken is 424 kcal and 200 g rice 714 kcal, over 4 servings.
-  assertObjectMatch(payloadOf(result) as object, {
-    updated: { per_serving: { kcal: 284.5 } },
+  assertObjectMatch(stub.tables["recipes"]?.[0] ?? {}, {
+    name: "Chicken and rice",
+    servings: 5,
+    yield_grams: 1500,
   });
-  assertEquals(after?.["servings"], 4);
+  // The cooked weight is what the numbers per 100 g are worked from, so it was passed on to core.
+  const computed = stub.tables["recipes"]?.[0]?.["computed"] as { effectiveGrams: number };
+  assertEquals(computed.effectiveGrams, 1500);
+  assertEquals(stub.tables["recipes"]?.[0]?.["instructions"], chickenAndRice.steps);
 });
 
 Deno.test("new steps replace the old ones, and an empty list clears them", async () => {

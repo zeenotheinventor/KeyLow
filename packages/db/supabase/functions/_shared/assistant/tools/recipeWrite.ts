@@ -3,7 +3,7 @@
 // is built from the food as the database holds it, and never from a number the model sent.
 import { z } from "zod";
 
-import { buildRecipeIngredient, validateRecipeDraft } from "../../core.ts";
+import { buildRecipeIngredient, canMeasureByVolume, validateRecipeDraft } from "../../core.ts";
 import { getFood, listFoodPortions } from "../../repos.ts";
 import { invalidInput } from "./entryWrite.ts";
 
@@ -75,12 +75,37 @@ const fieldOfProblem: Record<RecipeDraftProblem, string> = {
 
 type Built = { ingredients: RecipeIngredient[] } | { refused: WriteRunOutput };
 
-// Each ingredient's food and portions are read once, however many lines use the food.
+// A resent line is the stored line when it names the same food, unit, amount and portion. It keeps its stored
+// row and the snapshot it was frozen with (ADR 0003, Amendment 8), and each stored line is used once.
+function keptLines(
+  inputs: readonly IngredientInput[],
+  stored: readonly RecipeIngredient[],
+): (RecipeIngredient | null)[] {
+  const unused = [...stored];
+  return inputs.map((input) => {
+    const at = unused.findIndex(
+      (line) =>
+        line.food_id === input.food_id &&
+        line.unit === input.unit &&
+        line.quantity === input.amount &&
+        line.portion_id === input.portion_id,
+    );
+    return at === -1 ? null : (unused.splice(at, 1)[0] ?? null);
+  });
+}
+
+// Each new ingredient's food and portions are read once, however many lines use the food. A line that
+// matches one of `stored` is not built again, so a food that was deleted or has changed since cannot
+// move or refuse a line nobody changed.
 export async function buildIngredients(
   ctx: ToolContext,
   inputs: readonly IngredientInput[],
+  stored: readonly RecipeIngredient[] = [],
 ): Promise<Built> {
-  const foodIds = [...new Set(inputs.map(({ food_id }) => food_id))];
+  const kept = keptLines(inputs, stored);
+  const foodIds = [
+    ...new Set(inputs.flatMap(({ food_id }, index) => (kept[index] === null ? [food_id] : []))),
+  ];
   const read = new Map(
     await Promise.all(
       foodIds.map(async (id) => {
@@ -94,6 +119,11 @@ export async function buildIngredients(
   );
   const ingredients: RecipeIngredient[] = [];
   for (const [index, input] of inputs.entries()) {
+    const keptLine = kept[index];
+    if (keptLine !== null && keptLine !== undefined) {
+      ingredients.push(keptLine);
+      continue;
+    }
     const found = read.get(input.food_id);
     const food = found?.food ?? null;
     // The repo returns a deleted food, because an old entry must keep resolving it. A deleted food is not
@@ -109,6 +139,10 @@ export async function buildIngredients(
     const portion = found.portions.find(({ id }) => id === input.portion_id);
     if (input.unit === "portion" && portion === undefined) {
       return { refused: invalidInput([`ingredients.${index}.portion_id`]) };
+    }
+    // Without a density of its own or an estimate, a millilitre would be saved as a gram.
+    if (input.unit === "ml" && !canMeasureByVolume(food, found.portions)) {
+      return { refused: invalidInput([`ingredients.${index}.amount`]) };
     }
     try {
       ingredients.push(

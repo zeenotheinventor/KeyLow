@@ -259,6 +259,43 @@ Deno.test("an https source URL is saved on the recipe, and none leaves it null",
 });
 
 Deno.test(
+  "the link is saved on the new recipe only, and no other recipe's link moves",
+  async () => {
+    const bystander = recipeRow({ source_url: "https://example.com/bystander" });
+    const { ctx, stub } = recipeContext([createRecipeTool], { rows: { recipes: [bystander] } });
+
+    const result = await executeTool(ctx, "create_recipe", {
+      ...chickenAndRice,
+      source_url: "https://example.com/chicken-and-rice",
+    });
+
+    assertEquals(result.status, "ok");
+    assertEquals(
+      Object.fromEntries(recipesOf(stub).map((row) => [row["name"], row["source_url"]])),
+      {
+        "Pasta bake": "https://example.com/bystander",
+        "Chicken and rice": "https://example.com/chicken-and-rice",
+      },
+    );
+  },
+);
+
+Deno.test("an amount in millilitres of a food with no density is invalid_input", async () => {
+  const { ctx, stub } = setUp();
+
+  const result = await executeTool(ctx, "create_recipe", {
+    ...chickenAndRice,
+    ingredients: [
+      chickenAndRiceIngredients[1],
+      { food_id: chickenId, unit: "ml", amount: 100, portion_id: null },
+    ],
+  });
+
+  assertEquals(payloadOf(result), { error: "invalid_input", fields: ["ingredients.1.amount"] });
+  assertEquals(recipesOf(stub), []);
+});
+
+Deno.test(
   "a link that could not be saved leaves the recipe saved and tells the model",
   async () => {
     const { ctx, stub, store, reported } = setUp();
