@@ -137,9 +137,12 @@ describe("the programme explainer route", () => {
 
   it("should be a transparent modal from its first frame, while the programme is still being read", async () => {
     showSettlingProgram();
+    // The read never answers, so the programme is still being read for the whole test and not by luck of timing.
+    diaryBackend.hungTables.add("programs");
     await renderRoute();
 
     expect(screen.queryByRole("heading", { name: "How your programme works" })).toBeNull();
+    expect(routerMock.redirect).not.toHaveBeenCalled();
     expect(routerMock.screenOptions.at(-1)).toMatchObject({
       presentation: "transparentModal",
       animation: "fade",
