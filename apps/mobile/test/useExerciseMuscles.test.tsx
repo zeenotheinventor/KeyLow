@@ -31,8 +31,19 @@ const KNOWN_MUSCLES: readonly ExerciseMuscleEntry[] = [
 // Every read of one exercise by its id that the client makes, and whether the server should fail it.
 let exerciseReads = 0;
 let failExerciseReads = false;
+// When set, a read of one exercise by its id waits for it before the server answers.
+let heldExerciseRead: Promise<void> | null = null;
 
-const countingFetch: typeof fetch = (input, init) => {
+function holdExerciseRead(): () => void {
+  let release = () => {};
+  heldExerciseRead = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+
+  return release;
+}
+
+const countingFetch: typeof fetch = async (input, init) => {
   const address = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
   const url = new URL(address);
   if (url.pathname.endsWith("/exercises") && url.searchParams.has("id")) {
@@ -45,6 +56,7 @@ const countingFetch: typeof fetch = (input, init) => {
         }),
       );
     }
+    await heldExerciseRead;
   }
 
   return trainFetch(input, init);
@@ -79,6 +91,7 @@ describe("useExerciseMuscles", () => {
     resetTrainBackend();
     exerciseReads = 0;
     failExerciseReads = false;
+    heldExerciseRead = null;
     trainBackend.exercises = [
       {
         id: PRESS_ID,
@@ -117,10 +130,14 @@ describe("useExerciseMuscles", () => {
 
   it("should be loading, then ready with the fetched map, once the sheet opens online", async () => {
     const { result, rerender } = await renderMuscles({ known: null, isOpen: false });
+    const releaseExerciseRead = holdExerciseRead();
 
     await rerender({ isOpen: true });
 
     expect(result.current).toEqual({ status: "loading" });
+    await act(() => {
+      releaseExerciseRead();
+    });
     await waitFor(() => {
       expect(result.current).toEqual({ status: "ready", muscles: SQUAT_MUSCLES });
     });
