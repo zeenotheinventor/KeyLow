@@ -218,3 +218,15 @@ export const TrailingLabel: StoryObj<Meta<ListRowWithTrailingProps>> = {
     trailing: { kind: "label", label: "Undone" },
   },
 };
+
+// The Export my data screen's file row: a file icon, the file's name and its size, and the success tick named
+// "Ready" at the end. Once the file is saved the same row says "Saved". Its props are the row with a trailing
+// tick, which takes no press, so it has a story type of its own.
+export const TrailingTick: StoryObj<Meta<ListRowWithTrailingProps>> = {
+  args: {
+    icon: "FileJson",
+    title: "ki-lo-export-2026-11-04.json",
+    subtitle: "1.8 MB · Ready to save",
+    trailing: { kind: "tick", label: "Ready" },
+  },
+};

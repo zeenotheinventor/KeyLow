@@ -188,7 +188,7 @@ describe("the legal copy", () => {
       );
     });
 
-    it("should say in-app export and delete are on the way, not that they exist", () => {
+    it("should say in-app delete is on the way, not that it exists", () => {
       expect(allTextOf(document)).toContain("on the way");
       expect(allTextOf(document)).not.toMatch(/Settings/);
     });
@@ -402,13 +402,13 @@ describe("the legal copy", () => {
       expect(rights?.bullets?.join("\n")).toContain("ico.org.uk");
     });
 
-    it("should tell people to email to use their rights, and say in-app export and delete are on the way", () => {
+    it("should tell people to email to use their rights, export from More, and say in-app delete is on the way", () => {
       const how = PRIVACY_POLICY.sections.find(
         (section) => section.heading === "How to use your rights",
       );
       expect(how?.paragraphs).toEqual([
         "Email hello@sojisoft.com and say what you need.",
-        "Today, you export or delete your information by emailing hello@sojisoft.com. In-app export and delete are on the way.",
+        "You export your information in the app, from More, under Export my data. Today, you delete it by emailing hello@sojisoft.com. In-app delete is on the way.",
       ]);
     });
 

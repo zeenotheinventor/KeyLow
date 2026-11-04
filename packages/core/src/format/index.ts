@@ -15,3 +15,4 @@ export type { PortionAmount } from "./portionAmount";
 export { APP_VERSION, formatAppVersion, formatBuildLine } from "./appVersion";
 export { formatGroupedGrams } from "./groupedGrams";
 export { formatScaledCount } from "./scaledCount";
+export { formatFileSize } from "./fileSize";
