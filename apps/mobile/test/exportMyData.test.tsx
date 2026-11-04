@@ -3,7 +3,11 @@ import { act, render, screen, userEvent, waitFor, within } from "@testing-librar
 
 import ExportMyDataRoute from "../app/(tabs)/more/export";
 import { ThemeProvider } from "../lib/theme";
-import { fakePickedDirectory, madeUpAccountExport } from "./support/accountExportFixtures";
+import {
+  fakePickedDirectory,
+  madeUpAccountExport,
+  pickerCancelledError,
+} from "./support/accountExportFixtures";
 import { resetRouterMock, routerMock } from "./support/expoRouterMock";
 import { compileKitStyles } from "./support/kitStyles";
 import { registerAppStyles } from "./support/nativeWindStyles";
@@ -201,7 +205,7 @@ describe("the Export my data screen", () => {
 
     it("should keep both cards once the file is saved", async () => {
       const held = holdTheExport();
-      mockBackend.pickDirectory.mockResolvedValue(fakePickedDirectory("Downloads"));
+      mockBackend.pickDirectory.mockResolvedValue(fakePickedDirectory("primary%3ADownload"));
       const user = await renderScreen();
       await held.resolve(madeUpAccountExport());
       await user.press(await screen.findByRole("button", { name: "Save file" }));
@@ -317,7 +321,7 @@ describe("the Export my data screen", () => {
     it("should create the file in the picked folder as JSON and write the serialised export", async () => {
       const data = madeUpAccountExport();
       const held = holdTheExport();
-      const folder = fakePickedDirectory("Downloads");
+      const folder = fakePickedDirectory("primary%3ADownload");
       mockBackend.pickDirectory.mockResolvedValue(folder);
       const user = await renderScreen();
       await held.resolve(data);
@@ -369,26 +373,26 @@ describe("the Export my data screen", () => {
     }
 
     it("should say where it was saved, with the picked folder's own name, and the Saved tick", async () => {
-      await saveToFolder("Downloads", bigNote);
+      await saveToFolder("primary%3ADownload", bigNote);
 
       expect(
-        await screen.findByLabelText(`${FILE_NAME}, 1.8 MB · Saved to Downloads`),
+        await screen.findByLabelText(`${FILE_NAME}, 1.8 MB · Saved to Download`),
       ).toBeOnTheScreen();
       expect(screen.getByRole("img", { name: "Saved" })).toBeOnTheScreen();
       expect(screen.queryByRole("img", { name: "Ready" })).not.toBeOnTheScreen();
     });
 
-    it("should use whatever name the picked folder has", async () => {
-      await saveToFolder("Documents");
+    it("should show a folder inside another by its own name, not the address the picker gives", async () => {
+      await saveToFolder("primary%3ADocuments%2FBackups");
 
       expect(
-        await screen.findByLabelText(`${FILE_NAME}, 1 KB · Saved to Documents`),
+        await screen.findByLabelText(`${FILE_NAME}, 1 KB · Saved to Backups`),
       ).toBeOnTheScreen();
     });
 
     // A recommendation, awaiting Zee: no board draws a folder with no name.
     it("should say the folder you picked when the folder has no name", async () => {
-      await saveToFolder("");
+      await saveToFolder("primary%3A");
 
       expect(
         await screen.findByLabelText(`${FILE_NAME}, 1 KB · Saved to the folder you picked`),
@@ -396,7 +400,7 @@ describe("the Export my data screen", () => {
     });
 
     it("should leave Done as the only button, with its caption", async () => {
-      await saveToFolder("Downloads");
+      await saveToFolder("primary%3ADownload");
 
       expect(await screen.findByRole("button", { name: "Done" })).toBeEnabled();
       expect(screen.getByText(WORDS.savedFooter)).toBeOnTheScreen();
@@ -405,7 +409,7 @@ describe("the Export my data screen", () => {
     });
 
     it("should go back to More on Done", async () => {
-      const user = await saveToFolder("Downloads");
+      const user = await saveToFolder("primary%3ADownload");
 
       await user.press(await screen.findByRole("button", { name: "Done" }));
 
@@ -415,7 +419,7 @@ describe("the Export my data screen", () => {
 
   describe("a cancelled picker", () => {
     it.each([
-      ["rejects", () => mockBackend.pickDirectory.mockRejectedValue(new Error("cancelled"))],
+      ["is cancelled", () => mockBackend.pickDirectory.mockRejectedValue(pickerCancelledError())],
       ["returns no folder", () => mockBackend.pickDirectory.mockResolvedValue(undefined)],
     ])("should go back to ready, with no error, when the picker %s", async (_name, arrange) => {
       const held = holdTheExport();
@@ -435,8 +439,8 @@ describe("the Export my data screen", () => {
 
     it("should let the person pick a folder again afterwards", async () => {
       const held = holdTheExport();
-      const folder = fakePickedDirectory("Downloads");
-      mockBackend.pickDirectory.mockRejectedValueOnce(new Error("cancelled"));
+      const folder = fakePickedDirectory("primary%3ADownload");
+      mockBackend.pickDirectory.mockRejectedValueOnce(pickerCancelledError());
       mockBackend.pickDirectory.mockResolvedValueOnce(folder);
       const user = await renderScreen();
       await held.resolve(madeUpAccountExport());
@@ -448,7 +452,7 @@ describe("the Export my data screen", () => {
       await user.press(screen.getByRole("button", { name: "Save file" }));
 
       expect(
-        await screen.findByLabelText(`${FILE_NAME}, 1 KB · Saved to Downloads`),
+        await screen.findByLabelText(`${FILE_NAME}, 1 KB · Saved to Download`),
       ).toBeOnTheScreen();
       expect(mockBackend.exportMyData).toHaveBeenCalledTimes(1);
     });
@@ -471,7 +475,7 @@ describe("the Export my data screen", () => {
 
     it("should show the same banner when the write fails", async () => {
       const held = holdTheExport();
-      const folder = fakePickedDirectory("Downloads");
+      const folder = fakePickedDirectory("primary%3ADownload");
       folder.write.mockImplementation(() => {
         throw new Error("no space left");
       });
@@ -485,6 +489,75 @@ describe("the Export my data screen", () => {
         within(await screen.findByRole("alert")).getByText(WORDS.failedBody),
       ).toBeOnTheScreen();
       expect(screen.getByRole("button", { name: "Try again" })).toBeEnabled();
+    });
+
+    it("should show the banner, not a quiet return to ready, when the picker fails for any other reason", async () => {
+      const held = holdTheExport();
+      mockBackend.pickDirectory.mockRejectedValue(
+        Object.assign(new Error("no document provider"), { code: "ERR_UNAVAILABLE" }),
+      );
+      const user = await renderScreen();
+      await held.resolve(madeUpAccountExport());
+
+      await user.press(await screen.findByRole("button", { name: "Save file" }));
+
+      expect(
+        within(await screen.findByRole("alert")).getByText(WORDS.failedBody),
+      ).toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Try again" })).toBeEnabled();
+      expect(screen.queryByText(/no document provider/)).not.toBeOnTheScreen();
+    });
+
+    it("should delete the file it created when the write fails, so no empty file is left", async () => {
+      const held = holdTheExport();
+      const folder = fakePickedDirectory("primary%3ADownload");
+      folder.write.mockImplementation(() => {
+        throw new Error("no space left");
+      });
+      mockBackend.pickDirectory.mockResolvedValue(folder);
+      const user = await renderScreen();
+      await held.resolve(madeUpAccountExport());
+
+      await user.press(await screen.findByRole("button", { name: "Save file" }));
+
+      await screen.findByRole("alert");
+      expect(folder.remove).toHaveBeenCalledTimes(1);
+    });
+
+    it("should still show the banner when the half-written file cannot be deleted either", async () => {
+      const held = holdTheExport();
+      const folder = fakePickedDirectory("primary%3ADownload");
+      folder.write.mockImplementation(() => {
+        throw new Error("no space left");
+      });
+      folder.remove.mockImplementation(() => {
+        throw new Error("read only");
+      });
+      mockBackend.pickDirectory.mockResolvedValue(folder);
+      const user = await renderScreen();
+      await held.resolve(madeUpAccountExport());
+
+      await user.press(await screen.findByRole("button", { name: "Save file" }));
+
+      expect(
+        within(await screen.findByRole("alert")).getByText(WORDS.failedBody),
+      ).toBeOnTheScreen();
+    });
+
+    it("should delete nothing when no file could be created", async () => {
+      const held = holdTheExport();
+      const folder = fakePickedDirectory("primary%3ADownload");
+      folder.createFile.mockImplementation(() => {
+        throw new Error("not allowed");
+      });
+      mockBackend.pickDirectory.mockResolvedValue(folder);
+      const user = await renderScreen();
+      await held.resolve(madeUpAccountExport());
+
+      await user.press(await screen.findByRole("button", { name: "Save file" }));
+
+      await screen.findByRole("alert");
+      expect(folder.remove).not.toHaveBeenCalled();
     });
 
     it("should run the export again from preparing on Try again", async () => {
@@ -517,6 +590,104 @@ describe("the Export my data screen", () => {
 
       expect(screen.queryByText(new RegExp(secret))).not.toBeOnTheScreen();
       expect(JSON.stringify(consoleCalls.map((spy) => spy.mock.calls))).not.toContain(secret);
+    });
+  });
+
+  describe("the status region", () => {
+    // A live region is not an accessible element, so the role query does not reach it and it is found by its prop.
+    function theLiveRegion() {
+      const regions =
+        screen.root?.queryAll(
+          (node) => typeof node.type === "string" && node.props["aria-live"] === "polite",
+        ) ?? [];
+      const [region] = regions;
+      if (regions.length !== 1 || region === undefined) {
+        throw new Error(`Expected one polite live region, found ${regions.length}`);
+      }
+      return region;
+    }
+
+    it("should be one polite live region that holds the progress row, the Ready file row and the Saved one", async () => {
+      const held = holdTheExport();
+      mockBackend.pickDirectory.mockResolvedValue(fakePickedDirectory("primary%3ADownload"));
+      const user = await renderScreen();
+      const region = theLiveRegion();
+      expect(within(region).getByText("Preparing your file")).toBeOnTheScreen();
+      await held.resolve(madeUpAccountExport());
+      await screen.findByLabelText(`${FILE_NAME}, 1 KB · Ready to save`);
+      expect(theLiveRegion()).toBe(region);
+
+      await user.press(screen.getByRole("button", { name: "Save file" }));
+
+      await screen.findByLabelText(`${FILE_NAME}, 1 KB · Saved to Download`);
+      expect(theLiveRegion()).toBe(region);
+      expect(within(region).getByRole("img", { name: "Saved" })).toBeOnTheScreen();
+    });
+  });
+
+  describe("leaving by the tab bar", () => {
+    // The tabs blur a screen and keep it mounted, so the file must be dropped on blur and made again on focus.
+    async function blur() {
+      routerMock.isFocused = false;
+      await screen.rerender(
+        <ThemeProvider fixedPreference="dark">
+          <ExportMyDataRoute />
+        </ThemeProvider>,
+      );
+    }
+
+    async function focus() {
+      routerMock.isFocused = true;
+      await screen.rerender(
+        <ThemeProvider fixedPreference="dark">
+          <ExportMyDataRoute />
+        </ThemeProvider>,
+      );
+    }
+
+    it("should go back to preparing, with the file gone, when the screen loses focus", async () => {
+      const held = holdTheExport();
+      await renderScreen();
+      await held.resolve(madeUpAccountExport());
+      await screen.findByLabelText(`${FILE_NAME}, 1 KB · Ready to save`);
+
+      await blur();
+
+      expect(screen.getByText("Preparing your file")).toBeOnTheScreen();
+      expect(screen.queryByLabelText(/Ready to save/)).not.toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Save file" })).toBeDisabled();
+    });
+
+    it("should prepare a fresh file when the screen is focused again", async () => {
+      const held = holdTheExport();
+      await renderScreen();
+      await held.resolve(madeUpAccountExport());
+      await screen.findByLabelText(`${FILE_NAME}, 1 KB · Ready to save`);
+      await blur();
+      const second = holdTheExport();
+
+      await focus();
+
+      expect(mockBackend.exportMyData).toHaveBeenCalledTimes(2);
+      expect(screen.getByText("Preparing your file")).toBeOnTheScreen();
+      await second.resolve(madeUpAccountExport());
+      expect(await screen.findByLabelText(`${FILE_NAME}, 1 KB · Ready to save`)).toBeOnTheScreen();
+    });
+
+    it("should show a saved screen as preparing again after the person comes back to it", async () => {
+      const held = holdTheExport();
+      mockBackend.pickDirectory.mockResolvedValue(fakePickedDirectory("primary%3ADownload"));
+      const user = await renderScreen();
+      await held.resolve(madeUpAccountExport());
+      await user.press(await screen.findByRole("button", { name: "Save file" }));
+      await screen.findByRole("img", { name: "Saved" });
+      holdTheExport();
+
+      await blur();
+      await focus();
+
+      expect(screen.getByText("Preparing your file")).toBeOnTheScreen();
+      expect(screen.queryByRole("img", { name: "Saved" })).not.toBeOnTheScreen();
     });
   });
 });

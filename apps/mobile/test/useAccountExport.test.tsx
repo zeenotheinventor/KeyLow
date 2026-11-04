@@ -1,6 +1,8 @@
 import { act, renderHook, waitFor } from "@testing-library/react-native";
+import { StrictMode } from "react";
 
 import { fakePickedDirectory, madeUpAccountExport } from "./support/accountExportFixtures";
+import { resetRouterMock, routerMock } from "./support/expoRouterMock";
 import { useAccountExport } from "../components/ExportMyDataScreen/useAccountExport";
 
 import type { AccountExport } from "@keylow/core";
@@ -23,6 +25,10 @@ jest.mock("@keylow/api-client", () => ({
 jest.mock("expo-file-system", () => ({
   Directory: { pickDirectoryAsync: () => mockBackend.pickDirectory() },
 }));
+jest.mock(
+  "expo-router",
+  () => jest.requireActual<{ mockExpoRouter: unknown }>("./support/expoRouterMock").mockExpoRouter,
+);
 jest.mock("../lib/supabase", () => ({
   supabase: jest.requireActual<{ mockSupabaseClient: unknown }>("./support/supabaseMock")
     .mockSupabaseClient,
@@ -32,6 +38,7 @@ jest.mock("../lib/supabase", () => ({
 // leaves a hook that has let go of it and a Save file that finds nothing to write.
 describe("useAccountExport letting go of the file", () => {
   beforeEach(() => {
+    resetRouterMock();
     mockBackend.exportMyData.mockReset();
     mockBackend.pickDirectory.mockReset();
     mockBackend.exportMyData.mockResolvedValue(madeUpAccountExport());
@@ -128,5 +135,72 @@ describe("useAccountExport letting go of the file", () => {
 
     expect(mockBackend.exportMyData).toHaveBeenCalledTimes(1);
     expect(result.current.state.status).toBe("ready");
+  });
+
+  it("should write nothing when the screen loses focus, as the tabs do without unmounting it", async () => {
+    const { result, rerender } = await renderHook(() => useAccountExport());
+    await waitFor(() => {
+      expect(result.current.state.status).toBe("ready");
+    });
+    const { save } = result.current;
+
+    routerMock.isFocused = false;
+    await rerender({});
+    await act(async () => {
+      await save();
+    });
+
+    expect(result.current.state).toEqual({ status: "idle" });
+    expect(result.current.fileName).toBeUndefined();
+    expect(mockBackend.pickDirectory).not.toHaveBeenCalled();
+  });
+
+  it("should prepare a new file, not bring back the old one, when focus returns", async () => {
+    const { result, rerender } = await renderHook(() => useAccountExport());
+    await waitFor(() => {
+      expect(result.current.state.status).toBe("ready");
+    });
+    routerMock.isFocused = false;
+    await rerender({});
+
+    routerMock.isFocused = true;
+    await rerender({});
+
+    await waitFor(() => {
+      expect(result.current.state.status).toBe("ready");
+    });
+    expect(mockBackend.exportMyData).toHaveBeenCalledTimes(2);
+  });
+
+  it("should write nothing when the folder is picked after the screen was left", async () => {
+    const folder = fakePickedDirectory("primary%3ADownload");
+    let pickFolder: (picked: typeof folder) => void = () => undefined;
+    mockBackend.pickDirectory.mockReturnValue(
+      new Promise((resolve) => {
+        pickFolder = resolve;
+      }),
+    );
+    const { result, unmount } = await renderHook(() => useAccountExport());
+    await waitFor(() => {
+      expect(result.current.state.status).toBe("ready");
+    });
+    let saving: Promise<void> = Promise.resolve();
+    await act(() => {
+      saving = result.current.save();
+    });
+
+    await unmount();
+    await act(async () => {
+      pickFolder(folder);
+      await saving;
+    });
+
+    expect(folder.createFile).not.toHaveBeenCalled();
+  });
+
+  it("should start the export once when React starts the screen twice", async () => {
+    await renderHook(() => useAccountExport(), { wrapper: StrictMode });
+
+    expect(mockBackend.exportMyData).toHaveBeenCalledTimes(1);
   });
 });

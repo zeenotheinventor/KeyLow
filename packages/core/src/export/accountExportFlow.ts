@@ -17,13 +17,15 @@ export type AccountExportEvent =
   | { type: "pickerCancelled" }
   | { type: "savedTo"; folderName: string }
   | { type: "failedWhile"; step: AccountExportStep }
-  | { type: "retry" };
+  | { type: "retry" }
+  | { type: "reset" };
 
 export const initialAccountExportState: AccountExportState = { status: "idle" };
 
 /**
  * The screen's states and the events between them. An event that does not belong to the state, such as a
- * late result after the screen has moved on, leaves the state as it is.
+ * late result after the screen has moved on, leaves the state as it is. `reset` is the screen being left, from
+ * any state, and the file with it.
  */
 export function accountExportReducer(
   state: AccountExportState,
@@ -48,5 +50,7 @@ export function accountExportReducer(
         : state;
     case "retry":
       return state.status === "failed" ? { status: "preparing" } : state;
+    case "reset":
+      return initialAccountExportState;
   }
 }

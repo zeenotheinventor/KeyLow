@@ -37,46 +37,40 @@ export function ExportMyDataScreen() {
     );
   }
 
+  // One region that stays mounted from preparing to saved, so a screen reader hears the progress row become
+  // the Ready file row and then the Saved one. The failure is its own alert.
   function renderStatus() {
-    switch (state.status) {
-      case "idle":
-      case "preparing":
-        return (
-          <View aria-live="polite" role="status">
-            <Card padding={0}>
-              <ListRow
-                icon="LoaderCircle"
-                subtitle={copy.preparing.caption}
-                title={copy.preparing.title}
-              />
-            </Card>
-          </View>
-        );
-      case "ready":
-      case "saving":
-      case "saved":
-        return (
-          <View role="status">
-            <Card padding={0}>
-              <ListRow
-                icon="FileJson"
-                subtitle={
-                  state.status === "saved"
-                    ? describeExportSaved(sizeText ?? "", folderName ?? "")
-                    : describeExportReady(sizeText ?? "")
-                }
-                title={fileName ?? ""}
-                trailing={{
-                  kind: "tick",
-                  label: state.status === "saved" ? copy.saved.tickLabel : copy.ready.tickLabel,
-                }}
-              />
-            </Card>
-          </View>
-        );
-      case "failed":
-        return <Banner body={copy.failed.body} title={copy.failed.title} variant="error" />;
+    if (state.status === "failed") {
+      return <Banner body={copy.failed.body} title={copy.failed.title} variant="error" />;
     }
+    const isPreparing = state.status === "idle" || state.status === "preparing";
+    return (
+      <View aria-live="polite" role="status">
+        <Card padding={0}>
+          {isPreparing ? (
+            <ListRow
+              icon="LoaderCircle"
+              subtitle={copy.preparing.caption}
+              title={copy.preparing.title}
+            />
+          ) : (
+            <ListRow
+              icon="FileJson"
+              subtitle={
+                state.status === "saved"
+                  ? describeExportSaved(sizeText ?? "", folderName ?? "")
+                  : describeExportReady(sizeText ?? "")
+              }
+              title={fileName ?? ""}
+              trailing={{
+                kind: "tick",
+                label: state.status === "saved" ? copy.saved.tickLabel : copy.ready.tickLabel,
+              }}
+            />
+          )}
+        </Card>
+      </View>
+    );
   }
 
   function renderFooter() {

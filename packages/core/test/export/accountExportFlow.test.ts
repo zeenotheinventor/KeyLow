@@ -75,6 +75,24 @@ describe("accountExportReducer", () => {
     });
   });
 
+  describe("leaving the screen", () => {
+    it.each([
+      ["preparing", preparing],
+      ["ready", ready],
+      ["saving", saving],
+      ["saved", saved],
+      ["failed", failedWhilePreparing],
+    ])("should forget everything and be idle again from %s", (_name, state) => {
+      expect(accountExportReducer(state, { type: "reset" })).toEqual(initialAccountExportState);
+    });
+
+    it("should be able to start again after a reset", () => {
+      const reset = accountExportReducer(ready, { type: "reset" });
+
+      expect(accountExportReducer(reset, { type: "start" })).toEqual(preparing);
+    });
+  });
+
   describe("events that do not belong to the state", () => {
     it("should not start again once the export is under way or done", () => {
       for (const state of [preparing, ready, saving, saved, failedWhilePreparing]) {

@@ -22,9 +22,22 @@ export const madeUpAccountExport = (note = "after a run"): AccountExport => ({
   tables: { ...emptyTables(), weigh_ins: [{ id: "a", weight_kg: 80.5, note }] },
 });
 
-/** What `Directory.pickDirectoryAsync` hands back, as far as the screen uses it. */
+/**
+ * What `Directory.pickDirectoryAsync` hands back, as far as the screen uses it. The name is the picker's own,
+ * the last part of the tree address, so a folder called Download is `primary%3ADownload`.
+ */
 export function fakePickedDirectory(name: string) {
   const write = jest.fn<undefined, [string]>();
-  const createFile = jest.fn<{ write: typeof write }, [string, string | null]>(() => ({ write }));
-  return { name, createFile, write };
+  const remove = jest.fn<undefined, []>();
+  const createFile = jest.fn<
+    { write: typeof write; delete: typeof remove },
+    [string, string | null]
+  >(() => ({ write, delete: remove }));
+  return { name, createFile, write, remove };
 }
+
+/** What the Android picker rejects with when the person backs out of it. */
+export const pickerCancelledError = () =>
+  Object.assign(new Error("The file picker was cancelled by the user"), {
+    code: "ERR_PICKER_CANCELLED",
+  });
