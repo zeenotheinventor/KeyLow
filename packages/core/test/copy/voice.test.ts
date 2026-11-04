@@ -26,8 +26,11 @@ const exportedFunctionNames = Object.entries(copy)
   .filter(([, value]) => typeof value === "function")
   .map(([name]) => name);
 
-// The sign up checkbox and the setup buttons that say "my targets" are the person's own words, not Ki-Lo's.
+// The sign up checkbox, the setup buttons that say "my targets" and the Export my data row and title are the
+// person's own words, not Ki-Lo's.
 const personsOwnStatements = [
+  copy.ACCOUNT_EXPORT_COPY.moreRow.title,
+  copy.ACCOUNT_EXPORT_COPY.title,
   ...collectStrings(copy.SIGN_UP_ACCEPTANCE),
   copy.SETUP_SHELL.setOwnTargetsLabel,
   copy.SETUP_TARGETS_ROW.title,

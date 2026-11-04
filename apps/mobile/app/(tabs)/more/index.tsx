@@ -1,5 +1,6 @@
 import { useAssistantConsent, useProgramSummary, useTargets } from "@keylow/api-client";
 import {
+  ACCOUNT_EXPORT_COPY,
   MORE_SCREEN,
   TAB_TITLES,
   describeAssistantMoreRow,
@@ -24,7 +25,8 @@ import { useReadsEnabled } from "../../../lib/useReadsEnabled";
 // Programme sits under it and opens the Programme screen inside this tab, its subtitle the next check-in or the offer to
 // let Ki-Lo set the targets, and Targets says "From your programme" while the programme's targets are in force.
 // Recipes is Nutrition's last row and opens the recipe library inside this tab, where it moved from the bar.
-// Weight opens the Weight screen inside this tab, Appearance, the Body map and the Dashboard body map are set here, and Sign out is Account's one row.
+// Weight opens the Weight screen inside this tab, Appearance, the Body map and the Dashboard body map are set here, and Account
+// holds Export my data, which opens its screen inside this tab, above Sign out.
 // Assistant is the first row of Settings and opens its settings screen inside this tab, its sub line and value
 // following whether the assistant is on, and none until that is read.
 // Reminders and About are under Settings and open their screens. No board draws Reminders, and its icon is the
@@ -139,6 +141,16 @@ export default function MoreRoute() {
           />
         </GroupedList>
         <GroupedList title={MORE_SCREEN.account.title}>
+          <ListRow
+            icon="Download"
+            subtitle={ACCOUNT_EXPORT_COPY.moreRow.subtitle}
+            title={ACCOUNT_EXPORT_COPY.moreRow.title}
+            onPress={() => {
+              openOnce(() => {
+                router.push("/more/export");
+              });
+            }}
+          />
           <ListRow
             chevron={false}
             icon="LogOut"

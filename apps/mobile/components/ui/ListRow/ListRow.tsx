@@ -170,6 +170,13 @@ export function ListRow({
             </Text>
           ) : null}
         </View>
+        {trailing.kind === "tick" ? (
+          // The tick has a name of its own, so a group around it would fold the name away. The 8 points
+          // of padding with the row's 8 on the right give the export board's 16 beside the tick.
+          <View className="shrink-0 pr-2">
+            <Icon label={trailing.label} name="Check" tone="success" />
+          </View>
+        ) : null}
         {trailing.kind === "action" ? (
           // The button is 36 points high, so it reaches the 44 point touch target by hit slop, as the kit's small Button does.
           <PressableSurface

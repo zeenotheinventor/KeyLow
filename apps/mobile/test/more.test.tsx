@@ -676,6 +676,44 @@ describe("the More screen", () => {
     });
   });
 
+  describe("Export my data", () => {
+    it("should be the first row in Account, above Sign out, with its icon and a chevron", async () => {
+      await renderMore();
+
+      const account = within(screen.getByLabelText("Account"));
+      const row = account.getByRole("button", {
+        name: "Export my data, A file with everything in your account",
+      });
+
+      expect(row).toBeEnabled();
+      expect(drawingsIn(row)).toHaveLength(2);
+      const rows = account.getAllByRole("button");
+      expect(rows).toHaveLength(2);
+      expect(rows[0]).toBe(row);
+      expect(rows[1]).toHaveAccessibleName("Sign out");
+    });
+
+    it("should open the Export my data screen inside the More tab when pressed", async () => {
+      const user = userEvent.setup();
+      await renderMore();
+
+      await user.press(screen.getByRole("button", { name: /^Export my data/ }));
+
+      expect(routerMock.push).toHaveBeenCalledWith("/more/export");
+    });
+
+    it("should open the screen once on a double tap", async () => {
+      const user = userEvent.setup();
+      await renderMore();
+      const row = screen.getByRole("button", { name: /^Export my data/ });
+
+      await user.press(row);
+      await user.press(row);
+
+      expect(routerMock.push).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe("Sign out", () => {
     it("should draw its icon and no chevron, because it acts and goes nowhere", async () => {
       await renderMore();

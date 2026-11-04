@@ -6,3 +6,9 @@ export {
   serialiseAccountExport,
 } from "./accountExport";
 export type { AccountExport, AccountExportRow, AccountExportTable } from "./accountExport";
+export { accountExportReducer, initialAccountExportState } from "./accountExportFlow";
+export type {
+  AccountExportEvent,
+  AccountExportState,
+  AccountExportStep,
+} from "./accountExportFlow";

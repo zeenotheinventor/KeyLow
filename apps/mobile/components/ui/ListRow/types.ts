@@ -131,11 +131,14 @@ export type ListRowWithToggleProps = ListRowBaseProps & {
 /**
  * What a row of the changes list draws after its words. `action` is a text button in the accent ink, as the
  * assistant's cards draw their Undo, named for its row, `busy` while it runs. `label` is plain muted words,
- * such as "Undone" or "Can't undo", read as part of the row's one name.
+ * such as "Undone" or "Can't undo", read as part of the row's one name. `tick` is a success tick for a state
+ * that is done, such as the export file's "Ready" or "Saved": it has the name `label` of its own, and the words
+ * on the left are named without it.
  */
 export type ListRowTrailing =
   | { kind: "action"; label: string; onPress: () => void; busy?: boolean | undefined }
-  | { kind: "label"; label: string };
+  | { kind: "label"; label: string }
+  | { kind: "tick"; label: string };
 
 /**
  * A row that goes nowhere, with an action or a label at the end, as `assistant-settings · changes` draws
