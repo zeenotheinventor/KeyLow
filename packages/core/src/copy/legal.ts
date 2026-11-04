@@ -165,7 +165,7 @@ export const PRIVACY_POLICY: LegalDocument = {
       heading: "How to use your rights",
       paragraphs: [
         `Email ${COMPANY_DETAILS.contactEmail} and say what you need.`,
-        `Today, you export or delete your information by emailing ${COMPANY_DETAILS.contactEmail}. In-app export and delete are on the way.`,
+        `You export your information in the app, from More, under Export my data. Today, you delete it by emailing ${COMPANY_DETAILS.contactEmail}. In-app delete is on the way.`,
       ],
     },
     {
