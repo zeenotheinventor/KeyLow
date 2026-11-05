@@ -6,9 +6,10 @@ import { runCli } from "./cli.ts";
 import { openLocalHttpSession } from "./httpSession.ts";
 import { askCases } from "../cases/ask.ts";
 import { compactionCases } from "../cases/compaction.ts";
+import { redTeamCases } from "../cases/redteam.ts";
 
 const output = await runCli(process.argv.slice(2), process.env, {
-  cases: [...askCases, ...compactionCases],
+  cases: [...askCases, ...compactionCases, ...redTeamCases],
   openSession: openLocalHttpSession,
 });
 

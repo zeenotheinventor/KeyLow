@@ -5,8 +5,10 @@ import { createCaseEnvironment } from "./caseEnvironment.ts";
 import { createEvalDatabase } from "./database.ts";
 import { createFixtureUser } from "./fixtureUser.ts";
 import { createHttpDriver } from "./httpDriver.ts";
+import { attachRedTeamWorld } from "./redTeamSession.ts";
 import { readSupabaseStatus } from "../../../packages/db/scripts/supabaseStatus.ts";
 import { writeAskExtras } from "../fixtures/askExtras.ts";
+import { redTeamWorldHolder } from "../fixtures/redTeamWorld.ts";
 
 import type { EvalSession } from "./cli.ts";
 import type { FixtureUser } from "./fixtureUser.ts";
@@ -81,13 +83,17 @@ export async function openLocalHttpSession(): Promise<EvalSession> {
     const serviceClient = createClient<Database>(stack.apiUrl, stack.serviceRoleKey, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
+    // User B and the rows of the red-team set (KEY-702). It cannot fail the session.
+    await attachRedTeamWorld({ stack, userA: user, serviceClient });
     return {
       driver,
       database: createEvalDatabase(user.client),
       environment: createCaseEnvironment({ client: serviceClient, userId: user.id }),
-      close: user.remove,
+      // B goes first, and A is removed whatever happens to B.
+      close: () => redTeamWorldHolder.detach().finally(user.remove),
     };
   } catch (error) {
+    await redTeamWorldHolder.detach().catch(() => undefined);
     await user.remove();
     throw error;
   }
