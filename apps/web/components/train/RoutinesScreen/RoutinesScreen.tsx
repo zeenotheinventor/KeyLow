@@ -1,0 +1,152 @@
+"use client";
+
+import { useProfileTimeZone, useRoutines } from "@keylow/api-client";
+import {
+  GENERIC_ERROR,
+  RETRY_LABEL,
+  ROUTINES_EMPTY,
+  ROUTINES_SCREEN,
+  TRAIN_LOADING_NAME,
+  describeArchivedRoutinesLink,
+  describeOtherRoutineMeta,
+} from "@keylow/core/copy";
+import { iconStroke } from "@keylow/tokens";
+import { Archive, Calendar, Plus } from "lucide-react";
+import Link from "next/link";
+
+import { RoutineCard } from "../RoutineCard";
+import { activeFromOf, routineItemOf } from "./routineItems";
+
+import type { RoutinesScreenProps } from "./types";
+
+import { BackToFoodsLink } from "@/components/foods/FoodDetail";
+import { Button } from "@/components/ui/Button";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorState } from "@/components/ui/ErrorState";
+import { GroupedList } from "@/components/ui/GroupedList";
+import { ListRow } from "@/components/ui/ListRow";
+import { Skeleton } from "@/components/ui/Skeleton";
+import { trainPath, trainRoutinesArchivedPath } from "@/lib/trainRoutes";
+
+/**
+ * The routines list, as the `routines · list` and `routines · empty` boards draw it in the web shell: Back to
+ * Train and the title, the active routine as a card, the other routines in a card of rows, and the link to
+ * the archived routines. With no routine it shows the empty state. The list is read with the archived
+ * routines in one request, so the archived page opened from here already has them. The date the active
+ * routine began is in the profile's time zone, and the list does not wait for the zone: until it is known
+ * the date is left out. Every control but Back and the archived link is drawn only when its handler is
+ * given, so none is a dead control.
+ */
+export function RoutinesScreen({ onCreateRoutine, onEditRoutine }: RoutinesScreenProps) {
+  const routines = useRoutines({ archived: true });
+  const timeZone = useProfileTimeZone();
+
+  const live = routines.data?.filter((routine) => !routine.is_archived) ?? [];
+  const active = live.find((routine) => routine.is_active);
+  const others = live.filter((routine) => routine !== active).map(routineItemOf);
+  const archivedCount = (routines.data?.length ?? 0) - live.length;
+
+  const title = (
+    <div className="flex items-center justify-between gap-3">
+      <h1 className="text-h1">{ROUTINES_SCREEN.title}</h1>
+      {onCreateRoutine === undefined || (active === undefined && others.length === 0) ? null : (
+        <Button variant="secondary" onClick={onCreateRoutine}>
+          <Plus aria-hidden strokeWidth={iconStroke} />
+          {ROUTINES_SCREEN.newRoutineLabel}
+        </Button>
+      )}
+    </div>
+  );
+
+  function renderBody() {
+    if (routines.data === undefined) {
+      return routines.isError ? (
+        <ErrorState
+          title={GENERIC_ERROR}
+          retryLabel={RETRY_LABEL}
+          onRetry={() => {
+            void routines.refetch();
+          }}
+        />
+      ) : (
+        <Skeleton label={TRAIN_LOADING_NAME} variant="block" />
+      );
+    }
+
+    return (
+      <>
+        {active === undefined && others.length === 0 ? (
+          <EmptyState
+            icon={Calendar}
+            title={ROUTINES_EMPTY.title}
+            body={ROUTINES_EMPTY.body}
+            action={
+              onCreateRoutine === undefined
+                ? undefined
+                : {
+                    label: ROUTINES_EMPTY.action,
+                    icon: Plus,
+                    variant: "primary",
+                    onClick: onCreateRoutine,
+                  }
+            }
+          />
+        ) : null}
+        {active === undefined ? null : (
+          <section aria-label={ROUTINES_SCREEN.activeLabel} className="flex flex-col gap-2">
+            <h2 className="flex min-h-[32px] items-center px-1 text-body-strong">
+              {ROUTINES_SCREEN.activeLabel}
+            </h2>
+            <RoutineCard
+              {...routineItemOf(active)}
+              activeFrom={activeFromOf(active, timeZone.data)}
+              onPress={
+                onEditRoutine === undefined
+                  ? undefined
+                  : () => {
+                      onEditRoutine({ id: active.id, name: active.name });
+                    }
+              }
+            />
+          </section>
+        )}
+        {others.length === 0 ? null : (
+          <GroupedList title={ROUTINES_SCREEN.otherSectionName}>
+            {others.map((routine) => (
+              <ListRow
+                key={routine.id}
+                className="min-h-[64px]"
+                title={routine.name}
+                subtitle={describeOtherRoutineMeta(routine)}
+                chevron={false}
+                {...(onEditRoutine === undefined
+                  ? {}
+                  : {
+                      onClick: () => {
+                        onEditRoutine({ id: routine.id, name: routine.name });
+                      },
+                    })}
+              />
+            ))}
+          </GroupedList>
+        )}
+        {archivedCount === 0 ? null : (
+          <Button asChild variant="ghost" className="self-start">
+            <Link href={trainRoutinesArchivedPath()}>
+              <Archive aria-hidden strokeWidth={iconStroke} />
+              {describeArchivedRoutinesLink(archivedCount)}
+            </Link>
+          </Button>
+        )}
+      </>
+    );
+  }
+
+  return (
+    <div className="mx-auto flex w-full max-w-[1180px] flex-col gap-3 xl:gap-5">
+      <BackToFoodsLink tone="accent" label={ROUTINES_SCREEN.backLabel} href={trainPath()} />
+      {title}
+      <div className="flex flex-col gap-4 xl:max-w-[800px]">{renderBody()}</div>
+    </div>
+  );
+}
