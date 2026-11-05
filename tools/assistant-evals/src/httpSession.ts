@@ -5,11 +5,10 @@ import { createCaseEnvironment } from "./caseEnvironment.ts";
 import { createEvalDatabase } from "./database.ts";
 import { createFixtureUser } from "./fixtureUser.ts";
 import { createHttpDriver } from "./httpDriver.ts";
-import { startPageServer } from "./pageServer.ts";
+import { stopPageServer } from "./pageServerHolder.ts";
 import { createUndoTurn } from "./undoTurn.ts";
 import { readSupabaseStatus } from "../../../packages/db/scripts/supabaseStatus.ts";
 import { writeAskExtras } from "../fixtures/askExtras.ts";
-import { fixturePages } from "../fixtures/pages/index.ts";
 
 import type { EvalSession } from "./cli.ts";
 import type { FixtureUser } from "./fixtureUser.ts";
@@ -101,17 +100,12 @@ async function timeZoneOf(user: FixtureUser): Promise<string | null> {
 
 /**
  * The session of a run against the local stack: a new eval user with the synthetic diary and the assistant consent, the HTTP driver
- * for the served `assistant` function, and the eval user's own view of the database. It also starts the page
- * server the recipe import cases read their pages from (`src/pageServer.ts`). Closing it removes the user and
- * stops the server.
+ * for the served `assistant` function, and the eval user's own view of the database. Closing it removes the user and
+ * stops the page server if a case started one (`src/pageServerHolder.ts`).
  */
 export async function openLocalHttpSession(): Promise<EvalSession> {
   const stack = await readSupabaseStatus(databaseWorkdir);
-  const pageServer = await startPageServer(fixturePages);
-  const user = await createFixtureUser(stack).catch(async (error: unknown) => {
-    await pageServer.close();
-    throw error;
-  });
+  const user = await createFixtureUser(stack);
   try {
     // Without the consent the first turn is refused with `consent_needed`. It is the app's own write.
     await setAssistantConsent(user.client, user.id, true);
@@ -160,7 +154,7 @@ export async function openLocalHttpSession(): Promise<EvalSession> {
         try {
           await user.remove();
         } finally {
-          await pageServer.close();
+          await stopPageServer();
         }
       },
     };
@@ -168,7 +162,7 @@ export async function openLocalHttpSession(): Promise<EvalSession> {
     try {
       await user.remove();
     } finally {
-      await pageServer.close();
+      await stopPageServer();
     }
     throw error;
   }

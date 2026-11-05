@@ -425,6 +425,26 @@ describe("the pages", () => {
   });
 });
 
+describe("the page server", () => {
+  it("should be started by the setup of every case, which leaves the conversation to the first message", async () => {
+    let starts = 0;
+    const cases = recipeCasesOf(recipePages, () => {
+      starts += 1;
+      return Promise.resolve();
+    });
+    const environment = fakeEnvironment();
+
+    const conversations: (string | null | undefined)[] = [];
+    for (const evalCase of cases) {
+      conversations.push(await evalCase.setup?.(environment));
+    }
+
+    expect(starts).toBe(cases.length);
+    expect(conversations.every((conversation) => conversation === null)).toBe(true);
+    expect(cases.every((evalCase) => evalCase.setup !== undefined)).toBe(true);
+  });
+});
+
 describe("the Undo cases", () => {
   const undoCase = caseOf(pageNamed("undo-jsonld-plain-porridge"));
   const turn = (id: string) => ({ index: 0, result: turnResult({ turnId: id }) });

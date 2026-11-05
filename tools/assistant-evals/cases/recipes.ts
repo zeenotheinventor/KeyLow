@@ -20,6 +20,7 @@ import { foodPortionSchema, foodRowSchema } from "@keylow/core/schemas";
 import { READ_TOOLS } from "./ask.ts";
 import { pagePathOf, recipePages } from "../fixtures/pages/recipeImportPages.ts";
 import { recipePageUrl } from "../src/pageServer.ts";
+import { ensurePageServer } from "../src/pageServerHolder.ts";
 
 import type { Amount, ExpectedLine, RecipePage } from "../fixtures/pages/recipeImportPages.ts";
 import type { EvalCase, GradeContext, GradeOutcome, Grader } from "../src/case.ts";
@@ -321,7 +322,10 @@ export const messageFor = (page: RecipePage, position: number): string => {
 };
 
 /** The cases of the set: one for each page of the set, an Undo case among them when the page says so. */
-export function recipeCasesOf(pages: readonly RecipePage[] = recipePages): readonly EvalCase[] {
+export function recipeCasesOf(
+  pages: readonly RecipePage[] = recipePages,
+  servePages: () => Promise<void> = ensurePageServer,
+): readonly EvalCase[] {
   return pages.map((page, position): EvalCase => {
     const message = messageFor(page, position);
     const graders: Grader[] = [
@@ -334,6 +338,11 @@ export function recipeCasesOf(pages: readonly RecipePage[] = recipePages): reado
     return {
       id: `recipes/${page.id}`,
       set: "recipes",
+      // The page server starts with the first case that needs it, once, and the session stops it at the end.
+      setup: async () => {
+        await servePages();
+        return null;
+      },
       messages: [message],
       ...(page.undoes === true
         ? {
