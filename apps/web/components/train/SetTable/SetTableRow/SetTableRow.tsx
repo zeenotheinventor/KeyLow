@@ -1,6 +1,7 @@
 import { useId } from "react";
 
 import { SetCheckButton } from "../SetCheckButton";
+import { SetMarkButton } from "../SetMarkButton";
 
 import type { SetTableColumn } from "../types";
 import type { SetTableRowProps } from "./types";
@@ -37,7 +38,15 @@ export function SetTableRow({ row }: SetTableRowProps) {
     <>
       <tr className={cn("h-11", isLogged && "bg-success-muted")}>
         <td className={cn("pl-3 text-label-small tabular-nums md:px-4", markClasses)}>
-          {row.label}
+          {row.typeEdit === undefined ? (
+            row.label
+          ) : (
+            <SetMarkButton
+              name={row.typeEdit.name}
+              label={row.label}
+              onPress={row.typeEdit.onPress}
+            />
+          )}
         </td>
         <td className="text-caption tabular-nums text-text-muted">{row.previous}</td>
         {row.state === "done"

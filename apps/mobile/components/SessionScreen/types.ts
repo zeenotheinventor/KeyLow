@@ -35,12 +35,6 @@ export type SetTypeOpening = {
   setNumber: number;
 };
 
-/** Changes the type of a logged set. */
-export type ChangeSetTypeRequest = {
-  setId: string;
-  setType: SetType;
-};
-
 /** What the screen has read: the shared view, and for a ready session what the finish screen shows as it stands now. */
 export type SessionScreenView =
   | Exclude<SessionView, { status: "ready" }>

@@ -10,7 +10,12 @@ import {
   SQUAT_ID,
   STANDING_CALF_RAISE_ID,
 } from "./sessionRows";
-import { exerciseSetRows, scaffoldSession, sessionExercises } from "../../src/training";
+import {
+  exerciseSetRows,
+  scaffoldSession,
+  sessionExercises,
+  workingNumberOfRow,
+} from "../../src/training";
 
 import type { SessionSet } from "./sessionRows";
 import type { LastPerformanceSet } from "../../src/training";
@@ -576,5 +581,37 @@ describe("exerciseSetRows for warm-ups", () => {
       setType: "warmup",
       entry: { state: "logged", loadKg: 60, reps: 8, rir: null },
     });
+  });
+});
+
+describe("workingNumberOfRow", () => {
+  const squatRows = () => {
+    const squat = sessionExercises(legs, goldenLegsSets)[0];
+    if (squat === undefined) {
+      throw new Error("The golden Legs day plans the squat first");
+    }
+    return exerciseSetRows(squat, goldenLegsSets, []);
+  };
+
+  it("should give each warm-up before the first working set the number 1", () => {
+    const rows = squatRows();
+
+    expect(rows.map((_, index) => workingNumberOfRow(rows, index)).slice(0, 2)).toEqual([1, 1]);
+  });
+
+  it("should give a working set its own number", () => {
+    const rows = squatRows();
+
+    expect(rows.map((_, index) => workingNumberOfRow(rows, index)).slice(2, 5)).toEqual([1, 2, 3]);
+  });
+
+  it("should count the working sets before a warm-up logged between them", () => {
+    const rows = [
+      { setType: "working", setNumber: 1 },
+      { setType: "drop", setNumber: 2 },
+      { setType: "warmup", setNumber: 0 },
+    ] as const;
+
+    expect(workingNumberOfRow(rows, 2)).toBe(3);
   });
 });

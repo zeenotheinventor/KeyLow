@@ -368,3 +368,4 @@ export type {
   TrainingReminderSettings,
 } from "./trainingReminders";
 export { weekDayLookOf, type WeekDayLook } from "./weekDayLook";
+export { workingNumberOfRow } from "./exerciseRows";

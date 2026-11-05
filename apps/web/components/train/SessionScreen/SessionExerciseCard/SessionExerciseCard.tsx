@@ -5,6 +5,7 @@ import {
   describeSetColumns,
   describeSetInputError,
   describeSetRow,
+  describeSetTypeSheet,
   isWordedSetInputRule,
 } from "@keylow/core/copy";
 import {
@@ -14,11 +15,12 @@ import {
   setDraftOfValues,
   setValuesOfPrefill,
   validateSetDraft,
+  workingNumberOfRow,
 } from "@keylow/core/training";
 import { Plus } from "lucide-react";
 import { useRef, useState } from "react";
 
-import type { RowEdits, SessionExerciseCardProps } from "./types";
+import type { RowEdits, SessionExerciseCardProps, SetTypeOpening } from "./types";
 import type {
   SetTableColumn,
   SetTableEntryRow,
@@ -27,6 +29,7 @@ import type {
 import type { SetDraft, SetDraftIssue, SetType } from "@keylow/core/training";
 
 import { SetTable } from "@/components/train/SetTable";
+import { SetTypeDialog } from "@/components/train/SetTypeDialog";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 
@@ -48,7 +51,9 @@ const withoutRow = <Value,>(
  * or says under the row what rule they break. What is typed stays in its row until the set is logged, so a
  * write that fails brings the row back as it was typed. The check of a logged row removes it. Add set adds one
  * more row, filled with the same again of the exercise's last set, or as the next row is when nothing is
- * logged yet. The added rows are kept as the fewest rows the card must show: logging any set raises the sets
+ * logged yet. The mark of a row opens the set types dialog: on a row to log it keeps the type with what is
+ * typed in the row, which the set is then logged with, and on a logged row it changes the stored set. The
+ * added rows are kept as the fewest rows the card must show: logging any set raises the sets
  * done and leaves the rows as many, and a row added while none is left to log stays until a set is logged.
  */
 export function SessionExerciseCard({
@@ -60,6 +65,7 @@ export function SessionExerciseCard({
   exercise,
   sessionSets,
   logging,
+  typeChange,
 }: SessionExerciseCardProps) {
   const lastPerformance = useLastPerformance(exercise.exerciseId, {
     excludeSessionId: sessionId,
@@ -69,6 +75,7 @@ export function SessionExerciseCard({
     Readonly<Record<string, readonly SetDraftIssue[]>>
   >({});
   const [minimumRows, setMinimumRows] = useState(0);
+  const [typeOpening, setTypeOpening] = useState<SetTypeOpening | null>(null);
   const addSetRef = useRef<HTMLButtonElement>(null);
   const [latestSession] = lastPerformance.data ?? [];
   const previousSets = latestSession?.sets ?? [];
@@ -104,15 +111,19 @@ export function SessionExerciseCard({
   const entryRowOf = ({
     key,
     state,
-    setType,
+    setType: slotType,
     setNumber,
     previous,
     defaults,
-  }: Pick<SetTableEntryRow, "key" | "state" | "setType"> & {
+  }: Pick<SetTableEntryRow, "key" | "state"> & {
+    /** The type the row's slot has, which the person's own choice for the row replaces. */
+    setType: SetType;
+    /** The number the row has among the working sets, or would have as one. */
     setNumber: number;
     previous: Parameters<typeof describeSetRow>[0]["previous"];
     defaults: Pick<SetDraft, SetTableColumn>;
   }): SetTableEntryRow => {
+    const setType = edits[key]?.setType ?? slotType;
     const draft: SetDraft = {
       setType,
       rpe: "",
@@ -148,6 +159,18 @@ export function SessionExerciseCard({
       label: copy.label,
       previous: copy.previous,
       checkName: copy.accessibleName,
+      typeEdit: {
+        name: describeSetTypeSheet({ exerciseName: name, setType, setNumber }).accessibleName,
+        onPress: (event) => {
+          setTypeOpening({
+            rowKey: key,
+            setId: null,
+            setType,
+            setNumber,
+            mark: event.currentTarget,
+          });
+        },
+      },
       fields: { load: field("load"), reps: field("reps"), rir: field("rir") },
       errors: [
         ...new Set(
@@ -158,7 +181,15 @@ export function SessionExerciseCard({
       ],
       onCheck: (event) => {
         if (result.ok) {
-          logging.logSet({ exerciseId, values: result.values });
+          const isWarmup = result.values.setType === "warmup";
+          // A warm-up does not use up the slot the row stands for, so once it is stored the row starts afresh
+          // as the slot's own type, instead of staying a warm-up with the numbers of the one just logged.
+          // Until then, and when nothing is stored, what was typed and the type chosen stay in the row.
+          void logging.logSet({ exerciseId, values: result.values }).then((isStored) => {
+            if (isStored && isWarmup) {
+              setEdits((current) => withoutRow(current, key));
+            }
+          });
           // A click made with a key has no pointer position, so its detail is 0.
           if (event.detail === 0) {
             focusAfterLog(event.currentTarget);
@@ -171,14 +202,10 @@ export function SessionExerciseCard({
   };
 
   const plannedAndLoggedRows = rows.map(
-    ({
-      setId,
-      state,
-      setType,
-      setNumber,
-      previous,
-      entry,
-    }): SetTableEntryRow | SetTableLoggedRow => {
+    (
+      { setId, state, setType, setNumber, previous, entry },
+      index,
+    ): SetTableEntryRow | SetTableLoggedRow => {
       if (setId === null) {
         return entryRowOf({
           key: `planned-${setNumber}`,
@@ -193,6 +220,8 @@ export function SessionExerciseCard({
         });
       }
       const copy = describeSetRow({ setType, setNumber, unit, previous, entry });
+      // A warm-up has no number of its own, so the dialog is given the one it would have as a working set.
+      const workingNumber = workingNumberOfRow(rows, index);
       return {
         key: setId,
         state: "done",
@@ -203,6 +232,22 @@ export function SessionExerciseCard({
         reps: copy.reps,
         rir: copy.rir,
         checkName: copy.accessibleName,
+        typeEdit: {
+          name: describeSetTypeSheet({ exerciseName: name, setType, setNumber: workingNumber })
+            .accessibleName,
+          onPress:
+            logging.isSaving(setId) || typeChange.isChangingType(setId)
+              ? undefined
+              : (event) => {
+                  setTypeOpening({
+                    rowKey: setId,
+                    setId,
+                    setType,
+                    setNumber: workingNumber,
+                    mark: event.currentTarget,
+                  });
+                },
+        },
         onCheck: logging.isSaving(setId)
           ? undefined
           : () => {
@@ -223,11 +268,26 @@ export function SessionExerciseCard({
       key: `added-${index + 1}`,
       state: "todo",
       setType,
-      setNumber: setType === "warmup" ? 0 : workingRowCount + index + 1,
+      setNumber: workingRowCount + index + 1,
       previous: null,
       defaults: valuesToAdd === null ? BLANK_DRAFT : setDraftOfValues(valuesToAdd, unit),
     });
   });
+
+  const chooseType = (setType: SetType) => {
+    if (typeOpening === null) {
+      return;
+    }
+    const { rowKey, setId } = typeOpening;
+    setTypeOpening(null);
+    if (setId !== null) {
+      if (setType !== typeOpening.setType) {
+        void typeChange.changeSetType({ setId, setType });
+      }
+      return;
+    }
+    setEdits((current) => ({ ...current, [rowKey]: { ...current[rowKey], setType } }));
+  };
 
   return (
     <Card asChild padding="none" className="flex flex-col pb-2 pt-3">
@@ -254,6 +314,19 @@ export function SessionExerciseCard({
             {SESSION_ACTIVE.addSetAction}
           </Button>
         </div>
+        {typeOpening === null ? null : (
+          <SetTypeDialog
+            open
+            exerciseName={name}
+            setType={typeOpening.setType}
+            setNumber={typeOpening.setNumber}
+            returnFocusTo={typeOpening.mark}
+            onChoose={chooseType}
+            onClose={() => {
+              setTypeOpening(null);
+            }}
+          />
+        )}
       </section>
     </Card>
   );

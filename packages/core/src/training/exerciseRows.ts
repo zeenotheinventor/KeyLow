@@ -95,6 +95,25 @@ export const sessionExercises = <Set extends PrefillSessionSet>(
   });
 };
 
+/**
+ * The number a row has among the exercise's working sets, or would have as one: a working, drop or failure
+ * set has its own number, and a warm-up, which has none, gets the one after the working sets that come
+ * before it. It is the number the set types dialog draws on its Working option. `index` is the row's place
+ * in `rows`.
+ */
+export const workingNumberOfRow = (
+  rows: readonly Readonly<{ setType: SetType; setNumber: number }>[],
+  index: number,
+): number => {
+  const row = rows[index];
+  if (row !== undefined && isWorkingType({ set_type: row.setType })) {
+    return row.setNumber;
+  }
+  return (
+    rows.slice(0, index).filter(({ setType }) => isWorkingType({ set_type: setType })).length + 1
+  );
+};
+
 /** What a row draws in its cells: the copy's own type, so a row goes to `describeSetRow` as it is. */
 export type SessionRowEntry = SetRowEntry;
 

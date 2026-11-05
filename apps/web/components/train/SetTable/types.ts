@@ -13,6 +13,14 @@ export type SetTableField = {
   onChange: (value: string) => void;
 };
 
+/** What the mark of a row does: it opens the set types dialog. */
+export type SetTableTypeEdit = {
+  /** The name of the mark, such as "Set type, leg press set 3". */
+  name: string;
+  /** Absent while the set is being saved or its type is being changed, so the mark does nothing until then. */
+  onPress: ((event: React.MouseEvent<HTMLButtonElement>) => void) | undefined;
+};
+
 type SetTableRowBase = {
   key: string;
   setType: SetType;
@@ -22,6 +30,8 @@ type SetTableRowBase = {
   previous: string;
   /** The name of the check, which says what pressing it does: "Log set 3, 180 kilograms, 11 reps". */
   checkName: string;
+  /** Absent for a table that only shows its sets, whose mark is then plain text. */
+  typeEdit?: SetTableTypeEdit;
 };
 
 /** A set that is logged: its numbers are text, and its check takes it back. */
