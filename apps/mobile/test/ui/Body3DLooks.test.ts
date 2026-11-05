@@ -1,172 +1,70 @@
+import { looksOf } from "@keylow/body-3d/looksOf";
 import { MUSCLE_IDS } from "@keylow/core/training";
 import { bodyMapPalette } from "@keylow/tokens";
 
-import { GLOW_INTENSITY_AT_FULL_ALPHA, looksOf, parseRgba } from "../../components/ui/Body3D/looks";
 import { readMuscle } from "../../components/ui/BodyFigure";
 
 import type { BodyFigureScale } from "../../components/ui/BodyFigure";
 
-// The looks come from `BodyFigure`'s reading, and its folder reads the saved body choice.
+// The 2D figure's reading is in the kit folder, which reads the saved body choice.
 jest.mock("@react-native-async-storage/async-storage", () => ({
   __esModule: true,
   default: { getItem: () => Promise.resolve(null), setItem: () => Promise.resolve() },
 }));
 
-describe("parseRgba", () => {
-  it("should split an rgba string into an opaque colour and its alpha", () => {
-    expect(parseRgba("rgba(240,72,72,0.55)")).toEqual({ color: "rgb(240, 72, 72)", alpha: 0.55 });
-  });
+// The looks themselves are tested in the body-3d package. This is the proof that the same value is the same colour in 2D and 3D.
+describe.each(["dark", "light"] as const)(
+  "the 3D looks against the 2D figure in the %s theme",
+  (scheme) => {
+    const palette = bodyMapPalette(scheme);
 
-  it("should allow spaces, and read rgb with no alpha as fully opaque", () => {
-    expect(parseRgba("rgb( 1 , 2 , 3 )")).toEqual({ color: "rgb(1, 2, 3)", alpha: 1 });
-  });
-
-  it("should throw on anything else, without echoing it", () => {
-    expect(() => parseRgba("hotpink")).toThrow("The glow colour is not an rgb or rgba string.");
-  });
-});
-
-describe("looksOf in the dark theme", () => {
-  const palette = bodyMapPalette("dark");
-
-  it("should hold a look for each of the 22 muscle ids and no other", () => {
-    expect(Object.keys(looksOf("heat", {}, palette)).sort()).toEqual([...MUSCLE_IDS].sort());
-  });
-
-  it.each([0, 1, 2, 3, 4, 5])("should colour heat step %i as readMuscle does", (step) => {
-    const looks = looksOf("heat", { abs: step }, palette);
-
-    expect(looks.abs.color).toBe(readMuscle("heat", step, palette).fill);
-  });
-
-  it.each([0, 1, 2, 3, 4])("should colour volume status %i as readMuscle does", (status) => {
-    const looks = looksOf("volume", { abs: status }, palette);
-
-    expect(looks.abs.color).toBe(readMuscle("volume", status, palette).fill);
-  });
-
-  it.each([0, 1, 2, 3])("should colour gap value %i as readMuscle does", (gap) => {
-    const looks = looksOf("gap", { abs: gap }, palette);
-
-    expect(looks.abs.color).toBe(readMuscle("gap", gap, palette).fill);
-  });
-
-  it.each([0, 1, 2, 3])("should colour role value %i as readMuscle does", (role) => {
-    const looks = looksOf("role", { abs: role }, palette);
-
-    expect(looks.abs.color).toBe(readMuscle("role", role, palette).fill);
-  });
-
-  it.each<[BodyFigureScale, number | undefined]>([
-    ["heat", undefined],
-    ["volume", undefined],
-    ["gap", undefined],
-    ["heat", 9],
-    ["heat", -3],
-    ["heat", Number.NaN],
-    ["volume", 7],
-    ["volume", 1.5],
-    ["gap", 12],
-    ["gap", -1],
-    ["role", undefined],
-    ["role", 4],
-    ["role", 1.5],
-    ["role", Number.NaN],
-  ])(
-    "should read a %s value of %s as readMuscle does, missing and out of range included",
-    (scale, value) => {
+    it.each<[BodyFigureScale, number | undefined]>([
+      ["heat", undefined],
+      ["heat", 0],
+      ["heat", 1],
+      ["heat", 2],
+      ["heat", 3],
+      ["heat", 4],
+      ["heat", 5],
+      ["heat", 9],
+      ["heat", -3],
+      ["heat", Number.NaN],
+      ["volume", undefined],
+      ["volume", 0],
+      ["volume", 1],
+      ["volume", 2],
+      ["volume", 3],
+      ["volume", 4],
+      ["volume", 7],
+      ["volume", 1.5],
+      ["gap", undefined],
+      ["gap", 0],
+      ["gap", 1],
+      ["gap", 2],
+      ["gap", 3],
+      ["gap", 12],
+      ["gap", -1],
+      ["role", undefined],
+      ["role", 0],
+      ["role", 1],
+      ["role", 2],
+      ["role", 3],
+      ["role", 4],
+      ["role", 1.5],
+      ["role", Number.NaN],
+    ])("should colour a %s value of %s as readMuscle does", (scale, value) => {
       const looks = looksOf(scale, value === undefined ? {} : { abs: value }, palette);
 
       expect(looks.abs.color).toBe(readMuscle(scale, value, palette).fill);
-    },
-  );
+    });
 
-  it("should colour a muscle with no value at rest on heat", () => {
-    expect(looksOf("heat", {}, palette).quads.color).toBe(palette.heat[0]);
-  });
+    it("should glow exactly where the 2D figure marks a muscle as the peak", () => {
+      const values = Object.fromEntries(MUSCLE_IDS.map((id, index) => [id, index % 6]));
+      const looks = looksOf("heat", values, palette);
 
-  it("should glow only at the peak of the heat scale", () => {
-    const looks = looksOf(
-      "heat",
-      { abs: 0, quads: 1, biceps: 2, triceps: 3, calves: 4, chest_upper: 5 },
-      palette,
-    );
-
-    const glowing = MUSCLE_IDS.filter((id) => looks[id].glow > 0);
-    expect(glowing).toEqual(["chest_upper"]);
-  });
-
-  it("should never glow on the volume, gap or role scale", () => {
-    const everyValue = Object.fromEntries(MUSCLE_IDS.map((id, index) => [id, index % 5]));
-
-    for (const scale of ["volume", "gap", "role"] as const) {
-      const looks = looksOf(scale, everyValue, palette);
-      expect(MUSCLE_IDS.filter((id) => looks[id].glow > 0)).toEqual([]);
-    }
-  });
-
-  it.each([0, 1, 2, 3, 4, 5])("should read heat step %i as that warm", (step) => {
-    expect(looksOf("heat", { abs: step }, palette).abs.warmth).toBe(step);
-  });
-
-  it("should read a muscle with no heat as not warm at all", () => {
-    expect(looksOf("heat", {}, palette).abs.warmth).toBe(0);
-  });
-
-  it.each([1, 2, 3, 4])("should read volume status %i as warmer than not trained", (status) => {
-    const looks = looksOf("volume", { abs: status }, palette);
-
-    expect(looks.abs.warmth).toBe(1);
-    expect(looksOf("volume", {}, palette).abs.warmth).toBe(0);
-  });
-
-  it.each([0, 1, 2])("should read gap value %i as warmer than not in the plan", (gap) => {
-    expect(looksOf("gap", { abs: gap }, palette).abs.warmth).toBe(1);
-    expect(looksOf("gap", {}, palette).abs.warmth).toBe(0);
-  });
-
-  it("should read a muscle at rest on the role scale as not warm and any role as warm", () => {
-    expect(looksOf("role", {}, palette).abs.warmth).toBe(0);
-    expect(looksOf("role", { abs: 0 }, palette).abs.warmth).toBe(0);
-    for (const role of [1, 2, 3]) {
-      expect(looksOf("role", { abs: role }, palette).abs.warmth).toBe(1);
-    }
-  });
-
-  it("should give each of the 22 muscles on the role scale the colour readMuscle gives it", () => {
-    const values = Object.fromEntries(MUSCLE_IDS.map((id, index) => [id, index % 4]));
-    const looks = looksOf("role", values, palette);
-
-    for (const id of MUSCLE_IDS) {
-      expect(looks[id].color).toBe(readMuscle("role", values[id], palette).fill);
-    }
-  });
-
-  it("should glow by the alpha of the heat glow token, in its colour", () => {
-    const { chest_upper: peak } = looksOf("heat", { chest_upper: 5 }, palette);
-    const { color, alpha } = parseRgba(palette.heatGlow);
-
-    expect(peak.glowColor).toBe(color);
-    expect(peak.glow).toBeCloseTo(alpha * GLOW_INTENSITY_AT_FULL_ALPHA);
-  });
-
-  it("should give a muscle that does not glow the same glow colour, so a fade between them only moves the strength", () => {
-    const looks = looksOf("heat", { chest_upper: 5, abs: 2 }, palette);
-
-    expect(looks.abs.glowColor).toBe(looks.chest_upper.glowColor);
-  });
-});
-
-// Light keeps the role scale's rest colour, which is the heat scale's first step and shares its dark value with
-// tokens that differ in light.
-describe("looksOf in the light theme", () => {
-  const palette = bodyMapPalette("light");
-
-  it("should read a muscle at rest on the role scale as not warm and any role as warm", () => {
-    expect(looksOf("role", {}, palette).abs.warmth).toBe(0);
-    expect(looksOf("role", { abs: 0 }, palette).abs.warmth).toBe(0);
-    for (const role of [1, 2, 3]) {
-      expect(looksOf("role", { abs: role }, palette).abs.warmth).toBe(1);
-    }
-  });
-});
+      for (const id of MUSCLE_IDS) {
+        expect(looks[id].glow > 0).toBe(readMuscle("heat", values[id], palette).isPeak);
+      }
+    });
+  },
+);

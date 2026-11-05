@@ -1,3 +1,4 @@
+import { looksOf } from "@keylow/body-3d/looksOf";
 import { bodyMapPalette } from "@keylow/tokens";
 import { vars } from "nativewind";
 import { useCallback, useEffect, useMemo } from "react";
@@ -6,7 +7,6 @@ import { Gesture, GestureDetector } from "react-native-gesture-handler";
 
 import { Body3DBoundary } from "./Body3DBoundary";
 import { body3DCanvasElement } from "./body3DCanvasElement";
-import { looksOf } from "./looks";
 import { useBodyLongPress } from "./useBodyLongPress";
 import { useBodyRotation } from "./useBodyRotation";
 import { useBodyZoom } from "./useBodyZoom";

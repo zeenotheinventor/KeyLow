@@ -1,9 +1,9 @@
+import { looksOf } from "@keylow/body-3d/looksOf";
 import { bodyMapPalette } from "@keylow/tokens";
 import { render } from "@testing-library/react-native";
 import { makeMutable } from "react-native-reanimated";
 
 import { Body3DCanvas } from "../../components/ui/Body3D/Body3DCanvas";
-import { looksOf } from "../../components/ui/Body3D/looks";
 import { FRAME_ASPECT, wholeBodyView } from "../support/zoomView";
 
 import type { Body3DCanvasProps, MusclePicker } from "../../components/ui/Body3D/types";

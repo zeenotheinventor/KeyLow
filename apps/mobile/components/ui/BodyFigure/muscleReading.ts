@@ -1,7 +1,7 @@
+import { fillsOf } from "@keylow/body-3d/looksOf";
 import { readMuscleValue } from "@keylow/core/training";
 
 import type { BodyFigureScale } from "./types";
-import type { BodyFigureTone } from "@keylow/core/training";
 import type { BodyMapPalette } from "@keylow/tokens";
 
 /*
@@ -17,28 +17,6 @@ export type MuscleReading = {
   /** Whether the muscle glows, which only the peak heat step does. */
   isPeak: boolean;
 };
-
-function fillsOf(palette: BodyMapPalette): Record<BodyFigureTone, string> {
-  return {
-    "heat-0": palette.heat[0],
-    "heat-1": palette.heat[1],
-    "heat-2": palette.heat[2],
-    "heat-3": palette.heat[3],
-    "heat-4": palette.heat[4],
-    "heat-5": palette.heat[5],
-    "volume-not-trained": palette.volume.notTrained,
-    "volume-maintaining": palette.volume.maintaining,
-    "volume-growing": palette.volume.growing,
-    "volume-productive": palette.volume.productive,
-    "volume-high": palette.volume.high,
-    "gap-behind": palette.gap.behind,
-    "gap-on-plan": palette.gap.onPlan,
-    "gap-ahead": palette.gap.ahead,
-    "role-primary": palette.role.primary,
-    "role-secondary": palette.role.secondary,
-    "role-assist": palette.role.assist,
-  };
-}
 
 /**
  * The fill and the spoken value of one muscle on one scale. A muscle with no value, or a value the scale

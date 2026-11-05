@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./looksOf": "./src/looksOf.ts",
     "./rotation": "./src/rotation.ts",
     "./touch": "./src/touch.ts",
     "./zoom": "./src/zoom.ts"
@@ -20,7 +21,6 @@
     "@gltf-transform/extensions": "^4.5.1",
     "@gltf-transform/functions": "^4.5.1",
     "@keylow/config": "workspace:*",
-    "@keylow/core": "workspace:*",
     "@types/three": "0.186.0",
     "eslint": "^9.39.5",
     "typescript": "^5.9.3",
@@ -28,6 +28,8 @@
   },
   "dependencies": {
     "@keylow/body-model": "workspace:*",
+    "@keylow/core": "workspace:*",
+    "@keylow/tokens": "workspace:*",
     "three": "0.186.1"
   }
 }
