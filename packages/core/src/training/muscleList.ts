@@ -1,6 +1,7 @@
 import { heatStepOf } from "./bodyMapValues";
 import { heatPercentOf, readyInHoursOf } from "./heatReadout";
 import { MUSCLE_GROUPS, MUSCLE_IDS, MUSCLES } from "./muscles";
+import { MUSCLE_NAMES } from "../copy/muscleNames";
 
 import type { MuscleGroup, MuscleId } from "./muscles";
 import type { MuscleState } from "./muscleState";
@@ -50,3 +51,39 @@ export const muscleListGroups = (
       };
     }),
   }));
+
+export type MusclesAboveRest = {
+  /** The muscles that are above rest, hottest first. Muscles of the same heat keep the order of the list. */
+  rows: MuscleListRow[];
+  /** How many muscles the rows leave out, because they are at rest. */
+  moreAtRest: number;
+};
+
+/**
+ * The muscles of the list that are above rest (heat step 1 and up), hottest first, and how many are left
+ * out. The web body map's Muscles card shows these rows and writes the count into its caption.
+ */
+export const musclesAboveRest = (groups: readonly MuscleListGroup[]): MusclesAboveRest => {
+  const all = groups.flatMap(({ rows }) => rows);
+  const rows = all
+    .filter(({ heatStep }) => heatStep > 0)
+    .sort((a, b) => b.heatPercent - a.heatPercent);
+  return { rows, moreAtRest: all.length - rows.length };
+};
+
+/**
+ * The groups with only the muscles whose name holds the query, ignoring case and the spaces around the
+ * query. A group left with no muscle is dropped, and a blank query keeps everything.
+ */
+export const filterMuscleListGroups = (
+  groups: readonly MuscleListGroup[],
+  query: string,
+): MuscleListGroup[] => {
+  const wanted = query.trim().toLowerCase();
+  return groups
+    .map(({ group, rows }) => ({
+      group,
+      rows: rows.filter(({ muscle }) => MUSCLE_NAMES[muscle].toLowerCase().includes(wanted)),
+    }))
+    .filter(({ rows }) => rows.length > 0);
+};

@@ -14,8 +14,8 @@ import { Skeleton } from "@/components/ui/Skeleton";
  * are `describeMuscleSheet`'s and nothing is worked out here. While the detail is read, or if reading it
  * failed, the dialog still names the muscle and has its Close button.
  */
-export function MuscleSheetBody({ muscle, view, weekStart, now, days }: MuscleSheetBodyProps) {
-  const detail = useMuscleDetail(muscle, { view, weekStart, now });
+export function MuscleSheetBody({ muscle, view, at, weekStart, now, days }: MuscleSheetBodyProps) {
+  const detail = useMuscleDetail(muscle, { view, at, weekStart, now });
   const routine = useActiveRoutine();
 
   if (detail.data === undefined) {

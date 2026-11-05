@@ -104,6 +104,8 @@ export const BODY_MAP = {
   back: "Back",
   backToTrain: "Back to Train",
   muscleListButton: "Muscle list",
+  /** The search over the web muscle list and the line when it finds nothing. The boards do not draw either. */
+  muscleSearch: { label: "Search muscles", noResults: "No muscle matches your search." },
   closeSheet: "Close",
   /** The screen reader action on a muscle that opens its sheet, which a long press does for a finger. */
   muscleDetailsAction: "Show details",
@@ -614,6 +616,10 @@ export type MuscleListRowCopy = {
   status: string;
   accessibleName: string;
 };
+
+/** The result count announced after a search of the muscle list: "No muscles", "1 muscle" and "7 muscles". */
+export const describeMuscleCount = (count: number): string =>
+  count === 0 ? "No muscles" : count === 1 ? "1 muscle" : `${count} muscles`;
 
 /** The words of one row of the muscle list. */
 export const describeMuscleListRow = ({

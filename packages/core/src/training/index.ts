@@ -205,8 +205,8 @@ export type {
 } from "./muscleDetail";
 export { setsBarPositionsOf, upcomingSessionsOf, weightingExampleOf } from "./muscleSheetContext";
 export type { SetsBarPositions } from "./muscleSheetContext";
-export { muscleListGroups } from "./muscleList";
-export type { MuscleListGroup, MuscleListRow } from "./muscleList";
+export { filterMuscleListGroups, muscleListGroups, musclesAboveRest } from "./muscleList";
+export type { MuscleListGroup, MuscleListRow, MusclesAboveRest } from "./muscleList";
 
 export {
   BODY_ARTWORK,

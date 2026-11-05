@@ -5,6 +5,8 @@ export type MuscleSheetBodyProps = {
   muscle: MuscleId;
   /** The view on screen, which decides the volume status the sets bar is filled in. */
   view: BodyMapView;
+  /** The day on screen, `YYYY-MM-DD`, a day of the week. Left out for the current moment. */
+  at?: string | undefined;
   /** The Monday that starts the week, `YYYY-MM-DD`. */
   weekStart: string;
   /** The current moment, an ISO timestamp with a zone. */

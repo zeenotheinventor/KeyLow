@@ -1,6 +1,11 @@
 "use client";
 
-import { useBodyMap, useProfileTimeZone, useStartSessionAction } from "@keylow/api-client";
+import {
+  useBodyMap,
+  useMuscleList,
+  useProfileTimeZone,
+  useStartSessionAction,
+} from "@keylow/api-client";
 import {
   BODY_MAP,
   TRAIN_ERROR,
@@ -10,7 +15,7 @@ import {
   describeNothingLogged,
 } from "@keylow/core/copy";
 import { addCalendarDays, daysSinceMonday, toLocalDate } from "@keylow/core/dates";
-import { TRAINING_PARAMS_V2 } from "@keylow/core/training";
+import { TRAINING_PARAMS_V2, musclesAboveRest } from "@keylow/core/training";
 import { CircleAlert, Dumbbell, PersonStanding, Plus, WifiOff } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -20,8 +25,8 @@ import { BodyMapCard } from "../BodyMapCard";
 import { BodyMapLegend } from "../BodyMapLegend";
 import { BodyMapLoading } from "../BodyMapLoading";
 import { FigureSettingDialog } from "../FigureSettingDialog";
+import { MusclesCard } from "../MusclesCard";
 import { MuscleSheet } from "../MuscleSheet";
-import { useBodyMapView } from "./useBodyMapView";
 
 import type { MuscleId } from "@keylow/core/training";
 
@@ -30,6 +35,8 @@ import { ErrorState } from "@/components/ui/ErrorState";
 import { IconButton } from "@/components/ui/IconButton";
 import { useToast } from "@/components/ui/Toast";
 import { useBodyFigure } from "@/lib/bodyFigure";
+import { muscleListPath } from "@/lib/bodyMapRoutes";
+import { useBodyMapView } from "@/lib/bodyMapView";
 import { trainSessionPath } from "@/lib/trainRoutes";
 import { useIsOnline } from "@/lib/useIsOnline";
 import { useNow } from "@/lib/useNow";
@@ -48,9 +55,9 @@ import { useNow } from "@/lib/useNow";
  * view. The first time it opens it asks which figure, and closing that question without an answer records
  * Male so it is not asked again. The button at the right of the title opens the question at any time.
  *
- * The page is a column of two: the card, and the cards that belong beside it (the legend today). The
- * scale switch, the day row, the muscle list and the muscle sheet add to the card's column or the side
- * column.
+ * The page is a column of two: the card, and the cards that belong beside it (the legend and the Muscles
+ * card). The Muscles card lists the muscles above rest for the view shown, and leads to the muscle list page.
+ * The scale switch and the day row add to the card's column or the side column.
  */
 export function BodyMapScreen() {
   const router = useRouter();
@@ -68,6 +75,9 @@ export function BodyMapScreen() {
   const [isFigureDialogOpen, setIsFigureDialogOpen] = useState(false);
   const [hasAskedFigure, setHasAskedFigure] = useState(false);
   const [sheetMuscle, setSheetMuscle] = useState<MuscleId | null>(null);
+  // Where the sheet gives focus back to: the Muscles card's row that opened it. A muscle of the figures
+  // has none, so focus goes back to whatever had it. It is set with the muscle and never while it is open.
+  const [sheetReturnFocus, setSheetReturnFocus] = useState<Element | undefined>(undefined);
   // The first visit asks once, as soon as the stored figure is known to be none (`hasChosen` is true until
   // the store is read, so false means read and unanswered). The dialog then stays open
   // through the choice, so the preview shows it, and the answer is only recorded when it closes. The state is
@@ -97,6 +107,12 @@ export function BodyMapScreen() {
   const moment = { scale: "heat", weekStart, now: now.toISOString() } as const;
   const actual = useBodyMap({ ...moment, view: "actual" });
   const projected = useBodyMap({ ...moment, view: "projected" });
+  // With no routine Projected shows Actual, so the saved view is only kept for when there is one.
+  const view =
+    chosenView === "projected" && projected.data?.projectedAvailable === true
+      ? "projected"
+      : "actual";
+  const list = useMuscleList({ view, weekStart, now: moment.now });
 
   const title = (
     <div className="flex flex-col gap-1">
@@ -127,8 +143,6 @@ export function BodyMapScreen() {
     // at once in the browser, so this adds no wait there.
     if (isViewRead && isFigureReady && actualData !== undefined && projectedData !== undefined) {
       const { projectedAvailable, todayProjectedIsActual } = projectedData;
-      // With no routine Projected shows Actual, so the saved view is only kept for when there is one.
-      const view = chosenView === "projected" && projectedAvailable ? "projected" : "actual";
       const shown = view === "projected" ? projectedData : actualData;
       const { viewLabel, subLine, toggleLabel } = describeBodyMapHeader({
         scale: "heat",
@@ -166,7 +180,10 @@ export function BodyMapScreen() {
                 setView(view === "projected" ? "actual" : "projected");
               }}
               note={note}
-              onLongPressMuscle={setSheetMuscle}
+              onLongPressMuscle={(muscle) => {
+                setSheetReturnFocus(undefined);
+                setSheetMuscle(muscle);
+              }}
               selectedMuscle={sheetMuscle ?? undefined}
             />
             <div className="flex min-w-0 flex-1 flex-col gap-3 xl:gap-5">
@@ -186,12 +203,23 @@ export function BodyMapScreen() {
                   }}
                 />
               ) : (
-                <BodyMapLegend />
+                <>
+                  <BodyMapLegend />
+                  <MusclesCard
+                    list={list.data === undefined ? null : musclesAboveRest(list.data)}
+                    listHref={muscleListPath()}
+                    onOpenMuscle={(muscle, row) => {
+                      setSheetReturnFocus(row);
+                      setSheetMuscle(muscle);
+                    }}
+                  />
+                </>
               )}
             </div>
           </div>
           <MuscleSheet
             muscle={sheetMuscle}
+            returnFocusTo={sheetReturnFocus}
             view={view}
             weekStart={weekStart}
             now={moment.now}

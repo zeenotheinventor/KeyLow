@@ -3,6 +3,7 @@
 import { BODY_MAP } from "@keylow/core/copy";
 import { useRouter } from "next/navigation";
 
+import type { BodyMapBackLinkProps } from "./types";
 import type { MouseEvent } from "react";
 
 import { BackToFoodsLink } from "@/components/foods/FoodDetail";
@@ -31,17 +32,17 @@ function hasPageToReturnTo(): boolean {
 /**
  * The way back from the body map. It returns to the page the person came from, whichever it was (the
  * dashboard card, or later the Train page), and goes to the dashboard when the page was opened directly
- * and the app has no page before it. Where it points is the dashboard, so a click that opens a new tab or
- * window, which has no history to return through, still lands somewhere sensible.
+ * and the app has no page before it. Where it points is the dashboard, or the page the caller names, so a
+ * click that opens a new tab or window, which has no history to return through, still lands somewhere sensible.
  */
-export function BodyMapBackLink() {
+export function BodyMapBackLink({ fallbackHref = DASHBOARD_HREF }: BodyMapBackLinkProps) {
   const router = useRouter();
 
   return (
     <BackToFoodsLink
       tone="accent"
       label={BODY_MAP.back}
-      href={DASHBOARD_HREF}
+      href={fallbackHref}
       onClick={(event) => {
         if (isPlainLeftClick(event) && hasPageToReturnTo()) {
           event.preventDefault();
