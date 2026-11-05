@@ -158,6 +158,19 @@ async function writeDiaryDay(
   }
 }
 
+/**
+ * The free plan allows 15 assistant turns a day, so turn 16 of a run would answer `day_limit` and look like a
+ * low pass rate. Only the service role writes `entitlements`, and the stack is local (see `assertLocalStack`).
+ */
+async function grantUnlimitedAssistant(admin: SupabaseClient, userId: string): Promise<void> {
+  const { error } = await admin
+    .from("entitlements")
+    .insert({ user_id: userId, feature: "assistant", plan: "unlimited", source: "eval" });
+  if (error) {
+    throw new Error(`Could not grant the eval user an unlimited plan (${error.code})`);
+  }
+}
+
 const LOCAL_HOSTNAMES: ReadonlySet<string> = new Set(["localhost", "127.0.0.1", "[::1]"]);
 
 /**
@@ -214,6 +227,7 @@ export async function createFixtureUser(
   };
 
   try {
+    await grantUnlimitedAssistant(admin, id);
     const client = createClient<Database>(stack.apiUrl, stack.anonKey, stateless);
     const { error: signInError } = await client.auth.signInWithPassword({ email, password });
     if (signInError) {
