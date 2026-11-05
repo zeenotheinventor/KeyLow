@@ -14,6 +14,7 @@ import Link from "next/link";
 
 import { PlanWeek } from "../PlanWeek";
 import { TodayCard } from "../TodayCard";
+import { TrainBodyMap } from "../TrainBodyMap";
 import { TrainFirstTime } from "../TrainFirstTime";
 import { TrainLoading } from "../TrainLoading";
 import { TrainNoRoutine } from "../TrainNoRoutine";
@@ -54,8 +55,9 @@ function bindViewSession(handler: (sessionId: string) => void, sessionId: string
  * behind the terms gate. Offline it shows what the page already holds, under a notice that says when.
  * Starting a session needs a connection, so the buttons that log or reopen one are dimmed offline. A button
  * is drawn only when its handler is given, and it passes the handler what the start needs: the routine day
- * and the time zone. The page is a column, so the cards that belong beside and under the Today card (the
- * body map and the week) slot into it.
+ * and the time zone. The page is a row from the extra large breakpoint, as the board draws it: the Today
+ * card and the week in the left column and the body map in a column of its own at 360 pixels, which
+ * stacks under them below it. The body map is left out on the first visit.
  */
 export function TrainScreen({
   isStarting = false,
@@ -102,6 +104,9 @@ export function TrainScreen({
     );
   }
 
+  // The first visit has nothing to show on a body map, as on the phone.
+  const isFirstTime =
+    home.status === "ready" && home.today === null && !home.hasRoutine && !home.hasLoggedSession;
   const freeStart =
     home.status === "ready" ? { routineDayId: null, timeZone: home.timeZone } : undefined;
 
@@ -115,59 +120,66 @@ export function TrainScreen({
             : TRAIN_OFFLINE_NOTHING_SAVED}
         </Banner>
       )}
-      <div className="flex flex-col gap-3 xl:max-w-[800px] xl:gap-5">
-        {home.status === "loading" ? <TrainLoading /> : null}
-        {home.status === "ready" && home.today !== null && freeStart !== undefined ? (
-          <TodayCard
-            card={home.today.card}
-            context={home.today.context}
-            exercises={plannedExercisesOf(routine.data, home.today.plannedDayId)}
-            isLoadingExercises={routine.isLoading}
-            isStarting={isStarting}
-            isStartAndResumeDisabled={!isOnline}
-            onResume={onResume}
-            onStart={
-              home.today.plannedDayId === null
-                ? undefined
-                : bindStart(onStart, {
-                    routineDayId: home.today.plannedDayId,
-                    timeZone: home.timeZone,
-                  })
-            }
-            onLogAnother={bindStart(onLogSession, freeStart)}
-            onLogSession={bindStart(onLogSession, freeStart)}
-            onViewSession={
-              onViewSession === undefined || home.today.sessionToViewId === null
-                ? undefined
-                : bindViewSession(onViewSession, home.today.sessionToViewId)
-            }
-          />
-        ) : null}
-        {home.status === "ready" && home.today === null && !home.hasRoutine ? (
-          home.hasLoggedSession ? (
-            <TrainNoRoutine
-              isLogDisabled={!isOnline}
+      <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:gap-5">
+        <div className="flex min-w-0 flex-col gap-3 xl:max-w-[800px] xl:flex-1 xl:gap-5">
+          {home.status === "loading" ? <TrainLoading /> : null}
+          {home.status === "ready" && home.today !== null && freeStart !== undefined ? (
+            <TodayCard
+              card={home.today.card}
+              context={home.today.context}
+              exercises={plannedExercisesOf(routine.data, home.today.plannedDayId)}
+              isLoadingExercises={routine.isLoading}
               isStarting={isStarting}
-              onCreateRoutine={onCreateRoutine}
-              onLogSession={bindStart(onLogSession, {
-                routineDayId: null,
-                timeZone: home.timeZone,
-              })}
+              isStartAndResumeDisabled={!isOnline}
+              onResume={onResume}
+              onStart={
+                home.today.plannedDayId === null
+                  ? undefined
+                  : bindStart(onStart, {
+                      routineDayId: home.today.plannedDayId,
+                      timeZone: home.timeZone,
+                    })
+              }
+              onLogAnother={bindStart(onLogSession, freeStart)}
+              onLogSession={bindStart(onLogSession, freeStart)}
+              onViewSession={
+                onViewSession === undefined || home.today.sessionToViewId === null
+                  ? undefined
+                  : bindViewSession(onViewSession, home.today.sessionToViewId)
+              }
             />
-          ) : (
-            <TrainFirstTime
-              isLogDisabled={!isOnline}
-              isStarting={isStarting}
-              onLogSession={bindStart(onLogSession, {
-                routineDayId: null,
-                timeZone: home.timeZone,
-              })}
-              onSetGoal={onSetGoal}
-            />
-          )
-        ) : null}
-        {home.status === "ready" && home.week !== null ? (
-          <PlanWeek week={home.week.plan} weekStart={home.week.weekStart} />
+          ) : null}
+          {home.status === "ready" && home.today === null && !home.hasRoutine ? (
+            home.hasLoggedSession ? (
+              <TrainNoRoutine
+                isLogDisabled={!isOnline}
+                isStarting={isStarting}
+                onCreateRoutine={onCreateRoutine}
+                onLogSession={bindStart(onLogSession, {
+                  routineDayId: null,
+                  timeZone: home.timeZone,
+                })}
+              />
+            ) : (
+              <TrainFirstTime
+                isLogDisabled={!isOnline}
+                isStarting={isStarting}
+                onLogSession={bindStart(onLogSession, {
+                  routineDayId: null,
+                  timeZone: home.timeZone,
+                })}
+                onSetGoal={onSetGoal}
+              />
+            )
+          ) : null}
+          {home.status === "ready" && home.week !== null ? (
+            <PlanWeek week={home.week.plan} weekStart={home.week.weekStart} />
+          ) : null}
+        </div>
+        {home.status === "ready" && !isFirstTime ? (
+          <div className="xl:w-[360px] xl:shrink-0">
+            <TrainBodyMap savedAt={home.savedAt} timeZone={home.timeZone} />
+          </div>
         ) : null}
       </div>
     </div>

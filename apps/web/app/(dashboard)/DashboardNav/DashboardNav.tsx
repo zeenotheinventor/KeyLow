@@ -22,7 +22,7 @@ import { cn } from "@/lib/utils";
 const SECTIONS: readonly DashboardSection[] = [
   { label: TAB_TITLES.dashboard, href: "/dashboard" },
   { label: TAB_TITLES.diary, href: "/diary" },
-  { label: TRAIN_HOME.tabLabel, href: trainPath() },
+  { label: TRAIN_HOME.tabLabel, href: trainPath(), alsoCurrentOn: ["/body-map"] },
   { label: TAB_TITLES.more, href: "/more", alsoCurrentOn: [recipesPath(), "/weight"] },
 ];
 

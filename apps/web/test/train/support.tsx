@@ -334,6 +334,10 @@ async function respond(input: string | URL | Request, init?: RequestInit): Promi
   if (pathname.endsWith("/workout_sets")) {
     return setRequest(request, searchParams);
   }
+  // The body map card reads these too. The golden week has no goal and no accepted suggestion.
+  if (pathname.endsWith("/training_goals") || pathname.endsWith("/accepted_suggestions")) {
+    return answer(request, []);
+  }
   if (pathname.endsWith("/exercises")) {
     return exerciseRead(request, searchParams);
   }

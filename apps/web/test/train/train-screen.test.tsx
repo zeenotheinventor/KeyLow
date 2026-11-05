@@ -1,4 +1,5 @@
 import {
+  BODY_MAP,
   TRAIN_ERROR,
   TRAIN_FIRST_TIME,
   TRAIN_HOME,
@@ -49,6 +50,7 @@ const goldenWeekThrough = (moment: "planned" | "in_progress" | "done" | "rest") 
 };
 
 const today = () => screen.findByRole("region", { name: TRAIN_HOME.todaySectionName });
+const bodyMap = () => screen.findByRole("region", { name: BODY_MAP.title });
 
 describe("the Train page", () => {
   beforeEach(() => {
@@ -99,6 +101,17 @@ describe("the Train page", () => {
         "Seated Leg Curl3 × 10 to 12 · RIR 1",
         "Standing Calf Raise4 × 10 to 15 · RIR 1",
       ]);
+    });
+
+    it("should draw the body map beside the Today card, with Show projected and a link to open it", async () => {
+      renderWithTrain(<TrainScreen />);
+
+      const map = await bodyMap();
+      expect(await today()).toBeTruthy();
+      expect(within(map).getByRole("button", { name: "Show projected" })).toBeTruthy();
+      expect(
+        within(map).getByRole("link", { name: BODY_MAP.trainCard.openName }).getAttribute("href"),
+      ).toBe("/body-map");
     });
 
     it("should draw no button while no handler is given", async () => {
@@ -238,6 +251,20 @@ describe("the Train page", () => {
       expect(screen.queryByRole("region", { name: TRAIN_HOME.todaySectionName })).toBeNull();
     });
 
+    it("should leave the body map out, as there is nothing to show on the first visit", async () => {
+      renderWithTrain(<TrainScreen />);
+
+      await screen.findByRole("heading", { name: TRAIN_FIRST_TIME.title });
+      // Long enough for the card's own reads to land, which is when it would draw.
+      await act(async () => {
+        await new Promise((resolve) => {
+          setTimeout(resolve, 300);
+        });
+      });
+      expect(screen.queryByRole("region", { name: BODY_MAP.title })).toBeNull();
+      expect(screen.queryByRole("link", { name: BODY_MAP.trainCard.openName })).toBeNull();
+    });
+
     it("should draw Set your goal and Log a session only with handlers", async () => {
       renderWithTrain(<TrainScreen />);
       await screen.findByRole("heading", { name: TRAIN_FIRST_TIME.title });
@@ -281,7 +308,15 @@ describe("the Train page", () => {
       renderWithTrain(<TrainScreen />);
 
       await screen.findByRole("heading", { name: TRAIN_NO_ROUTINE.title });
-      expect(screen.queryByRole("button")).toBeNull();
+      expect(screen.queryByRole("button", { name: TRAIN_NO_ROUTINE.createAction })).toBeNull();
+      expect(screen.queryByRole("button", { name: TRAIN_NO_ROUTINE.logAction })).toBeNull();
+    });
+
+    it("should still draw the body map, as the mobile page does", async () => {
+      renderWithTrain(<TrainScreen />);
+
+      await screen.findByRole("heading", { name: TRAIN_NO_ROUTINE.title });
+      expect(await bodyMap()).toBeTruthy();
     });
   });
 
@@ -291,6 +326,7 @@ describe("the Train page", () => {
 
       expect(screen.getByRole("status", { name: TRAIN_LOADING_NAME })).toBeTruthy();
       expect(screen.getByRole("heading", { level: 1, name: TRAIN_HOME.title })).toBeTruthy();
+      expect(screen.queryByRole("region", { name: BODY_MAP.title })).toBeNull();
     });
   });
 
@@ -304,6 +340,7 @@ describe("the Train page", () => {
       expect(within(alert).getByRole("heading", { name: TRAIN_ERROR.title })).toBeTruthy();
       expect(within(alert).getByText(TRAIN_ERROR.body)).toBeTruthy();
       expect(screen.getByRole("heading", { level: 1, name: TRAIN_HOME.title })).toBeTruthy();
+      expect(screen.queryByRole("region", { name: BODY_MAP.title })).toBeNull();
 
       trainBackend.failingReads.clear();
       await userEvent.click(within(alert).getByRole("button", { name: TRAIN_ERROR.action }));
@@ -326,9 +363,14 @@ describe("the Train page", () => {
         onlineManager.setOnline(false);
       });
 
-      const banner = await screen.findByRole("status");
-      expect(within(banner).getByText(TRAIN_OFFLINE_TITLE)).toBeTruthy();
-      expect(within(banner).getByText(describeOfflineBanner("17:55"))).toBeTruthy();
+      // The body map card's view label is a status too, so the banner is the one that holds the notice.
+      const banners = (await screen.findAllByRole("status")).filter(
+        (status) => within(status).queryByText(TRAIN_OFFLINE_TITLE) !== null,
+      );
+      expect(banners).toHaveLength(1);
+      for (const banner of banners) {
+        expect(within(banner).getByText(describeOfflineBanner("17:55"))).toBeTruthy();
+      }
       expect(within(card).getByRole("button", { name: "Start Legs" })).toHaveProperty(
         "disabled",
         true,
