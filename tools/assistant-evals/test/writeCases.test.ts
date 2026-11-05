@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { fakeEnvironment } from "./fakeEnvironment.ts";
-import { readTool, turnResult, writeTool } from "./helpers.ts";
+import { noUsage, readTool, turnResult, writeTool } from "./helpers.ts";
 import { rowDatabase } from "./rowDatabase.ts";
 import { READ_TOOLS } from "../cases/ask.ts";
 import { describeCasesOf } from "../cases/describe.ts";
@@ -86,7 +86,7 @@ describe("the write set", () => {
     expect(messagesOf("write-delete-several-entries-after-a-no").at(-1)).toBe("Keep them");
     expect(messagesOf("write-copy-day-after-a-yes").at(-1)).toBe(`Copy ${YESTERDAY_COUNT} entries`);
     expect(messagesOf("write-copy-day-after-a-no").at(-1)).toBe("Don't copy");
-    expect(messagesOf("write-archive-a-recipe-after-a-yes").at(-1)).toBe("Archive recipe");
+    expect(messagesOf("write-archive-a-recipe-after-a-yes").at(-2)).toBe("Archive recipe");
     expect(messagesOf("write-archive-a-recipe-after-a-no").at(-1)).toBe("Keep it");
     expect(messagesOf("write-set-calories-after-a-yes").at(-1)).toBe("Change target");
     expect(messagesOf("write-set-calories-after-a-no").at(-1)).toBe(`Keep 1,300`);
@@ -115,8 +115,13 @@ describe("the write set", () => {
     const buttons =
       /^(?:Delete \d+ entries|Copy \d+ entries|Keep .*|Don't copy|Archive recipe|Change target)$/;
 
+    // The one read that follows a press, to prove the next request is accepted (KEY-840), is a question on purpose.
+    const readAfterAPress = "What recipes do I have?";
+
     for (const evalCase of [...cases, ...describeCasesOf(ANCHOR)]) {
-      for (const message of evalCase.messages.filter((candidate) => !buttons.test(candidate))) {
+      for (const message of evalCase.messages.filter(
+        (candidate) => !buttons.test(candidate) && candidate !== readAfterAPress,
+      )) {
         expect(message).not.toMatch(questionOpening);
       }
     }
@@ -493,6 +498,7 @@ const perfect: Record<string, () => Played> = {
           calls: [writeTool("archive_recipe", { id: "r", confirmation_id: "c" })],
           actions: [["archive_recipe", 1]],
         },
+        { calls: [readTool("get_recipes", {})] },
       ],
       { recipes: [{ name: "Scratch oat pot", is_archived: true }] },
     ),
@@ -815,6 +821,47 @@ describe("a write case, played right", () => {
       }
 
       expect(await grade(caseOf(id), play_())).toEqual([]);
+    },
+  );
+});
+
+describe("a press of a confirm button in the write set", () => {
+  const pressedCases: readonly (readonly [id: string, pressTurn: number])[] = [
+    ["write-delete-several-entries-after-a-yes", 2],
+    ["write-copy-day-after-a-yes", 2],
+    ["write-archive-a-recipe-after-a-yes", 2],
+    ["write-set-calories-after-a-yes", 1],
+    ["write-set-all-the-targets-after-a-yes", 1],
+    ["undo-an-archived-recipe", 2],
+  ];
+
+  it.each(pressedCases)(
+    "%s should fail when the press made a model call",
+    async (id, pressTurn) => {
+      const played = perfect[id]?.();
+      if (played === undefined) {
+        throw new Error(`No play for ${id}`);
+      }
+      const evalCase = caseOf(id);
+      const database = {
+        ...rowDatabase(played.rows),
+        firstModelCallOfTurn: (turnId: string) =>
+          Promise.resolve(
+            turnId === played.turns[pressTurn]?.turnId
+              ? { ...noUsage, inputTokens: 40, outputTokens: 5 }
+              : null,
+          ),
+      };
+
+      const reasons = (
+        await Promise.all(evalCase.expect.map((check) => check({ turns: played.turns, database })))
+      )
+        .filter(({ passed }) => !passed)
+        .map(({ reason }) => reason);
+
+      expect(reasons.join("\n")).toContain(
+        `turn ${pressTurn + 1} made a model call, and the press of a confirm button runs in code`,
+      );
     },
   );
 });

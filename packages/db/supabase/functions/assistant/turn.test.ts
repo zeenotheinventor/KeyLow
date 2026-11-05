@@ -1256,6 +1256,46 @@ for (const [label, answer] of [
   );
 }
 
+for (const [label, answer] of [
+  ["no card at all", okResult({ name: "delete_entry", actionId: deletedAction })],
+  [
+    "a card the app cannot draw",
+    okResult({
+      name: "delete_entry",
+      structured: { card: { kind: "not_a_card" } },
+      actionId: deletedAction,
+    }),
+  ],
+] as const) {
+  Deno.test(
+    `a press whose write landed with ${label} ends complete with no notice, because nothing is untrue`,
+    async () => {
+      const spy = spyOnConsole();
+      try {
+        await withHarness(askingOnly(answer), async (harness) => {
+          await afterAskedDelete(harness);
+
+          const result = await harness.take(deleteLabel);
+
+          assertEquals(typesOf(result.events), ["turn", "done"]);
+          assertEquals(result.events.at(-1), { type: "done", outcome: "complete" });
+          assertEquals(turnStatuses(harness), ["confirm", "complete"]);
+          assertEquals(harness.mock.bodies.length, 1);
+          assertEquals(harness.reports.length > 0, true);
+        });
+      } finally {
+        spy.restore();
+      }
+
+      const summaries = spy.lines.filter((line) => line.startsWith("assistant turn "));
+      assertStringIncludes(
+        summaries.at(-1) ?? "",
+        "modelCalls=0 toolCalls=1 ending=confirm_written_no_card",
+      );
+    },
+  );
+}
+
 Deno.test("a press that ends failed logs confirm_nothing_written", async () => {
   const spy = spyOnConsole();
   try {

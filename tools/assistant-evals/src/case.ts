@@ -180,7 +180,8 @@ export const refused = (): Grader => lastTurnEnded("refused");
 /**
  * Passes when the first model call of the second turn read from the prompt cache (`cache_read_input_tokens`
  * above 0 in `assistant_usage`). Later calls of a turn's tool rounds read the cache of the call before them, so
- * only the first call shows whether the conversation's prefix was cached.
+ * only the first call shows whether the conversation's prefix was cached. The press of a confirm button makes no
+ * model call (KEY-840) and so has no row, which fails here. Grade a turn that asks the model instead.
  */
 export function cacheReadOnSecondTurn(): Grader {
   return async (context) => {

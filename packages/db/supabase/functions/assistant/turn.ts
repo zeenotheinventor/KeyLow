@@ -205,6 +205,8 @@ type Run = {
   limitCode: LimitCode | null;
   dependencies: TurnDependencies;
   counts: { modelCalls: number; toolCalls: number };
+  // Writes that landed this turn: the answers that hold an action (a write that changed nothing holds none).
+  landedWrites: number;
   // The prompt of the last model call that answered, which is what the next request's size will start from.
   lastPromptTokens: number | null;
   unparseableInputRetries: number;
@@ -491,6 +493,9 @@ async function finishCall(
     await storeToolResult(run, block, null);
     return null;
   }
+  if (outcome.actionId !== null) {
+    run.landedWrites += 1;
+  }
   const structured = structuredSchema.safeParse(outcome.structured);
   if (!structured.success && outcome.structured !== null) {
     // A tool answered something the loop cannot read, which is a bug in the tool.
@@ -702,6 +707,17 @@ async function runConfirmedCall(
   if (run.pendingCards.length > 0) {
     return ending("complete");
   }
+  if (run.landedWrites > 0) {
+    // The write landed and the app cannot draw its card (a tool or a deploy that disagrees on the card). The
+    // failed-turn notice says nothing was changed, which would be untrue, and there are no words of the loop's
+    // own to put in its place. The turn ends complete with no card, and the report says what happened.
+    run.dependencies.report(
+      "assistant",
+      "internal_error",
+      new Error("a confirmed write landed without a card"),
+    );
+    return ending("complete", "confirm_written_no_card");
+  }
   // An error, `not_found` and a write that changed nothing all end here.
   run.dependencies.report(
     "assistant",
@@ -881,6 +897,7 @@ export function createRunTurn(
       limitCode: null,
       dependencies,
       counts: { modelCalls: 0, toolCalls: 0 },
+      landedWrites: 0,
       lastPromptTokens: null,
       unparseableInputRetries: 0,
       pendingCards: [],
