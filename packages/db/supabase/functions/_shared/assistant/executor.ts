@@ -24,9 +24,16 @@ export type ToolErrorCode =
 export type ExecutionResult =
   // `text` is what the model reads. `structured` is for the turn loop only.
   | { status: "ok"; text: string; structured: JsonValue | null; actionId: string | null }
-  // `note` is a line the tool wrote for the turn loop to add after the model's question. It is absent when
-  // the tool had none, and it is never stored with the pending confirmation.
-  | { status: "needs_confirmation"; text: string; confirmationId: string; note?: string }
+  // `question` is the tool's own words, for the turn loop to show when the model wrote none. `note` is a line
+  // the tool wrote to add after the question, and is absent when the tool had none. Neither is in `text`,
+  // and neither is stored with the pending confirmation.
+  | {
+      status: "needs_confirmation";
+      text: string;
+      confirmationId: string;
+      question: string;
+      note?: string;
+    }
   | { status: "error"; code: ToolErrorCode; text: string };
 
 function failed(
@@ -137,7 +144,7 @@ async function runWrite(
   const need =
     tool.needsConfirmation === undefined ? false : await tool.needsConfirmation(parsed.data, ctx);
   if (need !== false) {
-    const note = typeof need === "object" ? need.note : undefined;
+    const { question, note } = need;
     const hash = await inputHash(parsed.data);
     if (split.confirmationId === null) {
       const confirmationId = crypto.randomUUID();
@@ -151,6 +158,7 @@ async function runWrite(
       return {
         status: "needs_confirmation",
         confirmationId,
+        question,
         ...(note === undefined ? {} : { note }),
         text: wrapUntrusted(tool.name, {
           status: "needs_confirmation",

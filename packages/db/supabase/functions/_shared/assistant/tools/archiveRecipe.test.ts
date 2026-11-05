@@ -1,4 +1,10 @@
-import { assert, assertEquals, assertObjectMatch } from "@std/assert";
+import {
+  assert,
+  assertEquals,
+  assertFalse,
+  assertObjectMatch,
+  assertStringIncludes,
+} from "@std/assert";
 
 import { executeTool } from "../executor.ts";
 import {
@@ -12,6 +18,7 @@ import { archiveRecipeTool } from "./archiveRecipe.ts";
 import { otherUserId, recipeContext, recipeRow } from "./recipeFixtures.ts";
 import { payloadOf } from "./testing.ts";
 import { structuredOf } from "./writeFixtures.ts";
+import { confirmWordsFor } from "../../../assistant/confirmWords.ts";
 
 import type { ToolContext } from "../tool.ts";
 
@@ -219,3 +226,44 @@ Deno.test("another user's id in an action cannot be restored by this user", asyn
   assertEquals(result, { status: "error", code: "undo_unavailable" });
   assertEquals(archivedFlags(stub), { "Their stew": true });
 });
+
+Deno.test("the question is the board's, and the label is its button", async () => {
+  const { asking } = archiveContexts();
+  const input = { id: chickenAndRice.id };
+
+  const asked = await executeTool(asking, "archive_recipe", input);
+  const need = await archiveRecipeTool.needsConfirmation?.(input, asking);
+
+  assert(asked.status === "needs_confirmation");
+  assertEquals(
+    asked.question,
+    "Archive Chicken and rice? It leaves your recipe list. Entries already logged from it stay in your diary.",
+  );
+  assertEquals(
+    need !== false && need !== undefined ? need.confirmLabel : null,
+    confirmWordsFor("archive_recipe", input)?.confirmLabel,
+  );
+});
+
+Deno.test("a recipe that is not the user's asks nothing", async () => {
+  const { asking } = archiveContexts();
+
+  const result = await executeTool(asking, "archive_recipe", { id: theirs.id });
+
+  assertEquals(result.status, "ok");
+  assertEquals(payloadOf(result), { error: "not_found" });
+});
+
+Deno.test(
+  "the description tells the model to word the question in the same response as the call",
+  () => {
+    const { description } = archiveRecipeTool;
+
+    assertStringIncludes(
+      description,
+      "in the same response as the call, before it, write the question",
+    );
+    assertStringIncludes(description, "When they say no, do not call again.");
+    assertFalse(description.includes("ask the user"));
+  },
+);

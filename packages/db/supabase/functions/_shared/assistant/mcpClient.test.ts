@@ -184,23 +184,35 @@ Deno.test("callTool answers the executor's wrapped text and the structured outco
   );
 });
 
-Deno.test("callTool answers needs_confirmation with its confirmation id", async () => {
-  await withServer(
-    {
-      callTool: () =>
-        Promise.resolve({ status: "needs_confirmation", text: "confirm?", confirmationId: "c-1" }),
-    },
-    async (server) => {
-      const connection = await connectToolServer(connectionOptions(server));
+Deno.test(
+  "callTool answers needs_confirmation with its confirmation id and the tool's question",
+  async () => {
+    await withServer(
+      {
+        callTool: () =>
+          Promise.resolve({
+            status: "needs_confirmation",
+            text: "confirm?",
+            confirmationId: "c-1",
+            question: "Delete 2 entries?",
+          }),
+      },
+      async (server) => {
+        const connection = await connectToolServer(connectionOptions(server));
 
-      const result = await connection.callTool(writeToolName, {});
+        const result = await connection.callTool(writeToolName, {});
 
-      assertEquals(result.isError, false);
-      assertEquals(result.outcome, { status: "needs_confirmation", confirmationId: "c-1" });
-      await connection.close();
-    },
-  );
-});
+        assertEquals(result.isError, false);
+        assertEquals(result.outcome, {
+          status: "needs_confirmation",
+          confirmationId: "c-1",
+          question: "Delete 2 entries?",
+        });
+        await connection.close();
+      },
+    );
+  },
+);
 
 Deno.test(
   "callTool carries the note of a confirmation across, and leaves the key out without one",
@@ -212,6 +224,7 @@ Deno.test(
             status: "needs_confirmation",
             text: "confirm?",
             confirmationId: "c-1",
+            question: "Delete 2 entries?",
             note: "A line.",
           }),
       },
@@ -223,6 +236,7 @@ Deno.test(
         assertEquals(result.outcome, {
           status: "needs_confirmation",
           confirmationId: "c-1",
+          question: "Delete 2 entries?",
           note: "A line.",
         });
         await connection.close();

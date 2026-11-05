@@ -265,6 +265,12 @@ export function createFakeContext(
   return { ctx, store, reported };
 }
 
+// What a confirming fake tool answers: the words a real tool builds from the board.
+export const fakeAsk: Exclude<ConfirmationNeed, false> = {
+  question: "Delete the lunch entries?",
+  confirmLabel: "Delete them",
+};
+
 export const noteInput = z.object({ note: z.string(), extra: z.string().optional() });
 type NoteInput = z.infer<typeof noteInput>;
 

@@ -6,6 +6,8 @@ import { z } from "zod";
 
 import {
   buildTargetsChangedCard,
+  confirmTargetsButtons,
+  confirmTargetsQuestion,
   describeMacrosAdjustedNote,
   scaleMacroTargets,
   validateTargets,
@@ -89,7 +91,8 @@ export const updateTargetsTool: WriteToolDefinition<UpdateTargetsInput> = {
     "asking the user to change their calorie target from the current number to the new one, and when " +
     "they have a programme say that this ends it and its weekly check-in and that today and later days " +
     "use their own targets. Ki-Lo adds the line about their macros after your question, so do not write " +
-    "one. When they say yes call again with the same input and that confirmation_id. If the call is " +
+    "one. When they say yes call again with the same input and that confirmation_id. When they say no, " +
+    "do not call again. If the call is " +
     "refused naming macros, ask the user for all three of protein, carbs and fat with ask_user, then " +
     "call again with them. If the call is refused with current_kcal, call again with that number.",
   kind: "write",
@@ -110,7 +113,17 @@ export const updateTargetsTool: WriteToolDefinition<UpdateTargetsInput> = {
     if (!plan.ok) {
       return false;
     }
-    return plan.adjusted === null ? true : { note: describeMacrosAdjustedNote(plan.adjusted) };
+    const asked = {
+      question: confirmTargetsQuestion({
+        currentKcal: input.current_kcal,
+        newKcal: plan.targets.kcal,
+        programmeActive: (await readActiveProgramId(ctx)) !== null,
+      }),
+      confirmLabel: confirmTargetsButtons(input.current_kcal).confirmLabel,
+    };
+    return plan.adjusted === null
+      ? asked
+      : { ...asked, note: describeMacrosAdjustedNote(plan.adjusted) };
   },
   async run(ctx, input): Promise<WriteRunOutput> {
     const before = await getMyTargets(ctx.caller);
