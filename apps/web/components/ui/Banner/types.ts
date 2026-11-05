@@ -21,6 +21,12 @@ export type BannerProps = {
   tone?: BannerTone;
   /** A short heading. Without one, the children are the whole message. */
   title?: string;
+  /**
+   * Draws a message with no title as the tone's sentence (caption size and secondary ink for review and error,
+   * body size and secondary ink for info), as the boards draw an error or a warning that is one sentence.
+   * Without it a title-less message is body size in the primary ink.
+   */
+  sentence?: boolean;
   /** The message, or the body under the title. */
   children: React.ReactNode;
   /** Replaces the tone's icon. */

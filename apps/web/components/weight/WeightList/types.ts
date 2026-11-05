@@ -7,4 +7,6 @@ export type WeightListProps = {
   today: string;
   /** Whether the trend left out the reading of a day. */
   isLeftOut: (localDate: string) => boolean;
+  /** Opens a weigh-in, as its row is pressed. */
+  onOpen: (weighIn: WeighIn) => void;
 };

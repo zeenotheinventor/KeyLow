@@ -80,6 +80,8 @@ export { useDeleteWeighIn } from "./useDeleteWeighIn";
 export { useImportWeighIns } from "./useImportWeighIns";
 export { useUpdateWeighIn } from "./useUpdateWeighIn";
 export { useWeighIns } from "./useWeighIns";
+export { useWeighInEntry } from "./useWeighInEntry";
+export type { UseWeighInEntryInput } from "./useWeighInEntry";
 export { useWeightTrend } from "./useWeightTrend";
 export { useBodyMeasurements } from "./useBodyMeasurements";
 export { useBodyTrend } from "./useBodyTrend";

@@ -343,6 +343,8 @@ export const WEIGH_IN_SHEET = {
   deleteWarning: `Deleting removes it from Ki-Lo only. It stays in ${HEALTH_CONNECT_NAME} and won't come back on the next import.`,
   saveError:
     "Couldn't save your weigh-in. Check your connection and try again. What you typed is still here.",
+  /** The line on the web when the browser is offline and Save and Delete weigh-in are off. The boards do not draw it. */
+  saveOffline: "Saving a weigh-in needs a connection. Try again when you're back online.",
 } as const;
 
 /**

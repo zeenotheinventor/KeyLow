@@ -87,10 +87,12 @@ describe("WeightScreen", () => {
       );
     });
 
-    it("should draw no control that does nothing, since the dialog and the explainer are not built", () => {
+    it("should draw Add weigh-in, and no other control until the explainer is built", () => {
       renderScreen();
 
-      expect(screen.queryAllByRole("button")).toEqual([]);
+      expect(screen.getAllByRole("button").map((button) => button.textContent)).toEqual([
+        WEIGHT_SCREEN.addLabel,
+      ]);
     });
   });
 
@@ -167,11 +169,14 @@ describe("WeightScreen", () => {
       expect(document.body.textContent).not.toContain("Health Connect");
     });
 
-    it("should offer no Add weigh-in until a handler is given, so no button is dead", async () => {
+    it("should offer Add weigh-in in the header and on the board", async () => {
       renderScreen();
       await screen.findByRole("heading", { level: 2, name: WEIGHT_EMPTY.title });
 
-      expect(screen.queryAllByRole("button")).toEqual([]);
+      expect(screen.getAllByRole("button").map((button) => button.textContent)).toEqual([
+        WEIGHT_SCREEN.addLabel,
+        WEIGHT_EMPTY.addWeighIn,
+      ]);
     });
   });
 
@@ -235,13 +240,14 @@ describe("WeightScreen", () => {
       expect(typed?.getAttribute("aria-hidden")).toBe("true");
     });
 
-    it("should draw a row that does nothing yet as plain text, with no link or button", async () => {
+    it("should draw each row as a button that opens it, with no link and no chevron", async () => {
       renderScreen();
 
       const list = await weighInList();
 
       expect(within(list).queryAllByRole("link")).toEqual([]);
-      expect(within(list).queryAllByRole("button")).toEqual([]);
+      expect(within(list).getAllByRole("button")).toHaveLength(14);
+      expect(list.querySelector(".lucide-chevron-right")).toBeNull();
     });
 
     it("should name the days in the profile's zone, so a zone ahead of UTC reads the 17th as yesterday", async () => {

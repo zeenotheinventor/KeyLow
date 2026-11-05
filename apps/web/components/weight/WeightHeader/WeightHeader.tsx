@@ -15,7 +15,7 @@ const MORE_HREF = "/more";
  * and Add weigh-in at the end of the title's row. The How the trend works button sits before Add weigh-in
  * when the explainer is built, and shows in every state of the page like the rest of the header.
  */
-export function WeightHeader({ onAdd }: WeightHeaderProps) {
+export function WeightHeader({ onAdd, addButtonRef }: WeightHeaderProps) {
   return (
     <div className="flex flex-col gap-1">
       {/* The board draws the link 44 high with 8 px off its top and bottom in the flow, so its target is 44 and the title sits as drawn. */}
@@ -26,7 +26,7 @@ export function WeightHeader({ onAdd }: WeightHeaderProps) {
       <div className="flex min-h-control-md items-center justify-between gap-3">
         <h1 className="text-h1">{WEIGHT_SCREEN.title}</h1>
         {onAdd !== undefined && (
-          <Button onClick={onAdd}>
+          <Button ref={addButtonRef} onClick={onAdd}>
             <Plus aria-hidden strokeWidth={iconStroke} />
             {WEIGHT_SCREEN.addLabel}
           </Button>

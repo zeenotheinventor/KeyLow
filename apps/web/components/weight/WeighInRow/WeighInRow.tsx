@@ -8,10 +8,10 @@ import { ListRow } from "@/components/ui/ListRow";
 /**
  * One weigh-in of the list: the day over the time and where it came from, the weight in kilograms, and a
  * warning badge, with the figure muted, when the trend left the reading out. The Health Connect heart and the
- * manual pencil only decorate, because the words say where it came from. Pressing a row does nothing yet:
- * the dialog that opens a weigh-in gives it an `onClick`.
+ * manual pencil only decorate, because the words say where it came from. Pressing the row opens the weigh-in.
+ * It has no chevron: it opens a dialog and goes nowhere.
  */
-export function WeighInRow({ weighIn, today, isLeftOut }: WeighInRowProps) {
+export function WeighInRow({ weighIn, today, isLeftOut, onOpen }: WeighInRowProps) {
   const row = describeWeighInRow({
     localDate: weighIn.local_date,
     today,
@@ -34,6 +34,9 @@ export function WeighInRow({ weighIn, today, isLeftOut }: WeighInRowProps) {
       valueLook="numeral"
       valueTone={row.leftOut ? "muted" : undefined}
       chevron={false}
+      onClick={() => {
+        onOpen(weighIn);
+      }}
     />
   );
 }

@@ -16,6 +16,27 @@ describe("Banner", () => {
     cleanup();
   });
 
+  describe("sentence", () => {
+    it("should draw a title-less message at caption size in the secondary colour for an error, as the boards do", () => {
+      render(
+        <Banner tone="error" sentence>
+          Could not save it.
+        </Banner>,
+      );
+
+      const sentence = classesOf(screen.getByText("Could not save it."));
+      expect(sentence).toContain("text-caption");
+      expect(sentence).toContain("text-text-secondary");
+      expect(sentence).not.toContain("text-body");
+    });
+
+    it("should keep the default message at body size when it is not asked for", () => {
+      render(<Banner tone="error">Could not save it.</Banner>);
+
+      expect(classesOf(screen.getByText("Could not save it."))).toContain("text-body");
+    });
+  });
+
   it("should show a message", () => {
     render(<Banner tone="error">Email or password is not right. Check them and try again.</Banner>);
 
