@@ -549,10 +549,11 @@ describe("the goal screen", () => {
   it("should write the fixed words", () => {
     expect(GOAL_SCREEN).toStrictEqual({
       title: "Goal",
-      backLabel: "Back to Train",
+      backLabel: "Back",
       changeNote:
         "Changing an answer starts your new goal from today. Suggestions you already took keep their reasons.",
       prioritiesAction: "See your priorities",
+      loadingName: "Loading your goal",
     });
   });
 

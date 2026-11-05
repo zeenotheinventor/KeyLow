@@ -11,7 +11,8 @@ import { useBodyFigure } from "../../../lib/bodyFigure";
 import { BodyFigure, Button, Card, SheetHeader, Text, useToast } from "../../ui";
 import { priorityFigureValues } from "../priorityFigureValues";
 import { PriorityRow } from "../PriorityRow";
-import { useCloseGoalFlow } from "../useCloseGoalFlow";
+import { useFinishGoalFlow } from "../useFinishGoalFlow";
+import { useGoalDraft } from "../useGoalDraft";
 
 import type { GoalSummaryScreenProps } from "./types";
 
@@ -32,14 +33,17 @@ const MINIMUM_FOOTER_BOTTOM_PADDING = 12;
  * figures are not drawn, so no muscle shows as left out and then flips to kept up when the routine arrives. A
  * routine that cannot be read counts as none. The answers line, the legend and Save goal do not wait for it.
  * The figures are always the flat drawings, in the male or female figure the setting has. Save goal sends the
- * answers once, however often it is pressed, and then leaves the flow. A save that fails keeps the answers and
+ * answers once, however often it is pressed, and then ends the flow: back on the Goal screen when the flow
+ * was opened from it, and where closing leaves otherwise. Save goal is drawn only when the answers differ from
+ * those the flow opened with, so the priorities of the stored goal have nothing to save. A save that fails keeps the answers and
  * shows the error toast, so it can be tried again. Nothing the answers say reaches a log or a report from here.
  */
 export function GoalSummaryScreen({ answers }: GoalSummaryScreenProps) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const toast = useToast();
-  const closeFlow = useCloseGoalFlow();
+  const finishFlow = useFinishGoalFlow();
+  const { hasChanges } = useGoalDraft();
   const { figure, isReady: isFigureReady } = useBodyFigure();
   const routine = useActiveRoutine();
   const saveGoal = useSaveTrainingGoals();
@@ -75,7 +79,7 @@ export function GoalSummaryScreen({ answers }: GoalSummaryScreenProps) {
       toast.show({ message: GOAL_ERRORS.save, tone: "danger" });
       return;
     }
-    closeFlow();
+    finishFlow();
   }
 
   return (
@@ -118,24 +122,26 @@ export function GoalSummaryScreen({ answers }: GoalSummaryScreenProps) {
           </Text>
         </View>
       </ScrollView>
-      <View
-        className="border-t border-border bg-surface px-4 pt-3 pb-[var(--footer-bottom-padding)]"
-        style={vars({
-          "--footer-bottom-padding": Math.max(insets.bottom, MINIMUM_FOOTER_BOTTOM_PADDING),
-        })}
-      >
-        <Button
-          fullWidth
-          haptic="confirm"
-          loading={saveGoal.isPending}
-          size="lg"
-          onPress={() => {
-            void handleSave();
-          }}
+      {hasChanges ? (
+        <View
+          className="border-t border-border bg-surface px-4 pt-3 pb-[var(--footer-bottom-padding)]"
+          style={vars({
+            "--footer-bottom-padding": Math.max(insets.bottom, MINIMUM_FOOTER_BOTTOM_PADDING),
+          })}
         >
-          {GOAL_SUMMARY.saveAction}
-        </Button>
-      </View>
+          <Button
+            fullWidth
+            haptic="confirm"
+            loading={saveGoal.isPending}
+            size="lg"
+            onPress={() => {
+              void handleSave();
+            }}
+          >
+            {GOAL_SUMMARY.saveAction}
+          </Button>
+        </View>
+      ) : null}
     </View>
   );
 }

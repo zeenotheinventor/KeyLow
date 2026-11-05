@@ -1,12 +1,13 @@
 import { GOAL_ERRORS, GOAL_SUMMARY } from "@keylow/core/copy";
 import { BODY_ARTWORK, MUSCLE_IDS, VOLUME_STATUSES } from "@keylow/core/training";
 import { act, cleanup, render, screen, userEvent, within } from "@testing-library/react-native";
+import { useEffect as useReactEffect } from "react";
 
 import GoalSummaryRoute from "../../app/goal/summary";
-import { GoalDraftProvider } from "../../components/GoalQuestionnaire";
+import { GoalDraftProvider, useGoalDraft } from "../../components/GoalQuestionnaire";
 import { ToastProvider } from "../../components/ui";
 import { resetBodyFigureForTests } from "../../lib/bodyFigure/testing";
-import { goalQuestionPath } from "../../lib/goalRoutes";
+import { goalPath, goalQuestionPath } from "../../lib/goalRoutes";
 import { trainPath } from "../../lib/routineRoutes";
 import { ThemeProvider } from "../../lib/theme";
 import { resetRouterMock, routerMock } from "../support/expoRouterMock";
@@ -19,7 +20,7 @@ import { viewsDrawn } from "../support/viewsDrawn";
 import type { GoalDraftAnswers } from "../../components/GoalQuestionnaire";
 import type { ActiveRoutine } from "@keylow/api-client";
 import type { BodyArtworkFigure, GoalAnswers, MuscleId } from "@keylow/core/training";
-import type { useState } from "react";
+import type { ReactNode, useState } from "react";
 
 const mockStorageItems = new Map<string, string>();
 // While set, the stored figure is never read, which is what leaves the body figure not ready.
@@ -130,18 +131,35 @@ const routineTraining = (muscles: readonly MuscleId[]): ActiveRoutine => ({
   ],
 });
 
-const summaryTree = (answers: GoalDraftAnswers) => (
+// Gives the answers once the flow is open, as the questions do, so the draft differs from the one the flow
+// opened with, which is what puts Save goal on the screen.
+function Answering({ answers, children }: { answers: GoalDraftAnswers; children: ReactNode }) {
+  const { answer } = useGoalDraft();
+  useReactEffect(() => {
+    answer(answers);
+  }, [answer, answers]);
+
+  return children;
+}
+
+// The flow opens with nothing answered, as the first goal's does, unless `openedWith` says it was filled.
+const summaryTree = (answers: GoalDraftAnswers, openedWith?: GoalDraftAnswers) => (
   <ThemeProvider fixedPreference="dark">
     <ToastProvider>
-      <GoalDraftProvider initialAnswers={answers}>
-        <GoalSummaryRoute />
+      <GoalDraftProvider initialAnswers={openedWith}>
+        <Answering answers={answers}>
+          <GoalSummaryRoute />
+        </Answering>
       </GoalDraftProvider>
     </ToastProvider>
   </ThemeProvider>
 );
 
-async function renderSummary(answers: GoalDraftAnswers = goldenAnswers) {
-  await render(summaryTree(answers));
+async function renderSummary(
+  answers: GoalDraftAnswers = goldenAnswers,
+  openedWith?: GoalDraftAnswers,
+) {
+  await render(summaryTree(answers, openedWith));
 }
 
 function drawnBody(figureName: string, side: "front" | "back"): BodyArtworkFigure | null {
@@ -446,5 +464,47 @@ describe("the priorities summary", () => {
     await pressTwiceInTheSameMoment(screen.getByRole("button", { name: GOAL_SUMMARY.saveAction }));
 
     expect(routerMock.replace).toHaveBeenCalledWith(trainPath());
+  });
+  it("should draw no Save goal when the answers are those the flow opened with, as for the stored goal's priorities", async () => {
+    await renderSummary({}, goldenAnswers);
+
+    expect(screen.getByRole("heading", { name: GOAL_SUMMARY.title })).toBeOnTheScreen();
+    expect(screen.queryByRole("button", { name: GOAL_SUMMARY.saveAction })).not.toBeOnTheScreen();
+    expect(mockSave).not.toHaveBeenCalled();
+  });
+
+  it("should draw Save goal when an answer differs from those the flow opened with", async () => {
+    await renderSummary({ days_per_week: 5 }, goldenAnswers);
+
+    expect(screen.getByRole("button", { name: GOAL_SUMMARY.saveAction })).toBeEnabled();
+  });
+
+  describe("when the flow was opened from the Goal screen", () => {
+    beforeEach(() => {
+      routerMock.stackRouteNames = ["index", "[step]", "summary"];
+    });
+
+    it("should land back on the Goal screen after the save, and not leave the flow", async () => {
+      const user = userEvent.setup();
+      await renderSummary({ days_per_week: 5 }, goldenAnswers);
+
+      await user.press(screen.getByRole("button", { name: GOAL_SUMMARY.saveAction }));
+
+      expect(mockSave).toHaveBeenCalledWith({ ...goldenAnswers, days_per_week: 5 });
+      expect(routerMock.dismissTo).toHaveBeenCalledTimes(1);
+      expect(routerMock.dismissTo).toHaveBeenCalledWith(goalPath());
+      expect(routerMock.parentGoBack).not.toHaveBeenCalled();
+    });
+
+    it("should stay on the summary when the save fails", async () => {
+      mockSave.mockRejectedValueOnce(new Error("offline"));
+      const user = userEvent.setup();
+      await renderSummary({ days_per_week: 5 }, goldenAnswers);
+
+      await user.press(screen.getByRole("button", { name: GOAL_SUMMARY.saveAction }));
+
+      expect(await screen.findByText(GOAL_ERRORS.save)).toBeOnTheScreen();
+      expect(routerMock.dismissTo).not.toHaveBeenCalled();
+    });
   });
 });

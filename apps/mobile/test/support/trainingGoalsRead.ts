@@ -1,3 +1,5 @@
+import { useSyncExternalStore } from "react";
+
 import type { TrainingGoalsRow } from "@keylow/core/schemas";
 
 /**
@@ -13,6 +15,25 @@ export const trainingGoalsRead: {
   isReadEnabled: boolean;
 } = { status: "ready", row: null, isReadEnabled: true };
 
+// Screens that draw the goal redraw when a save replaces it, as the query's cache does for the real hook.
+const listeners = new Set<() => void>();
+let publishedCount = 0;
+const subscribe = (listener: () => void) => {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+};
+
+/** Replaces the stored goal and redraws every screen reading it, as a save does with `setQueryData`. */
+export function publishTrainingGoalsRow(row: TrainingGoalsRow): void {
+  trainingGoalsRead.row = row;
+  publishedCount += 1;
+  listeners.forEach((listener) => {
+    listener();
+  });
+}
+
 export function resetTrainingGoalsRead(): void {
   trainingGoalsRead.status = "ready";
   trainingGoalsRead.row = null;
@@ -24,6 +45,7 @@ export const useReadsEnabledMock = (): boolean => trainingGoalsRead.isReadEnable
 
 /** A stand-in for `useTrainingGoals`, with its states. A read that is not enabled makes no request. */
 export function useTrainingGoalsMock({ enabled = true }: { enabled?: boolean } = {}) {
+  useSyncExternalStore(subscribe, () => publishedCount);
   if (!enabled) {
     return { data: undefined, isPending: true, isError: false, fetchStatus: "idle" };
   }

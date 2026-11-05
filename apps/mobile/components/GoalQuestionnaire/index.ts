@@ -1,5 +1,8 @@
+export { GoalAnswerRow } from "./GoalAnswerRow";
 export { GoalDraftProvider } from "./GoalDraftProvider";
 export { GoalQuestionScreen } from "./GoalQuestionScreen";
+export { GoalScreen } from "./GoalScreen";
+export { GoalScreenSkeleton } from "./GoalScreenSkeleton";
 export { GoalSummaryScreen } from "./GoalSummaryScreen";
 export { PriorityRow } from "./PriorityRow";
 export { QuestionScreen } from "./QuestionScreen";
@@ -8,7 +11,9 @@ export { priorityFigureValues } from "./priorityFigureValues";
 export { useGoalDraft } from "./useGoalDraft";
 export type { GoalDraft, GoalDraftAnswers } from "@keylow/core/training";
 export type { GoalDraftProviderProps } from "./GoalDraftProvider";
+export type { GoalAnswerRowProps } from "./GoalAnswerRow";
 export type { GoalQuestionScreenProps } from "./GoalQuestionScreen";
+export type { GoalScreenProps } from "./GoalScreen";
 export type { QuestionScreenProps } from "./QuestionScreen";
 export type { GoalSummaryScreenProps } from "./GoalSummaryScreen";
 export type { PriorityRowProps } from "./PriorityRow";

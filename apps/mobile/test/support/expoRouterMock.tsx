@@ -20,6 +20,9 @@ export const routerMock = {
   hasParentNavigator: true,
   parentCanGoBack: jest.fn<boolean, []>(),
   canGoBack: jest.fn<boolean, []>(),
+  // The names of the routes in the stack the screen under test is in, such as "index" when the Goal screen is
+  // the first of the goal flow's stack.
+  stackRouteNames: [] as string[],
   // Whether the screen under test is the focused one. A test changes it, then rerenders.
   isFocused: true,
   redirect: jest.fn<undefined, [string]>(),
@@ -44,6 +47,7 @@ export function resetRouterMock(): void {
   routerMock.parentCanGoBack.mockReturnValue(true);
   routerMock.canGoBack.mockReset();
   routerMock.canGoBack.mockReturnValue(true);
+  routerMock.stackRouteNames = [];
   routerMock.isFocused = true;
   routerMock.redirect.mockReset();
   routerMock.segments = [];
@@ -65,6 +69,7 @@ const router = {
 
 // The same object every render, like the real hook's, so an effect that depends on it does not rerun.
 const navigation = {
+  getState: () => ({ routes: routerMock.stackRouteNames.map((name) => ({ name })) }),
   getParent: () =>
     routerMock.hasParentNavigator
       ? { goBack: routerMock.parentGoBack, canGoBack: routerMock.parentCanGoBack }

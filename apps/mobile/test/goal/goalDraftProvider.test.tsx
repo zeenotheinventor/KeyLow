@@ -67,6 +67,32 @@ describe("the goal draft provider", () => {
     expect(result.current.hasChanges).toBe(false);
   });
 
+  it("should start over from the answers given to restart, and count changes against them", async () => {
+    const { result } = await renderHook(() => useGoalDraft(), {
+      wrapper: providerWith({ goal: "strength", focus: ["legs"], days_per_week: 3 }),
+    });
+    await act(() => {
+      result.current.answer({ days_per_week: 5 });
+    });
+    expect(result.current.hasChanges).toBe(true);
+
+    await act(() => {
+      result.current.restart({ goal: "hybrid", focus: ["arms"], days_per_week: 4 });
+    });
+
+    expect(result.current.draft).toStrictEqual({
+      goal: "hybrid",
+      focus: ["arms"],
+      days_per_week: 4,
+    });
+    expect(result.current.hasChanges).toBe(false);
+
+    await act(() => {
+      result.current.answer({ days_per_week: 3 });
+    });
+    expect(result.current.hasChanges).toBe(true);
+  });
+
   it("should refuse to be used outside a provider", async () => {
     jest.spyOn(console, "error").mockImplementation(() => undefined);
 
