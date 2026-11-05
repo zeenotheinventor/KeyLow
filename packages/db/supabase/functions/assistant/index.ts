@@ -47,6 +47,7 @@ Deno.serve(
             id: nilId,
             conversationId: nilId,
             userMessageText: null,
+            personsWords: null,
             localDate: "1970-01-01",
             localTime: null,
           },

@@ -58,16 +58,31 @@ export type ActionRecord = {
   undoneAt: string | null;
 };
 
-// What `assistant_turns.pending_confirmation` holds: an id, a tool name and a hash. No health value.
-export type PendingConfirmation = { id: string; tool: string; inputHash: string };
+// What `assistant_turns.pending_confirmation` holds: an id, a tool name, a hash and the words of the confirm
+// button ("Delete 2 entries", "Copy 3 entries", "Archive recipe", "Change target"). Those are fixed words and
+// a count of rows, so no health value. The cancel button's words are not stored, because "Keep 2,140" holds a
+// calorie figure.
+export type PendingConfirmation = {
+  id: string;
+  tool: string;
+  inputHash: string;
+  confirmLabel: string;
+};
+
+// The confirmation as it is read back. A row written before the button's words were stored has none, and
+// it can never be confirmed: the next call asks again.
+export type StoredConfirmation = Omit<PendingConfirmation, "confirmLabel"> & {
+  confirmLabel: string | null;
+};
 
 const pendingConfirmationSchema = z.object({
   id: z.string(),
   tool: z.string(),
   input_hash: z.string(),
+  confirm_label: z.string().optional(),
 });
 
-export type PreviousPendingConfirmation = { turnId: string; confirmation: PendingConfirmation };
+export type PreviousPendingConfirmation = { turnId: string; confirmation: StoredConfirmation };
 
 export type SlotRequest = {
   userId: string;
@@ -271,8 +286,11 @@ export function createActionStore(client: SupabaseClient): ActionStore {
       if (previous === undefined || !parsed.success) {
         return null;
       }
-      const { id, tool, input_hash: inputHash } = parsed.data;
-      return { turnId: previous.id, confirmation: { id, tool, inputHash } };
+      const { id, tool, input_hash: inputHash, confirm_label: confirmLabel } = parsed.data;
+      return {
+        turnId: previous.id,
+        confirmation: { id, tool, inputHash, confirmLabel: confirmLabel ?? null },
+      };
     },
 
     async storePendingConfirmation(turnId, userId, confirmation) {
@@ -283,6 +301,7 @@ export function createActionStore(client: SupabaseClient): ActionStore {
             id: confirmation.id,
             tool: confirmation.tool,
             input_hash: confirmation.inputHash,
+            confirm_label: confirmation.confirmLabel,
           },
         })
         .eq("id", turnId)

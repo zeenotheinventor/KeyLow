@@ -6,4 +6,6 @@ export type MuscleSheetContentProps = {
   copy: MuscleSheetCopy;
   /** The detail the words were written from. */
   detail: MuscleDetail;
+  /** Opens the routine editor from the Not trained sheet, which draws its button only when this is given. */
+  onEditRoutine?: (() => void) | undefined;
 };

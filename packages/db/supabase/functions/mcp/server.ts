@@ -36,6 +36,7 @@ export function toCallToolResult(result: ExecutionResult): CallToolResult {
           confirmationId: result.confirmationId,
           question: result.question,
           ...(result.note === undefined ? {} : { note: result.note }),
+          ...(result.asksAgain === true ? { asksAgain: true } : {}),
         },
       };
     case "error":

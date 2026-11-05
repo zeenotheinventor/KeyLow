@@ -1,5 +1,5 @@
 // The two reads the `mcp` function makes with the service client: the turn a request names, and the
-// message that started it. The service role is the only reader that sees these rows for any user
+// message that started it (its text and the person's own words). The service role is the only reader that sees these rows for any user
 // (ADR 0003, Amendment 14), so every query is filtered by the user the function verified. A failure
 // carries the operation and a Postgres error code, never the database message, which can quote a row.
 import { z } from "zod";
@@ -31,14 +31,42 @@ export type McpTurn = {
 export type McpTurnStore = {
   // The turn when it exists and belongs to the user, otherwise null.
   findTurn(userId: string, turnId: string): Promise<McpTurn | null>;
-  // The text of the message that started the turn, or null when it has none.
-  userMessageText(userId: string, turn: McpTurn): Promise<string | null>;
+  // What the message that started the turn holds, in one read.
+  userMessage(userId: string, turn: McpTurn): Promise<UserMessage>;
+};
+
+export type UserMessage = {
+  // Every text block of the message joined, or null when it has none. It holds the context block, so it
+  // is for the empty-message guard and the recipe link check, and never for what the person said.
+  text: string | null;
+  // The person's own words: the last block of the message, when that block is text. The loop stores the
+  // message as the results of open calls, then the context block, then the person's words (`userContent`),
+  // so the last block is never a tool result or the context block. Null when there is none.
+  personsWords: string | null;
 };
 
 // Messages store the raw Messages API content: a list of blocks, the user's being text blocks.
 const messageContentSchema = z.array(
   z.looseObject({ type: z.string(), text: z.string().optional() }),
 );
+
+// The text and the person's words of a stored user message. Content that is not a list of blocks has neither.
+export function userMessageOf(rawContent: unknown): UserMessage {
+  const content = messageContentSchema.safeParse(rawContent);
+  if (!content.success) {
+    return { text: null, personsWords: null };
+  }
+  const text = content.data
+    .filter((block) => block.type === "text")
+    .map((block) => block.text ?? "")
+    .join("\n");
+  const last = content.data.at(-1);
+  const words = last?.type === "text" ? (last.text ?? "") : "";
+  return {
+    text: text === "" ? null : text,
+    personsWords: words.trim() === "" ? null : words,
+  };
+}
 
 function failure(operation: string, error: { code?: string }): Error {
   return new Error(`mcp turn store ${operation} failed ${error.code ?? "unknown"}`);
@@ -72,7 +100,7 @@ export function createMcpTurnStore(client: SupabaseClient<Database>): McpTurnSto
       };
     },
 
-    async userMessageText(userId, turn) {
+    async userMessage(userId, turn) {
       const { data, error } = await client
         .from("assistant_messages")
         .select("content")
@@ -82,15 +110,7 @@ export function createMcpTurnStore(client: SupabaseClient<Database>): McpTurnSto
       if (error !== null) {
         throw failure("read the user message", error);
       }
-      const content = messageContentSchema.safeParse(data?.content);
-      if (!content.success) {
-        return null;
-      }
-      const text = content.data
-        .filter((block) => block.type === "text")
-        .map((block) => block.text ?? "")
-        .join("\n");
-      return text === "" ? null : text;
+      return userMessageOf(data?.content);
     },
   };
 }

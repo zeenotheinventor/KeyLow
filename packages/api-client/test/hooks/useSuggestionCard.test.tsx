@@ -18,9 +18,9 @@ import {
 } from "../support/acceptedSuggestions";
 import { goldenLibraryRows } from "../support/goldenLibraryRows";
 import { goldenWeekData } from "../support/goldenWeekRows";
-import { REST_URL } from "../support/postgrest";
+import { REST_URL, postgrestRows } from "../support/postgrest";
 import { installLibraryFake } from "../support/suggestionLibrary";
-import { installTrainingFake } from "../support/training";
+import { installTrainingFake, openSessionRow } from "../support/training";
 import { strengthAnswers, trainingGoalsRow, vTaperAnswers } from "../support/trainingGoals";
 import { createWrapper } from "../support/wrapper";
 
@@ -149,6 +149,7 @@ function renderCard({
   const notices = {
     onAccepted: vi.fn<SuggestionNotices["onAccepted"]>(),
     onFailure: vi.fn<SuggestionNotices["onFailure"]>(),
+    onStart: vi.fn<SuggestionNotices["onStart"]>(),
   };
   const { wrapper, queryClient } = createWrapper();
   cache?.(queryClient);
@@ -546,7 +547,7 @@ describe("useSuggestionCard", () => {
   });
 
   describe("on Thursday before Legs, when the suggestion is for today", () => {
-    it("should offer the suggestion for today with no Add to press", async () => {
+    it("should offer the suggestion for today with Start in place of Add", async () => {
       const { result } = renderCard({ at: THURSDAY_BEFORE_LEGS });
 
       await settled(result);
@@ -556,7 +557,192 @@ describe("useSuggestionCard", () => {
       }
       expect(result.current.isForToday).toBe(true);
       expect(result.current.accept).toBeUndefined();
+      expect(result.current.start).toBeTypeOf("function");
       expect(result.current.copy.label).toBe("Suggested for today");
+    });
+
+    it("should offer no Start for a day to come", async () => {
+      const { result } = renderCard();
+
+      await settled(result);
+
+      if (result.current.status !== "offer") {
+        throw new Error(`Expected the offer, got ${result.current.status}`);
+      }
+      expect(result.current.start).toBeUndefined();
+    });
+
+    it("should store the suggestion under the day today plans, then start that day, with no Added toast", async () => {
+      const { result, accepted, notices } = renderCard({ at: THURSDAY_BEFORE_LEGS });
+      await settled(result);
+
+      act(() => {
+        if (result.current.status === "offer") {
+          result.current.start?.();
+        }
+      });
+
+      await waitFor(() => {
+        expect(notices.onStart).toHaveBeenCalledTimes(1);
+      });
+      expect(accepted.inserts).toHaveLength(1);
+      expect(accepted.inserts[0]).toMatchObject({
+        local_date: THURSDAY,
+        routine_day_id: LEGS_DAY_ID,
+      });
+      expect(notices.onStart).toHaveBeenCalledWith({
+        routineDayId: LEGS_DAY_ID,
+        timeZone: "Europe/London",
+      });
+      expect(notices.onAccepted).not.toHaveBeenCalled();
+      expect(notices.onFailure).not.toHaveBeenCalled();
+    });
+
+    it("should leave the accepted card with its own Start once the suggestion is stored", async () => {
+      const { result } = renderCard({ at: THURSDAY_BEFORE_LEGS });
+      await settled(result);
+
+      act(() => {
+        if (result.current.status === "offer") {
+          result.current.start?.();
+        }
+      });
+
+      await waitFor(() => {
+        expect(result.current.status).toBe("accepted");
+      });
+      if (result.current.status === "accepted") {
+        expect(result.current.start).toBeTypeOf("function");
+      }
+    });
+
+    it("should start nothing, say it was not saved and keep the offer when the suggestion cannot be stored", async () => {
+      const { result, accepted, notices } = renderCard({ at: THURSDAY_BEFORE_LEGS });
+      await settled(result);
+      accepted.failNextInserts("42501");
+
+      act(() => {
+        if (result.current.status === "offer") {
+          result.current.start?.();
+        }
+      });
+
+      await waitFor(() => {
+        expect(notices.onFailure).toHaveBeenCalledWith(ACCEPT_FAILED);
+      });
+      expect(notices.onStart).not.toHaveBeenCalled();
+      expect(result.current.status).toBe("offer");
+      expect(accepted.liveRows()).toHaveLength(0);
+    });
+
+    it("should store once and start once when Start is pressed twice", async () => {
+      const { result, accepted, notices } = renderCard({ at: THURSDAY_BEFORE_LEGS });
+      await settled(result);
+
+      act(() => {
+        if (result.current.status === "offer") {
+          result.current.start?.();
+          result.current.start?.();
+        }
+      });
+
+      await waitFor(() => {
+        expect(notices.onStart).toHaveBeenCalledTimes(1);
+      });
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      });
+      expect(accepted.inserts).toHaveLength(1);
+      expect(notices.onStart).toHaveBeenCalledTimes(1);
+    });
+
+    it("should only resume a session that is already open, and store nothing under it", async () => {
+      const { result, accepted, notices } = renderCard({
+        at: THURSDAY_BEFORE_LEGS,
+        overrides: () => {
+          server.use(
+            http.get(`${REST_URL}/workout_sessions`, ({ request }) =>
+              new URL(request.url).searchParams.get("ended_at") === "is.null"
+                ? postgrestRows(request, [
+                    openSessionRow({ local_date: THURSDAY, routine_day_id: LEGS_DAY_ID }),
+                  ])
+                : undefined,
+            ),
+          );
+        },
+      });
+      await settled(result);
+      // The card reads the open session itself, which is given a moment to land before Start is pressed.
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      });
+
+      act(() => {
+        if (result.current.status === "offer") {
+          result.current.start?.();
+        }
+      });
+
+      await waitFor(() => {
+        expect(notices.onStart).toHaveBeenCalledTimes(1);
+      });
+      expect(accepted.inserts).toHaveLength(0);
+    });
+  });
+
+  describe("on Thursday, when Thursday already holds the accepted suggestion", () => {
+    it("should draw the accepted card with a Start that stores nothing more and starts Legs", async () => {
+      const { result, accepted, notices } = renderCard({
+        at: THURSDAY_BEFORE_LEGS,
+        rows: [acceptedRow()],
+      });
+
+      await waitFor(() => {
+        expect(result.current.status).toBe("accepted");
+      });
+      act(() => {
+        if (result.current.status === "accepted") {
+          result.current.start?.();
+        }
+      });
+
+      expect(notices.onStart).toHaveBeenCalledExactlyOnceWith({
+        routineDayId: LEGS_DAY_ID,
+        timeZone: "Europe/London",
+      });
+      expect(accepted.inserts).toHaveLength(0);
+    });
+
+    it("should start a free session for a suggestion that stands alone", async () => {
+      const { result, notices } = renderCard({
+        at: THURSDAY_BEFORE_LEGS,
+        rows: [acceptedRow({ routine_day_id: null })],
+      });
+
+      await waitFor(() => {
+        expect(result.current.status).toBe("accepted");
+      });
+      act(() => {
+        if (result.current.status === "accepted") {
+          result.current.start?.();
+        }
+      });
+
+      expect(notices.onStart).toHaveBeenCalledWith({
+        routineDayId: null,
+        timeZone: "Europe/London",
+      });
+    });
+
+    it("should draw no Start on the accepted card of a day to come", async () => {
+      const { result } = renderCard({ rows: [acceptedRow()] });
+
+      await waitFor(() => {
+        expect(result.current.status).toBe("accepted");
+      });
+      if (result.current.status === "accepted") {
+        expect(result.current.start).toBeUndefined();
+      }
     });
   });
 });

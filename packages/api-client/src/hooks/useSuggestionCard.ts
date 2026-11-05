@@ -13,6 +13,7 @@ import { useRef } from "react";
 import { useAcceptedSuggestions } from "./useAcceptedSuggestions";
 import { useAcceptSuggestion } from "./useAcceptSuggestion";
 import { useActiveRoutine } from "./useActiveRoutine";
+import { useActiveSession } from "./useActiveSession";
 import { useRoutine } from "./useRoutine";
 import { useSuggestion } from "./useSuggestion";
 import { useSuggestionLibrary } from "./useSuggestionLibrary";
@@ -21,6 +22,7 @@ import { useUndoAcceptedSuggestion } from "./useUndoAcceptedSuggestion";
 import { weekStartOf } from "../weekStartOf";
 
 import type { PickDayOption, TrainHome } from "./trainHomeTypes";
+import type { SessionStartRequest } from "./useStartSessionAction";
 import type { RoutineDetail } from "../repos/routineSchemas";
 import type {
   NothingToSuggestCopy,
@@ -39,6 +41,11 @@ export type SuggestionNotices = {
   onAccepted: (notice: { message: string; actionLabel: string; undo: () => void }) => void;
   /** A write failed. The sentence is core's (`SUGGESTION_FAILED`), and states no value. */
   onFailure: (message: string) => void;
+  /**
+   * Starts the session of a suggestion for today, once it is stored: the app's own Start path, which opens the
+   * session screen, resumes a session already in progress and says so itself when the start fails.
+   */
+  onStart: (start: SessionStartRequest) => void;
 };
 
 export type UseSuggestionCardInput = {
@@ -63,7 +70,16 @@ export type SuggestionCardState =
   | { status: "hidden" }
   | { status: "no_goal" }
   | { status: "nothing"; copy: NothingToSuggestCopy }
-  | { status: "accepted"; copy: SuggestionAcceptedCopy }
+  | {
+      status: "accepted";
+      copy: SuggestionAcceptedCopy;
+      /**
+       * Starts the session the accepted suggestion is for, which a screen draws as Start. Undefined unless the
+       * day is today, so a card for a day to come has none, and a failed start of a suggestion stored a
+       * moment ago leaves this one to try again with.
+       */
+      start?: (() => void) | undefined;
+    }
   | {
       status: "offer";
       copy: SuggestionCardCopy;
@@ -79,6 +95,12 @@ export type SuggestionCardState =
       isAccepting: boolean;
       /** Adds the suggestion to its day. Undefined for today's, which starts a session instead of being added. */
       accept: (() => void) | undefined;
+      /**
+       * Stores the suggestion for today and then starts the session it is for (Start). Undefined for any other
+       * day. When storing fails nothing is started and the offer stays. When a session is already open it only
+       * resumes that one and stores nothing, since a running session is not the place to add to.
+       */
+      start?: (() => void) | undefined;
     };
 
 type SuggestionTarget = {
@@ -87,6 +109,8 @@ type SuggestionTarget = {
   routineDayId: string | null;
   routineDayName: string | null;
   today: string;
+  /** The profile's zone, which a session started from the suggestion is dated in. */
+  timeZone: string;
   /** The routine's days, whose planned sets the accepted card adds the stored sets to. */
   routineDays: readonly PickDayOption[];
 };
@@ -137,6 +161,7 @@ function targetOf(home: TrainHome, now: Date): SuggestionTarget | null {
     routineDayId: null,
     routineDayName: null,
     today,
+    timeZone: home.timeZone,
     routineDays,
   };
   if (home.today === null) {
@@ -144,12 +169,14 @@ function targetOf(home: TrainHome, now: Date): SuggestionTarget | null {
   }
   const { card } = home.today;
   if (card.kind === "planned") {
-    // Today's suggestion is started, not added to the day, so there is no routine day to store it under.
+    // Today's suggestion is stored under the day today plans, so the projection folds it into that day and
+    // the session started from the day takes it up. The day is null only if the plan places none today.
     return {
       day: today,
-      routineDayId: null,
+      routineDayId: home.today.plannedDayId,
       routineDayName: card.dayName,
       today,
+      timeZone: home.timeZone,
       routineDays,
     };
   }
@@ -161,6 +188,7 @@ function targetOf(home: TrainHome, now: Date): SuggestionTarget | null {
           routineDayId: card.next.id,
           routineDayName: card.next.name,
           today,
+          timeZone: home.timeZone,
           routineDays,
         };
   }
@@ -187,7 +215,12 @@ function adjustedOf(suggestion: SuggestedDay): PlanAdjusted {
  * unread suggestion, a library that is out of reach, a dismissed day and no connection give, so the card
  * is never a skeleton or a blank card. Accepting stores the suggestion for the day, tells the notices to
  * show the toast with Undo, and a failure leaves the offer in place and tells them with core's words. A double
- * press of Add joins the first. The suggestion is health data: nothing here logs or reports it.
+ * press of Add joins the first. A suggestion for today has Start in place of Add: it stores the suggestion
+ * under the day today plans (or under none for a session that follows no day), and only when that has
+ * landed tells the notices to start the session. A failure to store tells them with core's words and starts
+ * nothing. One that stored while the start failed leaves the accepted card, which has its own Start. With a
+ * session already open nothing is stored and the start resumes it. The suggestion is health data: nothing
+ * here logs or reports it.
  */
 export function useSuggestionCard({
   home,
@@ -207,6 +240,7 @@ export function useSuggestionCard({
   const acceptedRead = useAcceptedSuggestions(weekStartOf(day), { enabled: reads });
   const activeRoutine = useActiveRoutine({ enabled: reads });
   const routineDetail = useRoutine(activeRoutine.data?.id, { enabled: reads });
+  const activeSession = useActiveSession({ enabled: reads });
   const acceptMutation = useAcceptSuggestion();
   const undoMutation = useUndoAcceptedSuggestion();
   // Whether an add is on its way, so a second press joins it and does not tell the notices a second time.
@@ -227,6 +261,12 @@ export function useSuggestionCard({
     const plannedSets = target.routineDays.find(({ id }) => id === stored.routine_day_id)?.setCount;
     return {
       status: "accepted",
+      start:
+        target.day === target.today
+          ? () => {
+              notices.onStart({ routineDayId: stored.routine_day_id, timeZone: target.timeZone });
+            }
+          : undefined,
       copy: describeStoredAcceptedSuggestion(stored.exercises, plannedSets ?? 0, {
         localDate: target.day,
         todayLocalDate: target.today,
@@ -279,34 +319,54 @@ export function useSuggestionCard({
       notices.onFailure(SUGGESTION_FAILED.undoFailed);
     });
   };
-  const accept = () => {
+  const routineDayId = suggestion.kind === "plan_adjusted" ? target.routineDayId : null;
+  // Stores the suggestion for the day, once at a time: a second press while one is on its way joins it and
+  // does nothing. Resolves to the stored row's id, or to null when the press was dropped or the write failed
+  // (the notices were told).
+  const store = async (): Promise<string | null> => {
     if (isAddingRef.current) {
-      return;
+      return null;
     }
     isAddingRef.current = true;
-    acceptMutation
-      .mutateAsync({
+    try {
+      const { id } = await acceptMutation.mutateAsync({
         suggestion,
         localDate: target.day,
-        routineDayId: suggestion.kind === "plan_adjusted" ? target.routineDayId : null,
-      })
-      .then(
-        ({ id }) => {
-          notices.onAccepted({
-            message: describeSuggestionAccepted(adjustedOf(suggestion), context).toast,
-            actionLabel: SUGGESTION_ACCEPTED.undoAction,
-            undo: () => {
-              undo(id);
-            },
-          });
-        },
-        () => {
-          notices.onFailure(SUGGESTION_FAILED.acceptFailed);
-        },
-      )
-      .finally(() => {
-        isAddingRef.current = false;
+        routineDayId,
       });
+      return id;
+    } catch {
+      notices.onFailure(SUGGESTION_FAILED.acceptFailed);
+      return null;
+    } finally {
+      isAddingRef.current = false;
+    }
+  };
+  const accept = () => {
+    void store().then((id) => {
+      if (id !== null) {
+        notices.onAccepted({
+          message: describeSuggestionAccepted(adjustedOf(suggestion), context).toast,
+          actionLabel: SUGGESTION_ACCEPTED.undoAction,
+          undo: () => {
+            undo(id);
+          },
+        });
+      }
+    });
+  };
+  const request = { routineDayId, timeZone: target.timeZone };
+  const start = () => {
+    if (activeSession.data !== null && activeSession.data !== undefined) {
+      // A session is running: Start only brings it back, and nothing is stored under it.
+      notices.onStart(request);
+      return;
+    }
+    void store().then((id) => {
+      if (id !== null) {
+        notices.onStart(request);
+      }
+    });
   };
 
   return {
@@ -317,5 +377,6 @@ export function useSuggestionCard({
     isForToday,
     isAccepting: acceptMutation.isPending,
     accept: isForToday ? undefined : accept,
+    start: isForToday ? start : undefined,
   };
 }

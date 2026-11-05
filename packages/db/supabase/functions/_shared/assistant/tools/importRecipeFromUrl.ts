@@ -1,6 +1,9 @@
 // "Add this recipe: example.com/lemon-traybake" saves a recipe in one turn and answers with one card (plan 2.4).
 // The tool fetches the page, reads it, finds a food for each ingredient line and saves the recipe by the same
-// path as `create_recipe`, so the model never sees the page. What it gets back is the recipe's id, its
+// path as `create_recipe`, so the model never sees the page. The food of a line is chosen by a second tool-less
+// Haiku call from a short list the food search found (never from its order, and never by a score): it chooses a
+// position in the list or none, a position outside the list refuses the import, and a line with no right food is
+// left out, because a wrong food saved as matched is worse than a line the person chooses. What it gets back is the recipe's id, its
 // numbers and three counts. A line that matches no food is shown on the card as not counted and is left out
 // of the numbers, and a vague line whose food does match ("a splash of milk") is saved with a small guessed
 // amount and marked as an estimate. This is the only code that guesses an amount.
@@ -13,22 +16,25 @@
 //   is the page's own, by its place). A page without JSON-LD goes to the model as its visible text, capped, and
 //   every line the model copied must be found in that text.
 // - The whole tool must finish inside the turn loop's 20 s for one MCP call (`MCP_REQUEST_TIMEOUT_MILLISECONDS`
-//   in `assistant/turn.ts`). The fetch gets 5 s, the parse call 9 s, and every step is raced against a cutoff
-//   of 15 s from the start. The save is last, and it is not started after the cutoff, so a call that the loop
-//   gives up on has not saved anything. A save that has started takes one write, well inside the 5 s left.
+//   in `assistant/turn.ts`). The fetch gets 5 s, the parse call 9 s, the pick call 4 s, and every step is raced
+//   against a cutoff of 18 s from the start. The save is last, and it is not started after the cutoff, so a call
+//   that the loop gives up on has not saved anything, and it is not started with less than half a second left. A
+//   save that has started takes one write, well inside the 2.5 s or more that is left.
 // - Nothing here logs or reports a page, a link or a line.
 import { z } from "zod";
 
 import {
   buildRecipeImportedCard,
   buildRecipeIngredient,
+  importCandidate,
   importedAmountOf,
-  isConfidentFoodMatch,
-  simplerFoodWord,
+  importFoodCandidates,
+  importSearchWords,
 } from "../../core.ts";
 import { createRecipe, getFood, listFoodPortions, searchFoods } from "../../repos.ts";
 import { readRecipeJsonLd } from "../../recipeJsonLd.ts";
 import { visibleText } from "../../recipePageText.ts";
+import { picksFitLines } from "../recipeParse.ts";
 import { urlInUserMessage } from "../urls.ts";
 import {
   archiveMadeRecipe,
@@ -41,7 +47,7 @@ import {
 } from "./recipeWrite.ts";
 
 import type { RecipeImportedLine, RecipeIngredient } from "../../core.ts";
-import type { ParsedMeasure } from "../recipeParse.ts";
+import type { FoodPickLine, ParsedMeasure } from "../recipeParse.ts";
 import type { ToolContext, WriteRunOutput, WriteToolDefinition } from "../tool.ts";
 
 const importRecipeInput = z.strictObject({
@@ -68,6 +74,8 @@ export type ImportLimits = {
   fetchMilliseconds: number;
   /** The most the parse call may take. */
   parseMilliseconds: number;
+  /** The most the call that chooses each line's food may take. */
+  pickMilliseconds: number;
   /** Counted from the start. A step still running then ends the tool, and the save is not started. */
   saveCutoffMilliseconds: number;
 };
@@ -75,16 +83,21 @@ export type ImportLimits = {
 export const defaultImportLimits: ImportLimits = {
   fetchMilliseconds: 5_000,
   parseMilliseconds: 9_000,
-  saveCutoffMilliseconds: 15_000,
+  pickMilliseconds: 4_000,
+  saveCutoffMilliseconds: 18_000,
 };
 
 // The visible text of a page with no JSON-LD, cut here, which is about 4,000 tokens.
 const PAGE_TEXT_MAX_CHARACTERS = 15_000;
 // The most searches at once, so a long ingredient list does not open forty requests together.
 const SEARCHES_AT_ONCE = 8;
-// Hits asked of the search for one line. Only the first is taken, if it is good enough.
-const HITS_PER_SEARCH = 5;
+// Hits asked of the search for one word. The line's candidates are cut from them in core.
+const HITS_PER_SEARCH = 50;
 const SEARCH_TEXT_MAX_CHARACTERS = 80;
+// The page's own line, cut for the pick call.
+const PICK_LINE_MAX_CHARACTERS = 300;
+// The least time left for a save to start (a write tool call measured 77 to 303 ms).
+const SAVE_MINIMUM_MILLISECONDS = 500;
 const SOURCE_URL_MAX_CHARACTERS = 2000;
 
 class BudgetExceeded extends Error {}
@@ -100,21 +113,29 @@ type Resolution = {
   guess: { amount: number; unit: "g" | "ml" } | null;
 };
 
-// The food of one search text: the first hit, when it scores well enough.
-async function confidentHit(ctx: ToolContext, text: string): Promise<string | null> {
-  const query = text.slice(0, SEARCH_TEXT_MAX_CHARACTERS).trim();
-  const [first] = await searchFoods(ctx.caller, query, HITS_PER_SEARCH);
-  return first !== undefined && isConfidentFoodMatch(first.score) ? first.id : null;
-}
+type FoodHit = Awaited<ReturnType<typeof searchFoods>>[number];
 
-// The food word, then once more its head noun when that found nothing. No other search is tried.
-async function foodIdOf(ctx: ToolContext, foodWord: string): Promise<string | null> {
-  const found = await confidentHit(ctx, foodWord);
-  if (found !== null) {
-    return found;
-  }
-  const simpler = simplerFoodWord(foodWord);
-  return simpler === null ? null : await confidentHit(ctx, simpler);
+// The foods to offer for each line: the hits of every search word of the line, joined and cut in core. A line
+// with no food word has none. At most `SEARCHES_AT_ONCE` searches run together, across all the lines.
+async function candidatesOf(ctx: ToolContext, lines: readonly ReadLine[]): Promise<FoodHit[][]> {
+  const searches = lines.flatMap((line, lineIndex) =>
+    (line.food_name?.trim() ?? "").length < 2
+      ? []
+      : importSearchWords(line.food_name?.trim().slice(0, SEARCH_TEXT_MAX_CHARACTERS) ?? "").map(
+          (word) => ({ lineIndex, word }),
+        ),
+  );
+  const hits = await inBatches(searches, SEARCHES_AT_ONCE, ({ word }) =>
+    searchFoods(ctx.caller, word, HITS_PER_SEARCH),
+  );
+  return lines.map((line, lineIndex) =>
+    importFoodCandidates(
+      line.food_name?.trim().slice(0, SEARCH_TEXT_MAX_CHARACTERS) ?? "",
+      searches.flatMap(({ lineIndex: searched }, searchIndex) =>
+        searched === lineIndex ? [hits[searchIndex] ?? []] : [],
+      ),
+    ),
+  );
 }
 
 type FoodAndPortions = {
@@ -122,16 +143,13 @@ type FoodAndPortions = {
   portions: Awaited<ReturnType<typeof listFoodPortions>>;
 };
 
+// The line saved with the food the model chose, from there on as before: its portions, its amount and its check.
 async function resolveLine(
   ctx: ToolContext,
   line: ParsedMeasure,
+  foodId: string | null,
   foods: Map<string, Promise<FoodAndPortions | null>>,
 ): Promise<Resolution | null> {
-  const foodWord = line.food_name?.trim() ?? "";
-  if (foodWord.length < 2) {
-    return null;
-  }
-  const foodId = await foodIdOf(ctx, foodWord);
   if (foodId === null) {
     return null;
   }
@@ -347,9 +365,45 @@ export function createImportRecipeFromUrlTool(
           return refuse("servings_missing");
         }
 
+        const candidates = await within(candidatesOf(ctx, lines));
+        // Only a line with candidates is offered to the model. With none there is nothing to choose and no call.
+        const offered = lines.flatMap((read, index) => {
+          const found = candidates[index] ?? [];
+          return found.length === 0 ? [] : [{ index, found, read }];
+        });
+        if (offered.length === 0) {
+          return refuse("nothing_matched");
+        }
+        const pickLines: FoodPickLine[] = offered.map(({ found, read }) => ({
+          line: read.text.slice(0, PICK_LINE_MAX_CHARACTERS),
+          foodWord: (read.food_name ?? "").trim().slice(0, SEARCH_TEXT_MAX_CHARACTERS),
+          candidates: found.map(importCandidate),
+        }));
+        const picked = await within(
+          services.pickFoods(pickLines, {
+            userId: ctx.userId,
+            turnId: ctx.turn.id,
+            timeoutMilliseconds: Math.max(1, Math.min(limits.pickMilliseconds, msLeft())),
+          }),
+        );
+        // A failed pick refuses the import, as a failed parse does: most lines dropped by a passing failure
+        // would be a worse result than "try again". A position outside a line's list is refused here too.
+        if (!picked.ok || !picksFitLines(pickLines, picked.picks)) {
+          return refuse("could_not_read_recipe");
+        }
+        const chosenFoodIds: (string | null)[] = lines.map(() => null);
+        offered.forEach(({ index, found }, offeredIndex) => {
+          const position = picked.picks[offeredIndex]?.position ?? null;
+          chosenFoodIds[index] = position === null ? null : (found[position]?.id ?? null);
+        });
+
         const foods = new Map<string, Promise<FoodAndPortions | null>>();
         const resolved = await within(
-          inBatches(lines, SEARCHES_AT_ONCE, (line) => resolveLine(ctx, line, foods)),
+          inBatches(
+            lines.map((read, index) => ({ read, foodId: chosenFoodIds[index] ?? null })),
+            SEARCHES_AT_ONCE,
+            ({ read, foodId }) => resolveLine(ctx, read, foodId, foods),
+          ),
         );
         const counted = resolved.flatMap((resolution) => (resolution === null ? [] : [resolution]));
         if (counted.length === 0) {
@@ -366,8 +420,10 @@ export function createImportRecipeFromUrlTool(
           return checked.refused;
         }
 
-        // The save is last. Past the cutoff the loop may already have given up on this call.
-        if (msLeft() <= 0) {
+        // The save is last. It starts only with a real window left: a write that begins a moment before the cutoff
+        // and hangs would be cut off by the loop with the recipe saved and the tool reporting a failure, and a
+        // retry would save it twice.
+        if (msLeft() < SAVE_MINIMUM_MILLISECONDS) {
           throw new BudgetExceeded();
         }
         const sourceUrl = [fetched.finalUrl, withHttpScheme(url)].find(

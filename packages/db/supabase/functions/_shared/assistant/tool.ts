@@ -19,6 +19,9 @@ export type ToolTurn = {
   conversationId: string;
   // The text of the message that started the turn. Null when the turn has none, and then no write runs.
   userMessageText: string | null;
+  // The person's own words: the last block of their stored message, when that block is text. Never the
+  // context block or a tool result. Null when the turn has none, and then nothing can confirm a write.
+  personsWords: string | null;
   // The day the turn's sheet was opened on, and the hour the Describe sheet knows, if any. A write
   // defaults to them when the person names no day or time.
   localDate: string;

@@ -74,6 +74,7 @@ function copyContexts(rows: Diary, options: { slotLimit?: number; viewing?: stri
   const contextOn = (turnId: string): ToolContext => {
     const made = createFakeContext([copyDayTool], {
       store,
+      personsWords: "Copy 3 entries",
       turn: { id: turnId, conversationId: store.turns[0]?.conversationId ?? "" },
       localDate: options.viewing ?? today,
       localTime: "13:00",
@@ -526,3 +527,21 @@ Deno.test(
     assertFalse(description.includes("ask the user"));
   },
 );
+
+Deno.test("after a typed yes the confirmation asks again and nothing is copied", async () => {
+  const { asking, confirming, stub, store } = copyContexts({
+    food_log_entries: [...mealsOf(userId, yesterday, 3), ...mealsOf(userId, today, 3, 500)],
+  });
+  const asked = await executeTool(asking, "copy_day", copyOf(3));
+  assert(asked.status === "needs_confirmation");
+
+  const result = await executeTool(
+    { ...confirming, turn: { ...confirming.turn, personsWords: "yes please" } },
+    "copy_day",
+    { ...copyOf(3), confirmation_id: asked.confirmationId },
+  );
+
+  assertObjectMatch(result, { status: "needs_confirmation", asksAgain: true });
+  assertEquals(mine(stub, today).length, 3);
+  assertEquals(store.actions.length, 0);
+});

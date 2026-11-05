@@ -10,6 +10,7 @@ const HIDDEN: SuggestionCardState = { status: "hidden" };
 const NO_NOTICES: SuggestionNotices = {
   onAccepted: () => undefined,
   onFailure: () => undefined,
+  onStart: () => undefined,
 };
 
 type TrainSuggestion = {

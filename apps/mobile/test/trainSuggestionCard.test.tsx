@@ -57,7 +57,7 @@ setUpTests();
 const accept = jest.fn();
 const offer: SuggestionCardState = { ...thursdayOffer, accept };
 
-const notices = { onAccepted: jest.fn(), onFailure: jest.fn() };
+const notices = { onAccepted: jest.fn(), onFailure: jest.fn(), onStart: jest.fn() };
 
 let queryClient: QueryClient;
 

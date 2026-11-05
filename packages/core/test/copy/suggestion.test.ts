@@ -369,6 +369,13 @@ describe("the accepted card and toast", () => {
     expect(accepted.undoActionName).toBe("Undo adding to Thursday");
   });
 
+  it("should name the Start of the card as the offer's Start was named", () => {
+    expect(accepted.startActionName).toBe("Start Legs with the added exercise");
+    expect(describeSuggestionAccepted(twoAdds, forThursday).startActionName).toBe(
+      "Start Legs with the added exercises",
+    );
+  });
+
   it("should list every exercise added", () => {
     const both = describeSuggestionAccepted(twoAdds, forThursday);
     expect(both.title).toBe("Thursday's Legs: 22 sets");
@@ -403,6 +410,19 @@ describe("the accepted card worded from the stored row", () => {
     expect(both.toast).toBe(
       "Added to Thursday: 3 sets of incline dumbbell press and 3 sets of side lateral raise",
     );
+  });
+
+  it("should name the Start of a stored card for a day with a plan, as the live card does", () => {
+    expect(describeStoredAcceptedSuggestion(golden, 16, forThursday).startActionName).toBe(
+      "Start Legs with the added exercise",
+    );
+  });
+
+  it("should name the Start of a stored session with no routine day the suggested session", () => {
+    expect(
+      describeStoredAcceptedSuggestion(golden, 0, { ...forThursday, routineDayName: null })
+        .startActionName,
+    ).toBe("Start the suggested session");
   });
 
   it("should call a stored session with no routine day a session", () => {

@@ -2,6 +2,7 @@ import { RESTING_HEAT } from "@keylow/api-client";
 import {
   BODY_MAP,
   MUSCLE_GROUP_NAMES,
+  MUSCLE_SHEET,
   SEARCH_CLEAR_LABEL,
   TRAIN_ERROR,
   TRAIN_OFFLINE_TITLE,
@@ -24,10 +25,21 @@ const reads = vi.hoisted(
     bodyMapAsked: { view: string; at?: string }[];
     listAsked: { view: string; at?: string }[];
     detailAsked: { muscle: string; options: Record<string, unknown> }[];
-  } => ({ byView: {}, list: undefined, bodyMapAsked: [], listAsked: [], detailAsked: [] }),
+    routine: unknown;
+    notTrained: boolean;
+  } => ({
+    byView: {},
+    list: undefined,
+    bodyMapAsked: [],
+    listAsked: [],
+    detailAsked: [],
+    routine: null,
+    notTrained: false,
+  }),
 );
+const router = vi.hoisted(() => ({ back: vi.fn(), push: vi.fn() }));
 
-vi.mock("next/navigation", () => ({ useRouter: () => ({ back: vi.fn(), push: vi.fn() }) }));
+vi.mock("next/navigation", () => ({ useRouter: () => router }));
 vi.mock("@keylow/api-client", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@keylow/api-client")>()),
   useProfileTimeZone: () => ({ data: "Europe/London" }),
@@ -41,9 +53,9 @@ vi.mock("@keylow/api-client", async (importOriginal) => ({
   },
   useMuscleDetail: (muscle: string, options: Record<string, unknown>) => {
     reads.detailAsked.push({ muscle, options });
-    return read(hamstringsDetail);
+    return read(reads.notTrained ? notTrainedHamstringsDetail : hamstringsDetail);
   },
-  useActiveRoutine: () => ({ data: null }),
+  useActiveRoutine: () => ({ data: reads.routine }),
 }));
 
 const refetch = vi.fn<() => Promise<unknown>>(() => Promise.resolve());
@@ -96,6 +108,20 @@ const hamstringsDetail: MuscleDetail = {
   lastTrained: null,
 };
 
+// Hamstrings read with no sets this week, so its sheet is the Not trained one.
+const notTrainedHamstringsDetail: MuscleDetail = {
+  ...hamstringsDetail,
+  weeklySets: {
+    ...hamstringsDetail.weeklySets,
+    actual: 0,
+    planned: 0,
+    actualStatus: "not_trained",
+    plannedStatus: "not_trained",
+    volumeStatus: "not_trained",
+  },
+  targeting: { targeted: false, routineTrains: false, goalRanks: false },
+};
+
 const showReads = (list: MuscleListGroup[] | undefined = goldenMuscleList()) => {
   reads.byView = {
     actual: read(bodyMap),
@@ -125,6 +151,8 @@ describe("the muscle list page", () => {
     reads.bodyMapAsked = [];
     reads.listAsked = [];
     reads.detailAsked = [];
+    reads.routine = null;
+    router.push.mockReset();
     showReads();
   });
 
@@ -232,6 +260,72 @@ describe("the muscle list page", () => {
       fireEvent.keyDown(document, { key: "Escape" });
 
       expect(screen.queryByRole("dialog")).toBeNull();
+      expect(document.activeElement).toBe(row);
+    });
+  });
+
+  describe("Edit routine on a row's Not trained sheet", () => {
+    const openHamstringsSheet = () => {
+      const row = within(group("Legs")).getByRole("button", { name: /^Hamstrings,/ });
+      fireEvent.click(row);
+      return row;
+    };
+    const pressEditRoutine = () => {
+      fireEvent.click(
+        within(screen.getByRole("dialog", { name: "Hamstrings" })).getByRole("button", {
+          name: MUSCLE_SHEET.editRoutine,
+        }),
+      );
+    };
+
+    beforeEach(() => {
+      reads.notTrained = true;
+    });
+
+    afterEach(() => {
+      reads.notTrained = false;
+    });
+
+    it("should close the sheet and open the active routine's editor", () => {
+      reads.routine = { id: "routine-1" };
+      render(<MuscleListScreen />);
+      openHamstringsSheet();
+
+      pressEditRoutine();
+
+      expect(screen.queryByRole("dialog")).toBeNull();
+      expect(router.push).toHaveBeenCalledExactlyOnceWith("/train/routines/routine-1");
+    });
+
+    it("should open the create page when there is no active routine", () => {
+      render(<MuscleListScreen />);
+      openHamstringsSheet();
+
+      pressEditRoutine();
+
+      expect(screen.queryByRole("dialog")).toBeNull();
+      expect(router.push).toHaveBeenCalledExactlyOnceWith("/train/routines/new");
+    });
+
+    it("should draw no button until the routine read has answered", () => {
+      reads.routine = undefined;
+      render(<MuscleListScreen />);
+
+      openHamstringsSheet();
+
+      expect(
+        within(screen.getByRole("dialog", { name: "Hamstrings" })).queryByRole("button", {
+          name: MUSCLE_SHEET.editRoutine,
+        }),
+      ).toBeNull();
+    });
+
+    it("should give focus back to the row as the sheet closes", () => {
+      render(<MuscleListScreen />);
+      const row = openHamstringsSheet();
+
+      pressEditRoutine();
+
       expect(document.activeElement).toBe(row);
     });
   });

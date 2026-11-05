@@ -47,6 +47,7 @@ export const Accepted: Story = {
         toast: "Added to Thursday: 3 sets of incline dumbbell press",
         undoAction: "Undo",
         undoActionName: "Undo adding to Thursday",
+        startActionName: "Start Legs with the added exercise",
       },
     },
   },
