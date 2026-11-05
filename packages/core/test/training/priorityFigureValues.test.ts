@@ -1,21 +1,15 @@
+import { describe, expect, it } from "vitest";
+
 import {
   deriveMusclePriority,
   GOAL_PRESETS_V1,
+  MUSCLE_IDS,
+  priorityFigureValues,
   summarisePriorities,
   VOLUME_STATUSES,
-} from "@keylow/core/training";
+} from "../../src/training";
 
-import { priorityFigureValues } from "../../components/GoalQuestionnaire";
-
-import type { GoalAnswers } from "@keylow/core/training";
-
-// The folder's index reaches the kit, which reads the theme preference from storage.
-jest.mock("@react-native-async-storage/async-storage", () => ({
-  __esModule: true,
-  default: jest.requireActual<object>(
-    "@react-native-async-storage/async-storage/jest/async-storage-mock",
-  ),
-}));
+import type { GoalAnswers } from "../../src/training";
 
 const goldenAnswers: GoalAnswers = {
   goal: "aesthetic",
@@ -63,5 +57,9 @@ describe("priorityFigureValues", () => {
     for (const muscle of summary.notTargeted) {
       expect(values[muscle]).toBe(VOLUME_STATUSES.indexOf("not_trained"));
     }
+  });
+
+  it("should give every muscle a value, as each is in exactly one group", () => {
+    expect(Object.keys(values).sort()).toStrictEqual([...MUSCLE_IDS].sort());
   });
 });

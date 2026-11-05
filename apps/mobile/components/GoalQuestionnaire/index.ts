@@ -7,7 +7,6 @@ export { GoalSummaryScreen } from "./GoalSummaryScreen";
 export { PriorityRow } from "./PriorityRow";
 export { QuestionScreen } from "./QuestionScreen";
 export { firstUnansweredStep, goalAnswersOfRow } from "@keylow/core/training";
-export { priorityFigureValues } from "./priorityFigureValues";
 export { useGoalDraft } from "./useGoalDraft";
 export type { GoalDraft, GoalDraftAnswers } from "@keylow/core/training";
 export type { GoalDraftProviderProps } from "./GoalDraftProvider";
