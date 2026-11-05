@@ -1,5 +1,5 @@
 import type { BodyFigureValues } from "@/components/ui/BodyFigure";
-import type { BodyArtworkFigure, BodyMapView } from "@keylow/core/training";
+import type { BodyArtworkFigure, BodyMapView, MuscleId } from "@keylow/core/training";
 
 export type BodyMapCardProps = {
   /** The view shown. */
@@ -22,4 +22,8 @@ export type BodyMapCardProps = {
   onToggle: () => void;
   /** A line under the figures, or null for none: why the two views match, or why Projected is off. */
   note: string | null;
+  /** Called by a hold or Enter on a muscle, to open its details. */
+  onLongPressMuscle: (muscle: MuscleId) => void;
+  /** The muscle whose details are open, marked on the figures. */
+  selectedMuscle?: MuscleId | undefined;
 };

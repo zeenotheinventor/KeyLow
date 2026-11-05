@@ -16,14 +16,18 @@ const VIEWS = ["actual", "projected"] as const satisfies readonly BodyMapView[];
 // boards draw it, so the width is a class and the figure's own height follows its width.
 const FIGURE_WIDTH = 200;
 
+// How strongly the muscles that are not the selected one show while its sheet is open.
+const UNSELECTED_OPACITY = 0.4;
+
 /**
  * The front and the back of the body side by side with each name under it, coloured by the heat of the view.
  * A click anywhere on them calls `onTap`, and a drag that ends in a click does not. The figures are plain
  * images, so a screen reader reaches the other view through the toggle button and not through this click.
  * Both views are drawn one over the other and the one that is not shown fades out over 220 ms while the
  * other fades in, or is swapped at once under prefers-reduced-motion. The one that is not shown is hidden
- * from a screen reader. The press that opens a muscle's details is not here yet: a figure given a muscle
- * handler stops the click of a muscle, so the screen that adds one passes `onPressMuscle` as the tap.
+ * from a screen reader. With `onLongPressMuscle` the muscles of the shown view are buttons, and the hidden
+ * view keeps plain figures, so Tab never reaches it. A figure given a muscle handler stops the click of a
+ * muscle, so a short click on one calls `onTap` as a click anywhere else does.
  */
 export function BodyMapFigures({
   view,
@@ -31,6 +35,8 @@ export function BodyMapFigures({
   projectedValues,
   body,
   onTap,
+  onLongPressMuscle,
+  selected,
 }: BodyMapFiguresProps) {
   const pressedAt = useRef<{ x: number; y: number } | null>(null);
   const valuesOf = (layer: BodyMapView) => (layer === "projected" ? projectedValues : actualValues);
@@ -44,6 +50,11 @@ export function BodyMapFigures({
     ) {
       return;
     }
+    onTap?.();
+  };
+
+  // A figure given a muscle handler stops the click of a muscle, so the tap is passed on from here.
+  const handleMusclePress = () => {
     onTap?.();
   };
 
@@ -70,10 +81,15 @@ export function BodyMapFigures({
                 )}
               >
                 <BodyFigure
+                  {...(layer === view && onLongPressMuscle !== undefined
+                    ? { onLongPressMuscle, onPressMuscle: handleMusclePress }
+                    : {})}
                   body={body}
                   label={describeBodyFigureLabel({ scale: "heat", view: layer, side, hint: null })}
                   scale="heat"
+                  selected={selected}
                   side={side}
+                  unselectedOpacity={UNSELECTED_OPACITY}
                   values={valuesOf(layer)}
                   w={FIGURE_WIDTH}
                 />

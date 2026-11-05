@@ -42,3 +42,12 @@ export const focusRingClasses =
 /** The width of the line between muscles and of the line round the selected one, in the drawing's units. */
 export const SEPARATOR_WIDTH = 1.4;
 export const SELECTED_OUTLINE_WIDTH = 2.6;
+
+/*
+ * The invisible shape under each muscle that gives a press room to land, as one stroke round its outline in
+ * screen pixels (it does not scale with the figure). It is 20 pixels because the thinnest blob the artwork
+ * draws is 4.5 pixels across at 140 pixels wide (the female lower back), which this brings to 24, the
+ * WCAG minimum target size. Every other blob at both widths the body map draws the figures at (140 and 200)
+ * ends up wider. The shapes are drawn under all the muscles, so a muscle's own drawing always wins a press.
+ */
+export const HIT_AREA_STROKE_WIDTH = 20;

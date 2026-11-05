@@ -104,7 +104,10 @@ export function Dialog({
     return () => {
       unlockPageScroll();
       openPanels.splice(openPanels.indexOf(panel), 1);
-      if (focusTarget instanceof HTMLElement) focusTarget.focus();
+      // A drawn control, such as a muscle of the body map, is an SVG element and has focus too.
+      if (focusTarget instanceof HTMLElement || focusTarget instanceof SVGElement) {
+        focusTarget.focus();
+      }
     };
   }, [open, focusTarget]);
 

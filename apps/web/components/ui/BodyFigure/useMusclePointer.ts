@@ -72,7 +72,21 @@ export function useMusclePointer(onLongPress: ((muscle: MuscleId) => void) | und
     }
     timer.current = setTimeout(() => {
       timer.current = undefined;
+      // The hold is over once it fires, so a later move cannot count as a drag of this press. The click of
+      // the release is swallowed. The release may land on what the hold opened and never reach the figure,
+      // so the swallowing ends after the next pointer up, wherever it is, and a click that comes with no
+      // pointer down (assistive technology) is a press.
       isClickSwallowed.current = true;
+      origin.current = null;
+      window.addEventListener(
+        "pointerup",
+        () => {
+          setTimeout(() => {
+            isClickSwallowed.current = false;
+          }, 0);
+        },
+        { once: true, capture: true },
+      );
       onLongPress(muscle);
     }, BODY_LONG_PRESS_DELAY_MILLISECONDS);
   };
