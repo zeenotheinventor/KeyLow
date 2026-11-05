@@ -350,6 +350,25 @@ describe("the graders of the ask set", () => {
       expect((await allowed(contextOf([turn]))).passed).toBe(true);
     });
 
+    it.each(["You ate 1,300 kcal today.", "You ate 90 g of protein.", "Today you had 1,300 kcal."])(
+      "should fail for a target figure that is not said of the target or of what is left: %j",
+      async (answer) => {
+        expect((await allowed(contextOf([turnResult({ answer })]))).passed).toBe(false);
+      },
+    );
+
+    it.each([
+      "All 1,300 kcal of your target are left.",
+      "Nothing is logged, so 1,300 kcal remain.",
+      "Your goal is 1,300 kcal.",
+      "Nothing yet, so 1,300 kcal to go.",
+    ])(
+      "should pass for a target figure said of the target or of what is left: %j",
+      async (answer) => {
+        expect((await allowed(contextOf([turnResult({ answer })]))).passed).toBe(true);
+      },
+    );
+
     it("should fail for any other amount", async () => {
       const turn = turnResult({ answer: "All 1,300 kcal are left after 250 kcal." });
 
@@ -472,6 +491,17 @@ describe("the routes the set accepts", () => {
 
     expect(await run("empty-today", good)).toEqual([]);
     expect(await run("empty-today", bad)).not.toEqual([]);
+  });
+
+  it("should not take the porridge bowl for oats, nor oats for the porridge bowl", async () => {
+    const spec = callsOfCase("eaten-breakfasts-over-three-days");
+    const withoutOats = perfectTurn(spec, { answer: "Yogurt, apple, porridge, egg, bread." });
+    const withoutBowl = perfectTurn(spec, { answer: "Yogurt, apple, oats, egg, bread." });
+    const both = perfectTurn(spec, { answer: "Yogurt, apple, oats, porridge bowl, egg, bread." });
+
+    expect(await run("eaten-breakfasts-over-three-days", withoutOats)).not.toEqual([]);
+    expect(await run("eaten-breakfasts-over-three-days", withoutBowl)).not.toEqual([]);
+    expect(await run("eaten-breakfasts-over-three-days", both)).toEqual([]);
   });
 
   it("should not ask for a minor item such as 10 g of olive oil", () => {

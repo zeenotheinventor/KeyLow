@@ -122,22 +122,30 @@ export function answerNames(...spellings: readonly string[]): Grader {
 // An amount with its unit, such as "1,200 kcal", "85 g" or "80.5 kg". A date or a count of entries has none.
 const AMOUNT_WITH_UNIT = /(\d[\d,.]*)\s*(?:kcal|calories|cals?|kg|kilos?|grams?|g)\b/gi;
 
+// A clause that speaks of the target or of what is left of it. A comma only ends a clause when a space follows,
+// so the comma of "1,300" stays inside its number.
+const CLAUSE_END = /[.!?;:\n]\s*|,\s+/;
+const ABOUT_THE_TARGET = /\b(?:left|remaining|remain|remains|target|goal|to go)\b/i;
+
 /**
- * Passes when the last answer states no amount other than `allowed`. A range with nothing in it can still
- * say what is left of a target, because the tool gives the targets and the whole of each is left.
+ * Passes when the last answer states no amount, except a figure of `allowed` (the targets) in a clause that also
+ * says it is left, remaining, the target, the goal or to go. A range with nothing in it still has its targets,
+ * and the whole of each is left, but "you ate 1,300 kcal" is wrong whatever the target is.
  */
 export function noAmountsStated(allowed: readonly number[] = []): Grader {
   return (context) => {
-    const amounts = [...(context.turns.at(-1)?.answer ?? "").matchAll(AMOUNT_WITH_UNIT)].map(
-      ([, digits]) => Number((digits ?? "").replaceAll(",", "")),
-    );
-    const stray = amounts.find(
-      (amount) => !allowed.some((value) => Math.abs(value - amount) < 0.05),
+    const clauses = (context.turns.at(-1)?.answer ?? "").split(CLAUSE_END);
+    const stray = clauses.some((clause) =>
+      [...clause.matchAll(AMOUNT_WITH_UNIT)].some(([, digits]) => {
+        const amount = Number((digits ?? "").replaceAll(",", ""));
+        const isTargetFigure = allowed.some((value) => Math.abs(value - amount) < 0.05);
+        return !(isTargetFigure && ABOUT_THE_TARGET.test(clause));
+      }),
     );
     return Promise.resolve(
-      stray === undefined
-        ? pass("the answer states no amount but the targets")
-        : fail("the answer states an amount for a range with nothing in it"),
+      stray
+        ? fail("the answer states an amount for a range with nothing in it")
+        : pass("the answer states no amount but the targets"),
     );
   };
 }
@@ -285,7 +293,7 @@ const size = ({ value, tolerance }: ExpectedNumber): ExpectedNumber => ({
 const SPELLINGS: Readonly<Record<string, readonly [string, ...string[]]>> = {
   "Eval porridge bowl": ["porridge"],
   "Eval chicken and rice": ["chicken and rice"],
-  oats: ["oat", "porridge"],
+  oats: ["oat"],
   yogurt: ["yogurt", "yoghurt"],
 };
 
