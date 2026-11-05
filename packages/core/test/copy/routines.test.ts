@@ -39,6 +39,7 @@ import {
   ROUTINE_RESTORE_FAILED,
   ROUTINE_SAVE_FAILED,
   ROUTINE_WEEKDAY_CHOICES,
+  ROUTINES_OFFLINE,
   ROUTINES_ARCHIVED,
   ROUTINES_EMPTY,
   ROUTINES_SCREEN,
@@ -110,6 +111,14 @@ describe("the Routines screen's fixed words", () => {
 
   it("should say why Archive routine is dimmed while the draft has unsaved changes", () => {
     expect(ROUTINE_ARCHIVE_UNSAVED).toBe("Save or cancel your changes first.");
+  });
+
+  it("should say that making active, archiving and restoring need a connection", () => {
+    expect(ROUTINES_OFFLINE).toStrictEqual({
+      makeActive: "Making a routine active needs a connection.",
+      archive: "Archiving a routine needs a connection.",
+      restore: "Restoring a routine needs a connection.",
+    });
   });
 
   it("should count the archived routines on the link", () => {
