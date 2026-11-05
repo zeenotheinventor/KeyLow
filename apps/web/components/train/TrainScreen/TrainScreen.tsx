@@ -13,12 +13,14 @@ import { WifiOff } from "lucide-react";
 import Link from "next/link";
 
 import { PlanWeek } from "../PlanWeek";
+import { SuggestionCard } from "../SuggestionCard";
 import { TodayCard } from "../TodayCard";
 import { TrainBodyMap } from "../TrainBodyMap";
 import { TrainFirstTime } from "../TrainFirstTime";
 import { TrainLoading } from "../TrainLoading";
 import { TrainNoRoutine } from "../TrainNoRoutine";
 import { plannedExercisesOf } from "./plannedExercises";
+import { useTrainSuggestion } from "./useTrainSuggestion";
 
 import type { TrainScreenProps, TrainSessionStart } from "./types";
 
@@ -57,7 +59,9 @@ function bindViewSession(handler: (sessionId: string) => void, sessionId: string
  * is drawn only when its handler is given, and it passes the handler what the start needs: the routine day
  * and the time zone. The page is a row from the extra large breakpoint, as the board draws it: the Today
  * card and the week in the left column and the body map in a column of its own at 360 pixels, which
- * stacks under them below it. The body map is left out on the first visit.
+ * stacks under them below it. The body map is left out on the first visit. The suggestion card sits under the
+ * Today card and above the week, so above the body map in either layout, and is drawn only when it is given
+ * the notices that show its toast. It is not pressable until the web suggestion detail.
  */
 export function TrainScreen({
   isStarting = false,
@@ -67,9 +71,20 @@ export function TrainScreen({
   onStart,
   onResume,
   onViewSession,
+  suggestionNotices,
+  onSuggestionAddPress,
 }: TrainScreenProps) {
-  const home = useTrainHome({ now: useNow(), enabled: true });
+  const now = useNow();
+  const home = useTrainHome({ now, enabled: true });
   const isOnline = useIsOnline();
+  const suggestion = useTrainSuggestion({
+    home,
+    now,
+    enabled: true,
+    isOnline,
+    notices: suggestionNotices,
+    onAddPress: onSuggestionAddPress,
+  });
   // The board lists the planned day's exercises with their reps, which the active routine's read does not hold.
   const plannedRoutineId =
     home.status === "ready" &&
@@ -175,6 +190,11 @@ export function TrainScreen({
               />
             )
           ) : null}
+          <SuggestionCard
+            state={suggestion.state}
+            onDismiss={suggestion.dismiss}
+            onSetGoal={onSetGoal}
+          />
           {home.status === "ready" && home.week !== null ? (
             <PlanWeek week={home.week.plan} weekStart={home.week.weekStart} />
           ) : null}
