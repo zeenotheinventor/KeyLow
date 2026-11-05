@@ -4,19 +4,10 @@ import type { RecipeIngredientInput } from "../recipes";
 import type { Food, FoodPortion } from "../schemas/food";
 
 /*
- * What `import_recipe_from_url` decides about each ingredient line, in the order it decides it: which hit of
- * the food search it takes, the simpler word it tries when the search found nothing, and the amount it saves.
+ * What `import_recipe_from_url` decides about each ingredient line, in the order it decides it: which words it
+ * searches the foods for, the short list of foods it offers the model to choose from, and the amount it saves.
  * The numbers are core's own, and a line that fails any of these is not counted and never invented.
  */
-
-/**
- * The lowest `search_foods` score the import takes as the food of a line. The score is the search's own
- * (full text rank, trigram similarity and boosts). On the local stack with the full CoFID import, a food that
- * has every word of the query scored 1.8 to 2.3 ("olive oil" 2.189, "double cream" 1.818, "mascarpone"
- * 2.009), and a food found only by trigram similarity scored 1.2 or less ("red onion" 0.8, "cornflour"
- * 0.9, "plain flour" 1.179). The cut sits between the two. If the search's weights change, measure again.
- */
-export const IMPORT_MATCH_MIN_SCORE = 1.5;
 
 /**
  * The most a guessed amount can be, in grams or millilitres. A vague line ("a splash of milk" 50 ml, "salt to
@@ -24,8 +15,6 @@ export const IMPORT_MATCH_MIN_SCORE = 1.5;
  * trusted to move the recipe's numbers further.
  */
 export const IMPORT_GUESS_MAX_AMOUNT = 100;
-
-export const isConfidentFoodMatch = (score: number): boolean => score >= IMPORT_MATCH_MIN_SCORE;
 
 // A word shorter than this is not a food word ("red ox" has nothing simpler to try).
 const SIMPLER_WORD_MIN_CHARACTERS = 3;
@@ -64,6 +53,120 @@ export function simplerFoodWord(foodWord: string): string | null {
     !dropped.some((word) => FOOD_CHANGING_WORDS.has(word))
     ? last
     : null;
+}
+
+// The first word of a name of more than one word, when it is a food word of its own: "red onion" is also a
+// "red" food, and "coconut milk" is not a "coconut" food.
+function leadingFoodWord(foodWord: string): string | null {
+  const words = foodWord.trim().toLowerCase().split(/\s+/);
+  const first = words[0] ?? "";
+  return words.length > 1 &&
+    first.length >= SIMPLER_WORD_MIN_CHARACTERS &&
+    !FOOD_CHANGING_WORDS.has(first)
+    ? first
+    : null;
+}
+
+/**
+ * The words to search the foods for, for a food word of a line, in the order their hits are joined: the
+ * phrase, then its last word (`simplerFoodWord`), then its first word. Three at most.
+ */
+export function importSearchWords(foodWord: string): string[] {
+  const phrase = foodWord.trim().toLowerCase().replace(/\s+/g, " ");
+  if (phrase === "") {
+    return [];
+  }
+  const words = [phrase, simplerFoodWord(phrase), leadingFoodWord(phrase)].flatMap((word) =>
+    word === null ? [] : [word],
+  );
+  return [...new Set(words)].slice(0, IMPORT_SEARCH_WORDS_MAX);
+}
+
+/** The most foods offered to the model for one line. */
+export const IMPORT_CANDIDATES_MAX = 40;
+
+const IMPORT_SEARCH_WORDS_MAX = 3;
+const CANDIDATE_NAME_MAX_CHARACTERS = 80;
+const CANDIDATE_BRAND_MAX_CHARACTERS = 40;
+
+// "potato" is also "potatos" and "potatoes", "berry" is "berries". Only the forms a name starts with matter.
+function pluralFormsOf(word: string): string[] {
+  return word.endsWith("y")
+    ? [word, `${word}s`, `${word}es`, `${word.slice(0, -1)}ies`]
+    : [word, `${word}s`, `${word}es`];
+}
+
+/** The part of a food's name before its first comma, in lower case: "Potatoes" of "Potatoes, old, raw". */
+const firstPartOf = (name: string): string => (name.split(",")[0] ?? "").trim().toLowerCase();
+
+/** The part after the first comma, in lower case: the kind ("old", "semi-skimmed", "Cheddar") or "" when there is none. */
+const kindOf = (name: string): string => (name.split(",")[1] ?? "").trim().toLowerCase();
+
+// Takes one name of each kind in turn, in the order the kinds first appear, so a kind with sixty names does not
+// push out a kind with one: "Cheese, Cheddar, English" is not lost behind forty other cheeses.
+function onePerKindInTurn<Food extends CandidateFood>(foods: readonly Food[]): Food[] {
+  const kinds = new Map<string, Food[]>();
+  for (const food of foods) {
+    const kind = kindOf(food.name);
+    kinds.set(kind, [...(kinds.get(kind) ?? []), food]);
+  }
+  const rounds = Math.max(0, ...[...kinds.values()].map((names) => names.length));
+  return Array.from({ length: rounds }, (_, round) =>
+    [...kinds.values()].flatMap((names) => (names[round] === undefined ? [] : [names[round]])),
+  ).flat();
+}
+
+type CandidateFood = { id: string; name: string };
+
+/**
+ * The foods to offer the model for a line. The lists of `importSearchWords` are joined in order and a food
+ * found twice is kept once. The foods whose first part is the food word, its plural or one of its words go
+ * first ("Potatoes, old, raw" for "potato", where a dish such as "Potato rings" ties with it on score), taken
+ * one of each kind in turn (the part after the first comma), the rest keep their order, and the list is cut at
+ * `IMPORT_CANDIDATES_MAX`. The order is only a way to put the likely foods inside the cut. The model chooses,
+ * so there is no list of dish or cooking words here.
+ */
+export function importFoodCandidates<Food extends CandidateFood>(
+  foodWord: string,
+  hitLists: readonly (readonly Food[])[],
+): Food[] {
+  const phrase = foodWord.trim().toLowerCase().replace(/\s+/g, " ");
+  const wanted = new Set(
+    [phrase, ...phrase.split(/[\s-]+/)].filter((word) => word !== "").flatMap(pluralFormsOf),
+  );
+  const seen = new Set<string>();
+  const joined = hitLists.flat().filter((food) => {
+    if (seen.has(food.id)) {
+      return false;
+    }
+    seen.add(food.id);
+    return true;
+  });
+  const [named, others] = [
+    joined.filter((food) => wanted.has(firstPartOf(food.name))),
+    joined.filter((food) => !wanted.has(firstPartOf(food.name))),
+  ];
+  return [...onePerKindInTurn(named), ...others].slice(0, IMPORT_CANDIDATES_MAX);
+}
+
+/** One food as the model reads it: its name, and whether it is the person's own food. */
+export type ImportCandidate = { name: string; own: boolean };
+
+/**
+ * How a candidate food is written to the model: its name cut at 80 characters, then the brand when it has one
+ * (cut at 40), and `own` for the person's own food. `own` comes from the food's source and never from the text,
+ * so a product named "Potatoes (the person's own)" is not taken for one. The model never sees the food's id.
+ */
+export function importCandidate(food: {
+  name: string;
+  brand: string | null;
+  source: string;
+}): ImportCandidate {
+  const brand = food.brand?.trim().slice(0, CANDIDATE_BRAND_MAX_CHARACTERS) ?? "";
+  return {
+    name: `${food.name.slice(0, CANDIDATE_NAME_MAX_CHARACTERS)}${brand === "" ? "" : ` (${brand})`}`,
+    own: food.source === "user",
+  };
 }
 
 /** What the parse read of a line's amount. */

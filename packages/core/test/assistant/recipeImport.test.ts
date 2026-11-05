@@ -1,12 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  IMPORT_GUESS_MAX_AMOUNT,
-  IMPORT_MATCH_MIN_SCORE,
-  importedAmountOf,
-  isConfidentFoodMatch,
-  simplerFoodWord,
-} from "../../src/assistant";
+import { IMPORT_GUESS_MAX_AMOUNT, importedAmountOf, simplerFoodWord } from "../../src/assistant";
 
 import type { ImportedLineMeasure } from "../../src/assistant";
 
@@ -34,16 +28,6 @@ const measure = (overrides: Partial<ImportedLineMeasure> = {}): ImportedLineMeas
   guessAmount: null,
   guessUnit: null,
   ...overrides,
-});
-
-describe("isConfidentFoodMatch", () => {
-  it("should take the scores of a food that has every word of the query, and refuse the trigram guesses", () => {
-    // Measured on the local stack with the full CoFID import: "olive oil" 2.189, "double cream" 1.818,
-    // "mascarpone" 2.009 against "red onion" 0.8, "cornflour" 0.9 and "plain flour" 1.179.
-    expect([2.189, 1.818, 2.009].every(isConfidentFoodMatch)).toBe(true);
-    expect([0.8, 0.9, 1.179].some(isConfidentFoodMatch)).toBe(false);
-    expect(IMPORT_MATCH_MIN_SCORE).toBe(1.5);
-  });
 });
 
 describe("simplerFoodWord", () => {
