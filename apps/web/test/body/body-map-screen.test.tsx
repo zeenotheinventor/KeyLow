@@ -45,12 +45,14 @@ const reads = vi.hoisted(
     asked: { view: string; scale: string; enabled: boolean | undefined }[];
     detailAsked: { muscle: string; view: string }[];
     listAsked: (boolean | undefined)[];
+    scaleListAsked: { scale: string; enabled: boolean | undefined }[];
     zone: unknown;
   } => ({
     byRead: {},
     asked: [],
     detailAsked: [],
     listAsked: [],
+    scaleListAsked: [],
     zone: undefined,
   }),
 );
@@ -81,9 +83,19 @@ vi.mock("@keylow/api-client", async (importOriginal) => ({
     return pending;
   },
   useActiveRoutine: () => ({ data: null }),
-  // The Muscles card has its own test file, so the list is never read here.
+  // The Muscles card has its own test files, so the lists are never read here.
   useMuscleList: ({ enabled }: { enabled?: boolean | undefined }) => {
     reads.listAsked.push(enabled);
+    return {
+      data: undefined,
+      isPending: true,
+      isError: false,
+      error: null,
+      refetch: () => Promise.resolve(),
+    };
+  },
+  useMuscleScaleList: ({ scale, enabled }: { scale: string; enabled?: boolean | undefined }) => {
+    reads.scaleListAsked.push({ scale, enabled });
     return {
       data: undefined,
       isPending: true,
@@ -195,6 +207,7 @@ describe("BodyMapScreen", () => {
     reads.asked = [];
     reads.detailAsked = [];
     reads.listAsked = [];
+    reads.scaleListAsked = [];
     reads.zone = { data: "Europe/London" };
     show(read(goldenActual), read(goldenProjected));
   });
@@ -400,6 +413,7 @@ describe("BodyMapScreen", () => {
           ]),
         );
         expect(reads.asked.every(({ enabled }) => enabled !== false)).toBe(true);
+        expect(reads.scaleListAsked.every(({ enabled }) => enabled !== false)).toBe(true);
         for (const name of ["Volume", "Gap", "Heat"]) {
           chooseScale(name);
           expect(loading()).toBeNull();
@@ -408,6 +422,9 @@ describe("BodyMapScreen", () => {
           readsOnOpen,
         );
         expect(reads.asked.every(({ enabled }) => enabled !== false)).toBe(true);
+        // The card's rows are the scale on screen's, read from the same rows and never switched off.
+        expect(reads.scaleListAsked.map(({ scale }) => scale)).toContain("gap");
+        expect(reads.scaleListAsked.every(({ enabled }) => enabled !== false)).toBe(true);
       });
 
       it("should not remember the scale for the next visit", () => {
@@ -495,10 +512,10 @@ describe("BodyMapScreen", () => {
         expect(within(viewLabel()).getByText("By Sun 18 Oct, if you follow the plan")).toBeTruthy();
       });
 
-      it("should leave the Muscles card and its Muscle list link out", () => {
+      it("should keep the Muscle list link, which opens Heat's list, while the rows are not read", () => {
         render(<BodyMapScreen initialScale="volume" />);
 
-        expect(musclesCard()).toBeNull();
+        expect(musclesCard()?.getAttribute("href")).toBe("/body-map/muscles");
         expect(screen.queryByRole("heading", { name: BODY_MAP.listTitle })).toBeNull();
       });
 
@@ -607,12 +624,12 @@ describe("BodyMapScreen", () => {
         expect(screen.queryByText(/^Nothing logged/)).toBeNull();
       });
 
-      it("should leave the Muscles card out, and bring it back on Heat with its link as it was", () => {
+      it("should keep the Muscle list link on every scale, opening the same page", () => {
         render(<BodyMapScreen />);
         expect(musclesCard()?.getAttribute("href")).toBe("/body-map/muscles");
 
         chooseScale("Gap");
-        expect(musclesCard()).toBeNull();
+        expect(musclesCard()?.getAttribute("href")).toBe("/body-map/muscles");
 
         chooseScale("Heat");
         expect(musclesCard()?.getAttribute("href")).toBe("/body-map/muscles");

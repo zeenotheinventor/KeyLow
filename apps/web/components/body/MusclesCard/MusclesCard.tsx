@@ -1,4 +1,9 @@
-import { BODY_MAP, describeWebListCaption } from "@keylow/core/copy";
+import {
+  BODY_MAP,
+  describeGapListRow,
+  describeVolumeListRow,
+  describeWebListCaption,
+} from "@keylow/core/copy";
 import { List } from "lucide-react";
 import { useId } from "react";
 
@@ -8,15 +13,63 @@ import { MuscleRow } from "@/components/body/MuscleRow";
 import { Card } from "@/components/ui/Card";
 import { ListRow } from "@/components/ui/ListRow";
 
+// The swatch of each status on Volume and Gap, written out so Tailwind sees the classes.
+const volumeSwatchClassNames = {
+  not_trained: "bg-volume-not-trained",
+  maintaining: "bg-volume-maintaining",
+  growing: "bg-volume-growing",
+  productive: "bg-volume-productive",
+  high: "bg-volume-high",
+} as const;
+const gapSwatchClassNames = {
+  behind: "bg-gap-behind",
+  on_plan: "bg-gap-on-plan",
+  ahead: "bg-gap-ahead",
+} as const;
+
 /**
- * The Muscles card of the body map on Heat: the muscles above rest, hottest first, under a line that says how
- * many more are at rest, as `web-body, actual-heat` draws it from 700 px up. Below that the board draws only
- * the Muscle list row, so the rows are hidden there and the row alone stays. The row also sits at the foot of
- * the card from 700 px up, where the board has none, because otherwise "10 more at rest" has no way to them.
- * A row opens that muscle's sheet.
+ * The Muscles card of the body map, as `web-body, actual-heat`, `web-body, volume` and `web-body, gap` draw it
+ * from 700 px up: the muscles the scale on screen lists (above rest and hottest first on Heat, at Growing or
+ * above and most sets first on Volume, furthest behind first on Gap) under a line that says how many more are
+ * left out. Below that the board draws only the Muscle list row, so the rows are hidden there and the row alone
+ * stays. The row also sits at the foot of the card from 700 px up, where the board has none, because otherwise
+ * "10 more at rest" has no way to them. The page it opens is Heat's list on every scale. A row opens that
+ * muscle's sheet, and states its status and figure in words, so the colour of its swatch is never the only signal.
  */
-export function MusclesCard({ list, listHref, onOpenMuscle }: MusclesCardProps) {
+export function MusclesCard({ list, view, weekEnd, listHref, onOpenMuscle }: MusclesCardProps) {
   const headingId = useId();
+
+  function renderRows() {
+    if (list === null) {
+      return null;
+    }
+    const open = (muscle: Parameters<typeof onOpenMuscle>[0]) => (rowElement: HTMLElement) => {
+      onOpenMuscle(muscle, rowElement);
+    };
+    if ("moreAtRest" in list) {
+      return list.rows.map((row) => (
+        <MuscleRow key={row.muscle} row={row} onOpen={open(row.muscle)} />
+      ));
+    }
+    if (list.scale === "volume") {
+      return list.rows.map((row) => (
+        <MuscleRow
+          key={row.muscle}
+          words={describeVolumeListRow({ ...row, view, weekEnd })}
+          swatchClassName={volumeSwatchClassNames[row.status]}
+          onOpen={open(row.muscle)}
+        />
+      ));
+    }
+    return list.rows.map((row) => (
+      <MuscleRow
+        key={row.muscle}
+        words={describeGapListRow(row)}
+        swatchClassName={gapSwatchClassNames[row.status]}
+        onOpen={open(row.muscle)}
+      />
+    ));
+  }
 
   return (
     <Card padding="none">
@@ -27,20 +80,12 @@ export function MusclesCard({ list, listHref, onOpenMuscle }: MusclesCardProps) 
               {BODY_MAP.listTitle}
             </h2>
             <span className="text-caption text-text-muted">
-              {describeWebListCaption({ scale: "heat", moreAtRest: list.moreAtRest })}
+              {"moreAtRest" in list
+                ? describeWebListCaption({ scale: "heat", moreAtRest: list.moreAtRest })
+                : describeWebListCaption(list)}
             </span>
           </div>
-          <ul className="divide-y divide-border border-t border-border">
-            {list.rows.map((row) => (
-              <MuscleRow
-                key={row.muscle}
-                row={row}
-                onOpen={(rowElement) => {
-                  onOpenMuscle(row.muscle, rowElement);
-                }}
-              />
-            ))}
-          </ul>
+          <ul className="divide-y divide-border border-t border-border">{renderRows()}</ul>
         </section>
       )}
       <ul className={list === null ? "" : "min-[700px]:border-t min-[700px]:border-border"}>

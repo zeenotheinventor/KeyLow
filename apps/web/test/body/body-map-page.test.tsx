@@ -17,6 +17,7 @@ vi.mock("@keylow/api-client", async (importOriginal) => ({
   useStartSessionAction: () => ({ start: vi.fn(), isStarting: false }),
   useBodyMap: () => read(bodyMap),
   useMuscleList: () => read(undefined),
+  useMuscleScaleList: () => read(undefined),
 }));
 
 const read = <Data,>(data: Data): TrainingReadResult<Data> => ({

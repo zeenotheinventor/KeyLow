@@ -752,7 +752,7 @@ const TRUE_MINUS_SIGN = "\u2212";
 
 export type WebListCaptionInput =
   | { scale: "heat"; moreAtRest: number }
-  | { scale: "volume"; notTrained: number }
+  | { scale: "volume"; moreMaintaining: number; notTrained: number }
   | { scale: "gap"; moreOnPlan: number; notInPlan: number };
 
 const withCounts = (lead: string, counts: readonly (string | null)[]): string => {
@@ -772,7 +772,10 @@ export const describeWebListCaption = (input: WebListCaptionInput): string => {
     return withCounts("Hottest first", [countOf(input.moreAtRest, "more at rest")]);
   }
   if (input.scale === "volume") {
-    return withCounts("Most sets first", [countOf(input.notTrained, "not trained")]);
+    return withCounts("Most sets first", [
+      countOf(input.moreMaintaining, "more maintaining"),
+      countOf(input.notTrained, "not trained"),
+    ]);
   }
   return withCounts("Furthest behind first", [
     countOf(input.moreOnPlan, "more on plan"),
