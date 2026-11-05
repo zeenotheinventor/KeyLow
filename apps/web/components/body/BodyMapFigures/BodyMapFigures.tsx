@@ -20,8 +20,8 @@ const FIGURE_WIDTH = 200;
 const UNSELECTED_OPACITY = 0.4;
 
 /**
- * The front and the back of the body side by side with each name under it, coloured by the heat of the view.
- * A click anywhere on them calls `onTap`, and a drag that ends in a click does not. The figures are plain
+ * The front and the back of the body side by side with each name under it, coloured by the values of the
+ * scale and the view. A click anywhere on them calls `onTap`, and a drag that ends in a click does not. The figures are plain
  * images, so a screen reader reaches the other view through the toggle button and not through this click.
  * Both views are drawn one over the other and the one that is not shown fades out over 220 ms while the
  * other fades in, or is swapped at once under prefers-reduced-motion. The one that is not shown is hidden
@@ -30,6 +30,7 @@ const UNSELECTED_OPACITY = 0.4;
  * muscle, so a short click on one calls `onTap` as a click anywhere else does.
  */
 export function BodyMapFigures({
+  scale,
   view,
   actualValues,
   projectedValues,
@@ -85,8 +86,8 @@ export function BodyMapFigures({
                     ? { onLongPressMuscle, onPressMuscle: handleMusclePress }
                     : {})}
                   body={body}
-                  label={describeBodyFigureLabel({ scale: "heat", view: layer, side, hint: null })}
-                  scale="heat"
+                  label={describeBodyFigureLabel({ scale, view: layer, side, hint: null })}
+                  scale={scale}
                   selected={selected}
                   side={side}
                   unselectedOpacity={UNSELECTED_OPACITY}

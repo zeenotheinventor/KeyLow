@@ -1,22 +1,25 @@
 import type { BodyFigureValues } from "@/components/ui/BodyFigure";
+import type { BodyMapScale } from "@keylow/core/copy";
 import type { BodyArtworkFigure, BodyMapView, MuscleId } from "@keylow/core/training";
 
 export type BodyMapCardProps = {
-  /** The view shown. */
+  /** The scale the values are on. Gap has no Actual or Projected, so its label has no dashed dot. */
+  scale: BodyMapScale;
+  /** The view shown. On Gap both views draw the same, and the label does not name it. */
   view: BodyMapView;
-  /** The view named, such as "Actual". */
+  /** The view named, such as "Actual", or "Done against plan" on Gap. */
   viewLabel: string;
   /** The line under the view: the moment shown, or why there is nothing to show. */
   subLine: string;
-  /** The heat of each muscle in Actual. A muscle left out is drawn at rest. */
+  /** The value of each muscle in Actual, for the scale. A muscle left out is drawn at the scale's first step. */
   actualValues: BodyFigureValues;
-  /** The heat of each muscle in Projected. */
+  /** The value of each muscle in Projected. */
   projectedValues: BodyFigureValues;
   /** The figure drawn. Defaults to male. */
   body?: BodyArtworkFigure | undefined;
-  /** The toggle button's label, naming the view it switches to: "Show projected" or "Show actual". */
-  toggleLabel: string;
-  /** False when Projected cannot be shown, which disables the button and the click on the figures. */
+  /** The toggle button's label, naming the view it switches to: "Show projected" or "Show actual". Null for none, as on Gap. */
+  toggleLabel: string | null;
+  /** False when the view cannot be switched, which disables the button and the click on the figures. */
   isToggleEnabled: boolean;
   /** Called when the button or a click on the figures asks for the other view. */
   onToggle: () => void;

@@ -1,8 +1,11 @@
+import type { BodyMapLinkScale } from "@keylow/core/training";
+
+// The address's scale is read the same way on the web, so core owns it.
+export { bodyMapScaleOf } from "@keylow/core/training";
+export type { BodyMapLinkScale } from "@keylow/core/training";
+
 /** The screens that open the body map and that it names its Back control for. */
 export type BodyMapOrigin = "dashboard" | "train";
-
-/** The scales a link can open the body map on. Heat is where it opens when the address says nothing. */
-export type BodyMapLinkScale = "heat" | "volume";
 
 /**
  * The body map screen, pushed over the tabs. Opened from the Train home it says so, so Back reads "Back to
@@ -18,10 +21,6 @@ export const bodyMapPath = (
   ];
   return parameters.length === 0 ? "/body-map" : `/body-map?${parameters.join("&")}`;
 };
-
-/** The scale a `scale` parameter names. Anything but Volume, and a cold link with none, is Heat. */
-export const bodyMapScaleOf = (scale: string | undefined): BodyMapLinkScale =>
-  scale === "volume" ? "volume" : "heat";
 
 /** The origin a `from` parameter names. Anything but the Train home's own value is the dashboard, and a cold link has none. */
 export const bodyMapOriginOf = (from: string | undefined): BodyMapOrigin =>

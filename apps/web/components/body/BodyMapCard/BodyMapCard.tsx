@@ -15,9 +15,11 @@ import { Card } from "@/components/ui/Card";
  * Projected, and the front and back of the body with a line under them. The toggle button sits at the top
  * right of the card from the tablet breakpoint and under the figures on a phone, where the board centres
  * it. It is named for the view it switches to, and when it is off the line under the figures says why.
- * A click on the figures switches too.
+ * A click on the figures switches too. Gap has neither the button nor the click, and its line under the
+ * figures is the note on what the plan left behind.
  */
 export function BodyMapCard({
+  scale,
   view,
   viewLabel,
   subLine,
@@ -42,11 +44,12 @@ export function BodyMapCard({
         <ViewLabel
           label={viewLabel}
           subLine={subLine}
-          isProjected={view === "projected"}
+          isProjected={scale !== "gap" && view === "projected"}
           className="md:col-start-1 md:row-start-1"
         />
         <div className="md:col-span-2 md:row-start-2">
           <BodyMapFigures
+            scale={scale}
             view={view}
             actualValues={actualValues}
             projectedValues={projectedValues}
@@ -56,17 +59,19 @@ export function BodyMapCard({
             selected={selectedMuscle}
           />
         </div>
-        <Button
-          variant="secondary"
-          size="sm"
-          disabled={!isToggleEnabled}
-          aria-describedby={note === null ? undefined : noteId}
-          onClick={onToggle}
-          className="justify-self-center md:col-start-2 md:row-start-1 md:justify-self-end"
-        >
-          <ArrowRightLeft aria-hidden strokeWidth={iconStroke} />
-          {toggleLabel}
-        </Button>
+        {toggleLabel === null ? null : (
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={!isToggleEnabled}
+            aria-describedby={note === null ? undefined : noteId}
+            onClick={onToggle}
+            className="justify-self-center md:col-start-2 md:row-start-1 md:justify-self-end"
+          >
+            <ArrowRightLeft aria-hidden strokeWidth={iconStroke} />
+            {toggleLabel}
+          </Button>
+        )}
         {note === null ? null : (
           <p
             id={noteId}
