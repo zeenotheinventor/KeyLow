@@ -51,6 +51,7 @@ import { IconButton } from "@/components/ui/IconButton";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { useToast } from "@/components/ui/Toast";
 import { useBodyFigure } from "@/lib/bodyFigure";
+import { useBodyMapRenderer } from "@/lib/bodyMapRenderer";
 import { muscleListPath } from "@/lib/bodyMapRoutes";
 import { useBodyMapView } from "@/lib/bodyMapView";
 import { trainSessionPath } from "@/lib/trainRoutes";
@@ -81,7 +82,10 @@ const SCALE_OPTIONS = [
  * says so.
  *
  * The figures are drawn as the figure setting has it, male or female, which the page waits for with the
- * view. The first time it opens it asks which figure, and closing that question without an answer records
+ * view and with the renderer chosen in More. With 3D chosen, a male figure and a browser that can draw it, the
+ * card shows one body on a dark stage in place of the two figures (see `BodyMapCard`), and everything else on
+ * the page works on it as on the figures: the scale, the view, the day, the Muscles card and the sheet that a
+ * hold on a muscle opens. Side by side is always 2D. The first time it opens it asks which figure, and closing that question without an answer records
  * Male so it is not asked again. The button at the right of the title opens the question at any time.
  *
  * The page is a column of two: the card, and the cards that belong beside it (the legend and the Muscles
@@ -120,6 +124,9 @@ export function BodyMapScreen({ initialScale = "heat" }: BodyMapScreenProps) {
   const { view: chosenView, isRead: isViewRead, setView } = useBodyMapView();
   const [scale, setScale] = useState<BodyMapScale>(initialScale);
   const { figure, isReady: isFigureReady, hasChosen, setFigure } = useBodyFigure();
+  // The renderer is waited for with the view and the figure, so a person with 3D saved never sees the 2D layout
+  // flash before the stage, and the server's first draw (the skeleton) and the browser's first render agree.
+  const { isReady: isRendererReady } = useBodyMapRenderer();
   const [isFigureDialogOpen, setIsFigureDialogOpen] = useState(false);
   const [hasAskedFigure, setHasAskedFigure] = useState(false);
   // The scrubber day picked, or null for today. Only Heat has it. It is the day as picked: whether the view
@@ -219,7 +226,11 @@ export function BodyMapScreen({ initialScale = "heat" }: BodyMapScreenProps) {
         : musclesAboveRest(list.data)
       : (scaleList.data ?? null);
   const isShown =
-    isViewRead && isFigureReady && actual.data !== undefined && projected.data !== undefined;
+    isViewRead &&
+    isFigureReady &&
+    isRendererReady &&
+    actual.data !== undefined &&
+    projected.data !== undefined;
 
   // A day after today is one only Projected can show, so leaving the view that showed it for Actual leaves
   // the day behind for good, as the row falls back to today.

@@ -16,6 +16,9 @@
    v2 (second pass, 2026-10-18): --volume-not-targeted for a muscle the routine and goal do not train (KEY-356),
    drawn close to the silhouette so it reads as left out, not as a status. v4 renamed it --volume-not-trained, for a
    muscle with no sets; the gap scale reuses it for "not in your plan".
+   stage (KEY-835): --stage-background is the backdrop of the web 3D stage. It holds the dark theme's background in both themes,
+   because the stage is dark whatever the app's theme and the app's theme sits on <html>, where var(--background) would
+   resolve light under it. The kit's 3D body stays a clear canvas, and the stage that holds it draws this behind it.
    The far-behind and far-ahead gap steps are retired: core has three plan statuses (behind, on plan, ahead). */
 :root{
 --body-silhouette:#262D3A;
@@ -42,6 +45,7 @@
 --role-primary:#CCF249;
 --role-secondary:#8FA83A;
 --role-assist:#66783A;
+--stage-background:#0B0E13;
 }
 [data-theme="light"]{
 --body-silhouette:#E2E6EC;
@@ -68,4 +72,5 @@
 --role-primary:#4D7300;
 --role-secondary:#76A01A;
 --role-assist:#B9D67A;
+--stage-background:#0B0E13;
 }

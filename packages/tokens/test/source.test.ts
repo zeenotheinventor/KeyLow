@@ -65,6 +65,7 @@ describe("the training additions", () => {
     "role-primary",
     "role-secondary",
     "role-assist",
+    "stage-background",
   ];
 
   it.each(["dark", "light"] as const)(
