@@ -9,8 +9,11 @@ import {
   dressBody,
   frameBody,
   looksOf,
+  pickMuscle,
+  pointsPerMetre,
 } from "@keylow/body-3d";
-import { BODY_SIDE_YAW, turnAboutCentre, yawToReachSide } from "@keylow/body-3d/rotation";
+import { turnAboutCentre } from "@keylow/body-3d/rotation";
+import { cameraShift } from "@keylow/body-3d/zoom";
 import { bodyMapPalette, themes } from "@keylow/tokens";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Suspense, use, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -18,7 +21,9 @@ import { Suspense, use, useEffect, useLayoutEffect, useMemo, useRef, useState } 
 import { maleBodyModel } from "./bodyModel";
 
 import type { Body3DCanvasProps } from "./types";
-import type { BodySide } from "@keylow/body-3d/rotation";
+import type { CameraPosition } from "@keylow/body-3d";
+import type { ZoomView } from "@keylow/body-3d/zoom";
+import type { RootState } from "@react-three/fiber";
 
 const MILLISECONDS_PER_SECOND = 1000;
 
@@ -27,10 +32,30 @@ const SCHEME = "dark";
 const palette = bodyMapPalette(SCHEME);
 const selectedColour = themes[SCHEME]["text-primary"];
 
-/** An ease in and out, so a turn starts and stops softly. It is 0.5 half way through. */
-const smooth = (progress: number) => progress * progress * (3 - 2 * progress);
+type SceneCamera = RootState["camera"];
 
-type Turn = { from: number; to: number; elapsedMilliseconds: number };
+// The camera R3F makes from the `camera` prop is a perspective one, which has a zoom.
+function hasZoom(camera: SceneCamera): camera is SceneCamera & { zoom: number } {
+  return "zoom" in camera && typeof camera.zoom === "number";
+}
+
+/**
+ * Zooms the camera about the middle of its view, and moves it so the body is moved on the stage by the view's
+ * offset. The projection is rebuilt only when the zoom changed.
+ */
+function zoomCamera(
+  camera: SceneCamera,
+  framed: CameraPosition,
+  view: ZoomView,
+  metrePixels: number,
+) {
+  const shift = cameraShift(view, metrePixels);
+  camera.position.set(framed[0] + shift.x, framed[1] + shift.y, framed[2]);
+  if (hasZoom(camera) && camera.zoom !== view.zoom) {
+    camera.zoom = view.zoom;
+    camera.updateProjectionMatrix();
+  }
+}
 
 type BodyMeshesProps = Omit<Body3DCanvasProps, "onError">;
 
@@ -40,14 +65,17 @@ function BodyMeshes({
   selected,
   dim,
   unselectedOpacity,
-  side,
+  pose,
   motionMilliseconds,
   frameAspect,
+  onPickerChange,
   onFirstFrame,
 }: BodyMeshesProps) {
   const model = use(maleBodyModel());
   const camera = useThree((state) => state.camera);
   const invalidate = useThree((state) => state.invalidate);
+  const viewWidth = useThree((state) => state.size.width);
+  const viewHeight = useThree((state) => state.size.height);
   const hasReportedFrame = useRef(false);
   const looks = useMemo(() => looksOf(scale, values, palette), [scale, values]);
   const emphasis = useMemo(
@@ -88,10 +116,10 @@ function BodyMeshes({
     [dressed],
   );
   const framed = useMemo(() => frameBody(dressed.box, frameAspect), [dressed, frameAspect]);
-  // Where the body faces now and the turn under way, which the render loop reads. No React render is involved.
-  const yaw = useRef(BODY_SIDE_YAW[side]);
-  const turn = useRef<Turn | null>(null);
-  const previousSide = useRef<BodySide>(side);
+  const metrePixels = useMemo(
+    () => pointsPerMetre(dressed.box, frameAspect, viewHeight),
+    [dressed, frameAspect, viewHeight],
+  );
 
   useEffect(
     () => () => {
@@ -120,21 +148,19 @@ function BodyMeshes({
     camera.updateProjectionMatrix();
     invalidate();
   }, [camera, framed, invalidate]);
-  // A new side turns the body there by the shorter arc, or at once with no motion.
+  // The pose is written by the pointer and by a new side, off React. The loop draws only on demand, so every write
+  // asks for the next frame, which reads it below.
+  useEffect(() => pose.subscribe(invalidate), [pose, invalidate]);
+  // The pick is made here, where the camera and the body are, so it sees them as they are drawn: the turn, the zoom
+  // and the pan are all on them. The canvas is as wide as the touch area, so a point of the touch area is a point of it.
   useLayoutEffect(() => {
-    if (previousSide.current === side) {
-      return;
-    }
-    previousSide.current = side;
-    const to = yawToReachSide(yaw.current, side);
-    if (motionMilliseconds === 0) {
-      yaw.current = to;
-      turn.current = null;
-    } else {
-      turn.current = { from: yaw.current, to, elapsedMilliseconds: 0 };
-    }
-    invalidate();
-  }, [side, motionMilliseconds, invalidate]);
+    onPickerChange?.((point) =>
+      pickMuscle(point, { width: viewWidth, height: viewHeight }, camera, dressed.group),
+    );
+    return () => {
+      onPickerChange?.(null);
+    };
+  }, [onPickerChange, camera, dressed, viewWidth, viewHeight]);
 
   // The meshes are in the scene by now, so the first frame that runs is the first one that draws them.
   useFrame((_, deltaSeconds) => {
@@ -143,18 +169,12 @@ function BodyMeshes({
       hasReportedFrame.current = true;
       onFirstFrame?.();
     }
-    const current = turn.current;
-    if (current !== null) {
-      current.elapsedMilliseconds += deltaMilliseconds;
-      const progress = Math.min(1, current.elapsedMilliseconds / motionMilliseconds);
-      yaw.current = current.from + (current.to - current.from) * smooth(progress);
-      if (progress === 1) {
-        turn.current = null;
-      } else {
-        invalidate();
-      }
+    const isPoseMoving = pose.step(deltaMilliseconds);
+    turnAboutCentre(dressed.group, pose.yaw, centreX, centreZ);
+    zoomCamera(camera, framed, pose.view, metrePixels);
+    if (isPoseMoving) {
+      invalidate();
     }
-    turnAboutCentre(dressed.group, yaw.current, centreX, centreZ);
     // The loop draws only on demand, so a fade that is not over asks for the next frame itself.
     if (lookFade.step(deltaMilliseconds)) {
       invalidate();

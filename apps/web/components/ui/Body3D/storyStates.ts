@@ -6,5 +6,6 @@ export const storyStates = [
   "Selected",
   "Dimmed",
   "Turning",
+  "Interactive",
   "WithoutWebGL",
 ];
