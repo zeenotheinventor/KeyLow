@@ -280,11 +280,23 @@ export function errorResult(name: string, code: string): ToolCallResult {
   };
 }
 
-export function confirmationResult(name: string, confirmationId: string): ToolCallResult {
+export function confirmationResult(
+  name: string,
+  confirmationId: string,
+  note?: string,
+): ToolCallResult {
   return {
-    text: wrapUntrusted(name, { status: "needs_confirmation", confirmation_id: confirmationId }),
+    text: wrapUntrusted(name, {
+      status: "needs_confirmation",
+      confirmation_id: confirmationId,
+      ...(note === undefined ? {} : { note }),
+    }),
     isError: false,
-    outcome: { status: "needs_confirmation", confirmationId },
+    outcome: {
+      status: "needs_confirmation",
+      confirmationId,
+      ...(note === undefined ? {} : { note }),
+    },
   };
 }
 
@@ -352,6 +364,7 @@ export const fakeTools: ListedTool[] = [
     quick_replies: { type: "array", items: { type: "string" } },
   }),
   listed("import_recipe_from_url", false, { url: { type: "string" } }),
+  listed("update_targets", false, { current_kcal: { type: "number" } }),
 ];
 
 export const allowlistToolsOf = (tools: readonly ListedTool[]): AllowlistTool[] =>

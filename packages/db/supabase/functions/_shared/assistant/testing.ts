@@ -13,6 +13,7 @@ import type {
   SlotRequest,
 } from "./store.ts";
 import type {
+  ConfirmationNeed,
   ReadToolDefinition,
   ToolContext,
   ToolDefinition,
@@ -270,7 +271,7 @@ type NoteInput = z.infer<typeof noteInput>;
 export type FakeToolOptions = {
   name?: string;
   run?: (input: NoteInput) => Promise<{ target: ActionTarget | null }>;
-  needsConfirmation?: (input: NoteInput) => boolean;
+  needsConfirmation?: (input: NoteInput) => ConfirmationNeed;
   inverse?: WriteToolDefinition<NoteInput>["inverse"];
 };
 

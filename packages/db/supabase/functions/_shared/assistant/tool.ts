@@ -54,6 +54,8 @@ export type WriteRunOutput = ToolRunOutput & {
   target: ActionTarget | null;
 };
 
+export type ConfirmationNeed = boolean | { note: string };
+
 export type InverseOutcome = "undone" | "unavailable";
 
 type ToolBase<Input> = {
@@ -78,8 +80,11 @@ export type WriteToolDefinition<Input = unknown> = ToolBase<Input> & {
   kind: "write";
   // The table the write changes, recorded on its action.
   targetTable: string;
-  // Present when the call can be destructive or bulk. A true answer asks for a confirmation first.
-  needsConfirmation?(input: Input, ctx: ToolContext): boolean | Promise<boolean>;
+  // Present when the call can be destructive or bulk. A true answer asks for a confirmation first. A `note`
+  // asks too, and carries one line the tool wrote from the person's own rows. The turn loop adds it after
+  // the model's question, because the model words that question in the same response as the call, before
+  // the tool has answered.
+  needsConfirmation?(input: Input, ctx: ToolContext): ConfirmationNeed | Promise<ConfirmationNeed>;
   // Must not throw once its write has landed. A throw releases the slot and answers `tool_failed`, so
   // a write that landed and then threw would be retried by the model and done twice. Do the write
   // last, and return the target as soon as the write is done.

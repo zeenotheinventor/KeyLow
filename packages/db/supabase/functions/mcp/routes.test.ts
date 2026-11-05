@@ -407,6 +407,28 @@ Deno.test(
   },
 );
 
+Deno.test(
+  "a write that asks with a note answers the note as structuredContent after the confirmation id",
+  async () => {
+    const write = fakeWriteTool({ needsConfirmation: () => ({ note: "A line." }) });
+    const made = fake({ registry: createRegistry([write.definition]) });
+
+    const result = await resultOf(
+      await post(made.dependencies, callTool("fake_write", { note: "lunch" }), {
+        headers: { "x-kilo-allowed-tools": "fake_write" },
+      }),
+    );
+
+    const outcome = Object.entries(result["structuredContent"] ?? {});
+    assertEquals(
+      outcome.map(([key]) => key),
+      ["status", "confirmationId", "note"],
+    );
+    assertEquals(outcome[2]?.[1], "A line.");
+    assertEquals(write.runs, []);
+  },
+);
+
 Deno.test("tools/list and initialize do not read the user message", async () => {
   const made = fake();
 

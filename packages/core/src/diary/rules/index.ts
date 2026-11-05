@@ -15,6 +15,12 @@ export {
 } from "./macrosDisagreeWithCalories";
 export { progressBars } from "./progressBars";
 export type { ProgressBar, ProgressBarKey, ProgressTargets } from "./progressBars";
+export { MACRO_TARGET_MAXIMUM_G, scaleMacroTargets } from "./scaleMacroTargets";
+export type {
+  CurrentMacroTargets,
+  ScaledMacros,
+  ScaleMacroTargetsResult,
+} from "./scaleMacroTargets";
 export { sumEntries } from "./sumEntries";
 export type { EntryTotals, SummableEntry } from "./sumEntries";
 export { validateQuantity } from "./validateQuantity";

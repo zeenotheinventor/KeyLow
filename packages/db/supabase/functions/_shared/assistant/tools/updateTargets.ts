@@ -4,7 +4,12 @@
 // ended, and only while nothing has touched the targets or the programme since.
 import { z } from "zod";
 
-import { buildTargetsChangedCard, validateTargets } from "../../core.ts";
+import {
+  buildTargetsChangedCard,
+  describeMacrosAdjustedNote,
+  scaleMacroTargets,
+  validateTargets,
+} from "../../core.ts";
 import { getMyTargets, reopenProgram, updateMyTargets } from "../../repos.ts";
 import { invalidInput } from "./entryWrite.ts";
 import {
@@ -14,7 +19,15 @@ import {
   sameInstant,
 } from "./targetsWrite.ts";
 
-import type { ToolContext, WriteRunOutput, WriteToolDefinition } from "../tool.ts";
+import type { ScaledMacros, ValidTargets } from "../../core.ts";
+import type { Targets } from "../../repos.ts";
+import type { ConfirmationNeed, WriteRunOutput, WriteToolDefinition } from "../tool.ts";
+
+const macrosInput = z.strictObject({
+  protein_g: z.number().min(0).max(1000).describe("The new daily protein target in grams."),
+  carbs_g: z.number().min(0).max(1000).describe("The new daily carbs target in grams."),
+  fat_g: z.number().min(0).max(1000).describe("The new daily fat target in grams."),
+});
 
 const updateTargetsInput = z.strictObject({
   kcal: z
@@ -23,9 +36,11 @@ const updateTargetsInput = z.strictObject({
     .min(800)
     .max(6000)
     .describe("The new daily calorie target, a whole number."),
-  protein_g: z.number().min(0).max(1000).describe("The new daily protein target in grams."),
-  carbs_g: z.number().min(0).max(1000).describe("The new daily carbs target in grams."),
-  fat_g: z.number().min(0).max(1000).describe("The new daily fat target in grams."),
+  macros: macrosInput
+    .nullable()
+    .describe(
+      "The new protein, carbs and fat targets when the user gave all three, or null when the user gave only calories. Never a partial set.",
+    ),
   current_kcal: z
     .number()
     .int()
@@ -37,12 +52,27 @@ const updateTargetsInput = z.strictObject({
 
 type UpdateTargetsInput = z.infer<typeof updateTargetsInput>;
 
-const targetsOf = ({ kcal, protein_g, carbs_g, fat_g }: UpdateTargetsInput) =>
-  validateTargets({ kcal, protein_g, fat_g, carbs_g });
+// What to save, and the scaled macros when the person gave only calories and there were macros to scale.
+// A refusal names the fields only, because a value can be health data.
+type Plan =
+  | { ok: true; targets: ValidTargets; adjusted: ScaledMacros | null }
+  | { ok: false; fields: string[] };
 
-// Whether the number the model read is the person's own, as `run` will see it.
-async function isCurrentKcal(ctx: ToolContext, currentKcal: number | null): Promise<boolean> {
-  return ((await getMyTargets(ctx.caller)).kcal ?? null) === currentKcal;
+function planOf(input: UpdateTargetsInput, current: Targets): Plan {
+  if (input.macros !== null) {
+    const valid = validateTargets({ kcal: input.kcal, ...input.macros });
+    return valid.ok
+      ? { ok: true, targets: valid.value, adjusted: null }
+      : { ok: false, fields: Object.keys(valid.problems) };
+  }
+  const scaled = scaleMacroTargets(current, input.kcal);
+  if (scaled.outcome !== "scaled") {
+    return { ok: false, fields: ["macros"] };
+  }
+  const valid = validateTargets({ kcal: input.kcal, ...scaled.macros });
+  return valid.ok
+    ? { ok: true, targets: valid.value, adjusted: scaled.anyMacroSet ? scaled.macros : null }
+    : { ok: false, fields: Object.keys(valid.problems) };
 }
 
 export const updateTargetsTool: WriteToolDefinition<UpdateTargetsInput> = {
@@ -50,13 +80,18 @@ export const updateTargetsTool: WriteToolDefinition<UpdateTargetsInput> = {
   description:
     "Saves the user's own daily calorie, protein, carbs and fat targets, with Undo. Saving your own " +
     "targets ends the user's programme and its weekly check-in, so read the targets with get_day first " +
-    "and pass the calorie target the user has now as current_kcal. The call first answers " +
-    "needs_confirmation with a confirmation_id: ask the user in your own words to change their calorie " +
-    "target from the current number to the new one, and when they have a programme say that this ends it " +
-    "and its weekly check-in and that today and later days use their own targets. When they say yes call " +
-    "again with the same input and that confirmation_id. Ask for any of the four numbers the user did not " +
-    "give, never guess one. If the user did not give a macro, ask with ask_user. If the call is refused " +
-    "with current_kcal, call again with that number.",
+    "and pass the calorie target the user has now as current_kcal. When the user gave only calories " +
+    '("set my calories to 2,000"), pass macros as null: Ki-Lo adjusts their current protein, carbs and ' +
+    "fat by the same proportion. Do not work out the new grams and do not ask for them. When the user " +
+    "gave all three, pass macros with the three numbers. If the user gave some macros but not all, ask " +
+    "for the rest with ask_user, never guess one. The call first answers needs_confirmation with a " +
+    "confirmation_id: in the same response as the call, before it, write the question in your own words, " +
+    "asking the user to change their calorie target from the current number to the new one, and when " +
+    "they have a programme say that this ends it and its weekly check-in and that today and later days " +
+    "use their own targets. Ki-Lo adds the line about their macros after your question, so do not write " +
+    "one. When they say yes call again with the same input and that confirmation_id. If the call is " +
+    "refused naming macros, ask the user for all three of protein, carbs and fat with ask_user, then " +
+    "call again with them. If the call is refused with current_kcal, call again with that number.",
   kind: "write",
   input: updateTargetsInput,
   annotations: { readOnlyHint: false, destructiveHint: true },
@@ -64,27 +99,38 @@ export const updateTargetsTool: WriteToolDefinition<UpdateTargetsInput> = {
   // names the programme when one ended and the user's own id otherwise, which no programme row has.
   targetTable: "programs",
   // Asks only for a change that `run` would make: a refusal (a number out of range, a current_kcal that is
-  // not the person's own) must not spend a confirmation or show a button for it.
-  async needsConfirmation(input, ctx) {
-    return targetsOf(input).ok && (await isCurrentKcal(ctx, input.current_kcal));
+  // not the person's own, macros that cannot be scaled) must not spend a confirmation or show a button for
+  // it. When the macros will be scaled, the answer carries the line that tells the person the figures.
+  async needsConfirmation(input, ctx): Promise<ConfirmationNeed> {
+    const current = await getMyTargets(ctx.caller);
+    if ((current.kcal ?? null) !== input.current_kcal) {
+      return false;
+    }
+    const plan = planOf(input, current);
+    if (!plan.ok) {
+      return false;
+    }
+    return plan.adjusted === null ? true : { note: describeMacrosAdjustedNote(plan.adjusted) };
   },
   async run(ctx, input): Promise<WriteRunOutput> {
-    const valid = targetsOf(input);
-    if (!valid.ok) {
-      return invalidInput(Object.keys(valid.problems));
-    }
     const before = await getMyTargets(ctx.caller);
-    // The person was shown this number. Other targets now are not what they agreed to change.
+    // The person was shown this number. Other targets now are not what they agreed to change. It is
+    // checked before anything is scaled, because the scale is only right for the number they saw.
     if ((before.kcal ?? null) !== input.current_kcal) {
       return {
         data: { error: "invalid_input", fields: ["current_kcal"], current_kcal: before.kcal },
         target: null,
       };
     }
+    const plan = planOf(input, before);
+    if (!plan.ok) {
+      return invalidInput(plan.fields);
+    }
+    const { targets, adjusted } = plan;
     const activeProgramId = await readActiveProgramId(ctx);
 
     try {
-      await updateMyTargets(ctx.caller, ctx.userId, valid.value);
+      await updateMyTargets(ctx.caller, ctx.userId, targets);
     } catch (caught) {
       // The repo ends the programme and then writes the profile. When the second step fails the programme
       // would stay ended with no action and no card, so the person's plan is put back. The repo's error
@@ -109,12 +155,14 @@ export const updateTargetsTool: WriteToolDefinition<UpdateTargetsInput> = {
     return {
       data: {
         saved: true,
-        kcal: valid.value.kcal,
+        kcal: targets.kcal,
         programme_ended: activeProgramId !== null,
+        ...(adjusted === null ? {} : { adjusted_macros: adjusted }),
       },
       structured: {
         card: buildTargetsChangedCard({
-          kcal: valid.value.kcal,
+          kcal: targets.kcal,
+          ...(adjusted === null ? {} : { adjustedMacros: adjusted }),
           previousKcal: before.kcal ?? null,
           endedProgramme: activeProgramId !== null,
           // Undo needs the stamp to compare. Without it Undo would always be unavailable.

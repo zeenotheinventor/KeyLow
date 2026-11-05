@@ -50,7 +50,11 @@ export const profileRow = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 });
 
-export const newTargets = { kcal: 2000, protein_g: 150, carbs_g: 200, fat_g: 60 };
+// All three macros given.
+export const newTargets = { kcal: 2000, macros: { protein_g: 150, carbs_g: 200, fat_g: 60 } };
+
+// Only the calories given: the macros are scaled from the targets the person has now.
+export const caloriesOnly = { kcal: 2000, macros: null };
 
 // The caller's database with a programme in force, or with `withProgram: false` the manual targets only.
 // The earlier turn is where the model asks and the later one where the user has said yes.

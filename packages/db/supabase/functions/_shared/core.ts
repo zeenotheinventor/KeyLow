@@ -28,10 +28,12 @@ export type {
   RunCheckinBackstopResponse,
   RunCheckinRecomputeResponse,
   RunCheckinResponse,
+  ScaledMacros,
   ScheduleToSet,
   StartSnapshot,
   StartSnapshotAction,
   TrendInput,
+  ValidTargets,
 } from "./core/index.js";
 export {
   addCalendarDays,
@@ -72,6 +74,7 @@ export {
   daysSinceMonday,
   describeDayCitation,
   describeLoggedAmount,
+  describeMacrosAdjustedNote,
   describeRangeCitation,
   describeShortDate,
   describeRecipeLoggedAmount,
@@ -83,6 +86,7 @@ export {
   labelFoodInput,
   roundCalories,
   roundGrams,
+  scaleMacroTargets,
   roundKilograms,
   sumEntries,
   TREND_ESTIMATE,

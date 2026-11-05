@@ -457,7 +457,14 @@ async function finishCall(
       );
       return failedEnding("confirm_unavailable");
     }
-    const confirm = { confirmationId: outcome.confirmationId, question, ...words };
+    // The model worded the question before the tool answered, so a line the tool wrote (the figures the
+    // model could not know) is added after it, as its own paragraph. The guard above tests the model's own text, so a note
+    // alone never makes a confirmation.
+    const confirm = {
+      confirmationId: outcome.confirmationId,
+      question: outcome.note === undefined ? question : `${question}\n\n${outcome.note}`,
+      ...words,
+    };
     await storeToolResult(run, block, { [toolUse.id]: { confirm } });
     flushCards(run);
     emit(run, { type: "confirm", ...confirm });

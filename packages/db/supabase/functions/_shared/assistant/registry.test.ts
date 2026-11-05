@@ -179,12 +179,12 @@ Deno.test("create_custom_food opts out of strict mode and update_targets does no
 });
 
 Deno.test(
-  "the strict budget of the real registry is 16 tools, 0 optional and 13 union parameters",
+  "the strict budget of the real registry is 16 tools, 0 optional and 14 union parameters",
   () => {
     assertEquals(strictBudgetOf(toolRegistry.list), {
       tools: 16,
       optionalParameters: 0,
-      unionParameters: 13,
+      unionParameters: 14,
     });
   },
 );
