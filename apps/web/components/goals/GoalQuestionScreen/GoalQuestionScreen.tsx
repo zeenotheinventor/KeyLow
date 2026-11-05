@@ -14,10 +14,7 @@ import { QuestionStepper } from "../QuestionStepper";
 
 import type { GoalQuestionScreenProps } from "./types";
 
-import { goalQuestionPath } from "@/lib/goalRoutes";
-
-// The flow opens from the Goal row of More, so cancelling it returns there.
-const MORE_HREF = "/more";
+import { goalExitPath, goalQuestionPath } from "@/lib/goalRoutes";
 
 /**
  * One question of the goal questionnaire. The answers are kept by the flow's layout, so Back loses none.
@@ -33,7 +30,7 @@ export function GoalQuestionScreen({ step: stepName }: GoalQuestionScreenProps) 
   const question = GOAL_QUESTIONS[stepName];
 
   function leave() {
-    router.replace(MORE_HREF);
+    router.replace(goalExitPath());
   }
 
   function renderAnswers() {

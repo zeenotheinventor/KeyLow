@@ -399,4 +399,5 @@ export {
   isGoalStepAnswered,
 } from "./goalDraft";
 export type { GoalDraft, GoalDraftAction, GoalDraftAnswers } from "./goalDraft";
+export { priorityFigureValues } from "./priorityFigureValues";
 export { sessionHeatReadingTime } from "./sessionProgress";

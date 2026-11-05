@@ -1,0 +1,1 @@
+export { GoalSummaryRoute } from "./GoalSummaryRoute";

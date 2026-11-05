@@ -268,6 +268,12 @@ describe("the errors", () => {
   it("should state the save failure rule", () => {
     expect(GOAL_ERRORS.save).toBe("Your goal did not save. Check your connection, then try again.");
   });
+
+  it("should state the offline line that stands in for Save goal", () => {
+    expect(GOAL_ERRORS.saveOffline).toBe(
+      "Saving your goal needs a connection. Try again when you're back online.",
+    );
+  });
 });
 
 describe("describeGoalAnswersSentence", () => {
