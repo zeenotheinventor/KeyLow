@@ -15,12 +15,25 @@ export type Grader = (context: GradeContext) => Promise<GradeOutcome>;
 /** One earlier turn of a seeded conversation: the person's words and the assistant's reply, as plain text. */
 export type SeedTurn = Readonly<{ user: string; assistant: string }>;
 
+/**
+ * What the Undo route answers for one action: `undone`, or why it did not undo (`already_undone`,
+ * `undo_unavailable`, `not_found`).
+ */
+export type UndoOutcome = "undone" | "already_undone" | "undo_unavailable" | "not_found";
+
 /** What a case may do besides send messages, for the eval user of the run. */
 export type CaseEnvironment = Readonly<{
   /** Stores complete, text-only turns as a new conversation of the eval user and answers its id. */
   seedConversation: (turns: readonly SeedTurn[]) => Promise<string>;
   /** Resolves once the conversation has a compaction note, and rejects when none is stored in time. */
   waitForCompaction: (conversationId: string) => Promise<void>;
+  /**
+   * Presses Undo, as the app's card does, for every action the turn wrote, and answers the outcome of each in
+   * the order they were written. A turn that wrote nothing answers an empty list.
+   */
+  undoTurn: (turnId: string) => Promise<readonly UndoOutcome[]>;
+  /** Puts the eval user's calorie and macro targets back to what the run started with. */
+  restoreTargets: () => Promise<void>;
 }>;
 
 export type EvalCase = Readonly<{
@@ -37,6 +50,11 @@ export type EvalCase = Readonly<{
   messages: readonly [string, ...string[]];
   /** The case passes when every grader passes. */
   expect: readonly Grader[];
+  /**
+   * Runs after the graders, and also when a turn failed, so a case that wrote to rows the other sets read
+   * (today's diary, the targets) puts them back. It gets the turns sent so far.
+   */
+  cleanUp?: (turns: readonly TurnResult[], environment: CaseEnvironment) => Promise<void>;
 }>;
 
 const pass = (reason: string): GradeOutcome => ({ passed: true, reason });

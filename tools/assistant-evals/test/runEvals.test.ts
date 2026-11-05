@@ -403,6 +403,8 @@ describe("runEvals with a case that sets up and waits", () => {
       log.push(`wait ${conversationId}`);
       return Promise.resolve();
     },
+    undoTurn: () => Promise.resolve([]),
+    restoreTargets: () => Promise.resolve(),
   });
 
   it("should send the first message into the conversation that setup answered", async () => {

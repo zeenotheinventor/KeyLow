@@ -119,45 +119,58 @@ export async function runEvals(input: RunInput): Promise<RunReport> {
 
   async function playCase(evalCase: EvalCase, isAbandoned: () => boolean): Promise<Outcome> {
     const turns: TurnResult[] = [];
-    const needsEnvironment = evalCase.setup !== undefined || evalCase.afterTurn !== undefined;
+    const needsEnvironment =
+      evalCase.setup !== undefined ||
+      evalCase.afterTurn !== undefined ||
+      evalCase.cleanUp !== undefined;
     if (needsEnvironment && environment === undefined) {
       throw new CaseError("the case needs a session with a case environment");
     }
-    let conversationId: string | null =
-      evalCase.setup === undefined || environment === undefined
-        ? null
-        : await evalCase.setup(environment);
-    for (const [index, text] of evalCase.messages.entries()) {
-      // A case that hit its ceiling is abandoned, and its loop must not go on sending messages to the model.
-      if (isAbandoned()) {
-        throw new CaseError("the case was abandoned after its ceiling");
-      }
-      if (countedSoFar() >= budgetTokens) {
-        stopReason = "budget";
-        throw new CaseStopped(`the budget was reached before turn ${index + 1}`);
-      }
-      const turn = await driver.sendMessage({ conversationId, text });
-      turns.push(turn);
-      conversationId = turn.conversationId;
-      await readSpend();
-      if (isAbandoned()) {
-        throw new CaseError("the case was abandoned after its ceiling");
-      }
-      if (turn.status === "failed") {
-        throw new CaseError("the turn failed");
-      }
-      if (hasNoUsage(await database.usageOfTurn(turn.turnId))) {
-        throw new CaseError("no assistant_usage rows for the turn");
-      }
-      if (evalCase.afterTurn !== undefined && environment !== undefined) {
-        await evalCase.afterTurn({ index, result: turn }, environment);
-        // The wait is billed too: the compaction call it waited for is a row of the eval user.
+    try {
+      let conversationId: string | null =
+        evalCase.setup === undefined || environment === undefined
+          ? null
+          : await evalCase.setup(environment);
+      for (const [index, text] of evalCase.messages.entries()) {
+        // A case that hit its ceiling is abandoned, and its loop must not go on sending messages to the model.
+        if (isAbandoned()) {
+          throw new CaseError("the case was abandoned after its ceiling");
+        }
+        if (countedSoFar() >= budgetTokens) {
+          stopReason = "budget";
+          throw new CaseStopped(`the budget was reached before turn ${index + 1}`);
+        }
+        const turn = await driver.sendMessage({ conversationId, text });
+        turns.push(turn);
+        conversationId = turn.conversationId;
         await readSpend();
+        if (isAbandoned()) {
+          throw new CaseError("the case was abandoned after its ceiling");
+        }
+        if (turn.status === "failed") {
+          throw new CaseError("the turn failed");
+        }
+        if (hasNoUsage(await database.usageOfTurn(turn.turnId))) {
+          throw new CaseError("no assistant_usage rows for the turn");
+        }
+        if (evalCase.afterTurn !== undefined && environment !== undefined) {
+          await evalCase.afterTurn({ index, result: turn }, environment);
+          // The wait is billed too: the compaction call it waited for is a row of the eval user.
+          await readSpend();
+        }
+      }
+      const outcomes = await Promise.all(
+        evalCase.expect.map((grade) => grade({ turns, database })),
+      );
+      const failures = outcomes.filter(({ passed }) => !passed).map(({ reason }) => reason);
+      return { status: failures.length === 0 ? "passed" : "failed", failures };
+    } finally {
+      // After the graders have read the database, and also when the case failed half way, because a write
+      // that landed must not stay in the rows the other sets read. A failure here ends the case as an error.
+      if (evalCase.cleanUp !== undefined && environment !== undefined) {
+        await evalCase.cleanUp(turns, environment);
       }
     }
-    const outcomes = await Promise.all(evalCase.expect.map((grade) => grade({ turns, database })));
-    const failures = outcomes.filter(({ passed }) => !passed).map(({ reason }) => reason);
-    return { status: failures.length === 0 ? "passed" : "failed", failures };
   }
 
   async function runCase(evalCase: EvalCase): Promise<Outcome> {

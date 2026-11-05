@@ -5,6 +5,7 @@ import { createCaseEnvironment } from "./caseEnvironment.ts";
 import { createEvalDatabase } from "./database.ts";
 import { createFixtureUser } from "./fixtureUser.ts";
 import { createHttpDriver } from "./httpDriver.ts";
+import { createUndoTurn } from "./undoTurn.ts";
 import { readSupabaseStatus } from "../../../packages/db/scripts/supabaseStatus.ts";
 import { writeAskExtras } from "../fixtures/askExtras.ts";
 
@@ -53,16 +54,17 @@ export async function openLocalHttpSession(): Promise<EvalSession> {
     // The targets the ask set's "what is left" and "days at target" cases are worked out against.
     await writeAskExtras(user);
     const timeZone = await timeZoneOf(user);
+    const getAccessToken = async () => {
+      const { data } = await user.client.auth.getSession();
+      if (data.session === null) {
+        throw new Error("The eval user has no session");
+      }
+      return data.session.access_token;
+    };
     const driver = createHttpDriver({
       apiUrl: stack.apiUrl,
       anonKey: stack.anonKey,
-      getAccessToken: async () => {
-        const { data } = await user.client.auth.getSession();
-        if (data.session === null) {
-          throw new Error("The eval user has no session");
-        }
-        return data.session.access_token;
-      },
+      getAccessToken,
       timeZone,
       readToolCalls: async (turnId) => {
         const { data, error } = await user.client
@@ -84,7 +86,17 @@ export async function openLocalHttpSession(): Promise<EvalSession> {
     return {
       driver,
       database: createEvalDatabase(user.client),
-      environment: createCaseEnvironment({ client: serviceClient, userId: user.id }),
+      environment: createCaseEnvironment({
+        client: serviceClient,
+        userId: user.id,
+        undoTurn: createUndoTurn({
+          apiUrl: stack.apiUrl,
+          anonKey: stack.anonKey,
+          getAccessToken,
+          client: user.client,
+        }),
+        restoreTargets: () => writeAskExtras(user),
+      }),
       close: user.remove,
     };
   } catch (error) {

@@ -53,10 +53,16 @@ function fakeClient(options: { notes?: (string | null)[]; failInsertOn?: string 
 
 const userId = "11111111-1111-4111-8111-111111111111";
 
+// The tests of the seed and the wait do not press Undo or restore the targets.
+const unusedActions = {
+  undoTurn: () => Promise.reject(new Error("not used")),
+  restoreTargets: () => Promise.reject(new Error("not used")),
+};
+
 describe("seedConversation", () => {
   it("should store a conversation for the user with a complete turn and two messages for each seed turn", async () => {
     const { client, inserts } = fakeClient();
-    const environment = createCaseEnvironment({ client, userId });
+    const environment = createCaseEnvironment({ client, userId, ...unusedActions });
 
     const conversationId = await environment.seedConversation([
       { user: "first words", assistant: "first reply" },
@@ -87,7 +93,7 @@ describe("seedConversation", () => {
   it("should store the user message and then the reply of each turn in seq order, as text blocks", async () => {
     const { client, inserts } = fakeClient();
 
-    await createCaseEnvironment({ client, userId }).seedConversation([
+    await createCaseEnvironment({ client, userId, ...unusedActions }).seedConversation([
       { user: "first words", assistant: "first reply" },
       { user: "second words", assistant: "second reply" },
     ]);
@@ -116,7 +122,7 @@ describe("seedConversation", () => {
   it("should fail with the code of a refused insert and never the rows", async () => {
     const { client } = fakeClient({ failInsertOn: "assistant_turns" });
 
-    const failure = await createCaseEnvironment({ client, userId })
+    const failure = await createCaseEnvironment({ client, userId, ...unusedActions })
       .seedConversation([{ user: "secret words", assistant: "reply" }])
       .then(
         () => null,
@@ -135,6 +141,7 @@ describe("waitForCompaction", () => {
     const environment = createCaseEnvironment({
       client,
       userId,
+      ...unusedActions,
       pollIntervalMilliseconds: 1,
       compactionTimeoutMilliseconds: 1_000,
     });
@@ -154,6 +161,7 @@ describe("waitForCompaction", () => {
     const environment = createCaseEnvironment({
       client,
       userId,
+      ...unusedActions,
       pollIntervalMilliseconds: 1,
       compactionTimeoutMilliseconds: 20,
     });
@@ -161,5 +169,44 @@ describe("waitForCompaction", () => {
     await expect(environment.waitForCompaction("conversation-1")).rejects.toThrow(
       "no compaction note was stored within 20 ms",
     );
+  });
+});
+
+describe("undoTurn and restoreTargets", () => {
+  const unusedUndo = () => Promise.reject(new Error("not used"));
+
+  it("should hand the turn to the undo it was given and answer its outcomes", async () => {
+    const { client } = fakeClient();
+    const asked: string[] = [];
+    const environment = createCaseEnvironment({
+      client,
+      userId,
+      undoTurn: (turnId) => {
+        asked.push(turnId);
+        return Promise.resolve(["undone"]);
+      },
+      restoreTargets: () => Promise.resolve(),
+    });
+
+    await expect(environment.undoTurn("turn-a")).resolves.toEqual(["undone"]);
+    expect(asked).toEqual(["turn-a"]);
+  });
+
+  it("should call the restore it was given", async () => {
+    const { client } = fakeClient();
+    let restored = 0;
+    const environment = createCaseEnvironment({
+      client,
+      userId,
+      undoTurn: unusedUndo,
+      restoreTargets: () => {
+        restored += 1;
+        return Promise.resolve();
+      },
+    });
+
+    await environment.restoreTargets();
+
+    expect(restored).toBe(1);
   });
 });
