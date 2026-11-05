@@ -11,6 +11,7 @@ import type {
   ActionTarget,
   PendingConfirmation,
   SlotRequest,
+  StoredConfirmation,
 } from "./store.ts";
 import type {
   ConfirmationNeed,
@@ -30,7 +31,8 @@ type FakeTurn = {
   id: string;
   conversationId: string;
   userId: string;
-  pending: PendingConfirmation | null;
+  // A row written before the label was stored has `confirmLabel: null`.
+  pending: StoredConfirmation | null;
 };
 
 export type FakeActionStore = ActionStore & {
@@ -188,7 +190,7 @@ export function createFakeActionStore(
 // Turns of one conversation, oldest first, with the current one last.
 export function turnsOfConversation(
   ids: string[],
-  pending: Record<string, PendingConfirmation> = {},
+  pending: Record<string, StoredConfirmation> = {},
   inConversation: string = conversationId,
 ): FakeTurn[] {
   return ids.map((id) => ({
@@ -234,6 +236,8 @@ export function createFakeContext(
     store?: FakeActionStore;
     allowedTools?: ReadonlySet<string> | undefined;
     userMessageText?: string | null;
+    // The person's own words, which the context block and the tool results are never part of.
+    personsWords?: string | null;
     turn?: { id: string; conversationId: string };
     localDate?: string;
     localTime?: string | null;
@@ -250,6 +254,7 @@ export function createFakeContext(
       conversationId: overrides.turn?.conversationId ?? conversationId,
       userMessageText:
         "userMessageText" in overrides ? (overrides.userMessageText ?? null) : "log my lunch",
+      personsWords: overrides.personsWords ?? null,
       localDate: overrides.localDate ?? "2026-11-03",
       localTime: "localTime" in overrides ? (overrides.localTime ?? null) : "08:10",
     },

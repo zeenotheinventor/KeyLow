@@ -151,10 +151,30 @@ let programId = "";
 let foodEvents: AssistantStreamEvent[];
 let askEvents: AssistantStreamEvent[];
 let silentAskEvents: AssistantStreamEvent[];
+let keepEvents: AssistantStreamEvent[];
+// What Alice's targets and programme were after she answered "Keep 2,140" and the model still called the tool.
+let keptTargets: Awaited<ReturnType<typeof getMyTargets>>;
+let keptProgramId: string | undefined;
 let changeEvents: AssistantStreamEvent[];
 // What the person's targets and programme were when the asking turn had ended.
 let askedTargets: Awaited<ReturnType<typeof getMyTargets>>;
 let askedProgramId: string | undefined;
+
+// The id of the confirmation a turn left waiting.
+async function pendingConfirmationIdOf(turnId: string): Promise<string> {
+  const { data } = await adminClient()
+    .from("assistant_turns")
+    .select("pending_confirmation")
+    .eq("id", turnId)
+    .single();
+  const pending = data?.pending_confirmation;
+  return typeof pending === "object" &&
+    pending !== null &&
+    "id" in pending &&
+    typeof pending.id === "string"
+    ? pending.id
+    : "";
+}
 
 beforeAll(async () => {
   await requireServedFunction(inject("stack"), "assistant");
@@ -180,24 +200,31 @@ beforeAll(async () => {
   askedProgramId = (await getMyProgramSummary(alice.client)).program?.id;
   // A model that calls the tool and writes no question (KEY-839). It asks in a conversation of its own, and
   // changes nothing, so the turn that follows a yes below still finds Alice as the asking turn left her.
-  silentAskEvents = (
-    await turn(alice, "Please set my calories to 2,000", [useTool("update_targets", newTargets)])
+  const silent = await turn(alice, "Please set my calories to 2,000", [
+    useTool("update_targets", newTargets),
+  ]);
+  silentAskEvents = silent.events;
+  // She answers with the cancel button's words, and a model that misreads that still calls the tool with the
+  // id (KEY-839). The code refuses to spend it and asks again, so nothing changes.
+  await anthropicMock.forget(silent.turnMarker);
+  keepEvents = (
+    await turn(
+      alice,
+      "Keep 2,140",
+      [
+        useTool("update_targets", {
+          ...newTargets,
+          confirmation_id: await pendingConfirmationIdOf(silent.turnId),
+        }),
+      ],
+      silent.conversationId,
+    )
   ).events;
+  keptTargets = await getMyTargets(alice.client);
+  keptProgramId = (await getMyProgramSummary(alice.client)).program?.id;
   // The next turn repeats this one in its history, and the mock would find this marker first.
   await anthropicMock.forget(asked.turnMarker);
-  const { data: askedTurn } = await adminClient()
-    .from("assistant_turns")
-    .select("pending_confirmation")
-    .eq("id", asked.turnId)
-    .single();
-  const pending = askedTurn?.pending_confirmation;
-  const confirmationId =
-    typeof pending === "object" &&
-    pending !== null &&
-    "id" in pending &&
-    typeof pending.id === "string"
-      ? pending.id
-      : "";
+  const confirmationId = await pendingConfirmationIdOf(asked.turnId);
   changeEvents = (
     await turn(
       alice,
@@ -293,6 +320,24 @@ describe("a turn that asks to change the targets and the model wrote no question
       tone: "primary",
     });
     expect(silentAskEvents.at(-1)).toEqual({ type: "done", outcome: "confirm" });
+  });
+});
+
+describe("a turn that answers Keep 2,140 while the model calls the tool with the confirmation", () => {
+  it("ends asking again, with the buttons, and changes nothing", () => {
+    expect(keepEvents.find((event) => event.type === "confirm")).toMatchObject({
+      type: "confirm",
+      confirmLabel: "Change target",
+      cancelLabel: "Keep 2,140",
+      tone: "primary",
+    });
+    expect(keepEvents.at(-1)).toEqual({ type: "done", outcome: "confirm" });
+    expect(cardOf(keepEvents)).toBeUndefined();
+  });
+
+  it("leaves the targets as they were and the programme active", () => {
+    expect(keptTargets).toMatchObject({ source: "engine", kcal: 2140 });
+    expect(keptProgramId).toBe(programId);
   });
 });
 

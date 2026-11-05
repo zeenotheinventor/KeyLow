@@ -75,6 +75,7 @@ async function diaryOfThree() {
   const contextOn = (turnId: string): ToolContext => {
     const made = createFakeContext([logEntryTool, deleteEntryTool], {
       store,
+      personsWords: "Delete 3 entries",
       turn: { id: turnId, conversationId: store.turns[0]?.conversationId ?? "" },
       localDate: "2026-11-03",
       localTime: "13:00",
@@ -232,3 +233,24 @@ Deno.test(
     assertFalse(description.includes("ask the user"));
   },
 );
+
+Deno.test("after Keep them the confirmation asks again and nothing is deleted", async () => {
+  const { asking, confirming, stub, store, ids } = await diaryOfThree();
+  const asked = await executeTool(asking, "delete_entry", { ids });
+  assert(asked.status === "needs_confirmation");
+
+  const result = await executeTool(
+    { ...confirming, turn: { ...confirming.turn, personsWords: "Keep them" } },
+    "delete_entry",
+    { ids, confirmation_id: asked.confirmationId },
+  );
+
+  assert(result.status === "needs_confirmation");
+  assertEquals(result.asksAgain, true);
+  assertEquals(
+    result.question,
+    "Delete 3 entries at 13:00 today? Chicken and rice, Greek yoghurt and apple.",
+  );
+  assertFalse((stub.tables["food_log_entries"] ?? []).some((row) => row["deleted_at"] !== null));
+  assertEquals(store.actions.filter((action) => action.tool === "delete_entry").length, 0);
+});

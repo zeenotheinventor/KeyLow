@@ -68,6 +68,7 @@ export {
   confirmDeleteQuestion,
   confirmTargetsButtons,
   confirmTargetsQuestion,
+  isConfirmAnswer,
   assistantStreamEventSchema,
   assistantTurnRequestSchema,
   checkinStep,

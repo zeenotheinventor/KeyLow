@@ -664,6 +664,92 @@ Deno.test(
   },
 );
 
+Deno.test(
+  "a confirmation asked again uses the tool's question and not the model's words, which stay above it",
+  async () => {
+    await withHarness(
+      {
+        responses: [
+          callTools(
+            [{ id: "d1", name: "delete_entry", input: { ids: entryIds } }],
+            "Deleting those now.",
+          ),
+          reply("must not be asked for"),
+        ],
+        answers: {
+          delete_entry: confirmationResult("delete_entry", confirmationId, {
+            question: deleteQuestion,
+            asksAgain: true,
+          }),
+        },
+      },
+      async (harness) => {
+        const result = await harness.take("yes please");
+
+        assertEquals(eventsOfType(result.events, "confirm"), [
+          {
+            type: "confirm",
+            confirmationId,
+            question: deleteQuestion,
+            ...confirmDeleteButtons(3),
+            tone: "danger",
+          },
+        ]);
+        // The model's text has already streamed, so it is what the thread shows above the question.
+        assertEquals(
+          eventsOfType(result.events, "text")
+            .map((event) => event["delta"])
+            .join(""),
+          "Deleting those now.",
+        );
+        assertEquals(turnStatuses(harness), ["confirm"]);
+        assertEquals(harness.mock.bodies.length, 1);
+        assertEquals(harness.reports.length, 0);
+      },
+    );
+  },
+);
+
+Deno.test(
+  "a confirmation asked again after a typed yes is drawn once, with the old buttons gone, from the stored thread",
+  async () => {
+    await withHarness(
+      {
+        responses: [
+          callTools([{ id: "d1", name: "delete_entry", input: { ids: entryIds } }], deleteQuestion),
+          callTools([{ id: "d2", name: "delete_entry", input: { ids: entryIds } }]),
+        ],
+        answers: {
+          delete_entry: confirmationResult("delete_entry", confirmationId, {
+            question: deleteQuestion,
+          }),
+        },
+      },
+      async (harness) => {
+        await harness.take("delete my lunch");
+        const again = await harness.take("yes please");
+
+        const thread = threadFromMessages(again.rows, []);
+        assertEquals(
+          thread.map((item) => item.kind),
+          // The first question was the model's reply, which the sheet draws once with the buttons under it.
+          // The second turn's model wrote nothing, so the tool's question is the confirm alone.
+          ["user", "reply", "confirm", "user", "confirm"],
+        );
+        const confirms = thread.filter((item) => item.kind === "confirm");
+        assertEquals(
+          confirms.map((item) => item.answered),
+          [true, false],
+        );
+        assertEquals(
+          confirms.map((item) => item.question),
+          [deleteQuestion, deleteQuestion],
+        );
+      },
+    );
+  },
+);
+
 Deno.test("a model that wrote a question keeps its own words, not the tool's", async () => {
   await withHarness(
     {
@@ -981,6 +1067,68 @@ Deno.test(
         assertEquals(harness.mock.bodies.length, 2);
       },
     );
+  },
+);
+
+// A turn that ended asking, with the confirmation the `mcp` function would have stored on it.
+async function afterAskedDelete(harness: Harness) {
+  await harness.take("delete my lunch");
+  const [asked] = harness.turnRows();
+  if (asked === undefined) {
+    throw new Error("expected the asking turn");
+  }
+  asked["pending_confirmation"] = {
+    id: confirmationId,
+    tool: "delete_entry",
+    input_hash: "a".repeat(64),
+    confirm_label: confirmDeleteButtons(3).confirmLabel,
+  };
+}
+
+const askingThenAnswering = (answer: ScriptedResponse): HarnessOptions => ({
+  responses: [
+    callTools([{ id: "d1", name: "delete_entry", input: { ids: entryIds } }], deleteQuestion),
+    answer,
+  ],
+  answers: { delete_entry: confirmationResult("delete_entry", confirmationId) },
+});
+
+Deno.test(
+  "after a confirmation, a message that is not the button's words does not get the tool that was asked about",
+  async () => {
+    await withHarness(askingThenAnswering(reply("2,140.")), async (harness) => {
+      await afterAskedDelete(harness);
+
+      await harness.take("How many calories are left?");
+
+      assertEquals(harness.connectOptions[1]?.allowedTools.includes("delete_entry"), false);
+    });
+  },
+);
+
+Deno.test(
+  "after a confirmation, a link in the message does not get the tool that was asked about",
+  async () => {
+    await withHarness(askingThenAnswering(reply("Imported.")), async (harness) => {
+      await afterAskedDelete(harness);
+
+      await harness.take("https://example.com/pasta/recipe");
+
+      assertEquals(harness.connectOptions[1]?.allowedTools.includes("delete_entry"), false);
+    });
+  },
+);
+
+Deno.test(
+  "after a confirmation, the button's words get the tool that was asked about, in any case",
+  async () => {
+    await withHarness(askingThenAnswering(reply("Deleted.")), async (harness) => {
+      await afterAskedDelete(harness);
+
+      await harness.take("  delete 3 ENTRIES ");
+
+      assertEquals(harness.connectOptions[1]?.allowedTools.includes("delete_entry"), true);
+    });
   },
 );
 

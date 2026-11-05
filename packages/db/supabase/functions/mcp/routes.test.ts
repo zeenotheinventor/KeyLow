@@ -13,7 +13,11 @@ import { createMcpEndpoint } from "./routes.ts";
 import { turnStatuses } from "./turns.ts";
 
 import type { FakeActionStore } from "../_shared/assistant/testing.ts";
-import type { ToolDefinition, ToolRegistry } from "../_shared/assistant/tool.ts";
+import type {
+  ReadToolDefinition,
+  ToolDefinition,
+  ToolRegistry,
+} from "../_shared/assistant/tool.ts";
 import type { ReportError } from "../_shared/report.ts";
 import type { McpDependencies } from "./routes.ts";
 import type { McpTurn } from "./turns.ts";
@@ -40,6 +44,7 @@ type FakeOptions = {
   turnOwner?: string;
   signedIn?: boolean;
   userMessageText?: string | null;
+  personsWords?: string | null;
   ageMilliseconds?: number;
 };
 
@@ -73,11 +78,12 @@ function fake(options: FakeOptions = {}): Fake {
             ? turn
             : null,
         ),
-      userMessageText: (_forUser, forTurn) => {
+      userMessage: (_forUser, forTurn) => {
         messageLookups.push(forTurn.id);
-        return Promise.resolve(
-          "userMessageText" in options ? (options.userMessageText ?? null) : "log my lunch",
-        );
+        return Promise.resolve({
+          text: "userMessageText" in options ? (options.userMessageText ?? null) : "log my lunch",
+          personsWords: options.personsWords ?? null,
+        });
       },
     },
     caller: () => Object.create(null),
@@ -322,6 +328,30 @@ Deno.test(
     assertEquals(result["structuredContent"], { status: "error", code: "unknown_tool" });
   },
 );
+
+Deno.test("the tool's turn carries the person's words and the message text apart", async () => {
+  const seen: unknown[] = [];
+  const read: ReadToolDefinition<{ note: string }> = {
+    ...fakeReadTool("read_one").definition,
+    run(ctx) {
+      seen.push({ text: ctx.turn.userMessageText, personsWords: ctx.turn.personsWords });
+      return Promise.resolve({ data: { rows: [] } });
+    },
+  };
+  const made = fake({
+    registry: createRegistry([read]),
+    userMessageText: "Today is Tue 3 Nov.\nShow me what I logged",
+    personsWords: "Show me what I logged",
+  });
+
+  await post(made.dependencies, callTool("read_one", { note: "x" }), {
+    headers: { "x-kilo-allowed-tools": "read_one" },
+  });
+
+  assertEquals(seen, [
+    { text: "Today is Tue 3 Nov.\nShow me what I logged", personsWords: "Show me what I logged" },
+  ]);
+});
 
 Deno.test("a write runs under the turn and the user message the function loaded", async () => {
   const write = fakeWriteTool();
@@ -600,7 +630,7 @@ Deno.test(
 
 Deno.test("a failed read of the user message is reported and answers tool_failed", async () => {
   const made = fake();
-  made.dependencies.turns.userMessageText = () => Promise.reject(new Error(secretNote));
+  made.dependencies.turns.userMessage = () => Promise.reject(new Error(secretNote));
   const spy = spyOnConsole();
   let text: string;
   try {

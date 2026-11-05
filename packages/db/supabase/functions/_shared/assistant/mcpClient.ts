@@ -62,6 +62,8 @@ const outcomeSchema = z.discriminatedUnion("status", [
     confirmationId: z.string(),
     question: z.string().optional(),
     note: z.string().optional(),
+    // True when the confirmation was asked again because the message was not the button's words.
+    asksAgain: z.literal(true).optional(),
   }),
   z.object({ status: z.literal("error"), code: z.string() }),
 ]);

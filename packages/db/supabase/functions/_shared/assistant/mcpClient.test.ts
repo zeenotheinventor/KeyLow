@@ -245,6 +245,34 @@ Deno.test(
   },
 );
 
+Deno.test("callTool carries asksAgain across when the confirmation was asked again", async () => {
+  await withServer(
+    {
+      callTool: () =>
+        Promise.resolve({
+          status: "needs_confirmation",
+          text: "confirm?",
+          confirmationId: "c-2",
+          question: "Delete 2 entries?",
+          asksAgain: true,
+        }),
+    },
+    async (server) => {
+      const connection = await connectToolServer(connectionOptions(server));
+
+      const result = await connection.callTool(writeToolName, {});
+
+      assertEquals(result.outcome, {
+        status: "needs_confirmation",
+        confirmationId: "c-2",
+        question: "Delete 2 entries?",
+        asksAgain: true,
+      });
+      await connection.close();
+    },
+  );
+});
+
 Deno.test("a result with isError true comes back as isError, not as a throw", async () => {
   await withServer(
     {
