@@ -211,50 +211,34 @@ const table: readonly [foodWord: string, wanted: RegExp][] = [
 type SeedName = "full" | "subset";
 const seeds: readonly SeedName[] = ["full", "subset"];
 
-// The lists of every search word the import makes for a food word, or null when a word was never captured.
-function capturedListsOf(foodWord: string, seed: SeedName): CapturedHit[][] | null {
-  const lists = importSearchWords(foodWord).map(capturedHitsOf);
-  return lists.every((list) => list !== null)
-    ? lists.map((list) => list.filter((found) => seed === "full" || found.inSubset))
-    : null;
+// The captured lists of every search word the import makes for a food word. A word with no hits is captured and
+// empty, and a word that was never captured fails the test, so a row is never checked on less than it searches.
+function capturedListsOf(foodWord: string, seed: SeedName): CapturedHit[][] {
+  return importSearchWords(foodWord).map((word) => {
+    const captured = capturedHitsOf(word);
+    if (captured === null) {
+      throw new Error(`The search word "${word}" of "${foodWord}" was not captured`);
+    }
+    return captured.filter((found) => seed === "full" || found.inSubset);
+  });
 }
 
 describe.each(seeds)("the import table on the %s seed", (seed) => {
-  // A row whose search words were not all captured is skipped, and the last test below says so.
-  for (const [foodWord, wanted] of table) {
+  it.each(table)("should offer a food for %s only when the seed has one", (foodWord, wanted) => {
     const lists = capturedListsOf(foodWord, seed);
-    it.skipIf(lists === null)(
-      `should offer a food for ${foodWord} only when the seed has one`,
-      () => {
-        const seedHasWanted = (lists ?? []).some((list) =>
-          list.some(({ name }) => wanted.test(name)),
-        );
-        const candidates = importFoodCandidates(foodWord, lists ?? []);
+    const seedHasWanted = lists.some((list) => list.some(({ name }) => wanted.test(name)));
+    const candidates = importFoodCandidates(foodWord, lists);
 
-        expect(candidates.some(({ name }) => wanted.test(name))).toBe(seedHasWanted);
-      },
-    );
-  }
+    expect(candidates.some(({ name }) => wanted.test(name))).toBe(seedHasWanted);
+  });
 });
 
-const uncapturedWords = table.flatMap(([foodWord]) =>
-  importSearchWords(foodWord).filter((word) => capturedHitsOf(word) === null),
-);
-
 describe("the import table", () => {
-  // Turns on once the capture is whole.
-  it.skipIf(uncapturedWords.length > 0)(
-    "should have captured every search word of every row",
-    () => {
-      expect(uncapturedWords).toEqual([]);
-    },
-  );
-
   it("should have rows whose food is in neither seed, so the left out case is tested", () => {
     const leftOut = seeds.flatMap((seed) =>
       table.filter(([foodWord, wanted]) => {
         const lists = capturedListsOf(foodWord, seed);
-        return lists !== null && !lists.some((list) => list.some(({ name }) => wanted.test(name)));
+        return !lists.some((list) => list.some(({ name }) => wanted.test(name)));
       }),
     );
 
