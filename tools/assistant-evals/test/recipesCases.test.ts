@@ -404,7 +404,9 @@ describe("the pages", () => {
 // --- The expected foods ----------------------------------------------------------------------------------
 
 describe("the expected foods", () => {
-  // The CI stack seeds exactly these foods (supabase/seeds/10_cofid_subset.sql).
+  // The CoFID foods the CI stack seeds (supabase/seeds/10_cofid_subset.sql). It also holds 59 USDA chicken and
+  // turkey foods and 5 Open Food Facts samples. This only shows that a right food exists in the seed. It does not
+  // show that a correct import reaches it, which is what the live run is for.
   const seededNames = readFileSync(
     new URL("../../../packages/db/data/cofid/subset.txt", import.meta.url),
     "utf8",
@@ -493,7 +495,7 @@ describe("the expected foods", () => {
     springOnions: ["Onions, raw", "Noodles, egg, fried with spring onions, homemade"],
   };
 
-  it.each(Object.entries(FOODS))("should find a right food for %s in the CI seed", (_key, food) => {
+  it.each(Object.entries(FOODS))("should have a right food for %s in the CI seed", (_key, food) => {
     expect(seededNames.some((name) => food.namePattern.test(name))).toBe(true);
   });
 

@@ -118,14 +118,15 @@ describe("the settings of the served functions", () => {
     expect(origin).toBe(`http://host.docker.internal:${RECIPE_PAGE_SERVER_PORT}`);
   });
 
-  it("should be wired into the fetch of the mcp function, or the seam would do nothing", () => {
+  // A source check, so it proves the line is there and not that it runs. The first live run is the real proof.
+  it("should be wired into the fetch of the mcp function by a line that is not a comment", () => {
     const mcp = readFileSync(
       new URL("../../../packages/db/supabase/functions/mcp/index.ts", import.meta.url),
       "utf8",
     );
 
     expect(mcp).toMatch(
-      /fetchRecipePage\(url, \{[^}]*\.\.\.recipePageTestOverrides\(\(name\) => Deno\.env\.get\(name\)\)/s,
+      /fetchRecipePage\(url, \{[^}]*^[ \t]*\.\.\.recipePageTestOverrides\(\(name\) => Deno\.env\.get\(name\)\),?$/ms,
     );
   });
 
