@@ -308,22 +308,34 @@ function readReply(input: RecipeParseInput, message: Anthropic.Message): RecipeP
   return recipe.success ? { ok: true, recipe: recipe.data } : { ok: false, code: "unreadable" };
 }
 
+/**
+ * True when there is one pick for each line and each is null or a position inside that line's candidates. The
+ * tool checks a reply again with this, so a position outside a list is never a food whoever answered.
+ */
+export function picksFitLines(
+  lines: readonly FoodPickLine[],
+  picks: readonly (number | null)[],
+): boolean {
+  return (
+    picks.length === lines.length &&
+    picks.every(
+      (pick, index) =>
+        pick === null ||
+        (Number.isInteger(pick) && pick >= 0 && pick < (lines[index]?.candidates.length ?? 0)),
+    )
+  );
+}
+
 function readPicks(lines: readonly FoodPickLine[], message: Anthropic.Message): FoodPickOutcome {
   const read = jsonOf(message);
   if (!read.ok) {
     return read;
   }
   const reply = foodPickSchema.safeParse(read.json);
-  if (!reply.success || reply.data.picks.length !== lines.length) {
-    return { ok: false, code: "unreadable" };
-  }
   // A position the line was not offered is never a food: the whole reply is refused.
-  const inTheirLists = reply.data.picks.every(
-    (pick, index) =>
-      pick === null ||
-      (Number.isInteger(pick) && pick >= 0 && pick < (lines[index]?.candidates.length ?? 0)),
-  );
-  return inTheirLists ? { ok: true, picks: reply.data.picks } : { ok: false, code: "unreadable" };
+  return reply.success && picksFitLines(lines, reply.data.picks)
+    ? { ok: true, picks: reply.data.picks }
+    : { ok: false, code: "unreadable" };
 }
 
 export function createRecipeImportServices(

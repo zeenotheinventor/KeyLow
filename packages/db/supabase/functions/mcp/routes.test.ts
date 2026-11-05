@@ -355,6 +355,7 @@ Deno.test("a tool is given the recipe import's services when the function has th
   const services = {
     fetchPage: () => Promise.resolve({ ok: false as const, code: "timeout" as const }),
     parse: () => Promise.resolve({ ok: false as const, code: "failed" as const }),
+    pickFoods: () => Promise.resolve({ ok: false as const, code: "failed" as const }),
   };
   const call = (dependencies: McpDependencies) =>
     post(dependencies, callTool("read_probe", { note: "x" }), {
