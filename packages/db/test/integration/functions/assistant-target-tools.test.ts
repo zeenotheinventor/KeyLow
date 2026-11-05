@@ -40,24 +40,47 @@ const finish = (text: string): ScriptedReply => ({
 
 const turnMarkers: string[] = [];
 
+type PlacedTurn = {
+  events: AssistantStreamEvent[];
+  turnMarker: string;
+  // Every reply scripted for the conversation so far.
+  replies: ScriptedReply[];
+  turnId: string;
+  conversationId: string;
+};
+
+// A turn that starts a conversation carries a marker in its text, and the mock answers by it. A turn that
+// follows `after` sends the person's exact words with no marker, because a confirmation is spent only on the
+// words of its button and a marker would make them something else (KEY-839). The mock answers by the first
+// marker it finds in the request, which is the earlier turn's, still in the history, so the follow-up's
+// replies continue that turn's script.
 async function turn(
   user: TestUser,
   text: string,
   replies: ScriptedReply[],
-  conversationId: string | null = null,
+  after: PlacedTurn | null = null,
 ) {
-  const turnMarker = `${marker}${crypto.randomUUID().replaceAll("-", "").slice(0, 6)}`;
-  turnMarkers.push(turnMarker);
-  await anthropicMock.script(turnMarker, replies);
+  const turnMarker =
+    after?.turnMarker ?? `${marker}${crypto.randomUUID().replaceAll("-", "").slice(0, 6)}`;
+  if (after === null) {
+    turnMarkers.push(turnMarker);
+  }
+  const script = [...(after?.replies ?? []), ...replies];
+  await anthropicMock.script(turnMarker, script);
   const response = await callAssistant("turn", {
     user,
-    body: { ...turnBody(`${text} ${turnMarker}`), conversationId, localDate: "2026-11-03" },
+    body: {
+      ...turnBody(after === null ? `${text} ${turnMarker}` : text),
+      conversationId: after?.conversationId ?? null,
+      localDate: "2026-11-03",
+    },
   });
   const events = eventsOf(response);
   const first = events[0];
   return {
     events,
     turnMarker,
+    replies: script,
     turnId: first?.type === "turn" ? first.turnId : "",
     conversationId: first?.type === "turn" ? first.conversationId : "",
   };
@@ -156,6 +179,9 @@ let keepEvents: AssistantStreamEvent[];
 let keptTargets: Awaited<ReturnType<typeof getMyTargets>>;
 let keptProgramId: string | undefined;
 let changeEvents: AssistantStreamEvent[];
+let carol: TestUser;
+let carolProgramId = "";
+let noIdEvents: AssistantStreamEvent[];
 // What the person's targets and programme were when the asking turn had ended.
 let askedTargets: Awaited<ReturnType<typeof getMyTargets>>;
 let askedProgramId: string | undefined;
@@ -206,7 +232,6 @@ beforeAll(async () => {
   silentAskEvents = silent.events;
   // She answers with the cancel button's words, and a model that misreads that still calls the tool with the
   // id (KEY-839). The code refuses to spend it and asks again, so nothing changes.
-  await anthropicMock.forget(silent.turnMarker);
   keepEvents = (
     await turn(
       alice,
@@ -217,13 +242,11 @@ beforeAll(async () => {
           confirmation_id: await pendingConfirmationIdOf(silent.turnId),
         }),
       ],
-      silent.conversationId,
+      silent,
     )
   ).events;
   keptTargets = await getMyTargets(alice.client);
   keptProgramId = (await getMyProgramSummary(alice.client)).program?.id;
-  // The next turn repeats this one in its history, and the mock would find this marker first.
-  await anthropicMock.forget(asked.turnMarker);
   const confirmationId = await pendingConfirmationIdOf(asked.turnId);
   changeEvents = (
     await turn(
@@ -233,7 +256,23 @@ beforeAll(async () => {
         useTool("update_targets", { ...newTargets, confirmation_id: confirmationId }),
         finish("Done."),
       ],
-      asked.conversationId,
+      asked,
+    )
+  ).events;
+
+  // The model forgets the id after the button is pressed (live run 42110720568). The button's words and the same
+  // input still run the write, once. Carol is another person, so her change does not touch Alice's.
+  carol = await newAssistantUser("assistant-target-tools");
+  carolProgramId = await giveProgram(carol);
+  const carolAsked = await turn(carol, "Set my calories to 2,000", [
+    useTool("update_targets", newTargets, "Change your calorie target from 2,140 to 2,000 kcal?"),
+  ]);
+  noIdEvents = (
+    await turn(
+      carol,
+      "Change target",
+      [useTool("update_targets", newTargets), finish("Done.")],
+      carolAsked,
     )
   ).events;
 }, 240_000);
@@ -338,6 +377,26 @@ describe("a turn that answers Keep 2,140 while the model calls the tool with the
   it("leaves the targets as they were and the programme active", () => {
     expect(keptTargets).toMatchObject({ source: "engine", kcal: 2140 });
     expect(keptProgramId).toBe(programId);
+  });
+});
+
+describe("the turn that follows a yes when the model sends no confirmation id", () => {
+  it("streams the targets-changed card, once", () => {
+    expect(noIdEvents.filter((event) => event.type === "card")).toHaveLength(1);
+    expect(cardOf(noIdEvents)).toMatchObject({
+      kind: "targets_changed",
+      title: "Changed your calorie target to 2,000 kcal",
+    });
+  });
+
+  it("saves the targets, ends the programme and records one action", async () => {
+    expect(await getMyTargets(carol.client)).toMatchObject({ source: "manual", kcal: 2000 });
+    expect((await getMyProgramSummary(carol.client)).program).toBeNull();
+    const { data } = await carol.client
+      .from("assistant_actions")
+      .select("target_id")
+      .eq("tool", "update_targets");
+    expect(data).toEqual([{ target_id: carolProgramId }]);
   });
 });
 
