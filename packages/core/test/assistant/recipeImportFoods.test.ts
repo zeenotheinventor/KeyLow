@@ -157,14 +157,14 @@ describe("importFoodCandidates", () => {
     const many = Array.from({ length: 60 }, (_, index) => hit(`Dish ${index}`));
 
     expect(importFoodCandidates("lemon", [many])).toHaveLength(IMPORT_CANDIDATES_MAX);
-    expect(IMPORT_CANDIDATES_MAX).toBe(30);
+    expect(IMPORT_CANDIDATES_MAX).toBe(40);
   });
 
   it("should give no candidates for no hits", () => {
     expect(importFoodCandidates("lemon", [[], []])).toEqual([]);
   });
 
-  it("should give the same foods first in any input order when 30 or fewer names start with the word", () => {
+  it("should give the same foods first in any input order when 40 or fewer names start with the word", () => {
     const startingWithMilk = Array.from({ length: 12 }, (_, index) => hit(`Milk, kind ${index}`));
     const others = Array.from({ length: 30 }, (_, index) => hit(`Dish ${index}`));
     const forwards = [...others.slice(0, 15), ...startingWithMilk, ...others.slice(15)];

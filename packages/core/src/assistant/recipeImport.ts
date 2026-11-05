@@ -83,7 +83,7 @@ export function importSearchWords(foodWord: string): string[] {
 }
 
 /** The most foods offered to the model for one line. */
-export const IMPORT_CANDIDATES_MAX = 30;
+export const IMPORT_CANDIDATES_MAX = 40;
 
 const IMPORT_SEARCH_WORDS_MAX = 3;
 const CANDIDATE_NAME_MAX_CHARACTERS = 80;
