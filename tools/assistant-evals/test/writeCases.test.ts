@@ -1164,6 +1164,21 @@ describe("a write case, played wrong", () => {
     expect(reasons).toEqual([]);
   });
 
+  it("should read yesterday's lunch rows after the case pressed Undo, when they are deleted again", async () => {
+    const reasons = await failures("log-yesterdays-lunch-again", (played) => ({
+      ...played,
+      rows: {
+        ...played.rows,
+        food_log_entries: (played.rows["food_log_entries"] ?? []).map((row) => ({
+          ...row,
+          deleted_at: "2026-11-05T13:00:00Z",
+        })),
+      },
+    }));
+
+    expect(reasons).toEqual([]);
+  });
+
   it('should fail yesterday\'s lunch logged with a near food, because "again" means the same food', async () => {
     // Chicken with skin for the chicken without, and Thai rice for the long grain: both are real foods, and
     // `get_entries` gives the full name of the entry, so a search finds the exact one.

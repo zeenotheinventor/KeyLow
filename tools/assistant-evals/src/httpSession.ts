@@ -20,16 +20,56 @@ const databaseWorkdir = new URL("../../../packages/db", import.meta.url).pathnam
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
 
+const blocksOf = (content: unknown): unknown[] =>
+  Array.isArray(content) ? (content as unknown[]) : [];
+
 /** The `tool_use` blocks of a stored assistant message, in order. Anything else in the content is left out. */
 export function toolCallsOf(content: unknown): ToolCall[] {
-  if (!Array.isArray(content)) {
-    return [];
-  }
-  return content.flatMap((block: unknown) =>
+  return blocksOf(content).flatMap((block) =>
     isRecord(block) && block["type"] === "tool_use" && typeof block["name"] === "string"
       ? [{ name: block["name"], input: block["input"] }]
       : [],
   );
+}
+
+// The code a tool answered with: `"error": "not_found"` in the text of its result, which the tools write as JSON.
+// Only the code is kept, never the rest of the result.
+const ERROR_CODE = /"error"\s*:\s*"([a-z_]+)"/;
+
+/**
+ * The calls of a whole turn, in order, from every stored message of it: each `tool_use` block, with the error
+ * code its `tool_result` block carried when the tool refused it. The code says why a write did not land, such as
+ * `not_found` for an id the tool could not find.
+ */
+export function toolCallsOfTurn(contents: readonly unknown[]): ToolCall[] {
+  const codes = new Map<string, string>();
+  for (const block of contents.flatMap(blocksOf)) {
+    if (
+      isRecord(block) &&
+      block["type"] === "tool_result" &&
+      typeof block["tool_use_id"] === "string"
+    ) {
+      const text = block["content"];
+      const code = typeof text === "string" ? ERROR_CODE.exec(text)?.[1] : undefined;
+      if (code !== undefined) {
+        codes.set(block["tool_use_id"], code);
+      }
+    }
+  }
+  return contents.flatMap(blocksOf).flatMap((block) => {
+    if (!isRecord(block) || block["type"] !== "tool_use" || typeof block["name"] !== "string") {
+      return [];
+    }
+    const id = block["id"];
+    const code = typeof id === "string" ? codes.get(id) : undefined;
+    return [
+      {
+        name: block["name"],
+        input: block["input"],
+        ...(code === undefined ? {} : { errorCode: code }),
+      },
+    ];
+  });
 }
 
 async function timeZoneOf(user: FixtureUser): Promise<string | null> {
@@ -71,12 +111,11 @@ export async function openLocalHttpSession(): Promise<EvalSession> {
           .from("assistant_messages")
           .select("content")
           .eq("turn_id", turnId)
-          .eq("role", "assistant")
           .order("seq", { ascending: true });
         if (error) {
           throw new Error(`Could not read the tool calls of the turn (${error.code})`);
         }
-        return data.flatMap(({ content }) => toolCallsOf(content));
+        return toolCallsOfTurn(data.map(({ content }) => content));
       },
     });
     // The service role writes the conversations a case seeds, and nothing else uses it.

@@ -25,6 +25,7 @@ import {
   cardOfKind,
   loggedItems,
   loggedRows,
+  loggedSomeOfTheItems,
   noGuessedAmounts,
   onlyFoodsOf,
   onlyTheseTools,
@@ -217,13 +218,31 @@ const logged = (items: readonly ExpectedItem[], today: string): Grader[] => [
   onlyTheseTools(WRITE_AND_READ_TOOLS),
 ];
 
+// The route where the assistant logs what is clear and asks about the rest: some of the items logged rightly,
+// nothing else, and one question about a food or an amount. Nothing is guessed, so it is as good as logging all.
+const loggedThenAsked = (items: readonly ExpectedItem[], today: string): Grader[] => [
+  loggedSomeOfTheItems(items, today),
+  cardOfKind(0, "logged"),
+  clarifyingQuestion(),
+  askedOnce(),
+  askedAboutFoodOrAmount(),
+  onlyTheseTools(WRITE_AND_READ_TOOLS),
+];
+
 function gradersOf(spec: DescribeSpec, anchorDate: string): Grader[] {
   const graders: Grader[] = (() => {
     switch (spec.kind) {
-      case "log":
-        return spec.mayAskAboutSize
-          ? [anyOfRoutes([logged(spec.items, anchorDate), [...onlyQuestion(), askedAboutSize()]])]
-          : logged(spec.items, anchorDate);
+      case "log": {
+        const routes: Grader[][] = [logged(spec.items, anchorDate)];
+        if (spec.mayAskAboutSize) {
+          routes.push([...onlyQuestion(), askedAboutSize()]);
+        }
+        if (spec.items.length > 1) {
+          routes.push(loggedThenAsked(spec.items, anchorDate));
+        }
+        const [only] = routes;
+        return routes.length === 1 && only !== undefined ? only : [anyOfRoutes(routes)];
+      }
       case "clarify": {
         const asking = [
           ...onlyQuestion(),
@@ -235,8 +254,8 @@ function gradersOf(spec: DescribeSpec, anchorDate: string): Grader[] {
       }
       case "brief": {
         // Two eggs and the toast have portions, and the message gave no count for the toast. Butter and a flat
-        // white have none, so a weight for either is a guess. A question must be about the food or the amount, and
-        // logging must not drop the toast in silence.
+        // white have none, so a weight for either is a guess. A question must be about the food or the amount,
+        // and logging must not drop the toast in silence: the toast is logged, or asked about after the eggs.
         const eggs: ExpectedItem = { codes: FOOD_ROUTES.egg, amount: { count: 2 } };
         const toast: ExpectedItem = { codes: FOOD_ROUTES.toast, amount: { portion: true } };
         return [
@@ -249,6 +268,7 @@ function gradersOf(spec: DescribeSpec, anchorDate: string): Grader[] {
               onlyFoodsOf([...FOOD_ROUTES.egg, ...FOOD_ROUTES.toast]),
               onlyTheseTools(WRITE_AND_READ_TOOLS),
             ],
+            loggedThenAsked([eggs, toast], anchorDate),
           ]),
         ];
       }

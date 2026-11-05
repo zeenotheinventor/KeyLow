@@ -273,7 +273,8 @@ export function writeCasesOf(anchorDate: string): readonly EvalCase[] {
 
   // The words of a turn that makes the entry a later turn changes.
   const logEggs = (day: string) => `Log two large eggs on ${sayDay(day)} at 08:00.`;
-  const logBanana = (day: string) => `Log a banana on ${sayDay(day)} at 09:00.`;
+  // A size is given: a setup turn that is asked "which size?" never starts the case.
+  const logBanana = (day: string) => `Log a medium banana on ${sayDay(day)} at 09:00.`;
   const makeRecipe = (name: string) =>
     `Make a recipe called ${name} for 1 serving: 50 g porridge oats and 200 g semi-skimmed milk.`;
   const recipeIngredients = [
@@ -415,7 +416,7 @@ export function writeCasesOf(anchorDate: string): readonly EvalCase[] {
     make(
       "write-delete-several-entries-after-a-yes",
       [
-        `Log two large eggs and a banana on ${sayDay(deleteDays[1])} at 09:00.`,
+        `Log two large eggs and a medium banana on ${sayDay(deleteDays[1])} at 09:00.`,
         `Delete everything I logged on ${sayDay(deleteDays[1])} in one go.`,
         confirmDeleteButtons(2).confirmLabel,
       ],
@@ -435,7 +436,7 @@ export function writeCasesOf(anchorDate: string): readonly EvalCase[] {
     make(
       "write-delete-several-entries-after-a-no",
       [
-        `Log two large eggs and a banana on ${sayDay(deleteDays[2])} at 09:00.`,
+        `Log two large eggs and a medium banana on ${sayDay(deleteDays[2])} at 09:00.`,
         `Delete everything I logged on ${sayDay(deleteDays[2])} in one go.`,
         confirmDeleteButtons(2).cancelLabel,
       ],
@@ -768,7 +769,7 @@ export function writeCasesOf(anchorDate: string): readonly EvalCase[] {
   ];
   const repeated = make(
     "never-repeated-the-same-message-twice",
-    ["I had a banana.", "I had a banana."],
+    ["I had a medium banana.", "I had a medium banana."],
     [
       distinctTurns(),
       oneRowPerToolPerMessage(),
@@ -802,7 +803,8 @@ export function writeCasesOf(anchorDate: string): readonly EvalCase[] {
     [
       readBeforeFirstLog(yesterday),
       loggedItems(lunchItems, anchorDate),
-      loggedRows(lunchItems, anchorDate),
+      // The case presses Undo itself, so the entries are deleted again by the time the graders read them.
+      loggedRows(lunchItems, anchorDate, undefined, true),
       actionRows("log_entry", lunchItems.length),
       undoLunch.undone,
     ],

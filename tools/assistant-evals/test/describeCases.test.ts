@@ -404,6 +404,143 @@ function logCallInput(item: ExpectedItem): Record<string, unknown> {
   return typeof call.input === "object" && call.input !== null ? { ...call.input } : {};
 }
 
+describe("a log case that logs what is clear and asks about the rest", () => {
+  const orange: ExpectedItem = { codes: ["14-327"], amount: { count: 1 } };
+  const kiwi: ExpectedItem = { codes: ["14-371"], amount: { count: 1 } };
+
+  // The kiwi is logged, and one question asks the size of the orange.
+  const loggedKiwiThenAsked = (extra: Record<string, unknown> = {}) => {
+    const turn = turnResult({
+      status: "clarify",
+      toolCalls: [
+        logCallOf(kiwi),
+        readTool("ask_user", {
+          question: "What size was the orange?",
+          quick_replies: ["small", "medium"],
+        }),
+      ],
+      cards: [card("logged")],
+      ...extra,
+    });
+    return { turn, database: rowDatabase(rowsFor([kiwi], turn)) };
+  };
+
+  it("should pass the kiwi logged and one question about the orange", async () => {
+    const { turn, database } = loggedKiwiThenAsked();
+
+    expect(await failuresOf(caseOf("describe-an-orange-and-a-kiwi"), turn, database)).toEqual([]);
+  });
+
+  it("should pass the same for the three-item breakfast, the eggs logged and the toast asked about", async () => {
+    const eggs: ExpectedItem = { codes: ["12-940"], amount: { count: 2 }, time: "morning" };
+    const turn = turnResult({
+      status: "clarify",
+      toolCalls: [
+        logCallOf(eggs),
+        readTool("ask_user", { question: "How many slices of toast?", quick_replies: [] }),
+      ],
+      cards: [card("logged")],
+    });
+
+    expect(
+      await failuresOf(
+        caseOf("describe-eggs-toast-and-banana"),
+        turn,
+        rowDatabase(rowsFor([eggs], turn)),
+      ),
+    ).toEqual([]);
+  });
+
+  it("should fail a guessed weight logged next to the question", async () => {
+    const guessed: ExpectedItem = { codes: ["14-327"], amount: { grams: 130 } };
+    const turn = turnResult({
+      status: "clarify",
+      toolCalls: [
+        logCallOf(kiwi),
+        logCallOf(guessed),
+        readTool("ask_user", { question: "How much orange?", quick_replies: [] }),
+      ],
+      cards: [card("logged")],
+    });
+
+    const failures = await failuresOf(
+      caseOf("describe-an-orange-and-a-kiwi"),
+      turn,
+      rowDatabase(rowsFor([kiwi, guessed], turn)),
+    );
+
+    expect(failures[0]).toContain("no route passed");
+  });
+
+  it("should fail a wrong food logged next to the question", async () => {
+    const wrong: ExpectedItem = { codes: ["12-346"], amount: { count: 1 } };
+    const turn = turnResult({
+      status: "clarify",
+      toolCalls: [
+        logCallOf(wrong),
+        readTool("ask_user", { question: "What size was the orange?", quick_replies: [] }),
+      ],
+      cards: [card("logged")],
+    });
+
+    const failures = await failuresOf(
+      caseOf("describe-an-orange-and-a-kiwi"),
+      turn,
+      rowDatabase(rowsFor([wrong], turn)),
+    );
+
+    expect(failures[0]).toContain("no route passed");
+  });
+
+  it("should fail a question that is not about a food or an amount", async () => {
+    const turn = turnResult({
+      status: "clarify",
+      toolCalls: [
+        logCallOf(kiwi),
+        readTool("ask_user", { question: "Was it nice?", quick_replies: [] }),
+      ],
+      cards: [card("logged")],
+    });
+
+    const failures = await failuresOf(
+      caseOf("describe-an-orange-and-a-kiwi"),
+      turn,
+      rowDatabase(rowsFor([kiwi], turn)),
+    );
+
+    expect(failures[0]).toContain("no route passed");
+  });
+
+  it("should fail the entry in the diary being another amount than the call, whatever the call said", async () => {
+    const { turn } = loggedKiwiThenAsked();
+    const wrongRow = rowDatabase({
+      ...rowsFor([kiwi], turn),
+      food_log_entries: [
+        {
+          id: `entry-${turn.turnId}-0`,
+          food_id: foodIdOf("14-371"),
+          portion_id: portionIdOf("14-371"),
+          unit: "portion",
+          quantity: 5,
+          local_date: ANCHOR,
+          deleted_at: null,
+        },
+      ],
+    });
+
+    const failures = await failuresOf(caseOf("describe-an-orange-and-a-kiwi"), turn, wrongRow);
+
+    expect(failures[0]).toContain("no route passed");
+    expect(orange).toBeDefined();
+  });
+
+  it("should not apply to a case with one item, where a logged half is not a thing", async () => {
+    const { turn, database } = loggedKiwiThenAsked();
+
+    expect(await failuresOf(caseOf("describe-a-medium-bagel"), turn, database)).not.toEqual([]);
+  });
+});
+
 describe("a clarify case", () => {
   it.each(clarifySpecs.map(({ id }) => [id]))(
     "%s should pass one question and no write",
@@ -529,6 +666,22 @@ describe("the milestone's sentence", () => {
     expect(await failuresOf(caseOf(id), turn, rowDatabase(rowsFor([eggs, toast], turn)))).toEqual(
       [],
     );
+  });
+
+  it("should pass the eggs logged and one question about the toast", async () => {
+    const turn = turnResult({
+      status: "clarify",
+      toolCalls: [
+        logCallOf(eggs),
+        readTool("ask_user", {
+          question: "How many slices of toast did you have?",
+          quick_replies: ["1 slice", "2 slices"],
+        }),
+      ],
+      cards: [card("logged")],
+    });
+
+    expect(await failuresOf(caseOf(id), turn, rowDatabase(rowsFor([eggs], turn)))).toEqual([]);
   });
 
   it("should fail two eggs logged with the rest dropped in silence", async () => {

@@ -21,10 +21,20 @@ export const inputsOf = (turns: readonly TurnResult[], tool: string): unknown[] 
     .filter(({ name }) => name === tool)
     .map(({ input }) => input);
 
+// A null field says nothing, and log_entry sends a dozen of them, which pushed the food and the grams out of the
+// 200 characters of a failure line.
+const withoutNulls = (_key: string, value: unknown): unknown =>
+  value === null ? undefined : value;
+
 const toolsLine = (calls: readonly ToolCall[]): string =>
   calls.length === 0
     ? "none"
-    : calls.map(({ name, input }) => `${name}(${JSON.stringify(input).slice(0, 200)})`).join(", ");
+    : calls
+        .map(
+          ({ name, input, errorCode }) =>
+            `${name}(${JSON.stringify(input, withoutNulls).slice(0, 200)})${errorCode === undefined ? "" : ` -> ${errorCode}`}`,
+        )
+        .join(", ");
 
 /**
  * A failing case says what it was asked and which tools it called with which arguments, and never the answer
@@ -230,12 +240,14 @@ export function loggedItems(
 /**
  * Passes when the entries the turns left in the diary are the items: for each `log_entry` action the entry it
  * names is read, not deleted, and is the right food, portion and amount on the right day. This is the end
- * state, so a call that looked right but landed otherwise does not pass.
+ * state, so a call that looked right but landed otherwise does not pass. A case that presses Undo itself
+ * passes `includeDeleted`, because its graders run after the entries were deleted again.
  */
 export function loggedRows(
   items: readonly ExpectedItem[],
   today: string,
   turnIndexes?: readonly number[],
+  includeDeleted = false,
 ): Grader {
   return async ({ turns, database }) => {
     const actions = (
@@ -252,7 +264,10 @@ export function loggedRows(
     const rows = (
       await Promise.all(
         entryIds.map((id) =>
-          database.readRows({ table: "food_log_entries", where: { id, deleted_at: null } }),
+          database.readRows({
+            table: "food_log_entries",
+            where: includeDeleted ? { id } : { id, deleted_at: null },
+          }),
         ),
       )
     ).flat();
@@ -524,6 +539,76 @@ export function oneRowPerToolPerMessage(): Grader {
       }
     }
     return pass("no write was replayed");
+  };
+}
+
+/**
+ * Passes when the turns logged some of the items and nothing else: at least one `log_entry` call, each call one
+ * of the items (the right food, a portion for a count, grams only where the message gave them, no guessed
+ * weight), no item twice, and exactly as many entries in the diary, each the right food, portion and amount.
+ * It is for the route where the assistant logs what is clear and asks about the rest.
+ */
+export function loggedSomeOfTheItems(items: readonly ExpectedItem[], today: string): Grader {
+  return async ({ turns, database }) => {
+    const inputs = inputsOf(turns, "log_entry");
+    if (inputs.length === 0) {
+      return fail("nothing was logged");
+    }
+    const none = "a log_entry call is none of the items, or repeats one";
+    const callsLeft = new Set(items.keys());
+    for (const input of inputs) {
+      let found = -1;
+      for (const index of callsLeft) {
+        const item = items[index];
+        if (item !== undefined && (await matchesItem(input, item, today, database))) {
+          found = index;
+          break;
+        }
+      }
+      if (found === -1) {
+        return fail(none);
+      }
+      callsLeft.delete(found);
+    }
+    const actions = (
+      await Promise.all(
+        turns.map(({ turnId }) =>
+          database.readRows({
+            table: "assistant_actions",
+            where: { turn_id: turnId, tool: "log_entry" },
+          }),
+        ),
+      )
+    ).flat();
+    const rows = (
+      await Promise.all(
+        actions.flatMap(({ target_id: id }) =>
+          typeof id === "string"
+            ? [database.readRows({ table: "food_log_entries", where: { id, deleted_at: null } })]
+            : [],
+        ),
+      )
+    ).flat();
+    const rowsLeft = new Set(items.keys());
+    for (const row of rows) {
+      let found = -1;
+      for (const index of rowsLeft) {
+        const item = items[index];
+        if (item !== undefined && (await rowMatchesItem(row, item, today, database))) {
+          found = index;
+          break;
+        }
+      }
+      if (found === -1) {
+        return fail(
+          "an entry in the diary is none of the items, or there are more entries than calls",
+        );
+      }
+      rowsLeft.delete(found);
+    }
+    return rows.length === inputs.length
+      ? pass(`${inputs.length} of the ${items.length} items were logged`)
+      : fail("an entry in the diary is none of the items, or there are more entries than calls");
   };
 }
 

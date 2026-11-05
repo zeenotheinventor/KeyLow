@@ -15,6 +15,7 @@ import {
   confirmationLacks,
   loggedItems,
   loggedRows,
+  loggedSomeOfTheItems,
   noGuessedAmounts,
   oneRowPerToolPerMessage,
   onlyFoodsOf,
@@ -833,5 +834,116 @@ describe("oneRowPerToolPerMessage", () => {
     expect((await oneRowPerToolPerMessage()({ turns: [first, second], database })).reason).toBe(
       "turn 1 left 2 log_entry rows for one message",
     );
+  });
+});
+
+describe("loggedSomeOfTheItems", () => {
+  const turn = turnResult();
+  const toast: ExpectedItem = { codes: ["11-982"], amount: { portion: true } };
+  const database = (entries: Record<string, string | number | null>[]) =>
+    rowDatabase({
+      ...seedRows,
+      assistant_actions: entries.map((_entry, index) => ({
+        turn_id: turn.turnId,
+        tool: "log_entry",
+        target_id: `entry-${index}`,
+      })),
+      food_log_entries: entries.map((entry, index) => ({
+        id: `entry-${index}`,
+        deleted_at: null,
+        local_date: TODAY,
+        ...entry,
+      })),
+    });
+  const eggRow = {
+    food_id: EGG_ID,
+    portion_id: EGG_PORTION_ID,
+    unit: "portion",
+    quantity: 2,
+  };
+
+  it("should pass when only some of the items were logged, rightly, as the calls and as the rows", async () => {
+    const outcome = await loggedSomeOfTheItems(
+      [eggs, toast],
+      TODAY,
+    )({
+      turns: [turnResult({ ...turn, toolCalls: [logEggs()] })],
+      database: database([eggRow]),
+    });
+
+    expect(outcome.passed).toBe(true);
+  });
+
+  it("should fail when nothing was logged", async () => {
+    const outcome = await loggedSomeOfTheItems(
+      [eggs, toast],
+      TODAY,
+    )({
+      turns: [turnResult({ ...turn, toolCalls: [] })],
+      database: database([]),
+    });
+
+    expect(outcome).toEqual({ passed: false, reason: "nothing was logged" });
+  });
+
+  it("should fail a call that is none of the items, such as a guessed weight or another food", async () => {
+    const guessed = writeTool("log_entry", {
+      kind: "grams",
+      food_id: EGG_ID,
+      grams: 10,
+      time: null,
+    });
+
+    for (const calls of [[guessed], [logEggs(), guessed], [logEggs({ food_id: "other" })]]) {
+      const outcome = await loggedSomeOfTheItems(
+        [eggs, toast],
+        TODAY,
+      )({
+        turns: [turnResult({ ...turn, toolCalls: calls })],
+        database: database([eggRow]),
+      });
+
+      expect(outcome.reason).toBe("a log_entry call is none of the items, or repeats one");
+    }
+  });
+
+  it("should fail when the rows do not match the calls", async () => {
+    const outcome = await loggedSomeOfTheItems(
+      [eggs, toast],
+      TODAY,
+    )({
+      turns: [turnResult({ ...turn, toolCalls: [logEggs()] })],
+      database: database([{ ...eggRow, quantity: 3 }]),
+    });
+
+    expect(outcome.reason).toBe(
+      "an entry in the diary is none of the items, or there are more entries than calls",
+    );
+  });
+});
+
+describe("loggedRows after Undo", () => {
+  it("should read entries that Undo has deleted when asked to", async () => {
+    const turn = turnResult();
+    const database = rowDatabase({
+      ...seedRows,
+      assistant_actions: [{ turn_id: turn.turnId, tool: "log_entry", target_id: "entry-1" }],
+      food_log_entries: [
+        {
+          id: "entry-1",
+          food_id: EGG_ID,
+          portion_id: EGG_PORTION_ID,
+          unit: "portion",
+          quantity: 2,
+          local_date: TODAY,
+          deleted_at: "2026-11-05T12:00:00Z",
+        },
+      ],
+    });
+
+    expect((await loggedRows([eggs], TODAY)({ turns: [turn], database })).passed).toBe(false);
+    expect(
+      (await loggedRows([eggs], TODAY, undefined, true)({ turns: [turn], database })).passed,
+    ).toBe(true);
   });
 });

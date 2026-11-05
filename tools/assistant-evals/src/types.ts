@@ -15,6 +15,11 @@ export type ToolCall = Readonly<{
    * treated as one that writes.
    */
   readOnlyHint?: boolean | undefined;
+  /**
+   * The error code the tool answered, such as `not_found` or `invalid_input`, read from the stored tool result.
+   * Only the code, never the result, because a result is the person's data. Absent when the tool did not fail.
+   */
+  errorCode?: string | undefined;
 }>;
 
 /** What the app prints under an answer from the person's data. Either is null when the turn had none. */

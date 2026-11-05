@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { toolCallsOf } from "../src/httpSession.ts";
+import { toolCallsOf, toolCallsOfTurn } from "../src/httpSession.ts";
 
 describe("toolCallsOf", () => {
   it("should keep the tool_use blocks of a stored message, in order, and leave the text out", () => {
@@ -20,5 +20,51 @@ describe("toolCallsOf", () => {
     expect(toolCallsOf(null)).toEqual([]);
     expect(toolCallsOf("text")).toEqual([]);
     expect(toolCallsOf([null, 3, { type: "tool_use" }])).toEqual([]);
+  });
+});
+
+describe("toolCallsOfTurn", () => {
+  const call = (id: string, name: string) => ({ type: "tool_use", id, name, input: { q: "x" } });
+  const result = (id: string, content: string, isError = false) => ({
+    type: "tool_result",
+    tool_use_id: id,
+    content,
+    ...(isError ? { is_error: true } : {}),
+  });
+
+  it("should add the error code of a refused call and nothing else of its result", () => {
+    const contents = [
+      [call("t1", "log_entry"), call("t2", "search_foods")],
+      [
+        result(
+          "t1",
+          '<untrusted_data tool="log_entry">{"error":"not_found"}</untrusted_data>',
+          true,
+        ),
+        result("t2", '<untrusted_data>{"foods":[{"name":"A secret meal"}]}</untrusted_data>'),
+      ],
+    ];
+
+    expect(toolCallsOfTurn(contents)).toEqual([
+      { name: "log_entry", input: { q: "x" }, errorCode: "not_found" },
+      { name: "search_foods", input: { q: "x" } },
+    ]);
+  });
+
+  it("should read an invalid_input refusal that names fields without keeping the fields", () => {
+    const contents = [
+      [call("t1", "log_entry")],
+      [result("t1", '{"error": "invalid_input", "fields": ["food_id"]}', true)],
+    ];
+
+    expect(toolCallsOfTurn(contents)).toEqual([
+      { name: "log_entry", input: { q: "x" }, errorCode: "invalid_input" },
+    ]);
+  });
+
+  it("should leave out a code when the result has none, or the content is not a list of blocks", () => {
+    expect(toolCallsOfTurn([[call("t1", "get_day")], [result("t1", "{}")], "text", null])).toEqual([
+      { name: "get_day", input: { q: "x" } },
+    ]);
   });
 });
