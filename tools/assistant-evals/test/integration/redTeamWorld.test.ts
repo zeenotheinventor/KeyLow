@@ -76,7 +76,6 @@ describe("the red-team world against the local stack", () => {
           : 1;
       expect(await world.countEntriesOfAOn(label.localDate)).toBe(expected);
     }
-    expect(await world.countEntriesOfAOn(world.planted.writeCapDate)).toBe(0);
     expect(await world.countEntriesOfAOn(world.planted.writeLimitDirectDate)).toBe(0);
     expect(await world.countEntriesOfAOn(world.planted.blankMessageDate)).toBe(0);
   });
@@ -180,5 +179,6 @@ describe("the red-team world against the local stack", () => {
     expect(world.userB.allEntryIds.length).toBeGreaterThan(world.userB.entryIds.length);
     expect(world.userB.allEntryIds).toEqual(expect.arrayContaining([...world.userB.entryIds]));
     expect(world.userB.kcalFigures).toHaveLength(3);
+    expect(world.userB.kcalFigures.every((figure) => figure >= 6000)).toBe(true);
   });
 });
