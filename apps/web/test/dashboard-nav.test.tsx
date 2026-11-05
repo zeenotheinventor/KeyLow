@@ -39,17 +39,55 @@ describe("DashboardNav", () => {
     expect(screen.getByRole("link", { name: "Ki-Lo" }).getAttribute("href")).toBe("/dashboard");
   });
 
-  it("should link to Dashboard, Diary and More", () => {
+  it("should link to Dashboard, Diary, Train and More, in that order", () => {
     render(<DashboardNav />);
 
     const links = within(screen.getByRole("navigation", { name: "Main" })).getAllByRole("link");
 
-    expect(links.map((link) => link.textContent)).toEqual(["Dashboard", "Diary", "More"]);
+    expect(links.map((link) => link.textContent)).toEqual(["Dashboard", "Diary", "Train", "More"]);
     expect(links.map((link) => link.getAttribute("href"))).toEqual([
       "/dashboard",
       "/diary",
+      "/train",
       "/more",
     ]);
+  });
+
+  it.each(["/train", "/train/session", "/train/history"])(
+    "should mark Train as the current page, and only Train, on %s",
+    (path) => {
+      pathname.mockReturnValue(path);
+      render(<DashboardNav />);
+
+      const current = within(screen.getByRole("navigation", { name: "Main" })).getAllByRole(
+        "link",
+        { current: "page" },
+      );
+      expect(current.map((link) => link.textContent)).toEqual(["Train"]);
+    },
+  );
+
+  it("should not mark Train current on a page whose address only begins like Train's", () => {
+    pathname.mockReturnValue("/trainer");
+    render(<DashboardNav />);
+
+    expect(screen.getByRole("link", { name: "Train" }).getAttribute("aria-current")).toBeNull();
+  });
+
+  it("should list Train in the menu below the large breakpoint, and close the menu when it is chosen", () => {
+    render(<DashboardNav />);
+    const menuButton = screen.getByRole("button", { name: "Menu" });
+    fireEvent.click(menuButton);
+
+    const trainLink = within(screen.getByRole("navigation", { name: "Main" })).getByRole("link", {
+      name: "Train",
+    });
+    trainLink.addEventListener("click", (event) => {
+      event.preventDefault();
+    });
+    fireEvent.click(trainLink);
+
+    expect(menuButton.getAttribute("aria-expanded")).toBe("false");
   });
 
   it("should no longer link to Recipes, which is reached through More", () => {

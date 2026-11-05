@@ -132,6 +132,8 @@ export { useStartSessionAction } from "./useStartSessionAction";
 export type { SessionStartRequest } from "./useStartSessionAction";
 export { useDiscardSession } from "./useDiscardSession";
 export { useSessionView } from "./useSessionView";
+export { describeFinishDetails } from "./describeFinishDetails";
+export type { FinishDetails } from "./describeFinishDetails";
 export { useSetLogging } from "./useSetLogging";
 export { useRemoveSetWithUndo } from "./useRemoveSetWithUndo";
 export type { SetNotices } from "./useRemoveSetWithUndo";

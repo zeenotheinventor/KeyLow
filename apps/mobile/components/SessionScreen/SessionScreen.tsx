@@ -26,9 +26,9 @@ import { useSessionScreen } from "./useSessionScreen";
 import { useSetLogging } from "./useSetLogging";
 
 import type { ExerciseMusclesSheetExercise } from "../ExerciseMusclesSheet";
-import type { FinishDetails } from "../FinishScreen";
 import type { SessionScreenProps, SetTypeOpening } from "./types";
 import type { SetEntryOpening } from "../SetEntrySheet";
+import type { FinishDetails } from "@keylow/api-client";
 import type { SetType } from "@keylow/core/training";
 
 // The board's padding under the Add exercise button, which a phone with a taller inset outgrows.

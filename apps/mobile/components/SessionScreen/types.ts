@@ -1,5 +1,5 @@
-import type { FinishDetails, SavedOutcome } from "../FinishScreen";
-import type { SessionView } from "@keylow/api-client";
+import type { SavedOutcome } from "../FinishScreen";
+import type { FinishDetails, SessionView } from "@keylow/api-client";
 import type { SetType } from "@keylow/core/training";
 
 export type {

@@ -1,6 +1,5 @@
-import { useSessionView } from "@keylow/api-client";
+import { describeFinishDetails, useSessionView } from "@keylow/api-client";
 
-import { describeFinishDetails } from "./finishDetails";
 import { useReadsEnabled } from "../../lib/useReadsEnabled";
 
 import type { PendingSet, SessionScreenView } from "./types";

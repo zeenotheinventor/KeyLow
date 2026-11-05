@@ -1,6 +1,6 @@
 "use client";
 
-import { SEARCH_LAUNCHER, TAB_BAR_LABEL, TAB_TITLES } from "@keylow/core/copy";
+import { SEARCH_LAUNCHER, TAB_BAR_LABEL, TAB_TITLES, TRAIN_HOME } from "@keylow/core/copy";
 import { iconStroke } from "@keylow/tokens";
 import { Menu } from "lucide-react";
 import Link from "next/link";
@@ -14,6 +14,7 @@ import { KiLoMark } from "@/components/ui/KiLoMark";
 import { SearchLauncher } from "@/components/ui/SearchField";
 import { useFoodLogActions } from "@/lib/foodLogActions";
 import { recipesPath } from "@/lib/recipeRoutes";
+import { trainPath } from "@/lib/trainRoutes";
 import { useIsOnline } from "@/lib/useIsOnline";
 import { cn } from "@/lib/utils";
 
@@ -21,6 +22,7 @@ import { cn } from "@/lib/utils";
 const SECTIONS: readonly DashboardSection[] = [
   { label: TAB_TITLES.dashboard, href: "/dashboard" },
   { label: TAB_TITLES.diary, href: "/diary" },
+  { label: TRAIN_HOME.tabLabel, href: trainPath() },
   { label: TAB_TITLES.more, href: "/more", alsoCurrentOn: [recipesPath()] },
 ];
 
@@ -39,7 +41,7 @@ const focusRing =
   "outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-focus-ring-offset";
 
 /**
- * The top bar of the signed-in app: the mark, the three sections and the food search. From the
+ * The top bar of the signed-in app: the mark, the four sections and the food search. From the
  * large breakpoint the sections sit in the bar. Below it they move into the menu, as the boards draw.
  */
 export function DashboardNav() {

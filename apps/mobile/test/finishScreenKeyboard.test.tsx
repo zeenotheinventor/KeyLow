@@ -28,7 +28,7 @@ import { GOLDEN_SESSION_ID, goldenLegsOpen, LEGS_DAY_ID } from "./support/sessio
 import { resetTrainBackend, trainBackend } from "./support/trainBackend";
 import { viewsDrawn } from "./support/viewsDrawn";
 
-import type { FinishDetails } from "../components/FinishScreen";
+import type { FinishDetails } from "@keylow/api-client";
 import type { QueryClient } from "@tanstack/react-query";
 
 jest.mock("@react-native-async-storage/async-storage", () => ({
