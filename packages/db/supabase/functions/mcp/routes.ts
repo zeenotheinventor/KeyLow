@@ -18,7 +18,7 @@ import type { RecipeImportServices } from "../_shared/assistant/recipeParse.ts";
 import type { ToolContext, ToolRegistry } from "../_shared/assistant/tool.ts";
 import type { Database } from "../_shared/core/database.types.ts";
 import type { ReportError } from "../_shared/report.ts";
-import type { McpTurn, McpTurnStore } from "./turns.ts";
+import type { McpTurn, McpTurnStore, UserMessage } from "./turns.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export type McpDependencies = {
@@ -101,9 +101,9 @@ export function createMcpEndpoint(
       knownName: string,
       rawInput: unknown,
     ): Promise<ExecutionResult> {
-      let userMessageText: string | null;
+      let message: UserMessage;
       try {
-        userMessageText = await turns.userMessageText(user.id, turn);
+        message = await turns.userMessage(user.id, turn);
       } catch (caught) {
         // The transport would answer a throw with its message, and a store message can quote a row.
         dependencies.report("mcp", "internal_error", caught);
@@ -120,7 +120,8 @@ export function createMcpEndpoint(
         turn: {
           id: turn.id,
           conversationId: turn.conversationId,
-          userMessageText,
+          userMessageText: message.text,
+          personsWords: message.personsWords,
           ...localMoment,
         },
         registry,

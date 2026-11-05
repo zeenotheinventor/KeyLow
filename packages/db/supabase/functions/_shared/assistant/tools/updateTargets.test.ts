@@ -748,3 +748,26 @@ Deno.test(
 Deno.test("the description tells the model when they say no, do not call again", () => {
   assertStringIncludes(updateTargetsTool.description, "When they say no, do not call again.");
 });
+
+Deno.test(
+  "after Keep 2,140 the confirmation asks again, the targets are unchanged and the programme stays active",
+  async () => {
+    const c = contexts();
+    const confirmationId = confirmationIdOf(
+      await executeTool(c.asking, "update_targets", askedCaloriesOnly),
+    );
+
+    const result = await executeTool(
+      { ...c.confirming, turn: { ...c.confirming.turn, personsWords: "Keep 2,140" } },
+      "update_targets",
+      { ...askedCaloriesOnly, confirmation_id: confirmationId },
+    );
+
+    assert(result.status === "needs_confirmation");
+    assertEquals(result.asksAgain, true);
+    assertEquals(result.note, note);
+    assertEquals(profileOf(c)["target_kcal"], 1900);
+    assertEquals(programOf(c)["ended_on"], null);
+    assertEquals(c.store.actions.length, 0);
+  },
+);

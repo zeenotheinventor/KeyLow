@@ -41,6 +41,7 @@ function archiveContexts(rows = [chickenAndRice, theirs]) {
   const contextOn = (turnId: string): ToolContext => ({
     ...createFakeContext([archiveRecipeTool], {
       store,
+      personsWords: "Archive recipe",
       turn: { id: turnId, conversationId: store.turns[0]?.conversationId ?? "" },
     }).ctx,
     caller: base.stub.caller,
@@ -267,3 +268,20 @@ Deno.test(
     assertFalse(description.includes("ask the user"));
   },
 );
+
+Deno.test("after Keep it the confirmation asks again and nothing is archived", async () => {
+  const { asking, confirming, stub, store } = archiveContexts();
+  const confirmationId = confirmationIdOf(
+    await executeTool(asking, "archive_recipe", { id: chickenAndRice.id }),
+  );
+
+  const result = await executeTool(
+    { ...confirming, turn: { ...confirming.turn, personsWords: "Keep it" } },
+    "archive_recipe",
+    { id: chickenAndRice.id, confirmation_id: confirmationId },
+  );
+
+  assertObjectMatch(result, { status: "needs_confirmation", asksAgain: true });
+  assertEquals(archivedFlags(stub), { "Chicken and rice": false, "Their stew": false });
+  assertEquals(store.actions.length, 0);
+});

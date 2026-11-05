@@ -17,7 +17,12 @@ import { z } from "zod";
 import { toAnthropicTools } from "../_shared/assistant/adapters/anthropic.ts";
 import { askUserTool } from "../_shared/assistant/tools/askUser.ts";
 import { wrapUntrusted } from "../_shared/assistant/untrusted.ts";
-import { assistantCardSchema, mergeAssistantCards, withActionIds } from "../_shared/core.ts";
+import {
+  assistantCardSchema,
+  isConfirmAnswer,
+  mergeAssistantCards,
+  withActionIds,
+} from "../_shared/core.ts";
 import { allowedToolsFor } from "./allowlist.ts";
 import { COMPACTION_TIMEOUT_MILLISECONDS, planCompaction, promptTokensOf } from "./compact.ts";
 import { confirmWordsFor } from "./confirmWords.ts";
@@ -448,7 +453,10 @@ async function finishCall(
     const words = confirmWordsFor(toolUse.name, toolUse.input);
     // The model's own words when it wrote some, and the tool's otherwise, so a model that wrote no
     // question does not fail the turn. The tool's words are the board's, built from the person's own rows.
-    const modelWords = responseText.trim();
+    // When the confirmation is asked again, the model's text is never the question, because a model that
+    // misread "Keep them" may have written "Deleting those now." That text has already streamed, so it
+    // stays above the question.
+    const modelWords = outcome.asksAgain === true ? "" : responseText.trim();
     const question = modelWords === "" ? (outcome.question ?? "") : modelWords;
     if (words === null || question === "") {
       // A bug the evals catch: neither the model nor the tool worded the question, or the tool has no
@@ -703,7 +711,14 @@ async function takeTurn(run: Run): Promise<Ending> {
   }
   const allowedTools = allowedToolsFor({
     text: context.text,
-    pendingConfirmationTool: previousTurn?.pendingTool ?? null,
+    // A confirmation adds its own tool only when the person's message is the button's words, so a
+    // read-looking message after one no longer has the write at all.
+    pendingConfirmationTool: isConfirmAnswer(
+      context.text,
+      previousTurn?.pendingConfirmLabel ?? null,
+    )
+      ? (previousTurn?.pendingTool ?? null)
+      : null,
     tools: dependencies.availableTools,
   });
   const cachedTools = dependencies.toolListCache.read();

@@ -284,12 +284,13 @@ export function errorResult(name: string, code: string): ToolCallResult {
 export function confirmationResult(
   name: string,
   confirmationId: string,
-  { question, note }: { question?: string; note?: string } = {},
+  { question, note, asksAgain }: { question?: string; note?: string; asksAgain?: true } = {},
 ): ToolCallResult {
   return {
     text: wrapUntrusted(name, {
       status: "needs_confirmation",
       confirmation_id: confirmationId,
+      ...(asksAgain === undefined ? {} : { asked_again: true }),
       ...(note === undefined ? {} : { note }),
     }),
     isError: false,
@@ -298,6 +299,7 @@ export function confirmationResult(
       confirmationId,
       ...(question === undefined ? {} : { question }),
       ...(note === undefined ? {} : { note }),
+      ...(asksAgain === undefined ? {} : { asksAgain }),
     },
   };
 }
