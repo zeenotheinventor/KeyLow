@@ -1,2 +1,2 @@
 export { WeekDay } from "./WeekDay";
-export type { WeekDayLook, WeekDayProps } from "./types";
+export type { WeekDayProps } from "./types";

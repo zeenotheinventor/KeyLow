@@ -367,3 +367,4 @@ export type {
   TrainingReminderSession,
   TrainingReminderSettings,
 } from "./trainingReminders";
+export { weekDayLookOf, type WeekDayLook } from "./weekDayLook";
