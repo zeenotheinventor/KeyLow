@@ -187,6 +187,68 @@ describe("ListRow", () => {
     });
   });
 
+  describe("a weigh-in row: badge, unit and the figure's look", () => {
+    it("should show a badge in its tone between the text and the value, and say it in the row's text", () => {
+      renderInList(
+        <ListRow
+          title="Wed 14 Oct"
+          subtitle="08:31 · Added by you"
+          badge={{ label: "Left out of trend", tone: "warning" }}
+          value="88.9"
+          unit="kg"
+        />,
+      );
+
+      const badge = screen.getByText("Left out of trend");
+      expect(badge.className).toContain("bg-warning-muted");
+      expect(screen.getByRole("listitem").textContent).toBe(
+        "Wed 14 Oct08:31 · Added by youLeft out of trend88.9kg",
+      );
+    });
+
+    it("should draw no badge unless one is given, and leave the text column as it was", () => {
+      renderInList(<ListRow title="Today" subtitle="07:10 · Added by you" />);
+
+      expect(screen.getByRole("listitem").textContent).toBe("Today07:10 · Added by you");
+      expect(screen.getByText("Today").parentElement?.className).not.toContain("md:flex-row");
+    });
+
+    it("should put the unit after the value in the muted caption look", () => {
+      renderInList(<ListRow title="Today" value="81.4" unit="kg" valueLook="numeral" />);
+
+      const unit = screen.getByText("kg");
+      expect(unit.className).toContain("text-caption");
+      expect(unit.className).toContain("text-text-muted");
+      expect(unit.previousElementSibling?.textContent).toBe("81.4");
+    });
+
+    it("should draw a numeral value strong and in the primary colour, and a muted one in the muted colour", () => {
+      renderInList(
+        <>
+          <ListRow title="Today" value="81.4" unit="kg" valueLook="numeral" />
+          <ListRow title="Wed" value="88.9" unit="kg" valueLook="numeral" valueTone="muted" />
+        </>,
+      );
+
+      expect(screen.getByText("81.4").className).toContain("text-body-strong");
+      expect(screen.getByText("81.4").className).toContain("text-text-primary");
+      expect(screen.getByText("88.9").className).toContain("text-text-muted");
+      expect(screen.getByText("88.9").className).not.toContain("text-text-primary");
+    });
+
+    it("should draw no unit on a row that has no value", () => {
+      renderInList(<ListRow title="Today" unit="kg" valueLook="numeral" />);
+
+      expect(screen.queryByText("kg")).toBeNull();
+    });
+
+    it("should leave a value without a look as the quiet secondary text it was", () => {
+      renderInList(<ListRow title="Targets" value="2,200 kcal" />);
+
+      expect(screen.getByText("2,200 kcal").className).toContain("text-text-secondary");
+    });
+  });
+
   describe("reduced motion", () => {
     it("should drop the press scale under prefers-reduced-motion", async () => {
       renderInList(<ListRow title="Your foods" href="/foods" />);

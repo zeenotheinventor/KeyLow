@@ -48,10 +48,12 @@ export const WEIGHT_ERROR = {
   retry: "Try again",
 } as const;
 
-/** The `empty` state: its title, body and two actions. */
+/** The `empty` state: its title, body (and the web's body) and two actions. */
 export const WEIGHT_EMPTY = {
   title: "No weigh-ins yet",
   body: `Add one now, or bring in readings from your smart scale through ${HEALTH_CONNECT_NAME}. Your trend starts after the first weigh-in.`,
+  /** The web's own sentence: the web cannot connect Health Connect, so it does not name it. */
+  bodyWeb: "Add your first one here. Your trend starts after the first weigh-in.",
   addWeighIn: "Add weigh-in",
   connectHealth: `Connect ${HEALTH_CONNECT_NAME}`,
 } as const;
