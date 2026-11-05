@@ -28,7 +28,7 @@ import { Card } from "@/components/ui/Card";
 import { Skeleton, SkeletonBone } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
 import { useBodyFigure } from "@/lib/bodyFigure";
-import { goalExitPath } from "@/lib/goalRoutes";
+import { goalLeavePath } from "@/lib/goalRoutes";
 import { useIsOnline } from "@/lib/useIsOnline";
 
 const FIGURE_WIDTH = 70;
@@ -58,7 +58,8 @@ const ROW_PLACES = [0, 1, 2, 3] as const;
  * answers line, the legend and Save goal do not wait for it. The figures are always the flat drawings, in
  * the male or female figure the setting has. Save goal is drawn only once an answer has changed, so a goal
  * that is opened and left as it is stores no new row. It sends the answers once, however often it is pressed,
- * and then leaves for More. With no connection it is off and says why, since a save that waited would fire
+ * and then leaves for the Goal page when a goal was stored when the flow opened, so the new answer shows, and
+ * for More when it is the first goal. With no connection it is off and says why, since a save that waited would fire
  * later without the person looking. A save that fails keeps the answers and shows the error toast, so it
  * can be tried again. Nothing the answers say reaches a log or a report from here.
  */
@@ -66,7 +67,7 @@ export function GoalSummaryScreen({ answers }: GoalSummaryScreenProps) {
   const router = useRouter();
   const toast = useToast();
   const isOnline = useIsOnline();
-  const { hasChanges } = useGoalDraft();
+  const { hasChanges, hasStoredGoal } = useGoalDraft();
   const { figure, isReady: isFigureReady } = useBodyFigure();
   const routine = useActiveRoutine();
   const saveGoal = useSaveTrainingGoals();
@@ -106,7 +107,7 @@ export function GoalSummaryScreen({ answers }: GoalSummaryScreenProps) {
       toast.show({ message: GOAL_ERRORS.save, tone: "danger" });
       return;
     }
-    router.replace(goalExitPath());
+    router.replace(goalLeavePath(hasStoredGoal));
   }
 
   return (

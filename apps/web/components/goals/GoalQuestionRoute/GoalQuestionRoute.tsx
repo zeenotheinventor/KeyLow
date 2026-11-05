@@ -10,7 +10,7 @@ import { GoalQuestionScreen } from "../GoalQuestionScreen";
 
 import type { GoalQuestionRouteProps } from "./types";
 
-import { goalQuestionPath, readGoalStep } from "@/lib/goalRoutes";
+import { goalQuestionPath, isOpenedFromGoalPage, readGoalStep } from "@/lib/goalRoutes";
 
 /**
  * A question's address ends in its number. Anything that is not one of the six opens the first question, and
@@ -18,7 +18,7 @@ import { goalQuestionPath, readGoalStep } from "@/lib/goalRoutes";
  * on a reload, which drops the answers. Every question on screen therefore has the question before it, for
  * Back to return to. Nothing is drawn while the person is being sent on.
  */
-export function GoalQuestionRoute({ step }: GoalQuestionRouteProps) {
+export function GoalQuestionRoute({ step, from }: GoalQuestionRouteProps) {
   const router = useRouter();
   const { draft } = useGoalDraft();
   const question = readGoalStep(step);
@@ -34,6 +34,6 @@ export function GoalQuestionRoute({ step }: GoalQuestionRouteProps) {
   }, [firstOpen, router]);
 
   return question === undefined || firstOpen !== undefined ? null : (
-    <GoalQuestionScreen step={question} />
+    <GoalQuestionScreen step={question} isFromGoalPage={isOpenedFromGoalPage(from)} />
   );
 }
