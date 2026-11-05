@@ -10,6 +10,7 @@ import {
 import { History } from "lucide-react";
 
 import { FinishStat } from "../FinishDialog/FinishStat";
+import { SessionMusclesCard } from "../SessionMusclesCard";
 import { SetTable } from "../SetTable";
 import { SessionDetailLoading } from "./SessionDetailLoading";
 
@@ -34,7 +35,7 @@ function SessionDetailBody({ content }: { content: SessionDetailContent }) {
           <FinishStat key={stat.label} label={stat.label} value={stat.value} note={stat.note} />
         ))}
       </div>
-      {/* The Muscles trained card goes here (KEY-470). */}
+      <SessionMusclesCard variant="summary" {...content.musclesTrained} />
       {exercises.map(({ exerciseId, name, note, rows }) => (
         <Card key={exerciseId} asChild padding="none" className="flex flex-col pb-1 pt-3">
           <section aria-label={name}>

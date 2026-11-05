@@ -390,3 +390,4 @@ export {
   isGoalStepAnswered,
 } from "./goalDraft";
 export type { GoalDraft, GoalDraftAction, GoalDraftAnswers } from "./goalDraft";
+export { sessionHeatReadingTime } from "./sessionProgress";

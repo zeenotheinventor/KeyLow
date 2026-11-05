@@ -225,6 +225,7 @@ export {
 export {
   describeFinishDetails,
   describeSessionDetail,
+  heatSetsOf,
   isPendingSetId,
   useAddedExercises,
   useChangeSetType,

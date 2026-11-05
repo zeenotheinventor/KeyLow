@@ -146,6 +146,32 @@ export const sessionHeatValues = (
 ): Record<MuscleId, number> => heatValues(muscleState(loggedSets, at, params), params);
 
 /**
+ * The moment to read the heat of a session in progress at: `now`, or the latest live set when that is later.
+ * The model ignores a set after the moment it reads at, so a clock a little behind the one that stamped a set
+ * (or a tick that has not come yet) would leave the figures one set short of the list.
+ *
+ * Throws a `RangeError` naming the rule when `now` or a live set's `performed_at` is not an ISO timestamp with a zone.
+ */
+export const sessionHeatReadingTime = (
+  loggedSets: readonly Pick<HeatSet, "performed_at" | "deleted_at">[],
+  now: string,
+): string => {
+  const latest = loggedSets
+    .filter((set) => set.deleted_at === null)
+    .reduce<string | null>(
+      (latestSoFar, { performed_at }) =>
+        latestSoFar === null ||
+        parseMoment(performed_at, "A set's performed_at must be an ISO timestamp with a zone") >
+          parseMoment(latestSoFar)
+          ? performed_at
+          : latestSoFar,
+      null,
+    );
+
+  return latest !== null && parseMoment(latest) > parseMoment(now) ? latest : now;
+};
+
+/**
  * The effective sets each muscle took in a session, for "Muscles trained" on the finish screen: most
  * sets first, equal sets in the muscle list's order, and a muscle with none left out. The caller gives
  * the sets of the session. A blank RIR counts as hard and a warm-up counts nothing (`setEffort`).
