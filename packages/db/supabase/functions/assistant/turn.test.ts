@@ -1132,6 +1132,330 @@ Deno.test(
   },
 );
 
+// ---- The confirm button runs the stored call in code (KEY-840) ----
+
+const deleteLabel = confirmDeleteButtons(3).confirmLabel;
+const deleteCancelLabel = confirmDeleteButtons(3).cancelLabel;
+const deletedAction = "00000000-0000-4000-8000-0000000000a7";
+
+const deletedCall = () =>
+  okResult({
+    name: "delete_entry",
+    structured: { card: cardDraft("Chicken and rice", 612) },
+    actionId: deletedAction,
+  });
+
+// The turn that asks, with no model response left for anything after it.
+const askingOnly = (second: ToolAnswer = deletedCall()): HarnessOptions => ({
+  responses: [
+    callTools([{ id: "d1", name: "delete_entry", input: { ids: entryIds } }], deleteQuestion),
+  ],
+  answers: {
+    delete_entry: inSequence(confirmationResult("delete_entry", confirmationId), second),
+  },
+});
+
+const pressedCalls = (harness: Harness) => harness.connections[1]?.calls ?? [];
+
+Deno.test(
+  "the button's words make the one stored call with the pending id and no model call, and the card is the answer",
+  async () => {
+    const spy = spyOnConsole();
+    try {
+      await withHarness(askingOnly(), async (harness) => {
+        await afterAskedDelete(harness);
+
+        const result = await harness.take(deleteLabel);
+
+        assertEquals(harness.mock.bodies.length, 1);
+        assertEquals(pressedCalls(harness).length, 1);
+        assertEquals(pressedCalls(harness)[0]?.name, "delete_entry");
+        assertEquals(pressedCalls(harness)[0]?.input, {
+          ids: entryIds,
+          confirmation_id: confirmationId,
+        });
+        assertEquals(typesOf(result.events), ["turn", "card", "done"]);
+        assertEquals(result.events.at(-1), { type: "done", outcome: "complete" });
+        assertEquals(turnStatuses(harness), ["confirm", "complete"]);
+        assertEquals(harness.usageRows().length, 1);
+        assertEquals(harness.reports.length, 0);
+        assertEquals(harness.connections[1]?.closeCount, 1);
+
+        // The stored turn is the person's words, the call as an assistant row and the result with the card.
+        const stored = result.rows.filter((row) => row.turnId === result.turnId);
+        assertEquals(
+          stored.map((row) => row.role),
+          ["user", "assistant", "user"],
+        );
+        const [call] = blocksOf(stored[1]?.content);
+        assertEquals(call?.["type"], "tool_use");
+        assertEquals(call?.["name"], "delete_entry");
+        assertNotEquals(call?.["id"], "d1");
+        assertEquals(call?.["input"], { ids: entryIds, confirmation_id: confirmationId });
+        const [answer] = blocksOf(stored[2]?.content);
+        assertEquals(answer?.["tool_use_id"], call?.["id"]);
+        const display = stored[2]?.display;
+        assert(isRecord(display) && isRecord(display[String(call?.["id"])]));
+        assertEquals(
+          eventsOfType(result.events, "card").map((event) => event.card.actionIds),
+          [[deletedAction]],
+        );
+      });
+    } finally {
+      spy.restore();
+    }
+
+    const summaries = spy.lines.filter((line) => line.startsWith("assistant turn "));
+    assertStringIncludes(summaries.at(-1) ?? "", "modelCalls=0 toolCalls=1 ending=complete");
+    for (const line of spy.lines) {
+      const content = withoutIdsAndDurations(line);
+      assertEquals(content.includes("Delete 3"), false, line);
+      assertEquals(content.includes("612"), false, line);
+    }
+  },
+);
+
+Deno.test("any case and spaces around the button's words behave the same", async () => {
+  await withHarness(askingOnly(), async (harness) => {
+    await afterAskedDelete(harness);
+
+    const result = await harness.take("  delete 3 ENTRIES ");
+
+    assertEquals(harness.mock.bodies.length, 1);
+    assertEquals(pressedCalls(harness).length, 1);
+    assertEquals(typesOf(result.events), ["turn", "card", "done"]);
+  });
+});
+
+for (const [label, answer] of [
+  ["an error", errorResult("delete_entry", "tool_failed")],
+  ["not_found", okResult({ name: "delete_entry", payload: { error: "not_found" } })],
+  ["changed false", okResult({ name: "delete_entry", payload: { changed: false } })],
+] as const) {
+  Deno.test(
+    `a tool that answers ${label} ends the press with the failed notice and no card or model call`,
+    async () => {
+      await withHarness(askingOnly(answer), async (harness) => {
+        await afterAskedDelete(harness);
+
+        const result = await harness.take(deleteLabel);
+
+        assertEquals(typesOf(result.events), ["turn", "notice", "done"]);
+        assertEquals(result.events.slice(-2), [
+          { type: "notice", notice: { code: "turn_failed" } },
+          { type: "done", outcome: "failed" },
+        ]);
+        assertEquals(turnStatuses(harness), ["confirm", "failed"]);
+        assertEquals(harness.mock.bodies.length, 1);
+        assertEquals(pressedCalls(harness).length, 1);
+        assertEquals(harness.reports.length, 1);
+        assertEquals(harness.reports[0]?.code, "internal_error");
+        assertEquals(String(harness.reports[0]?.caught).includes(entryIds[0] ?? ""), false);
+      });
+    },
+  );
+}
+
+Deno.test("a press that ends failed logs confirm_nothing_written", async () => {
+  const spy = spyOnConsole();
+  try {
+    await withHarness(askingOnly(errorResult("delete_entry", "tool_failed")), async (harness) => {
+      await afterAskedDelete(harness);
+      await harness.take(deleteLabel);
+    });
+  } finally {
+    spy.restore();
+  }
+
+  const summaries = spy.lines.filter((line) => line.startsWith("assistant turn "));
+  assertStringIncludes(
+    summaries.at(-1) ?? "",
+    "modelCalls=0 toolCalls=1 ending=confirm_nothing_written",
+  );
+});
+
+Deno.test(
+  "a tool that asks again on the press sends the confirm event with the tool's question and ends confirm",
+  async () => {
+    const asksAgain = confirmationResult("delete_entry", "00000000-0000-4000-8000-0000000000c8", {
+      question: deleteQuestion,
+      asksAgain: true,
+    });
+    await withHarness(askingOnly(asksAgain), async (harness) => {
+      await afterAskedDelete(harness);
+
+      const result = await harness.take(deleteLabel);
+
+      assertEquals(typesOf(result.events), ["turn", "confirm", "done"]);
+      assertEquals(eventsOfType(result.events, "confirm")[0]?.question, deleteQuestion);
+      assertEquals(result.events.at(-1), { type: "done", outcome: "confirm" });
+      assertEquals(turnStatuses(harness), ["confirm", "confirm"]);
+      assertEquals(harness.mock.bodies.length, 1);
+    });
+  },
+);
+
+Deno.test(
+  "a press whose stored call cannot be found makes no call and fails honestly",
+  async () => {
+    await withHarness(askingOnly(), async (harness) => {
+      await afterAskedDelete(harness);
+      const [asked] = harness.turnRows();
+      asked?.["pending_confirmation"] &&
+        Object.assign(asked["pending_confirmation"], { id: "other" });
+
+      const result = await harness.take(deleteLabel);
+
+      assertEquals(typesOf(result.events), ["turn", "notice", "done"]);
+      assertEquals(result.events.at(-1), { type: "done", outcome: "failed" });
+      assertEquals(turnStatuses(harness), ["confirm", "failed"]);
+      assertEquals(pressedCalls(harness), []);
+      assertEquals(harness.mock.bodies.length, 1);
+      assertEquals(harness.reports.length, 1);
+    });
+  },
+);
+
+Deno.test("a press logs confirm_input_missing when the stored call cannot be found", async () => {
+  const spy = spyOnConsole();
+  try {
+    await withHarness(askingOnly(), async (harness) => {
+      await afterAskedDelete(harness);
+      const [asked] = harness.turnRows();
+      asked?.["pending_confirmation"] &&
+        Object.assign(asked["pending_confirmation"], { id: "other" });
+      await harness.take(deleteLabel);
+    });
+  } finally {
+    spy.restore();
+  }
+
+  const summaries = spy.lines.filter((line) => line.startsWith("assistant turn "));
+  assertStringIncludes(
+    summaries.at(-1) ?? "",
+    "modelCalls=0 toolCalls=0 ending=confirm_input_missing",
+  );
+});
+
+Deno.test(
+  "the cancel button and typed yes-words stay model turns, and the loop makes no call",
+  async () => {
+    for (const words of [deleteCancelLabel, "yes please"]) {
+      await withHarness(askingThenAnswering(reply("Nothing was deleted.")), async (harness) => {
+        await afterAskedDelete(harness);
+
+        const result = await harness.take(words);
+
+        assertEquals(harness.mock.bodies.length, 2);
+        assertEquals(pressedCalls(harness), []);
+        assertEquals(result.events.at(-1), { type: "done", outcome: "complete" });
+      });
+    }
+  },
+);
+
+Deno.test(
+  "the button's words after a turn that did not end confirm stay a model turn",
+  async () => {
+    await withHarness(askingThenAnswering(reply("Which entries?")), async (harness) => {
+      await afterAskedDelete(harness);
+      const [asked] = harness.turnRows();
+      if (asked === undefined) {
+        throw new Error("expected the asking turn");
+      }
+      asked["status"] = "complete";
+
+      await harness.take(deleteLabel);
+
+      assertEquals(harness.mock.bodies.length, 2);
+      assertEquals(pressedCalls(harness), []);
+    });
+  },
+);
+
+Deno.test(
+  "after a confirmed press, the next request has the call and its result in order and no open tool use",
+  async () => {
+    await withHarness(
+      {
+        ...askingOnly(),
+        responses: [
+          callTools([{ id: "d1", name: "delete_entry", input: { ids: entryIds } }], deleteQuestion),
+          reply("You have no entries left."),
+        ],
+      },
+      async (harness) => {
+        await afterAskedDelete(harness);
+        await harness.take(deleteLabel);
+
+        await harness.take("What did I log today?");
+
+        const messages = messagesOf(harness.mock.json()[1]);
+        assertEquals(
+          messages.map((message) => message["role"]),
+          ["user", "assistant", "user", "assistant", "user"],
+        );
+        const callIds = messages.flatMap((message) =>
+          blocksOf(message["content"]).flatMap((block) =>
+            block["type"] === "tool_use" ? [String(block["id"])] : [],
+          ),
+        );
+        assertEquals(callIds.length, 2);
+        assertEquals(new Set(callIds).size, 2);
+        // Each call is answered by the first block of the user message right after it.
+        for (const [index, message] of messages.entries()) {
+          if (message["role"] !== "assistant") {
+            continue;
+          }
+          const answered = blocksOf(messages[index + 1]?.["content"]).flatMap((block) =>
+            block["type"] === "tool_result" ? [String(block["tool_use_id"])] : [],
+          );
+          const called = blocksOf(message["content"]).flatMap((block) =>
+            block["type"] === "tool_use" ? [String(block["id"])] : [],
+          );
+          assertEquals(answered, called);
+        }
+        const [pressedCall] = blocksOf(messages[3]?.["content"]);
+        assertEquals(pressedCall?.["name"], "delete_entry");
+        assertEquals(pressedCall?.["input"], { ids: entryIds, confirmation_id: confirmationId });
+        // The new message joins behind the press's result, in one user message, and is last.
+        const last = blocksOf(messages[4]?.["content"]);
+        assertEquals(last[0]?.["type"], "tool_result");
+        assertEquals(last.at(-1)?.["text"], "What did I log today?");
+      },
+    );
+  },
+);
+
+Deno.test(
+  "a press whose call throws ends failed, and the next turn answers the open call",
+  async () => {
+    await withHarness(
+      {
+        ...askingOnly(failingCall()),
+        responses: [
+          callTools([{ id: "d1", name: "delete_entry", input: { ids: entryIds } }], deleteQuestion),
+          reply("Let me check."),
+        ],
+      },
+      async (harness) => {
+        await afterAskedDelete(harness);
+
+        const pressed = await harness.take(deleteLabel);
+        await harness.take("What did I log today?");
+
+        assertEquals(pressed.events.at(-1), { type: "done", outcome: "failed" });
+        assertEquals(pressedCalls(harness).length, 1);
+        const messages = messagesOf(harness.mock.json()[1]);
+        const last = blocksOf(messages.at(-1)?.["content"]);
+        assertEquals(last[0]?.["type"], "tool_result");
+        assertEquals(last[0]?.["is_error"], true);
+        assertEquals(harness.mock.bodies.length, 2);
+      },
+    );
+  },
+);
+
 Deno.test(
   "on a recipe-import turn a delete_entry call is never sent and the model gets tool_not_allowed",
   async () => {

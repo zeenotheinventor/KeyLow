@@ -27,6 +27,9 @@ export type PreviousTurn = {
   status: AssistantTurnStatus;
   // The tool the turn was waiting on a confirmation for, from `pending_confirmation`.
   pendingTool: string | null;
+  // The id of that confirmation, which leads to the stored call that asked it (KEY-840). Null for a row
+  // that holds none.
+  pendingConfirmationId: string | null;
   // The words of the button that confirms it, from the same row. Null for a row written before they were kept.
   pendingConfirmLabel: string | null;
 };
@@ -113,7 +116,11 @@ const turnStatuses = [
 ] as const satisfies readonly AssistantTurnStatus[];
 const roles = ["user", "assistant"] as const;
 
-const pendingToolSchema = z.object({ tool: z.string(), confirm_label: z.string().optional() });
+const pendingToolSchema = z.object({
+  id: z.string().optional(),
+  tool: z.string(),
+  confirm_label: z.string().optional(),
+});
 
 function failure(operation: string, error: { code?: string } | null): Error {
   return new Error(`assistant turn store ${operation} failed ${error?.code ?? "unknown"}`);
@@ -311,6 +318,7 @@ export function createTurnStore(
     return {
       status,
       pendingTool: pending.success ? pending.data.tool : null,
+      pendingConfirmationId: pending.success ? (pending.data.id ?? null) : null,
       pendingConfirmLabel: pending.success ? (pending.data.confirm_label ?? null) : null,
     };
   }
