@@ -3,9 +3,10 @@ import { BODY_MAP, describeBodyFigureLabel } from "@keylow/core/copy";
 import { useRef } from "react";
 
 import type { BodyMapFiguresProps } from "./types";
-import type { BodyMapView } from "@keylow/core/training";
+import type { BodyMapView, MuscleId } from "@keylow/core/training";
 import type { MouseEvent } from "react";
 
+import { ViewName } from "@/components/body/ViewLabel";
 import { BodyFigure } from "@/components/ui/BodyFigure";
 import { cn } from "@/lib/utils";
 
@@ -28,6 +29,11 @@ const UNSELECTED_OPACITY = 0.4;
  * from a screen reader. With `onLongPressMuscle` the muscles of the shown view are buttons, and the hidden
  * view keeps plain figures, so Tab never reaches it. A figure given a muscle handler stops the click of a
  * muscle, so a short click on one calls `onTap` as a click anywhere else does.
+ *
+ * With `sideBySide` the figures are Actual and Projected together, one side of each at the one width, with the
+ * view's name over it and its caption under it. Both views show, so a click on them does nothing, a short click
+ * on a muscle does nothing, and a hold or Enter on one calls `onLongPressMuscle` with the view of the figure it
+ * was on. `selected` outlines its muscle on the figure of `selectedView` only.
  */
 export function BodyMapFigures({
   scale,
@@ -38,6 +44,8 @@ export function BodyMapFigures({
   onTap,
   onLongPressMuscle,
   selected,
+  selectedView,
+  sideBySide,
 }: BodyMapFiguresProps) {
   const pressedAt = useRef<{ x: number; y: number } | null>(null);
   const valuesOf = (layer: BodyMapView) => (layer === "projected" ? projectedValues : actualValues);
@@ -58,6 +66,51 @@ export function BodyMapFigures({
   const handleMusclePress = () => {
     onTap?.();
   };
+
+  if (sideBySide !== undefined) {
+    return (
+      <div className="flex justify-center gap-6">
+        {VIEWS.map((shown) => (
+          // The column is no wider than its figure, so a long caption wraps under it and cannot push the
+          // row past the card.
+          <div key={shown} className="flex w-[140px] flex-col items-center gap-2 xl:w-[200px]">
+            <ViewName
+              isProjected={shown === "projected"}
+              label={BODY_MAP.views[shown]}
+              textClassName="text-label-small"
+            />
+            <div className="w-full [&_svg]:h-auto [&_svg]:w-full">
+              <BodyFigure
+                {...(onLongPressMuscle === undefined
+                  ? {}
+                  : {
+                      onLongPressMuscle: (muscle: MuscleId) => {
+                        onLongPressMuscle(muscle, shown);
+                      },
+                    })}
+                body={body}
+                label={describeBodyFigureLabel({
+                  scale,
+                  view: shown,
+                  side: sideBySide.side,
+                  hint: null,
+                })}
+                scale={scale}
+                selected={selectedView === shown ? selected : undefined}
+                side={sideBySide.side}
+                unselectedOpacity={UNSELECTED_OPACITY}
+                values={valuesOf(shown)}
+                w={FIGURE_WIDTH}
+              />
+            </div>
+            <span className="text-center text-caption text-text-muted">
+              {shown === "projected" ? sideBySide.projectedCaption : sideBySide.actualCaption}
+            </span>
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   return (
     // The tap is a convenience, and the visible toggle button is the way a keyboard reaches the same switch.
@@ -83,7 +136,12 @@ export function BodyMapFigures({
               >
                 <BodyFigure
                   {...(layer === view && onLongPressMuscle !== undefined
-                    ? { onLongPressMuscle, onPressMuscle: handleMusclePress }
+                    ? {
+                        onLongPressMuscle: (muscle: MuscleId) => {
+                          onLongPressMuscle(muscle, view);
+                        },
+                        onPressMuscle: handleMusclePress,
+                      }
                     : {})}
                   body={body}
                   label={describeBodyFigureLabel({ scale, view: layer, side, hint: null })}
