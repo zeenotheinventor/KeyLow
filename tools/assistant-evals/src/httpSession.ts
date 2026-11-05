@@ -5,6 +5,7 @@ import { createCaseEnvironment } from "./caseEnvironment.ts";
 import { createEvalDatabase } from "./database.ts";
 import { createFixtureUser } from "./fixtureUser.ts";
 import { createHttpDriver } from "./httpDriver.ts";
+import { stopPageServer } from "./pageServerHolder.ts";
 import { createUndoTurn } from "./undoTurn.ts";
 import { readSupabaseStatus } from "../../../packages/db/scripts/supabaseStatus.ts";
 import { writeAskExtras } from "../fixtures/askExtras.ts";
@@ -99,8 +100,8 @@ async function timeZoneOf(user: FixtureUser): Promise<string | null> {
 
 /**
  * The session of a run against the local stack: a new eval user with the synthetic diary and the assistant consent, the HTTP driver
- * for the served `assistant` function, and the eval user's own view of the database. Closing it removes the
- * user.
+ * for the served `assistant` function, and the eval user's own view of the database. Closing it removes the user and
+ * stops the page server if a case started one (`src/pageServerHolder.ts`).
  */
 export async function openLocalHttpSession(): Promise<EvalSession> {
   const stack = await readSupabaseStatus(databaseWorkdir);
@@ -148,10 +149,21 @@ export async function openLocalHttpSession(): Promise<EvalSession> {
         undoTurn: createUndoTurn({ client: user.client }),
         restoreTargets: () => writeAskExtras(user),
       }),
-      close: user.remove,
+      close: async () => {
+        // The server stops even when removing the user fails, or the run would not end.
+        try {
+          await user.remove();
+        } finally {
+          await stopPageServer();
+        }
+      },
     };
   } catch (error) {
-    await user.remove();
+    try {
+      await user.remove();
+    } finally {
+      await stopPageServer();
+    }
     throw error;
   }
 }

@@ -39,8 +39,11 @@ export type CaseEnvironment = Readonly<{
 export type EvalCase = Readonly<{
   id: string;
   set: EvalSetName;
-  /** Runs before the first message and answers the conversation it goes into. Left out, the first message opens one. */
-  setup?: (environment: CaseEnvironment) => Promise<string>;
+  /**
+   * Runs before the first message and answers the conversation it goes into, or null when the case only needs
+   * something started (such as the page server) and the first message should open one. Left out, the same.
+   */
+  setup?: (environment: CaseEnvironment) => Promise<string | null>;
   /** Runs after each turn has been read, for a case that must wait for something before its next message. */
   afterTurn?: (
     turn: Readonly<{ index: number; result: TurnResult }>,

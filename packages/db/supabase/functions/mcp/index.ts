@@ -21,6 +21,7 @@ import { createActionStore } from "../_shared/assistant/store.ts";
 import { createCallerClient, createServiceClient } from "../_shared/clients.ts";
 import { handle } from "../_shared/http.ts";
 import { fetchRecipePage } from "../_shared/recipePage.ts";
+import { recipePageTestOverrides } from "../_shared/recipePageTestOrigin.ts";
 import { reportError } from "../_shared/report.ts";
 import { recordUsage } from "../assistant/usage.ts";
 import { createMcpEndpoint } from "./routes.ts";
@@ -41,7 +42,12 @@ Deno.serve(
         readEnv: (name) => Deno.env.get(name),
         recordUsage: (call) => recordUsage(service, call),
         report: reportError,
-        fetchPage: (url, timeoutMilliseconds) => fetchRecipePage(url, { timeoutMilliseconds }),
+        // The overrides are empty unless the environment names a test origin and a local stack (the recipe import evals, KEY-701).
+        fetchPage: (url, timeoutMilliseconds) =>
+          fetchRecipePage(url, {
+            timeoutMilliseconds,
+            ...recipePageTestOverrides((name) => Deno.env.get(name)),
+          }),
       }),
       now: () => new Date(),
       report: reportError,
