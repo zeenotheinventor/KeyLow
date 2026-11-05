@@ -27,6 +27,12 @@ const routineRules = [
 export const samples: Record<string, () => string[]> = {
   describeDayNameFieldName: () => [copy.describeDayNameFieldName("Pull")],
   describeDayMenuName: () => [copy.describeDayMenuName("Pull")],
+  describeMoveDay: () => [copy.describeMoveDay("Legs", "up"), copy.describeMoveDay("", "down")],
+  describeMoveExercise: () => [copy.describeMoveExercise("Leg press", "down")],
+  describeMovedPosition: () => [
+    copy.describeMovedPosition("Legs", 1, 4),
+    copy.describeMovedPosition("", 2, 4),
+  ],
   describeNewDayName: () => [copy.describeNewDayName(1), copy.describeNewDayName(7)],
   describeWeekdayPickerTitle: () => [copy.describeWeekdayPickerTitle("Pull")],
   describeArchivedRoutinesLink: () => [
