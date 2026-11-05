@@ -263,6 +263,7 @@ const table: readonly [foodWord: string, wanted: RegExp][] = [
   ["curry paste", /^Curry paste/],
   ["coconut milk", /^Coconut milk/],
   ["chickpea", /^Chick ?peas/],
+  ["cheese", /^Cheese, Cheddar/],
   ["cream cheese", /^Cheese, (soft|cream)/],
   ["vanilla extract", /^Vanilla/],
 ];
