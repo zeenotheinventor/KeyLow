@@ -69,17 +69,20 @@ vi.mock("@keylow/api-client", async (importOriginal) => ({
     reads.volumeInputs.push(input);
     return reads.volume;
   },
-  useMuscleList: () => ({
-    data: undefined,
-    isPending: true,
-    isError: false,
-    error: null,
-    refetch: () => Promise.resolve(),
-  }),
+  useMuscleList: () => muscleListRead,
+  // The page's Muscles card reads this on the scale on screen, which main's body map screen does.
+  useMuscleScaleList: () => muscleListRead,
   useStartSessionAction: () => ({ start: vi.fn(), isStarting: false }),
 }));
 
 const refetch = () => Promise.resolve();
+const muscleListRead = {
+  data: undefined,
+  isPending: true,
+  isError: false,
+  error: null,
+  refetch,
+};
 const volumeWeek = (values: BodyMap["values"]): VolumeRead => ({
   data: {
     values,
