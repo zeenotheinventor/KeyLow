@@ -31,8 +31,7 @@ import { resetTrainBackend, trainBackend, trainClient } from "./support/trainBac
 import { viewsDrawn } from "./support/viewsDrawn";
 import { installVirtualClock } from "./support/virtualClock";
 
-import type { ExerciseNames } from "../components/RoutineEditor";
-import type { RoutineDraft } from "@keylow/core/training";
+import type { ExerciseNames, RoutineDraft } from "@keylow/core/training";
 import type { QueryClient } from "@tanstack/react-query";
 
 // The exercises of a day in the routine editor: the table the open day draws, adding from the picker,

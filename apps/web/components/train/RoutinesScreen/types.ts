@@ -13,7 +13,7 @@ export type RoutineItem = Pick<RoutineCardProps, "days" | "name" | "setsPerWeek"
 
 /**
  * Every control is drawn only when its handler is given, so none is a dead control. The routines page gives
- * none yet: the routine editor supplies Create and Edit.
+ * both through `RoutinesRoute`.
  */
 export type RoutinesScreenProps = {
   /** Opens the new routine editor. Draws New routine beside the title, and Create routine when there are no routines. */

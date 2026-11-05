@@ -27,6 +27,7 @@ import { GroupedList } from "@/components/ui/GroupedList";
 import { ListRow } from "@/components/ui/ListRow";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { trainPath, trainRoutinesArchivedPath } from "@/lib/trainRoutes";
+import { useIsOnline } from "@/lib/useIsOnline";
 
 /**
  * The routines list, as the `routines · list` and `routines · empty` boards draw it in the web shell: Back to
@@ -38,6 +39,7 @@ import { trainPath, trainRoutinesArchivedPath } from "@/lib/trainRoutes";
  * given, so none is a dead control.
  */
 export function RoutinesScreen({ onCreateRoutine, onEditRoutine }: RoutinesScreenProps) {
+  const isOnline = useIsOnline();
   const routines = useRoutines({ archived: true });
   const timeZone = useProfileTimeZone();
 
@@ -47,7 +49,7 @@ export function RoutinesScreen({ onCreateRoutine, onEditRoutine }: RoutinesScree
   const archivedCount = (routines.data?.length ?? 0) - live.length;
 
   const title = (
-    <div className="flex items-center justify-between gap-3">
+    <div className="flex items-center justify-between gap-3 xl:max-w-[800px]">
       <h1 className="text-h1">{ROUTINES_SCREEN.title}</h1>
       {onCreateRoutine === undefined || (active === undefined && others.length === 0) ? null : (
         <Button variant="secondary" onClick={onCreateRoutine}>
@@ -60,13 +62,19 @@ export function RoutinesScreen({ onCreateRoutine, onEditRoutine }: RoutinesScree
 
   function renderBody() {
     if (routines.data === undefined) {
-      return routines.isError ? (
+      // With no connection and nothing read, the read waits for a connection that may not come. Try again
+      // would only join that wait, so it is not offered until the browser is online, when the read goes by itself.
+      return routines.isError || !isOnline ? (
         <ErrorState
           title={GENERIC_ERROR}
           retryLabel={RETRY_LABEL}
-          onRetry={() => {
-            void routines.refetch();
-          }}
+          {...(isOnline
+            ? {
+                onRetry: () => {
+                  void routines.refetch();
+                },
+              }
+            : {})}
         />
       ) : (
         <Skeleton label={TRAIN_LOADING_NAME} variant="block" />
@@ -93,7 +101,7 @@ export function RoutinesScreen({ onCreateRoutine, onEditRoutine }: RoutinesScree
           />
         ) : null}
         {active === undefined ? null : (
-          <section aria-label={ROUTINES_SCREEN.activeLabel} className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2">
             <h2 className="flex min-h-[32px] items-center px-1 text-body-strong">
               {ROUTINES_SCREEN.activeLabel}
             </h2>
@@ -108,7 +116,7 @@ export function RoutinesScreen({ onCreateRoutine, onEditRoutine }: RoutinesScree
                     }
               }
             />
-          </section>
+          </div>
         )}
         {others.length === 0 ? null : (
           <GroupedList title={ROUTINES_SCREEN.otherSectionName}>

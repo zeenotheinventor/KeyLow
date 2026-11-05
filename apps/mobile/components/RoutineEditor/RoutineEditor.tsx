@@ -13,7 +13,15 @@ import {
   describeRemoveExercise,
   describeWeekdayPickerTitle,
 } from "@keylow/core/copy";
-import { MAX_DAYS_PER_ROUTINE, MAX_EXERCISES_PER_ROUTINE_DAY } from "@keylow/core/training";
+import {
+  MAX_DAYS_PER_ROUTINE,
+  MAX_EXERCISES_PER_ROUTINE_DAY,
+  draftOfState,
+  routineDraftReducer,
+  routineMarksOf,
+  startingStateOf,
+  summaryOf,
+} from "@keylow/core/training";
 import { onlineManager } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { usePreventRemove } from "expo-router/react-navigation";
@@ -22,13 +30,6 @@ import { useEffect, useReducer, useRef, useState } from "react";
 import { Keyboard, Platform, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import {
-  draftOfState,
-  routineDraftReducer,
-  startingStateOf,
-  summaryOf,
-} from "./routineDraftReducer";
-import { routineMarksOf } from "./routineMarks";
 import { useArchiveRoutineWithUndo } from "./useArchiveRoutineWithUndo";
 import { leaveRoutineEditor, leaveRoutineEditorSaved } from "../../lib/leaveRoutineEditor";
 import { useKeyboardLift } from "../../lib/useKeyboardLift";
@@ -50,9 +51,8 @@ import {
   useToast,
 } from "../ui";
 
-import type { RoutineMarks } from "./routineMarks";
-import type { EditorState, MoveDirection, OpenSheet, RoutineEditorProps } from "./types";
-import type { RoutineDraft } from "@keylow/core/training";
+import type { OpenSheet, RoutineEditorProps } from "./types";
+import type { EditorState, MoveDirection, RoutineDraft, RoutineMarks } from "@keylow/core/training";
 
 const emptyDraft: RoutineDraft = { name: "", days: [] };
 

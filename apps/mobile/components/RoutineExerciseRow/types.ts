@@ -1,4 +1,4 @@
-import type { ExerciseField, ExerciseMarks } from "../RoutineEditor";
+import type { ExerciseField, ExerciseMarks } from "@keylow/core/training";
 import type { RefCallback } from "react";
 import type { View } from "react-native";
 

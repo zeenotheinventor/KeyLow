@@ -15,6 +15,7 @@ import { ErrorState } from "@/components/ui/ErrorState";
 import { ListRow } from "@/components/ui/ListRow";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { trainRoutinesPath } from "@/lib/trainRoutes";
+import { useIsOnline } from "@/lib/useIsOnline";
 
 /**
  * The archived routines, as the `routines · archived` board draws them in the web shell: Back to Routines
@@ -24,18 +25,25 @@ import { trainRoutinesPath } from "@/lib/trainRoutes";
  * row gives its days alone.
  */
 export function ArchivedRoutinesScreen() {
+  const isOnline = useIsOnline();
   const routines = useRoutines({ archived: true });
   const archived = routines.data?.filter((routine) => routine.is_archived) ?? [];
 
   function renderBody() {
     if (routines.data === undefined) {
-      return routines.isError ? (
+      // With no connection and nothing read, the read waits for a connection that may not come. Try again
+      // would only join that wait, so it is not offered until the browser is online, when the read goes by itself.
+      return routines.isError || !isOnline ? (
         <ErrorState
           title={GENERIC_ERROR}
           retryLabel={RETRY_LABEL}
-          onRetry={() => {
-            void routines.refetch();
-          }}
+          {...(isOnline
+            ? {
+                onRetry: () => {
+                  void routines.refetch();
+                },
+              }
+            : {})}
         />
       ) : (
         <Skeleton label={TRAIN_LOADING_NAME} variant="block" />

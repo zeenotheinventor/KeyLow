@@ -1,20 +1,16 @@
-import { describeNewDayName } from "@keylow/core/copy";
-import {
-  MAX_DAYS_PER_ROUTINE,
-  MAX_EXERCISES_PER_ROUTINE_DAY,
-  summariseRoutine,
-} from "@keylow/core/training";
-
+import { MAX_DAYS_PER_ROUTINE, MAX_EXERCISES_PER_ROUTINE_DAY } from "./bounds";
 import {
   NEW_EXERCISE_TARGETS,
   draftExerciseOf,
   editorExerciseOf,
   withFieldText,
 } from "./editorExercise";
+import { summariseRoutine } from "./summariseRoutine";
+import { describeNewDayName } from "../copy/routines";
 
 import type { EditorExercise, ExerciseNames } from "./editorExercise";
-import type { EditorAction, EditorDay, EditorState, MoveDirection } from "./types";
-import type { RoutineDraft } from "@keylow/core/training";
+import type { RoutineDraft } from "./routineDraft";
+import type { EditorAction, EditorDay, EditorState, MoveDirection } from "./routineEditorState";
 
 /** The editor's state for a routine, every day closed. `exerciseNames` gives each exercise's name by its id. */
 export const startingStateOf = (

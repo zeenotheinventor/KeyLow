@@ -18,6 +18,7 @@ import {
   describeNewDayName,
   describeOtherRoutineMeta,
   describeProblemsBanner,
+  describeRemoveDay,
   describeRemoveExercise,
   describeRepRange,
   describeRestoreName,
@@ -278,6 +279,7 @@ describe("the routine editor", () => {
       title: "Edit routine",
       newTitle: "New routine",
       cancelLabel: "Cancel editing",
+      cancelAction: "Cancel",
       saveAction: "Save",
       nameLabel: "Name",
       daysHeading: "Days",
@@ -382,6 +384,12 @@ describe("the routine editor", () => {
         reps: "Reps for Barbell Squat",
         rir: "RIR for Barbell Squat",
       });
+    });
+  });
+
+  describe("describeRemoveDay", () => {
+    it("should name the day it removes", () => {
+      expect(describeRemoveDay("Push")).toBe("Remove Push");
     });
   });
 

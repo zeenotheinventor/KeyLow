@@ -1,11 +1,6 @@
-import { pushPullLegsDraft } from "./support/routineEditorFixtures";
-import { draftOfState, routineDraftReducer, startingStateOf } from "../components/RoutineEditor";
+import { draftOfState, routineDraftReducer, startingStateOf } from "@keylow/core/training";
 
-// The folder's index brings the editor with it, which reads the theme and the router.
-jest.mock("@react-native-async-storage/async-storage", () => ({
-  __esModule: true,
-  default: { getItem: () => Promise.resolve(null), setItem: () => Promise.resolve() },
-}));
+import { pushPullLegsDraft } from "./support/routineEditorFixtures";
 
 type EditorState = ReturnType<typeof startingStateOf>;
 

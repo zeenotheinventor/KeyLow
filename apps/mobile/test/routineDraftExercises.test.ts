@@ -1,18 +1,12 @@
-import { MAX_EXERCISES_PER_ROUTINE_DAY } from "@keylow/core/training";
-
-import { pushPullLegsDraft } from "./support/routineEditorFixtures";
 import {
+  MAX_EXERCISES_PER_ROUTINE_DAY,
   draftOfState,
   routineDraftReducer,
   startingStateOf,
   summaryOf,
-} from "../components/RoutineEditor";
+} from "@keylow/core/training";
 
-// The folder's index brings the editor with it, which reads the theme and the router.
-jest.mock("@react-native-async-storage/async-storage", () => ({
-  __esModule: true,
-  default: { getItem: () => Promise.resolve(null), setItem: () => Promise.resolve() },
-}));
+import { pushPullLegsDraft } from "./support/routineEditorFixtures";
 
 type EditorState = ReturnType<typeof startingStateOf>;
 type EditorAction = Parameters<typeof routineDraftReducer>[1];

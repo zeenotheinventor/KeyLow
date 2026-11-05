@@ -5,6 +5,7 @@ import {
   ROUTINE_EDITOR,
   ROUTINE_EDITOR_LOADING_LABEL,
 } from "@keylow/core/copy";
+import { draftOfStoredRoutine, exerciseNamesOfStoredRoutine } from "@keylow/core/training";
 import { useRouter } from "expo-router";
 import { vars } from "nativewind";
 import { useEffect } from "react";
@@ -17,36 +18,7 @@ import { useReadsEnabled } from "../../lib/useReadsEnabled";
 import { RoutineEditor } from "../RoutineEditor";
 import { ErrorState, SheetHeader } from "../ui";
 
-import type { ExerciseNames } from "../RoutineEditor";
 import type { RoutineEditorScreenProps } from "./types";
-import type { RoutineDraft } from "@keylow/core/training";
-
-type StoredRoutine = NonNullable<ReturnType<typeof useRoutine>["data"]>;
-
-/** A stored routine as the editor's draft: the days and exercises in order, with only the columns the draft holds. */
-const draftOfStoredRoutine = (routine: StoredRoutine): RoutineDraft => ({
-  name: routine.name,
-  days: routine.days.map((day) => ({
-    id: day.id,
-    weekday: day.weekday,
-    name: day.name,
-    exercises: day.exercises.map((exercise) => ({
-      exercise_id: exercise.exercise_id,
-      target_sets: exercise.target_sets,
-      rep_min: exercise.rep_min,
-      rep_max: exercise.rep_max,
-      target_rir: exercise.target_rir,
-    })),
-  })),
-});
-
-/** The names of a stored routine's exercises, by exercise id, which the draft does not hold. */
-const exerciseNamesOf = (routine: StoredRoutine): ExerciseNames =>
-  Object.fromEntries(
-    routine.days.flatMap((day) =>
-      day.exercises.map((exercise) => [exercise.exercise_id, exercise.exercise.name]),
-    ),
-  );
 
 /**
  * `/train/routines/<id>`: opens the editor on a stored routine, read from the library and kept on the phone,
@@ -74,7 +46,7 @@ export function RoutineEditorScreen({ id }: RoutineEditorScreenProps) {
     return (
       <RoutineEditor
         key={routine.data.id}
-        exerciseNames={exerciseNamesOf(routine.data)}
+        exerciseNames={exerciseNamesOfStoredRoutine(routine.data)}
         initialDraft={draftOfStoredRoutine(routine.data)}
         isActive={routine.data.is_active}
         isArchived={routine.data.is_archived}
