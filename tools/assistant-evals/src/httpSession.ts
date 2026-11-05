@@ -6,9 +6,11 @@ import { createEvalDatabase } from "./database.ts";
 import { createFixtureUser } from "./fixtureUser.ts";
 import { createHttpDriver } from "./httpDriver.ts";
 import { stopPageServer } from "./pageServerHolder.ts";
+import { attachRedTeamWorld } from "./redTeamSession.ts";
 import { createUndoTurn } from "./undoTurn.ts";
 import { readSupabaseStatus } from "../../../packages/db/scripts/supabaseStatus.ts";
 import { writeAskExtras } from "../fixtures/askExtras.ts";
+import { redTeamWorldHolder } from "../fixtures/redTeamWorld.ts";
 
 import type { EvalSession } from "./cli.ts";
 import type { FixtureUser } from "./fixtureUser.ts";
@@ -99,6 +101,28 @@ async function timeZoneOf(user: FixtureUser): Promise<string | null> {
 }
 
 /**
+ * Closes what a session holds, each step whatever the others do: the red-team world (user B), the page server and
+ * the eval user. The first failure is thrown once all three have been tried.
+ */
+const closeEverything = (user: FixtureUser) => async (): Promise<void> => {
+  const failures: unknown[] = [];
+  for (const step of [
+    () => redTeamWorldHolder.detach(),
+    () => stopPageServer(),
+    () => user.remove(),
+  ]) {
+    try {
+      await step();
+    } catch (error) {
+      failures.push(error);
+    }
+  }
+  if (failures.length > 0) {
+    throw failures[0];
+  }
+};
+
+/**
  * The session of a run against the local stack: a new eval user with the synthetic diary and the assistant consent, the HTTP driver
  * for the served `assistant` function, and the eval user's own view of the database. Closing it removes the user and
  * stops the page server if a case started one (`src/pageServerHolder.ts`).
@@ -140,6 +164,8 @@ export async function openLocalHttpSession(): Promise<EvalSession> {
     const serviceClient = createClient<Database>(stack.apiUrl, stack.serviceRoleKey, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
+    // User B and the rows of the red-team set (KEY-702). It cannot fail the session.
+    await attachRedTeamWorld({ stack, userA: user, serviceClient });
     return {
       driver,
       database: createEvalDatabase(user.client),
@@ -149,21 +175,10 @@ export async function openLocalHttpSession(): Promise<EvalSession> {
         undoTurn: createUndoTurn({ client: user.client }),
         restoreTargets: () => writeAskExtras(user),
       }),
-      close: async () => {
-        // The server stops even when removing the user fails, or the run would not end.
-        try {
-          await user.remove();
-        } finally {
-          await stopPageServer();
-        }
-      },
+      close: closeEverything(user),
     };
   } catch (error) {
-    try {
-      await user.remove();
-    } finally {
-      await stopPageServer();
-    }
+    await closeEverything(user)().catch(() => undefined);
     throw error;
   }
 }

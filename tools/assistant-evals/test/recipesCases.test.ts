@@ -20,6 +20,7 @@ import {
 } from "../cases/recipes.ts";
 import { fixturePages } from "../fixtures/pages/index.ts";
 import { FOODS, htmlOf, pagePathOf, recipePages } from "../fixtures/pages/recipeImportPages.ts";
+import { redTeamPages } from "../fixtures/pages/redTeamPages.ts";
 import { recipePageUrl } from "../src/pageServer.ts";
 import { THRESHOLD_PERCENT } from "../src/thresholds.ts";
 
@@ -347,7 +348,8 @@ describe("the recipe import set", () => {
   });
 
   it("should serve a page for every case, each at its own path", () => {
-    expect(fixturePages.size).toBe(recipePages.length);
+    // The red-team set's pages (KEY-702) are served by the same server.
+    expect(fixturePages.size).toBe(recipePages.length + redTeamPages.length);
     for (const page of recipePages) {
       expect(fixturePages.get(pagePathOf(page))).toBe(htmlOf(page));
     }

@@ -1,9 +1,10 @@
 import { htmlOf, pagePathOf, recipePages } from "./recipeImportPages.ts";
+import { redTeamPages } from "./redTeamPages.ts";
 
 /**
- * Every page the eval page server serves, by path. KEY-702's page cases add theirs here with one more
- * spread, and the server in `src/pageServer.ts` serves the lot.
+ * Every page the eval page server serves, by path: the pages of the recipe import set (KEY-701) and of the
+ * red-team set (KEY-702). The server in `src/pageServer.ts` serves the lot.
  */
 export const fixturePages: ReadonlyMap<string, string> = new Map(
-  recipePages.map((page) => [pagePathOf(page), htmlOf(page)]),
+  [...recipePages, ...redTeamPages].map((page) => [pagePathOf(page), htmlOf(page)]),
 );
