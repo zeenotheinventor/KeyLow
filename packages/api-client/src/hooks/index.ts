@@ -219,6 +219,12 @@ export type {
   SuggestionUnavailableReason,
   UseSuggestionInput,
 } from "./useSuggestion";
+export { useSuggestionCard } from "./useSuggestionCard";
+export type {
+  SuggestionCardState,
+  SuggestionNotices,
+  UseSuggestionCardInput,
+} from "./useSuggestionCard";
 export { useAssistantConsent } from "./useAssistantConsent";
 export { useAssistantStatus } from "./useAssistantStatus";
 export { useAssistantTurn } from "./useAssistantTurn";

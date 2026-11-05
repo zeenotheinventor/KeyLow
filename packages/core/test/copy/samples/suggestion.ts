@@ -51,6 +51,25 @@ export const samples: Record<string, () => string[]> = {
     ...Object.values(copy.describeSuggestionAccepted(goldenAdd, forThursday)),
     ...Object.values(copy.describeSuggestionAccepted(twoAdds, forToday)),
   ],
+  describeStoredAcceptedSuggestion: () => [
+    ...Object.values(
+      copy.describeStoredAcceptedSuggestion(
+        [{ target_sets: 3, exercise: { name: "Incline Dumbbell Press" } }],
+        16,
+        forThursday,
+      ),
+    ),
+    ...Object.values(
+      copy.describeStoredAcceptedSuggestion(
+        [
+          { target_sets: 3, exercise: { name: "Incline Dumbbell Press" } },
+          { target_sets: 3, exercise: { name: "Side Lateral Raise" } },
+        ],
+        0,
+        forFreshToday,
+      ),
+    ),
+  ],
   describeNothingToSuggest: () =>
     [prioritiesCovered, noRoomOnLegs, allHot, bandsOnly].flatMap((nothing) =>
       [forThursday, forToday, forFreshToday].flatMap((context) =>

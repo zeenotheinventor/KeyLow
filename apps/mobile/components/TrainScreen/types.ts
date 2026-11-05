@@ -1,3 +1,5 @@
+import type { SuggestionNotices } from "@keylow/api-client";
+
 /** What a start needs besides the moment: the routine day to follow, or null for a free session, and the profile's zone. */
 export type TrainSessionStart = {
   routineDayId: string | null;
@@ -35,4 +37,9 @@ export type TrainScreenProps = {
   onOpenHistory?: (() => void) | undefined;
   /** Opens the body map: the chevron button on the body map card. Drawn only when it is given. */
   onOpenBodyMap?: (() => void) | undefined;
+  /**
+   * What the suggestion card does with the toast: one with Undo for an add, and a failure sentence. The
+   * card is drawn only when it is given.
+   */
+  suggestionNotices?: SuggestionNotices | undefined;
 };

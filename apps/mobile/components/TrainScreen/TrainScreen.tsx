@@ -22,6 +22,7 @@ import { Banner, Button, ErrorState, Skeleton } from "../ui";
 import { TrainBodyMap } from "./TrainBodyMap";
 import { TrainFirstTime } from "./TrainFirstTime";
 import { TrainNoRoutine } from "./TrainNoRoutine";
+import { TrainSuggestionCard } from "./TrainSuggestionCard";
 
 import type { TrainScreenProps, TrainSessionStart } from "./types";
 
@@ -54,7 +55,8 @@ function bindViewSession(handler: (sessionId: string) => void, sessionId: string
  * of the week strip pass the id of the session they open. Pick day, under Start on the Today card, opens a
  * sheet of the routine's days and starts the one pressed the way Start does. The body map card sits under the
  * Today card or the no routine card and above the week strip, on every home but the first visit's, and
- * opens the body map when it is given a handler.
+ * opens the body map when it is given a handler. The suggestion card sits between them, as the boards
+ * compose it, and is drawn only when it is given the notices that show its toast.
  */
 export function TrainScreen({
   isStarting = false,
@@ -67,6 +69,7 @@ export function TrainScreen({
   onViewSession,
   onOpenHistory,
   onOpenBodyMap,
+  suggestionNotices,
 }: TrainScreenProps) {
   const now = useNow();
   const enabled = useReadsEnabled();
@@ -203,6 +206,9 @@ export function TrainScreen({
               onSetGoal={onSetGoal}
             />
           )
+        ) : null}
+        {home.status === "ready" && suggestionNotices !== undefined ? (
+          <TrainSuggestionCard home={home} notices={suggestionNotices} onSetGoal={onSetGoal} />
         ) : null}
         {home.status === "ready" && !isFirstTime ? (
           <TrainBodyMap

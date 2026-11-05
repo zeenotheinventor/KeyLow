@@ -206,6 +206,7 @@ describe("the package index", () => {
     "clearTickedItems",
     "listSuggestionLibrary",
     "useSuggestion",
+    "useSuggestionCard",
     "listAcceptedSuggestions",
     "acceptSuggestion",
     "undoAcceptedSuggestion",

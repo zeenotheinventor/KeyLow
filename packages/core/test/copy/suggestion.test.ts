@@ -28,11 +28,13 @@ import {
   describeNothingToSuggest,
   describeSuggestionAccepted,
   describeSuggestionCard,
+  describeStoredAcceptedSuggestion,
   describeSuggestionDetail,
   EXERCISE_PROPER_WORDS,
   SUGGESTION_ACCEPTED,
   SUGGESTION_CARD,
   SUGGESTION_DETAIL,
+  SUGGESTION_FAILED,
   SUGGESTION_NO_GOAL,
 } from "../../src/copy";
 
@@ -376,6 +378,40 @@ describe("the accepted card and toast", () => {
   });
 });
 
+describe("the accepted card worded from the stored row", () => {
+  const golden = [{ target_sets: 3, exercise: { name: "Incline Dumbbell Press" } }];
+
+  it("should word the card the same as the live suggestion does, from the day's planned sets and the stored exercise", () => {
+    expect(describeStoredAcceptedSuggestion(golden, 16, forThursday)).toStrictEqual(
+      describeSuggestionAccepted(goldenAdd, forThursday),
+    );
+  });
+
+  it("should count the stored sets and not any suggestion, so a day planned at 21 sets reads 24", () => {
+    expect(describeStoredAcceptedSuggestion(golden, 21, forThursday).title).toBe(
+      "Thursday's Legs: 24 sets",
+    );
+  });
+
+  it("should list every stored exercise", () => {
+    const both = describeStoredAcceptedSuggestion(
+      [...golden, { target_sets: 3, exercise: { name: "Side Lateral Raise" } }],
+      16,
+      forThursday,
+    );
+    expect(both.title).toBe("Thursday's Legs: 22 sets");
+    expect(both.toast).toBe(
+      "Added to Thursday: 3 sets of incline dumbbell press and 3 sets of side lateral raise",
+    );
+  });
+
+  it("should call a stored session with no routine day a session", () => {
+    expect(
+      describeStoredAcceptedSuggestion(golden, 0, { ...forThursday, routineDayName: null }).title,
+    ).toBe("Thursday's session: 3 sets");
+  });
+});
+
 describe("the nothing-to-add card", () => {
   it("should write the board's card for a day that is tomorrow", () => {
     expect(describeNothingToSuggest(prioritiesCovered, forThursday)).toStrictEqual({
@@ -638,6 +674,10 @@ describe("the fixed words", () => {
     expect(SUGGESTION_CARD).toStrictEqual({ startAction: "Start", dismissAction: "Not now" });
     expect(SUGGESTION_DETAIL.backLabel).toBe("Back to Train");
     expect(SUGGESTION_ACCEPTED.undoAction).toBe("Undo");
+    expect(SUGGESTION_FAILED).toStrictEqual({
+      acceptFailed: "Not saved. Check your connection and try again.",
+      undoFailed: "Couldn't undo. Try again.",
+    });
     expect(SUGGESTION_NO_GOAL).toStrictEqual({
       sectionName: "Suggestions",
       title: "Set your goal",
@@ -653,6 +693,7 @@ describe("the voice of every sentence", () => {
     ...collectStrings(SUGGESTION_CARD),
     ...collectStrings(SUGGESTION_DETAIL),
     ...collectStrings(SUGGESTION_ACCEPTED),
+    ...collectStrings(SUGGESTION_FAILED),
     ...collectStrings(SUGGESTION_NO_GOAL),
   ];
 

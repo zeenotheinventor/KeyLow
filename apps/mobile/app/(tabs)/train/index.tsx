@@ -1,13 +1,17 @@
 import { useTrainingGoals } from "@keylow/api-client";
 import { useRouter } from "expo-router";
+import { useMemo } from "react";
 
 import { TrainScreen, useTrainSessionActions } from "../../../components/TrainScreen";
+import { useToast } from "../../../components/ui";
 import { bodyMapPath } from "../../../lib/bodyMapRoutes";
 import { goalPath, goalQuestionPath } from "../../../lib/goalRoutes";
 import { sessionDetailPath } from "../../../lib/historyRoutes";
 import { newRoutinePath, routinesPath } from "../../../lib/routineRoutes";
 import { useOpenOnce } from "../../../lib/useOpenOnce";
 import { useReadsEnabled } from "../../../lib/useReadsEnabled";
+
+import type { SuggestionNotices } from "@keylow/api-client";
 
 export default function TrainRoute() {
   const router = useRouter();
@@ -18,6 +22,20 @@ export default function TrainRoute() {
   // Only a goal that was read to exist opens the Goal screen. With none, or while it is not known, the
   // questionnaire opens at its first question, which fills in whatever answers there are.
   const hasGoal = trainingGoals.data !== undefined && trainingGoals.data !== null;
+
+  const toast = useToast();
+  // The suggestion card's toast: the add with Undo, and the failure of an add or an Undo.
+  const suggestionNotices = useMemo<SuggestionNotices>(
+    () => ({
+      onAccepted: ({ message, actionLabel, undo }) => {
+        toast.show({ message, actionLabel, onAction: undo });
+      },
+      onFailure: (message: string) => {
+        toast.show({ message, icon: "CircleAlert", tone: "danger" });
+      },
+    }),
+    [toast],
+  );
 
   return (
     <TrainScreen
@@ -53,6 +71,7 @@ export default function TrainRoute() {
       onViewSession={(sessionId) => {
         router.push(sessionDetailPath(sessionId, "train"));
       }}
+      suggestionNotices={suggestionNotices}
     />
   );
 }
