@@ -116,6 +116,8 @@ export { useDashboardBodyMap } from "./useDashboardBodyMap";
 export type { DashboardBodyMap, DashboardToday } from "./useDashboardBodyMap";
 export { useMuscleList } from "./useMuscleList";
 export type { UseMuscleListInput } from "./useMuscleList";
+export { useMuscleScaleList } from "./useMuscleScaleList";
+export type { UseMuscleScaleListInput } from "./useMuscleScaleList";
 export { useMuscleDetail } from "./useMuscleDetail";
 export type { UseMuscleDetailInput } from "./useMuscleDetail";
 
@@ -144,7 +146,7 @@ export type {
   SessionDetailSet,
   SessionDetailView,
 } from "./sessionDetailTypes";
-export { describeFinishDetails } from "./describeFinishDetails";
+export { describeFinishDetails, heatSetsOf } from "./describeFinishDetails";
 export type { FinishDetails } from "./describeFinishDetails";
 export { useSetLogging } from "./useSetLogging";
 export { useChangeSetType } from "./useChangeSetType";

@@ -1,2 +1,2 @@
 export { MusclesCard } from "./MusclesCard";
-export type { MusclesCardProps } from "./types";
+export type { MusclesCardList, MusclesCardProps } from "./types";

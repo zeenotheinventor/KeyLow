@@ -109,14 +109,6 @@ describe("finishing a session", () => {
       );
     });
 
-    it("should leave the Muscles trained slot empty, which is a later ticket", async () => {
-      renderSession();
-
-      const dialog = await openFinishDialog();
-
-      expect(within(dialog).queryByText(FINISH_SCREEN.musclesHeading)).toBeNull();
-    });
-
     it("should keep the card and save the end it opened at, when the clock moves on and the dialog redraws", async () => {
       renderSession();
       const dialog = await openFinishDialog();

@@ -26,7 +26,7 @@ import {
 import { WeightChart } from "../WeightChart";
 import { WeightTrendCard } from "./WeightTrendCard";
 
-import type { WeightChartData } from "../WeightChart";
+import type { WeightChartData } from "@keylow/core/weight";
 
 jest.mock("@react-native-async-storage/async-storage", () => ({
   __esModule: true,

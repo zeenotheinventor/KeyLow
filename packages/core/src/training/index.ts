@@ -221,6 +221,13 @@ export { setsBarPositionsOf, upcomingSessionsOf, weightingExampleOf } from "./mu
 export type { SetsBarPositions } from "./muscleSheetContext";
 export { filterMuscleListGroups, muscleListGroups, musclesAboveRest } from "./muscleList";
 export type { MuscleListGroup, MuscleListRow, MusclesAboveRest } from "./muscleList";
+export { musclesAgainstPlan, musclesByVolume } from "./scaleMuscleList";
+export type {
+  GapMuscleRow,
+  MusclesAgainstPlan,
+  MusclesByVolume,
+  VolumeMuscleRow,
+} from "./scaleMuscleList";
 
 export {
   BODY_ARTWORK,
@@ -393,3 +400,4 @@ export {
 } from "./goalDraft";
 export type { GoalDraft, GoalDraftAction, GoalDraftAnswers } from "./goalDraft";
 export { priorityFigureValues } from "./priorityFigureValues";
+export { sessionHeatReadingTime } from "./sessionProgress";

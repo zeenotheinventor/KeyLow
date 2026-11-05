@@ -214,6 +214,7 @@ export {
   useLastPerformance,
   useMuscleDetail,
   useMuscleList,
+  useMuscleScaleList,
   useMuscleState,
   useRoutineTrendSets,
   useSession,
@@ -225,6 +226,7 @@ export {
 export {
   describeFinishDetails,
   describeSessionDetail,
+  heatSetsOf,
   isPendingSetId,
   useAddedExercises,
   useChangeSetType,
@@ -286,6 +288,7 @@ export type {
   UseLastPerformanceOptions,
   UseMuscleDetailInput,
   UseMuscleListInput,
+  UseMuscleScaleListInput,
 } from "./hooks";
 export {
   getActiveRoutine,

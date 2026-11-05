@@ -4,13 +4,16 @@ import {
   describeDayNameFieldName,
   describeEditorDay,
   describeExerciseFieldNames,
+  describeMoveDay,
+  describeMoveExercise,
   describeRemoveDay,
   describeRemoveExercise,
   describeWeekdayPickerTitle,
 } from "@keylow/core/copy";
-import { Plus, Trash2, X } from "lucide-react";
+import { ChevronDown, ChevronUp, Plus, Trash2, X } from "lucide-react";
 
 import type { RoutineDayCardProps } from "./types";
+import type { MoveDirection } from "@keylow/core/training";
 
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -26,6 +29,45 @@ const weekdayOptions = ROUTINE_WEEKDAY_CHOICES.map(({ label }) => ({ value: labe
 const fieldFrameClasses = "px-2";
 const fieldClasses = "text-center";
 
+/** Move up and Move down, the first dimmed at the top of its list and the second at the bottom. */
+function MoveButtons({
+  scope,
+  isFirst,
+  isLast,
+  labelFor,
+  onMove,
+}: {
+  /** Tells the editor which buttons these are, so it can put focus back on one after a move. */
+  scope: string;
+  isFirst: boolean;
+  isLast: boolean;
+  labelFor: (direction: MoveDirection) => string;
+  onMove: (direction: MoveDirection) => void;
+}) {
+  return (
+    <>
+      <IconButton
+        icon={ChevronUp}
+        label={labelFor("up")}
+        disabled={isFirst}
+        data-move-button={`${scope}:up`}
+        onClick={() => {
+          onMove("up");
+        }}
+      />
+      <IconButton
+        icon={ChevronDown}
+        label={labelFor("down")}
+        disabled={isLast}
+        data-move-button={`${scope}:down`}
+        onClick={() => {
+          onMove("down");
+        }}
+      />
+    </>
+  );
+}
+
 /**
  * A day of the routine editor, as the `web-routines · editor` board draws it: a card with the day's name
  * and weekday, and a row for each exercise with its sets, reps and RIR as fields. The problems core found
@@ -38,11 +80,15 @@ export function RoutineDayCard({
   exerciseCount,
   setCount,
   isFull,
+  isFirst,
+  isLast,
   onRename,
   onChangeWeekday,
+  onMove,
   onRemove,
   onAddExercise,
   onChangeField,
+  onMoveExercise,
   onRemoveExercise,
 }: RoutineDayCardProps) {
   const copy = describeEditorDay({
@@ -61,8 +107,8 @@ export function RoutineDayCard({
         className="flex flex-col gap-3 pb-2 pt-3"
       >
         <div className="flex flex-col gap-3 px-3">
-          <div className="flex items-end gap-1">
-            <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-end gap-1">
+            <div className="min-w-40 flex-1">
               <TextField
                 label={describeDayNameFieldName(day.name)}
                 value={day.name}
@@ -72,7 +118,16 @@ export function RoutineDayCard({
                 }}
               />
             </div>
-            <IconButton icon={Trash2} label={describeRemoveDay(day.name)} onClick={onRemove} />
+            <div className="ml-auto flex shrink-0 gap-2">
+              <MoveButtons
+                scope={`day:${day.key}`}
+                isFirst={isFirst}
+                isLast={isLast}
+                labelFor={(direction) => describeMoveDay(day.name, direction)}
+                onMove={onMove}
+              />
+              <IconButton icon={Trash2} label={describeRemoveDay(day.name)} onClick={onRemove} />
+            </div>
           </div>
           <div className="flex flex-col gap-1">
             <ChipGroup
@@ -112,14 +167,25 @@ export function RoutineDayCard({
                 className="flex flex-col gap-2 border-t border-border px-3 py-2"
               >
                 <div className="flex items-center justify-between gap-2">
-                  <span className="min-w-0 truncate text-body">{exercise.name}</span>
-                  <IconButton
-                    icon={X}
-                    label={describeRemoveExercise(exercise.name)}
-                    onClick={() => {
-                      onRemoveExercise(exercise.key);
-                    }}
-                  />
+                  <span className="min-w-0 break-words text-body">{exercise.name}</span>
+                  <div className="flex shrink-0 gap-2">
+                    <MoveButtons
+                      scope={`exercise:${day.key}:${exercise.key}`}
+                      isFirst={position === 0}
+                      isLast={position === day.exercises.length - 1}
+                      labelFor={(direction) => describeMoveExercise(exercise.name, direction)}
+                      onMove={(direction) => {
+                        onMoveExercise(exercise, position, direction);
+                      }}
+                    />
+                    <IconButton
+                      icon={X}
+                      label={describeRemoveExercise(exercise.name)}
+                      onClick={() => {
+                        onRemoveExercise(exercise.key);
+                      }}
+                    />
+                  </div>
                 </div>
                 <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)_minmax(0,1fr)] gap-2">
                   <div className="flex flex-col gap-1">

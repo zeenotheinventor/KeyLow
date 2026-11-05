@@ -3,6 +3,7 @@
 import {
   useBodyMap,
   useMuscleList,
+  useMuscleScaleList,
   useProfileTimeZone,
   useStartSessionAction,
 } from "@keylow/api-client";
@@ -73,10 +74,10 @@ const SCALE_OPTIONS = [
  * Male so it is not asked again. The button at the right of the title opens the question at any time.
  *
  * The page is a column of two: the card, and the cards that belong beside it (the legend and the Muscles
- * card). The Muscles card lists the muscles above rest for the view shown, and leads to the muscle list page.
- * Its rows are Heat's, so it is left out on Volume and Gap until it has theirs (KEY-828). Every muscle is
- * still reached there by Tab and Enter on the figures, which open its sheet (Actual on Gap, which has no
- * Projected). The muscle list page is reached from Heat. The day row adds to the card's column.
+ * card). The Muscles card lists the muscles the scale on screen picks for the view shown (above rest on Heat,
+ * at Growing or above on Volume, behind or on plan on Gap), and leads to the muscle list page, which stays
+ * Heat's on every scale. A row opens that muscle's sheet (Actual on Gap, which has no Projected), as Tab and
+ * Enter on the figures do. The day row adds to the card's column.
  */
 export function BodyMapScreen({ initialScale = "heat" }: BodyMapScreenProps) {
   const router = useRouter();
@@ -148,6 +149,20 @@ export function BodyMapScreen({ initialScale = "heat" }: BodyMapScreenProps) {
       : "actual";
   // The Muscles card lists Heat's muscles, but it is read on every scale so the card returns whole.
   const list = useMuscleList({ view, weekStart, now: nowIso });
+  // Volume's and Gap's rows come from the same cached rows as every read above and are never switched off,
+  // so a switch of scale asks for nothing. Heat has no rows here, so it holds Volume's.
+  const scaleList = useMuscleScaleList({
+    scale: scale === "gap" ? "gap" : "volume",
+    view,
+    weekStart,
+    now: nowIso,
+  });
+  const cardList =
+    scale === "heat"
+      ? list.data === undefined
+        ? null
+        : musclesAboveRest(list.data)
+      : (scaleList.data ?? null);
   const isShown =
     isViewRead && isFigureReady && actual.data !== undefined && projected.data !== undefined;
 
@@ -269,17 +284,16 @@ export function BodyMapScreen({ initialScale = "heat" }: BodyMapScreenProps) {
               ) : (
                 <>
                   <BodyMapLegend scale={scale} />
-                  {/* The card's rows are Heat's, so it is left out on the other scales until it has theirs. */}
-                  {scale === "heat" ? (
-                    <MusclesCard
-                      list={list.data === undefined ? null : musclesAboveRest(list.data)}
-                      listHref={muscleListPath()}
-                      onOpenMuscle={(muscle, row) => {
-                        setSheetReturnFocus(row);
-                        setSheetMuscle(muscle);
-                      }}
-                    />
-                  ) : null}
+                  <MusclesCard
+                    list={cardList}
+                    view={view}
+                    weekEnd={weekEnd}
+                    listHref={muscleListPath()}
+                    onOpenMuscle={(muscle, row) => {
+                      setSheetReturnFocus(row);
+                      setSheetMuscle(muscle);
+                    }}
+                  />
                 </>
               )}
             </div>
