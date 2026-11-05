@@ -3,7 +3,11 @@ import { assert, assertEquals, assertNotEquals, assertStringIncludes } from "@st
 import { toolRegistry } from "../_shared/assistant/registry.ts";
 import { spyOnConsole } from "../_shared/assistant/testing.ts";
 import { toJsonSchema } from "../_shared/assistant/tool.ts";
-import { confirmDeleteButtons, threadFromMessages } from "../_shared/core.ts";
+import {
+  confirmDeleteButtons,
+  confirmTargetsButtons,
+  threadFromMessages,
+} from "../_shared/core.ts";
 import { contextBlock, MODEL } from "./prompt.ts";
 import {
   MCP_REQUEST_TIMEOUT_MILLISECONDS,
@@ -507,6 +511,99 @@ Deno.test(
             },
           },
         });
+      },
+    );
+  },
+);
+
+Deno.test(
+  "a note on the confirmation is added after the model's question, a space between, and the stored row holds the same question",
+  async () => {
+    const note = "Your macros will be adjusted proportionally: protein 118 g.";
+    await withHarness(
+      {
+        responses: [
+          callTools(
+            [{ id: "u1", name: "update_targets", input: { current_kcal: 2140 } }],
+            "  Change your calorie target from 2,140 to 2,000 kcal?  ",
+          ),
+          reply("must not be asked for"),
+        ],
+        answers: { update_targets: confirmationResult("update_targets", confirmationId, note) },
+      },
+      async (harness) => {
+        const result = await harness.take("set my calories to 2000");
+
+        const question = `Change your calorie target from 2,140 to 2,000 kcal? ${note}`;
+        assertEquals(eventsOfType(result.events, "confirm"), [
+          {
+            type: "confirm",
+            confirmationId,
+            question,
+            ...confirmTargetsButtons(2140),
+            tone: "primary",
+          },
+        ]);
+        assertEquals(harness.mock.bodies.length, 1);
+        assertEquals(toolResultRows(harness)[0]?.display, {
+          u1: {
+            confirm: {
+              confirmationId,
+              question,
+              ...confirmTargetsButtons(2140),
+              tone: "primary",
+            },
+          },
+        });
+      },
+    );
+  },
+);
+
+Deno.test("a confirmation with no note leaves the model's question as it is", async () => {
+  await withHarness(
+    {
+      responses: [
+        callTools(
+          [{ id: "u1", name: "update_targets", input: { current_kcal: 2140 } }],
+          "Change your calorie target from 2,140 to 2,000 kcal?",
+        ),
+      ],
+      answers: { update_targets: confirmationResult("update_targets", confirmationId) },
+    },
+    async (harness) => {
+      const result = await harness.take("set my calories to 2000 and protein to 150");
+
+      assertEquals(
+        eventsOfType(result.events, "confirm")[0]?.["question"],
+        "Change your calorie target from 2,140 to 2,000 kcal?",
+      );
+    },
+  );
+});
+
+Deno.test(
+  "a note with no question text from the model still ends the turn failed, and the note alone is never a question",
+  async () => {
+    await withHarness(
+      {
+        responses: [
+          callTools([{ id: "u1", name: "update_targets", input: { current_kcal: 2140 } }], "   "),
+        ],
+        answers: {
+          update_targets: confirmationResult("update_targets", confirmationId, "A line."),
+        },
+      },
+      async (harness) => {
+        const result = await harness.take("set my calories to 2000");
+
+        assertEquals(typesOf(result.events).includes("confirm"), false);
+        assertEquals(result.events.slice(-2), [
+          { type: "notice", notice: { code: "turn_failed" } },
+          { type: "done", outcome: "failed" },
+        ]);
+        assertEquals(turnStatuses(harness), ["failed"]);
+        assertEquals(harness.reports.length, 1);
       },
     );
   },

@@ -1,15 +1,34 @@
 import { assert, assertEquals, assertObjectMatch } from "@std/assert";
 
+import { getMyTargets } from "../../repos.ts";
 import { executeTool } from "../executor.ts";
 import { toJsonSchema } from "../tool.ts";
 import { undoAction } from "../undo.ts";
-import { programId, newTargets, programRow, targetsContexts } from "./targetsFixtures.ts";
+import {
+  caloriesOnly,
+  newTargets,
+  programId,
+  programRow,
+  targetsContexts,
+} from "./targetsFixtures.ts";
 import { payloadOf } from "./testing.ts";
 import { updateTargetsTool } from "./updateTargets.ts";
 import { structuredOf } from "./writeFixtures.ts";
 import { confirmWordsFor } from "../../../assistant/confirmWords.ts";
 
 const askedWith = { ...newTargets, current_kcal: 2140 };
+const askedCaloriesOnly = { ...caloriesOnly, current_kcal: 2140 };
+
+const note = "Your macros will be adjusted proportionally: protein 118 g, carbs 229 g, fat 68 g.";
+const adjustedRow = {
+  name: "Macros adjusted proportionally",
+  amountText: "P 118 g · C 229 g · F 68 g",
+  time: null,
+  kcalText: null,
+  match: null,
+  matchedFood: null,
+  estimate: false,
+};
 
 const confirmationIdOf = (result: Awaited<ReturnType<typeof executeTool>>) => {
   assert(result.status === "needs_confirmation");
@@ -20,7 +39,7 @@ const contexts = (options: Parameters<typeof targetsContexts>[1] = {}) =>
   targetsContexts([updateTargetsTool], options);
 
 // Asks, then confirms, and gives back what the confirming call answered.
-async function changeTargets(c: ReturnType<typeof contexts>, input = askedWith) {
+async function changeTargets(c: ReturnType<typeof contexts>, input: object = askedWith) {
   const confirmationId = confirmationIdOf(await executeTool(c.asking, "update_targets", input));
   return await executeTool(c.confirming, "update_targets", {
     ...input,
@@ -143,7 +162,10 @@ Deno.test("a number out of range is refused with no question and no write", asyn
   const c = contexts();
 
   const tooLow = await executeTool(c.asking, "update_targets", { ...askedWith, kcal: 500 });
-  const negative = await executeTool(c.asking, "update_targets", { ...askedWith, fat_g: -5 });
+  const negative = await executeTool(c.asking, "update_targets", {
+    ...askedWith,
+    macros: { ...newTargets.macros, fat_g: -5 },
+  });
 
   assertEquals(tooLow.status, "error");
   assertEquals(negative.status, "error");
@@ -377,5 +399,327 @@ Deno.test("when the reopen also fails the failure is reported by code only", asy
   assertEquals(messages, [
     "Could not reopen your program (XX000)",
     "Could not save your targets (XX000)",
+  ]);
+});
+
+// ---- Only the calories given (KEY-824) ----
+
+const targetsRowOf = (c: ReturnType<typeof contexts>) => c.stub.tables["targets"]?.[0] ?? {};
+
+Deno.test(
+  "calories only asks with the note, writes nothing, and the spent confirmation saves the scaled macros and ends the programme",
+  async () => {
+    const c = contexts();
+
+    const asked = await executeTool(c.asking, "update_targets", askedCaloriesOnly);
+
+    assert(asked.status === "needs_confirmation");
+    assertEquals(asked.note, note);
+    assertEquals(profileOf(c)["target_kcal"], 1900);
+    assertEquals(programOf(c)["ended_on"], null);
+    assertEquals(c.store.actions.length, 0);
+
+    const result = await executeTool(c.confirming, "update_targets", {
+      ...askedCaloriesOnly,
+      confirmation_id: asked.confirmationId,
+    });
+
+    assertEquals(result.status, "ok");
+    assertEquals(payloadOf(result), {
+      saved: true,
+      kcal: 2000,
+      programme_ended: true,
+      adjusted_macros: { protein_g: 118, carbs_g: 229, fat_g: 68 },
+    });
+    assertObjectMatch(structuredOf(result), {
+      card: {
+        kind: "targets_changed",
+        title: "Changed your calorie target to 2,000 kcal",
+        sub: "Was 2,140 kcal from your programme",
+        rows: [adjustedRow],
+        undo: "available",
+      },
+    });
+    assertEquals(profileOf(c)["target_kcal"], 2000);
+    assertEquals(profileOf(c)["target_protein_g"], 118);
+    assertEquals(profileOf(c)["target_carbs_g"], 229);
+    assertEquals(profileOf(c)["target_fat_g"], 68);
+    assert(programOf(c)["ended_on"] !== null);
+    assertEquals(c.store.actions.length, 1);
+  },
+);
+
+Deno.test("all three macros given: no note, no row and today's result", async () => {
+  const c = contexts();
+
+  const asked = await executeTool(c.asking, "update_targets", askedWith);
+  const result = await changeTargets(c);
+
+  assert(asked.status === "needs_confirmation");
+  assertEquals("note" in asked, false);
+  assertEquals(payloadOf(result), { saved: true, kcal: 2000, programme_ended: true });
+  assertEquals(structuredOf(result)["card"] !== undefined, true);
+  assertObjectMatch(structuredOf(result), { card: { rows: [] } });
+});
+
+Deno.test(
+  "a confirmation asked with macros null is refused for a call that sends macros, and the other way round",
+  async () => {
+    const forNull = contexts();
+    const nullId = confirmationIdOf(
+      await executeTool(forNull.asking, "update_targets", askedCaloriesOnly),
+    );
+    const forMacros = contexts();
+    const macrosId = confirmationIdOf(
+      await executeTool(forMacros.asking, "update_targets", askedWith),
+    );
+
+    const sendsMacros = await executeTool(forNull.confirming, "update_targets", {
+      ...askedWith,
+      confirmation_id: nullId,
+    });
+    const sendsNull = await executeTool(forMacros.confirming, "update_targets", {
+      ...askedCaloriesOnly,
+      confirmation_id: macrosId,
+    });
+
+    assertEquals(sendsMacros.status === "error" && sendsMacros.code, "confirmation_invalid");
+    assertEquals(sendsNull.status === "error" && sendsNull.code, "confirmation_invalid");
+    assertEquals(profileOf(forNull)["target_kcal"], 1900);
+    assertEquals(profileOf(forMacros)["target_kcal"], 1900);
+  },
+);
+
+Deno.test(
+  "with no current calorie target the call is refused naming macros, with no question and no write",
+  async () => {
+    const c = contexts({ withProgram: false, profile: { target_kcal: null } });
+
+    const result = await executeTool(c.asking, "update_targets", {
+      ...caloriesOnly,
+      current_kcal: null,
+    });
+
+    assertEquals(result.status, "ok");
+    assertEquals(payloadOf(result), { error: "invalid_input", fields: ["macros"] });
+    assertEquals(profileOf(c)["target_kcal"], null);
+    assertEquals(c.store.actions.length, 0);
+    assertEquals(c.store.turns[0]?.pending, null);
+  },
+);
+
+Deno.test(
+  "a scaled macro over 1,000 g is refused naming macros, with no question and no write",
+  async () => {
+    const c = contexts({ engineTargets: { protein_g: 900 } });
+
+    const result = await executeTool(c.asking, "update_targets", {
+      kcal: 3000,
+      macros: null,
+      current_kcal: 2140,
+    });
+
+    assertEquals(result.status, "ok");
+    assertEquals(payloadOf(result), { error: "invalid_input", fields: ["macros"] });
+    assertEquals(profileOf(c)["target_kcal"], 1900);
+    assertEquals(programOf(c)["ended_on"], null);
+    assertEquals(c.store.actions.length, 0);
+    assertEquals(c.store.turns[0]?.pending, null);
+  },
+);
+
+Deno.test(
+  "with no current macros the calories are saved, the macros stay null and nothing mentions adjusting",
+  async () => {
+    const c = contexts({
+      engineTargets: { protein_g: null, carbs_g: null, fat_g: null },
+    });
+
+    const asked = await executeTool(c.asking, "update_targets", askedCaloriesOnly);
+    const result = await executeTool(c.confirming, "update_targets", {
+      ...askedCaloriesOnly,
+      confirmation_id: asked.status === "needs_confirmation" ? asked.confirmationId : "",
+    });
+
+    assert(asked.status === "needs_confirmation");
+    assertEquals("note" in asked, false);
+    assertEquals(payloadOf(result), { saved: true, kcal: 2000, programme_ended: true });
+    assertObjectMatch(structuredOf(result), { card: { rows: [] } });
+    assertEquals(profileOf(c)["target_kcal"], 2000);
+    assertEquals(profileOf(c)["target_protein_g"], null);
+    assertEquals(profileOf(c)["target_carbs_g"], null);
+    assertEquals(profileOf(c)["target_fat_g"], null);
+  },
+);
+
+Deno.test(
+  "with some current macros null the others are scaled and the null ones stay null and out of the words",
+  async () => {
+    const c = contexts({ engineTargets: { carbs_g: null } });
+
+    const asked = await executeTool(c.asking, "update_targets", askedCaloriesOnly);
+    const result = await executeTool(c.confirming, "update_targets", {
+      ...askedCaloriesOnly,
+      confirmation_id: asked.status === "needs_confirmation" ? asked.confirmationId : "",
+    });
+
+    assert(asked.status === "needs_confirmation");
+    assertEquals(
+      asked.note,
+      "Your macros will be adjusted proportionally: protein 118 g, fat 68 g.",
+    );
+    assertEquals(payloadOf(result), {
+      saved: true,
+      kcal: 2000,
+      programme_ended: true,
+      adjusted_macros: { protein_g: 118, carbs_g: null, fat_g: 68 },
+    });
+    assertObjectMatch(structuredOf(result), {
+      card: { rows: [{ amountText: "P 118 g · F 68 g" }] },
+    });
+    assertEquals(profileOf(c)["target_carbs_g"], null);
+  },
+);
+
+Deno.test(
+  "a current_kcal that is not the user's own is refused with the real number before any scaling",
+  async () => {
+    // The scaled protein would be over 1,000 g, but the number the person was shown is checked first.
+    const c = contexts({ engineTargets: { protein_g: 900 } });
+
+    const result = await executeTool(c.asking, "update_targets", {
+      kcal: 3000,
+      macros: null,
+      current_kcal: 1900,
+    });
+
+    assertEquals(payloadOf(result), {
+      error: "invalid_input",
+      fields: ["current_kcal"],
+      current_kcal: 2140,
+    });
+    assertEquals(c.store.turns[0]?.pending, null);
+  },
+);
+
+Deno.test(
+  "with day by day offsets the scale reads the week's figure and the macros of the row, the programme's targets row is untouched and the saved targets are manual",
+  async () => {
+    const c = contexts({
+      engineTargets: { dow_calories_kcal: [2000, 2200, 2140, 2140, 2140, 2140, 2140] },
+    });
+
+    const saved = await changeTargets(c, askedCaloriesOnly);
+
+    assertEquals(saved.status, "ok");
+    assertEquals(profileOf(c)["target_protein_g"], 118);
+    assertEquals(targetsRowOf(c)["calories_kcal"], 2140);
+    assertEquals(targetsRowOf(c)["protein_g"], 126);
+    assertEquals(targetsRowOf(c)["dow_calories_kcal"], [2000, 2200, 2140, 2140, 2140, 2140, 2140]);
+    assertEquals(targetsRowOf(c)["effective_to"], null);
+    assertEquals(await getMyTargets(c.confirming.caller), {
+      kcal: 2000,
+      protein_g: 118,
+      carbs_g: 229,
+      fat_g: 68,
+      source: "manual",
+    });
+  },
+);
+
+Deno.test(
+  "a macro edited between the question and the yes: the saved figures and the card follow the edit",
+  async () => {
+    // Accepted (KEY-824): current_kcal protects the ratio and not the macros, and the card shows what was saved.
+    const c = contexts({ withProgram: false });
+    const input = { ...caloriesOnly, current_kcal: 1900 };
+    const asked = await executeTool(c.asking, "update_targets", input);
+    assert(asked.status === "needs_confirmation");
+    assertEquals(
+      asked.note,
+      "Your macros will be adjusted proportionally: protein 126 g, carbs 211 g, fat 63 g.",
+    );
+    Object.assign(profileOf(c), { target_protein_g: 190 });
+
+    const result = await executeTool(c.confirming, "update_targets", {
+      ...input,
+      confirmation_id: asked.confirmationId,
+    });
+
+    assertEquals(profileOf(c)["target_protein_g"], 200);
+    assertObjectMatch(structuredOf(result), {
+      card: { rows: [{ amountText: "P 200 g · C 211 g · F 63 g" }] },
+    });
+  },
+);
+
+Deno.test(
+  "Undo after a calories only change reopens the programme and the row's own macros are in force again",
+  async () => {
+    const c = contexts();
+    const saved = await changeTargets(c, askedCaloriesOnly);
+    assert(saved.status === "ok" && saved.actionId !== null);
+    assertEquals((await getMyTargets(c.confirming.caller)).source, "manual");
+
+    const undone = await undoAction(c.confirming, saved.actionId);
+
+    assertEquals(undone, { status: "undone", actionId: saved.actionId });
+    assertEquals(programOf(c)["ended_on"], null);
+    assertEquals(await getMyTargets(c.confirming.caller), {
+      kcal: 2140,
+      protein_g: 126,
+      carbs_g: 245,
+      fat_g: 73,
+      dowCaloriesKcal: [2140, 2140, 2140, 2140, 2140, 2140, 2140],
+      source: "engine",
+    });
+  },
+);
+
+Deno.test("with no programme a calories only change has no Undo", async () => {
+  const c = contexts({ withProgram: false });
+
+  const saved = await changeTargets(c, { ...caloriesOnly, current_kcal: 1900 });
+
+  assert(saved.status === "ok" && saved.actionId !== null);
+  assertEquals(profileOf(c)["target_protein_g"], 126);
+  assertEquals(await undoAction(c.confirming, saved.actionId), {
+    status: "error",
+    code: "undo_unavailable",
+  });
+});
+
+Deno.test("the buttons for a calories only change are the same", () => {
+  assertEquals(confirmWordsFor("update_targets", askedCaloriesOnly)?.cancelLabel, "Keep 2,140");
+});
+
+Deno.test(
+  "the tool tells the model what to do with macros null, with a partial set and with a refusal",
+  () => {
+    const text = updateTargetsTool.description;
+
+    assert(text.includes("macros"));
+    assert(text.includes("null"));
+    assert(text.includes("ask_user"));
+    assert(!text.includes("Ask for any of the four numbers"));
+  },
+);
+
+Deno.test("macros is a required nullable object in the schema the model sees", () => {
+  const properties = toJsonSchema(updateTargetsTool)["properties"];
+  const macros = JSON.stringify(
+    typeof properties === "object" && properties !== null && "macros" in properties
+      ? properties.macros
+      : null,
+  );
+
+  assert(macros.includes('"type":"null"'));
+  assert(macros.includes("protein_g"));
+  assert(macros.includes('"additionalProperties":false'));
+  assertEquals(Object.keys(properties ?? {}), [
+    "kcal",
+    "macros",
+    "current_kcal",
+    "confirmation_id",
   ]);
 });

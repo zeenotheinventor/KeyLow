@@ -202,6 +202,35 @@ Deno.test("callTool answers needs_confirmation with its confirmation id", async 
   );
 });
 
+Deno.test(
+  "callTool carries the note of a confirmation across, and leaves the key out without one",
+  async () => {
+    await withServer(
+      {
+        callTool: () =>
+          Promise.resolve({
+            status: "needs_confirmation",
+            text: "confirm?",
+            confirmationId: "c-1",
+            note: "A line.",
+          }),
+      },
+      async (server) => {
+        const connection = await connectToolServer(connectionOptions(server));
+
+        const result = await connection.callTool(writeToolName, {});
+
+        assertEquals(result.outcome, {
+          status: "needs_confirmation",
+          confirmationId: "c-1",
+          note: "A line.",
+        });
+        await connection.close();
+      },
+    );
+  },
+);
+
 Deno.test("a result with isError true comes back as isError, not as a throw", async () => {
   await withServer(
     {

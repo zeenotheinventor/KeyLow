@@ -139,7 +139,11 @@ const proteinBar = {
   carbs_g: 19,
   fat_g: 6,
 };
-const newTargets = { kcal: 2000, protein_g: 150, carbs_g: 200, fat_g: 60, current_kcal: 2140 };
+// "Set my calories to 2,000": only the calories, so the macros are scaled from the programme's 126, 245 and 73 g
+// (KEY-824), to 118, 229 and 68 g.
+const newTargets = { kcal: 2000, macros: null, current_kcal: 2140 };
+const macrosNote =
+  "Your macros will be adjusted proportionally: protein 118 g, carbs 229 g, fat 68 g.";
 
 let alice: TestUser;
 let bob: TestUser;
@@ -259,9 +263,10 @@ describe("a turn that calls create_custom_food", () => {
 });
 
 describe("a turn that asks to change the targets", () => {
-  it("ends asking, with the board's buttons, and changes nothing", () => {
+  it("ends asking, with the board's buttons and the question followed by the line about the macros, and changes nothing", () => {
     expect(askEvents.find((event) => event.type === "confirm")).toMatchObject({
       type: "confirm",
+      question: `Change your calorie target from 2,140 to 2,000 kcal? ${macrosNote}`,
       confirmLabel: "Change target",
       cancelLabel: "Keep 2,140",
       tone: "primary",
@@ -278,13 +283,26 @@ describe("the turn that follows a yes", () => {
       kind: "targets_changed",
       title: "Changed your calorie target to 2,000 kcal",
       sub: "Was 2,140 kcal from your programme",
+      rows: [
+        {
+          name: "Macros adjusted proportionally",
+          amountText: "P 118 g · C 229 g · F 68 g",
+          kcalText: null,
+        },
+      ],
       undo: "available",
       undoneSub: "Put back 2,140 kcal and your programme",
     });
   });
 
-  it("saves the targets and ends the programme", async () => {
-    expect(await getMyTargets(alice.client)).toMatchObject({ source: "manual", kcal: 2000 });
+  it("saves the targets with the scaled macros and ends the programme", async () => {
+    expect(await getMyTargets(alice.client)).toMatchObject({
+      source: "manual",
+      kcal: 2000,
+      protein_g: 118,
+      carbs_g: 229,
+      fat_g: 68,
+    });
     expect((await getMyProgramSummary(alice.client)).program).toBeNull();
   });
 
@@ -303,7 +321,17 @@ describe("the turn that follows a yes", () => {
     });
     expect(data?.[0]?.target_updated_at).not.toBeNull();
     const written = JSON.stringify(data);
-    for (const word of ["2000", "2140", "2,000", "2,140", "kcal"]) {
+    for (const word of [
+      "2000",
+      "2140",
+      "2,000",
+      "2,140",
+      "kcal",
+      "118 g",
+      "229 g",
+      "68 g",
+      "adjusted",
+    ]) {
       expect(written).not.toContain(word);
     }
     expect((await bob.client.from("assistant_actions").select("id")).data).toEqual([]);
@@ -332,7 +360,7 @@ describe("Undo", () => {
     expect((await getMyProgramSummary(alice.client)).program).toBeNull();
   });
 
-  it("puts the programme back with the same next check-in and the engine's 2,140 kcal in force", async () => {
+  it("puts the programme back with the same next check-in and the engine's 2,140 kcal and macros in force", async () => {
     const actionId = cardOf(changeEvents)?.actionIds[0] ?? "";
 
     const result = await undoAssistantActions(alice.client, [actionId]);
@@ -340,6 +368,12 @@ describe("Undo", () => {
     expect(result).toEqual([{ actionId, result: "undone" }]);
     const summary = await getMyProgramSummary(alice.client);
     expect(summary.program).toMatchObject({ id: programId, nextCheckinDate: NEXT_CHECKIN_DATE });
-    expect(await getMyTargets(alice.client)).toMatchObject({ source: "engine", kcal: 2140 });
+    expect(await getMyTargets(alice.client)).toMatchObject({
+      source: "engine",
+      kcal: 2140,
+      protein_g: 126,
+      carbs_g: 245,
+      fat_g: 73,
+    });
   });
 });

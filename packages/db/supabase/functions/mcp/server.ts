@@ -31,7 +31,11 @@ export function toCallToolResult(result: ExecutionResult): CallToolResult {
     case "needs_confirmation":
       return {
         content,
-        structuredContent: { status: "needs_confirmation", confirmationId: result.confirmationId },
+        structuredContent: {
+          status: "needs_confirmation",
+          confirmationId: result.confirmationId,
+          ...(result.note === undefined ? {} : { note: result.note }),
+        },
       };
     case "error":
       return { content, isError: true, structuredContent: { status: "error", code: result.code } };

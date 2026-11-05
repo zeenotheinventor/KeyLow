@@ -24,7 +24,9 @@ export type ToolErrorCode =
 export type ExecutionResult =
   // `text` is what the model reads. `structured` is for the turn loop only.
   | { status: "ok"; text: string; structured: JsonValue | null; actionId: string | null }
-  | { status: "needs_confirmation"; text: string; confirmationId: string }
+  // `note` is a line the tool wrote for the turn loop to add after the model's question. It is absent when
+  // the tool had none, and it is never stored with the pending confirmation.
+  | { status: "needs_confirmation"; text: string; confirmationId: string; note?: string }
   | { status: "error"; code: ToolErrorCode; text: string };
 
 function failed(
@@ -132,7 +134,10 @@ async function runWrite(
 
   // The previous turn that holds the confirmation this call carries, when the call needs one.
   let confirmedOn: { turnId: string; confirmationId: string } | null = null;
-  if (tool.needsConfirmation !== undefined && (await tool.needsConfirmation(parsed.data, ctx))) {
+  const need =
+    tool.needsConfirmation === undefined ? false : await tool.needsConfirmation(parsed.data, ctx);
+  if (need !== false) {
+    const note = typeof need === "object" ? need.note : undefined;
     const hash = await inputHash(parsed.data);
     if (split.confirmationId === null) {
       const confirmationId = crypto.randomUUID();
@@ -146,9 +151,11 @@ async function runWrite(
       return {
         status: "needs_confirmation",
         confirmationId,
+        ...(note === undefined ? {} : { note }),
         text: wrapUntrusted(tool.name, {
           status: "needs_confirmation",
           confirmation_id: confirmationId,
+          ...(note === undefined ? {} : { note }),
         }),
       };
     }

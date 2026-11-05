@@ -56,7 +56,12 @@ export type ListedTool = {
 // The executor's outcome, which `mcp` returns as `structuredContent`. Only the turn loop reads it.
 const outcomeSchema = z.discriminatedUnion("status", [
   z.object({ status: z.literal("ok"), structured: z.json(), actionId: z.string().nullable() }),
-  z.object({ status: z.literal("needs_confirmation"), confirmationId: z.string() }),
+  // `note` is optional so that a deploy of either function first is harmless.
+  z.object({
+    status: z.literal("needs_confirmation"),
+    confirmationId: z.string(),
+    note: z.string().optional(),
+  }),
   z.object({ status: z.literal("error"), code: z.string() }),
 ]);
 
