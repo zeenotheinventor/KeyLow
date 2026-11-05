@@ -363,7 +363,7 @@ export function writeCasesOf(anchorDate: string): readonly EvalCase[] {
     make(
       "write-update-entry-grams",
       [
-        `Log 150 g of grilled chicken breast on ${sayDay(updateDay[1])} at 12:00.`,
+        `Log 150 g of grilled chicken breast without skin on ${sayDay(updateDay[1])} at 12:00.`,
         "Change that to 200 g.",
       ],
       [

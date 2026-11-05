@@ -154,8 +154,11 @@ export function describeSpecs(anchorDate: string): readonly DescribeSpec[] {
     ]),
 
     // Plain grams, where the message gave them (and the food has no portion, or the person chose grams).
-    log("describe-chicken-in-grams", "I ate 150 g of grilled chicken breast.", [
-      { codes: FOOD_ROUTES.chickenBreast, amount: { grams: 150 } },
+    // "Without skin" is in the words because the seed has the breast with skin and without, and "which one?"
+    // is a fair question for a message that says neither. This case and the rice, broccoli and oats cases log
+    // in grams with no question to ask.
+    log("describe-chicken-in-grams", "I ate 150 g of grilled chicken breast without skin.", [
+      { codes: FOOD_ROUTES.chickenBreastWithoutSkin, amount: { grams: 150 } },
     ]),
     log("describe-rice-in-grams", "I had 200 g of boiled white rice.", [
       { codes: FOOD_ROUTES.whiteRice, amount: { grams: 200 } },
@@ -176,10 +179,10 @@ export function describeSpecs(anchorDate: string): readonly DescribeSpec[] {
     ),
     log(
       "describe-lunch-at-half-past-twelve",
-      "At 12:30 I ate an apple and 150 g of grilled chicken breast.",
+      "At 12:30 I ate an apple and 150 g of grilled chicken breast without skin.",
       [
         { codes: FOOD_ROUTES.apple, amount: { count: 1 }, time: "12:30" },
-        { codes: FOOD_ROUTES.chickenBreast, amount: { grams: 150 }, time: "12:30" },
+        { codes: FOOD_ROUTES.chickenBreastWithoutSkin, amount: { grams: 150 }, time: "12:30" },
       ],
       true,
     ),

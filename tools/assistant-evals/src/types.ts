@@ -20,6 +20,11 @@ export type ToolCall = Readonly<{
    * Only the code, never the result, because a result is the person's data. Absent when the tool did not fail.
    */
   errorCode?: string | undefined;
+  /**
+   * What became of a call that did not fail with a code: `asked to confirm` when its result was a request for a
+   * yes, and `no result` when the turn stored the call and no result for it, so the loop never ran it.
+   */
+  outcome?: "asked to confirm" | "no result" | undefined;
 }>;
 
 /** What the app prints under an answer from the person's data. Either is null when the turn had none. */

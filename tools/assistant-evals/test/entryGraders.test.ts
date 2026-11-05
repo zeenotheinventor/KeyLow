@@ -425,6 +425,25 @@ describe("withContext", () => {
     );
   });
 
+  it("should show the error code of a refused call and what became of a call that asked or never ran", async () => {
+    const turns = [
+      turnResult({
+        toolCalls: [
+          { name: "log_entry", input: { count: 2 }, errorCode: "not_found" },
+          { name: "delete_entry", input: { ids: ["a", "b"] }, outcome: "asked to confirm" },
+          { name: "copy_day", input: {}, outcome: "no result" },
+          { name: "get_day", input: { local_date: "2026-11-04" } },
+        ],
+      }),
+    ];
+
+    const outcome = await withContext(failing, ["Do it."])({ turns, database });
+
+    expect(outcome.reason).toBe(
+      'no row matched; messages: "Do it."; tools: log_entry({"count":2}) -> not_found, delete_entry({"ids":["a","b"]}) -> asked to confirm, copy_day({}) -> no result, get_day({"local_date":"2026-11-04"})',
+    );
+  });
+
   it("should never add the answer of the turn", async () => {
     const turns = [turnResult({ answer: "You ate a secret meal." })];
 

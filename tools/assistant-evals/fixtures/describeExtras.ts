@@ -107,6 +107,7 @@ export const FOOD_ROUTE_WORDS: Readonly<Record<keyof typeof FOOD_ROUTES, string>
   cheddar: "cheddar",
   cheeseSlice: "cheese",
   chickenBreast: "grilled chicken breast",
+  chickenBreastWithoutSkin: "grilled chicken breast without skin",
   whiteRice: "boiled white rice",
   boiledBroccoli: "boiled broccoli",
   porridgeOats: "porridge oats",
@@ -143,6 +144,8 @@ export const FOOD_ROUTES = {
   cheddar: ["12-346"],
   cheeseSlice: ["12-346", "12-493", "12-527"],
   chickenBreast: ["18-323", "18-324", "18-325"],
+  // The seed has the breast with skin and without, so a message that names no skin can fairly draw a question.
+  chickenBreastWithoutSkin: ["18-323"],
   whiteRice: ["11-858", "11-862", "11-875"],
   boiledBroccoli: ["13-503"],
   porridgeOats: ["11-788"],

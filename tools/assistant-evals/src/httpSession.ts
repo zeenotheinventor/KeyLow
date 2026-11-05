@@ -34,6 +34,7 @@ export function toolCallsOf(content: unknown): ToolCall[] {
 
 // The code a tool answered with: `"error": "not_found"` in the text of its result, which the tools write as JSON.
 // Only the code is kept, never the rest of the result.
+const NEEDS_CONFIRMATION = /"status"\s*:\s*"needs_confirmation"/;
 const ERROR_CODE = /"error"\s*:\s*"([a-z_]+)"/;
 
 /**
@@ -43,16 +44,22 @@ const ERROR_CODE = /"error"\s*:\s*"([a-z_]+)"/;
  */
 export function toolCallsOfTurn(contents: readonly unknown[]): ToolCall[] {
   const codes = new Map<string, string>();
+  const asked = new Set<string>();
+  const answered = new Set<string>();
   for (const block of contents.flatMap(blocksOf)) {
     if (
       isRecord(block) &&
       block["type"] === "tool_result" &&
       typeof block["tool_use_id"] === "string"
     ) {
+      const id = block["tool_use_id"];
+      answered.add(id);
       const text = block["content"];
       const code = typeof text === "string" ? ERROR_CODE.exec(text)?.[1] : undefined;
       if (code !== undefined) {
-        codes.set(block["tool_use_id"], code);
+        codes.set(id, code);
+      } else if (typeof text === "string" && NEEDS_CONFIRMATION.test(text)) {
+        asked.add(id);
       }
     }
   }
@@ -60,13 +67,23 @@ export function toolCallsOfTurn(contents: readonly unknown[]): ToolCall[] {
     if (!isRecord(block) || block["type"] !== "tool_use" || typeof block["name"] !== "string") {
       return [];
     }
-    const id = block["id"];
-    const code = typeof id === "string" ? codes.get(id) : undefined;
+    const id = typeof block["id"] === "string" ? block["id"] : undefined;
+    const code = id === undefined ? undefined : codes.get(id);
+    const outcome =
+      id === undefined || code !== undefined
+        ? undefined
+        : asked.has(id)
+          ? ("asked to confirm" as const)
+          : // `ask_user` is turned into a question by the loop and never gets a result.
+            !answered.has(id) && block["name"] !== "ask_user"
+            ? ("no result" as const)
+            : undefined;
     return [
       {
         name: block["name"],
         input: block["input"],
         ...(code === undefined ? {} : { errorCode: code }),
+        ...(outcome === undefined ? {} : { outcome }),
       },
     ];
   });

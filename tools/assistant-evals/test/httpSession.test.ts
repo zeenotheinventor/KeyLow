@@ -68,3 +68,44 @@ describe("toolCallsOfTurn", () => {
     ]);
   });
 });
+
+describe("toolCallsOfTurn, what became of each call", () => {
+  const call = (id: string, name: string) => ({ type: "tool_use", id, name, input: {} });
+  const result = (id: string, content: string) => ({
+    type: "tool_result",
+    tool_use_id: id,
+    content,
+  });
+
+  it("should say a call asked to confirm, from the status in its result", () => {
+    const contents = [
+      [call("t1", "delete_entry")],
+      [
+        result(
+          "t1",
+          '<untrusted_data source="delete_entry">{"status":"needs_confirmation","confirmation_id":"c1"}</untrusted_data>',
+        ),
+      ],
+    ];
+
+    expect(toolCallsOfTurn(contents)).toEqual([
+      { name: "delete_entry", input: {}, outcome: "asked to confirm" },
+    ]);
+  });
+
+  it("should say a call has no result, which means the loop never ran it", () => {
+    expect(toolCallsOfTurn([[call("t1", "delete_entry")]])).toEqual([
+      { name: "delete_entry", input: {}, outcome: "no result" },
+    ]);
+  });
+
+  it("should not say it of ask_user, which the loop turns into a question and never answers", () => {
+    expect(toolCallsOfTurn([[call("t1", "ask_user")]])).toEqual([{ name: "ask_user", input: {} }]);
+  });
+
+  it("should say nothing of a call that ran and answered", () => {
+    expect(toolCallsOfTurn([[call("t1", "get_day")], [result("t1", '{"entries":[]}')]])).toEqual([
+      { name: "get_day", input: {} },
+    ]);
+  });
+});

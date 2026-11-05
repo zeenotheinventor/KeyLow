@@ -168,6 +168,21 @@ describe("the describe set", () => {
     }
   });
 
+  it("should word the chicken so that the skin cannot draw a question, and keep grams cases with nothing to ask", () => {
+    const chickenMessages = specs
+      .map(({ message }) => message)
+      .filter((message) => /chicken breast/.test(message));
+
+    expect(chickenMessages).toHaveLength(2);
+    for (const message of chickenMessages) {
+      expect(message).toMatch(/without skin/);
+    }
+    // At least one case logs in grams with no question: the rice, broccoli and oats say what and how much.
+    expect(
+      logSpecs.filter(({ items }) => items.every(({ amount }) => "grams" in amount)).length,
+    ).toBeGreaterThanOrEqual(4);
+  });
+
   it("should have the three-item breakfast with an entry for each item", () => {
     expect(logSpecOf("describe-eggs-toast-and-banana").items).toHaveLength(3);
   });

@@ -84,7 +84,9 @@ A setup turn that a later turn depends on must be unambiguous, or a fair size qu
 
 **A failed turn is an error, and the reason says where to look.** A turn that ends `failed` is an `error`, not a miss, so the report keeps its shape. The reason names the notice the turn sent, and after a call to a tool that asks first it says the cause **may be** `confirm_unavailable` (the model gave no question to put above the buttons) and to check the function log. It may also be an outage or a database error, so the harness does not blame either. The ending code itself is only in the function's log line (`ending=`). A real `confirm_unavailable` has been seen: the model called `delete_entry` with no question text after a `get_day`. The confirm cases are left strict, so they may hit it.
 
-**What a refused tool looks like.** A failure line prints each tool call with its arguments (null fields left out), and the error code the tool answered when it refused the call (`log_entry({...}) -> not_found`). The driver reads the code from the stored tool result and keeps nothing else of it.
+**What became of each call.** A failure line prints each tool call with its arguments (null fields left out), and after it what became of it: the error code the tool answered when it refused the call (`log_entry({...}) -> not_found`), `asked to confirm` when the result was a request for a yes, or `no result` when the turn stored the call and no result for it, which means the loop never ran it. The driver reads these from the stored messages and keeps nothing else of a result. `ask_user` never shows `no result`, because the loop turns it into a question.
+
+**Chicken.** The seed has the grilled breast with skin and without, and "which one?" is a fair question, so the chicken messages say "without skin" and expect that food. The rice, broccoli and oats cases still log in grams with no question to ask.
 
 **What it cannot show.** A failure of the MCP client after a tool ran needs a way to make the served client fail, and the served function has none. That case is KEY-794's unit test of the turn loop.
 

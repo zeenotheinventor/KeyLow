@@ -31,8 +31,8 @@ const toolsLine = (calls: readonly ToolCall[]): string =>
     ? "none"
     : calls
         .map(
-          ({ name, input, errorCode }) =>
-            `${name}(${JSON.stringify(input, withoutNulls).slice(0, 200)})${errorCode === undefined ? "" : ` -> ${errorCode}`}`,
+          ({ name, input, errorCode, outcome }) =>
+            `${name}(${JSON.stringify(input, withoutNulls).slice(0, 200)})${(errorCode ?? outcome) ? ` -> ${errorCode ?? outcome}` : ""}`,
         )
         .join(", ");
 
