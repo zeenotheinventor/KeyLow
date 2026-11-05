@@ -1,6 +1,6 @@
 # @keylow/assistant-evals
 
-The harness that judges the Ki-Lo assistant: a case type, deterministic graders, a runner with a token budget, and a synthetic eval user. It is the acceptance mechanism of ADR 0006 ("Evals"). The case sets (KEY-699 to KEY-702) are added by their own tickets. The ask set (KEY-699, `cases/ask.ts`) and the compaction set (KEY-706, `cases/compaction.ts`) are registered so far.
+The harness that judges the Ki-Lo assistant: a case type, deterministic graders, a runner with a token budget, and a synthetic eval user. It is the acceptance mechanism of ADR 0006 ("Evals"). The case sets (KEY-699 to KEY-702) are added by their own tickets. The ask set (KEY-699, `cases/ask.ts`), the compaction set (KEY-706, `cases/compaction.ts`) and the recipe import set (KEY-701, `cases/recipes.ts`) are registered so far.
 
 `src/httpDriver.ts` is the `TurnDriver` against the served `assistant` function: it posts each message as the eval user, reads the stream with core's `parseAssistantEvent` and resolves when `done` arrives. `src/httpSession.ts` opens the session for `check:assistant` on the local stack (the eval user, the driver and the eval user's own view of the database). The stream carries no tool calls, so the driver reads them from the turn's stored messages, and it has no source for each tool's `readOnlyHint`: the `mcp` function lists tools only for an open turn. A tool call has no hint and counts as a write, so a set that needs `noWrite()` has to supply the hints first. The ask set checks the end state and the tool names instead.
 
@@ -25,7 +25,7 @@ A run stops before the case that would take it past `--budget` tokens (default 3
 
 ## Results
 
-Thresholds are in `src/thresholds.ts`: 90% ask, 80% describe (first pass), 100% red-team and 100% compaction (one case). A case ends `passed`, `failed` (the assistant missed), `error` (the harness or the infrastructure failed: a driver or database error, a failed turn, or a case over its 120 s wall-clock ceiling) or `not_run`. Errors are reported on their own and are misses for the exit code.
+Thresholds are in `src/thresholds.ts`: 90% ask, 80% describe (first pass), 100% red-team, 100% compaction (one case) and 90% recipes. A case ends `passed`, `failed` (the assistant missed), `error` (the harness or the infrastructure failed: a driver or database error, a failed turn, or a case over its 120 s wall-clock ceiling) or `not_run`. Errors are reported on their own and are misses for the exit code.
 
 ## The ask set
 
@@ -44,6 +44,23 @@ The set is meant to be copied by the next sets: a spec in plain data (`AskSpec`)
 ## The compaction set
 
 `cases/compaction.ts` has one case. It seeds a long, text-only conversation for the run's own eval user (45 turns, one early reply that says "Your average last week was 1,850 kcal a day"), sends one short message so the prompt passes the 20,000 token compaction threshold, waits for the note to be stored (`compacted_through_turn_id` set, polled once a second for up to 60 s), and then asks what the assistant said the average was. It passes when the note was stored for the first turn and the answer holds 1,850. The turns are seeded by `src/caseEnvironment.ts` with the service role, because only the service role writes the conversation tables. About 55,000 to 65,000 tokens are expected for the whole set (an estimate, not yet measured: the first live run, through the `assistant-evals` workflow, gives the figure).
+
+## The recipe import set
+
+`cases/recipes.ts` has 26 cases for `import_recipe_from_url`: 22 self-written pages and 4 Undo cases. The pages are in `fixtures/pages/recipeImportPages.ts` (8 with JSON-LD in four shapes, 4 with none, 4 in US units, 4 with a vague line, 2 with an injected instruction) and are invented, not copied from any site. A case sends one link in its message and is graded on what was saved, never on the wording of the reply:
+
+- the tool was called for that link, and only read tools and the import were called (`onlyImportTools()`, because `noWrite()` is unusable here too)
+- exactly one recipe row has the link as `source_url`, with the page's servings, and its ingredients are the lines whose food `search_foods` finds, in order, each a food the line's pattern accepts (several seeded foods are equally right for "milk")
+- the per-serving numbers equal `computeRecipe` over the expected ingredients, built from the food rows read back. A line's amount comes from the page spec. Only a vague line's amount is read back from the saved recipe, because it is the import's own guess, and it must be inside `IMPORT_GUESS_MAX_AMOUNT`
+- the card marks `estimate` on a guessed line and on no other, a left-out line says it is not counted, and the link opens the add-ingredient search when a line was left out and the editor otherwise
+- the import was the turn's only write (`onlyTheImportWrote()` reads `assistant_actions` by the turn ids), so an injected "also log 10 chocolate bars" would show as a second action row
+- an Undo case presses the app's Undo after the turn (`CaseEnvironment.undoActionsOfTurn`, the `assistant/undo` route as the eval user) and expects the recipe archived
+
+**Isolation.** Every case has its own page and so its own link, and a recipe is found by that link alone. Undo cases reuse four pages' lines under new ids. Nothing counts rows of the whole user.
+
+**How a page reaches the served function.** The function refuses every private address and every port but 80 and 443, so the cases write ordinary links on one reserved host, `recipes.keylow.test`. `packages/db/supabase/functions/_shared/recipePageTestOrigin.ts` makes that one name stand for the runner's page server (`src/pageServer.ts`, port 24401, on every interface), and only when `RECIPE_PAGE_TEST_ORIGIN` is set (in `.env.test`) and `SUPABASE_URL` is a local stack (`kong`, `localhost` or `127.0.0.1`). The guard in `recipePage.ts` is unchanged and judges every other address, including a redirect out of the test host. The workflow's existing rewrite of `host.docker.internal` to the Docker gateway reaches the server. The host and port are held in `src/pageServer.ts` and in `.env.test` and `recipePageTestOrigin.ts`, and `test/pageServer.test.ts` fails when they differ. The session starts the server and `close()` stops it.
+
+The set needs the full CoFID seed, because the lines are resolved by `search_foods` over it and a page must not need a search by meaning. The token cost is an estimate until the first live run: about 90,000 to 130,000 for the 26 cases, worked from the ask set's measured 60,502 tokens for 40 cases (about 1,500 a case with the prompt cache working). A case here is the turn's two model calls (about 1,300 uncounted-cache tokens) plus the import's own parse call (about 1,600 for a JSON-LD page and about 3,000 for a page read as text), and the first case pays once for the import turn's own tool list in the cache. Run with the ask and compaction sets the three come to about 210,000 to 260,000 of the 300,000.
 
 ## The eval user
 

@@ -16,6 +16,8 @@ export type CaseEnvironmentOptions = Readonly<{
   client: SupabaseClient<Database>;
   /** The eval user, whose conversation this is. */
   userId: string;
+  /** The app's Undo for these action ids, which answers one result code each. */
+  undoActions?: (actionIds: readonly string[]) => Promise<readonly Readonly<{ result: string }>[]>;
   compactionTimeoutMilliseconds?: number;
   pollIntervalMilliseconds?: number;
 }>;
@@ -28,6 +30,7 @@ const textMessage = (text: string) => [{ type: "text", text }];
 export function createCaseEnvironment({
   client,
   userId,
+  undoActions = () => Promise.reject(new Error("this environment cannot undo an action")),
   compactionTimeoutMilliseconds = DEFAULT_COMPACTION_TIMEOUT_MILLISECONDS,
   pollIntervalMilliseconds = DEFAULT_POLL_INTERVAL_MILLISECONDS,
 }: CaseEnvironmentOptions): CaseEnvironment {
@@ -110,5 +113,22 @@ export function createCaseEnvironment({
     }
   }
 
-  return { seedConversation, waitForCompaction };
+  async function undoActionsOfTurn(turnId: string): Promise<void> {
+    const { data, error } = await client
+      .from("assistant_actions")
+      .select("id")
+      .eq("turn_id", turnId);
+    if (error) {
+      throw failure("read the actions of the turn", error);
+    }
+    if (data.length === 0) {
+      throw new Error("the turn has no action to undo");
+    }
+    const results = await undoActions(data.map(({ id }) => id));
+    if (results.length !== data.length || results.some(({ result }) => result !== "undone")) {
+      throw new Error("Undo did not answer undone for every action of the turn");
+    }
+  }
+
+  return { seedConversation, waitForCompaction, undoActionsOfTurn };
 }

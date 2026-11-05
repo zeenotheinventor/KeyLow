@@ -163,3 +163,52 @@ describe("waitForCompaction", () => {
     );
   });
 });
+
+describe("undoActionsOfTurn", () => {
+  const clientWithActions = (ids: readonly string[]): SupabaseClient<Database> =>
+    ({
+      from: () => ({
+        select: () => ({
+          eq: () => Promise.resolve({ data: ids.map((id) => ({ id })), error: null }),
+        }),
+      }),
+      // The fake answers only the call the environment makes, so it stands in for the whole client type.
+    }) as unknown as SupabaseClient<Database>;
+
+  it("should undo every action of the turn through the app's Undo", async () => {
+    const asked: (readonly string[])[] = [];
+    const environment = createCaseEnvironment({
+      client: clientWithActions(["action-1", "action-2"]),
+      userId,
+      undoActions: (ids) => {
+        asked.push(ids);
+        return Promise.resolve(ids.map(() => ({ result: "undone" })));
+      },
+    });
+
+    await expect(environment.undoActionsOfTurn("turn-1")).resolves.toBeUndefined();
+    expect(asked).toEqual([["action-1", "action-2"]]);
+  });
+
+  it("should reject when an action was not undone", async () => {
+    const environment = createCaseEnvironment({
+      client: clientWithActions(["action-1"]),
+      userId,
+      undoActions: () => Promise.resolve([{ result: "undo_unavailable" }]),
+    });
+
+    await expect(environment.undoActionsOfTurn("turn-1")).rejects.toThrow(
+      "Undo did not answer undone",
+    );
+  });
+
+  it("should reject when the turn has no action to undo", async () => {
+    const environment = createCaseEnvironment({
+      client: clientWithActions([]),
+      userId,
+      undoActions: () => Promise.resolve([]),
+    });
+
+    await expect(environment.undoActionsOfTurn("turn-1")).rejects.toThrow("no action to undo");
+  });
+});

@@ -63,6 +63,42 @@ function driver(overrides: Partial<HttpDriverOptions> = {}) {
   });
 }
 
+describe("createHttpDriver, cards", () => {
+  const card = {
+    actionIds: ["33333333-3333-4333-8333-333333333333"],
+    kind: "recipe_created",
+    title: "Added recipe Test, 2 servings",
+    sub: null,
+    rows: [],
+    totalText: null,
+    note: null,
+    link: null,
+    undo: "available",
+    undoneSub: null,
+  };
+
+  it("should keep the cards a turn sent, in order", async () => {
+    streamOf(
+      turnEvent,
+      sse({ type: "card", card }),
+      sse({ type: "text", delta: "Done." }),
+      sse({ type: "done", outcome: "complete" }),
+    );
+
+    const result = await driver().sendMessage({ conversationId: null, text: "add it" });
+
+    expect(result.cards).toEqual([card]);
+  });
+
+  it("should leave cards out when the turn sent none", async () => {
+    streamOf(turnEvent, sse({ type: "done", outcome: "complete" }));
+
+    const result = await driver().sendMessage({ conversationId: null, text: "hello" });
+
+    expect(result).not.toHaveProperty("cards");
+  });
+});
+
 describe("createHttpDriver, one turn", () => {
   it("should post the turn with the day in the user's time zone, and no hour", async () => {
     streamOf(turnEvent, sse({ type: "done", outcome: "complete" }));

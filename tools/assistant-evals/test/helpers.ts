@@ -43,6 +43,8 @@ const sumOf = (left: TurnUsage, right: Partial<TurnUsage>): TurnUsage => ({
 type FakeDatabaseOptions = {
   /** The row count to answer for a table, whatever the filters. */
   rowCounts?: Readonly<Record<string, number>>;
+  /** The rows to answer for a table, whatever the filters. */
+  rows?: Readonly<Record<string, readonly Readonly<Record<string, unknown>>[]>>;
   /** The usage to answer for a turn id. A turn that is not listed has none. */
   usageByTurnId?: Readonly<Record<string, Partial<TurnUsage>>>;
   /** The usage of the first model call of a turn. Falls back to the usage of the turn. */
@@ -61,6 +63,10 @@ export function fakeDatabase(options: FakeDatabaseOptions = {}): EvalDatabase & 
     countRows: (query) => {
       queries.push(query);
       return Promise.resolve(options.rowCounts?.[query.table] ?? 0);
+    },
+    readRows: (query) => {
+      queries.push(query);
+      return Promise.resolve(options.rows?.[query.table] ?? []);
     },
     usageOfTurn: (turnId) => Promise.resolve(sumOf(noUsage, options.usageByTurnId?.[turnId] ?? {})),
     usageOfUser: () => Promise.resolve(sumOf(noUsage, options.userUsage ?? {})),
@@ -128,6 +134,7 @@ export function scriptedStack(script: readonly ScriptedTurn[]): {
 
   const database: EvalDatabase = {
     countRows: () => Promise.resolve(0),
+    readRows: () => Promise.resolve([]),
     usageOfTurn: (turnId) => Promise.resolve(byTurnId.get(turnId) ?? noUsage),
     usageOfUser: () => Promise.resolve(userTotal),
     firstModelCallOfTurn: (turnId) => Promise.resolve(byTurnId.get(turnId) ?? null),

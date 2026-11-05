@@ -21,6 +21,11 @@ export type CaseEnvironment = Readonly<{
   seedConversation: (turns: readonly SeedTurn[]) => Promise<string>;
   /** Resolves once the conversation has a compaction note, and rejects when none is stored in time. */
   waitForCompaction: (conversationId: string) => Promise<void>;
+  /**
+   * Undoes every action of a turn as the app's Undo button does (the `assistant/undo` route, as the eval
+   * user) and rejects unless each one answered `undone`.
+   */
+  undoActionsOfTurn: (turnId: string) => Promise<void>;
 }>;
 
 export type EvalCase = Readonly<{

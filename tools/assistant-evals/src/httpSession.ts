@@ -1,12 +1,14 @@
-import { setAssistantConsent } from "@keylow/api-client";
+import { setAssistantConsent, undoAssistantActions } from "@keylow/api-client";
 import { createClient } from "@supabase/supabase-js";
 
 import { createCaseEnvironment } from "./caseEnvironment.ts";
 import { createEvalDatabase } from "./database.ts";
 import { createFixtureUser } from "./fixtureUser.ts";
 import { createHttpDriver } from "./httpDriver.ts";
+import { startPageServer } from "./pageServer.ts";
 import { readSupabaseStatus } from "../../../packages/db/scripts/supabaseStatus.ts";
 import { writeAskExtras } from "../fixtures/askExtras.ts";
+import { fixturePages } from "../fixtures/pages/index.ts";
 
 import type { EvalSession } from "./cli.ts";
 import type { FixtureUser } from "./fixtureUser.ts";
@@ -41,12 +43,17 @@ async function timeZoneOf(user: FixtureUser): Promise<string | null> {
 
 /**
  * The session of a run against the local stack: a new eval user with the synthetic diary and the assistant consent, the HTTP driver
- * for the served `assistant` function, and the eval user's own view of the database. Closing it removes the
- * user.
+ * for the served `assistant` function, and the eval user's own view of the database. It also starts the page
+ * server the recipe import cases read their pages from (`src/pageServer.ts`). Closing it removes the user and
+ * stops the server.
  */
 export async function openLocalHttpSession(): Promise<EvalSession> {
   const stack = await readSupabaseStatus(databaseWorkdir);
-  const user = await createFixtureUser(stack);
+  const pageServer = await startPageServer(fixturePages);
+  const user = await createFixtureUser(stack).catch(async (error: unknown) => {
+    await pageServer.close();
+    throw error;
+  });
   try {
     // Without the consent the first turn is refused with `consent_needed`. It is the app's own write.
     await setAssistantConsent(user.client, user.id, true);
@@ -84,11 +91,19 @@ export async function openLocalHttpSession(): Promise<EvalSession> {
     return {
       driver,
       database: createEvalDatabase(user.client),
-      environment: createCaseEnvironment({ client: serviceClient, userId: user.id }),
-      close: user.remove,
+      environment: createCaseEnvironment({
+        client: serviceClient,
+        userId: user.id,
+        undoActions: (actionIds) => undoAssistantActions(user.client, actionIds),
+      }),
+      close: async () => {
+        await user.remove();
+        await pageServer.close();
+      },
     };
   } catch (error) {
     await user.remove();
+    await pageServer.close();
     throw error;
   }
 }

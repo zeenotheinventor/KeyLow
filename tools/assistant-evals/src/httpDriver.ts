@@ -3,7 +3,7 @@ import { localToday } from "@keylow/core/engine";
 
 import type { SendMessageInput, TurnDriver } from "./driver.ts";
 import type { AnswerMeta, ToolCall, TurnResult, TurnStatus } from "./types.ts";
-import type { AssistantStreamEvent } from "@keylow/core";
+import type { AssistantCard, AssistantStreamEvent } from "@keylow/core";
 
 export type HttpDriverOptions = Readonly<{
   /** The project's API address, such as `http://127.0.0.1:54321`. */
@@ -90,6 +90,7 @@ export function createHttpDriver(options: HttpDriverOptions): TurnDriver {
     let answer = "";
     let lastNoticeCode: string | null = null;
     let answerMeta: AnswerMeta | undefined;
+    const cards: AssistantCard[] = [];
     let buffer = "";
     const decoder = new TextDecoder();
     const reader = response.body.getReader();
@@ -106,6 +107,8 @@ export function createHttpDriver(options: HttpDriverOptions): TurnDriver {
             answer += event.delta;
           } else if (event.type === "answer_meta") {
             answerMeta = { citation: event.citation, estimate: event.estimate };
+          } else if (event.type === "card") {
+            cards.push(event.card);
           } else if (event.type === "notice") {
             // The code only, so a gate refusal is readable and nothing else of the notice is kept.
             lastNoticeCode = event.notice.code;
@@ -119,6 +122,7 @@ export function createHttpDriver(options: HttpDriverOptions): TurnDriver {
               answer,
               toolCalls: await readToolCalls(turn.turnId),
               ...(answerMeta === undefined ? {} : { answerMeta }),
+              ...(cards.length === 0 ? {} : { cards }),
             };
           }
         }

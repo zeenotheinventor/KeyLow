@@ -1,4 +1,5 @@
 import type { Database } from "@keylow/api-client";
+import type { AssistantCard } from "@keylow/core";
 
 // What the harness knows about a finished turn and about the database. Both are plain data, so a grader is
 // a function over them and a stub can stand in for the real thing.
@@ -30,6 +31,8 @@ export type TurnResult = Readonly<{
   toolCalls: readonly ToolCall[];
   /** The line under the answer and the Estimate label, from the turn's `answer_meta` event. Absent when the turn sent none. */
   answerMeta?: AnswerMeta | undefined;
+  /** The action cards the turn sent, in order. Absent when it sent none. */
+  cards?: readonly AssistantCard[] | undefined;
 }>;
 
 /** The sum of the `assistant_usage` rows of one turn (a turn with tool rounds writes several). */
@@ -50,6 +53,8 @@ export type RowQuery = Readonly<{
 /** What the graders and the runner read from the database, as the eval user. */
 export type EvalDatabase = Readonly<{
   countRows: (query: RowQuery) => Promise<number>;
+  /** Every column of every row that matches, for a grader that has to compare values and not only count rows. */
+  readRows: (query: RowQuery) => Promise<readonly Readonly<Record<string, unknown>>[]>;
   /** The sum of the `assistant_usage` rows of one turn. */
   usageOfTurn: (turnId: string) => Promise<TurnUsage>;
   /** The sum of every `assistant_usage` row of the eval user: its turns, their compactions, anything else. */

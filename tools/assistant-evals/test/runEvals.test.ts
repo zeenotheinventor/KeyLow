@@ -395,6 +395,7 @@ describe("runEvals", () => {
 
 describe("runEvals with a case that sets up and waits", () => {
   const environmentThatLogs = (log: string[]): CaseEnvironment => ({
+    undoActionsOfTurn: () => Promise.resolve(),
     seedConversation: (turns) => {
       log.push(`seed ${turns.length}`);
       return Promise.resolve("seeded-conversation");
