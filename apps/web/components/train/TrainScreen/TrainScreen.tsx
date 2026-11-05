@@ -11,6 +11,7 @@ import {
 import { formatClockTime } from "@keylow/core/dates";
 import { WifiOff } from "lucide-react";
 
+import { PlanWeek } from "../PlanWeek";
 import { TodayCard } from "../TodayCard";
 import { TrainFirstTime } from "../TrainFirstTime";
 import { TrainLoading } from "../TrainLoading";
@@ -152,6 +153,9 @@ export function TrainScreen({
               onSetGoal={onSetGoal}
             />
           )
+        ) : null}
+        {home.status === "ready" && home.week !== null ? (
+          <PlanWeek week={home.week.plan} weekStart={home.week.weekStart} />
         ) : null}
       </div>
     </div>

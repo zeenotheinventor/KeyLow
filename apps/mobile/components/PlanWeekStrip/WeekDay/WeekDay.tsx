@@ -2,7 +2,8 @@ import { View } from "react-native";
 
 import { Icon, PressableSurface, Text } from "../../ui";
 
-import type { WeekDayLook, WeekDayProps } from "./types";
+import type { WeekDayProps } from "./types";
+import type { WeekDayLook } from "@keylow/core/training";
 
 // The classes are written out so Tailwind sees them. A tick sits on the success fill, a session in progress
 // on the accent fill inside the accent ring, and the ring alone marks today. A day still to come is a

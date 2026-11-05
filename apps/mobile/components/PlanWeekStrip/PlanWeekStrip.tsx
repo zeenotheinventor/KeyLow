@@ -4,12 +4,11 @@ import {
   describeTrainWeekCaption,
   describeTrainWeekDay,
 } from "@keylow/core/copy";
-import { latestFinishedSession, weekCaption } from "@keylow/core/training";
+import { latestFinishedSession, weekCaption, weekDayLookOf } from "@keylow/core/training";
 import { View } from "react-native";
 
 import { Card, Text } from "../ui";
 import { WeekDay } from "./WeekDay";
-import { weekDayLookOf } from "./weekDayLook";
 
 import type { PlanWeekStripProps } from "./types";
 

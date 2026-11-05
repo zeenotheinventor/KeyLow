@@ -1,5 +1,4 @@
-/** How a day's mark is drawn: a tick, the accent ring on the accent fill, the ring, the dashed ring, or the dash. */
-export type WeekDayLook = "done" | "running" | "ring" | "planned" | "rest";
+import type { WeekDayLook } from "@keylow/core/training";
 
 export type WeekDayProps = {
   /** The column head: "Mon". */
