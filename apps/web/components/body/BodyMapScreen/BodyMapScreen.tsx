@@ -39,7 +39,7 @@ import { BodyMapLoading } from "../BodyMapLoading";
 import { DayScrubber } from "../DayScrubber";
 import { FigureSettingDialog } from "../FigureSettingDialog";
 import { MusclesCard } from "../MusclesCard";
-import { MuscleSheet } from "../MuscleSheet";
+import { MuscleSheet, useEditRoutine } from "../MuscleSheet";
 
 import type { BodyMapScreenProps } from "./types";
 import type { BodyMapScale } from "@keylow/core/copy";
@@ -133,6 +133,10 @@ export function BodyMapScreen({ initialScale = "heat" }: BodyMapScreenProps) {
   // Where the sheet gives focus back to: the Muscles card's row that opened it. A muscle of the figures
   // has none, so focus goes back to whatever had it. It is set with the muscle and never while it is open.
   const [sheetReturnFocus, setSheetReturnFocus] = useState<Element | undefined>(undefined);
+  const closeMuscleSheet = () => {
+    setSheetMuscle(null);
+  };
+  const editRoutine = useEditRoutine(closeMuscleSheet);
   // The first visit asks once, as soon as the stored figure is known to be none (`hasChosen` is true until
   // the store is read, so false means read and unanswered). The dialog then stays open
   // through the choice, so the preview shows it, and the answer is only recorded when it closes. The state is
@@ -434,9 +438,8 @@ export function BodyMapScreen({ initialScale = "heat" }: BodyMapScreenProps) {
             weekStart={weekStart}
             now={nowIso}
             days={shownDays}
-            onClose={() => {
-              setSheetMuscle(null);
-            }}
+            onClose={closeMuscleSheet}
+            onEditRoutine={editRoutine}
           />
         </>
       );

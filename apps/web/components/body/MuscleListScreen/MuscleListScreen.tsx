@@ -25,7 +25,7 @@ import { useRef, useState } from "react";
 
 import { BodyMapBackLink } from "../BodyMapBackLink";
 import { MuscleRow } from "../MuscleRow";
-import { MuscleSheet } from "../MuscleSheet";
+import { MuscleSheet, useEditRoutine } from "../MuscleSheet";
 import { ViewLabel } from "../ViewLabel";
 
 import type { MuscleListScreenProps } from "./types";
@@ -69,6 +69,10 @@ export function MuscleListScreen({ at: dayParameter }: MuscleListScreenProps) {
   const [sheetMuscle, setSheetMuscle] = useState<MuscleId | null>(null);
   // The row that opened the sheet, which gets focus back when it closes. It is set with the muscle.
   const [sheetRow, setSheetRow] = useState<Element | undefined>(undefined);
+  const closeMuscleSheet = () => {
+    setSheetMuscle(null);
+  };
+  const editRoutine = useEditRoutine(closeMuscleSheet);
   const [query, setQuery] = useState("");
   const searchField = useRef<HTMLInputElement>(null);
   const announcedQuery = useSettledValue(query.trim(), ANNOUNCE_AFTER_TYPING_MS);
@@ -240,9 +244,8 @@ export function MuscleListScreen({ at: dayParameter }: MuscleListScreenProps) {
         weekStart={weekStart}
         now={moment.now}
         days={shownDays}
-        onClose={() => {
-          setSheetMuscle(null);
-        }}
+        onClose={closeMuscleSheet}
+        onEditRoutine={editRoutine}
       />
     </div>
   );
