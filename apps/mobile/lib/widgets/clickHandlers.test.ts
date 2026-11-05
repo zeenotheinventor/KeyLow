@@ -50,6 +50,7 @@ const unusedRepositories: WidgetRepositories = {
   getActiveSession: unused,
   getActiveRoutine: unused,
   getRoutine: unused,
+  listAcceptedSuggestions: unused,
   getLastPerformance: unused,
   addSet: unused,
   removeSet: unused,

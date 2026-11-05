@@ -3,7 +3,7 @@ import { cleanup, render, screen, userEvent } from "@testing-library/react-nativ
 import { setUpTests } from "react-native-reanimated";
 
 import { SuggestionCard } from "../components/SuggestionCard";
-import { thursdayOffer } from "../components/SuggestionCard/storyStates";
+import { thursdayDetail, thursdayOffer } from "../components/SuggestionCard/storyStates";
 import { ThemeProvider } from "../lib/theme";
 import { installVirtualClock } from "./support/virtualClock";
 
@@ -17,6 +17,18 @@ jest.mock("@react-native-async-storage/async-storage", () => ({
 setUpTests();
 
 const offerState: SuggestionOfferState = { ...thursdayOffer, accept: undefined };
+
+// The offer on the day itself, worded as core words it for today: Start in place of Add.
+const startWords = {
+  primaryAction: "Start",
+  primaryActionName: "Start Legs with the added exercises",
+};
+const todayOfferState: SuggestionOfferState = {
+  ...offerState,
+  isForToday: true,
+  detail: { ...thursdayDetail, ...startWords },
+  copy: { ...thursdayOffer.copy, label: "Suggested for today", ...startWords },
+};
 
 function renderCard(props: SuggestionCardProps) {
   return render(
@@ -120,6 +132,32 @@ describe("the suggestion card", () => {
       ).toBeOnTheScreen();
     });
 
+    it("should call start when Start is pressed on today's suggestion, named as core words it", async () => {
+      const start = jest.fn();
+      await renderCard({ state: { ...todayOfferState, start } });
+
+      await userEvent
+        .setup()
+        .press(screen.getByRole("button", { name: "Start Legs with the added exercises" }));
+
+      expect(start).toHaveBeenCalledTimes(1);
+    });
+
+    it("should show Start busy and not call start while a start is under way", async () => {
+      const start = jest.fn();
+      await renderCard({ state: { ...todayOfferState, start }, isStarting: true });
+
+      await userEvent.setup().press(screen.getByRole("button", { busy: true }));
+
+      expect(start).not.toHaveBeenCalled();
+    });
+
+    it("should leave Add to a day to come alone while a start is under way elsewhere", async () => {
+      await renderCard({ state: { ...offerState, accept: jest.fn() }, isStarting: true });
+
+      expect(screen.queryByRole("button", { busy: true })).toBeNull();
+    });
+
     it("should draw no Not now when it is given no handler", async () => {
       await renderCard({ state: offerState });
 
@@ -139,6 +177,7 @@ describe("the suggestion card", () => {
             toast: "Added to Thursday: 3 sets of incline dumbbell press",
             undoAction: "Undo",
             undoActionName: "Undo adding to Thursday",
+            startActionName: "Start Legs with the added exercise",
           },
         },
       });
@@ -148,6 +187,35 @@ describe("the suggestion card", () => {
       expect(
         screen.getByText("Now with 3 sets of incline dumbbell press. They count as planned."),
       ).toBeOnTheScreen();
+    });
+  });
+
+  describe("the accepted card for today", () => {
+    const acceptedWords = {
+      cardName: "Today",
+      title: "Today's Legs: 19 sets",
+      detail: "Now with 3 sets of incline dumbbell press. They count as planned.",
+      toast: "Added to today: 3 sets of incline dumbbell press",
+      undoAction: "Undo",
+      undoActionName: "Undo adding to today",
+      startActionName: "Start Legs with the added exercise",
+    };
+
+    it("should draw Start, which calls start", async () => {
+      const start = jest.fn();
+      await renderCard({ state: { status: "accepted", copy: acceptedWords, start } });
+
+      await userEvent
+        .setup()
+        .press(screen.getByRole("button", { name: "Start Legs with the added exercise" }));
+
+      expect(start).toHaveBeenCalledTimes(1);
+    });
+
+    it("should draw no Start for a day to come", async () => {
+      await renderCard({ state: { status: "accepted", copy: acceptedWords } });
+
+      expect(screen.queryByRole("button")).toBeNull();
     });
   });
 

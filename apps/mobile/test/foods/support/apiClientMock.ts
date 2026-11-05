@@ -237,6 +237,7 @@ export const mockApiClient = {
   useActiveSession: () => noSessionRead,
   useActiveRoutine: () => noSessionRead,
   useRoutine: () => noSessionRead,
+  useAcceptedSuggestions: () => noSessionRead,
   // A signed in user here has accepted the current Terms, so the AuthGate's terms gate stays out of the way.
   useTermsAcceptance: () => ({
     isPending: false,

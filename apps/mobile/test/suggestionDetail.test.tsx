@@ -69,7 +69,7 @@ jest.mock("../lib/useNow", () => ({ useNow: () => new Date("2026-10-14T11:00:00Z
 setUpTests();
 
 const accept = jest.fn();
-const notices = { onAccepted: jest.fn(), onFailure: jest.fn() };
+const notices = { onAccepted: jest.fn(), onFailure: jest.fn(), onStart: jest.fn() };
 const offer: SuggestionOfferState = { ...thursdayOffer, accept };
 
 let queryClient: QueryClient;
@@ -154,6 +154,7 @@ describe("the suggestion detail sheet on the Train home", () => {
                 toast: "Added to Thursday: 3 sets of incline dumbbell press",
                 undoAction: "Undo",
                 undoActionName: "Undo adding to Thursday",
+                startActionName: "Start Legs with the added exercise",
               },
             }
           : state.status === "nothing"
@@ -283,6 +284,31 @@ describe("the suggestion detail sheet on the Train home", () => {
       expect(queryTheSheet()).toBeNull();
     });
 
+    it("should start today's suggestion once and close on Start, named as core words it", async () => {
+      const start = jest.fn();
+      mockCardState = {
+        ...offer,
+        isForToday: true,
+        accept: undefined,
+        start,
+        detail: {
+          ...thursdayDetail,
+          primaryAction: "Start",
+          primaryActionName: "Start Legs with the added exercises",
+        },
+      };
+      const dialog = await openDetail();
+
+      await userEvent
+        .setup()
+        .press(within(dialog).getByRole("button", { name: "Start Legs with the added exercises" }));
+      await afterTheSheetHasClosed();
+
+      expect(start).toHaveBeenCalledTimes(1);
+      expect(accept).not.toHaveBeenCalled();
+      expect(queryTheSheet()).toBeNull();
+    });
+
     it("should draw no Add for a suggestion for today, and keep Not now", async () => {
       mockCardState = { ...offer, isForToday: true, accept: undefined };
       const dialog = await openDetail();
@@ -339,6 +365,7 @@ describe("the suggestion detail sheet on the Train home", () => {
           toast: "Added to Thursday: 3 sets of incline dumbbell press",
           undoAction: "Undo",
           undoActionName: "Undo adding to Thursday",
+          startActionName: "Start Legs with the added exercise",
         },
       };
       await act(() => {

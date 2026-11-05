@@ -160,11 +160,13 @@ export type {
 } from "./routineDraft";
 export { routinePayload } from "./routinePayload";
 export type { RoutinePayload } from "./routinePayload";
-export { scaffoldSession } from "./scaffoldSession";
+export { scaffoldSession, scaffoldSessionWithAdditions } from "./scaffoldSession";
 export type {
   ScaffoldedExercise,
   ScaffoldRoutineDay,
   ScaffoldRoutineExercise,
+  SessionIdentity,
+  SessionPlanJoin,
   SessionScaffold,
 } from "./scaffoldSession";
 export { summariseRoutine } from "./summariseRoutine";
