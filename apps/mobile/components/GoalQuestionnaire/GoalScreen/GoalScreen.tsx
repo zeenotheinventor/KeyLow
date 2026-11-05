@@ -1,6 +1,7 @@
 import { useProfileTimeZone } from "@keylow/api-client";
 import { describeGoalAnswerRows, describeGoalSetOn, GOAL_SCREEN } from "@keylow/core/copy";
 import { toLocalDate } from "@keylow/core/dates";
+import { goalAnswersOfRow } from "@keylow/core/training";
 import { useFocusEffect, useRouter } from "expo-router";
 import { vars } from "nativewind";
 import { useCallback } from "react";
@@ -12,7 +13,6 @@ import { useOpenOnce } from "../../../lib/useOpenOnce";
 import { useReadsEnabled } from "../../../lib/useReadsEnabled";
 import { Button, GroupedList, SheetHeader, Text } from "../../ui";
 import { GoalAnswerRow } from "../GoalAnswerRow";
-import { goalAnswersOfRow } from "../goalAnswersOfRow";
 import { useCloseGoalFlow } from "../useCloseGoalFlow";
 import { useGoalDraft } from "../useGoalDraft";
 
