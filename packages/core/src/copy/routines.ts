@@ -88,6 +88,17 @@ export const ROUTINE_RESTORE_FAILED =
 export const ROUTINE_ARCHIVE_FAILED =
   "Your routine was not archived. Check your connection, then try again.";
 
+/**
+ * The line shown while there is no connection, beside the control that is off for it: Make active on the
+ * list, Archive routine in the editor and Restore on the archived list. A write is never held back to run
+ * later, so the control is off and says why. The web draws them, and no board does.
+ */
+export const ROUTINES_OFFLINE = {
+  makeActive: "Making a routine active needs a connection.",
+  archive: "Archiving a routine needs a connection.",
+  restore: "Restoring a routine needs a connection.",
+} as const;
+
 /** The caption under the dimmed Archive routine item while the draft has changes that are not saved. The boards do not draw it. */
 export const ROUTINE_ARCHIVE_UNSAVED = "Save or cancel your changes first.";
 

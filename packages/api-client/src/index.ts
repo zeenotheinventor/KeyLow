@@ -315,9 +315,13 @@ export {
   useArchiveRoutine,
   useRoutine,
   useRoutines,
+  useArchiveRoutineWithUndo,
+  useMakeRoutineActive,
+  useRestoreRoutine,
   useSaveRoutine,
   useSetActiveRoutine,
 } from "./hooks";
+export type { RoutineNotices } from "./hooks";
 export type { UseRoutinesOptions, UseTrendSetsOptions } from "./hooks";
 export { RoutineRuleError } from "./errors";
 export type { RoutineRule } from "./errors";

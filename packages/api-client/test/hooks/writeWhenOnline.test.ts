@@ -1,18 +1,16 @@
 import { onlineManager } from "@tanstack/react-query";
-import { act } from "@testing-library/react-native";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { writeWhenOnline } from "../lib/writeWhenOnline";
+import { writeWhenOnline } from "../../src/hooks/writeWhenOnline";
 
 describe("writeWhenOnline", () => {
-  afterEach(async () => {
-    await act(() => {
-      onlineManager.setOnline(true);
-    });
+  afterEach(() => {
+    onlineManager.setOnline(true);
   });
 
   it("should run the write, and say nothing, when there is a connection", async () => {
-    const write = jest.fn().mockResolvedValue(undefined);
-    const onFailed = jest.fn();
+    const write = vi.fn().mockResolvedValue(undefined);
+    const onFailed = vi.fn();
 
     await writeWhenOnline(write, onFailed);
 
@@ -21,11 +19,9 @@ describe("writeWhenOnline", () => {
   });
 
   it("should not run the write, and say it failed once, when there is no connection", async () => {
-    await act(() => {
-      onlineManager.setOnline(false);
-    });
-    const write = jest.fn().mockResolvedValue(undefined);
-    const onFailed = jest.fn();
+    onlineManager.setOnline(false);
+    const write = vi.fn().mockResolvedValue(undefined);
+    const onFailed = vi.fn();
 
     await writeWhenOnline(write, onFailed);
 
@@ -34,8 +30,8 @@ describe("writeWhenOnline", () => {
   });
 
   it("should say it failed once, and not pass the error on, when the write throws", async () => {
-    const write = jest.fn().mockRejectedValue(new Error("a routine called Upper Lower"));
-    const onFailed = jest.fn();
+    const write = vi.fn().mockRejectedValue(new Error("a routine called Upper Lower"));
+    const onFailed = vi.fn();
 
     await writeWhenOnline(write, onFailed);
 
