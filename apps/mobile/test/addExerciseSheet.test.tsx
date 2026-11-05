@@ -1,5 +1,5 @@
 import { KeyLowProvider } from "@keylow/api-client";
-import { ADD_EXERCISE } from "@keylow/core/copy";
+import { ADD_EXERCISE, CUSTOM_EXERCISE } from "@keylow/core/copy";
 import { onlineManager } from "@tanstack/react-query";
 import {
   act,
@@ -75,19 +75,17 @@ async function renderSheet(props: AddExerciseSheetProps) {
 type SessionOverrides = {
   onClose?: () => void;
   onAddToSession?: (exercise: ChosenExercise) => void;
-  onCreate?: (name: string) => void;
 };
 
 const sessionProps = ({
   onClose = jest.fn(),
   onAddToSession = jest.fn(),
-  onCreate,
 }: SessionOverrides = {}): AddExerciseSheetProps => ({
   mode: "session",
+  dayName: "Legs",
   open: true,
   onAddToSession,
   onClose,
-  onCreate,
 });
 
 async function search(words: string) {
@@ -262,22 +260,37 @@ describe("the Add exercise sheet", () => {
   });
 
   describe("the Create row", () => {
-    it("should not be drawn without a handler", async () => {
+    it("should not be drawn until something is searched for", async () => {
       await renderSheet(sessionProps());
-      await search("lateral raise");
+      await screen.findByRole("searchbox", { name: ADD_EXERCISE.searchName });
 
-      await screen.findByRole("heading", { name: "Library · 4" });
       expect(screen.queryByRole("button", { name: /^Create/ })).toBeNull();
     });
 
-    it("should hand the searched words to the handler when given one", async () => {
-      const onCreate = jest.fn();
-      await renderSheet(sessionProps({ onCreate }));
+    it("should be drawn under the results, in a session and in a routine", async () => {
+      await renderSheet(sessionProps());
+      await search("lateral raise");
+      expect(
+        await screen.findByRole("button", { name: 'Create "lateral raise"' }),
+      ).toBeOnTheScreen();
+      await cleanup();
+
+      await renderSheet({ mode: "routine", open: true, onChoose: jest.fn(), onClose: jest.fn() });
+      await search("lateral raise");
+
+      expect(
+        await screen.findByRole("button", { name: 'Create "lateral raise"' }),
+      ).toBeOnTheScreen();
+    });
+
+    it("should open the New exercise form with the searched words as its name", async () => {
+      await renderSheet(sessionProps());
       const user = await search("lateral raise");
 
       await user.press(await screen.findByRole("button", { name: 'Create "lateral raise"' }));
 
-      expect(onCreate).toHaveBeenCalledWith("lateral raise");
+      expect(await screen.findByRole("heading", { name: CUSTOM_EXERCISE.title })).toBeOnTheScreen();
+      expect(screen.getByLabelText(CUSTOM_EXERCISE.nameLabel)).toHaveDisplayValue("lateral raise");
     });
   });
 

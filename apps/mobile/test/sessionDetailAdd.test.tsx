@@ -443,6 +443,19 @@ describe("adding sets and exercises to a past session from the session detail", 
       return screen.findByLabelText("Side lateral raise, set 1");
     }
 
+    it("should name the session's routine day in the New exercise form's Save button", async () => {
+      const user = await renderDetail();
+      await user.press(screen.getByRole("button", { name: ADD_EXERCISE.title }));
+      await user.type(
+        await screen.findByRole("searchbox", { name: ADD_EXERCISE.searchName }),
+        "cable face pull",
+      );
+
+      await user.press(await screen.findByRole("button", { name: 'Create "cable face pull"' }));
+
+      expect(await screen.findByRole("button", { name: "Save and add to Pull" })).toBeOnTheScreen();
+    });
+
     it("should open the first set of the picked exercise, filled from the last time it was done", async () => {
       const user = await renderDetail();
 

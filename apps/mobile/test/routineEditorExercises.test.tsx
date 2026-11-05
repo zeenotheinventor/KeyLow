@@ -285,6 +285,20 @@ describe("the exercises of a day in the routine editor", () => {
       expect(text("5 exercises · 15 sets")).toBeOnTheScreen();
     });
 
+    it("should say Save and add in the New exercise form, which hands the exercise to the editor", async () => {
+      const user = await showEditor();
+      await openDay(user, "Pull");
+      await user.press(screen.getByRole("button", { name: ROUTINE_EDITOR.addExerciseAction }));
+      await user.type(
+        await screen.findByRole("searchbox", { name: ADD_EXERCISE.searchName }),
+        "cable face pull",
+      );
+
+      await user.press(await screen.findByRole("button", { name: 'Create "cable face pull"' }));
+
+      expect(await screen.findByRole("button", { name: "Save and add" })).toBeOnTheScreen();
+    });
+
     it("should put the keyboard away when the picker opens, as the other sheets do", async () => {
       const dismiss = jest.spyOn(Keyboard, "dismiss");
       const user = await showEditor();

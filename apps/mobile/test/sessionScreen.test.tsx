@@ -770,6 +770,20 @@ describe("the active session screen", () => {
       expect(card.getByText("Dumbbell")).toBeOnTheScreen();
     });
 
+    it("should name the session's routine day in the New exercise form's Save button", async () => {
+      const user = userEvent.setup();
+      await renderSession();
+      await user.press(await screen.findByRole("button", { name: "Add exercise" }));
+      await user.type(
+        await screen.findByRole("searchbox", { name: "Search exercises" }),
+        "cable face pull",
+      );
+
+      await user.press(await screen.findByRole("button", { name: 'Create "cable face pull"' }));
+
+      expect(await screen.findByRole("button", { name: "Save and add to Legs" })).toBeOnTheScreen();
+    });
+
     it("should log a set of the added exercise through the set entry, still on one card", async () => {
       // The set entry reads the exercise for the snapshot a set freezes, and the search finds the same one.
       const [, sideLateralRaise] = lateralRaiseExercises;

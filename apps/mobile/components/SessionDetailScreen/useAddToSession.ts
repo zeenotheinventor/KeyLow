@@ -192,6 +192,7 @@ export function useAddToSession(sessionId: string | undefined): AddToSession {
     },
     picker: {
       mode: "session",
+      dayName: sessionData?.routine_day_name ?? null,
       open: isPickerOpen,
       onAddToSession: (exercise) => {
         void chooseExercise(exercise);

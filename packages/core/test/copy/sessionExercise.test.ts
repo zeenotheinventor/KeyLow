@@ -125,6 +125,14 @@ describe("the New exercise form's fixed words", () => {
     });
   });
 
+  it("should word the chooser's way back and the two save lines, which no board draws", () => {
+    expect(CUSTOM_EXERCISE).toMatchObject({
+      muscleChooserBackName: "Back to New exercise",
+      saveFailed: "Your exercise did not save. Check your connection, then try again.",
+      saveOffline: "Saving an exercise needs a connection. Try again when you're back online.",
+    });
+  });
+
   it("should count the golden name as the board does", () => {
     expect(describeExerciseNameLength("Lean-away cable raise")).toBe("21 / 200");
   });

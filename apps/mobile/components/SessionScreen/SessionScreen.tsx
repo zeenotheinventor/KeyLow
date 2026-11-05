@@ -289,6 +289,7 @@ export function SessionScreen({ onHide, onDiscarded, onFinished }: SessionScreen
       ) : null}
       {view.status === "ready" ? (
         <AddExerciseSheet
+          dayName={view.header.dayName}
           mode="session"
           open={isPickerOpen}
           onAddToSession={view.addExercise}
