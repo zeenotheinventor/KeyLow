@@ -344,6 +344,46 @@ describe("threadFromMessages, a question and a confirmation", () => {
   });
 });
 
+describe("threadFromMessages, a confirm button pressed and run in code", () => {
+  const confirmTurn = [
+    userMessage("m1", firstTurnId, "Delete everything from lunch today"),
+    toolUseMessage("m2", firstTurnId, [{ id: "call-1", name: "delete_entry" }]),
+    toolResultMessage("m3", firstTurnId, [
+      {
+        toolUseId: "call-1",
+        source: "delete_entry",
+        outcome: {
+          confirm: {
+            confirmationId: "00000000-0000-4000-8000-0000000000c1",
+            question: "Delete 3 entries at 13:00 today?",
+            confirmLabel: "Delete 3 entries",
+            cancelLabel: "Keep them",
+            tone: "danger",
+          },
+        },
+      },
+    ]),
+  ];
+  // The turn the loop ran with no model call: the person's words, the call it made, and the card.
+  const pressTurn = [
+    userMessage("m4", secondTurnId, "Delete 3 entries"),
+    toolUseMessage("m5", secondTurnId, [{ id: "toolu_pressed", name: "delete_entry" }]),
+    toolResultMessage("m6", secondTurnId, [
+      { toolUseId: "toolu_pressed", source: "delete_entry", outcome: { card: loggedCard } },
+    ]),
+  ];
+  const thread = threadFromMessages([...confirmTurn, ...pressTurn], availableActions);
+
+  it("should draw the question, the person's words and the card, with no reply under it", () => {
+    expect(kinds(thread)).toEqual(["user", "confirm", "user", "card"]);
+    expect(thread[2]).toMatchObject({ kind: "user", text: "Delete 3 entries" });
+  });
+
+  it("should answer the earlier confirmation", () => {
+    expect(thread[1]).toMatchObject({ kind: "confirm", answered: true });
+  });
+});
+
 describe("threadFromMessages, the meta of an answer", () => {
   const answerTurn = (outcomes: Record<string, unknown>[]) => [
     userMessage("m1", firstTurnId, "How fast is my weight going down?"),

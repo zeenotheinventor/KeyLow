@@ -45,6 +45,7 @@ import {
   isRecord,
   loggedItems,
   loggedRows,
+  madeNoModelCall,
   noActionRowsInTurn,
   oneRowPerToolPerMessage,
   noQuestionsAsked,
@@ -430,6 +431,7 @@ export function writeCasesOf(anchorDate: string): readonly EvalCase[] {
           "two ids",
         ),
         actionRows("delete_entry", 1, [2]),
+        madeNoModelCall(2),
         entriesOn(deleteDays[1], 0),
       ],
     ),
@@ -468,6 +470,7 @@ export function writeCasesOf(anchorDate: string): readonly EvalCase[] {
         noActionRowsInTurn(1),
         copyCalled(copyDays[1]),
         actionRows("copy_day", 1, [2]),
+        madeNoModelCall(2),
         entriesOn(copyDays[1], dayCount + 1),
       ],
     ),
@@ -530,18 +533,25 @@ export function writeCasesOf(anchorDate: string): readonly EvalCase[] {
         recipeIs("Scratch oat bowl", false, 1),
       ],
     ),
+    // The fourth message proves the next request is accepted after a press, whose stored call has no thinking
+    // block (KEY-840). It is graded by its ending only: a reply that names the archived recipe is not a fair
+    // failure, because the model may say what it archived.
     make(
       "write-archive-a-recipe-after-a-yes",
       [
         makeRecipe("Scratch oat pot"),
         "Archive my Scratch oat pot recipe.",
         confirmArchiveButtons().confirmLabel,
+        "What recipes do I have?",
       ],
       [
         actionRows("create_recipe", 1, [0]),
         turnEnded(1, "confirm"),
         noActionRowsInTurn(1),
         actionRows("archive_recipe", 1, [2]),
+        madeNoModelCall(2),
+        noActionRowsInTurn(3),
+        turnEnded(3, "complete"),
         recipeIs("Scratch oat pot", true, 1),
       ],
     ),
@@ -617,6 +627,7 @@ export function writeCasesOf(anchorDate: string): readonly EvalCase[] {
       ["Set my calories to 2,000.", changeCalories.confirmLabel],
       [
         turnEnded(0, "confirm"),
+        madeNoModelCall(1),
         noActionRowsInTurn(0),
         calledWith(
           "update_targets",
@@ -654,6 +665,7 @@ export function writeCasesOf(anchorDate: string): readonly EvalCase[] {
       ],
       [
         turnEnded(0, "confirm"),
+        madeNoModelCall(1),
         noActionRowsInTurn(0),
         calledWith(
           "update_targets",
@@ -743,7 +755,12 @@ export function writeCasesOf(anchorDate: string): readonly EvalCase[] {
         "Archive my Scratch oat cup recipe.",
         confirmArchiveButtons().confirmLabel,
       ],
-      [actionRows("archive_recipe", 1), undoArchive.undone, recipeIs("Scratch oat cup", false, 1)],
+      [
+        actionRows("archive_recipe", 1),
+        madeNoModelCall(2),
+        undoArchive.undone,
+        recipeIs("Scratch oat cup", false, 1),
+      ],
       { afterTurn: undoArchive.afterTurn },
     ),
     make(

@@ -10,6 +10,7 @@
 // - A tool call is made once. A thrown `McpClientError` ends the turn, so a write is never repeated.
 // - Each tool result is stored the moment its call returns, as its own user row. `toApiMessages` joins the
 //   rows of one role, so the model still reads one user message holding all the results of a response.
+// - The press of a confirm button makes no model call: `runConfirmedCall` makes the stored call itself (KEY-840).
 // - Nothing here logs or reports message text, a tool argument or a result.
 import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
@@ -25,6 +26,7 @@ import {
 } from "../_shared/core.ts";
 import { allowedToolsFor } from "./allowlist.ts";
 import { COMPACTION_TIMEOUT_MILLISECONDS, planCompaction, promptTokensOf } from "./compact.ts";
+import { confirmedCallOf } from "./confirmedCall.ts";
 import { confirmWordsFor } from "./confirmWords.ts";
 import {
   buildTurnRequest,
@@ -50,7 +52,7 @@ import type { ReportError } from "../_shared/report.ts";
 import type { AllowlistTool } from "./allowlist.ts";
 import type { RunTurn, TurnContext } from "./runTurn.ts";
 import type { EventStream } from "./sse.ts";
-import type { FinalTurnStatus, TurnStore } from "./turnStore.ts";
+import type { FinalTurnStatus, PreviousTurn, StoredMessage, TurnStore } from "./turnStore.ts";
 import type { UsageToRecord } from "./usage.ts";
 
 // A turn with ten writes needs eleven model calls (one for each write and the answer), and the reads before
@@ -203,6 +205,10 @@ type Run = {
   limitCode: LimitCode | null;
   dependencies: TurnDependencies;
   counts: { modelCalls: number; toolCalls: number };
+  // Writes that landed this turn: the answers that hold an action (a write that changed nothing holds none).
+  landedWrites: number;
+  // The code of the last tool error the loop read, so a press that wrote nothing can tell a refusal from a fault.
+  lastErrorCode: string | null;
   // The prompt of the last model call that answered, which is what the next request's size will start from.
   lastPromptTokens: number | null;
   unparseableInputRetries: number;
@@ -273,6 +279,9 @@ function distinctLine(values: readonly (string | null)[]): string | null {
 }
 
 const nonBlank = (text: string): boolean => text.trim() !== "";
+
+// What a call needs to run: the model's `tool_use` block, or the one the loop makes after a confirm button.
+type CalledTool = Pick<Anthropic.ToolUseBlock, "id" | "name" | "input">;
 
 const isToolUse = (block: Anthropic.ContentBlock): block is Anthropic.ToolUseBlock =>
   block.type === "tool_use";
@@ -443,7 +452,7 @@ type Display = { [key: string]: Json };
 
 async function finishCall(
   run: Run,
-  toolUse: Anthropic.ToolUseBlock,
+  toolUse: CalledTool,
   result: ToolCallResult,
   responseText: string,
 ): Promise<Ending | null> {
@@ -483,8 +492,12 @@ async function finishCall(
     return ending("confirm");
   }
   if (outcome.status === "error") {
+    run.lastErrorCode = outcome.code;
     await storeToolResult(run, block, null);
     return null;
+  }
+  if (outcome.actionId !== null) {
+    run.landedWrites += 1;
   }
   const structured = structuredSchema.safeParse(outcome.structured);
   if (!structured.success && outcome.structured !== null) {
@@ -551,7 +564,7 @@ function hostOf(input: Record<string, unknown>): string | null {
 async function runToolUse(
   run: Run,
   session: Session,
-  toolUse: Anthropic.ToolUseBlock,
+  toolUse: CalledTool,
   responseText: string,
 ): Promise<Ending | null> {
   const { id, name, input } = toolUse;
@@ -666,6 +679,69 @@ async function runModelCalls(run: Run, session: Session): Promise<Ending> {
   return failedEnding("model_call_limit");
 }
 
+// The executor's refusals that a person can cause on a press, and that the notice already answers.
+const PRESS_REFUSALS: ReadonlySet<string> = new Set([
+  "confirmation_invalid",
+  "write_limit_reached",
+]);
+
+// The press of a confirm button (KEY-840). The person has decided, so the loop makes the stored call itself and
+// no model is asked: a model that answered in prose would leave a press that does nothing, under words that
+// may say it is done. The executor stays the guard, because `runToolUse` sends the same call a model's would,
+// and `runWrite` checks the tool, the hash, the id, the person's stored words and the slot, and spends the
+// confirmation once. The card is the answer. Anything else ends the turn with the failed-turn notice, so a
+// press never ends in a claim that something happened. No model call is made, so `lastPromptTokens` stays
+// null and no compaction is planned. Nothing here logs or reports the input.
+async function runConfirmedCall(
+  run: Run,
+  session: Session,
+  history: readonly StoredMessage[],
+  previousTurn: PreviousTurn,
+): Promise<Ending> {
+  const call = confirmedCallOf(history, previousTurn);
+  if (call === null) {
+    run.dependencies.report(
+      "assistant",
+      "internal_error",
+      new Error("a confirmed call cannot be found"),
+    );
+    return failedEnding("confirm_input_missing");
+  }
+  // Stored as an assistant row before it runs, so the history reads as a call the model made.
+  await storeAssistantContent(run, [toJson(call)]);
+  const finished = await runToolUse(run, session, call, "");
+  if (finished !== null) {
+    return finished;
+  }
+  if (run.pendingCards.length > 0) {
+    return ending("complete");
+  }
+  if (run.landedWrites > 0) {
+    // The write landed and the app cannot draw its card (a tool or a deploy that disagrees on the card). The
+    // failed-turn notice says nothing was changed, which would be untrue, and there are no words of the loop's
+    // own to put in its place. The turn ends complete with no card, and the report says what happened.
+    run.dependencies.report(
+      "assistant",
+      "internal_error",
+      new Error("a confirmed write landed without a card"),
+    );
+    return ending("complete", "confirm_written_no_card");
+  }
+  // An error, `not_found` and a write that changed nothing all end here. Only what is unexpected is reported: a
+  // call that never ran, or an error that is not a refusal the person can cause. `not_found` and a state already
+  // in place are answers and not errors, and a spent confirmation or the write limit is a refusal.
+  const refused = run.lastErrorCode !== null && PRESS_REFUSALS.has(run.lastErrorCode);
+  const benign = run.counts.toolCalls > 0 && (run.lastErrorCode === null || refused);
+  if (!benign) {
+    run.dependencies.report(
+      "assistant",
+      "internal_error",
+      new Error("a confirmed call wrote nothing"),
+    );
+  }
+  return failedEnding("confirm_nothing_written");
+}
+
 function bearerToken(request: Request): string | null {
   const header = request.headers.get("Authorization");
   return header === null ? null : header.replace(/^Bearer\s+/i, "");
@@ -709,16 +785,12 @@ async function takeTurn(run: Run): Promise<Ending> {
     );
     return failedEnding("not_configured");
   }
+  const pressedConfirm = isConfirmAnswer(context.text, previousTurn?.pendingConfirmLabel ?? null);
   const allowedTools = allowedToolsFor({
     text: context.text,
     // A confirmation adds its own tool only when the person's message is the button's words, so a
     // read-looking message after one no longer has the write at all.
-    pendingConfirmationTool: isConfirmAnswer(
-      context.text,
-      previousTurn?.pendingConfirmLabel ?? null,
-    )
-      ? (previousTurn?.pendingTool ?? null)
-      : null,
+    pendingConfirmationTool: pressedConfirm ? (previousTurn?.pendingTool ?? null) : null,
     tools: dependencies.availableTools,
   });
   const cachedTools = dependencies.toolListCache.read();
@@ -743,13 +815,18 @@ async function takeTurn(run: Run): Promise<Ending> {
         dependencies.toolListCache.write(listedTools);
       }
     }
-    const tools = toAnthropicTools(listedTools);
-    return await runModelCalls(run, {
+    const session: Session = {
       client,
       connection,
       allowedTools: new Set(allowedTools),
-      tools,
-    });
+      tools: toAnthropicTools(listedTools),
+    };
+    // The button's words, on a turn that ended asking for that confirmation, are the person's decision.
+    // Every other message, the cancel button and typed words included, is a model turn.
+    if (pressedConfirm && previousTurn?.status === "confirm") {
+      return await runConfirmedCall(run, session, history, previousTurn);
+    }
+    return await runModelCalls(run, session);
   } finally {
     await connection.close();
   }
@@ -835,6 +912,8 @@ export function createRunTurn(
       limitCode: null,
       dependencies,
       counts: { modelCalls: 0, toolCalls: 0 },
+      landedWrites: 0,
+      lastErrorCode: null,
       lastPromptTokens: null,
       unparseableInputRetries: 0,
       pendingCards: [],

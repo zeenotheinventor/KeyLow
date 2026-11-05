@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { fakeEnvironment } from "./fakeEnvironment.ts";
-import { readTool, turnResult, writeTool } from "./helpers.ts";
+import { fakeDatabase, readTool, turnResult, writeTool } from "./helpers.ts";
 import { rowDatabase } from "./rowDatabase.ts";
 import {
   actionRows,
@@ -16,6 +16,7 @@ import {
   loggedItems,
   loggedRows,
   loggedSomeOfTheItems,
+  madeNoModelCall,
   noGuessedAmounts,
   oneRowPerToolPerMessage,
   onlyFoodsOf,
@@ -230,6 +231,39 @@ describe("turnEnded", () => {
     );
     expect((await turnEnded(5, "confirm")({ turns, database })).reason).toBe(
       "turn 6 ended never, not confirm",
+    );
+  });
+});
+
+describe("madeNoModelCall", () => {
+  const turns = [turnResult({ status: "confirm" }), turnResult({ status: "complete" })];
+  const [asking, pressed] = turns;
+
+  it("should pass for a turn with no assistant_usage row, as the press of a button has", async () => {
+    const database = fakeDatabase({
+      usageByTurnId: { [asking?.turnId ?? ""]: { inputTokens: 9 } },
+    });
+
+    expect(await madeNoModelCall(1)({ turns, database })).toEqual({
+      passed: true,
+      reason: "turn 2 made no model call",
+    });
+  });
+
+  it("should fail, naming the turn, when the press made a model call", async () => {
+    const database = fakeDatabase({
+      usageByTurnId: { [pressed?.turnId ?? ""]: { inputTokens: 9, outputTokens: 3 } },
+    });
+
+    expect(await madeNoModelCall(1)({ turns, database })).toEqual({
+      passed: false,
+      reason: "turn 2 made a model call, and the press of a confirm button runs in code",
+    });
+  });
+
+  it("should fail for a turn that never happened", async () => {
+    expect((await madeNoModelCall(4)({ turns, database: fakeDatabase() })).reason).toBe(
+      "turn 5 never happened",
     );
   });
 });

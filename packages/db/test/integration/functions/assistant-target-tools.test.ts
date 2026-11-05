@@ -181,7 +181,7 @@ let keptProgramId: string | undefined;
 let changeEvents: AssistantStreamEvent[];
 let carol: TestUser;
 let carolProgramId = "";
-let noIdEvents: AssistantStreamEvent[];
+let noModelStepEvents: AssistantStreamEvent[];
 // What the person's targets and programme were when the asking turn had ended.
 let askedTargets: Awaited<ReturnType<typeof getMyTargets>>;
 let askedProgramId: string | undefined;
@@ -247,34 +247,17 @@ beforeAll(async () => {
   ).events;
   keptTargets = await getMyTargets(alice.client);
   keptProgramId = (await getMyProgramSummary(alice.client)).program?.id;
-  const confirmationId = await pendingConfirmationIdOf(asked.turnId);
-  changeEvents = (
-    await turn(
-      alice,
-      "Change target",
-      [
-        useTool("update_targets", { ...newTargets, confirmation_id: confirmationId }),
-        finish("Done."),
-      ],
-      asked,
-    )
-  ).events;
+  // The button's words run the write in code and the script holds no model step for them (KEY-840). A model
+  // that forgot the id, or answered in prose (live runs 42110720568 and 42115161699), can no longer stop it.
+  changeEvents = (await turn(alice, "Change target", [], asked)).events;
 
-  // The model forgets the id after the button is pressed (live run 42110720568). The button's words and the same
-  // input still run the write, once. Carol is another person, so her change does not touch Alice's.
+  // The same press for another person. Carol's change does not touch Alice's.
   carol = await newAssistantUser("assistant-target-tools");
   carolProgramId = await giveProgram(carol);
   const carolAsked = await turn(carol, "Set my calories to 2,000", [
     useTool("update_targets", newTargets, "Change your calorie target from 2,140 to 2,000 kcal?"),
   ]);
-  noIdEvents = (
-    await turn(
-      carol,
-      "Change target",
-      [useTool("update_targets", newTargets), finish("Done.")],
-      carolAsked,
-    )
-  ).events;
+  noModelStepEvents = (await turn(carol, "Change target", [], carolAsked)).events;
 }, 240_000);
 
 afterAll(async () => {
@@ -380,10 +363,10 @@ describe("a turn that answers Keep 2,140 while the model calls the tool with the
   });
 });
 
-describe("the turn that follows a yes when the model sends no confirmation id", () => {
+describe("the turn that follows a yes for another person, with no model step scripted", () => {
   it("streams the targets-changed card, once", () => {
-    expect(noIdEvents.filter((event) => event.type === "card")).toHaveLength(1);
-    expect(cardOf(noIdEvents)).toMatchObject({
+    expect(noModelStepEvents.filter((event) => event.type === "card")).toHaveLength(1);
+    expect(cardOf(noModelStepEvents)).toMatchObject({
       kind: "targets_changed",
       title: "Changed your calorie target to 2,000 kcal",
     });
@@ -401,6 +384,11 @@ describe("the turn that follows a yes when the model sends no confirmation id", 
 });
 
 describe("the turn that follows a yes", () => {
+  it("streams the card alone, with no reply under it", () => {
+    expect(changeEvents.map((event) => event.type)).toEqual(["turn", "card", "done"]);
+    expect(changeEvents.at(-1)).toEqual({ type: "done", outcome: "complete" });
+  });
+
   it("streams the board's targets-changed card", () => {
     expect(cardOf(changeEvents)).toMatchObject({
       kind: "targets_changed",
