@@ -38,18 +38,19 @@ The PNGs are rendered at device pixel ratio 2, so a mobile board is 1640 by 1688
 
 A board is `<screen>/<state>`, taken from the canvas file name. `food-search.results-with-off.dc.html` becomes `food-search/results-with-off.png` and `food-search/results-with-off.html`. The screens are:
 
-| Screen                                   | What it is                                                                    |
-| ---------------------------------------- | ----------------------------------------------------------------------------- |
-| [`food-search`](food-search/README.md)   | Mobile food search sheet. The board `idle` is the canvas file `Main.dc.html`. |
-| [`tab-shell`](tab-shell/README.md)       | Mobile tab bar, placeholders and the session cover.                           |
-| [`food-detail`](food-detail/README.md)   | Mobile food detail.                                                           |
-| [`food-form`](food-form/README.md)       | Mobile food form: new, copy and edit.                                         |
-| [`barcode-scan`](barcode-scan/README.md) | Mobile barcode scanner.                                                       |
-| [`auth`](auth/README.md)                 | Mobile sign in and sign up.                                                   |
-| [`web`](web/README.md)                   | Web login and app shell.                                                      |
-| [`web-foods`](web-foods/README.md)       | Web Foods page: search, barcode lookup, your foods.                           |
-| [`web-food`](web-food/README.md)         | Web food detail and food form.                                                |
-| [`widgets`](widgets/README.md)           | Phone widgets: `dashboard`, `quick-log`, `lock-screen`, `states`.             |
+| Screen                                         | What it is                                                                    |
+| ---------------------------------------------- | ----------------------------------------------------------------------------- |
+| [`food-search`](food-search/README.md)         | Mobile food search sheet. The board `idle` is the canvas file `Main.dc.html`. |
+| [`tab-shell`](tab-shell/README.md)             | Mobile tab bar, placeholders and the session cover.                           |
+| [`food-detail`](food-detail/README.md)         | Mobile food detail.                                                           |
+| [`food-form`](food-form/README.md)             | Mobile food form: new, copy and edit.                                         |
+| [`barcode-scan`](barcode-scan/README.md)       | Mobile barcode scanner.                                                       |
+| [`auth`](auth/README.md)                       | Mobile sign in and sign up.                                                   |
+| [`web`](web/README.md)                         | Web login and app shell.                                                      |
+| [`web-foods`](web-foods/README.md)             | Web Foods page: search, barcode lookup, your foods.                           |
+| [`web-food`](web-food/README.md)               | Web food detail and food form.                                                |
+| [`web-weight`](web-weight/proposals/README.md) | Web Weight page, weigh-in dialog and trend explainer (hand-drawn proposals).  |
+| [`widgets`](widgets/README.md)                 | Phone widgets: `dashboard`, `quick-log`, `lock-screen`, `states`.             |
 
 There are 115 M2 boards, plus the 4 widget boards, whose canvas is kept in `source-widgets/`. A state with `proposal` in its name (`history-proposal`, `quantity-proposal-m3`, `label-scan-proposal-m3`) is a labelled proposal for M3 and is not built in M2. The component files (`*Screen.dc.html`) hold the markup for a screen's states and are not boards. They stay in `source/project/`.
 
