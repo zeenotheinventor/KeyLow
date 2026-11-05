@@ -1,2 +1,2 @@
 export { TrainIconTile } from "./TrainIconTile";
-export type { TrainIconTileProps } from "./types";
+export type { TrainIconTileProps, TrainIconTileTone } from "./types";
