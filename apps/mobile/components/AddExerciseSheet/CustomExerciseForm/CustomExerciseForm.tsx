@@ -1,4 +1,4 @@
-import { useSaveExercise } from "@keylow/api-client";
+import { exerciseHitOf, useSaveExercise } from "@keylow/api-client";
 import {
   CUSTOM_EXERCISE,
   describeCustomExerciseIssue,
@@ -23,7 +23,6 @@ import {
 } from "../../ui";
 import { CustomExerciseMuscleRow } from "../CustomExerciseMuscleRow";
 import { MuscleChooser } from "../MuscleChooser";
-import { chosenExerciseOf } from "./chosenExerciseOf";
 
 import type { CustomExerciseFormProps, DraftMuscle } from "./types";
 import type { ExerciseDetail } from "@keylow/api-client";
@@ -119,7 +118,7 @@ export function CustomExerciseForm({
       return;
     }
     if (isMounted.current) {
-      onSaved(chosenExerciseOf(saved));
+      onSaved(exerciseHitOf(saved));
     }
   }
 

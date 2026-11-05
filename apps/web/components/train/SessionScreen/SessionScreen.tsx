@@ -19,6 +19,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useId, useState } from "react";
 
 import { AddExerciseDialog } from "../AddExerciseDialog";
+import { CustomExerciseDialog } from "../CustomExerciseDialog";
 import { FinishDialog } from "../FinishDialog";
 import { DiscardSessionDialog } from "./DiscardSessionDialog";
 import { SessionClock } from "./SessionClock";
@@ -59,6 +60,8 @@ export function SessionScreen() {
   const typeChange = useChangeSetType(notices);
   const [isDiscardOpen, setIsDiscardOpen] = useState(false);
   const [isPickerOpen, setIsPickerOpen] = useState(false);
+  // The words the New exercise dialog was opened with, or null while it is closed.
+  const [creatingName, setCreatingName] = useState<string | null>(null);
   // What the finish dialog was opened with, which it keeps while the saved session stops being the open one.
   const [finishing, setFinishing] = useState<FinishDetails | null>(null);
   // Held here, so Keep logging does not drop a note of up to 1,000 characters.
@@ -165,10 +168,25 @@ export function SessionScreen() {
         open={isPickerOpen}
         mode="session"
         onAddToSession={view.addExercise}
+        onCreate={setCreatingName}
         onClose={() => {
           setIsPickerOpen(false);
         }}
       />
+      {creatingName === null ? null : (
+        <CustomExerciseDialog
+          destination={{ kind: "session", dayName: view.header.dayName }}
+          initialName={creatingName}
+          onClose={() => {
+            setCreatingName(null);
+          }}
+          onSaved={(exercise) => {
+            view.addExercise(exercise);
+            setCreatingName(null);
+            setIsPickerOpen(false);
+          }}
+        />
+      )}
       {finishing === null ? null : (
         <FinishDialog
           details={finishing}

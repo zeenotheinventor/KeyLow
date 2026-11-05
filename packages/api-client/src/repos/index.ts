@@ -132,7 +132,7 @@ export {
   listTrainingGoalsHistory,
   saveTrainingGoals,
 } from "./trainingGoals";
-export { getExercise, searchExercises } from "./exercises";
+export { exerciseHitOf, getExercise, searchExercises } from "./exercises";
 export type { ExerciseDetail, ExerciseSearchHit, ExerciseSearchOptions } from "./exercises";
 export { listSuggestionLibrary } from "./suggestionLibrary";
 export type { SuggestionLibraryOptions } from "./suggestionLibrary";
