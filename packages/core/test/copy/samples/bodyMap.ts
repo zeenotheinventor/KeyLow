@@ -217,7 +217,7 @@ export const samples: Record<string, () => string[]> = {
   describeMuscleCount: () => [0, 1, 2].map(copy.describeMuscleCount),
   describeWebListCaption: () => [
     copy.describeWebListCaption({ scale: "heat", moreAtRest: 10 }),
-    copy.describeWebListCaption({ scale: "volume", notTrained: 7 }),
+    copy.describeWebListCaption({ scale: "volume", moreMaintaining: 3, notTrained: 7 }),
     copy.describeWebListCaption({ scale: "gap", moreOnPlan: 3, notInPlan: 7 }),
   ],
   describeVolumeListRow: () =>

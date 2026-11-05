@@ -214,6 +214,7 @@ export {
   useLastPerformance,
   useMuscleDetail,
   useMuscleList,
+  useMuscleScaleList,
   useMuscleState,
   useRoutineTrendSets,
   useSession,
@@ -287,6 +288,7 @@ export type {
   UseLastPerformanceOptions,
   UseMuscleDetailInput,
   UseMuscleListInput,
+  UseMuscleScaleListInput,
 } from "./hooks";
 export {
   getActiveRoutine,

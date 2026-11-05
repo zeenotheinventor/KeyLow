@@ -53,6 +53,13 @@ vi.mock("@keylow/api-client", async (importOriginal) => ({
     error: null,
     refetch: () => Promise.resolve(),
   }),
+  useMuscleScaleList: () => ({
+    data: undefined,
+    isPending: true,
+    isError: false,
+    error: null,
+    refetch: () => Promise.resolve(),
+  }),
 }));
 
 const render = (ui: ReactElement) => renderIn(ui, { wrapper: ToastProvider });

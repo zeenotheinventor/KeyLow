@@ -116,6 +116,8 @@ export { useDashboardBodyMap } from "./useDashboardBodyMap";
 export type { DashboardBodyMap, DashboardToday } from "./useDashboardBodyMap";
 export { useMuscleList } from "./useMuscleList";
 export type { UseMuscleListInput } from "./useMuscleList";
+export { useMuscleScaleList } from "./useMuscleScaleList";
+export type { UseMuscleScaleListInput } from "./useMuscleScaleList";
 export { useMuscleDetail } from "./useMuscleDetail";
 export type { UseMuscleDetailInput } from "./useMuscleDetail";
 
