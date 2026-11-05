@@ -1,4 +1,6 @@
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import { hydrateRoot } from "react-dom/client";
+import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Body3DCanvasProps } from "@/components/ui/Body3D/Body3DCanvas";
@@ -67,9 +69,9 @@ describe("Body3D", () => {
       values: {},
       dim: 1,
       unselectedOpacity: 1,
-      side: "front",
       selected: undefined,
     });
+    expect(lastCanvasProps().pose.yaw).toBe(0);
   });
 
   it("should hand the canvas the values, the scale, the selection and the side it was given", async () => {
@@ -93,8 +95,8 @@ describe("Body3D", () => {
       selected: "quads",
       dim: 0.3,
       unselectedOpacity: 0.5,
-      side: "back",
     });
+    expect(lastCanvasProps().pose.yaw).toBe(Math.PI);
   });
 
   it("should ease and turn over the standard 220 ms", async () => {
@@ -132,6 +134,24 @@ describe("Body3D", () => {
     lastCanvasProps().onFirstFrame?.();
 
     expect(onFirstFrame).toHaveBeenCalledTimes(1);
+  });
+
+  it("should hydrate the markup of a server that cannot draw, with no warning, and then draw", async () => {
+    // The server has no WebGL and the browser has, which is every page load.
+    vi.mocked(hasWebGL).mockReturnValue(false);
+    const container = document.createElement("div");
+    container.innerHTML = renderToString(<Body3D label={label} w={200} />);
+    document.body.append(container);
+    vi.mocked(hasWebGL).mockReturnValue(true);
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    act(() => {
+      hydrateRoot(container, <Body3D label={label} w={200} />);
+    });
+
+    expect(await screen.findByText("The canvas")).toBeTruthy();
+    expect(consoleError).not.toHaveBeenCalled();
+    container.remove();
   });
 
   describe("with no WebGL", () => {

@@ -79,6 +79,84 @@ function TurningBody(args: Body3DProps) {
 // A new side turns the body there by the shorter arc over 220 ms, or at once with reduced motion.
 export const Turning: Story = { render: (args) => <TurningBody {...args} /> };
 
+const LOG_LENGTH = 8;
+
+// A drag turns the body and it settles on Front or Back, a click taps, a 500 ms hold names the muscle under the pointer,
+// and a pinch on a touch screen or a trackpad pinch (ctrl and the wheel) zooms. A plain wheel scrolls the page. The
+// buttons stand in for the ones the screen draws, and the log shows what the body called.
+function InteractiveBody(args: Body3DProps) {
+  const [side, setSide] = useState<"front" | "back">("front");
+  const [resetCount, setResetCount] = useState(0);
+  const [zoomInCount, setZoomInCount] = useState(0);
+  const [zoomOutCount, setZoomOutCount] = useState(0);
+  const [log, setLog] = useState<string[]>([]);
+  const record = (entry: string) => {
+    setLog((previous) => [entry, ...previous].slice(0, LOG_LENGTH));
+  };
+  return (
+    <>
+      <Body3D
+        {...args}
+        side={side}
+        zoomInCount={zoomInCount}
+        zoomOutCount={zoomOutCount}
+        zoomResetCount={resetCount}
+        onLongPressMuscle={(muscle) => {
+          record(`Hold: ${muscle}`);
+        }}
+        onSideChange={(next) => {
+          setSide(next);
+          record(`Side: ${next}`);
+        }}
+        onTap={() => {
+          record("Tap");
+        }}
+        onZoomChange={(zoom) => {
+          record(`Zoom: ${zoom}`);
+        }}
+      />
+      <div className="flex gap-2">
+        <Button
+          variant="secondary"
+          onClick={() => {
+            setZoomOutCount(zoomOutCount + 1);
+          }}
+        >
+          Zoom out
+        </Button>
+        <Button
+          variant="secondary"
+          onClick={() => {
+            setZoomInCount(zoomInCount + 1);
+          }}
+        >
+          Zoom in
+        </Button>
+        <Button
+          variant="secondary"
+          onClick={() => {
+            setResetCount(resetCount + 1);
+          }}
+        >
+          Reset
+        </Button>
+      </div>
+      <ol aria-label="What the body called" className="h-48 w-full text-caption" role="log">
+        {log.map((entry, index) => (
+          <li key={`${entry}-${log.length - index}`}>{entry}</li>
+        ))}
+      </ol>
+    </>
+  );
+}
+
+// The stage is wider than the body, as the screen's is, so a drag starts anywhere on it. Drag to turn, click to tap, hold
+// the chest for half a second, pinch or ctrl and scroll to zoom, and Reset eases back (at once with reduced motion).
+export const Interactive: Story = {
+  args: { touchWidth: 360 },
+  render: (args) => <InteractiveBody {...args} />,
+};
+
 const realGetContext = Object.getOwnPropertyDescriptor(HTMLCanvasElement.prototype, "getContext");
 
 function RefusesWebGL({ children }: { children: ReactNode }) {
