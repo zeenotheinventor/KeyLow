@@ -1,4 +1,4 @@
-import { formatCalories } from "../format/numbers";
+import { formatCalories, formatGrams } from "../format/numbers";
 
 /*
  * The words of the assistant's targets confirmation and card, from the approved canvas "Ki-Lo assistant
@@ -62,3 +62,45 @@ export const TARGETS_CHANGED_NOTE_WITHOUT_UNDO =
 /** "Put back 2,140 kcal and your programme", the line under "Undone". */
 export const describeTargetsChangedUndone = (previousKcal: number | null): string =>
   `Put back ${previousKcal === null ? "your targets" : kcalText(previousKcal)} and your programme`;
+
+export type AdjustedMacros = {
+  protein_g: number | null;
+  carbs_g: number | null;
+  fat_g: number | null;
+};
+
+/**
+ * NOT ON THE CANVAS (KEY-824, a draft for Zee). The line the code adds after the model's question when only
+ * the calories change: "Your macros will be adjusted proportionally: protein 118 g, carbs 229 g, fat 68 g."
+ * A macro that is null is left out.
+ */
+export const describeMacrosAdjustedNote = ({
+  protein_g,
+  carbs_g,
+  fat_g,
+}: AdjustedMacros): string => {
+  const figures = [
+    ...(protein_g === null ? [] : [`protein ${formatGrams(protein_g)} g`]),
+    ...(carbs_g === null ? [] : [`carbs ${formatGrams(carbs_g)} g`]),
+    ...(fat_g === null ? [] : [`fat ${formatGrams(fat_g)} g`]),
+  ];
+  return `Your macros will be adjusted proportionally: ${figures.join(", ")}.`;
+};
+
+/** NOT ON THE CANVAS (KEY-824, a draft for Zee): the name of the card row that follows the calories change. */
+export const MACROS_ADJUSTED_ROW_NAME = "Macros adjusted proportionally";
+
+/**
+ * NOT ON THE CANVAS (KEY-824, a draft for Zee): the card row's figures, "P 118 g · C 229 g · F 68 g", in the
+ * style of `assistant-card · food-created`'s row. A macro that is null is left out.
+ */
+export const describeMacrosAdjustedAmount = ({
+  protein_g,
+  carbs_g,
+  fat_g,
+}: AdjustedMacros): string =>
+  [
+    ...(protein_g === null ? [] : [`P ${formatGrams(protein_g)} g`]),
+    ...(carbs_g === null ? [] : [`C ${formatGrams(carbs_g)} g`]),
+    ...(fat_g === null ? [] : [`F ${formatGrams(fat_g)} g`]),
+  ].join(" · ");

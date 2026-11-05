@@ -9,6 +9,7 @@ import {
   describeAssistantChange,
   withActionIds,
 } from "../../src/assistant";
+import { describeMacrosAdjustedNote } from "../../src/copy";
 
 const foodId = "00000000-0000-4000-8000-0000000000f1";
 const actionIds: [string, ...string[]] = ["00000000-0000-4000-8000-0000000000d1"];
@@ -98,6 +99,20 @@ describe("confirmTargetsQuestion", () => {
   });
 });
 
+describe("describeMacrosAdjustedNote", () => {
+  it("should name the three macros in whole grams", () => {
+    expect(describeMacrosAdjustedNote({ protein_g: 118, carbs_g: 229, fat_g: 68 })).toBe(
+      "Your macros will be adjusted proportionally: protein 118 g, carbs 229 g, fat 68 g.",
+    );
+  });
+
+  it("should leave out a macro that is null", () => {
+    expect(describeMacrosAdjustedNote({ protein_g: 118, carbs_g: null, fat_g: 68 })).toBe(
+      "Your macros will be adjusted proportionally: protein 118 g, fat 68 g.",
+    );
+  });
+});
+
 describe("buildTargetsChangedCard", () => {
   it("should build the board's card after a programme ended", () => {
     const draft = buildTargetsChangedCard({ kcal: 2000, previousKcal: 2140, endedProgramme: true });
@@ -145,6 +160,46 @@ describe("buildTargetsChangedCard", () => {
     );
     expect(draft.undo).toBe("unavailable");
     expect(draft.undoneSub).toBeNull();
+  });
+
+  it("should add no row when the macros were not adjusted", () => {
+    const draft = buildTargetsChangedCard({ kcal: 2000, previousKcal: 2140, endedProgramme: true });
+
+    expect(draft.rows).toEqual([]);
+  });
+
+  it("should add the adjusted macros as one row, drawn as food created draws its row", () => {
+    const draft = buildTargetsChangedCard({
+      kcal: 2000,
+      previousKcal: 2140,
+      endedProgramme: true,
+      adjustedMacros: { protein_g: 118, carbs_g: 229, fat_g: 68 },
+    });
+
+    expect(assistantCardSchema.parse(withActionIds(draft, actionIds)).rows).toEqual([
+      {
+        name: "Macros adjusted proportionally",
+        amountText: "P 118 g · C 229 g · F 68 g",
+        time: null,
+        kcalText: null,
+        match: null,
+        matchedFood: null,
+        estimate: false,
+      },
+    ]);
+    expect(draft.title).toBe("Changed your calorie target to 2,000 kcal");
+    expect(draft.sub).toBe("Was 2,140 kcal from your programme");
+  });
+
+  it("should leave a null macro out of the row", () => {
+    const draft = buildTargetsChangedCard({
+      kcal: 2000,
+      previousKcal: 1900,
+      endedProgramme: false,
+      adjustedMacros: { protein_g: 118, carbs_g: null, fat_g: 68 },
+    });
+
+    expect(draft.rows[0]?.amountText).toBe("P 118 g · F 68 g");
   });
 
   it("should have no sub when no target was set before", () => {
