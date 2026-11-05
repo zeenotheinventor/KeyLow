@@ -73,6 +73,11 @@ export const trainBackend: {
   savedRoutines: Row[];
   /** Holds every `save_routine` call until it settles, as a slow connection does. A test opens it by resolving it. */
   saveRoutineGate: Promise<void> | null;
+  /**
+   * A test file's own tables, asked before the fake's own: it answers a request, or null to leave it to them.
+   * The suggestion card's `suggestionBackend.tsx` serves the goal, the library and the accepted suggestions so.
+   */
+  extraRoute: ((request: Request, url: URL) => Response | Promise<Response> | null) | null;
 } = {
   timeZone: "Europe/London",
   routine: null,
@@ -106,6 +111,7 @@ export const trainBackend: {
   exerciseSaveCalls: 0,
   savedRoutines: [],
   saveRoutineGate: null,
+  extraRoute: null,
 };
 
 export function resetTrainBackend(): void {
@@ -141,6 +147,7 @@ export function resetTrainBackend(): void {
   trainBackend.exerciseSaveCalls = 0;
   trainBackend.savedRoutines = [];
   trainBackend.saveRoutineGate = null;
+  trainBackend.extraRoute = null;
   lastFinishedSession = null;
 }
 
@@ -383,6 +390,10 @@ async function respond(input: string | URL | Request, init?: RequestInit): Promi
   const request = new Request(input, init);
   const { pathname, searchParams } = new URL(request.url);
 
+  const extra = trainBackend.extraRoute?.(request, new URL(request.url)) ?? null;
+  if (extra !== null) {
+    return extra;
+  }
   if (pathname.endsWith("/profiles")) {
     return searchParams.get("select") === "weight_unit"
       ? answer(request, [{ weight_unit: trainBackend.weightUnit }])

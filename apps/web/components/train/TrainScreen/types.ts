@@ -1,3 +1,5 @@
+import type { SuggestionNotices } from "@keylow/api-client";
+
 /** What a start needs besides the moment: the routine day to follow, or null for a free session, and the profile's zone. */
 export type TrainSessionStart = {
   routineDayId: string | null;
@@ -23,4 +25,11 @@ export type TrainScreenProps = {
   onResume?: (() => void) | undefined;
   /** Opens a finished session, given its id: "View session" on the Today card. Drawn only when it is given. */
   onViewSession?: ((sessionId: string) => void) | undefined;
+  /**
+   * The toasts of the suggestion card: the add with Undo and the failure of an add or an Undo. The card is
+   * drawn only when it is given, since Add could not tell anyone without it.
+   */
+  suggestionNotices?: SuggestionNotices | undefined;
+  /** Called when Add is pressed, before the write, while focus is still on the button, for the toast's keyboard route. */
+  onSuggestionAddPress?: (() => void) | undefined;
 };
