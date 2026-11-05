@@ -10,4 +10,7 @@ export const storyStates = [
   "ErrorSentence",
   "ReviewSentence",
   "ReviewWithLinkBelow",
+  "ReviewCompactNoIcon",
+  "ReviewWithoutIcon",
+  "ReviewCompact",
 ];

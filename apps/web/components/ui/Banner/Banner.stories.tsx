@@ -121,3 +121,32 @@ export const ReviewSentence: Story = {
       "Deleting removes it from Ki-Lo only. It stays in Health Connect and won't come back on the next import.",
   },
 };
+
+// The trend explainer's settling banner: no icon, 12 on every side, the title in the primary ink, a bar under it.
+export const ReviewCompactNoIcon: Story = {
+  args: {
+    tone: "review",
+    size: "compact",
+    hasIcon: false,
+    title: "Your trend is settling: 3 of 7 weigh-ins",
+    children: <div className="mt-2 h-1.5 rounded-pill bg-surface-raised" />,
+  },
+};
+
+export const ReviewWithoutIcon: Story = {
+  args: {
+    tone: "review",
+    hasIcon: false,
+    title: "Needs review",
+    children: "Energy and carbohydrate are not given.",
+  },
+};
+
+export const ReviewCompact: Story = {
+  args: {
+    tone: "review",
+    size: "compact",
+    title: "Needs review",
+    children: "Energy and carbohydrate are not given.",
+  },
+};

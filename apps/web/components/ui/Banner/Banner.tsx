@@ -10,10 +10,13 @@ import { cn } from "@/lib/utils";
 // muted fill carries the colour, so the warning ink falls back to the primary text colour there.
 // Info is the quiet notice the boards draw: 12 all round, the sentence in body size and the action
 // in the accent ink, underlined, under the words. Review and error keep their older look.
+// The compact size is the trend explainer's: 12 all round whatever the tone, and its title in the label
+// style in the primary ink, as the board draws the settling banner.
 // Each class is written out whole so Tailwind can see it.
 const toneStyles = {
   info: {
     frame: "border-border bg-surface-raised p-3",
+    compactFrame: "border-border bg-surface-raised p-3",
     icon: "text-text-secondary",
     ink: "text-text-primary",
     sentence: "text-body text-text-secondary",
@@ -25,6 +28,7 @@ const toneStyles = {
   },
   review: {
     frame: "border-warning bg-warning-muted px-4 py-3",
+    compactFrame: "border-warning bg-warning-muted p-3",
     icon: "text-warning",
     ink: "text-warning light-theme:text-text-primary",
     sentence: "text-caption text-text-secondary",
@@ -38,6 +42,7 @@ const toneStyles = {
   },
   error: {
     frame: "border-danger bg-danger-muted px-4 py-3",
+    compactFrame: "border-danger bg-danger-muted p-3",
     icon: "text-danger",
     ink: "text-text-primary",
     sentence: "text-caption text-text-secondary",
@@ -82,6 +87,8 @@ export function Banner({
   tone = "info",
   title,
   sentence = false,
+  hasIcon = true,
+  size = "default",
   children,
   icon,
   role,
@@ -92,19 +99,22 @@ export function Banner({
   const style = toneStyles[tone];
   const Icon = icon ?? style.defaultIcon;
   const placement = actionPlacement ?? style.defaultActionPlacement;
+  const isCompact = size === "compact";
 
   return (
     <div
       role={role ?? style.defaultRole}
       className={cn(
         "flex items-start gap-3 rounded-medium border text-text-primary",
-        style.frame,
+        isCompact ? style.compactFrame : style.frame,
         className,
       )}
     >
-      <span className={cn("flex pt-0.5", style.icon)}>
-        <Icon aria-hidden className="size-5" strokeWidth={iconStroke} />
-      </span>
+      {hasIcon && (
+        <span className={cn("flex pt-0.5", style.icon)}>
+          <Icon aria-hidden className="size-5" strokeWidth={iconStroke} />
+        </span>
+      )}
       <span
         className={cn("flex min-w-0 flex-1 flex-col", title === undefined ? "gap-1" : "gap-0.5")}
       >
@@ -112,7 +122,13 @@ export function Banner({
           <span className={sentence ? style.sentence : "text-body"}>{children}</span>
         ) : (
           <>
-            <span className={cn("text-body-strong", style.ink)}>{title}</span>
+            <span
+              className={
+                isCompact ? "text-label-small text-text-primary" : cn("text-body-strong", style.ink)
+              }
+            >
+              {title}
+            </span>
             <span className={style.sentence}>{children}</span>
           </>
         )}

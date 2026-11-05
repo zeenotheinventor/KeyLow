@@ -3,6 +3,9 @@ import type * as React from "react";
 
 export type BannerTone = "info" | "review" | "error";
 
+/** The kit's notice, or the trend explainer's compact one: 12 on every side and a 14 over 20 title. */
+export type BannerSize = "default" | "compact";
+
 /** Where the action sits. Trailing is at the end of the row, below is a link under the message. Info goes below, review and error trailing, unless told. */
 export type BannerActionPlacement = "trailing" | "below";
 
@@ -27,6 +30,16 @@ export type BannerProps = {
    * Without it a title-less message is body size in the primary ink.
    */
   sentence?: boolean;
+  /**
+   * Whether to draw the leading icon. Defaults to true. The trend explainer's board draws its warning with no
+   * icon, and `icon` can only change one.
+   */
+  hasIcon?: boolean;
+  /**
+   * `default` is the kit's notice. `compact` is the trend explainer's: 12 on every side whatever the tone, the
+   * tone's border and fill kept, and the title in 14 over 20 semibold in the primary ink in both themes.
+   */
+  size?: BannerSize;
   /** The message, or the body under the title. */
   children: React.ReactNode;
   /** Replaces the tone's icon. */
