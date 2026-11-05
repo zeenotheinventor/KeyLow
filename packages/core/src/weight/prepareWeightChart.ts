@@ -1,15 +1,15 @@
-import { WEIGHT_SCREEN, describeChartDate } from "@keylow/core/copy";
-import { addCalendarDays } from "@keylow/core/dates";
-import { pointsInRange, rangeWindow, weighInsInRange } from "@keylow/core/weight";
+import { WEIGHT_SCREEN, describeChartDate } from "../copy/weight";
+import { addCalendarDays } from "../dates";
+import { pointsInRange, rangeWindow, weighInsInRange } from "./ranges";
 
 import type {
   WeightChartAxis,
   WeightChartData,
   WeightChartReading,
   WeightChartTrendPoint,
-} from "./types";
-import type { TrendPoint } from "@keylow/core/engine";
-import type { WeightRange } from "@keylow/core/weight";
+} from "./chartTypes";
+import type { TrendPoint } from "../engine";
+import type { WeightRange } from "./types";
 
 type PrepareWeightChartInput = {
   /** The trend over every day, as `computeTrend` made it. It is filtered here and never worked out again. */

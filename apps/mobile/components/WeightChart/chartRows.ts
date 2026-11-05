@@ -1,4 +1,4 @@
-import type { WeightChartData } from "./types";
+import type { WeightChartData } from "@keylow/core/weight";
 
 /** One row of the drawing. Each series has its own key, and a row holds a value for one or two of them. */
 export type WeightChartRow = {

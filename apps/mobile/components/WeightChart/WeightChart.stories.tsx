@@ -1,9 +1,9 @@
 import { describeChartName } from "@keylow/core/copy";
 import { addCalendarDays } from "@keylow/core/dates";
 import { computeTrend } from "@keylow/core/engine";
+import { prepareWeightChart } from "@keylow/core/weight";
 import { View } from "react-native";
 
-import { prepareWeightChart } from "./prepareWeightChart";
 import { WeightChart } from "./WeightChart";
 
 import type { WeightRange } from "@keylow/core/weight";
