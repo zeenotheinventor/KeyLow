@@ -2,8 +2,9 @@ import { formatClockTime, instantAtLocalTime, toLocalDate } from "@keylow/core/d
 import { z } from "zod";
 
 import { getDiaryDay } from "./diary";
-import { insertDiaryEntry, repoError } from "./diaryRows";
+import { insertDiaryEntry } from "./diaryRows";
 import { diaryInsertSchema } from "./diarySchemas";
+import { repoError } from "./repoError";
 
 import type { DiaryInsert, LogEntry } from "./diarySchemas";
 import type { Database } from "../database.types";
@@ -129,8 +130,7 @@ export async function copyDay(
   for (const copy of copies) {
     const inserted = await insertCopy(client, copy);
     if ("error" in inserted) {
-      // The database's error is not attached as the cause: its details can quote the failing row.
-      const failure = new Error(`Could not copy the day: ${inserted.error.message}`);
+      const failure = repoError("copy the day", inserted.error);
       const takenBack = await softDeleteEntries(client, entryIds).then(
         () => true,
         () => false,

@@ -102,7 +102,7 @@ describe("useFoodWithPortions", () => {
     });
     expect(result.current).toEqual({
       status: "error",
-      debugMessage: "Could not load the food: food unavailable",
+      debugMessage: "Could not load the food (XX000)",
     });
   });
 
@@ -117,7 +117,7 @@ describe("useFoodWithPortions", () => {
     });
     expect(result.current).toEqual({
       status: "error",
-      debugMessage: "Could not load the food's portions: portions down",
+      debugMessage: "Could not load the food's portions (XX000)",
     });
   });
 

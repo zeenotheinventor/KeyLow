@@ -185,7 +185,7 @@ describe("getDiaryDay", () => {
     );
 
     await expect(getDiaryDay(createTestClient(), "2026-10-15")).rejects.toThrow(
-      "Could not load the day's entries: unavailable",
+      "Could not load the day's entries (XX000)",
     );
   });
 
@@ -456,7 +456,7 @@ describe("getLogEntry", () => {
 
     await expect(
       getLogEntry(createTestClient(), "55555555-5555-4555-8555-555555555555"),
-    ).rejects.toThrow("Could not load the entry: unavailable");
+    ).rejects.toThrow("Could not load the entry (XX000)");
   });
 
   it("should leave the entry values out of the error when the row has an unexpected shape", async () => {

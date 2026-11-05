@@ -103,7 +103,7 @@ describe("listOwnFoods", () => {
     );
 
     await expect(listOwnFoods(createTestClient())).rejects.toThrow(
-      "Could not list your foods: Database unavailable",
+      "Could not list your foods (XX000)",
     );
   });
 

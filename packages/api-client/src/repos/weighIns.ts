@@ -1,10 +1,11 @@
 import { idOfRow, parseRow } from "./diaryRows";
+import { repoError } from "./repoError";
 import { weighInSchema } from "./weighInSchemas";
 
 import type { WeighIn } from "./weighInSchemas";
 import type { Database } from "../database.types";
 import type { HealthWeighInInsert, ManualWeighInInsert } from "@keylow/core/weight";
-import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 // A weigh-in is health data: the weight, the note and a Health sample id never reach a message. A
 // failure here names the action and the error code only, and the cause holds the code and nothing else,
@@ -16,9 +17,6 @@ const WEIGH_IN_COLUMNS = "id,measured_at,local_date,tz,weight_kg,source,note";
 const PAGE_SIZE = 1000;
 const IMPORT_CHUNK_SIZE = 500;
 const IMPORT_KEY = "user_id,source,external_id";
-
-const weighInRepoError = (action: string, cause: PostgrestError) =>
-  new Error(`Could not ${action} (${cause.code})`, { cause: { code: cause.code } });
 
 /** Thrown when an update finds no manual row to change: the row is imported, deleted or not the caller's. */
 export class WeighInNotEditableError extends Error {
@@ -47,7 +45,7 @@ export async function listWeighIns(client: SupabaseClient<Database>): Promise<We
       .range(offset, offset + PAGE_SIZE - 1);
 
     if (error) {
-      throw weighInRepoError("load your weigh-ins", error);
+      throw repoError("load your weigh-ins", error);
     }
 
     weighIns.push(
@@ -75,7 +73,7 @@ export async function addWeighIn(
     .single();
 
   if (error) {
-    throw weighInRepoError("add the weigh-in", error);
+    throw repoError("add the weigh-in", error);
   }
 
   return parseRow(weighInSchema, data, "read the new weigh-in", idOfRow);
@@ -115,7 +113,7 @@ export async function updateWeighIn(
     .maybeSingle();
 
   if (error) {
-    throw weighInRepoError("update the weigh-in", error);
+    throw repoError("update the weigh-in", error);
   }
   if (data === null) {
     throw new WeighInNotEditableError();
@@ -142,7 +140,7 @@ export async function softDeleteWeighIn(
     .maybeSingle();
 
   if (error) {
-    throw weighInRepoError("delete the weigh-in", error);
+    throw repoError("delete the weigh-in", error);
   }
   if (data === null) {
     throw new Error("Could not delete the weigh-in: it was not found");
@@ -177,7 +175,7 @@ export async function importWeighIns(
       .select("id");
 
     if (error) {
-      throw weighInRepoError("import the weigh-ins", error);
+      throw repoError("import the weigh-ins", error);
     }
     inserted += data.length;
   }

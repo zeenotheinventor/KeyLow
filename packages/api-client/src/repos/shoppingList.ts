@@ -4,10 +4,11 @@ import { shoppingItemSchema, shoppingItemWriteSchema } from "@keylow/core/shoppi
 import { z } from "zod";
 
 import { idOfRow, parseRow } from "./diaryRows";
+import { repoError } from "./repoError";
 
 import type { Database } from "../database.types";
 import type { ShoppingIngredient, ShoppingItem, ShoppingItemWrite } from "@keylow/core/shopping";
-import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 // A shopping list is health data (ADR 0003, Amendment 15), and the database's own message and details
 // can quote a failing row. So a failure here names the action and the error code only, and the cause
@@ -21,9 +22,6 @@ const ITEM_COLUMNS =
 // ingredient's amount and frozen food, with the food as it is now for the store cupboard rules.
 const SOURCE_COLUMNS =
   "id,name,servings,recipe_ingredients(position,food_id,quantity,unit,resolved_grams,snapshot,foods(name,food_group))";
-
-export const shoppingRepoError = (action: string, cause: PostgrestError) =>
-  new Error(`Could not ${action} (${cause.code})`, { cause: { code: cause.code } });
 
 const sourceIngredientSchema = z.object({
   position: z.number().int().nonnegative(),
@@ -81,7 +79,7 @@ export async function listShoppingItems(client: SupabaseClient<Database>): Promi
     .order("id", { ascending: true });
 
   if (error) {
-    throw shoppingRepoError("load your shopping list", error);
+    throw repoError("load your shopping list", error);
   }
 
   return data.map((row) => parseRow(shoppingItemSchema, row, "load your shopping list", idOfRow));
@@ -105,7 +103,7 @@ export async function getShoppingSources(
     .in("id", [...new Set(recipeIds)]);
 
   if (error) {
-    throw shoppingRepoError("load the recipes for your shopping list", error);
+    throw repoError("load the recipes for your shopping list", error);
   }
 
   const recipes = data.map((row) =>
@@ -136,7 +134,7 @@ export async function saveShoppingItems(
   const { error } = await client.rpc("save_shopping_items", { p_items: items });
 
   if (error) {
-    throw shoppingRepoError(action, error);
+    throw repoError(action, error);
   }
 }
 
@@ -163,7 +161,7 @@ export async function addShoppingItem(
     .single();
 
   if (error) {
-    throw shoppingRepoError(action, error);
+    throw repoError(action, error);
   }
 
   return parseRow(shoppingItemSchema, data, action, idOfRow);
@@ -185,7 +183,7 @@ export async function setShoppingItemChecked(
     .eq("id", id);
 
   if (error) {
-    throw shoppingRepoError(checked ? "tick the item" : "untick the item", error);
+    throw repoError(checked ? "tick the item" : "untick the item", error);
   }
 }
 
@@ -197,7 +195,7 @@ export async function deleteShoppingItem(
   const { error } = await client.from("shopping_list_items").delete().eq("id", id);
 
   if (error) {
-    throw shoppingRepoError("remove the item", error);
+    throw repoError("remove the item", error);
   }
 }
 
@@ -206,6 +204,6 @@ export async function clearTickedItems(client: SupabaseClient<Database>): Promis
   const { error } = await client.from("shopping_list_items").delete().not("checked_at", "is", null);
 
   if (error) {
-    throw shoppingRepoError("clear the ticked items", error);
+    throw repoError("clear the ticked items", error);
   }
 }

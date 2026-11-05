@@ -230,7 +230,7 @@ describe("useLogFood", () => {
       await result.current.log.mutateAsync(noon).catch(() => undefined);
     });
 
-    expect(result.current.log.error).toHaveProperty("cause.message", "unavailable");
+    expect(result.current.log.error).toHaveProperty("cause", { code: "XX000" });
     expect(queryClient.getQueryData(keys.diary.day(DAY))).toMatchObject({ entries: [] });
   });
 

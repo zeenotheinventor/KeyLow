@@ -143,7 +143,7 @@ describe("getFood", () => {
     expect(await getFood(createTestClient(), FOOD_ID)).toBeNull();
   });
 
-  it("should throw an error carrying the PostgREST error as its cause", async () => {
+  it("should throw an error whose cause is the database error code", async () => {
     server.use(
       http.get(`${REST_URL}/foods`, () => postgrestError(500, "XX000", "database unavailable")),
     );
@@ -151,7 +151,7 @@ describe("getFood", () => {
     const failure = await getFood(createTestClient(), FOOD_ID).catch((error: unknown) => error);
 
     expect(failure).toBeInstanceOf(Error);
-    expect(failure).toHaveProperty("cause.message", "database unavailable");
+    expect(failure).toHaveProperty("cause", { code: "XX000" });
   });
 
   it("should reject a row that does not match the food schema", async () => {
@@ -182,7 +182,7 @@ describe("listFoodPortions", () => {
     expect(request?.url.searchParams.get("order")).toBe("position.asc");
   });
 
-  it("should throw an error carrying the PostgREST error as its cause", async () => {
+  it("should throw an error whose cause is the database error code", async () => {
     server.use(
       http.get(`${REST_URL}/food_portions`, () =>
         postgrestError(500, "XX000", "database unavailable"),
@@ -193,7 +193,7 @@ describe("listFoodPortions", () => {
       (error: unknown) => error,
     );
 
-    expect(failure).toHaveProperty("cause.message", "database unavailable");
+    expect(failure).toHaveProperty("cause", { code: "XX000" });
   });
 });
 
@@ -382,7 +382,7 @@ describe("createFood", () => {
     expect(requestsTo("POST", "food_portions")).toEqual([]);
   });
 
-  it("should throw an error carrying the PostgREST error and skip the portions when the food insert fails", async () => {
+  it("should throw an error whose cause is the database error code and skip the portions when the food insert fails", async () => {
     server.use(
       http.post(`${REST_URL}/foods`, async ({ request }) => {
         await record(request);
@@ -483,7 +483,7 @@ describe("replaceFoodPortions", () => {
     expect(portions).toEqual([portionRow()]);
   });
 
-  it("should throw an error carrying the PostgREST error and skip the insert when the delete fails", async () => {
+  it("should throw an error whose cause is the database error code and skip the insert when the delete fails", async () => {
     server.use(
       http.delete(`${REST_URL}/food_portions`, () =>
         postgrestError(500, "XX000", "database unavailable"),
@@ -501,7 +501,7 @@ describe("replaceFoodPortions", () => {
       twoPortions,
     ).catch((error: unknown) => error);
 
-    expect(failure).toHaveProperty("cause.message", "database unavailable");
+    expect(failure).toHaveProperty("cause", { code: "XX000" });
     expect(failure).toHaveProperty("message", expect.stringContaining(FOOD_ID));
     expect(failure).not.toBeInstanceOf(FoodsPartialWriteError);
     expect(requestsTo("POST", "food_portions")).toEqual([]);
@@ -761,7 +761,7 @@ describe("updateFood", () => {
     expect(requestsTo("DELETE", "food_portions")).toEqual([]);
   });
 
-  it("should throw an error carrying the PostgREST error when the update fails", async () => {
+  it("should throw an error whose cause is the database error code when the update fails", async () => {
     server.use(
       http.patch(`${REST_URL}/foods`, () => postgrestError(500, "XX000", "database unavailable")),
     );
@@ -770,7 +770,7 @@ describe("updateFood", () => {
       (error: unknown) => error,
     );
 
-    expect(failure).toHaveProperty("cause.message", "database unavailable");
+    expect(failure).toHaveProperty("cause", { code: "XX000" });
   });
 });
 
@@ -828,7 +828,7 @@ describe("softDeleteFood", () => {
     );
   });
 
-  it("should throw with the database message and keep it as the cause when the request fails", async () => {
+  it("should throw with the action and the database error code, and keep the code as the cause, when the request fails", async () => {
     server.use(
       http.patch(`${REST_URL}/foods`, () => postgrestError(500, "XX000", "database unavailable")),
     );
@@ -837,7 +837,7 @@ describe("softDeleteFood", () => {
       (error: unknown) => error,
     );
 
-    expect(failure).toHaveProperty("message", "Could not delete the food: database unavailable");
-    expect(failure).toHaveProperty("cause");
+    expect(failure).toHaveProperty("message", "Could not delete the food (XX000)");
+    expect(failure).toHaveProperty("cause", { code: "XX000" });
   });
 });

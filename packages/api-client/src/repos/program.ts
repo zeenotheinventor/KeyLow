@@ -15,6 +15,7 @@ import {
 } from "@keylow/core/setup";
 import { z } from "zod";
 
+import { repoError } from "./repoError";
 import { invokeEdgeFunction } from "../edge";
 
 import type { SetupProgram } from "./setup";
@@ -24,7 +25,7 @@ import type {
   RunCheckinRecomputeResponse,
   TargetsBasis,
 } from "@keylow/core/schemas";
-import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 // The program, its expenditure estimates and its targets are health data. A failure names the action and
 // a code only: the database's own code, or one of ours for a row that is not what the table promises
@@ -140,11 +141,6 @@ export type ProgramSummary = {
 
 const snapshotKindSchema = z.enum(["start", "checkin"]);
 
-const readError = (action: string, code: string) =>
-  new Error(`Could not ${action} (${code})`, { cause: { code } });
-
-const databaseError = (action: string, cause: PostgrestError) => readError(action, cause.code);
-
 /** Parses a stored jsonb, and on failure names the code and nothing the value held. */
 function parseOrFail<Schema extends z.ZodType>(
   schema: Schema,
@@ -154,7 +150,7 @@ function parseOrFail<Schema extends z.ZodType>(
 ): z.output<Schema> {
   const result = schema.safeParse(value);
   if (!result.success) {
-    throw readError(action, code);
+    throw repoError(action, { code });
   }
   return result.data;
 }
@@ -188,12 +184,12 @@ function toSnapshot(row: SnapshotColumns, action: string): ExpenditureSnapshot {
   // The table's own check ties the two together: a start has no measurement and a check-in has one.
   if (kind === "start") {
     if (row.measurement !== null) {
-      throw readError(action, "invalid_row");
+      throw repoError(action, { code: "invalid_row" });
     }
     return { ...fields, kind, measurement: null };
   }
   if (row.measurement === null) {
-    throw readError(action, "invalid_row");
+    throw repoError(action, { code: "invalid_row" });
   }
   return {
     ...fields,
@@ -255,13 +251,13 @@ export async function getMyProgramSummary(
   ]);
 
   if (program.error) {
-    throw databaseError(action, program.error);
+    throw repoError(action, program.error);
   }
   if (snapshots.error) {
-    throw databaseError(action, snapshots.error);
+    throw repoError(action, snapshots.error);
   }
   if (targets.error) {
-    throw databaseError(action, targets.error);
+    throw repoError(action, targets.error);
   }
 
   if (program.data === null) {
@@ -310,7 +306,7 @@ export async function listMyExpenditureSnapshots(
     .order("as_of_date", { ascending: true });
 
   if (error) {
-    throw databaseError(action, error);
+    throw repoError(action, error);
   }
 
   return data.map((row) => toSnapshot(row, action));
@@ -344,10 +340,10 @@ export async function listMyTargetsHistory(
   ]);
 
   if (program.error) {
-    throw databaseError(action, program.error);
+    throw repoError(action, program.error);
   }
   if (targets.error) {
-    throw databaseError(action, targets.error);
+    throw repoError(action, targets.error);
   }
 
   const programIsActive = program.data !== null;
@@ -401,9 +397,6 @@ export async function recomputeMyTargets(
   return runCheckinRecomputeResponseSchema.parse(response);
 }
 
-const updateError = (cause: PostgrestError) =>
-  new Error(`Could not update your program (${cause.code})`, { cause: { code: cause.code } });
-
 /**
  * Edits the active program of `userId` in place and then recomputes the targets, so the new goal is in
  * force at once. `today` is the user's local date (`YYYY-MM-DD`), which the age rule needs.
@@ -443,7 +436,7 @@ export async function updateMyProgram(
 
   const profile = await client.from("profiles").select("birth_date").eq("id", userId).maybeSingle();
   if (profile.error) {
-    throw updateError(profile.error);
+    throw repoError("update your program", profile.error);
   }
   const birthDate = profile.data?.birth_date ?? null;
   // No birth date means no proof of age, so the age is taken as 0 and `goalsAllowed` decides from that.
@@ -468,7 +461,7 @@ export async function updateMyProgram(
     .select("id")
     .single();
   if (error) {
-    throw updateError(error);
+    throw repoError("update your program", error);
   }
 
   return recomputeMyTargets(client);
@@ -505,10 +498,10 @@ export async function reopenProgram(
     client.from("programs").select("id").is("ended_on", null).maybeSingle(),
   ]);
   if (latest.error) {
-    throw databaseError(action, latest.error);
+    throw repoError(action, latest.error);
   }
   if (active.error) {
-    throw databaseError(action, active.error);
+    throw repoError(action, active.error);
   }
   if (latest.data?.id !== programId || latest.data.ended_on === null || active.data !== null) {
     return false;
@@ -525,7 +518,7 @@ export async function reopenProgram(
     if (error.code === UNIQUE_VIOLATION) {
       return false;
     }
-    throw databaseError(action, error);
+    throw repoError(action, error);
   }
   return data.length === 1;
 }

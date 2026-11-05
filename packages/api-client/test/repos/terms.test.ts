@@ -68,13 +68,13 @@ describe("getMyTermsAcceptance", () => {
     expect(await getMyTermsAcceptance(createTestClient())).toBeNull();
   });
 
-  it("should throw with the database error as the cause when the request fails", async () => {
+  it("should throw with the database error code as the cause when the request fails", async () => {
     server.use(
       http.get(`${REST_URL}/profiles`, () => postgrestError(500, "XX000", "database unavailable")),
     );
 
     await expect(getMyTermsAcceptance(createTestClient())).rejects.toMatchObject({
-      message: "Could not load your terms acceptance: database unavailable",
+      message: "Could not load your terms acceptance (XX000)",
       cause: { code: "XX000" },
     });
   });
@@ -122,7 +122,7 @@ describe("acceptTerms", () => {
     { code: "22023", status: 400, reason: "the version is blank" },
     { code: "P0002", status: 404, reason: "the user has no profile row" },
   ])(
-    "should throw with the database error $code as the cause when $reason",
+    "should throw with the database error code $code as the cause when $reason",
     async ({ code, status }) => {
       server.use(
         http.post(`${REST_URL}/rpc/accept_terms`, () =>
@@ -134,7 +134,7 @@ describe("acceptTerms", () => {
       );
 
       await expect(acceptTerms(createTestClient(), "2026-10-15")).rejects.toMatchObject({
-        message: "Could not accept the terms: refused by the database",
+        message: `Could not accept the terms (${code})`,
         cause: { code },
       });
     },

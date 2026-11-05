@@ -1,11 +1,13 @@
 import { isValidTimeZone, toLocalDate } from "@keylow/core/dates";
 import { toDayOfWeekKcal } from "@keylow/core/engine";
 
+import { repoError } from "./repoError";
+
 import type { Database } from "../database.types";
 import type { ProgressTargets, ValidTargets } from "@keylow/core/diary";
 import type { DayOfWeekKcal } from "@keylow/core/engine";
 import type { WeightDisplayUnit } from "@keylow/core/weight";
-import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 // Targets are health data. The database's own message can quote a value (a refused number is written into
 // it), so a failure names the action and the error code only, and the cause holds the code and nothing else.
@@ -21,9 +23,6 @@ const ENGINE_TARGET_COLUMNS = "program_id,calories_kcal,protein_g,fat_g,carbs_g,
  */
 export type Targets = ProgressTargets &
   ({ source: "engine"; dowCaloriesKcal: DayOfWeekKcal } | { source: "manual" });
-
-const repoError = (action: string, cause: PostgrestError) =>
-  new Error(`Could not ${action} (${cause.code})`, { cause: { code: cause.code } });
 
 type TargetColumns = Pick<
   Database["public"]["Tables"]["profiles"]["Row"],

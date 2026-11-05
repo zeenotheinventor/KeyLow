@@ -1,5 +1,6 @@
 import { idOfRow, parseRow } from "./diaryRows";
-import { readSnapshot, trainingRepoError, trainingWeekBounds } from "./training";
+import { repoError } from "./repoError";
+import { readSnapshot, trainingWeekBounds } from "./training";
 import {
   HISTORY_SET_COLUMNS,
   SESSION_COLUMNS,
@@ -77,7 +78,7 @@ export async function listSessionsInWeek(
       .range(offset, offset + PAGE_SIZE - 1);
 
     if (error) {
-      throw trainingRepoError("load your history", error);
+      throw repoError("load your history", error);
     }
 
     sessions.push(...data.map(parseHistorySession));
@@ -116,7 +117,7 @@ export async function findPreviousSessionWeek(
     .limit(1);
 
   if (error) {
-    throw trainingRepoError("load your history", error);
+    throw repoError("load your history", error);
   }
 
   const newest = data[0]?.local_date;

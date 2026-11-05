@@ -1,6 +1,6 @@
 import type { DiaryInsert } from "./diarySchemas";
 import type { Database } from "../database.types";
-import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { z } from "zod";
 
 // The diary holds health data. Nothing in these helpers puts a value of an entry, a note or a total
@@ -39,9 +39,6 @@ export function insertDiaryEntry(client: SupabaseClient<Database>, entry: DiaryI
       return table.insert(entry);
   }
 }
-
-export const repoError = (action: string, cause: PostgrestError) =>
-  new Error(`Could not ${action}: ${cause.message}`, { cause });
 
 /**
  * Parses what the database returned, and on failure reports where the row is wrong. The message

@@ -72,7 +72,7 @@ describe("getFoodByBarcode", () => {
     );
 
     await expect(getFoodByBarcode(createTestClient(), VALID_BARCODE)).rejects.toThrow(
-      "Could not look up the food by barcode: Database unavailable",
+      "Could not look up the food by barcode (XX000)",
     );
   });
 

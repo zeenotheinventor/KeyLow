@@ -2,7 +2,8 @@ import { bestSetPerWeek } from "@keylow/core/training";
 import { z } from "zod";
 
 import { parseRow } from "./diaryRows";
-import { trainingRepoError, trainingWeekBounds } from "./training";
+import { repoError } from "./repoError";
+import { trainingWeekBounds } from "./training";
 import { TREND_SET_SELECT, trendSetRowSchema } from "./trainingSchemas";
 import { weekStartOf } from "../weekStartOf";
 
@@ -101,7 +102,7 @@ export async function listTrendSets(
       .range(offset, offset + PAGE_SIZE - 1);
 
     if (error) {
-      throw trainingRepoError("load your trend", error);
+      throw repoError("load your trend", error);
     }
 
     rangeRows.push(...data.map(parseTrendRow));
@@ -126,7 +127,7 @@ export async function listTrendSets(
       .limit(unseen.length * EARLIER_ROWS_PER_EXERCISE);
 
     if (error) {
-      throw trainingRepoError("load your trend", error);
+      throw repoError("load your trend", error);
     }
     if (data.length === 0) {
       break;
