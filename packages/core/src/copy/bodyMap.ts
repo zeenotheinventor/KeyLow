@@ -116,8 +116,21 @@ export const BODY_MAP = {
   sideSwitchDescription: "Turns the body to face front or back.",
   /** The hint under the 3D body: the board's whole line, one phrase for each gesture. */
   rotateHint: "Drag to turn · Pinch to zoom · Long-press a muscle for details",
-  /** The Reset button over the zoomed 3D body, which shows while it is zoomed. The name is for a screen reader, since the visible label is one word. */
-  zoom: { reset: "Reset", resetName: "Reset zoom" },
+  /** The hint under the web 3D body, which has a mouse: the board's whole line, with the plus and minus buttons in the zoom phrase. */
+  rotateHintWeb:
+    "Drag to turn · Pinch or use + and − to zoom · Press and hold a muscle for details",
+  /**
+   * The zoom controls of the 3D body. The Reset button shows over the body while it is zoomed, and its name is for a
+   * screen reader, since the visible label is one word. The web draws the plus and minus buttons for a mouse, named
+   * `in` and `out`, in a group named `groupName`.
+   */
+  zoom: {
+    reset: "Reset",
+    resetName: "Reset zoom",
+    in: "Zoom in",
+    out: "Zoom out",
+    groupName: "Zoom",
+  },
   /** Over the 2D figure while the 3D body loads, at the corner of the stage. It goes when the 3D body has drawn or has failed. */
   loading3d: "Loading 3D…",
   /** Added to the figure's name while the 3D body loads, as the loading board names it. */

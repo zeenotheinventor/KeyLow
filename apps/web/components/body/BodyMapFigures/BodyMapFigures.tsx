@@ -2,6 +2,8 @@ import { BODY_TAP_SLOP } from "@keylow/body-3d/touch";
 import { BODY_MAP, describeBodyFigureLabel } from "@keylow/core/copy";
 import { useRef } from "react";
 
+import { BodyStage } from "./BodyStage";
+
 import type { BodyMapFiguresProps } from "./types";
 import type { BodyMapView, MuscleId } from "@keylow/core/training";
 import type { MouseEvent } from "react";
@@ -34,6 +36,12 @@ const UNSELECTED_OPACITY = 0.4;
  * view's name over it and its caption under it. Both views show, so a click on them does nothing, a short click
  * on a muscle does nothing, and a hold or Enter on one calls `onLongPressMuscle` with the view of the figure it
  * was on. `selected` outlines its muscle on the figure of `selectedView` only.
+ *
+ * With `in3d` it is one body on a dark stage instead, turned to the side it names, as the 3D body map draws it: a drag
+ * turns the body, a click calls `onTap`, and a hold on a muscle calls `onLongPressMuscle`, which the 3D body picks
+ * through the skin. When 3D cannot be drawn the 2D figure of that side stays in the stage, where a click on it calls
+ * `onTap` too and a drag does not, and where no muscle is a button. It has no outgoing figures, because the 3D body
+ * eases its colours itself. `sideBySide` takes it over, since side by side in 3D is not drawn.
  */
 export function BodyMapFigures({
   scale,
@@ -46,6 +54,7 @@ export function BodyMapFigures({
   selected,
   selectedView,
   sideBySide,
+  in3d,
 }: BodyMapFiguresProps) {
   const pressedAt = useRef<{ x: number; y: number } | null>(null);
   const valuesOf = (layer: BodyMapView) => (layer === "projected" ? projectedValues : actualValues);
@@ -66,6 +75,29 @@ export function BodyMapFigures({
   const handleMusclePress = () => {
     onTap?.();
   };
+
+  if (in3d !== undefined && sideBySide === undefined) {
+    return (
+      <BodyStage
+        body={body}
+        label={describeBodyFigureLabel({ scale, view, side: in3d.side, hint: null })}
+        scale={scale}
+        selected={selected}
+        side={in3d.side}
+        unselectedOpacity={UNSELECTED_OPACITY}
+        values={valuesOf(view)}
+        {...(onLongPressMuscle === undefined
+          ? {}
+          : {
+              onLongPressMuscle: (muscle: MuscleId) => {
+                onLongPressMuscle(muscle, view);
+              },
+            })}
+        onSideChange={in3d.onSideChange}
+        onTap={onTap}
+      />
+    );
+  }
 
   if (sideBySide !== undefined) {
     return (

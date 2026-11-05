@@ -20,17 +20,16 @@ describe("readOnce", () => {
     expect(readModel()).toBe(readModel());
   });
 
-  it("should read again on the next ask after a read that failed", async () => {
-    const read = vi
-      .fn<() => Promise<string>>()
-      .mockRejectedValueOnce(new Error("offline"))
-      .mockResolvedValueOnce("model");
+  it("should remember a read that failed, so the next ask fails at once with the same error and does not read again", async () => {
+    const read = vi.fn<() => Promise<string>>().mockRejectedValue(new Error("offline"));
     const readModel = readOnce(read);
 
-    await expect(readModel()).rejects.toThrow("offline");
+    const first = readModel();
+    await expect(first).rejects.toThrow("offline");
 
-    await expect(readModel()).resolves.toBe("model");
-    expect(read).toHaveBeenCalledTimes(2);
+    expect(readModel()).toBe(first);
+    await expect(readModel()).rejects.toThrow("offline");
+    expect(read).toHaveBeenCalledTimes(1);
   });
 
   it("should not read again after a read that worked", async () => {
