@@ -1,4 +1,4 @@
-import { FOOD_FORM, describeNutritionHeading } from "@keylow/core/copy";
+import { FOOD_FORM, describeAmountUnitNote, describeNutritionHeading } from "@keylow/core/copy";
 import { REQUIRED_FOOD_NUTRIENTS, customFoodInputFrom } from "@keylow/core/foods";
 import { customFoodInputSchema } from "@keylow/core/schemas";
 import { vars } from "nativewind";
@@ -288,6 +288,9 @@ export function FoodForm({
             />
           ))}
           {errors["portions"] === undefined ? null : <FieldError>{errors["portions"]}</FieldError>}
+          <Text tone="muted" variant="caption">
+            {describeAmountUnitNote(values.basis)}
+          </Text>
           <Button className="-ml-4 self-start" icon="Plus" variant="ghost" onPress={addPortion}>
             {FOOD_FORM.addPortion}
           </Button>
