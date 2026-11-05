@@ -2,10 +2,11 @@
 
 import { MUSCLE_NAMES } from "@keylow/core/copy";
 import { BODY_ARTWORK, BODY_GLOW_FILTER, isMuscleId, readMuscleValue } from "@keylow/core/training";
-import { useId } from "react";
+import { useId, useRef } from "react";
 
 import {
   focusRingClasses,
+  HIT_AREA_STROKE_WIDTH,
   selectedOutlineClass,
   SELECTED_OUTLINE_WIDTH,
   separatorClass,
@@ -16,6 +17,7 @@ import {
 import { useMusclePointer } from "./useMusclePointer";
 
 import type { BodyFigureProps } from "./types";
+import type { MuscleId } from "@keylow/core/training";
 import type { KeyboardEvent, MouseEvent } from "react";
 
 import { cn } from "@/lib/utils";
@@ -45,7 +47,17 @@ export function BodyFigure({
   // One filter for each figure, so two figures on a page never share a name. The name is also kept to
   // letters and digits, which is all the SVG reference reads reliably.
   const glowName = `glow${useId().replace(/[^A-Za-z0-9]/g, "")}`;
-  const { figure, startHold } = useMusclePointer(onLongPressMuscle);
+  const muscleButtons = useRef(new Map<MuscleId, SVGElement>());
+  // A pointer does not focus a drawn muscle in every browser, so a hold focuses it before the details open.
+  // Focus then returns to it when they close.
+  const { figure, startHold } = useMusclePointer(
+    onLongPressMuscle === undefined
+      ? undefined
+      : (muscle) => {
+          muscleButtons.current.get(muscle)?.focus();
+          onLongPressMuscle(muscle);
+        },
+  );
   const artwork = BODY_ARTWORK[body][side];
   const hasHandler = onPressMuscle !== undefined || onLongPressMuscle !== undefined;
 
@@ -55,6 +67,21 @@ export function BodyFigure({
   const hasGlow = muscles.some((muscle) => muscle.isPeak);
   // The key that opens the details, when the screen has them, and otherwise presses the muscle.
   const pressWithKeyboard = onLongPressMuscle ?? onPressMuscle;
+
+  // What a pointer does on a muscle, on its drawing and on the invisible shape that widens it.
+  const pointerHandlersOf = (id: MuscleId) => ({
+    onClick: (event: MouseEvent) => {
+      event.stopPropagation();
+      onPressMuscle?.(id);
+    },
+    onContextMenu: (event: MouseEvent) => {
+      // A touch hold opens the browser's menu on some phones, and the hold is the details.
+      if (onLongPressMuscle !== undefined) {
+        event.preventDefault();
+      }
+    },
+    onPointerDown: startHold(id),
+  });
 
   return (
     <svg
@@ -94,6 +121,21 @@ export function BodyFigure({
       <g opacity={dim}>
         <path className={silhouetteClass} d={artwork.head} />
         <path className={silhouetteClass} d={artwork.outline} />
+        {hasHandler &&
+          muscles.map((muscle) => (
+            // Under every muscle, so it catches only the presses that no muscle's own drawing claims.
+            <path
+              key={`hit-${muscle.id}`}
+              aria-hidden
+              className="cursor-pointer fill-transparent stroke-transparent"
+              d={muscle.path}
+              data-testid={`hit-area-${muscle.id}`}
+              strokeLinejoin="round"
+              strokeWidth={HIT_AREA_STROKE_WIDTH}
+              vectorEffect="non-scaling-stroke"
+              {...pointerHandlersOf(muscle.id)}
+            />
+          ))}
         {muscles.map((muscle) => {
           const isSelected = muscle.id === selected;
           const appearance = {
@@ -117,16 +159,7 @@ export function BodyFigure({
               {...appearance}
               aria-label={`${MUSCLE_NAMES[muscle.id]}, ${muscle.valueName}`}
               className={cn(appearance.className, "cursor-pointer", focusRingClasses)}
-              onClick={(event: MouseEvent) => {
-                event.stopPropagation();
-                onPressMuscle?.(muscle.id);
-              }}
-              onContextMenu={(event: MouseEvent) => {
-                // A touch hold opens the browser's menu on some phones, and the hold is the details.
-                if (onLongPressMuscle !== undefined) {
-                  event.preventDefault();
-                }
-              }}
+              {...pointerHandlersOf(muscle.id)}
               onKeyDown={(event: KeyboardEvent) => {
                 if (event.key === "Enter" || event.key === " ") {
                   event.preventDefault();
@@ -136,7 +169,13 @@ export function BodyFigure({
                   }
                 }
               }}
-              onPointerDown={startHold(muscle.id)}
+              ref={(node) => {
+                if (node === null) {
+                  muscleButtons.current.delete(muscle.id);
+                } else {
+                  muscleButtons.current.set(muscle.id, node);
+                }
+              }}
               role="button"
               tabIndex={0}
             />

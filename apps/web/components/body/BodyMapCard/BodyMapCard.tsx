@@ -28,6 +28,8 @@ export function BodyMapCard({
   isToggleEnabled,
   onToggle,
   note,
+  onLongPressMuscle,
+  selectedMuscle,
 }: BodyMapCardProps) {
   const noteId = useId();
 
@@ -50,6 +52,8 @@ export function BodyMapCard({
             projectedValues={projectedValues}
             body={body}
             onTap={isToggleEnabled ? onToggle : undefined}
+            onLongPressMuscle={onLongPressMuscle}
+            selected={selectedMuscle}
           />
         </div>
         <Button

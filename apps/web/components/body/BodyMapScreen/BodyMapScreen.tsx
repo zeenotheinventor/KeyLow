@@ -20,7 +20,10 @@ import { BodyMapCard } from "../BodyMapCard";
 import { BodyMapLegend } from "../BodyMapLegend";
 import { BodyMapLoading } from "../BodyMapLoading";
 import { FigureSettingDialog } from "../FigureSettingDialog";
+import { MuscleSheet } from "../MuscleSheet";
 import { useBodyMapView } from "./useBodyMapView";
+
+import type { MuscleId } from "@keylow/core/training";
 
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
@@ -64,6 +67,7 @@ export function BodyMapScreen() {
   const { figure, isReady: isFigureReady, hasChosen, setFigure } = useBodyFigure();
   const [isFigureDialogOpen, setIsFigureDialogOpen] = useState(false);
   const [hasAskedFigure, setHasAskedFigure] = useState(false);
+  const [sheetMuscle, setSheetMuscle] = useState<MuscleId | null>(null);
   // The first visit asks once, as soon as the stored figure is known to be none (`hasChosen` is true until
   // the store is read, so false means read and unanswered). The dialog then stays open
   // through the choice, so the preview shows it, and the answer is only recorded when it closes. The state is
@@ -143,46 +147,60 @@ export function BodyMapScreen() {
           : null;
 
       return (
-        <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:gap-5">
-          <BodyMapCard
-            view={view}
-            viewLabel={viewLabel}
-            subLine={
-              shown.nothingLogged
-                ? describeNothingLogged(TRAINING_PARAMS_V2.heatWindowDays)
-                : subLine
-            }
-            actualValues={actualData.values}
-            projectedValues={projectedData.values}
-            body={figure}
-            toggleLabel={toggleLabel}
-            isToggleEnabled={projectedAvailable}
-            onToggle={() => {
-              setView(view === "projected" ? "actual" : "projected");
-            }}
-            note={note}
-          />
-          <div className="flex min-w-0 flex-1 flex-col gap-3 xl:gap-5">
-            {shown.nothingLogged ? (
-              <EmptyState
-                icon={Dumbbell}
-                title={BODY_MAP.emptyState.title}
-                body={BODY_MAP.emptyState.body}
-                size="section"
-                action={{
-                  label: BODY_MAP.emptyState.action,
-                  icon: Plus,
-                  variant: "primary",
-                  onClick: () => {
-                    startSession({ routineDayId: null, timeZone: zone });
-                  },
-                }}
-              />
-            ) : (
-              <BodyMapLegend />
-            )}
+        <>
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:gap-5">
+            <BodyMapCard
+              view={view}
+              viewLabel={viewLabel}
+              subLine={
+                shown.nothingLogged
+                  ? describeNothingLogged(TRAINING_PARAMS_V2.heatWindowDays)
+                  : subLine
+              }
+              actualValues={actualData.values}
+              projectedValues={projectedData.values}
+              body={figure}
+              toggleLabel={toggleLabel}
+              isToggleEnabled={projectedAvailable}
+              onToggle={() => {
+                setView(view === "projected" ? "actual" : "projected");
+              }}
+              note={note}
+              onLongPressMuscle={setSheetMuscle}
+              selectedMuscle={sheetMuscle ?? undefined}
+            />
+            <div className="flex min-w-0 flex-1 flex-col gap-3 xl:gap-5">
+              {shown.nothingLogged ? (
+                <EmptyState
+                  icon={Dumbbell}
+                  title={BODY_MAP.emptyState.title}
+                  body={BODY_MAP.emptyState.body}
+                  size="section"
+                  action={{
+                    label: BODY_MAP.emptyState.action,
+                    icon: Plus,
+                    variant: "primary",
+                    onClick: () => {
+                      startSession({ routineDayId: null, timeZone: zone });
+                    },
+                  }}
+                />
+              ) : (
+                <BodyMapLegend />
+              )}
+            </div>
           </div>
-        </div>
+          <MuscleSheet
+            muscle={sheetMuscle}
+            view={view}
+            weekStart={weekStart}
+            now={moment.now}
+            days={shown.days}
+            onClose={() => {
+              setSheetMuscle(null);
+            }}
+          />
+        </>
       );
     }
     if (actual.isError || projected.isError) {

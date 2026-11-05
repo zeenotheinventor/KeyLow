@@ -615,6 +615,27 @@ describe("BodyFigure", () => {
       expect(onPressMuscle).toHaveBeenCalledExactlyOnceWith("quads");
     });
 
+    it("should press on a click with no pointer down after a hold released outside the figure, as a screen reader sends it", () => {
+      const onPressMuscle = vi.fn();
+      const onLongPressMuscle = vi.fn();
+      renderFigure({ onPressMuscle, onLongPressMuscle });
+      const quads = muscleButton("quads", "Rested");
+
+      down(quads);
+      act(() => {
+        vi.advanceTimersByTime(500);
+      });
+      // The hold opened a sheet over the figure, so the pointer is lifted over the sheet.
+      up(document.body);
+      act(() => {
+        vi.advanceTimersByTime(10);
+      });
+      fireEvent.click(quads);
+
+      expect(onLongPressMuscle).toHaveBeenCalledOnce();
+      expect(onPressMuscle).toHaveBeenCalledExactlyOnceWith("quads");
+    });
+
     it("should not long press when the pointer leaves the figure", () => {
       const onLongPressMuscle = vi.fn();
       renderFigure({ onLongPressMuscle });
@@ -739,6 +760,63 @@ describe("BodyFigure", () => {
       fireEvent.click(quads);
 
       expect(onPressMuscle).toHaveBeenCalledExactlyOnceWith("quads");
+    });
+  });
+
+  describe("the wider shape under each muscle", () => {
+    // The shape is invisible and has no role, so it is found by its test id.
+    it("should press and hold the muscle when its wider shape is pressed", () => {
+      vi.useFakeTimers();
+      const onPressMuscle = vi.fn();
+      const onLongPressMuscle = vi.fn();
+      renderFigure({ onPressMuscle, onLongPressMuscle, w: 200 });
+      const hitArea = screen.getByTestId("hit-area-neck");
+
+      fireEvent.click(hitArea);
+      fireEvent.pointerDown(hitArea, { clientX: 50, clientY: 50, button: 0, isPrimary: true });
+      act(() => {
+        vi.advanceTimersByTime(500);
+      });
+
+      expect(onPressMuscle).toHaveBeenCalledExactlyOnceWith("neck");
+      expect(onLongPressMuscle).toHaveBeenCalledExactlyOnceWith("neck");
+    });
+
+    it("should be out of the tab order and the role tree", () => {
+      renderFigure({ onPressMuscle: noop });
+
+      expect(screen.getByTestId("hit-area-neck").getAttribute("aria-hidden")).toBe("true");
+      expect(screen.getAllByRole("button", { name: /^Neck, / })).toHaveLength(1);
+    });
+
+    it("should be a stroke in screen pixels, so it is the same size at every width the figure is drawn at", () => {
+      renderFigure({ onPressMuscle: noop, w: 140 });
+
+      const hitArea = screen.getByTestId("hit-area-neck");
+      expect(hitArea.getAttribute("vector-effect")).toBe("non-scaling-stroke");
+      expect(Number(hitArea.getAttribute("stroke-width"))).toBeGreaterThanOrEqual(20);
+    });
+
+    it("should come before every muscle, so a muscle's own drawing wins a press over a neighbour's shape", () => {
+      renderFigure({ onPressMuscle: noop });
+
+      const hitAreas = screen.getAllByTestId(/^hit-area-/);
+      const muscles = screen.getAllByRole("button");
+      expect(hitAreas).toHaveLength(muscles.length);
+      const lastHitArea = hitAreas.at(-1);
+      const firstMuscle = muscles[0];
+      if (lastHitArea === undefined || firstMuscle === undefined) {
+        throw new Error("The figure draws no muscles");
+      }
+      expect(
+        lastHitArea.compareDocumentPosition(firstMuscle) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    });
+
+    it("should be left out of a figure with no handler", () => {
+      renderFigure();
+
+      expect(screen.queryByTestId("hit-area-neck")).toBeNull();
     });
   });
 });

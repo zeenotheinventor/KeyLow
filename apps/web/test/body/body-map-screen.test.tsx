@@ -116,10 +116,15 @@ function show(actual: BodyMapRead, projected: BodyMapRead = actual) {
   reads.byView = { actual, projected };
 }
 
-const figure = (side: "front" | "back", view = "Actual") =>
-  screen.getByRole("img", { name: `Body map, ${view}, heat, ${side}` });
+// The shown view's figures are groups of muscle buttons and the other view's are plain images hidden from a
+// screen reader.
+const figure = (side: "front" | "back", view = "Actual") => {
+  const name = `Body map, ${view}, heat, ${side}`;
+  return screen.queryByRole("group", { name }) ?? screen.getByRole("img", { name, hidden: true });
+};
 const fillOf = (side: "front" | "back", path: string, view = "Actual") =>
-  figure(side, view).querySelector(`path[d="${path}"]`)?.getAttribute("class") ?? "";
+  figure(side, view).querySelector(`path[d="${path}"]:not([aria-hidden])`)?.getAttribute("class") ??
+  "";
 const toggle = () => screen.getByRole("button", { name: /^Show (projected|actual)$/ });
 const viewLabel = () =>
   within(screen.getByRole("region", { name: BODY_MAP.title })).getByRole("status");
@@ -201,12 +206,11 @@ describe("BodyMapScreen", () => {
       expect(screen.getAllByText(BODY_MAP.sideSwitch.back)).toHaveLength(2);
     });
 
-    it("should draw the figures as plain images, with no muscle buttons", () => {
+    it("should draw the shown figures as groups of muscle buttons", () => {
       render(<BodyMapScreen />);
 
-      expect(screen.queryAllByRole("button", { name: /, (rested|light|warm|hot)/i })).toHaveLength(
-        0,
-      );
+      expect(screen.getByRole("group", { name: "Body map, Actual, heat, front" })).toBeTruthy();
+      expect(screen.getByRole("group", { name: "Body map, Actual, heat, back" })).toBeTruthy();
     });
 
     it("should colour the legend swatches from the rested step up to the peak, in order", () => {
@@ -734,10 +738,7 @@ describe("BodyMapScreen", () => {
       render(<BodyMapScreen />);
 
       const actualLayer = figure("front", "Actual").parentElement;
-      const projectedLayer = screen.getByRole("img", {
-        name: "Body map, Projected, heat, front",
-        hidden: true,
-      }).parentElement;
+      const projectedLayer = figure("front", "Projected").parentElement;
       expect(actualLayer?.className).toContain("opacity-100");
       expect(projectedLayer?.className).toContain("opacity-0");
 
