@@ -214,6 +214,7 @@ export const samples: Record<string, () => string[]> = {
         ...(card.todayLine === null ? [] : [card.todayLine]),
       ];
     }),
+  describeMuscleCount: () => [0, 1, 2].map(copy.describeMuscleCount),
   describeWebListCaption: () => [
     copy.describeWebListCaption({ scale: "heat", moreAtRest: 10 }),
     copy.describeWebListCaption({ scale: "volume", notTrained: 7 }),

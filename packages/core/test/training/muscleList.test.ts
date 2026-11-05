@@ -5,7 +5,14 @@ import { z } from "zod";
 import { actualStateAt, THURSDAY_EVENING } from "./goldenWeekInputs";
 import { MUSCLE_GROUP_NAMES, MUSCLE_NAMES } from "../../src/copy";
 import { muscleIdSchema } from "../../src/schemas";
-import { MUSCLE_GROUPS, MUSCLE_IDS, muscleListGroups, MUSCLES } from "../../src/training";
+import {
+  filterMuscleListGroups,
+  MUSCLE_GROUPS,
+  MUSCLE_IDS,
+  muscleListGroups,
+  musclesAboveRest,
+  MUSCLES,
+} from "../../src/training";
 
 // A record keyed by the muscle enum must hold every muscle id.
 const heatStatesSchema = z.record(
@@ -154,5 +161,84 @@ describe("muscleListGroups, properties", () => {
         }
       }),
     );
+  });
+});
+
+describe("musclesAboveRest", () => {
+  const groups = muscleListGroups(actualStateAt(THURSDAY_EVENING), NOW);
+  const { rows, moreAtRest } = musclesAboveRest(groups);
+
+  it("should give the 12 muscles of the web board, hottest first", () => {
+    expect(rows.map(({ muscle }) => MUSCLE_NAMES[muscle])).toStrictEqual([
+      "Hamstrings",
+      "Quads",
+      "Glutes",
+      "Lats",
+      "Lower back",
+      "Calves",
+      "Mid traps",
+      "Biceps",
+      "Rear delts",
+      "Upper chest",
+      "Lower chest",
+      "Triceps",
+    ]);
+  });
+
+  it("should count the muscles it leaves out, which are at rest", () => {
+    expect(moreAtRest).toBe(10);
+    expect(rows.length + moreAtRest).toBe(MUSCLE_IDS.length);
+  });
+
+  it("should keep the order of the muscle list among muscles of the same heat", () => {
+    const fivePercent = rows.filter(({ heatPercent }) => heatPercent === 5);
+
+    expect(fivePercent.map(({ muscle }) => muscle)).toStrictEqual([
+      "chest_upper",
+      "chest_lower",
+      "triceps",
+    ]);
+  });
+
+  it("should give no rows when every muscle is at rest", () => {
+    const rested = groups.map(({ group, rows: groupRows }) => ({
+      group,
+      rows: groupRows.map((row) => ({ ...row, heatPercent: 0, heatStep: 0 })),
+    }));
+
+    expect(musclesAboveRest(rested)).toStrictEqual({ rows: [], moreAtRest: 22 });
+  });
+});
+
+describe("filterMuscleListGroups", () => {
+  const groups = muscleListGroups(actualStateAt(THURSDAY_EVENING), NOW);
+  const namesIn = (filtered: ReturnType<typeof filterMuscleListGroups>) =>
+    filtered.flatMap(({ rows }) => rows.map(({ muscle }) => MUSCLE_NAMES[muscle]));
+
+  it("should keep everything for an empty or blank query", () => {
+    expect(filterMuscleListGroups(groups, "")).toStrictEqual(groups);
+    expect(filterMuscleListGroups(groups, "   ")).toStrictEqual(groups);
+  });
+
+  it("should keep the muscles whose name holds the query, ignoring case and the spaces around it", () => {
+    expect(namesIn(filterMuscleListGroups(groups, " DELTS "))).toStrictEqual([
+      "Front delts",
+      "Side delts",
+      "Rear delts",
+    ]);
+  });
+
+  it("should find a capitalised name from a lowercase query", () => {
+    expect(namesIn(filterMuscleListGroups(groups, "ham"))).toStrictEqual(["Hamstrings"]);
+  });
+
+  it("should drop a group that has no muscle left", () => {
+    const filtered = filterMuscleListGroups(groups, "traps");
+
+    expect(filtered.map(({ group }) => group)).toStrictEqual(["back"]);
+  });
+
+  it("should give no groups when nothing matches", () => {
+    expect(filterMuscleListGroups(groups, "zzz")).toStrictEqual([]);
   });
 });

@@ -45,6 +45,14 @@ vi.mock("@keylow/api-client", async (importOriginal) => ({
     return details.byMuscle[muscle];
   },
   useActiveRoutine: () => ({ data: reads.routine }),
+  // The Muscles card has its own test file, so the list is never read here.
+  useMuscleList: () => ({
+    data: undefined,
+    isPending: true,
+    isError: false,
+    error: null,
+    refetch: () => Promise.resolve(),
+  }),
 }));
 
 const render = (ui: ReactElement) => renderIn(ui, { wrapper: ToastProvider });

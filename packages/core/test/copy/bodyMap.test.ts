@@ -15,6 +15,7 @@ import {
   describeHeatStep,
   describeGapNote,
   describeLegendCaption,
+  describeMuscleCount,
   describeMuscleListRow,
   describeNothingLogged,
   describePlannedSessions,
@@ -159,6 +160,8 @@ describe("the fixed words of the body map, as the boards draw them", () => {
       back: "Back",
       backToTrain: "Back to Train",
       muscleListButton: "Muscle list",
+      // The boards draw neither the search nor its empty line (KEY-770).
+      muscleSearch: { label: "Search muscles", noResults: "No muscle matches your search." },
       closeSheet: "Close",
       muscleDetailsAction: "Show details",
       sideBySideName: "Show side by side",
@@ -872,5 +875,16 @@ describe("describeZoomLevel", () => {
   it("should write a zoom that rounds to a whole one as that whole one", () => {
     expect(describeZoomLevel(1.96)).toBe("2×");
     expect(describeZoomLevel(1.04)).toBe("1×");
+  });
+});
+
+describe("describeMuscleCount", () => {
+  it.each([
+    [0, "No muscles"],
+    [1, "1 muscle"],
+    [2, "2 muscles"],
+    [22, "22 muscles"],
+  ])("should write %s as %s", (count, expected) => {
+    expect(describeMuscleCount(count)).toBe(expected);
   });
 });

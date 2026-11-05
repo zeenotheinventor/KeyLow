@@ -55,6 +55,14 @@ vi.mock("@keylow/api-client", async (importOriginal) => ({
     reads.asked.push({ view, scale });
     return reads.byView[view];
   },
+  // The Muscles card has its own test file, so the list is never read here.
+  useMuscleList: () => ({
+    data: undefined,
+    isPending: true,
+    isError: false,
+    error: null,
+    refetch: () => Promise.resolve(),
+  }),
 }));
 
 // The dashboard layout holds the toast provider the screen's failure toast needs.
