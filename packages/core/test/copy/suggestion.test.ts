@@ -693,6 +693,9 @@ describe("the fixed words", () => {
   it("should hold the card's, the detail's, the accepted card's and the no-goal card's", () => {
     expect(SUGGESTION_CARD).toStrictEqual({ startAction: "Start", dismissAction: "Not now" });
     expect(SUGGESTION_DETAIL.backLabel).toBe("Back to Train");
+    expect(SUGGESTION_DETAIL.offline).toBe(
+      "Adding to a day or starting a session needs a connection.",
+    );
     expect(SUGGESTION_ACCEPTED.undoAction).toBe("Undo");
     expect(SUGGESTION_FAILED).toStrictEqual({
       acceptFailed: "Not saved. Check your connection and try again.",

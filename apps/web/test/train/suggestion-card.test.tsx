@@ -116,14 +116,6 @@ describe("the suggestion card on the Train page, on the golden Wednesday at 12:0
       expect(card.compareDocumentPosition(week) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
       expect(card.compareDocumentPosition(bodyMap) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     });
-
-    it("should draw no link to the detail, since the card is not pressable yet", async () => {
-      renderRoute();
-
-      const card = await suggestionRegion();
-
-      expect(within(card).queryByRole("link")).toBeNull();
-    });
   });
 
   describe("Add", () => {
@@ -443,14 +435,14 @@ describe("the suggestion card on the Train page, on Thursday before Legs", () =>
     vi.useRealTimers();
   });
 
-  it("should offer the suggestion for today with no Add to press, since Start is another ticket's", async () => {
+  it("should offer the suggestion for today with Start in place of Add", async () => {
     renderRoute();
 
     const card = await screen.findByRole("region", { name: "Suggestion for today" });
 
     expect(within(card).getByText("Suggested for today")).toBeTruthy();
     expect(within(card).queryByRole("button", { name: /^Add to/ })).toBeNull();
-    expect(within(card).queryByRole("button", { name: /^Start/ })).toBeNull();
+    expect(within(card).getByRole("button", { name: /^Start/ })).toBeTruthy();
     expect(within(card).getByRole("button", { name: /^Not now/ })).toBeTruthy();
   });
 });

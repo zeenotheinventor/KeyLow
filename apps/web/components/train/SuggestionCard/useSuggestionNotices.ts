@@ -27,7 +27,8 @@ function focusTargetAfterAdd(): HTMLElement | null {
  * danger toast for a write that did not go through. The toast is the provider's, so it stays after the card
  * has changed. Nothing of the suggestion is passed on beyond core's sentence, which names no exercise.
  * `start` is the page's own Start (the one the Today card uses, so there is one start path), which the hook
- * calls for a suggestion for today once it is stored. This card draws no Start yet, so it is not called here.
+ * calls for a suggestion for today once it is stored. Start shows no Added toast, so it is not passed to
+ * `noteAddPress`.
  * `noteAddPress` is called when Add is pressed, while focus is still on the button: it reads whether the
  * press was the keyboard's, so the toast that follows takes focus to Undo and gives it back afterwards.
  */
