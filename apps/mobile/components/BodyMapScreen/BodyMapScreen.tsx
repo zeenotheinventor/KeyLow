@@ -10,7 +10,14 @@ import {
   scrubberDaysOf,
 } from "@keylow/core/copy";
 import { addCalendarDays, daysSinceMonday, toLocalDate } from "@keylow/core/dates";
-import { TRAINING_PARAMS_V2 } from "@keylow/core/training";
+import {
+  actualReadDateOf,
+  bodyMapViewOf,
+  heatDateOf,
+  plannedSessionsOf,
+  selectedDateOf,
+  TRAINING_PARAMS_V2,
+} from "@keylow/core/training";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { vars } from "nativewind";
 import { useState } from "react";
@@ -40,7 +47,7 @@ import {
   Skeleton,
 } from "../ui";
 
-import type { BodyMapScale, PlannedSession } from "@keylow/core/copy";
+import type { BodyMapScale } from "@keylow/core/copy";
 import type { BodyArtworkSide, BodyMapView, MuscleId } from "@keylow/core/training";
 
 const MINIMUM_BOTTOM_PADDING = 16;
@@ -142,17 +149,14 @@ export function BodyMapScreen() {
   const moment = { weekStart, now: nowIso, enabled: isReadEnabled };
   // Today is the current moment, so it is read with no day. Actual stops at today, so it is never asked for
   // a day after it, and the Projected reading does not follow the day picked in Actual's place.
-  const heatDate =
-    chosenDate !== null && chosenDate !== today && chosenDate >= weekStart && chosenDate <= weekEnd
-      ? chosenDate
-      : undefined;
+  const heatDate = heatDateOf(chosenDate, today, weekStart);
   // Side by side shows both views on any day of the week, so Actual is read at a day after today too.
   const isSideBySideAsked = wantsSideBySide && scale === "heat";
   const heatActual = useBodyMap({
     ...moment,
     scale: "heat",
     view: "actual",
-    at: heatDate !== undefined && (isSideBySideAsked || heatDate < today) ? heatDate : undefined,
+    at: actualReadDateOf(heatDate, today, isSideBySideAsked),
   });
   const heatProjected = useBodyMap({
     ...moment,
@@ -235,23 +239,15 @@ export function BodyMapScreen() {
   }
 
   // Gap has no Actual or Projected, so the view that is remembered only matters to Heat and Volume.
-  const view =
-    chosenView === "projected" && projected.data?.projectedAvailable === true
-      ? "projected"
-      : "actual";
+  const view = bodyMapViewOf(chosenView, projected.data?.projectedAvailable);
   // Side by side needs a plan to show next to what is logged.
   const isSideBySide = isSideBySideAsked && projected.data?.projectedAvailable === true;
-  // The day and view resolution here mirrors `MuscleListScreen`'s (apart from side by side, which the list never
-  // opens from), so a change to one needs the same change in the other.
   // The day shown: the one picked when the view shown can choose it, and otherwise today. This is the one
   // place the day is decided, and the figures, the line under the label, the nothing logged check, the
   // scrubber and the muscle sheet all follow it, and the view shown was read at it.
   const shownDays =
     (view === "projected" || isSideBySide ? projected.data : actual.data)?.days ?? [];
-  const selectedDate =
-    scale === "heat" && shownDays.some(({ date, selectable }) => date === heatDate && selectable)
-      ? (heatDate ?? today)
-      : today;
+  const selectedDate = scale === "heat" ? selectedDateOf(heatDate, shownDays, today) : today;
 
   function renderBody() {
     const { data: actualData } = actual;
@@ -262,9 +258,7 @@ export function BodyMapScreen() {
       const shown = view === "projected" || isSideBySide ? projectedData : actualData;
       const isSelectedToday = selectedDate === today;
       // A planned session counts from the day after today up to the day shown (ruling D).
-      const plannedSessions: PlannedSession[] = shown.days
-        .filter(({ date, status }) => status === "planned" && date > today && date <= selectedDate)
-        .map(({ date, plannedDayName }) => ({ localDate: date, routineDayName: plannedDayName }));
+      const plannedSessions = plannedSessionsOf(shown.days, today, selectedDate);
       function headerOf(headerView: BodyMapView, at: string) {
         return describeBodyMapHeader({
           scale,

@@ -7,6 +7,13 @@ import {
   describeBodyMapHeader,
 } from "@keylow/core/copy";
 import { addCalendarDays, daysSinceMonday, toLocalDate } from "@keylow/core/dates";
+import {
+  actualReadDateOf,
+  bodyMapViewOf,
+  heatDateOf,
+  plannedSessionsOf,
+  selectedDateOf,
+} from "@keylow/core/training";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { vars } from "nativewind";
 import { useState } from "react";
@@ -23,7 +30,6 @@ import { MuscleSheet, useEditRoutine } from "../MuscleSheet";
 import { Button, EmptyState, ErrorState, GroupedList, SheetHeader, Skeleton, Text } from "../ui";
 import { ViewLabel } from "../ViewLabel";
 
-import type { PlannedSession } from "@keylow/core/copy";
 import type { MuscleId } from "@keylow/core/training";
 
 const MINIMUM_BOTTOM_PADDING = 16;
@@ -60,34 +66,21 @@ export function MuscleListScreen() {
   const nowIso = now.toISOString();
   const moment = { weekStart, now: nowIso, enabled: isReadEnabled };
 
-  // The day and view resolution below mirrors `BodyMapScreen`'s (the day, the two heat reads and the view
-  // fallback), so a change to one needs the same change in the other.
   // The address carries any text, so only a day of this week is taken, and today is read as no day at all.
-  const weekDates = Array.from({ length: 7 }, (_, offset) => addCalendarDays(weekStart, offset));
-  const heatDate =
-    typeof dayParameter === "string" && dayParameter !== today && weekDates.includes(dayParameter)
-      ? dayParameter
-      : undefined;
+  const heatDate = heatDateOf(dayParameter, today, weekStart);
   // The map's own two reads at the same days, from the same cache. They hold the days of the week, the moment
   // shown and whether there is a routine, which the list's rows do not.
   const actual = useBodyMap({
     ...moment,
     scale: "heat",
     view: "actual",
-    at: heatDate !== undefined && heatDate < today ? heatDate : undefined,
+    at: actualReadDateOf(heatDate, today, false),
   });
   const projected = useBodyMap({ ...moment, scale: "heat", view: "projected", at: heatDate });
-  const view =
-    chosenView === "projected" && projected.data?.projectedAvailable === true
-      ? "projected"
-      : "actual";
+  const view = bodyMapViewOf(chosenView, projected.data?.projectedAvailable);
   const shown = view === "projected" ? projected : actual;
   const shownDays = shown.data?.days ?? [];
-  const selectedDate =
-    heatDate !== undefined &&
-    shownDays.some(({ date, selectable }) => date === heatDate && selectable)
-      ? heatDate
-      : today;
+  const selectedDate = selectedDateOf(heatDate, shownDays, today);
   const isSelectedToday = selectedDate === today;
   const list = useMuscleList({
     view,
@@ -120,9 +113,7 @@ export function MuscleListScreen() {
     ) {
       const shownData = view === "projected" ? projectedData : actualData;
       // A planned session counts from the day after today up to the day shown (ruling D).
-      const plannedSessions: PlannedSession[] = shownData.days
-        .filter(({ date, status }) => status === "planned" && date > today && date <= selectedDate)
-        .map(({ date, plannedDayName }) => ({ localDate: date, routineDayName: plannedDayName }));
+      const plannedSessions = plannedSessionsOf(shownData.days, today, selectedDate);
       const { viewLabel, subLine, toggleLabel } = describeBodyMapHeader({
         scale: "heat",
         view,

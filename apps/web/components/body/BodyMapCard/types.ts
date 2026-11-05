@@ -1,6 +1,13 @@
+import type { BodyMapSideBySide } from "@/components/body/BodyMapFigures";
 import type { BodyFigureValues } from "@/components/ui/BodyFigure";
 import type { BodyMapScale } from "@keylow/core/copy";
-import type { BodyArtworkFigure, BodyMapView, MuscleId } from "@keylow/core/training";
+import type {
+  BodyArtworkSide,
+  BodyArtworkFigure,
+  BodyMapView,
+  MuscleId,
+} from "@keylow/core/training";
+import type { ReactNode } from "react";
 
 export type BodyMapCardProps = {
   /** The scale the values are on. Gap has no Actual or Projected, so its label has no dashed dot. */
@@ -25,8 +32,22 @@ export type BodyMapCardProps = {
   onToggle: () => void;
   /** A line under the figures, or null for none: why the two views match, or why Projected is off. */
   note: string | null;
-  /** Called by a hold or Enter on a muscle, to open its details. */
-  onLongPressMuscle: (muscle: MuscleId) => void;
+  /** Called by a hold or Enter on a muscle, to open its details, with the view of the figure it was on. */
+  onLongPressMuscle: (muscle: MuscleId, view: BodyMapView) => void;
   /** The muscle whose details are open, marked on the figures. */
   selectedMuscle?: MuscleId | undefined;
+  /** The view whose figure `selectedMuscle` is marked on in the side by side layout. */
+  selectedView?: BodyMapView | undefined;
+  /**
+   * Draws the side by side layout: Actual and Projected together, one side of the body each, with the small
+   * Front and Back switch where the view label was. The toggle button is the screen's to leave out there,
+   * with a null label, and a click on the figures does nothing.
+   */
+  sideBySide?: (BodyMapSideBySide & { onSideChange: (side: BodyArtworkSide) => void }) | undefined;
+  /** Called by the Show side by side button. Left out, the card has no button, as on Volume and Gap. */
+  onToggleSideBySide?: (() => void) | undefined;
+  /** False disables the Show side by side button: with no routine there is no plan to show beside what is logged. Defaults to true. */
+  isSideBySideEnabled?: boolean | undefined;
+  /** The row under the card's content, such as the day scrubber. */
+  footer?: ReactNode;
 };

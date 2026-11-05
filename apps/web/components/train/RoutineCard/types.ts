@@ -1,4 +1,5 @@
 import type { ActiveRoutineInput } from "@keylow/core/copy";
+import type * as React from "react";
 
 /**
  * The active routine as the card reads it: its name, its days with their weekdays, the sets in a week
@@ -10,4 +11,6 @@ export type RoutineCardProps = ActiveRoutineInput & {
    * so a card that opens nothing is never described as a control.
    */
   onPress?: (() => void) | undefined;
+  /** The card's button, for a screen that hands focus to it once the routine becomes the active one. Set only when `onPress` is. */
+  ref?: React.Ref<HTMLButtonElement> | undefined;
 };

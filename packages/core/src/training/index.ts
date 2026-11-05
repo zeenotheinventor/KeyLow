@@ -190,6 +190,14 @@ export { readMuscleValue } from "./bodyFigureReading";
 export type { BodyFigureScale, BodyFigureTone, MuscleValueReading } from "./bodyFigureReading";
 export { bodyMapScaleOf } from "./bodyMapLink";
 export type { BodyMapLinkScale } from "./bodyMapLink";
+export {
+  actualReadDateOf,
+  bodyMapViewOf,
+  heatDateOf,
+  plannedSessionsOf,
+  selectedDateOf,
+} from "./bodyMapDay";
+export type { PlannedSessionSource } from "./bodyMapDay";
 export { dayMoments } from "./bodyMapMoments";
 export type { DayMoment, DayMoments, DayMomentsInput } from "./bodyMapMoments";
 

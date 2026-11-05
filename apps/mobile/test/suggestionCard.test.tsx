@@ -3,10 +3,11 @@ import { cleanup, render, screen, userEvent } from "@testing-library/react-nativ
 import { setUpTests } from "react-native-reanimated";
 
 import { SuggestionCard } from "../components/SuggestionCard";
+import { thursdayOffer } from "../components/SuggestionCard/storyStates";
 import { ThemeProvider } from "../lib/theme";
 import { installVirtualClock } from "./support/virtualClock";
 
-import type { SuggestionCardProps } from "../components/SuggestionCard";
+import type { SuggestionCardProps, SuggestionOfferState } from "../components/SuggestionCard";
 
 jest.mock("@react-native-async-storage/async-storage", () => ({
   __esModule: true,
@@ -15,31 +16,7 @@ jest.mock("@react-native-async-storage/async-storage", () => ({
 
 setUpTests();
 
-// The words are core's and are tested there. These are the words of the `suggestion · *` boards, given as the card is given them.
-const offerState: Extract<SuggestionCardProps["state"], { status: "offer" }> = {
-  status: "offer",
-  day: "2026-10-15",
-  isForToday: false,
-  isAccepting: false,
-  accept: undefined,
-  copy: {
-    cardName: "Suggestion for Thursday",
-    label: "Suggested for Thursday",
-    headline: "Legs, plus incline dumbbell press",
-    linkName: "Suggested for Thursday: Legs, plus incline dumbbell press. See why",
-    sentence: "Add 3 sets of incline dumbbell press to the end of Thursday's Legs.",
-    reasonsName: "Why Ki-Lo suggests this for Thursday",
-    reasons: [
-      { kind: "volume", text: "Upper chest: 4.8 sets in the last 7 days, target 12" },
-      { kind: "heat", text: "Upper chest is ready now: heat 13 %" },
-      { kind: "length", text: "Thursday goes from 16 to 19 sets, about 60 minutes" },
-    ],
-    primaryAction: "Add to Thursday",
-    primaryActionName: "Add to Thursday",
-    dismissAction: "Not now",
-    dismissActionName: "Not now for Thursday's suggestion",
-  },
-};
+const offerState: SuggestionOfferState = { ...thursdayOffer, accept: undefined };
 
 function renderCard(props: SuggestionCardProps) {
   return render(
@@ -72,6 +49,34 @@ describe("the suggestion card", () => {
       expect(screen.getByLabelText("Why Ki-Lo suggests this for Thursday")).toBeOnTheScreen();
       expect(screen.getAllByRole("listitem")).toHaveLength(3);
       expect(screen.getByText("Upper chest is ready now: heat 13 %")).toBeOnTheScreen();
+    });
+
+    it("should open the detail from the heading's link, named as core words it", async () => {
+      const onOpenDetail = jest.fn();
+      await renderCard({ state: offerState, onOpenDetail });
+
+      await userEvent.setup().press(
+        screen.getByRole("link", {
+          name: "Suggested for Thursday: Legs, plus incline dumbbell press. See why",
+        }),
+      );
+
+      expect(onOpenDetail).toHaveBeenCalledTimes(1);
+    });
+
+    it("should draw no link when it is given no handler to open the detail", async () => {
+      await renderCard({ state: offerState });
+
+      expect(screen.queryByRole("link")).toBeNull();
+    });
+
+    it("should draw no link when the offer holds no detail to open", async () => {
+      await renderCard({
+        state: { ...offerState, detail: undefined },
+        onOpenDetail: jest.fn(),
+      });
+
+      expect(screen.queryByRole("link")).toBeNull();
     });
 
     it("should call accept when Add to Thursday is pressed", async () => {

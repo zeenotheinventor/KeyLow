@@ -133,6 +133,9 @@ describe("the package index", () => {
     "useRoutines",
     "useSaveRoutine",
     "useSetActiveRoutine",
+    "useMakeRoutineActive",
+    "useArchiveRoutineWithUndo",
+    "useRestoreRoutine",
 
     "startSession",
     "finishSession",

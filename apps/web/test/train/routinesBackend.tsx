@@ -6,6 +6,8 @@ import { renderWithRouter } from "../ui/appRouter";
 
 import type { ReactElement } from "react";
 
+import { ToastProvider } from "@/components/ui/Toast";
+
 type Row = Record<string, unknown>;
 
 /** What the database holds of the routines and how it answers, which a test changes between renders. */
@@ -87,7 +89,7 @@ export function renderWithRoutines(ui: ReactElement) {
 
   return renderWithRouter(
     <KeyLowProvider client={client} queryClient={queryClient}>
-      {ui}
+      <ToastProvider>{ui}</ToastProvider>
     </KeyLowProvider>,
   );
 }

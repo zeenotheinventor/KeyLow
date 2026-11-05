@@ -166,7 +166,19 @@ describe("More page", () => {
       within(settings)
         .getAllByRole("listitem")
         .map((row) => row.textContent),
-    ).toEqual([expect.stringContaining("Appearance"), "About"]);
+    ).toEqual([
+      expect.stringContaining("Appearance"),
+      expect.stringContaining("Dashboard body map"),
+      "About",
+    ]);
+  });
+
+  it("should put the Dashboard body map control under Settings, between Appearance and About, on Heat", async () => {
+    await renderPage();
+
+    const settings = screen.getByRole("region", { name: "Settings" });
+    expect(within(settings).getByRole("radiogroup", { name: "Dashboard body map" })).toBeTruthy();
+    expect(within(settings).getByRole("radio", { name: "Heat" })).toHaveProperty("checked", true);
   });
 
   it("should show who is signed in under the Sign out button", async () => {
