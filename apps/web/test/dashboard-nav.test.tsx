@@ -67,6 +67,20 @@ describe("DashboardNav", () => {
     },
   );
 
+  it.each(["/body-map", "/body-map/anything"])(
+    "should mark Train as the current page, and only Train, on %s, as the body map opens from the Train page",
+    (path) => {
+      pathname.mockReturnValue(path);
+      render(<DashboardNav />);
+
+      const current = within(screen.getByRole("navigation", { name: "Main" })).getAllByRole(
+        "link",
+        { current: "page" },
+      );
+      expect(current.map((link) => link.textContent)).toEqual(["Train"]);
+    },
+  );
+
   it("should not mark Train current on a page whose address only begins like Train's", () => {
     pathname.mockReturnValue("/trainer");
     render(<DashboardNav />);
