@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { readLocalPreference, writeLocalPreference } from "@/lib/localPreference";
+import {
+  readLocalPreference,
+  readLocalPreferenceState,
+  writeLocalPreference,
+} from "@/lib/localPreference";
 
 const isColour = (stored: string): stored is "red" | "blue" =>
   stored === "red" || stored === "blue";
@@ -46,5 +50,34 @@ describe("localPreference", () => {
     expect(() => {
       writeLocalPreference("colour", "red");
     }).not.toThrow();
+  });
+
+  describe("readLocalPreferenceState", () => {
+    it("should be saved, with the value, when the guard accepts what is stored", () => {
+      window.localStorage.setItem("colour", "red");
+
+      expect(readLocalPreferenceState("colour", isColour)).toStrictEqual({
+        status: "saved",
+        value: "red",
+      });
+    });
+
+    it("should be empty when nothing is stored", () => {
+      expect(readLocalPreferenceState("colour", isColour)).toStrictEqual({ status: "empty" });
+    });
+
+    it("should be empty when the guard refuses what is stored", () => {
+      window.localStorage.setItem("colour", "green");
+
+      expect(readLocalPreferenceState("colour", isColour)).toStrictEqual({ status: "empty" });
+    });
+
+    it("should be unreadable, not empty, when storage is blocked", () => {
+      vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+        throw new DOMException("blocked", "SecurityError");
+      });
+
+      expect(readLocalPreferenceState("colour", isColour)).toStrictEqual({ status: "unreadable" });
+    });
   });
 });

@@ -112,4 +112,24 @@ describe("DashboardBodyMapCard", () => {
       expect(screen.getByText("Today: Legs").closest("[aria-hidden=true]")).not.toBeNull();
     });
   });
+  describe("the figure", () => {
+    it("should draw Male unless told otherwise", () => {
+      renderCard(goldenThursdayBodyMap);
+
+      expect(
+        figure("front").querySelector(`path[d="${BODY_ARTWORK.male.front.outline}"]`),
+      ).not.toBeNull();
+    });
+
+    it("should draw the figure it is given, front and back", () => {
+      render(<DashboardBodyMapCard bodyMap={goldenThursdayBodyMap} body="female" />);
+
+      expect(
+        figure("front").querySelector(`path[d="${BODY_ARTWORK.female.front.outline}"]`),
+      ).not.toBeNull();
+      expect(
+        figure("back").querySelector(`path[d="${BODY_ARTWORK.female.back.outline}"]`),
+      ).not.toBeNull();
+    });
+  });
 });

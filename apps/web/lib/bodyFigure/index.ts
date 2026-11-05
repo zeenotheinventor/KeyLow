@@ -1,0 +1,1 @@
+export { useBodyFigure } from "./useBodyFigure";

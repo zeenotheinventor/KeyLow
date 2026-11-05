@@ -180,6 +180,7 @@ export const BODY_MAP = {
     sheetTitle: "Figure",
     description: "This changes how the body is drawn. Nothing else changes.",
     options: { male: "Male", female: "Female" },
+    done: "Done",
   },
 } as const;
 
