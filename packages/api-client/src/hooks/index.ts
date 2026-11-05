@@ -148,6 +148,8 @@ export { describeFinishDetails } from "./describeFinishDetails";
 export type { FinishDetails } from "./describeFinishDetails";
 export { useSetLogging } from "./useSetLogging";
 export { useChangeSetType } from "./useChangeSetType";
+export { useEditSet } from "./useEditSet";
+export type { EditSet, EditSetOpening, EditSetOpeningState, SetChanges } from "./useEditSet";
 export { useRemoveSetWithUndo } from "./useRemoveSetWithUndo";
 export type { SetNotices } from "./useRemoveSetWithUndo";
 export { useAddedExercises } from "./useAddedExercises";

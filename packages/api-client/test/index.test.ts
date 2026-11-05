@@ -139,6 +139,7 @@ describe("the package index", () => {
     "useStartSession",
     "useFinishSession",
     "useDeleteSession",
+    "useEditSet",
 
     "addSet",
     "updateSet",
