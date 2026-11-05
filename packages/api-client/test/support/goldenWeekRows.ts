@@ -64,6 +64,8 @@ export const goldenRoutine = {
   id: ROUTINE_ID,
   name: goldenWeek.routine.name,
   activated_at: null,
+  is_active: true,
+  is_archived: false,
   routine_days: goldenWeek.routine.days.map((day) => ({
     id: day.id,
     name: day.name,
@@ -76,6 +78,8 @@ export const goldenRoutine = {
         position: routineExercise.position,
         exercise_id: id,
         target_sets: routineExercise.targetSets,
+        rep_min: routineExercise.targetRepsMin,
+        rep_max: routineExercise.targetRepsMax,
         target_rir: routineExercise.targetRir,
         exercises: { id, name, equipment, mechanic, exercise_muscles: muscles },
       };

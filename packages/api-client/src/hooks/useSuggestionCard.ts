@@ -5,11 +5,15 @@ import {
   describeStoredAcceptedSuggestion,
   describeSuggestionAccepted,
   describeSuggestionCard,
+  describeSuggestionDetail,
 } from "@keylow/core/copy";
 import { addCalendarDays, toLocalDate } from "@keylow/core/dates";
+import { useRef } from "react";
 
 import { useAcceptedSuggestions } from "./useAcceptedSuggestions";
 import { useAcceptSuggestion } from "./useAcceptSuggestion";
+import { useActiveRoutine } from "./useActiveRoutine";
+import { useRoutine } from "./useRoutine";
 import { useSuggestion } from "./useSuggestion";
 import { useSuggestionLibrary } from "./useSuggestionLibrary";
 import { useTrainingGoals } from "./useTrainingGoals";
@@ -17,12 +21,15 @@ import { useUndoAcceptedSuggestion } from "./useUndoAcceptedSuggestion";
 import { weekStartOf } from "../weekStartOf";
 
 import type { PickDayOption, TrainHome } from "./trainHomeTypes";
+import type { RoutineDetail } from "../repos/routineSchemas";
 import type {
   NothingToSuggestCopy,
   SuggestedDay,
   SuggestionAcceptedCopy,
   SuggestionCardCopy,
   SuggestionContext,
+  SuggestionDetailCopy,
+  SuggestionRepRange,
 } from "@keylow/core/copy";
 import type { PlanAdjusted } from "@keylow/core/training";
 
@@ -60,6 +67,12 @@ export type SuggestionCardState =
   | {
       status: "offer";
       copy: SuggestionCardCopy;
+      /**
+       * The whole suggested session, worded for the detail: the same suggestion the card holds, never worked
+       * out a second time. Undefined until the routine's rep ranges are read, and when they cannot be, so a
+       * screen draws no way into the detail then and the offer still stands.
+       */
+      detail: SuggestionDetailCopy | undefined;
       /** The day the suggestion is for, which Not now is kept under. */
       day: string;
       isForToday: boolean;
@@ -79,6 +92,34 @@ type SuggestionTarget = {
 };
 
 const HIDDEN: SuggestionCardState = { status: "hidden" };
+
+/**
+ * What the detail needs of the routine that the suggestion does not carry: the rep range of each planned
+ * exercise by its routine exercise id, and the name of each exercise the routine holds by exercise id.
+ */
+function routineWordsOf(routine: RoutineDetail | null | undefined) {
+  const exercises = (routine?.days ?? []).flatMap((day) => day.exercises);
+  return {
+    plannedRepRanges: new Map<string, SuggestionRepRange>(
+      exercises.map(({ id, rep_min, rep_max }) => [id, { repMin: rep_min, repMax: rep_max }]),
+    ),
+    exerciseNames: new Map(exercises.map(({ exercise }) => [exercise.id, exercise.name])),
+  };
+}
+
+/** Whether the words have a rep range for every exercise kept from the plan and a name for every exercise. */
+function canWordDetail(
+  suggestion: SuggestedDay,
+  { plannedRepRanges, exerciseNames }: ReturnType<typeof routineWordsOf>,
+  libraryNames: ReadonlyMap<string, string>,
+): boolean {
+  return suggestion.exercises.every((exercise) =>
+    exercise.origin === "plan"
+      ? plannedRepRanges.has(exercise.routine_exercise_id) &&
+        exerciseNames.has(exercise.exercise_id)
+      : libraryNames.has(exercise.exercise_id),
+  );
+}
 
 /**
  * The day the card asks for, from the Today card: the next planned day on a rest day, today on a planned day,
@@ -164,8 +205,12 @@ export function useSuggestionCard({
   const goals = useTrainingGoals({ enabled: reads });
   const library = useSuggestionLibrary(goals.data?.equipment, { enabled: reads });
   const acceptedRead = useAcceptedSuggestions(weekStartOf(day), { enabled: reads });
+  const activeRoutine = useActiveRoutine({ enabled: reads });
+  const routineDetail = useRoutine(activeRoutine.data?.id, { enabled: reads });
   const acceptMutation = useAcceptSuggestion();
   const undoMutation = useUndoAcceptedSuggestion();
+  // Whether an add is on its way, so a second press joins it and does not tell the notices a second time.
+  const isAddingRef = useRef(false);
 
   if (target === null || !isOnline) {
     return HIDDEN;
@@ -218,6 +263,16 @@ export function useSuggestionCard({
     return HIDDEN;
   }
 
+  const routineWords = routineWordsOf(routineDetail.data);
+  const detail = canWordDetail(suggestion, routineWords, context.exerciseNames)
+    ? describeSuggestionDetail(suggestion, {
+        ...context,
+        // The library holds what could be added, so the planned exercises are named from the routine.
+        exerciseNames: new Map([...routineWords.exerciseNames, ...context.exerciseNames]),
+        plannedRepRanges: routineWords.plannedRepRanges,
+      })
+    : undefined;
+
   const isForToday = target.day === target.today;
   const undo = (id: string) => {
     undoMutation.mutateAsync(id).catch(() => {
@@ -225,6 +280,10 @@ export function useSuggestionCard({
     });
   };
   const accept = () => {
+    if (isAddingRef.current) {
+      return;
+    }
+    isAddingRef.current = true;
     acceptMutation
       .mutateAsync({
         suggestion,
@@ -244,12 +303,16 @@ export function useSuggestionCard({
         () => {
           notices.onFailure(SUGGESTION_FAILED.acceptFailed);
         },
-      );
+      )
+      .finally(() => {
+        isAddingRef.current = false;
+      });
   };
 
   return {
     status: "offer",
     copy: describeSuggestionCard(suggestion, context),
+    detail,
     day: target.day,
     isForToday,
     isAccepting: acceptMutation.isPending,

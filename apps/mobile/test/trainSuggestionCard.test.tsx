@@ -4,8 +4,8 @@ import { onlineManager } from "@tanstack/react-query";
 import { act, cleanup, render, screen, userEvent, waitFor } from "@testing-library/react-native";
 import { setUpTests } from "react-native-reanimated";
 
+import { thursdayOffer } from "../components/SuggestionCard/storyStates";
 import { TrainScreen } from "../components/TrainScreen";
-import { TrainSuggestionCard } from "../components/TrainScreen/TrainSuggestionCard";
 import { suggestionDismissedStorageKey } from "../lib/suggestionDismissed";
 import { ThemeProvider } from "../lib/theme";
 import { createDiaryQueryClient } from "./support/diaryBackend";
@@ -14,7 +14,7 @@ import { goldenRoutine, mondayPush, tuesdayPull } from "./support/trainGoldenWee
 import { installVirtualClock } from "./support/virtualClock";
 
 import type { TrainScreenProps } from "../components/TrainScreen";
-import type { SuggestionCardState, TrainHome, UseSuggestionCardInput } from "@keylow/api-client";
+import type { SuggestionCardState, UseSuggestionCardInput } from "@keylow/api-client";
 import type { QueryClient } from "@tanstack/react-query";
 
 const mockStored = new Map<string, string>();
@@ -55,26 +55,7 @@ jest.mock("../lib/useNow", () => ({ useNow: () => new Date("2026-10-14T11:00:00Z
 setUpTests();
 
 const accept = jest.fn();
-const offer: SuggestionCardState = {
-  status: "offer",
-  day: "2026-10-15",
-  isForToday: false,
-  isAccepting: false,
-  accept,
-  copy: {
-    cardName: "Suggestion for Thursday",
-    label: "Suggested for Thursday",
-    headline: "Legs, plus incline dumbbell press",
-    linkName: "Suggested for Thursday: Legs, plus incline dumbbell press. See why",
-    sentence: "Add 3 sets of incline dumbbell press to the end of Thursday's Legs.",
-    reasonsName: "Why Ki-Lo suggests this for Thursday",
-    reasons: [{ kind: "length", text: "Thursday goes from 16 to 19 sets, about 60 minutes" }],
-    primaryAction: "Add to Thursday",
-    primaryActionName: "Add to Thursday",
-    dismissAction: "Not now",
-    dismissActionName: "Not now for Thursday's suggestion",
-  },
-};
+const offer: SuggestionCardState = { ...thursdayOffer, accept };
 
 const notices = { onAccepted: jest.fn(), onFailure: jest.fn() };
 
@@ -90,68 +71,6 @@ async function renderTrain(props: TrainScreenProps = { suggestionNotices: notice
     </ThemeProvider>,
   );
 }
-
-const readyHome: Extract<TrainHome, { status: "ready" }> = {
-  status: "ready",
-  hasRoutine: true,
-  routineId: null,
-  hasLoggedSession: true,
-  today: null,
-  week: null,
-  routineDays: [],
-  timeZone: "Europe/London",
-  savedAt: new Date("2026-10-14T11:00:00Z"),
-};
-
-describe("what the card on the Train home gives the shared hook", () => {
-  beforeEach(() => {
-    mockCardInputs.length = 0;
-    mockReadsEnabled = true;
-    mockCardState = { status: "hidden" };
-  });
-
-  afterEach(async () => {
-    await cleanup();
-    await act(() => {
-      onlineManager.setOnline(true);
-    });
-  });
-
-  const renderCard = () =>
-    render(
-      <ThemeProvider fixedPreference="dark">
-        <TrainSuggestionCard home={readyHome} notices={notices} />
-      </ThemeProvider>,
-    );
-
-  it("should leave the reads off while the account has not accepted the Terms", async () => {
-    mockReadsEnabled = false;
-    await renderCard();
-
-    expect(mockCardInputs.at(-1)?.enabled).toBe(false);
-  });
-
-  it("should let the reads run once the Terms are accepted", async () => {
-    await renderCard();
-
-    expect(mockCardInputs.at(-1)?.enabled).toBe(true);
-  });
-
-  it("should tell the hook the phone is offline when it is", async () => {
-    await act(() => {
-      onlineManager.setOnline(false);
-    });
-    await renderCard();
-
-    expect(mockCardInputs.at(-1)?.isOnline).toBe(false);
-  });
-
-  it("should tell the hook the phone is online when it is", async () => {
-    await renderCard();
-
-    expect(mockCardInputs.at(-1)?.isOnline).toBe(true);
-  });
-});
 
 describe("the suggestion card on the Train home", () => {
   beforeEach(() => {
@@ -172,6 +91,37 @@ describe("the suggestion card on the Train home", () => {
     await cleanup();
     jest.useRealTimers();
     queryClient.clear();
+    await act(() => {
+      onlineManager.setOnline(true);
+    });
+  });
+
+  it("should leave the reads off while the account has not accepted the Terms", async () => {
+    mockReadsEnabled = false;
+    await renderTrain();
+
+    expect(mockCardInputs.at(-1)?.enabled).toBe(false);
+  });
+
+  it("should let the reads run once the Terms are accepted", async () => {
+    await renderTrain();
+
+    expect(mockCardInputs.at(-1)?.enabled).toBe(true);
+  });
+
+  it("should tell the hook the phone is offline when it is", async () => {
+    await act(() => {
+      onlineManager.setOnline(false);
+    });
+    await renderTrain();
+
+    expect(mockCardInputs.at(-1)?.isOnline).toBe(false);
+  });
+
+  it("should tell the hook the phone is online when it is", async () => {
+    await renderTrain();
+
+    expect(mockCardInputs.at(-1)?.isOnline).toBe(true);
   });
 
   it("should sit under the rest day card and above the body map, as the boards compose it", async () => {
@@ -193,11 +143,13 @@ describe("the suggestion card on the Train home", () => {
     await screen.findByRole("heading", { name: TRAIN_TODAY_CARD.restTitle });
 
     expect(screen.queryByLabelText("Suggestion for Thursday")).not.toBeOnTheScreen();
+    // Nothing is read either, since an offer with no toast to tell anyone could not be added to.
+    expect(mockCardInputs.at(-1)?.enabled).toBe(false);
   });
 
   it("should ask the shared hook for the home it is on and give it the notices", async () => {
     await renderTrain();
-    await screen.findByLabelText("Suggestion for Thursday");
+    await screen.findByRole("heading", { name: TRAIN_TODAY_CARD.restTitle });
 
     const asked = mockCardInputs.at(-1);
     expect(asked?.home.status).toBe("ready");
