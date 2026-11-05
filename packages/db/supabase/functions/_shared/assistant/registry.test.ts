@@ -199,7 +199,10 @@ Deno.test(
         nested: z.object({ n: z.number().nullable() }),
       }),
     };
-    const confirmed = { ...write("confirmed_tool"), needsConfirmation: () => true };
+    const confirmed = {
+      ...write("confirmed_tool"),
+      needsConfirmation: () => ({ question: "Do it?", confirmLabel: "Do it" }),
+    };
 
     assertEquals(strictBudgetOf([nullable]), {
       tools: 1,

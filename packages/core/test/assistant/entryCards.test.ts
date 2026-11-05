@@ -9,6 +9,7 @@ import {
   buildLoggedCard,
   buildUpdatedCard,
   confirmDeleteButtons,
+  confirmDeleteDayWord,
   confirmDeleteQuestion,
 } from "../../src/assistant";
 import { buildLogEntry, buildQuickEntry } from "../../src/diary";
@@ -262,6 +263,28 @@ describe("confirmDelete", () => {
 
     expect(question).toBe(
       "Delete 3 entries at 13:00 today? Chicken and rice, Greek yoghurt and apple.",
+    );
+  });
+});
+
+describe("confirmDeleteDayWord", () => {
+  const today = "2026-11-03";
+
+  it("should call the person's own today today", () => {
+    expect(confirmDeleteDayWord(["2026-11-03", "2026-11-03"], today)).toBe("today");
+  });
+
+  it("should call the day before it yesterday", () => {
+    expect(confirmDeleteDayWord(["2026-11-02"], today)).toBe("yesterday");
+  });
+
+  it("should name any other day by its short date", () => {
+    expect(confirmDeleteDayWord(["2026-10-27", "2026-10-27"], today)).toBe("on Tue 27 Oct");
+  });
+
+  it("should count the days when the entries are on several", () => {
+    expect(confirmDeleteDayWord(["2026-11-03", "2026-11-02", "2026-11-03"], today)).toBe(
+      "across 2 days",
     );
   });
 });

@@ -1,4 +1,4 @@
-import { assert, assertEquals, assertObjectMatch } from "@std/assert";
+import { assert, assertEquals, assertObjectMatch, assertStringIncludes } from "@std/assert";
 
 import { getMyTargets } from "../../repos.ts";
 import { executeTool } from "../executor.ts";
@@ -722,4 +722,29 @@ Deno.test("macros is a required nullable object in the schema the model sees", (
     "current_kcal",
     "confirmation_id",
   ]);
+});
+
+Deno.test(
+  "the question is the board's, and the label is its button, with the note after for a calories only change",
+  async () => {
+    const c = contexts();
+
+    const asked = await executeTool(c.asking, "update_targets", askedCaloriesOnly);
+    const need = await updateTargetsTool.needsConfirmation?.(askedCaloriesOnly, c.asking);
+
+    assert(asked.status === "needs_confirmation");
+    assertEquals(
+      asked.question,
+      "Change your calorie target from 2,140 to 2,000 kcal? This ends your programme and its weekly check-in. Today and later days use your own targets.",
+    );
+    assertEquals(asked.note, note);
+    assertEquals(
+      need !== false && need !== undefined ? need.confirmLabel : null,
+      confirmWordsFor("update_targets", askedCaloriesOnly)?.confirmLabel,
+    );
+  },
+);
+
+Deno.test("the description tells the model when they say no, do not call again", () => {
+  assertStringIncludes(updateTargetsTool.description, "When they say no, do not call again.");
 });

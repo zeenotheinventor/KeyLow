@@ -148,11 +148,8 @@ describe("the second and third questions", () => {
   it("should go on to the fourth question from the days", async () => {
     goalsBackend.row = storedGoalRow;
     renderGoalFlow(router, "/goal/3");
-    const next = await nextButton();
-    // The fourth question is not built yet, so the push is watched and the page stays on the days.
-    router.push.mockImplementation(() => undefined);
 
-    await userEvent.click(next);
+    await userEvent.click(await nextButton());
 
     expect(router.push).toHaveBeenCalledWith("/goal/4");
   });

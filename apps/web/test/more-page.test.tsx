@@ -12,9 +12,13 @@ const { getUser, signOut, themeCookie, useTargets } = vi.hoisted(() => ({
   useTargets: vi.fn<() => { data: { kcal: number | null } | undefined }>(),
 }));
 
+// The Goal row reads the goal and the time zone. Its own tests are in goals/goal-row.test.tsx, so here both
+// reads are paused, as they are offline, which leaves the row with no sub line.
 vi.mock("@keylow/api-client", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@keylow/api-client")>()),
   useTargets,
+  useTrainingGoals: () => ({ data: undefined, isPending: true, fetchStatus: "paused" }),
+  useProfileTimeZone: () => ({ data: undefined, isPending: true, fetchStatus: "paused" }),
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -126,6 +130,15 @@ describe("More page", () => {
     expect(link.getAttribute("href")).toBe("/weight");
     expect(link.getAttribute("aria-disabled")).toBeNull();
     expect(link.textContent).toBe("Weight");
+  });
+
+  it("should put the Goal row in Body, after Weight", async () => {
+    await renderPage();
+
+    const rows = within(screen.getByRole("region", { name: "Body" })).getAllByRole("link");
+
+    expect(rows.map((row) => row.textContent)).toEqual(["Weight", "Goal"]);
+    expect(rows[1]?.getAttribute("href")).toBe("/goal");
   });
 
   it("should not link to a Settings page, because Appearance is on this page", async () => {

@@ -150,6 +150,7 @@ let bob: TestUser;
 let programId = "";
 let foodEvents: AssistantStreamEvent[];
 let askEvents: AssistantStreamEvent[];
+let silentAskEvents: AssistantStreamEvent[];
 let changeEvents: AssistantStreamEvent[];
 // What the person's targets and programme were when the asking turn had ended.
 let askedTargets: Awaited<ReturnType<typeof getMyTargets>>;
@@ -177,6 +178,11 @@ beforeAll(async () => {
   askEvents = asked.events;
   askedTargets = await getMyTargets(alice.client);
   askedProgramId = (await getMyProgramSummary(alice.client)).program?.id;
+  // A model that calls the tool and writes no question (KEY-839). It asks in a conversation of its own, and
+  // changes nothing, so the turn that follows a yes below still finds Alice as the asking turn left her.
+  silentAskEvents = (
+    await turn(alice, "Please set my calories to 2,000", [useTool("update_targets", newTargets)])
+  ).events;
   // The next turn repeats this one in its history, and the mock would find this marker first.
   await anthropicMock.forget(asked.turnMarker);
   const { data: askedTurn } = await adminClient()
@@ -274,6 +280,19 @@ describe("a turn that asks to change the targets", () => {
     expect(askEvents.at(-1)).toEqual({ type: "done", outcome: "confirm" });
     expect(askedTargets).toMatchObject({ source: "engine", kcal: 2140 });
     expect(askedProgramId).toBe(programId);
+  });
+});
+
+describe("a turn that asks to change the targets and the model wrote no question", () => {
+  it("ends asking with the board's question, followed by the line about the macros", () => {
+    expect(silentAskEvents.find((event) => event.type === "confirm")).toMatchObject({
+      type: "confirm",
+      question: `Change your calorie target from 2,140 to 2,000 kcal? This ends your programme and its weekly check-in. Today and later days use your own targets.\n\n${macrosNote}`,
+      confirmLabel: "Change target",
+      cancelLabel: "Keep 2,140",
+      tone: "primary",
+    });
+    expect(silentAskEvents.at(-1)).toEqual({ type: "done", outcome: "confirm" });
   });
 });
 
