@@ -493,11 +493,12 @@ export function onlyFoodsOf(codes: readonly string[]): Grader {
 }
 
 /**
- * Passes when no write was replayed: each turn left at most one row for a tool for one message, and no turn
- * names a target that an earlier turn wrote. A person who says the same thing twice may be logged twice, but
- * the second turn must be its own write.
+ * Passes when each turn left at most one row for a tool, and no turn names a target (a tool and an id) that an
+ * earlier turn wrote. It is for a case whose messages each ask for one write, such as saying the same thing
+ * twice: the second turn may be its own write, or none, but never the first turn's write again and never two.
+ * It would fail a message that logs three foods, which leaves three `log_entry` rows.
  */
-export function noWriteReplayed(): Grader {
+export function oneRowPerToolPerMessage(): Grader {
   return async ({ turns, database }) => {
     const seen = new Map<string, number>();
     for (const [index, { turnId }] of turns.entries()) {

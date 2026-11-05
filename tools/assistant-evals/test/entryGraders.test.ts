@@ -16,7 +16,7 @@ import {
   loggedItems,
   loggedRows,
   noGuessedAmounts,
-  noWriteReplayed,
+  oneRowPerToolPerMessage,
   onlyFoodsOf,
   noQuestionsAsked,
   noActionRowsInTurn,
@@ -788,7 +788,7 @@ describe("noGuessedAmounts and onlyFoodsOf", () => {
   });
 });
 
-describe("noWriteReplayed", () => {
+describe("oneRowPerToolPerMessage", () => {
   const first = turnResult();
   const second = turnResult();
   const action = (turn: { turnId: string }, tool: string, target: string) => ({
@@ -802,13 +802,17 @@ describe("noWriteReplayed", () => {
       assistant_actions: [action(first, "log_entry", "a"), action(second, "log_entry", "b")],
     });
 
-    expect((await noWriteReplayed()({ turns: [first, second], database })).passed).toBe(true);
+    expect((await oneRowPerToolPerMessage()({ turns: [first, second], database })).passed).toBe(
+      true,
+    );
   });
 
   it("should pass when the second turn wrote nothing", async () => {
     const database = rowDatabase({ assistant_actions: [action(first, "log_entry", "a")] });
 
-    expect((await noWriteReplayed()({ turns: [first, second], database })).passed).toBe(true);
+    expect((await oneRowPerToolPerMessage()({ turns: [first, second], database })).passed).toBe(
+      true,
+    );
   });
 
   it("should fail when two turns name the same target, which is a write replayed", async () => {
@@ -816,7 +820,7 @@ describe("noWriteReplayed", () => {
       assistant_actions: [action(first, "log_entry", "a"), action(second, "log_entry", "a")],
     });
 
-    expect((await noWriteReplayed()({ turns: [first, second], database })).reason).toBe(
+    expect((await oneRowPerToolPerMessage()({ turns: [first, second], database })).reason).toBe(
       "a write of turn 1 was written again in turn 2",
     );
   });
@@ -826,7 +830,7 @@ describe("noWriteReplayed", () => {
       assistant_actions: [action(first, "log_entry", "a"), action(first, "log_entry", "b")],
     });
 
-    expect((await noWriteReplayed()({ turns: [first, second], database })).reason).toBe(
+    expect((await oneRowPerToolPerMessage()({ turns: [first, second], database })).reason).toBe(
       "turn 1 left 2 log_entry rows for one message",
     );
   });

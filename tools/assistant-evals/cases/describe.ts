@@ -12,7 +12,7 @@
 //
 // FAIR ROUTES. A case fails only when the answer is wrong. Where a good assistant can reasonably ask once
 // instead of logging, the question passes too, and nothing is written: a food that comes in sizes (a banana, an
-// apple, a croissant, a boiled potato) may be answered with one question about the size, because the person
+// apple, an orange, eggs, a croissant, a boiled potato) may be answered with one question about the size, because the person
 // said no size and asking is not a guess. A message that names a meal ("for breakfast") may be logged with no
 // time or with a morning time. "Some cheese" may be one question or a logged slice.
 import { READ_TOOLS, onlyReadTools } from "./ask.ts";
@@ -93,7 +93,12 @@ export function describeSpecs(anchorDate: string): readonly DescribeSpec[] {
 
   return [
     // Natural amounts: the food's own portions.
-    log("describe-two-eggs", "I had two eggs.", [{ codes: FOOD_ROUTES.egg, amount: { count: 2 } }]),
+    log(
+      "describe-two-eggs",
+      "I had two eggs.",
+      [{ codes: FOOD_ROUTES.egg, amount: { count: 2 } }],
+      true,
+    ),
     log(
       "describe-a-banana",
       "I ate a banana.",
@@ -108,6 +113,7 @@ export function describeSpecs(anchorDate: string): readonly DescribeSpec[] {
         { codes: FOOD_ROUTES.toast, amount: { count: 1 }, time: "morning" },
         { codes: FOOD_ROUTES.banana, amount: { count: 1 }, time: "morning" },
       ],
+      true,
     ),
     log(
       "describe-an-apple-at-three",
@@ -127,10 +133,15 @@ export function describeSpecs(anchorDate: string): readonly DescribeSpec[] {
     log("describe-a-medium-bagel", "I had a medium bagel.", [
       { codes: FOOD_ROUTES.bagel, amount: { count: 1 } },
     ]),
-    log("describe-an-orange-and-a-kiwi", "I ate an orange and a kiwi.", [
-      { codes: FOOD_ROUTES.orange, amount: { count: 1 } },
-      { codes: FOOD_ROUTES.kiwi, amount: { count: 1 } },
-    ]),
+    log(
+      "describe-an-orange-and-a-kiwi",
+      "I ate an orange and a kiwi.",
+      [
+        { codes: FOOD_ROUTES.orange, amount: { count: 1 } },
+        { codes: FOOD_ROUTES.kiwi, amount: { count: 1 } },
+      ],
+      true,
+    ),
     log(
       "describe-a-boiled-potato",
       "I had a boiled potato.",
@@ -156,9 +167,12 @@ export function describeSpecs(anchorDate: string): readonly DescribeSpec[] {
     ]),
 
     // The day and the time of the message.
-    log("describe-yesterday-at-eight", "Yesterday at 8am I had two boiled eggs.", [
-      { codes: FOOD_ROUTES.boiledEgg, amount: { count: 2 }, time: "08:00", date: yesterday },
-    ]),
+    log(
+      "describe-yesterday-at-eight",
+      "Yesterday at 8am I had two boiled eggs.",
+      [{ codes: FOOD_ROUTES.boiledEgg, amount: { count: 2 }, time: "08:00", date: yesterday }],
+      true,
+    ),
     log(
       "describe-lunch-at-half-past-twelve",
       "At 12:30 I ate an apple and 150 g of grilled chicken breast.",
@@ -166,6 +180,7 @@ export function describeSpecs(anchorDate: string): readonly DescribeSpec[] {
         { codes: FOOD_ROUTES.apple, amount: { count: 1 }, time: "12:30" },
         { codes: FOOD_ROUTES.chickenBreast, amount: { grams: 150 }, time: "12:30" },
       ],
+      true,
     ),
 
     // Too vague to log: one question, nothing written.
@@ -219,14 +234,17 @@ function gradersOf(spec: DescribeSpec, anchorDate: string): Grader[] {
           : [anyOfRoutes([asking, logged([spec.mayLog], anchorDate)])];
       }
       case "brief": {
-        // Two eggs have a portion. Toast has one too, but the message gave no count, so it is optional.
+        // Two eggs and the toast have portions, and the message gave no count for the toast. Butter and a flat
+        // white have none, so a weight for either is a guess. A question must be about the food or the amount, and
+        // logging must not drop the toast in silence.
         const eggs: ExpectedItem = { codes: FOOD_ROUTES.egg, amount: { count: 2 } };
+        const toast: ExpectedItem = { codes: FOOD_ROUTES.toast, amount: { portion: true } };
         return [
           anyOfRoutes([
-            onlyQuestion(),
+            [...onlyQuestion(), askedAboutFoodOrAmount()],
             [
-              loggedItems([eggs], anchorDate),
-              loggedRows([eggs], anchorDate),
+              loggedItems([eggs, toast], anchorDate),
+              loggedRows([eggs, toast], anchorDate),
               noGuessedAmounts(),
               onlyFoodsOf([...FOOD_ROUTES.egg, ...FOOD_ROUTES.toast]),
               onlyTheseTools(WRITE_AND_READ_TOOLS),

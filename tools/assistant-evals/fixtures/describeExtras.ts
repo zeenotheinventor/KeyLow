@@ -162,17 +162,3 @@ export function lunchOfDay(
         : [{ code: FIXTURE_FOOD_CODES[food], grams }];
     });
 }
-
-/**
- * The foods that are as right as the code itself for a repeated entry: the other foods of the first route that
- * holds it (the three grilled chicken breasts for 18-323), or the code alone. `get_entries` gives the names of
- * the entries, so a model that repeats yesterday's chicken may find any of its siblings by search.
- */
-export function siblingsOf(code: string): readonly [string, ...string[]] {
-  for (const route of Object.values<readonly [string, ...string[]]>(FOOD_ROUTES)) {
-    if (route.includes(code)) {
-      return route;
-    }
-  }
-  return [code];
-}

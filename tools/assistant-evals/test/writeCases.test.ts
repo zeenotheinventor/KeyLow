@@ -1164,53 +1164,46 @@ describe("a write case, played wrong", () => {
     expect(reasons).toEqual([]);
   });
 
-  it("should accept a sibling of the fixture's food for yesterday's lunch, and fail a food that is not one", async () => {
-    const siblings = await failures("log-yesterdays-lunch-again", (played) => ({
-      turns: played.turns.map((turn) => ({
-        ...turn,
-        toolCalls: turn.toolCalls.map((call) =>
-          call.name === "log_entry" &&
-          isRecordInput(call.input) &&
-          call.input["food_id"] === foodIdOf("18-323")
-            ? logGrams("18-324", 130, { time: "12:30" })
-            : call,
-        ),
-      })),
-      rows: {
-        ...played.rows,
-        foods: [
-          ...(played.rows["foods"] ?? []),
-          { id: foodIdOf("18-324"), source: "cofid", source_ref: "18-324" },
-        ],
-        food_log_entries: (played.rows["food_log_entries"] ?? []).map((row) =>
-          row["food_id"] === foodIdOf("18-323") ? { ...row, food_id: foodIdOf("18-324") } : row,
-        ),
-      },
-    }));
-    const stewed = await failures("log-yesterdays-lunch-again", (played) => ({
-      turns: played.turns.map((turn) => ({
-        ...turn,
-        toolCalls: turn.toolCalls.map((call) =>
-          call.name === "log_entry" &&
-          isRecordInput(call.input) &&
-          call.input["food_id"] === foodIdOf("18-323")
-            ? logGrams("18-307", 130, { time: "12:30" })
-            : call,
-        ),
-      })),
-      rows: {
-        ...played.rows,
-        foods: [
-          ...(played.rows["foods"] ?? []),
-          { id: foodIdOf("18-307"), source: "cofid", source_ref: "18-307" },
-        ],
-      },
-    }));
+  it('should fail yesterday\'s lunch logged with a near food, because "again" means the same food', async () => {
+    // Chicken with skin for the chicken without, and Thai rice for the long grain: both are real foods, and
+    // `get_entries` gives the full name of the entry, so a search finds the exact one.
+    const nearFood = async (from: string, to: string) =>
+      failures("log-yesterdays-lunch-again", (played) => ({
+        turns: played.turns.map((turn) => ({
+          ...turn,
+          toolCalls: turn.toolCalls.map((call) =>
+            call.name === "log_entry" &&
+            isRecordInput(call.input) &&
+            call.input["food_id"] === foodIdOf(from)
+              ? logGrams(to, call.input["grams"] === null ? 0 : Number(call.input["grams"]), {
+                  time: "12:30",
+                })
+              : call,
+          ),
+        })),
+        rows: {
+          ...played.rows,
+          foods: [
+            ...(played.rows["foods"] ?? []),
+            { id: foodIdOf(to), source: "cofid", source_ref: to },
+          ],
+          food_log_entries: (played.rows["food_log_entries"] ?? []).map((row) =>
+            row["food_id"] === foodIdOf(from) ? { ...row, food_id: foodIdOf(to) } : row,
+          ),
+        },
+      }));
 
-    expect(siblings).toEqual([]);
-    expect(stewed.some((reason) => reason.includes("no log_entry call matched item 1 of 3"))).toBe(
-      true,
-    );
+    for (const [from, to] of [
+      ["18-323", "18-324"],
+      ["11-862", "11-875"],
+    ] as const) {
+      const reasons = await nearFood(from, to);
+
+      expect(reasons.some((reason) => reason.includes("no log_entry call matched item"))).toBe(
+        true,
+      );
+      expect(reasons.some((reason) => reason.includes("no logged entry matched item"))).toBe(true);
+    }
   });
 
   it("should fail a write with the wrong card, which the app would draw differently", async () => {

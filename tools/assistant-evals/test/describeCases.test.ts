@@ -188,12 +188,17 @@ describe("the describe set", () => {
     ).toEqual(["describe-some-rice", "describe-a-bowl-of-pasta"]);
   });
 
-  it("should let a food that comes in sizes be answered with one question about the size", () => {
+  it("should let every food that comes in sizes, given no size, be answered with one question about the size", () => {
     expect(logSpecs.filter(({ mayAskAboutSize }) => mayAskAboutSize).map(({ id }) => id)).toEqual([
+      "describe-two-eggs",
       "describe-a-banana",
+      "describe-eggs-toast-and-banana",
       "describe-an-apple-at-three",
       "describe-a-croissant",
+      "describe-an-orange-and-a-kiwi",
       "describe-a-boiled-potato",
+      "describe-yesterday-at-eight",
+      "describe-lunch-at-half-past-twelve",
     ]);
   });
 
@@ -316,10 +321,10 @@ describe("a log case", () => {
     expect(failures).toEqual([expect.stringContaining("turn 1 sent no logged card")]);
   });
 
-  it("should fail when the assistant asked instead of logging the eggs", async () => {
+  it("should fail when the assistant asked instead of logging a food with no size to ask about", async () => {
     const failures = await failuresOf(
-      caseOf("describe-two-eggs"),
-      asking("Which eggs?"),
+      caseOf("describe-three-slices-of-cheddar"),
+      asking("Which cheddar?"),
       rowDatabase({}),
     );
 
@@ -507,7 +512,15 @@ describe("the milestone's sentence", () => {
     expect(await failuresOf(caseOf(id), asking("How much butter?"), rowDatabase({}))).toEqual([]);
   });
 
-  it("should pass portions of the real foods, with the toast optional", async () => {
+  it("should pass a question about the food or the amount, and fail one about something else", async () => {
+    expect(await failuresOf(caseOf(id), asking("How much butter?"), rowDatabase({}))).toEqual([]);
+    const failures = await failuresOf(caseOf(id), asking("What time was that?"), rowDatabase({}));
+
+    expect(failures[0]).toContain("no route passed");
+    expect(failures[0]).toContain("does not ask about the food or the amount");
+  });
+
+  it("should pass portions of the eggs and the toast", async () => {
     const turn = turnResult({
       toolCalls: [logCallOf(eggs), logCallOf(toast)],
       cards: [card("logged")],
@@ -516,10 +529,14 @@ describe("the milestone's sentence", () => {
     expect(await failuresOf(caseOf(id), turn, rowDatabase(rowsFor([eggs, toast], turn)))).toEqual(
       [],
     );
-    const eggsOnly = turnResult({ toolCalls: [logCallOf(eggs)], cards: [card("logged")] });
-    expect(await failuresOf(caseOf(id), eggsOnly, rowDatabase(rowsFor([eggs], eggsOnly)))).toEqual(
-      [],
-    );
+  });
+
+  it("should fail two eggs logged with the rest dropped in silence", async () => {
+    const turn = turnResult({ toolCalls: [logCallOf(eggs)], cards: [card("logged")] });
+
+    const failures = await failuresOf(caseOf(id), turn, rowDatabase(rowsFor([eggs], turn)));
+
+    expect(failures[0]).toContain("no log_entry call matched item 2 of 2");
   });
 
   it("should fail a guessed weight of butter", async () => {

@@ -31,18 +31,18 @@ describe("a turn that ended failed", () => {
     expect(await reasonOf({})).toEqual(["the turn failed (no notice)"]);
   });
 
-  it("should point at the assistant, not the infrastructure, when it failed after a call to a tool that asks first", async () => {
+  it("should name confirm_unavailable as a possible cause, and point at the function log, after a tool that asks first", async () => {
     const [reason] = await reasonOf({
       noticeCode: "turn_failed",
       toolCalls: [readTool("get_day"), writeTool("delete_entry", { ids: ["a", "b"] })],
     });
 
     expect(reason).toBe(
-      "the turn failed (notice turn_failed) after a call to delete_entry, a tool that asks first: most likely confirm_unavailable, the model gave no question to put above the buttons, so this is the assistant's fault and not the infrastructure's",
+      "the turn failed (notice turn_failed) after a call to delete_entry, a tool that asks first: may be confirm_unavailable (the model gave no question to put above the buttons), check the function log for the ending",
     );
   });
 
-  it("should not blame the assistant for a failure after a call to a tool that does not ask first", async () => {
+  it("should not name a cause for a failure after a call to a tool that does not ask first", async () => {
     const [reason] = await reasonOf({
       noticeCode: "turn_failed",
       toolCalls: [writeTool("log_entry", {})],

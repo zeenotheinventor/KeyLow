@@ -46,7 +46,7 @@ import {
   loggedItems,
   loggedRows,
   noActionRowsInTurn,
-  noWriteReplayed,
+  oneRowPerToolPerMessage,
   noQuestionsAsked,
   onlyTheseTools,
   readBeforeFirstLog,
@@ -57,7 +57,7 @@ import {
   withContext,
 } from "./entryGraders.ts";
 import { ASK_TARGETS } from "../fixtures/askExtras.ts";
-import { FOOD_ROUTES, lunchOfDay, siblingsOf } from "../fixtures/describeExtras.ts";
+import { FOOD_ROUTES, lunchOfDay } from "../fixtures/describeExtras.ts";
 import { diaryDateOf } from "../fixtures/diary.ts";
 import { dayEntries } from "../fixtures/diaryTotals.ts";
 import { noActionRows } from "../src/case.ts";
@@ -771,7 +771,7 @@ export function writeCasesOf(anchorDate: string): readonly EvalCase[] {
     ["I had a banana.", "I had a banana."],
     [
       distinctTurns(),
-      noWriteReplayed(),
+      oneRowPerToolPerMessage(),
       actionRows("log_entry", 1, [0]),
       anyOfRoutes([
         [
@@ -788,10 +788,10 @@ export function writeCasesOf(anchorDate: string): readonly EvalCase[] {
 
   // "Log yesterday's lunch again" reads yesterday first, logs what the diary holds, and Undo takes it out. The
   // reply is not graded: the prompt tells the model the reply never repeats the card's details, so a count in
-  // the words would be asking for what the prompt forbids. `get_entries` gives names, not food ids, so any
-  // sibling of the fixture's food (the other grilled chicken breasts, the other white rices) is as right.
+  // the words would be asking for what the prompt forbids. The foods are exactly the fixture's: `get_entries`
+  // gives the full CoFID name of each entry, so a search finds the same food, and "again" means the same food.
   const lunchItems = lunchOfDay(41).map(({ code, grams }): ExpectedItem => ({
-    codes: siblingsOf(code),
+    codes: [code],
     amount: { grams },
     time: "any",
   }));

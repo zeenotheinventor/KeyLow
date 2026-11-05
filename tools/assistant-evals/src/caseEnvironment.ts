@@ -80,6 +80,9 @@ export function createCaseEnvironment({
           seq: index * 2 + 1,
         },
         {
+          // Every row has an id: in a batch where one row has none, supabase-js sends `id: null` for it, and
+          // the insert fails with a not-null violation (23502).
+          id: crypto.randomUUID(),
           conversation_id: conversationId,
           turn_id: turnId,
           user_id: userId,

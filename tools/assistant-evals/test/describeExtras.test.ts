@@ -9,7 +9,6 @@ import {
   lunchOfDay,
   portionsOf,
   seededFood,
-  siblingsOf,
 } from "../fixtures/describeExtras.ts";
 
 const read = (path: string) => readFileSync(new URL(path, import.meta.url), "utf8");
@@ -112,17 +111,5 @@ describe("FOOD_ROUTES, the chicken breast", () => {
 describe("FOOD_ROUTE_WORDS", () => {
   it("should give every route the words it is searched with", () => {
     expect(Object.keys(FOOD_ROUTE_WORDS).sort()).toEqual(Object.keys(FOOD_ROUTES).sort());
-  });
-});
-
-describe("siblingsOf", () => {
-  it("should give the other grilled breasts for the grilled breast and the other white rices for the rice", () => {
-    expect(siblingsOf("18-323")).toEqual(["18-323", "18-324", "18-325"]);
-    expect(siblingsOf("11-862")).toContain("11-858");
-  });
-
-  it("should give the code alone for a food in no route", () => {
-    expect(siblingsOf("12-313")).toEqual(["12-313"]);
-    expect(siblingsOf("99-999")).toEqual(["99-999"]);
   });
 });

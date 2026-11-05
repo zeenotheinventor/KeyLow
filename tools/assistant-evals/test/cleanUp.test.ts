@@ -87,7 +87,7 @@ describe("runEvals with a case that cleans up", () => {
     expect(environment.calls).toEqual(["restore targets"]);
   });
 
-  it("should end the case as an error when the cleanUp fails, naming the failure", async () => {
+  it("should end a passing case as an error when the cleanUp fails, naming the failure", async () => {
     const stack = scriptedStack([costing(1)]);
 
     const report = await runEvals({
@@ -99,7 +99,46 @@ describe("runEvals with a case that cleans up", () => {
 
     expect(report.cases[0]).toMatchObject({
       status: "error",
-      failures: ["the run failed: Undo answered 500"],
+      failures: ["cleanUp failed: Undo answered 500"],
+    });
+  });
+
+  it("should keep what the graders found when the cleanUp fails too, and add the failure", async () => {
+    const stack = scriptedStack([costing(1)]);
+
+    const report = await runEvals({
+      cases: [
+        oneTurnCase({
+          expect: [
+            () => Promise.resolve({ passed: false, reason: "the entry has the wrong amount" }),
+          ],
+          cleanUp: () => Promise.reject(new Error("Undo answered 500")),
+        }),
+      ],
+      ...stack,
+      environment: fakeEnvironment(),
+      budgetTokens: 1_000_000,
+    });
+
+    expect(report.cases[0]).toMatchObject({
+      status: "failed",
+      failures: ["the entry has the wrong amount", "cleanUp failed: Undo answered 500"],
+    });
+  });
+
+  it("should keep the reason a turn failed when the cleanUp fails too", async () => {
+    const stack = scriptedStack([costing(1, { status: "failed" })]);
+
+    const report = await runEvals({
+      cases: [oneTurnCase({ cleanUp: () => Promise.reject(new Error("Undo answered 500")) })],
+      ...stack,
+      environment: fakeEnvironment(),
+      budgetTokens: 1_000_000,
+    });
+
+    expect(report.cases[0]).toMatchObject({
+      status: "error",
+      failures: ["the turn failed (no notice); cleanUp failed: Undo answered 500"],
     });
   });
 

@@ -119,6 +119,19 @@ describe("seedConversation", () => {
     expect(messages.every((row) => row["conversation_id"] === "new-conversation")).toBe(true);
   });
 
+  it("should give every message row an id, because a batch where one row has none is sent with a null id", async () => {
+    const { client, inserts } = fakeClient();
+
+    await createCaseEnvironment({ client, userId, ...unusedActions }).seedConversation([
+      { user: "first words", assistant: "first reply" },
+    ]);
+
+    const messages = inserts[2]?.rows ?? [];
+    expect(messages).toHaveLength(2);
+    expect(messages.every((row) => typeof row["id"] === "string")).toBe(true);
+    expect(new Set(messages.map((row) => row["id"])).size).toBe(2);
+  });
+
   it("should fail with the code of a refused insert and never the rows", async () => {
     const { client } = fakeClient({ failInsertOn: "assistant_turns" });
 

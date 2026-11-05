@@ -1,5 +1,5 @@
-import { getFood, getMyTargets, logFood, searchFoods, updateMyTargets } from "@keylow/api-client";
-import { afterAll, describe, expect, inject, it } from "vitest";
+import { getFood, logFood, searchFoods } from "@keylow/api-client";
+import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 
 import { adminClient } from "../../../../packages/db/test/integration/support/stack";
 import { scratchDayOf } from "../../cases/writes.ts";
@@ -12,6 +12,7 @@ import {
 } from "../../fixtures/describeExtras.ts";
 import { createCaseEnvironment } from "../../src/caseEnvironment.ts";
 import { createFixtureUser } from "../../src/fixtureUser.ts";
+import { openLocalHttpSession } from "../../src/httpSession.ts";
 import { createUndoTurn } from "../../src/undoTurn.ts";
 
 import type { FixtureUser } from "../../src/fixtureUser.ts";
@@ -20,17 +21,15 @@ import type { FixtureUser } from "../../src/fixtureUser.ts";
 // Every user is new for the run, named under key700-<run id> at keylow.test, and afterAll removes them.
 const RUN_ID = crypto.randomUUID().slice(0, 8);
 
-const created: FixtureUser[] = [];
-const newUser = async (label: string) => {
-  const user = await createFixtureUser(inject("stack"), {
-    namePrefix: `key700-${RUN_ID}-${label}`,
-  });
-  created.push(user);
-  return user;
-};
+// One user for the search and Undo tests: building one takes a diary of six weeks, so it is not made per word.
+let user: FixtureUser;
+
+beforeAll(async () => {
+  user = await createFixtureUser(inject("stack"), { namePrefix: `key700-${RUN_ID}` });
+});
 
 afterAll(async () => {
-  await Promise.all(created.map((user) => user.remove()));
+  await user.remove();
 });
 
 describe("the seeded foods the describe and write sets expect", () => {
@@ -66,57 +65,79 @@ describe("the seeded foods the describe and write sets expect", () => {
   );
 });
 
+// `search_foods` takes a limit of 1 to 10 from the model, and shows the portions of the first five results only.
+const MOST_RESULTS_THE_MODEL_CAN_ASK_FOR = 10;
+const RESULTS_WITH_PORTIONS = 5;
+
 describe("the plain food search, which is all the assistant resolves foods with", () => {
   it.each(Object.entries(FOOD_ROUTES))(
-    "should find one of the foods of the %s route in its first five results",
+    "should find one of the foods of the %s route among the 10 results the model can ask for",
     async (route, codes) => {
-      const user = await newUser("search");
       const words = FOOD_ROUTE_WORDS[route as keyof typeof FOOD_ROUTES];
 
-      const hits = await searchFoods(user.client, words, 5);
+      const hits = await searchFoods(user.client, words, MOST_RESULTS_THE_MODEL_CAN_ASK_FOR);
       const { data } = await adminClient()
         .from("foods")
-        .select("source_ref")
+        .select("id,source_ref")
         .in(
           "id",
           hits.map(({ id }) => id),
         );
-      const found = (data ?? []).map(({ source_ref }) => source_ref);
+      const codeOf = new Map((data ?? []).map(({ id, source_ref }) => [id, source_ref]));
+      const ranked = hits.map(({ id }) => codeOf.get(id) ?? "?");
+      const position = ranked.findIndex((code) => codes.some((expected) => expected === code)) + 1;
+      // The positions are the finding of the run: one line for each word, 0 when none of the 10 is a right food.
+      console.info(
+        `search "${words}": first right food at position ${position}${position > RESULTS_WITH_PORTIONS ? " (no portions shown)" : ""}; results ${ranked.join(" ")}`,
+      );
 
-      expect(
-        found.some((code) => codes.some((expected) => expected === code)),
-        `"${words}" found ${found.join(", ")}`,
-      ).toBe(true);
+      expect(position, `"${words}" found ${ranked.join(", ")}`).toBeGreaterThan(0);
     },
   );
 });
 
 describe("the targets the write set puts back", () => {
-  it("should change the targets, and then write the ask targets back", async () => {
-    const user = await newUser("targets");
-    await writeAskExtras(user);
-    await updateMyTargets(user.client, user.id, {
-      kcal: 2000,
-      protein_g: 138,
-      carbs_g: 231,
-      fat_g: 77,
-    });
-    expect((await getMyTargets(user.client)).kcal).toBe(2000);
+  it("should write the ask targets back through the session's own environment", async () => {
+    const session = await openLocalHttpSession();
+    try {
+      const environment = session.environment;
+      if (environment === undefined) {
+        throw new Error("The session has no case environment");
+      }
+      // The session's user is the owner of a conversation the environment seeds.
+      const conversationId = await environment.seedConversation([
+        { user: "hi", assistant: "hello" },
+      ]);
+      const admin = adminClient();
+      const { data: conversation } = await admin
+        .from("assistant_conversations")
+        .select("user_id")
+        .eq("id", conversationId)
+        .single();
+      const userId = conversation?.user_id ?? "";
+      const askTargets = {
+        target_kcal: ASK_TARGETS.kcal,
+        target_protein_g: ASK_TARGETS.protein_g,
+        target_carbs_g: ASK_TARGETS.carbs_g,
+        target_fat_g: ASK_TARGETS.fat_g,
+      };
+      expect(await session.database.countRows({ table: "profiles", where: askTargets })).toBe(1);
 
-    await writeAskExtras(user);
+      const { error } = await admin.from("profiles").update({ target_kcal: 2000 }).eq("id", userId);
+      expect(error).toBeNull();
+      expect(await session.database.countRows({ table: "profiles", where: askTargets })).toBe(0);
 
-    expect(await getMyTargets(user.client)).toMatchObject({
-      kcal: ASK_TARGETS.kcal,
-      protein_g: ASK_TARGETS.protein_g,
-      carbs_g: ASK_TARGETS.carbs_g,
-      fat_g: ASK_TARGETS.fat_g,
-    });
+      await environment.restoreTargets();
+
+      expect(await session.database.countRows({ table: "profiles", where: askTargets })).toBe(1);
+    } finally {
+      await session.close();
+    }
   });
 });
 
 describe("Undo for a turn of the eval user", () => {
   it("should undo a real write once, then answer that it was already undone", async () => {
-    const user = await newUser("undo");
     const admin = adminClient();
     const environment = createCaseEnvironment({
       client: admin,

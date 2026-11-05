@@ -7,8 +7,9 @@ export type CaseReport = Readonly<{
   id: string;
   set: EvalSetName;
   /**
-   * `failed` is a miss by the assistant. `error` is the harness or the infrastructure failing (a driver error, a
-   * database error, a failed turn, a case that took too long) and says nothing about the assistant. Both are
+   * `failed` is a miss by the assistant. `error` is a case that could not be judged (a driver error, a database
+   * error, a failed turn, a case that took too long) and says nothing certain about the assistant: a failed turn
+   * may be the assistant (`confirm_unavailable`) or an outage, and its reason says where to look. Both are
    * misses for the exit code. `not_run` means the budget, or an unreadable spend, stopped the run before the case.
    */
   status: "passed" | "failed" | "error" | "not_run";
@@ -86,8 +87,9 @@ function afterCeiling<Result>(
   });
 }
 
-// The tools that ask first. A turn that fails right after a call to one of them is most often the model giving
-// no question to put above the buttons, which the function ends as `confirm_unavailable`.
+// The tools that ask first. A turn that fails right after a call to one of them may be the model giving no
+// question to put above the buttons, which the function ends as `confirm_unavailable`. It may also be an
+// outage or a database error, so the reason only says it is possible.
 const TOOLS_THAT_ASK_FIRST: ReadonlySet<string> = new Set([
   "delete_entry",
   "copy_day",
@@ -97,15 +99,15 @@ const TOOLS_THAT_ASK_FIRST: ReadonlySet<string> = new Set([
 
 /**
  * Why a failed turn is an error. The ending code is only in the function's log, so this names the notice the
- * turn sent and, after a tool that asks first, says it is most likely the assistant's fault, so a reader can
- * tell it from an infrastructure failure. The status stays `error` and the report keeps its shape.
+ * turn sent and, after a tool that asks first, says `confirm_unavailable` is possible and where to look. The
+ * status stays `error` and the report keeps its shape.
  */
 function failedTurnReason(turn: TurnResult): string {
   const notice = turn.noticeCode === undefined ? "no notice" : `notice ${turn.noticeCode}`;
   const asked = [...turn.toolCalls].reverse().find(({ name }) => TOOLS_THAT_ASK_FIRST.has(name));
   return asked === undefined
     ? `the turn failed (${notice})`
-    : `the turn failed (${notice}) after a call to ${asked.name}, a tool that asks first: most likely confirm_unavailable, the model gave no question to put above the buttons, so this is the assistant's fault and not the infrastructure's`;
+    : `the turn failed (${notice}) after a call to ${asked.name}, a tool that asks first: may be confirm_unavailable (the model gave no question to put above the buttons), check the function log for the ending`;
 }
 
 /**
@@ -148,6 +150,8 @@ export async function runEvals(input: RunInput): Promise<RunReport> {
     if (needsEnvironment && environment === undefined) {
       throw new CaseError("the case needs a session with a case environment");
     }
+    let outcome: Outcome | undefined;
+    let thrown: unknown;
     try {
       let conversationId: string | null =
         evalCase.setup === undefined || environment === undefined
@@ -185,14 +189,37 @@ export async function runEvals(input: RunInput): Promise<RunReport> {
         evalCase.expect.map((grade) => grade({ turns, database })),
       );
       const failures = outcomes.filter(({ passed }) => !passed).map(({ reason }) => reason);
-      return { status: failures.length === 0 ? "passed" : "failed", failures };
-    } finally {
-      // After the graders have read the database, and also when the case failed half way, because a write
-      // that landed must not stay in the rows the other sets read. A failure here ends the case as an error.
-      if (evalCase.cleanUp !== undefined && environment !== undefined) {
+      outcome = { status: failures.length === 0 ? "passed" : "failed", failures };
+    } catch (error) {
+      thrown = error;
+    }
+    // After the graders have read the database, and also when the case failed half way, because a write that
+    // landed must not stay in the rows the other sets read. A failure here is added to what the graders or the
+    // turn already found, and never replaces it: an off-script write with no Undo must not hide the finding.
+    let cleanUpFailure: string | undefined;
+    if (evalCase.cleanUp !== undefined && environment !== undefined) {
+      try {
         await evalCase.cleanUp(turns, environment);
+      } catch (error) {
+        cleanUpFailure = `cleanUp failed: ${messageOf(error)}`;
       }
     }
+    if (thrown !== undefined) {
+      if (cleanUpFailure !== undefined && thrown instanceof CaseError) {
+        throw new CaseError(`${thrown.message}; ${cleanUpFailure}`);
+      }
+      throw thrown instanceof Error ? thrown : new Error(messageOf(thrown));
+    }
+    if (outcome === undefined) {
+      throw new CaseError("the case ended without an outcome");
+    }
+    if (cleanUpFailure === undefined) {
+      return outcome;
+    }
+    return {
+      status: outcome.status === "passed" ? "error" : outcome.status,
+      failures: [...outcome.failures, cleanUpFailure],
+    };
   }
 
   async function runCase(evalCase: EvalCase): Promise<Outcome> {
