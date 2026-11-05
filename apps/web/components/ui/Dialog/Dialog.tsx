@@ -72,6 +72,7 @@ export function Dialog({
   open,
   onClose,
   title,
+  closeLabel = "Close",
   children,
   footer,
   leadingAction,
@@ -174,7 +175,7 @@ export function Dialog({
           <h2 id={titleId} className="min-w-0 truncate text-h2">
             {title}
           </h2>
-          <Button variant="ghost" iconOnly aria-label="Close" onClick={onClose}>
+          <Button variant="ghost" iconOnly aria-label={closeLabel} onClick={onClose}>
             <X aria-hidden />
           </Button>
         </header>

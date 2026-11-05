@@ -1,7 +1,7 @@
+import { goalDraftReducer, hasGoalDraftChanged, initialGoalDraft } from "@keylow/core/training";
 import { useCallback, useMemo, useReducer, useState } from "react";
 
 import { GoalDraftContext } from "../goalDraftContext";
-import { goalDraftReducer, hasGoalDraftChanged, initialGoalDraft } from "../goalDraftReducer";
 
 import type { GoalDraftProviderProps } from "./types";
 import type { GoalDraftContextValue } from "../goalDraftContext";

@@ -23,6 +23,7 @@ export function MuscleSheetBody({
   days,
   enabled,
   onClose,
+  onEditRoutine,
 }: MuscleSheetBodyProps) {
   const detail = useMuscleDetail(muscle, { view, at, weekStart, now, enabled });
   const routine = useActiveRoutine({ enabled });
@@ -59,5 +60,12 @@ export function MuscleSheetBody({
     weightingExample: weightingExampleOf(routine.data ?? null, muscle),
   });
 
-  return <MuscleSheetContent copy={copy} detail={detail.data} onClose={onClose} />;
+  return (
+    <MuscleSheetContent
+      copy={copy}
+      detail={detail.data}
+      onClose={onClose}
+      onEditRoutine={onEditRoutine}
+    />
+  );
 }

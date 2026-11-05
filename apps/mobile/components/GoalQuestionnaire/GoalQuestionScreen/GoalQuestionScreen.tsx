@@ -1,4 +1,5 @@
 import { GOAL_QUESTION_STEPS, GOAL_QUESTIONNAIRE, GOAL_QUESTIONS } from "@keylow/core/copy";
+import { isGoalStepAnswered } from "@keylow/core/training";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useRef, useState } from "react";
 import { BackHandler } from "react-native";
@@ -9,7 +10,6 @@ import { DaysStep } from "../DaysStep";
 import { EquipmentStep } from "../EquipmentStep";
 import { ExperienceStep } from "../ExperienceStep";
 import { FocusStep } from "../FocusStep";
-import { isGoalStepAnswered } from "../goalDraftReducer";
 import { GoalStep } from "../GoalStep";
 import { MinutesStep } from "../MinutesStep";
 import { QuestionScreen } from "../QuestionScreen";

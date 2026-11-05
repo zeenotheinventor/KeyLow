@@ -16,4 +16,6 @@ export type MuscleSheetBodyProps = {
   /** False makes no read at all. */
   enabled: boolean;
   onClose: () => void;
+  /** Opens the routine editor. The Not trained sheet draws its Edit routine button only when this is given. */
+  onEditRoutine?: (() => void) | undefined;
 };

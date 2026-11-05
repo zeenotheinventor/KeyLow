@@ -353,7 +353,13 @@ export type {
 } from "./repos";
 export { ExerciseRuleError } from "./errors";
 export type { ExerciseRule } from "./errors";
-export { archiveExercise, getExercise, saveExercise, searchExercises } from "./repos";
+export {
+  archiveExercise,
+  exerciseHitOf,
+  getExercise,
+  saveExercise,
+  searchExercises,
+} from "./repos";
 export type {
   ExerciseDetail,
   ExerciseSave,

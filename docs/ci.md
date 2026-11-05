@@ -71,6 +71,16 @@ The long jobs are split into legs, which are the entries of one job's matrix. Ea
 - `scope` runs turbo through npx, so it needs no install and takes a few seconds.
 - `mobile-fingerprint.yml` is separate and is not a required check. It comments on pull requests and needs write access to them.
 
+## Assistant evals (on demand)
+
+`.github/workflows/assistant-evals.yml` runs the eval sets of the assistant (ADR 0006, "Evals") against a local stack with the Edge Functions served. Every case is a paid call to the Anthropic API, so the workflow has `workflow_dispatch` only. It never runs on a pull request or a push, and it is not part of `checks`. The file has to be on `main` before it can be started, and it runs in the `assistant-evals` environment, which holds `ANTHROPIC_EVAL_API_KEY`.
+
+```sh
+gh workflow run assistant-evals.yml --ref main -f sets="ask redTeam"
+```
+
+The optional `sets` input is a space-separated list of set names, and the names are in `tools/assistant-evals/src/thresholds.ts`. An empty `sets` runs every registered set, and a name that is not a set is refused by the command with a message. A run stops before the case that would pass 300,000 tokens. The stack steps copy the `db` job, so a bump of the CLI pin or an image tag there is made in both files.
+
 ## Checking before a push
 
 CI runs the full gate on the pull request, so before a push run `pnpm check:affected`, which checks only what the change can affect (see [local-dev.md](runbooks/local-dev.md)). Run the full `pnpm check` when a root file, a shared package's public API or a config changes, or when asked.
