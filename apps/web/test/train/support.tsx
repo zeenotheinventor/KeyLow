@@ -59,6 +59,14 @@ export const trainBackend: {
   finishGate: Promise<void> | null;
   /** Never answers the writes that log a set, as a slow connection does. */
   hangingSetWrites: boolean;
+  /** The arguments of the `save_exercise` calls that were stored, in order. */
+  savedExercises: Row[];
+  /** Fails the `save_exercise` call, as a database that is down does. */
+  failingExerciseSave: boolean;
+  /** Holds every `save_exercise` call until it settles, as a slow connection does. A test opens it by resolving it. */
+  exerciseSaveGate: Promise<void> | null;
+  /** Every `save_exercise` call that arrived, stored or not. */
+  exerciseSaveCalls: number;
 } = {
   timeZone: "Europe/London",
   routine: null,
@@ -85,6 +93,10 @@ export const trainBackend: {
   finishedSessions: [],
   finishGate: null,
   hangingSetWrites: false,
+  savedExercises: [],
+  failingExerciseSave: false,
+  exerciseSaveGate: null,
+  exerciseSaveCalls: 0,
 };
 
 export function resetTrainBackend(): void {
@@ -113,6 +125,10 @@ export function resetTrainBackend(): void {
   trainBackend.finishedSessions = [];
   trainBackend.finishGate = null;
   trainBackend.hangingSetWrites = false;
+  trainBackend.savedExercises = [];
+  trainBackend.failingExerciseSave = false;
+  trainBackend.exerciseSaveGate = null;
+  trainBackend.exerciseSaveCalls = 0;
   lastFinishedSession = null;
 }
 
@@ -298,6 +314,35 @@ async function setRequest(request: Request, searchParams: URLSearchParams): Prom
   );
 }
 
+let nextExerciseNumber = 0;
+
+/**
+ * The `save_exercise` call: it stores the exercise and its muscle map as one, and answers its id. The exercise
+ * then answers searches and the read after the write, as the database would have it.
+ */
+async function saveExerciseRequest(request: Request): Promise<Response> {
+  trainBackend.exerciseSaveCalls += 1;
+  await trainBackend.exerciseSaveGate;
+  if (trainBackend.failingExerciseSave) {
+    return failedWrite();
+  }
+  const body: unknown = await request.json();
+  const saved = isRow(body) ? body : {};
+  trainBackend.savedExercises.push(saved);
+  nextExerciseNumber += 1;
+  const id = `0000000b-0000-4000-8000-${String(nextExerciseNumber).padStart(12, "0")}`;
+  trainBackend.searchableExercises = [
+    {
+      ...(isRow(saved["p_exercise"]) ? saved["p_exercise"] : {}),
+      id,
+      source: "user",
+      exercise_muscles: rowsOf(saved["p_muscles"]),
+    },
+    ...trainBackend.searchableExercises,
+  ];
+  return jsonResponse(id);
+}
+
 // The session that was finished, which the read after the write finds by its id.
 let lastFinishedSession: Row | null = null;
 
@@ -346,6 +391,9 @@ async function respond(input: string | URL | Request, init?: RequestInit): Promi
     return searchParams.has("id")
       ? read("routine_detail", request, trainBackend.routine === null ? [] : [trainBackend.routine])
       : read("routines", request, trainBackend.routine === null ? [] : [trainBackend.routine]);
+  }
+  if (pathname.endsWith("/rpc/save_exercise")) {
+    return saveExerciseRequest(request);
   }
   if (pathname.endsWith("/rpc/delete_workout_session")) {
     trainBackend.writes.push("delete_session");

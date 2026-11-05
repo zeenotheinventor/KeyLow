@@ -75,6 +75,23 @@ export type ExerciseSearchHit = z.output<typeof exerciseHitSchema>;
 /** One live exercise with its full muscle map, in the order of the muscle list. */
 export type ExerciseDetail = z.output<typeof exerciseDetailSchema>;
 
+/**
+ * A saved exercise as a search hands one on: the detail's primary and secondary muscles, in the order of
+ * the muscle list, and the assisting ones left out. The screens use it to put an exercise just made in the
+ * place of one picked from the search.
+ */
+export function exerciseHitOf({ muscles, ...exercise }: ExerciseDetail): ExerciseSearchHit {
+  return {
+    ...exercise,
+    primary_muscles: muscles
+      .filter(({ role }) => role === "primary")
+      .map(({ muscle_id }) => muscle_id),
+    secondary_muscles: muscles
+      .filter(({ role }) => role === "secondary")
+      .map(({ muscle_id }) => muscle_id),
+  };
+}
+
 export type ExerciseSearchOptions = {
   /** How many exercises to ask for, 1 to 50. Defaults to 25. */
   limit?: number;
