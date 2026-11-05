@@ -19,7 +19,7 @@ import { useIsOnline } from "../../lib/connectivity";
 import { useNow } from "../../lib/useNow";
 import { useReadsEnabled } from "../../lib/useReadsEnabled";
 import { MuscleRow } from "../MuscleRow";
-import { MuscleSheet } from "../MuscleSheet";
+import { MuscleSheet, useEditRoutine } from "../MuscleSheet";
 import { Button, EmptyState, ErrorState, GroupedList, SheetHeader, Skeleton, Text } from "../ui";
 import { ViewLabel } from "../ViewLabel";
 
@@ -53,6 +53,10 @@ export function MuscleListScreen() {
   const weekEnd = addCalendarDays(weekStart, 6);
   const { view: chosenView, isRead: isViewRead, setView } = useBodyMapView();
   const [sheetMuscle, setSheetMuscle] = useState<MuscleId | null>(null);
+  const closeMuscleSheet = () => {
+    setSheetMuscle(null);
+  };
+  const editRoutine = useEditRoutine({ enabled: isReadEnabled, closeSheet: closeMuscleSheet });
   const nowIso = now.toISOString();
   const moment = { weekStart, now: nowIso, enabled: isReadEnabled };
 
@@ -229,9 +233,8 @@ export function MuscleListScreen() {
         at={isSelectedToday ? undefined : selectedDate}
         view={view}
         weekStart={weekStart}
-        onClose={() => {
-          setSheetMuscle(null);
-        }}
+        onClose={closeMuscleSheet}
+        onEditRoutine={editRoutine}
       />
     </View>
   );

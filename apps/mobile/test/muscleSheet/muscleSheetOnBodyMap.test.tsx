@@ -458,12 +458,12 @@ describe("the muscle sheet on the body map", () => {
       ]);
     });
 
-    it("should leave out the buttons that edit the routine, which no screen can open from the sheet yet", async () => {
+    it("should draw Edit routine, and no Edit goal, which the board dropped", async () => {
       await openScreen();
 
       await longPress("Abs");
 
-      expect(screen.queryByRole("button", { name: "Edit routine" })).not.toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Edit routine" })).toBeOnTheScreen();
       expect(screen.queryByRole("button", { name: "Edit goal" })).not.toBeOnTheScreen();
     });
   });

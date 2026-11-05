@@ -1,6 +1,6 @@
 import { View } from "react-native";
 
-import { Text } from "../../ui";
+import { Button, Text } from "../../ui";
 import { HeatTile } from "../HeatTile";
 import { LastTrainedBlock } from "../LastTrainedBlock";
 import { StatTile } from "../StatTile";
@@ -10,11 +10,10 @@ import type { NotTrainedSheetBodyProps } from "./types";
 /**
  * What the sheet of a muscle with no sets this week holds under its header: the Heat and This week tiles,
  * what a set would do, when the muscle was last trained, and how to get it into the routine. The Edit
- * routine button the board draws between the last two is not here until the routine editor can be opened
- * from the sheet.
+ * routine button sits between the last two and is drawn only when its handler is given.
  */
-export function NotTrainedSheetBody({ copy, detail }: NotTrainedSheetBodyProps) {
-  const { heat, thisWeek, explanation, lastTrained, footnote } = copy;
+export function NotTrainedSheetBody({ copy, detail, onEditRoutine }: NotTrainedSheetBodyProps) {
+  const { heat, thisWeek, explanation, lastTrained, footnote, actions } = copy;
 
   return (
     <>
@@ -29,6 +28,11 @@ export function NotTrainedSheetBody({ copy, detail }: NotTrainedSheetBodyProps) 
       </View>
       <Text>{explanation}</Text>
       <LastTrainedBlock lastTrained={lastTrained} />
+      {onEditRoutine === undefined ? null : (
+        <Button fullWidth variant="secondary" onPress={onEditRoutine}>
+          {actions.editRoutine}
+        </Button>
+      )}
       <Text tone="muted" variant="caption">
         {footnote}
       </Text>

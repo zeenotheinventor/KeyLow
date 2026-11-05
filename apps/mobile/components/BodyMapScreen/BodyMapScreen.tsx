@@ -29,7 +29,7 @@ import { BodyMapHint } from "../BodyMapHint";
 import { BodyMapLegend } from "../BodyMapLegend";
 import { DayScrubber } from "../DayScrubber";
 import { FigureSettingSheet } from "../FigureSettingSheet";
-import { MuscleSheet } from "../MuscleSheet";
+import { MuscleSheet, useEditRoutine } from "../MuscleSheet";
 import {
   Card,
   EmptyState,
@@ -127,6 +127,10 @@ export function BodyMapScreen() {
   // shown can choose it is worked out where the view is known.
   const [chosenDate, setChosenDate] = useState<string | null>(null);
   const [sheetMuscle, setSheetMuscle] = useState<MuscleId | null>(null);
+  const closeMuscleSheet = () => {
+    setSheetMuscle(null);
+  };
+  const editRoutine = useEditRoutine({ enabled: isReadEnabled, closeSheet: closeMuscleSheet });
   // The view of the figure the sheet was opened from, which the side by side view has two of.
   const [sheetView, setSheetView] = useState<BodyMapView>("actual");
   const [wantsSideBySide, setWantsSideBySide] = useState(false);
@@ -478,9 +482,8 @@ export function BodyMapScreen() {
         // Side by side has two figures, so the sheet follows the one it was opened from. Otherwise it follows the view shown.
         view={scale === "gap" ? "actual" : isSideBySide ? sheetView : view}
         weekStart={weekStart}
-        onClose={() => {
-          setSheetMuscle(null);
-        }}
+        onClose={closeMuscleSheet}
+        onEditRoutine={editRoutine}
       />
     </View>
   );
