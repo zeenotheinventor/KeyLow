@@ -188,6 +188,8 @@ export { exerciseRoleValues, musclesByRole, ROLE_FIGURE_VALUES } from "./exercis
 export type { MuscleRoleEntry, MusclesOfRole } from "./exerciseRoles";
 export { readMuscleValue } from "./bodyFigureReading";
 export type { BodyFigureScale, BodyFigureTone, MuscleValueReading } from "./bodyFigureReading";
+export { bodyMapScaleOf } from "./bodyMapLink";
+export type { BodyMapLinkScale } from "./bodyMapLink";
 export { dayMoments } from "./bodyMapMoments";
 export type { DayMoment, DayMoments, DayMomentsInput } from "./bodyMapMoments";
 
@@ -219,6 +221,13 @@ export { setsBarPositionsOf, upcomingSessionsOf, weightingExampleOf } from "./mu
 export type { SetsBarPositions } from "./muscleSheetContext";
 export { filterMuscleListGroups, muscleListGroups, musclesAboveRest } from "./muscleList";
 export type { MuscleListGroup, MuscleListRow, MusclesAboveRest } from "./muscleList";
+export { musclesAgainstPlan, musclesByVolume } from "./scaleMuscleList";
+export type {
+  GapMuscleRow,
+  MusclesAgainstPlan,
+  MusclesByVolume,
+  VolumeMuscleRow,
+} from "./scaleMuscleList";
 
 export {
   BODY_ARTWORK,
@@ -390,3 +399,5 @@ export {
   isGoalStepAnswered,
 } from "./goalDraft";
 export type { GoalDraft, GoalDraftAction, GoalDraftAnswers } from "./goalDraft";
+export { priorityFigureValues } from "./priorityFigureValues";
+export { sessionHeatReadingTime } from "./sessionProgress";

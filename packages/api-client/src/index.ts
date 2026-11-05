@@ -214,6 +214,7 @@ export {
   useLastPerformance,
   useMuscleDetail,
   useMuscleList,
+  useMuscleScaleList,
   useMuscleState,
   useRoutineTrendSets,
   useSession,
@@ -225,10 +226,12 @@ export {
 export {
   describeFinishDetails,
   describeSessionDetail,
+  heatSetsOf,
   isPendingSetId,
   useAddedExercises,
   useChangeSetType,
   useDiscardSession,
+  useEditSet,
   usePendingSets,
   useRemoveSetWithUndo,
   useSessionDetail,
@@ -239,6 +242,9 @@ export {
 export type {
   AddedExercise,
   ChangeSetTypeRequest,
+  EditSet,
+  EditSetOpening,
+  EditSetOpeningState,
   ExercisePlan,
   FinishDetails,
   LogSetRequest,
@@ -256,6 +262,7 @@ export type {
   SessionStartRequest,
   SessionView,
   SessionViewExercise,
+  SetChanges,
   SetLogging,
   SetNotices,
 } from "./hooks";
@@ -281,6 +288,7 @@ export type {
   UseLastPerformanceOptions,
   UseMuscleDetailInput,
   UseMuscleListInput,
+  UseMuscleScaleListInput,
 } from "./hooks";
 export {
   getActiveRoutine,

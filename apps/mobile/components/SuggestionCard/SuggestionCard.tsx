@@ -1,14 +1,11 @@
 import { SUGGESTION_NO_GOAL } from "@keylow/core/copy";
-import { View } from "react-native";
+import { Pressable, View } from "react-native";
 
 import { Button, Card, Icon, Text } from "../ui";
 
-import type { SuggestionCardProps } from "./types";
+import type { SuggestionCardProps, SuggestionOfferState } from "./types";
 import type { IconName } from "../ui";
-import type { SuggestionCardState } from "@keylow/api-client";
 import type { ReactNode } from "react";
-
-type OfferState = Extract<SuggestionCardState, { status: "offer" }>;
 
 // The swatch before each reason, written out so Tailwind sees them. The volume swatch is the nearest token
 // to the board's `--volume-under`, which the live tokens no longer have.
@@ -46,22 +43,41 @@ function Tile({
 function Offer({
   state,
   onDismiss,
+  onOpenDetail,
 }: {
-  state: OfferState;
+  state: SuggestionOfferState;
   onDismiss: SuggestionCardProps["onDismiss"];
+  onOpenDetail: SuggestionCardProps["onOpenDetail"];
 }) {
   const { copy } = state;
+  const words = (
+    <View className="min-w-0 flex-1 gap-0.5">
+      <Text tone="muted" variant="caption">
+        {copy.label}
+      </Text>
+      <Text variant="body-strong">{copy.headline}</Text>
+    </View>
+  );
   return (
     <Card aria-label={copy.cardName} role="region">
       <View className="gap-3">
         <View className="flex-row items-center gap-3">
           <Tile icon="Sparkles" tile="accent" tone="accent-ink" />
-          <View className="min-w-0 flex-1 gap-0.5">
-            <Text tone="muted" variant="caption">
-              {copy.label}
-            </Text>
-            <Text variant="body-strong">{copy.headline}</Text>
-          </View>
+          {state.detail === undefined || onOpenDetail === undefined ? (
+            words
+          ) : (
+            // The board draws the label and headline with a chevron as the one link to the detail, and the
+            // accessible name is core's "See why" one.
+            <Pressable
+              aria-label={copy.linkName}
+              className="min-h-touch-target min-w-0 flex-1 flex-row items-center gap-2"
+              role="link"
+              onPress={onOpenDetail}
+            >
+              {words}
+              <Icon name="ChevronRight" size="sm" tone="muted" />
+            </Pressable>
+          )}
         </View>
         <Text>{copy.sentence}</Text>
         <View aria-label={copy.reasonsName} className="gap-1.5" role="list">
@@ -131,14 +147,17 @@ function Statement({
  * offer with the reasons behind it and its two buttons, the card once it is added to the day, the card that
  * says there is nothing to add, and the card for a user with no goal. Every word is core's, given in the
  * state. A button is drawn only when its handler is given, and the offer for today draws no Add, so no
- * control is dead. The offer does not open a detail yet: the board's See why link comes with the detail.
+ * control is dead. Only the offer opens the detail, through the board's See why link on its heading, and
+ * only when it holds the detail. The accepted card, the nothing to add card and the no goal card have no
+ * session to show (the accepted one is worded from the stored row, which the live suggestion may differ
+ * from), and the boards draw no link on them.
  */
-export function SuggestionCard({ state, onDismiss, onSetGoal }: SuggestionCardProps) {
+export function SuggestionCard({ state, onDismiss, onSetGoal, onOpenDetail }: SuggestionCardProps) {
   switch (state.status) {
     case "hidden":
       return null;
     case "offer":
-      return <Offer state={state} onDismiss={onDismiss} />;
+      return <Offer state={state} onDismiss={onDismiss} onOpenDetail={onOpenDetail} />;
     case "accepted":
       return (
         <Statement

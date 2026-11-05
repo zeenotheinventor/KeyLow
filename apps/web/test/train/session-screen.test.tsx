@@ -84,6 +84,7 @@ describe("the session page", () => {
         "Leg press",
         "Seated leg curl",
         "Standing calf raise",
+        SESSION_ACTIVE.sideCardHeading,
       ]);
     });
 
@@ -599,7 +600,8 @@ describe("the session page", () => {
       await userEvent.click(screen.getByRole("button", { name: ADD_EXERCISE.closeName }));
 
       expect(screen.queryByRole("dialog")).toBeNull();
-      expect(screen.getAllByRole("heading", { level: 2 })).toHaveLength(5);
+      // The five exercise cards and the This session so far card.
+      expect(screen.getAllByRole("heading", { level: 2 })).toHaveLength(6);
     });
   });
 

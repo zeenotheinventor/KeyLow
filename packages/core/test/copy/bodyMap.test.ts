@@ -729,7 +729,10 @@ describe("describeDashboardBodyMapCard", () => {
 describe("describeWebListCaption", () => {
   it.each([
     [{ scale: "heat", moreAtRest: 10 }, "Hottest first · 10 more at rest"],
-    [{ scale: "volume", notTrained: 7 }, "Most sets first · 7 not trained"],
+    [
+      { scale: "volume", moreMaintaining: 3, notTrained: 7 },
+      "Most sets first · 3 more maintaining, 7 not trained",
+    ],
     [
       { scale: "gap", moreOnPlan: 3, notInPlan: 7 },
       "Furthest behind first · 3 more on plan, 7 not in plan",
@@ -740,7 +743,15 @@ describe("describeWebListCaption", () => {
 
   it("should leave out a count of 0 and the dot when both are 0", () => {
     expect(describeWebListCaption({ scale: "heat", moreAtRest: 0 })).toBe("Hottest first");
-    expect(describeWebListCaption({ scale: "volume", notTrained: 0 })).toBe("Most sets first");
+    expect(describeWebListCaption({ scale: "volume", moreMaintaining: 0, notTrained: 0 })).toBe(
+      "Most sets first",
+    );
+    expect(describeWebListCaption({ scale: "volume", moreMaintaining: 3, notTrained: 0 })).toBe(
+      "Most sets first · 3 more maintaining",
+    );
+    expect(describeWebListCaption({ scale: "volume", moreMaintaining: 0, notTrained: 7 })).toBe(
+      "Most sets first · 7 not trained",
+    );
     expect(describeWebListCaption({ scale: "gap", moreOnPlan: 3, notInPlan: 0 })).toBe(
       "Furthest behind first · 3 more on plan",
     );

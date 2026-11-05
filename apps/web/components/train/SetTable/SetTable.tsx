@@ -13,7 +13,7 @@ const headingClasses = "text-caption font-medium text-text-muted";
  * with the sentences for any rule they break under it, so the table is the whole entry: nothing opens. The
  * screen holds what is typed and what the check does. With `variant="readOnly"` it is a logged session's
  * sets as the session detail draws them: each row a sentence of what was done, with no headings, no check
- * column and nothing to type or press.
+ * column and nothing to type. A row given `edit` is one button that opens the set.
  */
 export function SetTable(props: SetTableProps) {
   if (props.variant === "readOnly") {
@@ -26,6 +26,7 @@ export function SetTable(props: SetTableProps) {
           <col className="w-11 md:w-14" />
           <col />
           <col className="w-20 md:w-24" />
+          <col className="w-8 md:w-10" />
         </colgroup>
         <tbody>
           {props.rows.map((row) => (

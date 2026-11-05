@@ -1,2 +1,3 @@
 export { SuggestionCard } from "./SuggestionCard";
-export type { SuggestionCardProps } from "./types";
+export { SuggestionDetailSheet } from "./SuggestionDetailSheet";
+export type { SuggestionCardProps, SuggestionOfferState } from "./types";

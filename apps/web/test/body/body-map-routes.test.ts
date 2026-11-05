@@ -7,6 +7,14 @@ describe("the body map routes", () => {
     expect(bodyMapPath()).toBe("/body-map");
   });
 
+  it("should ask for Volume in the address", () => {
+    expect(bodyMapPath("volume")).toBe("/body-map?scale=volume");
+  });
+
+  it("should leave Heat out of the address, because Heat is where the map opens", () => {
+    expect(bodyMapPath("heat")).toBe("/body-map");
+  });
+
   it("should open the muscle list with no address parameter for today", () => {
     expect(muscleListPath()).toBe("/body-map/muscles");
   });

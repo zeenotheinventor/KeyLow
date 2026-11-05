@@ -21,6 +21,9 @@ import {
 import TrainSessionDetailPage from "@/app/(dashboard)/train/history/[id]/page";
 import { SessionDetailScreen } from "@/components/train/SessionDetailScreen";
 
+const router = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn() }));
+vi.mock("next/navigation", () => ({ useRouter: () => router }));
+
 const renderDetail = (id: string = PULL_SESSION_ID, origin: "history" | "train" = "history") =>
   renderWithDetail(<SessionDetailScreen id={id} origin={origin} />);
 
@@ -75,13 +78,14 @@ describe("the session detail", () => {
       expect(detailBackend.reads).not.toContain("routine_days");
     });
 
-    it("should draw a card for each exercise, in the order they were first logged", async () => {
+    it("should draw the Muscles trained card, then a card for each exercise in the order they were first logged", async () => {
       renderDetail();
 
       await screen.findByRole("group", { name: "Time" });
       expect(
         screen.getAllByRole("region").map((region) => region.getAttribute("aria-label")),
       ).toEqual([
+        "Muscles trained",
         "Pullups",
         "Bent over barbell row",
         "Wide-grip lat pulldown",
@@ -122,12 +126,13 @@ describe("the session detail", () => {
       expect(within(rowCard).getByRole("row", { name: /^Set 1, 154.3 lb by 10/ })).toBeTruthy();
     });
 
-    it("should draw the sets as plain text: nothing to press, type into or check", async () => {
+    it("should draw each set as a row to press, with nothing to type into or check", async () => {
       renderDetail();
 
       const rowCard = await card("Bent over barbell row");
-      expect(within(rowCard).queryByRole("button")).toBeNull();
+      expect(within(rowCard).getAllByRole("button")).toHaveLength(4);
       expect(within(rowCard).queryByRole("textbox")).toBeNull();
+      expect(within(rowCard).queryByRole("checkbox")).toBeNull();
       expect(within(rowCard).queryByRole("columnheader")).toBeNull();
     });
   });
@@ -211,7 +216,7 @@ describe("the session detail", () => {
 
       expect(await screen.findByRole("heading", { name: HISTORY_ERROR.title })).toBeTruthy();
       expect(screen.queryByRole("button", { name: HISTORY_ERROR.action })).toBeNull();
-      expect(screen.queryByRole("status")).toBeNull();
+      expect(screen.queryByRole("status", { name: HISTORY_SESSION_LOADING_NAME })).toBeNull();
     });
 
     it("should read the session by itself when the connection comes back", async () => {

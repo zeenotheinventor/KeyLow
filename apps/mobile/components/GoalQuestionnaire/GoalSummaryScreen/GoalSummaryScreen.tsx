@@ -1,6 +1,11 @@
 import { useActiveRoutine, useSaveTrainingGoals } from "@keylow/api-client";
 import { describePriorities, GOAL_ERRORS, GOAL_SUMMARY } from "@keylow/core/copy";
-import { deriveMusclePriority, GOAL_PRESETS_V1, summarisePriorities } from "@keylow/core/training";
+import {
+  deriveMusclePriority,
+  GOAL_PRESETS_V1,
+  priorityFigureValues,
+  summarisePriorities,
+} from "@keylow/core/training";
 import { useRouter } from "expo-router";
 import { vars } from "nativewind";
 import { useMemo, useRef } from "react";
@@ -9,7 +14,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useBodyFigure } from "../../../lib/bodyFigure";
 import { BodyFigure, Button, Card, SheetHeader, Text, useToast } from "../../ui";
-import { priorityFigureValues } from "../priorityFigureValues";
 import { PriorityRow } from "../PriorityRow";
 import { useFinishGoalFlow } from "../useFinishGoalFlow";
 import { useGoalDraft } from "../useGoalDraft";

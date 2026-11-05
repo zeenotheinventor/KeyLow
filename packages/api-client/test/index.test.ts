@@ -116,6 +116,7 @@ describe("the package index", () => {
     "weekStartOf",
     "useBodyMap",
     "useMuscleList",
+    "useMuscleScaleList",
     "useMuscleDetail",
     "useDashboardBodyMap",
     "todayPlanOf",
@@ -139,6 +140,7 @@ describe("the package index", () => {
     "useStartSession",
     "useFinishSession",
     "useDeleteSession",
+    "useEditSet",
 
     "addSet",
     "updateSet",

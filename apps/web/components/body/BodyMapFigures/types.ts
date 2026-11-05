@@ -1,12 +1,15 @@
 import type { BodyFigureValues } from "@/components/ui/BodyFigure";
+import type { BodyMapScale } from "@keylow/core/copy";
 import type { BodyArtworkFigure, BodyMapView, MuscleId } from "@keylow/core/training";
 
 export type BodyMapFiguresProps = {
+  /** The scale the values are on: heat steps, volume statuses or gap values. */
+  scale: BodyMapScale;
   /** The view shown. The other view's figures stay in place, faded out, so a switch cross-fades. */
   view: BodyMapView;
-  /** The heat of each muscle in Actual, as `useBodyMap` gives it. A muscle left out is drawn at rest. */
+  /** The value of each muscle in Actual, as `useBodyMap` gives it for the scale. A muscle left out is drawn at the scale's first step. */
   actualValues: BodyFigureValues;
-  /** The heat of each muscle in Projected. */
+  /** The value of each muscle in Projected. */
   projectedValues: BodyFigureValues;
   /** The figure drawn. Defaults to male. */
   body?: BodyArtworkFigure | undefined;

@@ -11,7 +11,7 @@ import { useKeyboardUndo } from "@/lib/keyboardUndo";
  * How the page tells the person about a set: a danger toast for a failure, and a toast with Undo for a
  * removal. `prepareRemoval` is called when the check of a logged set is pressed, while focus is still on
  * it: when the press came from the keyboard, the removal's toast then takes focus to Undo and gives it back
- * to the control beside the row.
+ * to the control beside the row. From inside a dialog opened from the row, give `from`: the row's control.
  */
 export function useSetNotices() {
   const toast = useToast();
@@ -30,8 +30,8 @@ export function useSetNotices() {
 
   return {
     notices,
-    prepareRemoval: () => {
-      removalFocus.current = keyboardUndo.afterRemovingRow();
+    prepareRemoval: (options?: { from?: Element | null | undefined }) => {
+      removalFocus.current = keyboardUndo.afterRemovingRow(options);
     },
   };
 }

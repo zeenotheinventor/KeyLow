@@ -7,6 +7,7 @@ import {
   ROUTINE_EDITOR,
   ROUTINE_SAVE_FAILED,
   describeDaysSummary,
+  describeMovedPosition,
   describeProblemsBanner,
 } from "@keylow/core/copy";
 import {
@@ -28,7 +29,7 @@ import { CustomExerciseDialog } from "../CustomExerciseDialog";
 import { RoutineDayCard } from "../RoutineDayCard";
 
 import type { RoutineEditorProps } from "./types";
-import type { RoutineDraft } from "@keylow/core/training";
+import type { MoveDirection, RoutineDraft } from "@keylow/core/training";
 
 import { Banner } from "@/components/ui/Banner";
 import { Button } from "@/components/ui/Button";
@@ -38,6 +39,9 @@ import { useToast } from "@/components/ui/Toast";
 import { trainRoutinesPath } from "@/lib/trainRoutes";
 
 const emptyDraft: RoutineDraft = { name: "", days: [] };
+
+/** What the last move asks of the page: the words to announce, and the move button to put focus on. */
+type LastMove = { request: number; announcement: string; focusButton: string };
 
 /**
  * The routine editor, as the `web-routines · editor` board draws it: the title with Cancel and Save, the
@@ -64,6 +68,7 @@ export function RoutineEditor({ initialDraft, exerciseNames, routineId }: Routin
   // Marks show from the first press of Save with problems, and follow the draft after.
   const [areMarksShown, setAreMarksShown] = useState(false);
   const [focusRequest, setFocusRequest] = useState(0);
+  const [lastMove, setLastMove] = useState<LastMove | null>(null);
   const form = useRef<HTMLFormElement>(null);
 
   const draft = draftOfState(state);
@@ -94,6 +99,17 @@ export function RoutineEditor({ initialDraft, exerciseNames, routineId }: Routin
     }
   }, [focusRequest]);
 
+  // Moving an item can take the browser's focus off its button: a button that is dimmed cannot hold it, and a
+  // node the browser moves can lose it. So focus goes back after the render, to the button that moved the
+  // item, or to its partner when the item is now at the end that button points to.
+  useEffect(() => {
+    if (lastMove !== null) {
+      form.current
+        ?.querySelector<HTMLElement>(`[data-move-button="${lastMove.focusButton}"]`)
+        ?.focus();
+    }
+  }, [lastMove]);
+
   useEffect(() => {
     // The editor is replaced, so Back from the list does not return to a form that would save again.
     if (isLeaving) {
@@ -123,6 +139,24 @@ export function RoutineEditor({ initialDraft, exerciseNames, routineId }: Routin
       return;
     }
     setIsLeaving(true);
+  }
+
+  /** Announces where the item went and asks for focus on its move button once the render has drawn it there. */
+  function announceMove(
+    scope: string,
+    itemName: string,
+    position: number,
+    count: number,
+    by: MoveDirection,
+  ) {
+    const newPosition = by === "up" ? position - 1 : position + 1;
+    const isAtTheEnd = by === "up" ? newPosition === 0 : newPosition === count - 1;
+    const focusDirection = isAtTheEnd ? (by === "up" ? "down" : "up") : by;
+    setLastMove((previous) => ({
+      request: (previous?.request ?? 0) + 1,
+      announcement: describeMovedPosition(itemName, newPosition + 1, count),
+      focusButton: `${scope}:${focusDirection}`,
+    }));
   }
 
   function cancel() {
@@ -198,11 +232,17 @@ export function RoutineEditor({ initialDraft, exerciseNames, routineId }: Routin
                 exerciseCount={summary.days[position]?.exerciseCount ?? 0}
                 setCount={summary.days[position]?.setCount ?? 0}
                 isFull={day.exercises.length >= MAX_EXERCISES_PER_ROUTINE_DAY}
+                isFirst={position === 0}
+                isLast={position === state.days.length - 1}
                 onRename={(name) => {
                   dispatch({ type: "renameDay", key: day.key, name });
                 }}
                 onChangeWeekday={(weekday) => {
                   dispatch({ type: "setWeekday", key: day.key, weekday });
+                }}
+                onMove={(by) => {
+                  dispatch({ type: "moveDay", key: day.key, by });
+                  announceMove(`day:${day.key}`, day.name, position, state.days.length, by);
                 }}
                 onRemove={() => {
                   dispatch({ type: "removeDay", key: day.key });
@@ -212,6 +252,16 @@ export function RoutineEditor({ initialDraft, exerciseNames, routineId }: Routin
                 }}
                 onChangeField={(key, field, text) => {
                   dispatch({ type: "editExercise", dayKey: day.key, key, field, text });
+                }}
+                onMoveExercise={(exercise, position, by) => {
+                  dispatch({ type: "moveExercise", dayKey: day.key, key: exercise.key, by });
+                  announceMove(
+                    `exercise:${day.key}:${exercise.key}`,
+                    exercise.name,
+                    position,
+                    day.exercises.length,
+                    by,
+                  );
                 }}
                 onRemoveExercise={(key) => {
                   dispatch({ type: "removeExercise", dayKey: day.key, key });
@@ -232,6 +282,10 @@ export function RoutineEditor({ initialDraft, exerciseNames, routineId }: Routin
             {ROUTINE_DAY_CONTROLS.addDayAction}
           </Button>
         </section>
+        {/* Each announcement is a new node, so the same words twice are heard twice. */}
+        <p role="status" aria-live="polite" className="sr-only">
+          {lastMove === null ? null : <span key={lastMove.request}>{lastMove.announcement}</span>}
+        </p>
       </form>
       {/* The dialogs sit beside the form: a dialog renders in place and its buttons are untyped, so inside the form they would submit it. */}
       <AddExerciseDialog
