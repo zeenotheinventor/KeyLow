@@ -39,7 +39,7 @@ function ActionButton({ action }: { action: EmptyStateAction }) {
   }
 
   return (
-    <Button variant={variant} className="mt-3" onClick={action.onClick}>
+    <Button variant={variant} className="mt-3" disabled={action.disabled} onClick={action.onClick}>
       {content}
     </Button>
   );

@@ -199,6 +199,43 @@ describe("ErrorState", () => {
   });
 });
 
+describe("EmptyState disabled action", () => {
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("should dim the button and not press it when the action is disabled", () => {
+    const onClick = vi.fn();
+    render(
+      <EmptyState
+        icon={SearchX}
+        title="No sessions yet"
+        action={{ label: "Start a session", disabled: true, onClick }}
+      />,
+    );
+
+    const button = screen.getByRole("button", { name: "Start a session" });
+    fireEvent.click(button);
+
+    expect(button.hasAttribute("disabled")).toBe(true);
+    expect(onClick).not.toHaveBeenCalled();
+  });
+
+  it("should leave the button pressable when the action is not disabled", () => {
+    render(
+      <EmptyState
+        icon={SearchX}
+        title="No sessions yet"
+        action={{ label: "Start a session", onClick: () => undefined }}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Start a session" }).hasAttribute("disabled")).toBe(
+      false,
+    );
+  });
+});
+
 describe("EmptyState action variant", () => {
   afterEach(() => {
     cleanup();

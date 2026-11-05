@@ -66,6 +66,18 @@ export const samples: Record<string, () => string[]> = {
         row.accessibleName,
       ];
     }),
+  describeHistoryTableRow: () =>
+    [summary, openSummary].flatMap((rowSummary) => {
+      const row = copy.describeHistoryTableRow({ localDate: "2026-10-13", summary: rowSummary });
+      return [
+        row.date,
+        row.name,
+        row.time,
+        row.sets,
+        ...present(row.muscles),
+        ...present(row.resumeName),
+      ];
+    }),
   describeSessionWhen: () => [
     copy.describeSessionWhen({
       localDate: "2026-10-13",
