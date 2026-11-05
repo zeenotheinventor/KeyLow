@@ -236,6 +236,7 @@ const table: readonly [foodWord: string, wanted: RegExp][] = [
   ["chicken", /^Chicken, (breast|light meat|meat)/],
   ["chicken", /^Chicken, breast, raw/],
   ["chicken breast", /^Chicken, breast.*raw/],
+  ["chicken breast", /^Chicken, breast, raw/],
   ["banana", /^Bananas, /],
   ["egg", /^Eggs, chicken, whole, raw/],
   ["apple", /^Apples, eating, raw/],

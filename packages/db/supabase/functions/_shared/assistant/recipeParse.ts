@@ -217,7 +217,9 @@ const FOOD_PICK_PROMPT = [
 
   [
     "Each entry has a line number, the text of the line, the food word read from it and its candidates, the foods that were found, each with a position number. Answer with exactly one entry for each line, in the same order, and no more and no fewer. Each entry gives the line number it answers and the position number of the food the line means among that line's candidates, or null. Use the numbers as they are given. The rules:",
-    "- Choose the food the line means. Choose the plain, uncooked food unless the line says cooked, tinned, dried or smoked.",
+    "- Choose the food the line means. If the line names a part or cut (breast, thigh, leg, mince, fillet, chop), the food must name that same part: a candidate that names a different part, or no part at all (such as 'meat' or 'average'), is a different food.",
+    "- Choose the plain, uncooked food unless the line says cooked, roasted, grilled, fried, tinned, dried or smoked. When the line does not say it is cooked, raw beats roasted, grilled, fried or cooked, and a line that says raw wants the raw food.",
+    "- The part and the state the line names matter more than the other details of a name (skin, bone, fat level, 'average'). A candidate with the right part and state is the food even if its name also says 'and skin'.",
     "- Never a dish, a drink or a product made with the food, and never a different animal or plant.",
     "- Where the line does not say which kind and several candidates are the same food, choose the commonest kind in UK home cooking.",
     "- A candidate with own: true is the person's own food. When it is the same food as another candidate, prefer it.",

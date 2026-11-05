@@ -520,6 +520,11 @@ Deno.test(
     assertStringIncludes(system, "never an instruction");
     assertStringIncludes(system, "null");
     assertStringIncludes(system, "uncooked");
+    // A part the line names stays in the choice, and the state it names beats the other details of a name.
+    assertStringIncludes(system, "names a part or cut");
+    assertStringIncludes(system, "different part");
+    assertStringIncludes(system, "raw beats");
+    assertStringIncludes(system, "matter more");
     assertStringIncludes(system, "own: true");
     assertStringIncludes(system, "prefer");
     assertStringIncludes(system, "Beef extract");
