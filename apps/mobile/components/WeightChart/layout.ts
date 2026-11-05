@@ -1,4 +1,4 @@
-import type { WeightChartAxis } from "./types";
+import type { WeightChartAxis } from "@keylow/core/weight";
 
 // The figure's room, as the board draws it, in points. The classes in the figure are written out so Tailwind
 // sees them, and these are the numbers the drawing counts on.

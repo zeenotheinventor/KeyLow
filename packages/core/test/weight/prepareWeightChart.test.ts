@@ -1,10 +1,10 @@
-import { addCalendarDays } from "@keylow/core/dates";
-import { computeTrend } from "@keylow/core/engine";
-import { rangeWindow } from "@keylow/core/weight";
+import { describe, expect, it } from "vitest";
 
-import { prepareWeightChart } from "./prepareWeightChart";
+import { addCalendarDays } from "../../src/dates";
+import { computeTrend } from "../../src/engine";
+import { prepareWeightChart, rangeWindow } from "../../src/weight";
 
-import type { WeightRange } from "@keylow/core/weight";
+import type { WeightRange } from "../../src/weight";
 
 const today = "2026-10-23";
 
