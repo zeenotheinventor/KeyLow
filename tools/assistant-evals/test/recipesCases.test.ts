@@ -5,6 +5,7 @@ import { spoonPortionWithLabel } from "@keylow/core/nutrition";
 import { buildRecipeIngredient, computeRecipe } from "@keylow/core/recipes";
 import { describe, expect, it } from "vitest";
 
+import { fakeEnvironment } from "./fakeEnvironment.ts";
 import { fakeDatabase, readTool, turnResult, writeTool } from "./helpers.ts";
 import { READ_TOOLS } from "../cases/ask.ts";
 import {
@@ -424,6 +425,36 @@ describe("the pages", () => {
   });
 });
 
+describe("the Undo cases", () => {
+  const undoCase = caseOf(pageNamed("undo-jsonld-plain-porridge"));
+  const turn = (id: string) => ({ index: 0, result: turnResult({ turnId: id }) });
+
+  it("should press Undo for the turn after it, and only the Undo cases do", async () => {
+    const environment = fakeEnvironment({ undoPresses: { "turn-x": [["undone"]] } });
+
+    await undoCase.afterTurn?.(turn("turn-x"), environment);
+
+    expect(environment.calls).toEqual(["undo turn-x"]);
+    expect(caseOf(pageNamed("jsonld-plain-porridge")).afterTurn).toBeUndefined();
+  });
+
+  it("should fail when the turn had nothing to undo", async () => {
+    const environment = fakeEnvironment();
+
+    await expect(undoCase.afterTurn?.(turn("turn-y"), environment)).rejects.toThrow("no action");
+  });
+
+  it("should fail when an action was not undone", async () => {
+    const environment = fakeEnvironment({
+      undoPresses: { "turn-z": [["undone", "undo_unavailable"]] },
+    });
+
+    await expect(undoCase.afterTurn?.(turn("turn-z"), environment)).rejects.toThrow(
+      "undone, undo_unavailable",
+    );
+  });
+});
+
 // --- The expected foods ----------------------------------------------------------------------------------
 
 describe("the expected foods", () => {
@@ -448,7 +479,7 @@ describe("the expected foods", () => {
   ].flatMap(([, name]) => (name === undefined ? [] : [name]));
   const seededNames = [...cofidNames, ...usdaNames];
 
-  // Foods a person would not mean by the line, most of them the first hit of a tied search (KEY-701 review).
+  // Foods a person would not mean by the line, most of them the first hit of a tied search, which the import took before KEY-838.
   const WRONG: Readonly<Record<keyof typeof FOODS, readonly string[]>> = {
     oats: [
       "Porridge oats, unfortified, cooked, made up with semi-skimmed milk",

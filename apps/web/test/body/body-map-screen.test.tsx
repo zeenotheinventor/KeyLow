@@ -1,6 +1,13 @@
 import { RESTING_HEAT } from "@keylow/api-client";
-import { BODY_MAP, TRAIN_ERROR, TRAIN_OFFLINE_TITLE, TRAIN_START_FAILED } from "@keylow/core/copy";
-import { BODY_ARTWORK } from "@keylow/core/training";
+import {
+  BODY_MAP,
+  MUSCLE_NAMES,
+  TRAIN_ERROR,
+  TRAIN_OFFLINE_TITLE,
+  TRAIN_START_FAILED,
+  describeGap,
+} from "@keylow/core/copy";
+import { BODY_ARTWORK, GAP_VALUES, MUSCLE_IDS, VOLUME_STATUSES } from "@keylow/core/training";
 import { onlineManager } from "@tanstack/react-query";
 import {
   act,
@@ -13,7 +20,7 @@ import {
 import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { BodyMap, TrainingReadResult } from "@keylow/api-client";
+import type { BodyMap, BodyMapDay, TrainingReadResult } from "@keylow/api-client";
 import type { BodyMapView } from "@keylow/core/training";
 import type { ReactElement } from "react";
 
@@ -33,12 +40,19 @@ const sessionStart = vi.hoisted(() => ({
 }));
 const reads = vi.hoisted(
   (): {
-    byView: Record<string, unknown>;
-    asked: { view: string; scale: string }[];
+    // Each body map read by its scale and view, as "heat:actual".
+    byRead: Record<string, unknown>;
+    asked: { view: string; scale: string; enabled: boolean | undefined }[];
+    detailAsked: { muscle: string; view: string }[];
+    listAsked: (boolean | undefined)[];
+    scaleListAsked: { scale: string; enabled: boolean | undefined }[];
     zone: unknown;
   } => ({
-    byView: {},
+    byRead: {},
     asked: [],
+    detailAsked: [],
+    listAsked: [],
+    scaleListAsked: [],
     zone: undefined,
   }),
 );
@@ -51,18 +65,45 @@ vi.mock("@keylow/api-client", async (importOriginal) => ({
     sessionStart.notices = notices;
     return { start: sessionStart.start, isStarting: false };
   },
-  useBodyMap: ({ view, scale }: { view: string; scale: string }) => {
-    reads.asked.push({ view, scale });
-    return reads.byView[view];
+  // A read switched off gives nothing, as the real hook does, so a skeleton shows if a scale is not read.
+  useBodyMap: ({
+    view,
+    scale,
+    enabled,
+  }: {
+    view: string;
+    scale: string;
+    enabled?: boolean | undefined;
+  }) => {
+    reads.asked.push({ view, scale, enabled });
+    return enabled === false ? pending : reads.byRead[`${scale}:${view}`];
   },
-  // The Muscles card has its own test file, so the list is never read here.
-  useMuscleList: () => ({
-    data: undefined,
-    isPending: true,
-    isError: false,
-    error: null,
-    refetch: () => Promise.resolve(),
-  }),
+  useMuscleDetail: (muscle: string, { view }: { view: string }) => {
+    reads.detailAsked.push({ muscle, view });
+    return pending;
+  },
+  useActiveRoutine: () => ({ data: null }),
+  // The Muscles card has its own test files, so the lists are never read here.
+  useMuscleList: ({ enabled }: { enabled?: boolean | undefined }) => {
+    reads.listAsked.push(enabled);
+    return {
+      data: undefined,
+      isPending: true,
+      isError: false,
+      error: null,
+      refetch: () => Promise.resolve(),
+    };
+  },
+  useMuscleScaleList: ({ scale, enabled }: { scale: string; enabled?: boolean | undefined }) => {
+    reads.scaleListAsked.push({ scale, enabled });
+    return {
+      data: undefined,
+      isPending: true,
+      isError: false,
+      error: null,
+      refetch: () => Promise.resolve(),
+    };
+  },
 }));
 
 // The dashboard layout holds the toast provider the screen's failure toast needs.
@@ -120,8 +161,23 @@ const goldenProjected: BodyMap = {
   values: { ...goldenActual.values, lats: 5, quads: 4 },
 };
 
+// Every scale is read from the same rows, so by default all of them give what Heat does.
 function show(actual: BodyMapRead, projected: BodyMapRead = actual) {
-  reads.byView = { actual, projected };
+  reads.byRead = {
+    "heat:actual": actual,
+    "heat:projected": projected,
+    "volume:actual": actual,
+    "volume:projected": projected,
+    "gap:actual": actual,
+  };
+}
+
+// One scale's reads, for the tests where the scales differ. Gap has no Projected.
+function showScale(scale: "volume" | "gap", actual: BodyMapRead, projected: BodyMapRead = actual) {
+  reads.byRead[`${scale}:actual`] = actual;
+  if (scale === "volume") {
+    reads.byRead["volume:projected"] = projected;
+  }
 }
 
 // The shown view's figures are groups of muscle buttons and the other view's are plain images hidden from a
@@ -149,6 +205,9 @@ describe("BodyMapScreen", () => {
     resetBodyFigureForTests();
     onlineManager.setOnline(true);
     reads.asked = [];
+    reads.detailAsked = [];
+    reads.listAsked = [];
+    reads.scaleListAsked = [];
     reads.zone = { data: "Europe/London" };
     show(read(goldenActual), read(goldenProjected));
   });
@@ -172,13 +231,14 @@ describe("BodyMapScreen", () => {
       expect(screen.getByRole("heading", { level: 1, name: BODY_MAP.title })).toBeTruthy();
     });
 
-    it("should read Actual and Projected heat, and nothing else", () => {
+    it("should open on Heat, with the Heat legend", () => {
       render(<BodyMapScreen />);
 
-      expect(new Set(reads.asked.map(({ scale }) => scale))).toStrictEqual(new Set(["heat"]));
-      expect(new Set(reads.asked.map(({ view }) => view))).toStrictEqual(
-        new Set(["actual", "projected"]),
+      expect(screen.getByRole("radio", { name: BODY_MAP.scaleSwitch.heat })).toHaveProperty(
+        "checked",
+        true,
       );
+      expect(screen.getByRole("region", { name: BODY_MAP.legendNames.heat })).toBeTruthy();
     });
   });
 
@@ -246,6 +306,418 @@ describe("BodyMapScreen", () => {
           "How hard and how recently each muscle worked. It cools as you recover. Press and hold a muscle, or pick it below, for its details.",
         ),
       ).toBeTruthy();
+    });
+  });
+
+  describe("the scales", () => {
+    const SUNDAY_20_00 = "2026-10-18T19:00:00.000Z";
+    const volumeAt = (status: (typeof VOLUME_STATUSES)[number]) => VOLUME_STATUSES.indexOf(status);
+    const gapAt = (value: (typeof GAP_VALUES)[number]) => GAP_VALUES.indexOf(value);
+    const dayOf = (date: string, status: BodyMapDay["status"], plannedDayName: string | null) => ({
+      date,
+      at: `${date}T19:00:00.000Z`,
+      isToday: false,
+      status,
+      plannedDayName,
+      sessionDayName: null,
+      selectable: true,
+    });
+    // Saturday's Push was planned and not done.
+    const week: BodyMapDay[] = [
+      dayOf("2026-10-12", "logged", "Push"),
+      dayOf("2026-10-16", "rest", null),
+      dayOf("2026-10-17", "missed", "Push"),
+      dayOf("2026-10-18", "rest", null),
+    ];
+    const sundayVolume: BodyMap = {
+      ...goldenActual,
+      values: {
+        ...RESTING_HEAT,
+        lats: volumeAt("productive"),
+        quads: volumeAt("growing"),
+        calves: volumeAt("maintaining"),
+        triceps: volumeAt("high"),
+      },
+      computedAt: SUNDAY_20_00,
+      days: week,
+    };
+    const sundayGap: BodyMap = {
+      ...goldenActual,
+      values: {
+        ...RESTING_HEAT,
+        lats: gapAt("on_plan"),
+        triceps: gapAt("behind"),
+        quads: gapAt("ahead"),
+        neck: gapAt("not_in_plan"),
+      },
+      computedAt: SUNDAY_20_00,
+      days: week,
+    };
+    const scaleSwitch = () => screen.getByRole("radiogroup", { name: BODY_MAP.scaleSwitch.name });
+    const chooseScale = (name: string) => {
+      fireEvent.click(within(scaleSwitch()).getByRole("radio", { name }));
+    };
+    const figureOf = (scale: string, side: "front" | "back", view: string) =>
+      screen.getByRole("group", { name: `Body map, ${view}, ${scale}, ${side}` });
+    const fillClassOf = (figureElement: HTMLElement, path: string) =>
+      figureElement.querySelector(`path[d="${path}"]:not([aria-hidden])`)?.getAttribute("class") ??
+      "";
+    const legendNamesOf = (legend: HTMLElement) =>
+      within(legend)
+        .getAllByRole("listitem")
+        .map((item) => item.textContent);
+    const swatchClassOf = (legend: HTMLElement, position: number) =>
+      within(legend).getAllByRole("listitem")[position]?.querySelector('[aria-hidden="true"]')
+        ?.className ?? "";
+    const musclesCard = () => screen.queryByRole("link", { name: BODY_MAP.muscleListButton });
+
+    describe("the switch", () => {
+      it("should offer Heat, Volume and Gap in a group named Scale, on Heat", () => {
+        render(<BodyMapScreen />);
+
+        const options = within(scaleSwitch()).getAllByRole("radio");
+        expect(options.map((option) => option.closest("label")?.textContent)).toStrictEqual([
+          "Heat",
+          "Volume",
+          "Gap",
+        ]);
+        expect(within(scaleSwitch()).getByRole("radio", { name: "Heat" })).toHaveProperty(
+          "checked",
+          true,
+        );
+      });
+
+      it("should open on Volume when the link names it", () => {
+        render(<BodyMapScreen initialScale="volume" />);
+
+        expect(within(scaleSwitch()).getByRole("radio", { name: "Volume" })).toHaveProperty(
+          "checked",
+          true,
+        );
+        expect(screen.getByRole("region", { name: BODY_MAP.legendNames.volume })).toBeTruthy();
+      });
+
+      it("should read every scale at once and switch with no request and no skeleton", () => {
+        render(<BodyMapScreen />);
+        const readsOnOpen = new Set(reads.asked.map(({ scale, view }) => `${scale}:${view}`));
+        const loading = () =>
+          screen.queryByRole("status", { name: BODY_MAP.dashboardCard.loadingLabel });
+
+        expect(readsOnOpen).toStrictEqual(
+          new Set([
+            "heat:actual",
+            "heat:projected",
+            "volume:actual",
+            "volume:projected",
+            "gap:actual",
+          ]),
+        );
+        expect(reads.asked.every(({ enabled }) => enabled !== false)).toBe(true);
+        expect(reads.scaleListAsked.every(({ enabled }) => enabled !== false)).toBe(true);
+        for (const name of ["Volume", "Gap", "Heat"]) {
+          chooseScale(name);
+          expect(loading()).toBeNull();
+        }
+        expect(new Set(reads.asked.map(({ scale, view }) => `${scale}:${view}`))).toStrictEqual(
+          readsOnOpen,
+        );
+        expect(reads.asked.every(({ enabled }) => enabled !== false)).toBe(true);
+        // The card's rows are the scale on screen's, read from the same rows and never switched off.
+        expect(reads.scaleListAsked.map(({ scale }) => scale)).toContain("gap");
+        expect(reads.scaleListAsked.every(({ enabled }) => enabled !== false)).toBe(true);
+      });
+
+      it("should not remember the scale for the next visit", () => {
+        const first = render(<BodyMapScreen />);
+        chooseScale("Volume");
+        first.unmount();
+
+        render(<BodyMapScreen />);
+
+        expect(within(scaleSwitch()).getByRole("radio", { name: "Heat" })).toHaveProperty(
+          "checked",
+          true,
+        );
+      });
+    });
+
+    describe("Volume", () => {
+      beforeEach(() => {
+        showScale("volume", read(sundayVolume));
+      });
+
+      it("should draw the legend of the five bands in order, each with its name, and the caption", () => {
+        render(<BodyMapScreen initialScale="volume" />);
+
+        const legend = screen.getByRole("region", { name: BODY_MAP.legendNames.volume });
+        expect(within(legend).getByRole("heading", { name: "Volume" })).toBeTruthy();
+        expect(legendNamesOf(legend)).toStrictEqual([
+          "Not trained",
+          "Maintaining",
+          "Growing",
+          "Productive",
+          "High",
+        ]);
+        [
+          "bg-volume-not-trained",
+          "bg-volume-maintaining",
+          "bg-volume-growing",
+          "bg-volume-productive",
+          "bg-volume-high",
+        ].forEach((swatchClass, position) => {
+          expect(swatchClassOf(legend, position)).toContain(swatchClass);
+        });
+        expect(
+          within(legend).getByText(
+            "Sets this week, Monday to Sunday. Growing starts at 4 sets, Productive at 10 and High above 20.",
+          ),
+        ).toBeTruthy();
+      });
+
+      it("should fill the muscles from the Volume read, and name the value of each as well", () => {
+        render(<BodyMapScreen initialScale="volume" />);
+
+        const { front, back } = BODY_ARTWORK.male;
+        const frontFigure = figureOf("weekly sets", "front", "Actual");
+        const backFigure = figureOf("weekly sets", "back", "Actual");
+        expect(fillClassOf(frontFigure, front.muscles.quads)).toContain("fill-volume-growing");
+        expect(fillClassOf(backFigure, back.muscles.triceps)).toContain("fill-volume-high");
+        expect(fillClassOf(backFigure, back.muscles.lats)).toContain("fill-volume-productive");
+        expect(within(backFigure).getByRole("button", { name: "Lats, Productive" })).toBeTruthy();
+      });
+
+      it("should keep the Actual and Projected toggle, which reads the Projected sets", () => {
+        showScale(
+          "volume",
+          read(sundayVolume),
+          read({ ...sundayVolume, values: { ...sundayVolume.values, lats: volumeAt("high") } }),
+        );
+        render(<BodyMapScreen initialScale="volume" />);
+
+        fireEvent.click(toggle());
+
+        expect(within(viewLabel()).getByText("Projected")).toBeTruthy();
+        const projectedLats = figureOf("weekly sets", "back", "Projected");
+        expect(fillClassOf(projectedLats, BODY_ARTWORK.male.back.muscles.lats)).toContain(
+          "fill-volume-high",
+        );
+      });
+
+      it("should say the sets so far in Actual and the projected sets by Sunday in Projected", () => {
+        render(<BodyMapScreen initialScale="volume" />);
+        expect(within(viewLabel()).getByText(/^This week · as of /)).toBeTruthy();
+
+        fireEvent.click(toggle());
+
+        expect(within(viewLabel()).getByText("By Sun 18 Oct, if you follow the plan")).toBeTruthy();
+      });
+
+      it("should keep the Muscle list link, which opens Heat's list, while the rows are not read", () => {
+        render(<BodyMapScreen initialScale="volume" />);
+
+        expect(musclesCard()?.getAttribute("href")).toBe("/body-map/muscles");
+        expect(screen.queryByRole("heading", { name: BODY_MAP.listTitle })).toBeNull();
+      });
+
+      it("should keep reading the muscle list, so the Muscles card comes back whole on Heat", () => {
+        render(<BodyMapScreen initialScale="volume" />);
+
+        expect(reads.listAsked.length).toBeGreaterThan(0);
+        expect(reads.listAsked.every((enabled) => enabled !== false)).toBe(true);
+      });
+
+      it("should not show the nothing logged state, which belongs to Heat", () => {
+        showScale("volume", read({ ...sundayVolume, nothingLogged: true }));
+        render(<BodyMapScreen initialScale="volume" />);
+
+        expect(screen.queryByRole("heading", { name: BODY_MAP.emptyState.title })).toBeNull();
+        expect(screen.queryByText(/^Nothing logged/)).toBeNull();
+        expect(screen.getByRole("region", { name: BODY_MAP.legendNames.volume })).toBeTruthy();
+      });
+
+      it("should say Projected needs a routine when there is none, and keep Actual", () => {
+        showScale("volume", read({ ...sundayVolume, projectedAvailable: false }));
+        render(<BodyMapScreen initialScale="volume" />);
+
+        expect(toggle().hasAttribute("disabled")).toBe(true);
+        expect(screen.getByText(BODY_MAP.toggle.projectedNeedsRoutine)).toBeTruthy();
+      });
+    });
+
+    describe("Gap", () => {
+      beforeEach(() => {
+        window.localStorage.setItem("bodyMap.view", "projected" satisfies BodyMapView);
+        showScale("gap", read(sundayGap));
+      });
+
+      it("should draw the legend of the four values in order, and the caption", () => {
+        render(<BodyMapScreen />);
+        chooseScale("Gap");
+
+        const legend = screen.getByRole("region", { name: BODY_MAP.legendNames.gap });
+        expect(within(legend).getByRole("heading", { name: "Gap" })).toBeTruthy();
+        expect(legendNamesOf(legend)).toStrictEqual(["Not in plan", "Behind", "On plan", "Ahead"]);
+        ["bg-volume-not-trained", "bg-gap-behind", "bg-gap-on-plan", "bg-gap-ahead"].forEach(
+          (swatchClass, position) => {
+            expect(swatchClassOf(legend, position)).toContain(swatchClass);
+          },
+        );
+        expect(
+          within(legend).getByText(
+            "Sets done against your plan for the week. On plan means within 1 set.",
+          ),
+        ).toBeTruthy();
+      });
+
+      it("should fill the muscles from the Gap read, named Done against plan", () => {
+        render(<BodyMapScreen />);
+        chooseScale("Gap");
+
+        const { front, back } = BODY_ARTWORK.male;
+        const frontFigure = figureOf("gap", "front", "Done against plan");
+        const backFigure = figureOf("gap", "back", "Done against plan");
+        expect(fillClassOf(backFigure, back.muscles.triceps)).toContain("fill-gap-behind");
+        expect(fillClassOf(frontFigure, front.muscles.quads)).toContain("fill-gap-ahead");
+        expect(fillClassOf(backFigure, back.muscles.lats)).toContain("fill-gap-on-plan");
+        expect(within(viewLabel()).getByText("Done against plan")).toBeTruthy();
+      });
+
+      it("should have no toggle, and a click on the figures does nothing and leaves the saved view", () => {
+        render(<BodyMapScreen />);
+        chooseScale("Gap");
+
+        expect(screen.queryByRole("button", { name: /^Show (projected|actual)$/ })).toBeNull();
+        fireEvent.click(figureOf("gap", "front", "Done against plan"));
+
+        expect(within(viewLabel()).getByText("Done against plan")).toBeTruthy();
+        expect(window.localStorage.getItem("bodyMap.view")).toBe("projected");
+        chooseScale("Heat");
+        expect(within(viewLabel()).getByText("Projected")).toBeTruthy();
+      });
+
+      it("should show the note under the figures: the missed session, and that the week is still on", () => {
+        render(<BodyMapScreen />);
+        chooseScale("Gap");
+
+        const note = describeGap({ values: sundayGap.values, days: week, countsWholeWeek: false });
+        expect(note).toContain("Push was missed");
+        expect(screen.getByText(note)).toBeTruthy();
+        expect(screen.getByText(note).textContent).toContain(BODY_MAP.notes.gapSoFar);
+      });
+
+      it("should count the whole week from Sunday, so the note no longer says the week is on", () => {
+        vi.setSystemTime(new Date(SUNDAY_20_00));
+        render(<BodyMapScreen />);
+        chooseScale("Gap");
+
+        const note = describeGap({ values: sundayGap.values, days: week, countsWholeWeek: true });
+        expect(screen.getByText(note)).toBeTruthy();
+        expect(note).not.toContain(BODY_MAP.notes.gapSoFar);
+      });
+
+      it("should not show the nothing logged state, which belongs to Heat", () => {
+        showScale("gap", read({ ...sundayGap, nothingLogged: true }));
+        render(<BodyMapScreen />);
+        chooseScale("Gap");
+
+        expect(screen.queryByRole("heading", { name: BODY_MAP.emptyState.title })).toBeNull();
+        expect(screen.queryByText(/^Nothing logged/)).toBeNull();
+      });
+
+      it("should keep the Muscle list link on every scale, opening the same page", () => {
+        render(<BodyMapScreen />);
+        expect(musclesCard()?.getAttribute("href")).toBe("/body-map/muscles");
+
+        chooseScale("Gap");
+        expect(musclesCard()?.getAttribute("href")).toBe("/body-map/muscles");
+
+        chooseScale("Heat");
+        expect(musclesCard()?.getAttribute("href")).toBe("/body-map/muscles");
+      });
+
+      it("should open the sheet of a muscle on Actual, whatever view is saved", () => {
+        render(<BodyMapScreen />);
+        chooseScale("Gap");
+
+        fireEvent.keyDown(
+          within(figureOf("gap", "back", "Done against plan")).getByRole("button", {
+            name: /^Lats, /,
+          }),
+          { key: "Enter" },
+        );
+
+        expect(screen.getByRole("dialog", { name: MUSCLE_NAMES.lats })).toBeTruthy();
+        expect(reads.detailAsked.at(-1)).toStrictEqual({ muscle: "lats", view: "actual" });
+      });
+    });
+
+    describe("reaching every muscle", () => {
+      it.each([["Volume"], ["Gap"]])(
+        "should keep a button for each of the 22 muscles on the figures in %s, with its value named",
+        (name) => {
+          showScale("volume", read(sundayVolume));
+          showScale("gap", read(sundayGap));
+          render(<BodyMapScreen />);
+          chooseScale(name);
+
+          const buttons = screen
+            .getAllByRole("button", { name: /^[A-Za-z ]+, [A-Za-z ]+$/ })
+            .map((button) => button.getAttribute("aria-label"));
+          for (const muscle of MUSCLE_IDS) {
+            expect(buttons.some((label) => label?.startsWith(`${MUSCLE_NAMES[muscle]}, `))).toBe(
+              true,
+            );
+          }
+        },
+      );
+
+      it("should open the sheet of a muscle on Volume in the view shown", () => {
+        window.localStorage.setItem("bodyMap.view", "projected" satisfies BodyMapView);
+        showScale("volume", read(sundayVolume));
+        render(<BodyMapScreen initialScale="volume" />);
+
+        fireEvent.keyDown(
+          within(figureOf("weekly sets", "back", "Projected")).getByRole("button", {
+            name: /^Lats, /,
+          }),
+          { key: "Enter" },
+        );
+
+        expect(reads.detailAsked.at(-1)).toStrictEqual({ muscle: "lats", view: "projected" });
+      });
+    });
+
+    describe("while it loads, fails or is offline", () => {
+      it("should say the body map is not available offline on Volume when nothing was read", () => {
+        show(pending);
+        onlineManager.setOnline(false);
+        act(() => undefined);
+        render(<BodyMapScreen initialScale="volume" />);
+
+        expect(screen.getByText(TRAIN_OFFLINE_TITLE)).toBeTruthy();
+        expect(
+          screen.queryByRole("status", { name: BODY_MAP.dashboardCard.loadingLabel }),
+        ).toBeNull();
+        expect(screen.queryByRole("radiogroup", { name: BODY_MAP.scaleSwitch.name })).toBeNull();
+      });
+
+      it("should say it too when Heat was read and the scale asked for is still waiting for a connection", () => {
+        showScale("volume", pending);
+        onlineManager.setOnline(false);
+        act(() => undefined);
+        render(<BodyMapScreen initialScale="volume" />);
+
+        expect(screen.getByText(TRAIN_OFFLINE_TITLE)).toBeTruthy();
+      });
+
+      it("should read again the scale that failed on Try again", () => {
+        showScale("volume", failed);
+        render(<BodyMapScreen initialScale="volume" />);
+
+        fireEvent.click(screen.getByRole("button", { name: TRAIN_ERROR.action }));
+
+        expect(refetch).toHaveBeenCalled();
+      });
     });
   });
 

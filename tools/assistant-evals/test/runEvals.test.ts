@@ -368,7 +368,10 @@ describe("runEvals", () => {
         [costing(5, { status: "failed" })],
       );
 
-      expect(report.cases[0]).toMatchObject({ status: "error", failures: ["the turn failed"] });
+      expect(report.cases[0]).toMatchObject({
+        status: "error",
+        failures: ["the turn failed (no notice)"],
+      });
     });
 
     it("should end a case whose driver never answers after the wall-clock ceiling, and carry on", async () => {
@@ -395,7 +398,6 @@ describe("runEvals", () => {
 
 describe("runEvals with a case that sets up and waits", () => {
   const environmentThatLogs = (log: string[]): CaseEnvironment => ({
-    undoActionsOfTurn: () => Promise.resolve(),
     seedConversation: (turns) => {
       log.push(`seed ${turns.length}`);
       return Promise.resolve("seeded-conversation");
@@ -404,6 +406,8 @@ describe("runEvals with a case that sets up and waits", () => {
       log.push(`wait ${conversationId}`);
       return Promise.resolve();
     },
+    undoTurn: () => Promise.resolve([]),
+    restoreTargets: () => Promise.resolve(),
   });
 
   it("should send the first message into the conversation that setup answered", async () => {

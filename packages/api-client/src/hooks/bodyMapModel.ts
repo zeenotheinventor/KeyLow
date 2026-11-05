@@ -9,6 +9,8 @@ import {
   heatValues,
   muscleDetail,
   muscleState,
+  musclesAgainstPlan,
+  musclesByVolume,
   projectWeek,
   projectedState,
   targetedMuscles,
@@ -27,6 +29,8 @@ import type {
   MuscleId,
   MusclePlanComparison,
   MuscleState,
+  MusclesAgainstPlan,
+  MusclesByVolume,
   PlanRoutine,
   TargetedMusclesInput,
   WeekPlan,
@@ -152,9 +156,10 @@ export function heatStatesOf(
  * Each muscle's place against the plan so far: the status from the plan up to yesterday plus today once
  * it is logged (`compareWeekSoFar`, ruling G), and whether the muscle is in the plan from the whole week
  * (`compareWeek`). A muscle whose only planned session is still ahead has nothing planned so far, and
- * would read as not in the plan until that day if the so-far numbers decided it.
+ * would read as not in the plan until that day if the so-far numbers decided it. The comparison so far is
+ * given too, since the Muscles card writes the sets of it.
  */
-function gapValuesOf(rows: BodyMapRows, weekStart: string, computedAt: string) {
+function gapOf(rows: BodyMapRows, weekStart: string, computedAt: string) {
   const projection = projectionOf(rows, weekStart);
   const soFar = compareWeekSoFar(projection, computedAt, rows.timeZone, COMPARE_PARAMS_V2);
   const wholeWeek = compareWeek(projection.actual, projection.projected, COMPARE_PARAMS_V2);
@@ -165,7 +170,7 @@ function gapValuesOf(rows: BodyMapRows, weekStart: string, computedAt: string) {
       projectedWeeklySets: wholeWeek[muscle].projectedWeeklySets,
     };
   }
-  return gapValues(inPlanFromWholeWeek, targetedMusclesOf(rows));
+  return { soFar, values: gapValues(inPlanFromWholeWeek, targetedMusclesOf(rows)) };
 }
 
 /** The values of one scale. Heat reads at `computedAt`, volume the calendar week, and gap the week so far. */
@@ -188,8 +193,31 @@ export function valuesOf(
       );
     }
     case "gap":
-      return gapValuesOf(rows, weekStart, computedAt);
+      return gapOf(rows, weekStart, computedAt).values;
   }
+}
+
+/**
+ * The rows of the Muscles card on Volume or Gap, for the same week and moment as `valuesOf` draws the figures
+ * from, so the two always agree. The rules of which muscles are listed, their order and the counts are core's.
+ */
+export function scaleListOf(
+  scale: "volume" | "gap",
+  view: BodyMapView,
+  rows: BodyMapRows,
+  weekStart: string,
+  computedAt: string,
+): MusclesByVolume | MusclesAgainstPlan {
+  if (scale === "gap") {
+    const { soFar, values } = gapOf(rows, weekStart, computedAt);
+    return musclesAgainstPlan(soFar, values);
+  }
+  const { actual, projected } = projectionOf(rows, weekStart);
+  // With no routine there is no plan to project, so Projected is Actual.
+  return musclesByVolume(
+    compareWeek(actual, projected, COMPARE_PARAMS_V2),
+    rows.routine === null ? "actual" : view,
+  );
 }
 
 const MILLISECONDS_PER_DAY = 24 * 3_600_000;

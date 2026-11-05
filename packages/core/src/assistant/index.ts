@@ -7,6 +7,7 @@ export * from "./thread";
 export * from "./undoState";
 export * from "./changes";
 export * from "./cards";
+export * from "./confirmAnswer";
 export * from "./sheetThread";
 export * from "./cardPresentation";
 export * from "./describeInLog";

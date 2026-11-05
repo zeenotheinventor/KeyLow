@@ -15,10 +15,27 @@ export type ToolCall = Readonly<{
    * treated as one that writes.
    */
   readOnlyHint?: boolean | undefined;
+  /**
+   * The error code the tool answered, such as `not_found` or `invalid_input`, read from the stored tool result.
+   * Only the code, never the result, because a result is the person's data. Absent when the tool did not fail.
+   */
+  errorCode?: string | undefined;
+  /**
+   * What became of a call that did not fail with a code: `asked to confirm` when its result was a request for a
+   * yes, and `no result` when the turn stored the call and no result for it, so the loop never ran it.
+   */
+  outcome?: "asked to confirm" | "no result" | undefined;
 }>;
 
 /** What the app prints under an answer from the person's data. Either is null when the turn had none. */
 export type AnswerMeta = Readonly<{ citation: string | null; estimate: string | null }>;
+
+/** What the app draws for a write that waits for a yes: the question, with the note the code added, and the buttons. */
+export type Confirmation = Readonly<{
+  question: string;
+  confirmLabel: string;
+  cancelLabel: string;
+}>;
 
 /** The result of one user turn, once its stream has ended. */
 export type TurnResult = Readonly<{
@@ -31,8 +48,12 @@ export type TurnResult = Readonly<{
   toolCalls: readonly ToolCall[];
   /** The line under the answer and the Estimate label, from the turn's `answer_meta` event. Absent when the turn sent none. */
   answerMeta?: AnswerMeta | undefined;
+  /** The `confirm` event of a turn that ended waiting for a yes. Absent otherwise. */
+  confirmation?: Confirmation | undefined;
   /** The action cards the turn sent, in order. Absent when it sent none. */
   cards?: readonly AssistantCard[] | undefined;
+  /** The code of the last `notice` event, such as `turn_failed`. Absent when the turn sent none. */
+  noticeCode?: string | undefined;
 }>;
 
 /** The sum of the `assistant_usage` rows of one turn (a turn with tool rounds writes several). */

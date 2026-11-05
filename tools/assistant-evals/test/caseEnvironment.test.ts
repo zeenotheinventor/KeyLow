@@ -53,10 +53,16 @@ function fakeClient(options: { notes?: (string | null)[]; failInsertOn?: string 
 
 const userId = "11111111-1111-4111-8111-111111111111";
 
+// The tests of the seed and the wait do not press Undo or restore the targets.
+const unusedActions = {
+  undoTurn: () => Promise.reject(new Error("not used")),
+  restoreTargets: () => Promise.reject(new Error("not used")),
+};
+
 describe("seedConversation", () => {
   it("should store a conversation for the user with a complete turn and two messages for each seed turn", async () => {
     const { client, inserts } = fakeClient();
-    const environment = createCaseEnvironment({ client, userId });
+    const environment = createCaseEnvironment({ client, userId, ...unusedActions });
 
     const conversationId = await environment.seedConversation([
       { user: "first words", assistant: "first reply" },
@@ -87,7 +93,7 @@ describe("seedConversation", () => {
   it("should store the user message and then the reply of each turn in seq order, as text blocks", async () => {
     const { client, inserts } = fakeClient();
 
-    await createCaseEnvironment({ client, userId }).seedConversation([
+    await createCaseEnvironment({ client, userId, ...unusedActions }).seedConversation([
       { user: "first words", assistant: "first reply" },
       { user: "second words", assistant: "second reply" },
     ]);
@@ -113,10 +119,23 @@ describe("seedConversation", () => {
     expect(messages.every((row) => row["conversation_id"] === "new-conversation")).toBe(true);
   });
 
+  it("should give every message row an id, because a batch where one row has none is sent with a null id", async () => {
+    const { client, inserts } = fakeClient();
+
+    await createCaseEnvironment({ client, userId, ...unusedActions }).seedConversation([
+      { user: "first words", assistant: "first reply" },
+    ]);
+
+    const messages = inserts[2]?.rows ?? [];
+    expect(messages).toHaveLength(2);
+    expect(messages.every((row) => typeof row["id"] === "string")).toBe(true);
+    expect(new Set(messages.map((row) => row["id"])).size).toBe(2);
+  });
+
   it("should fail with the code of a refused insert and never the rows", async () => {
     const { client } = fakeClient({ failInsertOn: "assistant_turns" });
 
-    const failure = await createCaseEnvironment({ client, userId })
+    const failure = await createCaseEnvironment({ client, userId, ...unusedActions })
       .seedConversation([{ user: "secret words", assistant: "reply" }])
       .then(
         () => null,
@@ -135,6 +154,7 @@ describe("waitForCompaction", () => {
     const environment = createCaseEnvironment({
       client,
       userId,
+      ...unusedActions,
       pollIntervalMilliseconds: 1,
       compactionTimeoutMilliseconds: 1_000,
     });
@@ -154,6 +174,7 @@ describe("waitForCompaction", () => {
     const environment = createCaseEnvironment({
       client,
       userId,
+      ...unusedActions,
       pollIntervalMilliseconds: 1,
       compactionTimeoutMilliseconds: 20,
     });
@@ -164,51 +185,41 @@ describe("waitForCompaction", () => {
   });
 });
 
-describe("undoActionsOfTurn", () => {
-  const clientWithActions = (ids: readonly string[]): SupabaseClient<Database> =>
-    ({
-      from: () => ({
-        select: () => ({
-          eq: () => Promise.resolve({ data: ids.map((id) => ({ id })), error: null }),
-        }),
-      }),
-      // The fake answers only the call the environment makes, so it stands in for the whole client type.
-    }) as unknown as SupabaseClient<Database>;
+describe("undoTurn and restoreTargets", () => {
+  const unusedUndo = () => Promise.reject(new Error("not used"));
 
-  it("should undo every action of the turn through the app's Undo", async () => {
-    const asked: (readonly string[])[] = [];
+  it("should hand the turn to the undo it was given and answer its outcomes", async () => {
+    const { client } = fakeClient();
+    const asked: string[] = [];
     const environment = createCaseEnvironment({
-      client: clientWithActions(["action-1", "action-2"]),
+      client,
       userId,
-      undoActions: (ids) => {
-        asked.push(ids);
-        return Promise.resolve(ids.map(() => ({ result: "undone" })));
+      undoTurn: (turnId) => {
+        asked.push(turnId);
+        return Promise.resolve(["undone"]);
+      },
+      restoreTargets: () => Promise.resolve(),
+    });
+
+    await expect(environment.undoTurn("turn-a")).resolves.toEqual(["undone"]);
+    expect(asked).toEqual(["turn-a"]);
+  });
+
+  it("should call the restore it was given", async () => {
+    const { client } = fakeClient();
+    let restored = 0;
+    const environment = createCaseEnvironment({
+      client,
+      userId,
+      undoTurn: unusedUndo,
+      restoreTargets: () => {
+        restored += 1;
+        return Promise.resolve();
       },
     });
 
-    await expect(environment.undoActionsOfTurn("turn-1")).resolves.toBeUndefined();
-    expect(asked).toEqual([["action-1", "action-2"]]);
-  });
+    await environment.restoreTargets();
 
-  it("should reject when an action was not undone", async () => {
-    const environment = createCaseEnvironment({
-      client: clientWithActions(["action-1"]),
-      userId,
-      undoActions: () => Promise.resolve([{ result: "undo_unavailable" }]),
-    });
-
-    await expect(environment.undoActionsOfTurn("turn-1")).rejects.toThrow(
-      "Undo did not answer undone",
-    );
-  });
-
-  it("should reject when the turn has no action to undo", async () => {
-    const environment = createCaseEnvironment({
-      client: clientWithActions([]),
-      userId,
-      undoActions: () => Promise.resolve([]),
-    });
-
-    await expect(environment.undoActionsOfTurn("turn-1")).rejects.toThrow("no action to undo");
+    expect(restored).toBe(1);
   });
 });

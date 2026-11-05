@@ -5,6 +5,7 @@ import { render } from "@testing-library/react";
 import { useEffect, useState } from "react";
 
 import type { TrainingGoalsRow } from "@keylow/core/schemas";
+import type { ReactNode } from "react";
 import type { Mock } from "vitest";
 
 import { GoalFlow, GoalQuestionRoute } from "@/components/goals";
@@ -16,12 +17,18 @@ export const goalsBackend: {
   row: TrainingGoalsRow | null;
   /** How many times the goal was read. */
   reads: number;
-} = { status: "ready", row: null, reads: 0 };
+  /** The same for the time zone of the profile, which dates the goal on the Goal row. */
+  timeZoneStatus: "ready" | "pending" | "error";
+  /** The profile's time zone, or `null` for a profile with none. */
+  timeZone: string | null;
+} = { status: "ready", row: null, reads: 0, timeZoneStatus: "ready", timeZone: "UTC" };
 
 export function resetGoalsBackend(): void {
   goalsBackend.status = "ready";
   goalsBackend.row = null;
   goalsBackend.reads = 0;
+  goalsBackend.timeZoneStatus = "ready";
+  goalsBackend.timeZone = "UTC";
 }
 
 /** The golden week's goal as the database holds it, with every answer a question asks. */
@@ -47,8 +54,26 @@ const json = (body: unknown, status = 200): Response =>
     headers: { "content-type": "application/json" },
   });
 
+const down = (): Response => json({ code: "XX000", message: "down", details: "", hint: "" }, 500);
+
+function respondWithTimeZone(): Promise<Response> {
+  switch (goalsBackend.timeZoneStatus) {
+    case "pending":
+      return new Promise(() => undefined);
+    case "error":
+      return Promise.resolve(down());
+    case "ready":
+      return Promise.resolve(
+        json(goalsBackend.timeZone === null ? [] : [{ timezone: goalsBackend.timeZone }]),
+      );
+  }
+}
+
 function respond(input: string | URL | Request): Promise<Response> {
   const { pathname } = new URL(new Request(input).url);
+  if (pathname.endsWith("/profiles")) {
+    return respondWithTimeZone();
+  }
   if (!pathname.endsWith("/training_goals")) {
     return Promise.resolve(json([]));
   }
@@ -57,7 +82,7 @@ function respond(input: string | URL | Request): Promise<Response> {
     case "pending":
       return new Promise(() => undefined);
     case "error":
-      return Promise.resolve(json({ code: "XX000", message: "down", details: "", hint: "" }, 500));
+      return Promise.resolve(down());
     case "ready":
       return Promise.resolve(json(goalsBackend.row === null ? [] : [goalsBackend.row]));
   }
@@ -95,16 +120,21 @@ function Flow({ startAt, router }: { startAt: string; router: FlowRouter }) {
   );
 }
 
-export function renderGoalFlow(router: FlowRouter, startAt = "/goal/1") {
+/** Renders `ui` with the app's data layer over the fake database. */
+export function renderWithGoals(ui: ReactNode) {
   // A failed read is shown at once, where the app's own client would try it again first.
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
   return {
     ...render(
       <KeyLowProvider client={client} queryClient={queryClient}>
-        <Flow startAt={startAt} router={router} />
+        {ui}
       </KeyLowProvider>,
     ),
     queryClient,
   };
+}
+
+export function renderGoalFlow(router: FlowRouter, startAt = "/goal/1") {
+  return renderWithGoals(<Flow startAt={startAt} router={router} />);
 }

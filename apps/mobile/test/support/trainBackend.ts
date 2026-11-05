@@ -46,6 +46,10 @@ export const trainBackend: {
   removedSets: Row[];
   /** The `exercises` rows the search answers with, whatever the words, each with its `exercise_muscles`, in the order the database sorts them: the person's own first, then by name. */
   exercises: Row[];
+  /** The live `accepted_suggestions` rows every read of them answers with, whatever the week asked for. */
+  acceptedSuggestions: Row[];
+  /** Holds the answer to the accepted suggestions until this settles. A promise that never settles hangs the read. */
+  holdAcceptedSuggestions: Promise<void> | null;
 } = {
   routine: null,
   sessions: [],
@@ -62,6 +66,8 @@ export const trainBackend: {
   holdUpdateSet: null,
   removedSets: [],
   exercises: [],
+  acceptedSuggestions: [],
+  holdAcceptedSuggestions: null,
 };
 
 export function resetTrainBackend(): void {
@@ -82,6 +88,8 @@ export function resetTrainBackend(): void {
   trainBackend.removedSets = [];
   nextSetNumber = 0;
   trainBackend.exercises = [];
+  trainBackend.acceptedSuggestions = [];
+  trainBackend.holdAcceptedSuggestions = null;
 }
 
 /** The number of reads made to a training table. */
@@ -268,6 +276,10 @@ export async function trainFetch(
 
   if (table === "profiles" && url.searchParams.get("select") === "weight_unit") {
     return jsonResponse([{ weight_unit: trainBackend.weightUnit }]);
+  }
+  if (table === "accepted_suggestions" && (init?.method ?? "GET") === "GET") {
+    await trainBackend.holdAcceptedSuggestions;
+    return jsonResponse(trainBackend.acceptedSuggestions);
   }
   // The read of one exercise by its id, for a set's snapshot. The search names no id.
   if (

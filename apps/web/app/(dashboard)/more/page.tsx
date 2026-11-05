@@ -4,6 +4,8 @@ import { cookies } from "next/headers";
 import { signOut } from "../actions";
 import { PageFrame } from "../PageFrame";
 import { AppearanceSetting } from "./AppearanceSetting";
+import { DashboardBodyChartSetting } from "./DashboardBodyChartSetting";
+import { GoalRow } from "./GoalRow";
 import { TargetsRow } from "./TargetsRow";
 
 import { GroupedList } from "@/components/ui/GroupedList";
@@ -37,9 +39,11 @@ export default async function MorePage() {
         </GroupedList>
         <GroupedList title={MORE_SCREEN.body.title} headerSize="compact">
           <ListRow title={MORE_SCREEN.body.weight.title} href="/weight" />
+          <GoalRow />
         </GroupedList>
         <GroupedList title={MORE_SCREEN.settings.title} headerSize="compact">
           <AppearanceSetting initialPreference={themePreference} />
+          <DashboardBodyChartSetting />
           <ListRow title={MORE_SCREEN.settings.about.title} href="/about" />
         </GroupedList>
         <form action={signOut}>

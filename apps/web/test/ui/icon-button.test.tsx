@@ -1,6 +1,6 @@
 import { controlHeight, touchTarget } from "@keylow/tokens";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { ArrowDown, Pencil, X } from "lucide-react";
+import { ArrowDown, Columns2, Pencil, X } from "lucide-react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { compileUtilities, reducedMotionRules } from "./compileUtilities";
@@ -166,6 +166,113 @@ describe("IconButton", () => {
       );
 
       expect(screen.getByRole("button", { name: "Remove" }).className).not.toContain("text-danger");
+    });
+  });
+  describe("the size and the selected look, which a caller asks for", () => {
+    it("should look as it did before when asked for neither", () => {
+      render(<IconButton icon={Pencil} label="Edit" />);
+      const { className } = screen.getByRole("button", { name: "Edit" });
+
+      for (const kept of [
+        "h-control-sm",
+        "w-control-sm",
+        "rounded-small",
+        "after:-inset-1",
+        "text-text-secondary",
+        "hover:bg-hover-overlay",
+        "active:bg-press-overlay",
+      ]) {
+        expect(className).toContain(kept);
+      }
+      for (const absent of [
+        "h-[40px]",
+        "rounded-medium",
+        "border",
+        "bg-accent-muted",
+        "bg-surface-raised",
+      ]) {
+        expect(className).not.toContain(absent);
+      }
+    });
+
+    it("should draw the card size as a 40 px square with the medium radius, a border and a raised fill", () => {
+      render(<IconButton icon={Columns2} label="Show side by side" size="card" />);
+      const { className } = screen.getByRole("button", { name: "Show side by side" });
+
+      for (const drawn of [
+        "h-[40px]",
+        "w-[40px]",
+        "rounded-medium",
+        "border",
+        "border-border",
+        "bg-surface-raised",
+        "text-text-primary",
+      ]) {
+        expect(className).toContain(drawn);
+      }
+      expect(className).not.toContain("h-control-sm");
+      expect(className).not.toContain("text-text-secondary");
+    });
+
+    it("should reach a 44 px target from the card size too", async () => {
+      render(<IconButton icon={Columns2} label="Show side by side" size="card" />);
+      const css = await compileUtilities(
+        screen.getByRole("button", { name: "Show side by side" }).className,
+      );
+
+      expect(css).toMatch(/\.after\\:-inset-\\\[2px\\\]::after\s*\{[^}]*inset: -2px/);
+    });
+
+    it("should draw the accent fill, border and ink when selected, and keep it under the pointer", () => {
+      render(<IconButton icon={Columns2} label="Show side by side" size="card" isSelected />);
+      const { className } = screen.getByRole("button", { name: "Show side by side" });
+
+      for (const drawn of ["border-accent", "bg-accent-muted", "text-accent-ink"]) {
+        expect(className).toContain(drawn);
+      }
+      for (const gone of [
+        "bg-surface-raised",
+        "border-border",
+        "text-text-secondary",
+        "text-text-primary",
+        "hover:bg-hover-overlay",
+      ]) {
+        expect(className).not.toContain(gone);
+      }
+    });
+
+    it("should draw the selected look at the default size too", () => {
+      render(<IconButton icon={Pencil} label="Edit" isSelected />);
+      const { className } = screen.getByRole("button", { name: "Edit" });
+
+      expect(className).toContain("h-control-sm");
+      for (const drawn of ["border", "border-accent", "bg-accent-muted", "text-accent-ink"]) {
+        expect(className).toContain(drawn);
+      }
+    });
+
+    it("should leave aria-pressed to the caller, and not set it for the look alone", () => {
+      render(
+        <>
+          <IconButton icon={Pencil} label="Look only" isSelected />
+          <IconButton icon={Pencil} label="Toggle" isSelected aria-pressed />
+        </>,
+      );
+
+      expect(
+        screen.getByRole("button", { name: "Look only" }).getAttribute("aria-pressed"),
+      ).toBeNull();
+      expect(screen.getByRole("button", { name: "Toggle" }).getAttribute("aria-pressed")).toBe(
+        "true",
+      );
+    });
+
+    it("should not put either prop on the DOM element", () => {
+      render(<IconButton icon={Pencil} label="Edit" size="card" isSelected />);
+      const button = screen.getByRole("button", { name: "Edit" });
+
+      expect(button.getAttribute("size")).toBeNull();
+      expect(button.getAttribute("isselected")).toBeNull();
     });
   });
 });

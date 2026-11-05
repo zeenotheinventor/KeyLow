@@ -315,10 +315,22 @@ const describeHeadline = (suggestion: SuggestedDay, context: SuggestionContext):
       )}`
     : FRESH_HEADLINE;
 
-const describeStartName = (suggestion: SuggestedDay, context: SuggestionContext): string =>
-  suggestion.kind === "plan_adjusted"
-    ? `Start ${describeRoutineDay(context)} with the added ${addedOf(suggestion).length === 1 ? "exercise" : "exercises"}`
+/** The name of a Start button: the routine day with the exercises added to it, or the session built for the week. */
+const describeStartNameFor = (
+  hasPlan: boolean,
+  addedCount: number,
+  context: SuggestionDayContext,
+): string =>
+  hasPlan
+    ? `Start ${describeRoutineDay(context)} with the added ${addedCount === 1 ? "exercise" : "exercises"}`
     : "Start the suggested session";
+
+const describeStartName = (suggestion: SuggestedDay, context: SuggestionContext): string =>
+  describeStartNameFor(
+    suggestion.kind === "plan_adjusted",
+    suggestion.kind === "plan_adjusted" ? addedOf(suggestion).length : 0,
+    context,
+  );
 
 /** The two buttons and their names, for the card and for the detail. */
 type SuggestionActions = Readonly<{
@@ -519,10 +531,16 @@ export type SuggestionAcceptedCopy = Readonly<{
   toast: string;
   undoAction: string;
   undoActionName: string;
+  /**
+   * The name of the card's Start, which the card draws for today: the same name the offer's Start had
+   * ("Start Legs with the added exercise"), so two Start buttons on a screen are told apart.
+   */
+  startActionName: string;
 }>;
 
 const buildAcceptedCopy = (
   added: string,
+  addedCount: number,
   sets: number,
   context: SuggestionDayContext,
 ): SuggestionAcceptedCopy => {
@@ -534,6 +552,7 @@ const buildAcceptedCopy = (
     toast: `Added to ${day}: ${added}`,
     undoAction: SUGGESTION_ACCEPTED.undoAction,
     undoActionName: `${SUGGESTION_ACCEPTED.undoAction} adding to ${day}`,
+    startActionName: describeStartNameFor(context.routineDayName !== null, addedCount, context),
   };
 };
 
@@ -542,7 +561,12 @@ export const describeSuggestionAccepted = (
   suggestion: PlanAdjusted,
   context: SuggestionContext,
 ): SuggestionAcceptedCopy =>
-  buildAcceptedCopy(describeAdded(addedOf(suggestion), context), suggestion.sets, context);
+  buildAcceptedCopy(
+    describeAdded(addedOf(suggestion), context),
+    addedOf(suggestion).length,
+    suggestion.sets,
+    context,
+  );
 
 /** An exercise an accepted suggestion stored: its sets and the library's name for it, frozen when it was accepted. */
 export type StoredAddedExercise = Readonly<{
@@ -568,6 +592,7 @@ export const describeStoredAcceptedSuggestion = (
           `${describeCount(target_sets, "set", "sets")} of ${lowerExerciseName(exercise.name)}`,
       ),
     ),
+    exercises.length,
     exercises.reduce((total, { target_sets }) => total + target_sets, plannedSets),
     context,
   );

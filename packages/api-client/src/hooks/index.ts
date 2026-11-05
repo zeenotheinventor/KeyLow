@@ -116,6 +116,8 @@ export { useDashboardBodyMap } from "./useDashboardBodyMap";
 export type { DashboardBodyMap, DashboardToday } from "./useDashboardBodyMap";
 export { useMuscleList } from "./useMuscleList";
 export type { UseMuscleListInput } from "./useMuscleList";
+export { useMuscleScaleList } from "./useMuscleScaleList";
+export type { UseMuscleScaleListInput } from "./useMuscleScaleList";
 export { useMuscleDetail } from "./useMuscleDetail";
 export type { UseMuscleDetailInput } from "./useMuscleDetail";
 
@@ -125,6 +127,10 @@ export { useRoutines } from "./useRoutines";
 export type { UseRoutinesOptions } from "./useRoutines";
 export { useSaveRoutine } from "./useSaveRoutine";
 export { useSetActiveRoutine } from "./useSetActiveRoutine";
+export { useMakeRoutineActive } from "./useMakeRoutineActive";
+export { useArchiveRoutineWithUndo } from "./useArchiveRoutineWithUndo";
+export { useRestoreRoutine } from "./useRestoreRoutine";
+export type { RoutineNotices } from "./routineNotices";
 
 export { useDeleteSession } from "./useDeleteSession";
 export { useFinishSession } from "./useFinishSession";
@@ -144,10 +150,12 @@ export type {
   SessionDetailSet,
   SessionDetailView,
 } from "./sessionDetailTypes";
-export { describeFinishDetails } from "./describeFinishDetails";
+export { describeFinishDetails, heatSetsOf } from "./describeFinishDetails";
 export type { FinishDetails } from "./describeFinishDetails";
 export { useSetLogging } from "./useSetLogging";
 export { useChangeSetType } from "./useChangeSetType";
+export { useEditSet } from "./useEditSet";
+export type { EditSet, EditSetOpening, EditSetOpeningState, SetChanges } from "./useEditSet";
 export { useRemoveSetWithUndo } from "./useRemoveSetWithUndo";
 export type { SetNotices } from "./useRemoveSetWithUndo";
 export { useAddedExercises } from "./useAddedExercises";

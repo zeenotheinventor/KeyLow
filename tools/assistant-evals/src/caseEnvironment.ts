@@ -16,8 +16,10 @@ export type CaseEnvironmentOptions = Readonly<{
   client: SupabaseClient<Database>;
   /** The eval user, whose conversation this is. */
   userId: string;
-  /** The app's Undo for these action ids, which answers one result code each. */
-  undoActions?: (actionIds: readonly string[]) => Promise<readonly Readonly<{ result: string }>[]>;
+  /** Presses Undo for the actions of a turn as the eval user does (`undoTurn.ts`). */
+  undoTurn: CaseEnvironment["undoTurn"];
+  /** Writes the targets the run started with back to the eval user. */
+  restoreTargets: CaseEnvironment["restoreTargets"];
   compactionTimeoutMilliseconds?: number;
   pollIntervalMilliseconds?: number;
 }>;
@@ -30,7 +32,8 @@ const textMessage = (text: string) => [{ type: "text", text }];
 export function createCaseEnvironment({
   client,
   userId,
-  undoActions = () => Promise.reject(new Error("this environment cannot undo an action")),
+  undoTurn,
+  restoreTargets,
   compactionTimeoutMilliseconds = DEFAULT_COMPACTION_TIMEOUT_MILLISECONDS,
   pollIntervalMilliseconds = DEFAULT_POLL_INTERVAL_MILLISECONDS,
 }: CaseEnvironmentOptions): CaseEnvironment {
@@ -77,6 +80,9 @@ export function createCaseEnvironment({
           seq: index * 2 + 1,
         },
         {
+          // Every row has an id: in a batch where one row has none, supabase-js sends `id: null` for it, and
+          // the insert fails with a not-null violation (23502).
+          id: crypto.randomUUID(),
           conversation_id: conversationId,
           turn_id: turnId,
           user_id: userId,
@@ -113,22 +119,5 @@ export function createCaseEnvironment({
     }
   }
 
-  async function undoActionsOfTurn(turnId: string): Promise<void> {
-    const { data, error } = await client
-      .from("assistant_actions")
-      .select("id")
-      .eq("turn_id", turnId);
-    if (error) {
-      throw failure("read the actions of the turn", error);
-    }
-    if (data.length === 0) {
-      throw new Error("the turn has no action to undo");
-    }
-    const results = await undoActions(data.map(({ id }) => id));
-    if (results.length !== data.length || results.some(({ result }) => result !== "undone")) {
-      throw new Error("Undo did not answer undone for every action of the turn");
-    }
-  }
-
-  return { seedConversation, waitForCompaction, undoActionsOfTurn };
+  return { seedConversation, waitForCompaction, undoTurn, restoreTargets };
 }

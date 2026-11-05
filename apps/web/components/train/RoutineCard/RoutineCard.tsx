@@ -27,7 +27,7 @@ const pressableClasses =
  * are core's (`describeActiveRoutine`), and the week is hidden from a screen reader, because the card's name
  * already says which days are trained.
  */
-export function RoutineCard({ onPress, ...routine }: RoutineCardProps) {
+export function RoutineCard({ onPress, ref, ...routine }: RoutineCardProps) {
   const copy = describeActiveRoutine(routine);
   const isPressable = onPress !== undefined;
   // A button holds phrasing content only, so the name is a heading when the card is plain information.
@@ -71,6 +71,7 @@ export function RoutineCard({ onPress, ...routine }: RoutineCardProps) {
     <Card asChild padding="none" className="border-accent">
       {isPressable ? (
         <button
+          ref={ref}
           aria-label={copy.accessibleName}
           className={cn("flex w-full flex-col gap-2 p-4", pressableClasses)}
           type="button"

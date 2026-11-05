@@ -33,6 +33,8 @@ vi.mock("@keylow/api-client", async (importOriginal) => ({
     reads.listAsked.push(options);
     return reads.list;
   },
+  // Volume's and Gap's rows have their own test file.
+  useMuscleScaleList: () => read<undefined>(undefined),
   useMuscleDetail: () => ({
     data: hamstringsDetail,
     isPending: false,

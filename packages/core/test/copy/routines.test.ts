@@ -15,6 +15,9 @@ import {
   describeExerciseMenuName,
   describeMakeActiveDialog,
   describeMakeActiveName,
+  describeMoveDay,
+  describeMoveExercise,
+  describeMovedPosition,
   describeNewDayName,
   describeOtherRoutineMeta,
   describeProblemsBanner,
@@ -36,6 +39,7 @@ import {
   ROUTINE_RESTORE_FAILED,
   ROUTINE_SAVE_FAILED,
   ROUTINE_WEEKDAY_CHOICES,
+  ROUTINES_OFFLINE,
   ROUTINES_ARCHIVED,
   ROUTINES_EMPTY,
   ROUTINES_SCREEN,
@@ -107,6 +111,14 @@ describe("the Routines screen's fixed words", () => {
 
   it("should say why Archive routine is dimmed while the draft has unsaved changes", () => {
     expect(ROUTINE_ARCHIVE_UNSAVED).toBe("Save or cancel your changes first.");
+  });
+
+  it("should say that making active, archiving and restoring need a connection", () => {
+    expect(ROUTINES_OFFLINE).toStrictEqual({
+      makeActive: "Making a routine active needs a connection.",
+      archive: "Archiving a routine needs a connection.",
+      restore: "Restoring a routine needs a connection.",
+    });
   });
 
   it("should count the archived routines on the link", () => {
@@ -545,6 +557,23 @@ describe("the words the routine editor shell needs that no board draws", () => {
 
   it("should name the two moves of the day's and the exercise's menus", () => {
     expect(ROUTINE_MOVE).toStrictEqual({ upAction: "Move up", downAction: "Move down" });
+  });
+
+  it("should name a day's move buttons after the day, and say day when it has no name", () => {
+    expect(describeMoveDay("Legs", "up")).toBe("Move Legs up");
+    expect(describeMoveDay("Legs", "down")).toBe("Move Legs down");
+    expect(describeMoveDay("", "up")).toBe("Move day up");
+    expect(describeMoveDay("  ", "down")).toBe("Move day down");
+  });
+
+  it("should name an exercise's move buttons after the exercise", () => {
+    expect(describeMoveExercise("Leg press", "down")).toBe("Move Leg press down");
+    expect(describeMoveExercise("Leg press", "up")).toBe("Move Leg press up");
+  });
+
+  it("should tell where a moved day or exercise now is, without a name when it has none", () => {
+    expect(describeMovedPosition("Legs", 1, 4)).toBe("Legs moved to position 1 of 4");
+    expect(describeMovedPosition("", 2, 4)).toBe("Moved to position 2 of 4");
   });
 
   it("should name an exercise's menu button after the exercise", () => {

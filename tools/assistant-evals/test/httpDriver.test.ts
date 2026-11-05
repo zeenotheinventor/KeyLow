@@ -97,6 +97,18 @@ describe("createHttpDriver, cards", () => {
 
     expect(result).not.toHaveProperty("cards");
   });
+
+  it("should keep the code of the notice a failed turn sent, and nothing else of it", async () => {
+    streamOf(
+      turnEvent,
+      sse({ type: "notice", notice: { code: "turn_failed" } }),
+      sse({ type: "done", outcome: "failed" }),
+    );
+
+    const result = await driver().sendMessage({ conversationId: null, text: "delete them" });
+
+    expect(result.noticeCode).toBe("turn_failed");
+  });
 });
 
 describe("createHttpDriver, one turn", () => {
@@ -186,6 +198,40 @@ describe("createHttpDriver, one turn", () => {
     const result = await driver().sendMessage({ conversationId: null, text: "hello" });
 
     expect(result.answerMeta).toBeUndefined();
+  });
+
+  it("should carry the question and the button words of the confirm event", async () => {
+    streamOf(
+      turnEvent,
+      sse({
+        type: "confirm",
+        confirmationId: "33333333-3333-4333-8333-333333333333",
+        question:
+          "Change your calorie target from 1,300 to 2,000 kcal?\n\nYour macros will be adjusted.",
+        confirmLabel: "Change target",
+        cancelLabel: "Keep 1,300",
+        tone: "primary",
+      }),
+      sse({ type: "done", outcome: "confirm" }),
+    );
+
+    const result = await driver().sendMessage({ conversationId: null, text: "set my calories" });
+
+    expect(result.status).toBe("confirm");
+    expect(result.confirmation).toEqual({
+      question:
+        "Change your calorie target from 1,300 to 2,000 kcal?\n\nYour macros will be adjusted.",
+      confirmLabel: "Change target",
+      cancelLabel: "Keep 1,300",
+    });
+  });
+
+  it("should leave confirmation out when the turn asked for none", async () => {
+    streamOf(turnEvent, sse({ type: "done", outcome: "complete" }));
+
+    const result = await driver().sendMessage({ conversationId: null, text: "hello" });
+
+    expect(result.confirmation).toBeUndefined();
   });
 
   it("should resolve a turn that ends failed with that status, and not throw", async () => {

@@ -3,10 +3,11 @@ import { cleanup, render, screen, userEvent } from "@testing-library/react-nativ
 import { setUpTests } from "react-native-reanimated";
 
 import { SuggestionCard } from "../components/SuggestionCard";
+import { thursdayDetail, thursdayOffer } from "../components/SuggestionCard/storyStates";
 import { ThemeProvider } from "../lib/theme";
 import { installVirtualClock } from "./support/virtualClock";
 
-import type { SuggestionCardProps } from "../components/SuggestionCard";
+import type { SuggestionCardProps, SuggestionOfferState } from "../components/SuggestionCard";
 
 jest.mock("@react-native-async-storage/async-storage", () => ({
   __esModule: true,
@@ -15,30 +16,18 @@ jest.mock("@react-native-async-storage/async-storage", () => ({
 
 setUpTests();
 
-// The words are core's and are tested there. These are the words of the `suggestion · *` boards, given as the card is given them.
-const offerState: Extract<SuggestionCardProps["state"], { status: "offer" }> = {
-  status: "offer",
-  day: "2026-10-15",
-  isForToday: false,
-  isAccepting: false,
-  accept: undefined,
-  copy: {
-    cardName: "Suggestion for Thursday",
-    label: "Suggested for Thursday",
-    headline: "Legs, plus incline dumbbell press",
-    linkName: "Suggested for Thursday: Legs, plus incline dumbbell press. See why",
-    sentence: "Add 3 sets of incline dumbbell press to the end of Thursday's Legs.",
-    reasonsName: "Why Ki-Lo suggests this for Thursday",
-    reasons: [
-      { kind: "volume", text: "Upper chest: 4.8 sets in the last 7 days, target 12" },
-      { kind: "heat", text: "Upper chest is ready now: heat 13 %" },
-      { kind: "length", text: "Thursday goes from 16 to 19 sets, about 60 minutes" },
-    ],
-    primaryAction: "Add to Thursday",
-    primaryActionName: "Add to Thursday",
-    dismissAction: "Not now",
-    dismissActionName: "Not now for Thursday's suggestion",
-  },
+const offerState: SuggestionOfferState = { ...thursdayOffer, accept: undefined };
+
+// The offer on the day itself, worded as core words it for today: Start in place of Add.
+const startWords = {
+  primaryAction: "Start",
+  primaryActionName: "Start Legs with the added exercises",
+};
+const todayOfferState: SuggestionOfferState = {
+  ...offerState,
+  isForToday: true,
+  detail: { ...thursdayDetail, ...startWords },
+  copy: { ...thursdayOffer.copy, label: "Suggested for today", ...startWords },
 };
 
 function renderCard(props: SuggestionCardProps) {
@@ -72,6 +61,34 @@ describe("the suggestion card", () => {
       expect(screen.getByLabelText("Why Ki-Lo suggests this for Thursday")).toBeOnTheScreen();
       expect(screen.getAllByRole("listitem")).toHaveLength(3);
       expect(screen.getByText("Upper chest is ready now: heat 13 %")).toBeOnTheScreen();
+    });
+
+    it("should open the detail from the heading's link, named as core words it", async () => {
+      const onOpenDetail = jest.fn();
+      await renderCard({ state: offerState, onOpenDetail });
+
+      await userEvent.setup().press(
+        screen.getByRole("link", {
+          name: "Suggested for Thursday: Legs, plus incline dumbbell press. See why",
+        }),
+      );
+
+      expect(onOpenDetail).toHaveBeenCalledTimes(1);
+    });
+
+    it("should draw no link when it is given no handler to open the detail", async () => {
+      await renderCard({ state: offerState });
+
+      expect(screen.queryByRole("link")).toBeNull();
+    });
+
+    it("should draw no link when the offer holds no detail to open", async () => {
+      await renderCard({
+        state: { ...offerState, detail: undefined },
+        onOpenDetail: jest.fn(),
+      });
+
+      expect(screen.queryByRole("link")).toBeNull();
     });
 
     it("should call accept when Add to Thursday is pressed", async () => {
@@ -115,6 +132,32 @@ describe("the suggestion card", () => {
       ).toBeOnTheScreen();
     });
 
+    it("should call start when Start is pressed on today's suggestion, named as core words it", async () => {
+      const start = jest.fn();
+      await renderCard({ state: { ...todayOfferState, start } });
+
+      await userEvent
+        .setup()
+        .press(screen.getByRole("button", { name: "Start Legs with the added exercises" }));
+
+      expect(start).toHaveBeenCalledTimes(1);
+    });
+
+    it("should show Start busy and not call start while a start is under way", async () => {
+      const start = jest.fn();
+      await renderCard({ state: { ...todayOfferState, start }, isStarting: true });
+
+      await userEvent.setup().press(screen.getByRole("button", { busy: true }));
+
+      expect(start).not.toHaveBeenCalled();
+    });
+
+    it("should leave Add to a day to come alone while a start is under way elsewhere", async () => {
+      await renderCard({ state: { ...offerState, accept: jest.fn() }, isStarting: true });
+
+      expect(screen.queryByRole("button", { busy: true })).toBeNull();
+    });
+
     it("should draw no Not now when it is given no handler", async () => {
       await renderCard({ state: offerState });
 
@@ -134,6 +177,7 @@ describe("the suggestion card", () => {
             toast: "Added to Thursday: 3 sets of incline dumbbell press",
             undoAction: "Undo",
             undoActionName: "Undo adding to Thursday",
+            startActionName: "Start Legs with the added exercise",
           },
         },
       });
@@ -143,6 +187,35 @@ describe("the suggestion card", () => {
       expect(
         screen.getByText("Now with 3 sets of incline dumbbell press. They count as planned."),
       ).toBeOnTheScreen();
+    });
+  });
+
+  describe("the accepted card for today", () => {
+    const acceptedWords = {
+      cardName: "Today",
+      title: "Today's Legs: 19 sets",
+      detail: "Now with 3 sets of incline dumbbell press. They count as planned.",
+      toast: "Added to today: 3 sets of incline dumbbell press",
+      undoAction: "Undo",
+      undoActionName: "Undo adding to today",
+      startActionName: "Start Legs with the added exercise",
+    };
+
+    it("should draw Start, which calls start", async () => {
+      const start = jest.fn();
+      await renderCard({ state: { status: "accepted", copy: acceptedWords, start } });
+
+      await userEvent
+        .setup()
+        .press(screen.getByRole("button", { name: "Start Legs with the added exercise" }));
+
+      expect(start).toHaveBeenCalledTimes(1);
+    });
+
+    it("should draw no Start for a day to come", async () => {
+      await renderCard({ state: { status: "accepted", copy: acceptedWords } });
+
+      expect(screen.queryByRole("button")).toBeNull();
     });
   });
 

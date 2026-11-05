@@ -8,12 +8,13 @@
 // cooked, that a person who wrote the line would want. A product made from it, a dish, a juice, a powder or a
 // variant (potato rings, milk shake, goats milk, smoked salmon, garlic powder) is wrong, and so is any food
 // that is merely the search's first hit. The patterns must never be fitted to what `search_foods` happens to
-// return: the import takes the first of many tied hits, and a case that fails because of that is the eval
-// finding a real defect. A right food exists for every line in the CI seed (packages/db/data/cofid/subset.txt,
-// and `test/recipesCases.test.ts` checks that), which does not mean the import reaches it. Lines such as
-// "salmon fillet", "plain flour" and "basmati rice" depend on the import fix (a retry on the last word reaches
-// a turkey fillet or wholemeal flour, and "basmati rice" scores 0.022 over the cut). The line words are the food's own lexical words, because the import
-// resolves through `search_foods` only (KEY-185 Amendment 2 H) and a page must not need a search by meaning.
+// return: the import once took the first of many tied hits (fixed by KEY-838, which has the model choose from a
+// list), and the patterns kept to the food a person wants are what showed it. A right food exists for every line
+// in the CI seed (packages/db/data/cofid/subset.txt plus the USDA foods, and `test/recipesCases.test.ts` checks
+// that), which does not mean the import chooses it. "salmon fillet", "plain flour" and "basmati rice" are real
+// recipe words that went wrong before the fix, and stay as written. The line words are the food's own lexical
+// words, because the import resolves through `search_foods` only (KEY-185 Amendment 2 H) and a page must not
+// need a search by meaning.
 // A line with no seeded food uses a bare word that finds no food at all (no "paste", which finds a fish paste
 // or a pasteurised milk by its trigrams).
 

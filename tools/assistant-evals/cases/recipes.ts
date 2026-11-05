@@ -338,7 +338,12 @@ export function recipeCasesOf(pages: readonly RecipePage[] = recipePages): reado
       ...(page.undoes === true
         ? {
             afterTurn: async ({ result }, environment) => {
-              await environment.undoActionsOfTurn(result.turnId);
+              const outcomes = await environment.undoTurn(result.turnId);
+              if (outcomes.length === 0 || outcomes.some((outcome) => outcome !== "undone")) {
+                throw new Error(
+                  `Undo did not answer undone for every action of the turn (${outcomes.join(", ") || "no action"})`,
+                );
+              }
             },
           }
         : {}),

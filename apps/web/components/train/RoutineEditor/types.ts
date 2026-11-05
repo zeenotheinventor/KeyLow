@@ -7,4 +7,8 @@ export type RoutineEditorProps = {
   exerciseNames?: ExerciseNames | undefined;
   /** The id of the routine being edited, which Save replaces. Leave it out to create a routine. */
   routineId?: string | undefined;
+  /** Whether the stored routine is the active one, which cannot be archived. Read from the routine as it is now. */
+  isActive?: boolean | undefined;
+  /** Whether the stored routine is archived. Archive routine is not drawn for one. */
+  isArchived?: boolean | undefined;
 };

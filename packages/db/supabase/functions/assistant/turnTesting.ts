@@ -280,22 +280,26 @@ export function errorResult(name: string, code: string): ToolCallResult {
   };
 }
 
+// The question is for the turn loop only, so it is in the outcome and never in the text the model reads.
 export function confirmationResult(
   name: string,
   confirmationId: string,
-  note?: string,
+  { question, note, asksAgain }: { question?: string; note?: string; asksAgain?: true } = {},
 ): ToolCallResult {
   return {
     text: wrapUntrusted(name, {
       status: "needs_confirmation",
       confirmation_id: confirmationId,
+      ...(asksAgain === undefined ? {} : { asked_again: true }),
       ...(note === undefined ? {} : { note }),
     }),
     isError: false,
     outcome: {
       status: "needs_confirmation",
       confirmationId,
+      ...(question === undefined ? {} : { question }),
       ...(note === undefined ? {} : { note }),
+      ...(asksAgain === undefined ? {} : { asksAgain }),
     },
   };
 }

@@ -11,18 +11,24 @@ import {
   describeMuscleCount,
 } from "@keylow/core/copy";
 import { addCalendarDays, daysSinceMonday, toLocalDate } from "@keylow/core/dates";
-import { filterMuscleListGroups } from "@keylow/core/training";
+import {
+  actualReadDateOf,
+  bodyMapViewOf,
+  filterMuscleListGroups,
+  heatDateOf,
+  plannedSessionsOf,
+  selectedDateOf,
+} from "@keylow/core/training";
 import { iconStroke } from "@keylow/tokens";
 import { ArrowRightLeft, SearchX, WifiOff } from "lucide-react";
 import { useRef, useState } from "react";
 
 import { BodyMapBackLink } from "../BodyMapBackLink";
 import { MuscleRow } from "../MuscleRow";
-import { MuscleSheet } from "../MuscleSheet";
+import { MuscleSheet, useEditRoutine } from "../MuscleSheet";
 import { ViewLabel } from "../ViewLabel";
 
 import type { MuscleListScreenProps } from "./types";
-import type { PlannedSession } from "@keylow/core/copy";
 import type { MuscleId } from "@keylow/core/training";
 
 import { Button } from "@/components/ui/Button";
@@ -63,38 +69,30 @@ export function MuscleListScreen({ at: dayParameter }: MuscleListScreenProps) {
   const [sheetMuscle, setSheetMuscle] = useState<MuscleId | null>(null);
   // The row that opened the sheet, which gets focus back when it closes. It is set with the muscle.
   const [sheetRow, setSheetRow] = useState<Element | undefined>(undefined);
+  const closeMuscleSheet = () => {
+    setSheetMuscle(null);
+  };
+  const editRoutine = useEditRoutine(closeMuscleSheet);
   const [query, setQuery] = useState("");
   const searchField = useRef<HTMLInputElement>(null);
   const announcedQuery = useSettledValue(query.trim(), ANNOUNCE_AFTER_TYPING_MS);
   const moment = { weekStart, now: now.toISOString() };
 
-  // The day and view resolution below mirrors the mobile list's: the address carries any text, so only a day
-  // of this week is taken, and today is read as no day at all.
-  const weekDates = Array.from({ length: 7 }, (_, offset) => addCalendarDays(weekStart, offset));
-  const heatDate =
-    dayParameter !== undefined && dayParameter !== today && weekDates.includes(dayParameter)
-      ? dayParameter
-      : undefined;
+  // The address carries any text, so only a day of this week is taken, and today is read as no day at all.
+  const heatDate = heatDateOf(dayParameter, today, weekStart);
   // The map's own two reads at the same days, from the same cache. They hold the days of the week, the
   // moment shown and whether there is a routine, which the list's rows do not.
   const actual = useBodyMap({
     ...moment,
     scale: "heat",
     view: "actual",
-    at: heatDate !== undefined && heatDate < today ? heatDate : undefined,
+    at: actualReadDateOf(heatDate, today, false),
   });
   const projected = useBodyMap({ ...moment, scale: "heat", view: "projected", at: heatDate });
-  const view =
-    chosenView === "projected" && projected.data?.projectedAvailable === true
-      ? "projected"
-      : "actual";
+  const view = bodyMapViewOf(chosenView, projected.data?.projectedAvailable);
   const shown = view === "projected" ? projected : actual;
   const shownDays = shown.data?.days ?? [];
-  const selectedDate =
-    heatDate !== undefined &&
-    shownDays.some(({ date, selectable }) => date === heatDate && selectable)
-      ? heatDate
-      : today;
+  const selectedDate = selectedDateOf(heatDate, shownDays, today);
   const isSelectedToday = selectedDate === today;
   // Today is the current moment, so it is read with no day.
   const readDay = isSelectedToday ? undefined : selectedDate;
@@ -112,9 +110,7 @@ export function MuscleListScreen({ at: dayParameter }: MuscleListScreenProps) {
     ) {
       const shownData = view === "projected" ? projectedData : actualData;
       // A planned session counts from the day after today up to the day shown.
-      const plannedSessions: PlannedSession[] = shownData.days
-        .filter(({ date, status }) => status === "planned" && date > today && date <= selectedDate)
-        .map(({ date, plannedDayName }) => ({ localDate: date, routineDayName: plannedDayName }));
+      const plannedSessions = plannedSessionsOf(shownData.days, today, selectedDate);
       const { viewLabel, subLine, toggleLabel } = describeBodyMapHeader({
         scale: "heat",
         view,
@@ -248,9 +244,8 @@ export function MuscleListScreen({ at: dayParameter }: MuscleListScreenProps) {
         weekStart={weekStart}
         now={moment.now}
         days={shownDays}
-        onClose={() => {
-          setSheetMuscle(null);
-        }}
+        onClose={closeMuscleSheet}
+        onEditRoutine={editRoutine}
       />
     </div>
   );

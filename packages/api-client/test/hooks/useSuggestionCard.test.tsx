@@ -1,10 +1,13 @@
 import { onlineManager } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
+import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import { useSuggestionCard } from "../../src/hooks/useSuggestionCard";
+import { keys } from "../../src/queryKeys";
+import { routineColumnsSchema } from "../../src/repos/trainingSchemas";
 import {
   INCLINE_DUMBBELL_PRESS_ID,
   LEGS_DAY_ID,
@@ -15,8 +18,9 @@ import {
 } from "../support/acceptedSuggestions";
 import { goldenLibraryRows } from "../support/goldenLibraryRows";
 import { goldenWeekData } from "../support/goldenWeekRows";
+import { REST_URL, postgrestRows } from "../support/postgrest";
 import { installLibraryFake } from "../support/suggestionLibrary";
-import { installTrainingFake } from "../support/training";
+import { installTrainingFake, openSessionRow } from "../support/training";
 import { strengthAnswers, trainingGoalsRow, vTaperAnswers } from "../support/trainingGoals";
 import { createWrapper } from "../support/wrapper";
 
@@ -26,6 +30,7 @@ import type {
   SuggestionNotices,
   UseSuggestionCardInput,
 } from "../../src/hooks/useSuggestionCard";
+import type { QueryClient } from "@tanstack/react-query";
 
 type ReadyHome = Extract<TrainHome, { status: "ready" }>;
 
@@ -118,6 +123,10 @@ type Scenario = {
   goal?: unknown;
   at?: string;
   rows?: Record<string, unknown>[];
+  /** Fills the query cache before the first render, as a screen that read earlier has it. */
+  cache?: (queryClient: QueryClient) => void;
+  /** Adds handlers over the fakes' own, installed after them so they answer first. */
+  overrides?: () => void;
 };
 
 /** The golden week, the golden library and a goal behind MSW, with the Train home and the card read as the screen reads them. */
@@ -129,16 +138,21 @@ function renderCard({
   home,
   routine = goldenWeekData.routine,
   holdAcceptedSuggestions = false,
+  cache,
+  overrides,
 }: Scenario = {}) {
   const training = installTrainingFake(server, { ...goldenWeekData, routine, goal });
   installLibraryFake(server, goldenLibraryRows);
   const accepted = installAcceptedSuggestionsFake(server, { rows });
+  overrides?.();
   const release = holdAcceptedSuggestions ? accepted.hold() : () => undefined;
   const notices = {
     onAccepted: vi.fn<SuggestionNotices["onAccepted"]>(),
     onFailure: vi.fn<SuggestionNotices["onFailure"]>(),
+    onStart: vi.fn<SuggestionNotices["onStart"]>(),
   };
-  const { wrapper } = createWrapper();
+  const { wrapper, queryClient } = createWrapper();
+  cache?.(queryClient);
   const now = new Date(at);
   const rendered = renderHook(
     () => {
@@ -167,6 +181,13 @@ async function afterReads(accepted: { reads: unknown[] }) {
   });
 }
 
+/** Waits until the offer holds the detail, which waits for the routine's rep ranges. */
+async function detailRead(result: { current: SuggestionCardState }) {
+  await waitFor(() => {
+    expect(result.current.status === "offer" && result.current.detail !== undefined).toBe(true);
+  });
+}
+
 async function settled(result: { current: { status: string } }) {
   await waitFor(() => {
     expect(result.current.status).not.toBe("hidden");
@@ -187,6 +208,161 @@ describe("useSuggestionCard", () => {
       expect(result.current.isForToday).toBe(false);
       expect(result.current.copy.headline).toBe("Legs, plus incline dumbbell press");
       expect(result.current.copy.primaryAction).toBe("Add to Thursday");
+    });
+
+    it("should carry the whole session for the detail, worked out from the suggestion the offer holds", async () => {
+      const { result } = renderCard();
+
+      await detailRead(result);
+
+      if (result.current.status !== "offer") {
+        throw new Error(`Expected the offer, got ${result.current.status}`);
+      }
+      const { detail } = result.current;
+      expect(detail?.rows).toHaveLength(6);
+      expect(detail?.loadLine).toBe("6 exercises · 19 sets · about 60 min");
+      // The detail and the card are one suggestion: the same headline, day and buttons.
+      expect(detail?.headline).toBe(result.current.copy.headline);
+      expect(detail?.primaryAction).toBe(result.current.copy.primaryAction);
+      expect(detail?.dismissActionName).toBe(result.current.copy.dismissActionName);
+    });
+
+    it("should take the rep range of a planned exercise from the routine", async () => {
+      const { result } = renderCard();
+
+      await detailRead(result);
+
+      if (result.current.status !== "offer") {
+        throw new Error(`Expected the offer, got ${result.current.status}`);
+      }
+      const [firstRow] = result.current.detail?.rows ?? [];
+      expect(firstRow?.why).toBe("From your plan");
+      expect(firstRow?.added).toBe(false);
+      expect(firstRow?.target).toContain("5 to 8");
+    });
+
+    describe("while the routine's own read is not answered", () => {
+      /** Answers the read of the routine by its id, which the detail's rep ranges come from, in place of the fake's. */
+      const answerRoutineById = (answer: () => Promise<Response> | Response) => {
+        const asked = { count: 0 };
+        const overrides = () => {
+          server.use(
+            http.get(`${REST_URL}/routines`, ({ request }) => {
+              if (!new URL(request.url).searchParams.has("id")) {
+                return undefined;
+              }
+              asked.count += 1;
+              return answer();
+            }),
+          );
+        };
+        return { asked, overrides };
+      };
+
+      const addOnce = async (result: { current: SuggestionCardState }, inserts: unknown[]) => {
+        act(() => {
+          if (result.current.status === "offer") {
+            result.current.accept?.();
+          }
+        });
+        await waitFor(() => {
+          expect(result.current.status).toBe("accepted");
+        });
+        expect(inserts).toHaveLength(1);
+      };
+
+      it("should keep the offer with no detail, and still add once, when the read fails", async () => {
+        const { asked, overrides } = answerRoutineById(() =>
+          HttpResponse.json(
+            { code: "XX000", message: "down", details: null, hint: null },
+            { status: 500 },
+          ),
+        );
+        const { result, accepted } = renderCard({ overrides });
+
+        await settled(result);
+        await waitFor(() => {
+          expect(asked.count).toBeGreaterThan(0);
+        });
+
+        if (result.current.status !== "offer") {
+          throw new Error(`Expected the offer, got ${result.current.status}`);
+        }
+        expect(result.current.detail).toBeUndefined();
+        await addOnce(result, accepted.inserts);
+      });
+
+      it("should keep the offer with no detail, and still add once, while the read is held", async () => {
+        let release: () => void = () => undefined;
+        const held = new Promise<void>((resolve) => {
+          release = resolve;
+        });
+        const { asked, overrides } = answerRoutineById(async () => {
+          await held;
+          return HttpResponse.json(null, { status: 406 });
+        });
+        const { result, accepted } = renderCard({ overrides });
+
+        await settled(result);
+        await waitFor(() => {
+          expect(asked.count).toBeGreaterThan(0);
+        });
+
+        if (result.current.status !== "offer") {
+          throw new Error(`Expected the offer, got ${result.current.status}`);
+        }
+        expect(result.current.detail).toBeUndefined();
+        await addOnce(result, accepted.inserts);
+        release();
+      });
+    });
+
+    it("should read the routine by its id only while the card is asking for a suggestion", async () => {
+      // The Train home of a session in progress has no suggestion to make, so the card reads nothing, also
+      // the routine's detail, although the active routine is already in the cache.
+      const home = readyHome("planned");
+      const inProgress: TrainHome = {
+        ...home,
+        today: {
+          card: {
+            kind: "in_progress",
+            dayName: "Legs",
+            minutesSoFar: 30,
+            setsLogged: 8,
+            setsPlanned: 16,
+            nextSet: null,
+          },
+          context: { localDate: THURSDAY, nextExerciseName: null, recovery: null },
+          plannedDayId: LEGS_DAY_ID,
+          sessionToViewId: null,
+        },
+      };
+      const asked = { count: 0 };
+      const { result } = renderCard({
+        overrides: () => {
+          server.use(
+            http.get(`${REST_URL}/routines`, ({ request }) => {
+              asked.count += new URL(request.url).searchParams.has("id") ? 1 : 0;
+              return undefined;
+            }),
+          );
+        },
+        home: inProgress,
+        at: THURSDAY_BEFORE_LEGS,
+        cache: (queryClient) => {
+          queryClient.setQueryData(
+            keys.training.activeRoutine,
+            routineColumnsSchema.parse(goldenWeekData.routine),
+          );
+        },
+      });
+
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 200));
+      });
+
+      expect(result.current.status).toBe("hidden");
+      expect(asked.count).toBe(0);
     });
 
     it("should store the suggestion for Thursday's Legs and switch to the accepted card on Add", async () => {
@@ -257,8 +433,8 @@ describe("useSuggestionCard", () => {
       expect(accepted.liveRows()).toHaveLength(0);
     });
 
-    it("should send one request for a double press of Add", async () => {
-      const { result, accepted } = renderCard();
+    it("should send one request and show one toast for a double press of Add", async () => {
+      const { result, accepted, notices } = renderCard();
       await settled(result);
 
       act(() => {
@@ -272,6 +448,7 @@ describe("useSuggestionCard", () => {
         expect(result.current.status).toBe("accepted");
       });
       expect(accepted.inserts).toHaveLength(1);
+      expect(notices.onAccepted).toHaveBeenCalledTimes(1);
     });
 
     it("should keep the offer and say the accept failed, with the words it was given, when the write fails", async () => {
@@ -370,7 +547,7 @@ describe("useSuggestionCard", () => {
   });
 
   describe("on Thursday before Legs, when the suggestion is for today", () => {
-    it("should offer the suggestion for today with no Add to press", async () => {
+    it("should offer the suggestion for today with Start in place of Add", async () => {
       const { result } = renderCard({ at: THURSDAY_BEFORE_LEGS });
 
       await settled(result);
@@ -380,7 +557,192 @@ describe("useSuggestionCard", () => {
       }
       expect(result.current.isForToday).toBe(true);
       expect(result.current.accept).toBeUndefined();
+      expect(result.current.start).toBeTypeOf("function");
       expect(result.current.copy.label).toBe("Suggested for today");
+    });
+
+    it("should offer no Start for a day to come", async () => {
+      const { result } = renderCard();
+
+      await settled(result);
+
+      if (result.current.status !== "offer") {
+        throw new Error(`Expected the offer, got ${result.current.status}`);
+      }
+      expect(result.current.start).toBeUndefined();
+    });
+
+    it("should store the suggestion under the day today plans, then start that day, with no Added toast", async () => {
+      const { result, accepted, notices } = renderCard({ at: THURSDAY_BEFORE_LEGS });
+      await settled(result);
+
+      act(() => {
+        if (result.current.status === "offer") {
+          result.current.start?.();
+        }
+      });
+
+      await waitFor(() => {
+        expect(notices.onStart).toHaveBeenCalledTimes(1);
+      });
+      expect(accepted.inserts).toHaveLength(1);
+      expect(accepted.inserts[0]).toMatchObject({
+        local_date: THURSDAY,
+        routine_day_id: LEGS_DAY_ID,
+      });
+      expect(notices.onStart).toHaveBeenCalledWith({
+        routineDayId: LEGS_DAY_ID,
+        timeZone: "Europe/London",
+      });
+      expect(notices.onAccepted).not.toHaveBeenCalled();
+      expect(notices.onFailure).not.toHaveBeenCalled();
+    });
+
+    it("should leave the accepted card with its own Start once the suggestion is stored", async () => {
+      const { result } = renderCard({ at: THURSDAY_BEFORE_LEGS });
+      await settled(result);
+
+      act(() => {
+        if (result.current.status === "offer") {
+          result.current.start?.();
+        }
+      });
+
+      await waitFor(() => {
+        expect(result.current.status).toBe("accepted");
+      });
+      if (result.current.status === "accepted") {
+        expect(result.current.start).toBeTypeOf("function");
+      }
+    });
+
+    it("should start nothing, say it was not saved and keep the offer when the suggestion cannot be stored", async () => {
+      const { result, accepted, notices } = renderCard({ at: THURSDAY_BEFORE_LEGS });
+      await settled(result);
+      accepted.failNextInserts("42501");
+
+      act(() => {
+        if (result.current.status === "offer") {
+          result.current.start?.();
+        }
+      });
+
+      await waitFor(() => {
+        expect(notices.onFailure).toHaveBeenCalledWith(ACCEPT_FAILED);
+      });
+      expect(notices.onStart).not.toHaveBeenCalled();
+      expect(result.current.status).toBe("offer");
+      expect(accepted.liveRows()).toHaveLength(0);
+    });
+
+    it("should store once and start once when Start is pressed twice", async () => {
+      const { result, accepted, notices } = renderCard({ at: THURSDAY_BEFORE_LEGS });
+      await settled(result);
+
+      act(() => {
+        if (result.current.status === "offer") {
+          result.current.start?.();
+          result.current.start?.();
+        }
+      });
+
+      await waitFor(() => {
+        expect(notices.onStart).toHaveBeenCalledTimes(1);
+      });
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      });
+      expect(accepted.inserts).toHaveLength(1);
+      expect(notices.onStart).toHaveBeenCalledTimes(1);
+    });
+
+    it("should only resume a session that is already open, and store nothing under it", async () => {
+      const { result, accepted, notices } = renderCard({
+        at: THURSDAY_BEFORE_LEGS,
+        overrides: () => {
+          server.use(
+            http.get(`${REST_URL}/workout_sessions`, ({ request }) =>
+              new URL(request.url).searchParams.get("ended_at") === "is.null"
+                ? postgrestRows(request, [
+                    openSessionRow({ local_date: THURSDAY, routine_day_id: LEGS_DAY_ID }),
+                  ])
+                : undefined,
+            ),
+          );
+        },
+      });
+      await settled(result);
+      // The card reads the open session itself, which is given a moment to land before Start is pressed.
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      });
+
+      act(() => {
+        if (result.current.status === "offer") {
+          result.current.start?.();
+        }
+      });
+
+      await waitFor(() => {
+        expect(notices.onStart).toHaveBeenCalledTimes(1);
+      });
+      expect(accepted.inserts).toHaveLength(0);
+    });
+  });
+
+  describe("on Thursday, when Thursday already holds the accepted suggestion", () => {
+    it("should draw the accepted card with a Start that stores nothing more and starts Legs", async () => {
+      const { result, accepted, notices } = renderCard({
+        at: THURSDAY_BEFORE_LEGS,
+        rows: [acceptedRow()],
+      });
+
+      await waitFor(() => {
+        expect(result.current.status).toBe("accepted");
+      });
+      act(() => {
+        if (result.current.status === "accepted") {
+          result.current.start?.();
+        }
+      });
+
+      expect(notices.onStart).toHaveBeenCalledExactlyOnceWith({
+        routineDayId: LEGS_DAY_ID,
+        timeZone: "Europe/London",
+      });
+      expect(accepted.inserts).toHaveLength(0);
+    });
+
+    it("should start a free session for a suggestion that stands alone", async () => {
+      const { result, notices } = renderCard({
+        at: THURSDAY_BEFORE_LEGS,
+        rows: [acceptedRow({ routine_day_id: null })],
+      });
+
+      await waitFor(() => {
+        expect(result.current.status).toBe("accepted");
+      });
+      act(() => {
+        if (result.current.status === "accepted") {
+          result.current.start?.();
+        }
+      });
+
+      expect(notices.onStart).toHaveBeenCalledWith({
+        routineDayId: null,
+        timeZone: "Europe/London",
+      });
+    });
+
+    it("should draw no Start on the accepted card of a day to come", async () => {
+      const { result } = renderCard({ rows: [acceptedRow()] });
+
+      await waitFor(() => {
+        expect(result.current.status).toBe("accepted");
+      });
+      if (result.current.status === "accepted") {
+        expect(result.current.start).toBeUndefined();
+      }
     });
   });
 });

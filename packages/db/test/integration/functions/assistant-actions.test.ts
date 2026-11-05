@@ -208,7 +208,38 @@ describe("the target of an action and its undo", () => {
 });
 
 describe("the pending confirmation of a turn", () => {
-  const confirmation = { id: crypto.randomUUID(), tool: "delete_entry", inputHash: "a".repeat(64) };
+  const confirmation = {
+    id: crypto.randomUUID(),
+    tool: "delete_entry",
+    inputHash: "a".repeat(64),
+    confirmLabel: "Delete 2 entries",
+  };
+
+  it("reads a confirmation stored before the button's words were kept as having none", async () => {
+    const conversation = await newConversation(alice.user);
+    await adminClient()
+      .from("assistant_turns")
+      .update({
+        pending_confirmation: {
+          id: confirmation.id,
+          tool: confirmation.tool,
+          input_hash: confirmation.inputHash,
+        },
+      })
+      .eq("id", conversation.turnId);
+    const nextTurnId = await newTurn(alice.user, conversation.conversationId);
+
+    expect(
+      await store.previousPendingConfirmation(
+        conversation.conversationId,
+        alice.user.id,
+        nextTurnId,
+      ),
+    ).toEqual({
+      turnId: conversation.turnId,
+      confirmation: { ...confirmation, confirmLabel: null },
+    });
+  });
 
   it("is found from the next turn of the same conversation, and nowhere else", async () => {
     const conversation = await newConversation(alice.user);

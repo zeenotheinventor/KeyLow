@@ -1,6 +1,6 @@
 "use client";
 
-import { useStartSessionAction } from "@keylow/api-client";
+import { useStartSessionAction, useTrainingGoals } from "@keylow/api-client";
 import { TRAIN_START_FAILED } from "@keylow/core/copy";
 import { CircleAlert } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { TrainScreen } from "../TrainScreen";
 
 import { useToast } from "@/components/ui/Toast";
+import { goalPath, goalQuestionPath } from "@/lib/goalRoutes";
 import { trainRoutineNewPath, trainSessionDetailPath, trainSessionPath } from "@/lib/trainRoutes";
 
 /**
@@ -15,7 +16,8 @@ import { trainRoutineNewPath, trainSessionDetailPath, trainSessionPath } from "@
  * and open its page, and Resume opens it. One session is open at a time, so a start with one in progress
  * opens that one. Create routine opens the new routine's editor. A start that fails shows a danger toast
  * that states the rule, opens nothing and can be pressed again. View session on the Done card opens the
- * session's detail.
+ * session's detail. Set your goal opens the Goal page when a goal was read to exist, and the first question
+ * when there is none or it is not known yet (offline, loading or failed), so the button always leads somewhere.
  */
 export function TrainRoute() {
   const router = useRouter();
@@ -30,6 +32,9 @@ export function TrainRoute() {
     },
   });
 
+  const goals = useTrainingGoals();
+  const hasGoal = goals.data !== undefined && goals.data !== null;
+
   return (
     <TrainScreen
       isStarting={isStarting}
@@ -39,6 +44,9 @@ export function TrainRoute() {
       onStart={start}
       onLogSession={start}
       onResume={openSession}
+      onSetGoal={() => {
+        router.push(hasGoal ? goalPath() : goalQuestionPath(1));
+      }}
       onViewSession={(sessionId) => {
         router.push(trainSessionDetailPath(sessionId, "train"));
       }}

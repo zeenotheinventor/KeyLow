@@ -1,8 +1,8 @@
 import { View } from "react-native";
 
+import { thursdayOffer as offer } from "./storyStates";
 import { SuggestionCard } from "./SuggestionCard";
 
-import type { SuggestionCardProps } from "./types";
 import type { Meta, StoryObj } from "@storybook/react-native";
 
 const meta = {
@@ -24,35 +24,6 @@ const meta = {
 export default meta;
 
 type Story = StoryObj<typeof meta>;
-
-// The words of the `suggestion · card` board, for Thursday's Legs seen on Wednesday at 12:00.
-const offer: Extract<SuggestionCardProps["state"], { status: "offer" }> = {
-  status: "offer",
-  day: "2026-10-15",
-  isForToday: false,
-  isAccepting: false,
-  accept: () => undefined,
-  copy: {
-    cardName: "Suggestion for Thursday",
-    label: "Suggested for Thursday",
-    headline: "Legs, plus incline dumbbell press",
-    linkName: "Suggested for Thursday: Legs, plus incline dumbbell press. See why",
-    sentence: "Add 3 sets of incline dumbbell press to the end of Thursday's Legs.",
-    reasonsName: "Why Ki-Lo suggests this for Thursday",
-    reasons: [
-      {
-        kind: "volume",
-        text: "Upper chest: 4.8 sets in the last 7 days, target 12, a V-taper priority",
-      },
-      { kind: "heat", text: "Upper chest is ready now: heat 13 %" },
-      { kind: "length", text: "Thursday goes from 16 to 19 sets, about 60 minutes" },
-    ],
-    primaryAction: "Add to Thursday",
-    primaryActionName: "Add to Thursday",
-    dismissAction: "Not now",
-    dismissActionName: "Not now for Thursday's suggestion",
-  },
-};
 
 export const Offer: Story = { args: { state: offer } };
 
@@ -76,6 +47,7 @@ export const Accepted: Story = {
         toast: "Added to Thursday: 3 sets of incline dumbbell press",
         undoAction: "Undo",
         undoActionName: "Undo adding to Thursday",
+        startActionName: "Start Legs with the added exercise",
       },
     },
   },

@@ -43,7 +43,6 @@ describe("the compaction case", () => {
   const [compactionCase] = compactionCases;
 
   const environment = (log: string[]): CaseEnvironment => ({
-    undoActionsOfTurn: () => Promise.resolve(),
     seedConversation: (turns: readonly SeedTurn[]) => {
       log.push(`seed ${turns.length}`);
       return Promise.resolve("seeded");
@@ -52,6 +51,8 @@ describe("the compaction case", () => {
       log.push(`wait ${conversationId}`);
       return Promise.resolve();
     },
+    undoTurn: () => Promise.resolve([]),
+    restoreTargets: () => Promise.resolve(),
   });
 
   async function play(secondAnswer: string, log: string[] = []) {

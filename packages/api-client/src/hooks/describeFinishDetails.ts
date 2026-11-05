@@ -23,6 +23,10 @@ export type FinishDetails = {
   sets: readonly HeatSet[];
 };
 
+/** The sets of a session that the heat model can read: those whose snapshot is stored. */
+export const heatSetsOf = (sets: readonly ScreenSet[]): HeatSet[] =>
+  sets.flatMap(({ snapshot, ...set }) => (snapshot === undefined ? [] : [{ ...set, snapshot }]));
+
 type OpenSession = {
   id: string;
   started_at: string;
@@ -62,8 +66,6 @@ export function describeFinishDetails(
     exercisesPlanned:
       plannedNames === null ? null : new Set(plannedNames.map((entry) => entry.exerciseId)).size,
     notLoggedNote: describeNotLoggedNote(notLogged),
-    sets: open.sets.flatMap(({ snapshot, ...set }) =>
-      snapshot === undefined ? [] : [{ ...set, snapshot }],
-    ),
+    sets: heatSetsOf(open.sets),
   };
 }

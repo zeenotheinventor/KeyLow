@@ -27,6 +27,13 @@ export { mapHealthSample, mapHealthSamples } from "./mapHealthSample";
 export { KILOGRAMS_PER_POUND, displayWeight, kgToLb, lbToKg } from "./units";
 export { isTrendSettling } from "./isTrendSettling";
 export { pointsInRange, rangeWindow, weighInsInRange } from "./ranges";
+export { prepareWeightChart } from "./prepareWeightChart";
+export type {
+  WeightChartAxis,
+  WeightChartData,
+  WeightChartReading,
+  WeightChartTrendPoint,
+} from "./chartTypes";
 export { weeklyRateKg } from "./weeklyRateKg";
 export {
   BODY_FAT_MAX_PCT,

@@ -2,7 +2,7 @@ import { parseAssistantEvent } from "@keylow/core";
 import { localToday } from "@keylow/core/engine";
 
 import type { SendMessageInput, TurnDriver } from "./driver.ts";
-import type { AnswerMeta, ToolCall, TurnResult, TurnStatus } from "./types.ts";
+import type { AnswerMeta, Confirmation, ToolCall, TurnResult, TurnStatus } from "./types.ts";
 import type { AssistantCard, AssistantStreamEvent } from "@keylow/core";
 
 export type HttpDriverOptions = Readonly<{
@@ -90,6 +90,7 @@ export function createHttpDriver(options: HttpDriverOptions): TurnDriver {
     let answer = "";
     let lastNoticeCode: string | null = null;
     let answerMeta: AnswerMeta | undefined;
+    let confirmation: Confirmation | undefined;
     const cards: AssistantCard[] = [];
     let buffer = "";
     const decoder = new TextDecoder();
@@ -109,6 +110,9 @@ export function createHttpDriver(options: HttpDriverOptions): TurnDriver {
             answerMeta = { citation: event.citation, estimate: event.estimate };
           } else if (event.type === "card") {
             cards.push(event.card);
+          } else if (event.type === "confirm") {
+            const { question, confirmLabel, cancelLabel } = event;
+            confirmation = { question, confirmLabel, cancelLabel };
           } else if (event.type === "notice") {
             // The code only, so a gate refusal is readable and nothing else of the notice is kept.
             lastNoticeCode = event.notice.code;
@@ -122,7 +126,9 @@ export function createHttpDriver(options: HttpDriverOptions): TurnDriver {
               answer,
               toolCalls: await readToolCalls(turn.turnId),
               ...(answerMeta === undefined ? {} : { answerMeta }),
+              ...(confirmation === undefined ? {} : { confirmation }),
               ...(cards.length === 0 ? {} : { cards }),
+              ...(lastNoticeCode === null ? {} : { noticeCode: lastNoticeCode }),
             };
           }
         }

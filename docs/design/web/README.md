@@ -161,3 +161,39 @@ These are recommendations made while Zee was away, and each can be reversed.
 - **The top bar and the More page are drawn as main has them.** Every board has the live top bar: Dashboard, Diary, Train and More. Train is current on the body map frames and More on the More frames. The More boards start from `shell-more`, with Recipes out of the top bar (ruling of 2026-10-29) and Train in it, the Nutrition section (Targets, Recipes) and the About row added, so the Body map row sits in the page as it is today. The Weight row is still "Coming soon" there.
 - **The body map boards keep the scale switch, day row, legend and muscle list of `web-body · actual-heat`.** Only the figures inside the card change.
 - **Segmented controls.** Front / Back follows the card's own Scale switch on the canvas board (a 44 pixel track with 36 pixel segments), and the More row follows Appearance on `shell-more`. The two looks differ on the existing boards and are left as drawn.
+
+## Dashboard body map proposal
+
+Boards for the dashboard training card in Weekly volume and the More row that chooses it ([KEY-773](https://linear.app/sojisoft/issue/KEY-773), the web twin of [KEY-772](https://linear.app/sojisoft/issue/KEY-772)). The design gate was met by these boards, drawn by hand from the approved phone boards `dashboard · training-card-volume`, `dashboard · training-card-volume-empty` and `tab-shell.more · dashboard-chart-setting` (canvas version 74, approved on 2026-11-02) and from the built web card. They are drawn by hand and not exported, and Zee has not reviewed them yet: he reviews them after merge. They are not on the canvas, so they sit in `proposals/`, where `tools/design-export` does not look. Each is a PNG at device pixel ratio 2 and a standalone page that opens from `file://`, with no script. The frames are 1280 dark, 1280 light, 375 dark and 375 light, from left to right. The pages link `packages/tokens` by relative path and use no raw hex. Every word is from `packages/core/src/copy/` (`BODY_MAP.dashboardCard`, `describeDashboardVolumeCard`, `MORE_SCREEN.settings.dashboardBodyChart`), and the figures are the male artwork of `BODY_ARTWORK` filled from the Volume scale, with the same muscle values as the phone board (8 of 22 muscles at Growing or above).
+
+### shell-dashboard-volume
+
+The Dashboard with the training card in Weekly volume, where `DashboardScreen` puts it: in the second column under the This week card at 1280, and last in the stack at 375. The bar is the one the app has now (Dashboard, Diary, Train, More). The other cards are one labelled skeleton block each, as the phone board draws them. The card keeps the built web card's structure: the "Training" caption with its dumbbell, the "Actual · this week" line, the "Body map" label with its chevron, front and back at 100 pixels on the Volume scale, the High to None strip, and under a hairline "8 of 22 muscles at Growing or above" and "Today: Legs". The whole card is one link to the body map on Volume, named "Body map, weekly volume, Actual this week, Monday to Sunday. 8 of 22 muscles at Growing or above. Today: Legs, 16 sets planned. Open the body map on Volume".
+
+![web shell-dashboard-volume](proposals/shell-dashboard-volume.png)
+
+Open [proposals/shell-dashboard-volume.html](proposals/shell-dashboard-volume.html).
+
+### shell-dashboard-volume-empty
+
+The same card on a Monday before the first set: every muscle is Not trained and the summary says "No sets yet this week". The legend and the Today line stay, so the card keeps its height, and it does not fall back to Heat's 14-day message.
+
+![web shell-dashboard-volume-empty](proposals/shell-dashboard-volume-empty.png)
+
+Open [proposals/shell-dashboard-volume-empty.html](proposals/shell-dashboard-volume-empty.html).
+
+### shell-more-dashboard-chart
+
+The More page with the Dashboard body map row in the Settings group, after Appearance and before About, with the groups as the app has them now (Food, Nutrition, Body, Settings, Account). The row is built like Appearance: the label over a segmented control of Heat and Weekly volume, and under it the caption that says what the chosen one shows. The dark frames show Heat, the default, with "How hard and how recently each muscle worked, right now." and the light frames show Weekly volume with "Sets for each muscle this week, Monday to Sunday.", as the phone board does. There is no 2D or 3D row (web 3D is parked) and no leading icon, matching the web Appearance row.
+
+![web shell-more-dashboard-chart](proposals/shell-more-dashboard-chart.png)
+
+Open [proposals/shell-more-dashboard-chart.html](proposals/shell-more-dashboard-chart.html).
+
+### Decisions
+
+- **Volume, Actual only, the calendar week from Monday to Sunday.** The week start is fixed, and Projected is not on the card (Zee, 2026-11-02).
+- **The choice is saved in the browser,** like the Appearance setting, and Heat is the default.
+- **The card does not change shape.** Volume keeps Heat's header, figures, legend strip and summary row. Only the second line ("Actual · this week"), the strip, the summary and the link target change.
+- **Only the Not trained swatch has a border,** the strong border, because it is the one that could pass for the card behind it.
+- **More is 1070 high, not 812,** because the page does not fit in 812 at either width. The web-weight boards take the same exception for a page that needs more, and `more-body-map-setting` is 1100.

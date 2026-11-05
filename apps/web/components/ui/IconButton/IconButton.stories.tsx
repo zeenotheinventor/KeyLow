@@ -1,4 +1,4 @@
-import { Archive, ArrowDown, ArrowUp, Copy, Pencil, X } from "lucide-react";
+import { Archive, ArrowDown, ArrowUp, Columns2, Copy, Pencil, X } from "lucide-react";
 import { userEvent } from "storybook/test";
 
 import { IconButton } from "./IconButton";
@@ -77,4 +77,26 @@ export const RowActions: Story = {
       <IconButton icon={Archive} label="Archive Chicken and rice" />
     </div>
   ),
+};
+
+// The body map card's Show side by side button: the 40 px card size, off and on. A toggle that is on sets
+// `aria-pressed` as well as `isSelected`, which is the look only.
+export const Card: Story = {
+  args: { icon: Columns2, label: "Show side by side", size: "card", "aria-pressed": false },
+};
+
+export const CardSelected: Story = {
+  args: {
+    icon: Columns2,
+    label: "Show side by side",
+    size: "card",
+    isSelected: true,
+    "aria-pressed": true,
+  },
+};
+
+export const Selected: Story = { args: { isSelected: true, "aria-pressed": true } };
+
+export const CardDisabled: Story = {
+  args: { icon: Columns2, label: "Show side by side", size: "card", disabled: true },
 };

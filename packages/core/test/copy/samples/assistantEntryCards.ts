@@ -25,6 +25,12 @@ export const samples: Record<string, () => string[]> = {
     copy.describeDeletedUndone(3, "13:00"),
     copy.describeDeletedUndone(1, null),
   ],
+  describeConfirmDeleteDayWord: () => [
+    copy.describeConfirmDeleteDayWord(["2026-11-03"], "2026-11-03"),
+    copy.describeConfirmDeleteDayWord(["2026-11-02"], "2026-11-03"),
+    copy.describeConfirmDeleteDayWord(["2026-10-27"], "2026-11-03"),
+    copy.describeConfirmDeleteDayWord(["2026-11-03", "2026-11-02"], "2026-11-03"),
+  ],
   describeConfirmDeleteQuestion: () => [
     copy.describeConfirmDeleteQuestion(3, "13:00", "today", ["apple", "pear", "tea"]),
     copy.describeConfirmDeleteQuestion(2, null, "yesterday", ["apple", "pear"]),
