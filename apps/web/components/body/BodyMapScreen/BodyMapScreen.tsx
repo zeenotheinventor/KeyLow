@@ -12,6 +12,7 @@ import {
   TRAIN_OFFLINE_TITLE,
   TRAIN_START_FAILED,
   describeBodyMapHeader,
+  describeGap,
   describeNothingLogged,
 } from "@keylow/core/copy";
 import { addCalendarDays, daysSinceMonday, toLocalDate } from "@keylow/core/dates";
@@ -28,11 +29,14 @@ import { FigureSettingDialog } from "../FigureSettingDialog";
 import { MusclesCard } from "../MusclesCard";
 import { MuscleSheet } from "../MuscleSheet";
 
+import type { BodyMapScreenProps } from "./types";
+import type { BodyMapScale } from "@keylow/core/copy";
 import type { MuscleId } from "@keylow/core/training";
 
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { IconButton } from "@/components/ui/IconButton";
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { useToast } from "@/components/ui/Toast";
 import { useBodyFigure } from "@/lib/bodyFigure";
 import { muscleListPath } from "@/lib/bodyMapRoutes";
@@ -41,15 +45,28 @@ import { trainSessionPath } from "@/lib/trainRoutes";
 import { useIsOnline } from "@/lib/useIsOnline";
 import { useNow } from "@/lib/useNow";
 
+const SCALE_OPTIONS = [
+  { value: "heat", label: BODY_MAP.scaleSwitch.heat },
+  { value: "volume", label: BODY_MAP.scaleSwitch.volume },
+  { value: "gap", label: BODY_MAP.scaleSwitch.gap },
+] as const;
+
 /**
  * The body map page: the heat now, front and back, with the legend, as the `web-body · actual-heat` board
- * draws it, under a Back link and the title. The colours are the hook's numbers and nothing here works them
- * out. The toggle, or a click on the figures, switches between Actual and Projected, in the view last
- * chosen on this device (Actual until one is). With no routine Projected is off and the page shows Actual,
- * keeping the view chosen for when there is one. With no sets in the last 14 days the figures are at rest
- * and the empty state says why, with no legend and a Start a session button. Today is always the current moment, and the clock ticks
- * once a minute without a new read. Every read is behind the terms gate the dashboard layout holds. Offline
- * with nothing already read there is no saved body map to show, and it says so.
+ * draws it, under a Back link and the title. The scale switch beside the title picks Heat (now), Volume (the
+ * week's sets) or Gap (done against the plan), as the `web-body · volume` and `web-body · gap` boards draw
+ * them. The page opens on the scale `initialScale` names (Volume for `?scale=volume`, Heat otherwise) and
+ * does not remember it. The colours are the hook's numbers and nothing here works them out. The toggle, or a
+ * click on the figures, switches between Actual and Projected on Heat and Volume, in the view last chosen on
+ * this device (Actual until one is). Gap has neither, and leaves the view that is remembered as it was.
+ * With no routine Projected is off and the page shows Actual, keeping the view chosen for when there is
+ * one. With no sets in the last 14 days Heat shows the figures at rest and the empty state says why, with
+ * no legend and a Start a session button. Volume and Gap draw as usual, since a week with nothing logged
+ * is still a plan to compare with. Today is always the current moment, and the clock ticks once a minute
+ * without a new read. Every scale is read at once (Heat and Volume in both views, Gap in one) from the same
+ * rows, so a switch of scale makes no request and shows no skeleton. Every read is behind the terms gate the
+ * dashboard layout holds. Offline with nothing already read there is no saved body map to show, and it
+ * says so.
  *
  * The figures are drawn as the figure setting has it, male or female, which the page waits for with the
  * view. The first time it opens it asks which figure, and closing that question without an answer records
@@ -57,9 +74,11 @@ import { useNow } from "@/lib/useNow";
  *
  * The page is a column of two: the card, and the cards that belong beside it (the legend and the Muscles
  * card). The Muscles card lists the muscles above rest for the view shown, and leads to the muscle list page.
- * The scale switch and the day row add to the card's column or the side column.
+ * Its rows are Heat's, so it is left out on Volume and Gap until it has theirs (KEY-828). Every muscle is
+ * still reached there by Tab and Enter on the figures, which open its sheet (Actual on Gap, which has no
+ * Projected). The muscle list page is reached from Heat. The day row adds to the card's column.
  */
-export function BodyMapScreen() {
+export function BodyMapScreen({ initialScale = "heat" }: BodyMapScreenProps) {
   const router = useRouter();
   const toast = useToast();
   const isOnline = useIsOnline();
@@ -71,6 +90,7 @@ export function BodyMapScreen() {
   const weekStart = addCalendarDays(today, -daysSinceMonday(today));
   const weekEnd = addCalendarDays(weekStart, 6);
   const { view: chosenView, isRead: isViewRead, setView } = useBodyMapView();
+  const [scale, setScale] = useState<BodyMapScale>(initialScale);
   const { figure, isReady: isFigureReady, hasChosen, setFigure } = useBodyFigure();
   const [isFigureDialogOpen, setIsFigureDialogOpen] = useState(false);
   const [hasAskedFigure, setHasAskedFigure] = useState(false);
@@ -104,35 +124,64 @@ export function BodyMapScreen() {
       toast.show({ message: TRAIN_START_FAILED, tone: "danger", icon: CircleAlert });
     },
   });
-  const moment = { scale: "heat", weekStart, now: now.toISOString() } as const;
-  const actual = useBodyMap({ ...moment, view: "actual" });
-  const projected = useBodyMap({ ...moment, view: "projected" });
-  // With no routine Projected shows Actual, so the saved view is only kept for when there is one.
+  const nowIso = now.toISOString();
+  // Every scale is read here and the scale on screen picks which result is shown. The reads share their
+  // rows, so a read switched off and on again with the scale would fetch what is already held. All of them
+  // stay on, so a switch of scale makes no request and shows no skeleton.
+  const moment = { weekStart, now: nowIso };
+  const heatActual = useBodyMap({ ...moment, scale: "heat", view: "actual" });
+  const heatProjected = useBodyMap({ ...moment, scale: "heat", view: "projected" });
+  const volumeActual = useBodyMap({ ...moment, scale: "volume", view: "actual" });
+  const volumeProjected = useBodyMap({ ...moment, scale: "volume", view: "projected" });
+  // Gap has no Actual or Projected, so it is read once.
+  const gap = useBodyMap({ ...moment, scale: "gap", view: "actual" });
+  const { actual, projected } = {
+    heat: { actual: heatActual, projected: heatProjected },
+    volume: { actual: volumeActual, projected: volumeProjected },
+    gap: { actual: gap, projected: gap },
+  }[scale];
+  // With no routine Projected shows Actual, so the saved view is only kept for when there is one. Gap has
+  // neither, so the saved view only matters to Heat and Volume.
   const view =
     chosenView === "projected" && projected.data?.projectedAvailable === true
       ? "projected"
       : "actual";
-  const list = useMuscleList({ view, weekStart, now: moment.now });
+  // The Muscles card lists Heat's muscles, but it is read on every scale so the card returns whole.
+  const list = useMuscleList({ view, weekStart, now: nowIso });
+  const isShown =
+    isViewRead && isFigureReady && actual.data !== undefined && projected.data !== undefined;
 
   const title = (
-    <div className="flex flex-col gap-1">
-      <div className="-my-2 self-start">
-        <BodyMapBackLink />
+    <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+      <div className="flex flex-col gap-1">
+        <div className="-my-2 self-start">
+          <BodyMapBackLink />
+        </div>
+        <div className="flex items-center justify-between gap-3">
+          <h1 className="text-h1">{BODY_MAP.title}</h1>
+          {/* Left out until the stored figure is known, so closing the dialog can never write over it. */}
+          {isFigureReady ? (
+            <IconButton
+              icon={PersonStanding}
+              label={BODY_MAP.figureSetting.label}
+              aria-haspopup="dialog"
+              onClick={() => {
+                setIsFigureDialogOpen(true);
+              }}
+            />
+          ) : null}
+        </div>
       </div>
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="text-h1">{BODY_MAP.title}</h1>
-        {/* Left out until the stored figure is known, so closing the dialog can never write over it. */}
-        {isFigureReady ? (
-          <IconButton
-            icon={PersonStanding}
-            label={BODY_MAP.figureSetting.label}
-            aria-haspopup="dialog"
-            onClick={() => {
-              setIsFigureDialogOpen(true);
-            }}
-          />
-        ) : null}
-      </div>
+      {/* Nothing is read to switch to until the body map is, so the switch comes with it. */}
+      {isShown ? (
+        <SegmentedControl
+          label={BODY_MAP.scaleSwitch.name}
+          options={SCALE_OPTIONS}
+          value={scale}
+          onChange={setScale}
+          className="w-full md:w-[300px]"
+        />
+      ) : null}
     </div>
   );
 
@@ -141,11 +190,11 @@ export function BodyMapScreen() {
     const { data: projectedData } = projected;
     // The figure is waited for only so the server and the first draw in the browser agree: the store is read
     // at once in the browser, so this adds no wait there.
-    if (isViewRead && isFigureReady && actualData !== undefined && projectedData !== undefined) {
+    if (isShown && actualData !== undefined && projectedData !== undefined) {
       const { projectedAvailable, todayProjectedIsActual } = projectedData;
       const shown = view === "projected" ? projectedData : actualData;
       const { viewLabel, subLine, toggleLabel } = describeBodyMapHeader({
-        scale: "heat",
+        scale,
         view,
         at: shown.computedAt,
         tz: zone,
@@ -153,33 +202,48 @@ export function BodyMapScreen() {
         weekEnd,
         plannedSessions: [],
       });
-      // Why Projected is off, or why it matches Actual today. Neither is said when there is nothing to say.
-      const note = !projectedAvailable
-        ? BODY_MAP.toggle.projectedNeedsRoutine
-        : view === "projected" && todayProjectedIsActual
+      // The line under the figures. Gap says what the plan left behind, counting the whole week from its last
+      // day and the days so far before. Otherwise it says why Projected is off, or why it matches Actual today
+      // (Heat only). Nothing is said when there is nothing to say.
+      const noteUnderFigures = () => {
+        if (scale === "gap") {
+          return describeGap({
+            values: actualData.values,
+            days: actualData.days,
+            countsWholeWeek: today >= weekEnd,
+          });
+        }
+        if (!projectedAvailable) {
+          return BODY_MAP.toggle.projectedNeedsRoutine;
+        }
+        return scale === "heat" && view === "projected" && todayProjectedIsActual
           ? BODY_MAP.notes.todayProjected
           : null;
+      };
+      // Nothing logged in the 14 days is about heat. A week with nothing logged is still a plan to compare with.
+      const isNothingLogged = scale === "heat" && shown.nothingLogged;
+      // Gap has neither Actual nor Projected, so it has no toggle and a click on the figures does nothing.
+      const isToggleEnabled = scale !== "gap" && projectedAvailable;
 
       return (
         <>
           <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:gap-5">
             <BodyMapCard
+              scale={scale}
               view={view}
               viewLabel={viewLabel}
               subLine={
-                shown.nothingLogged
-                  ? describeNothingLogged(TRAINING_PARAMS_V2.heatWindowDays)
-                  : subLine
+                isNothingLogged ? describeNothingLogged(TRAINING_PARAMS_V2.heatWindowDays) : subLine
               }
               actualValues={actualData.values}
               projectedValues={projectedData.values}
               body={figure}
               toggleLabel={toggleLabel}
-              isToggleEnabled={projectedAvailable}
+              isToggleEnabled={isToggleEnabled}
               onToggle={() => {
                 setView(view === "projected" ? "actual" : "projected");
               }}
-              note={note}
+              note={noteUnderFigures()}
               onLongPressMuscle={(muscle) => {
                 setSheetReturnFocus(undefined);
                 setSheetMuscle(muscle);
@@ -187,7 +251,7 @@ export function BodyMapScreen() {
               selectedMuscle={sheetMuscle ?? undefined}
             />
             <div className="flex min-w-0 flex-1 flex-col gap-3 xl:gap-5">
-              {shown.nothingLogged ? (
+              {isNothingLogged ? (
                 <EmptyState
                   icon={Dumbbell}
                   title={BODY_MAP.emptyState.title}
@@ -204,15 +268,18 @@ export function BodyMapScreen() {
                 />
               ) : (
                 <>
-                  <BodyMapLegend />
-                  <MusclesCard
-                    list={list.data === undefined ? null : musclesAboveRest(list.data)}
-                    listHref={muscleListPath()}
-                    onOpenMuscle={(muscle, row) => {
-                      setSheetReturnFocus(row);
-                      setSheetMuscle(muscle);
-                    }}
-                  />
+                  <BodyMapLegend scale={scale} />
+                  {/* The card's rows are Heat's, so it is left out on the other scales until it has theirs. */}
+                  {scale === "heat" ? (
+                    <MusclesCard
+                      list={list.data === undefined ? null : musclesAboveRest(list.data)}
+                      listHref={muscleListPath()}
+                      onOpenMuscle={(muscle, row) => {
+                        setSheetReturnFocus(row);
+                        setSheetMuscle(muscle);
+                      }}
+                    />
+                  ) : null}
                 </>
               )}
             </div>
@@ -220,9 +287,10 @@ export function BodyMapScreen() {
           <MuscleSheet
             muscle={sheetMuscle}
             returnFocusTo={sheetReturnFocus}
-            view={view}
+            // Gap has no Projected, so a muscle's sheet there reads Actual.
+            view={scale === "gap" ? "actual" : view}
             weekStart={weekStart}
-            now={moment.now}
+            now={nowIso}
             days={shown.days}
             onClose={() => {
               setSheetMuscle(null);
@@ -239,7 +307,7 @@ export function BodyMapScreen() {
           retryLabel={TRAIN_ERROR.action}
           onRetry={() => {
             // Try again reads every one of them that failed, and nothing else on screen.
-            void Promise.all([actual.refetch(), projected.refetch()]);
+            void Promise.all([...new Set([actual, projected])].map((read) => read.refetch()));
           }}
         />
       );
