@@ -78,13 +78,14 @@ describe("the session detail", () => {
       expect(detailBackend.reads).not.toContain("routine_days");
     });
 
-    it("should draw a card for each exercise, in the order they were first logged", async () => {
+    it("should draw the Muscles trained card, then a card for each exercise in the order they were first logged", async () => {
       renderDetail();
 
       await screen.findByRole("group", { name: "Time" });
       expect(
         screen.getAllByRole("region").map((region) => region.getAttribute("aria-label")),
       ).toEqual([
+        "Muscles trained",
         "Pullups",
         "Bent over barbell row",
         "Wide-grip lat pulldown",

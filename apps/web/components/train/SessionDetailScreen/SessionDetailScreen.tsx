@@ -15,6 +15,7 @@ import { useRouter } from "next/navigation";
 import { useId, useState } from "react";
 
 import { FinishStat } from "../FinishDialog/FinishStat";
+import { SessionMusclesCard } from "../SessionMusclesCard";
 import { SetTable } from "../SetTable";
 import { DeleteSessionDialog } from "./DeleteSessionDialog";
 import { EditSetDialog } from "./EditSetDialog";
@@ -51,7 +52,7 @@ function SessionDetailBody({
           <FinishStat key={stat.label} label={stat.label} value={stat.value} note={stat.note} />
         ))}
       </div>
-      {/* The Muscles trained card goes here (KEY-470). */}
+      <SessionMusclesCard variant="summary" {...content.musclesTrained} />
       {exercises.map(({ exerciseId, name, note, rows }) => (
         <Card key={exerciseId} asChild padding="none" className="flex flex-col pb-1 pt-3">
           <section aria-label={name}>

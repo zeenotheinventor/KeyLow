@@ -144,7 +144,7 @@ export type {
   SessionDetailSet,
   SessionDetailView,
 } from "./sessionDetailTypes";
-export { describeFinishDetails } from "./describeFinishDetails";
+export { describeFinishDetails, heatSetsOf } from "./describeFinishDetails";
 export type { FinishDetails } from "./describeFinishDetails";
 export { useSetLogging } from "./useSetLogging";
 export { useChangeSetType } from "./useChangeSetType";

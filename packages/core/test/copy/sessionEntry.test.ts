@@ -60,6 +60,7 @@ describe("the active session's fixed words", () => {
       addExerciseAction: "Add exercise",
       setsListName: "Sets",
       loggedColumnName: "Logged",
+      sideCardHeading: "This session so far",
     });
   });
 

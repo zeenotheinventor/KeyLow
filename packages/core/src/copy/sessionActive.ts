@@ -32,6 +32,8 @@ export const SESSION_ACTIVE = {
   setsListName: "Sets",
   /** The heading of the column that holds the check, which a table keeps for a screen reader alone. */
   loggedColumnName: "Logged",
+  /** The heading of the card beside the exercises on the web, which draws the muscles trained so far. */
+  sideCardHeading: "This session so far",
 } as const;
 
 export type SetColumnsCopy = {
