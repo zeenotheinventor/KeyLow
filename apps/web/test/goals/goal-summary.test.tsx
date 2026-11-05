@@ -270,13 +270,13 @@ describe("when the routine cannot be read", () => {
 });
 
 describe("Save goal", () => {
-  it("should store the answers once and leave to More", async () => {
+  it("should store the answers once and leave for the Goal page when a goal was stored", async () => {
     renderGoalSummary();
 
     await userEvent.click(await saveButton());
 
     await waitFor(() => {
-      expect(router.replace).toHaveBeenCalledWith("/more");
+      expect(router.replace).toHaveBeenCalledWith("/goal");
     });
     expect(summaryBackend.saved).toMatchObject([
       {
@@ -289,6 +289,17 @@ describe("Save goal", () => {
         },
       },
     ]);
+    expect(summaryBackend.saved).toHaveLength(1);
+  });
+
+  it("should leave for More when it is the first goal", async () => {
+    renderGoalSummary(goldenAnswers, { hasStoredGoal: false });
+
+    await userEvent.click(await saveButton());
+
+    await waitFor(() => {
+      expect(router.replace).toHaveBeenCalledWith("/more");
+    });
     expect(summaryBackend.saved).toHaveLength(1);
   });
 
@@ -330,7 +341,7 @@ describe("Save goal", () => {
     summaryBackend.save = "ready";
     await userEvent.click(await saveButton());
     await waitFor(() => {
-      expect(router.replace).toHaveBeenCalledWith("/more");
+      expect(router.replace).toHaveBeenCalledWith("/goal");
     });
     expect(summaryBackend.saved).toHaveLength(2);
   });

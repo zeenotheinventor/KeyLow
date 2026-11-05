@@ -298,12 +298,12 @@ describe("moving through the last three questions", () => {
   });
 
   it.each(["/goal/4", "/goal/5", "/goal/6"])(
-    "should leave for More from %s with nothing changed, and ask first when something was",
+    "should leave for the Goal page from %s with nothing changed, and ask first when something was",
     async (startAt) => {
       renderGoalFlow(router, startAt);
 
       await userEvent.click(await screen.findByRole("button", { name: "Cancel" }));
-      expect(router.replace).toHaveBeenCalledWith("/more");
+      expect(router.replace).toHaveBeenCalledWith("/goal");
       expect(screen.queryByRole("dialog")).toBeNull();
     },
   );

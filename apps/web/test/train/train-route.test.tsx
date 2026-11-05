@@ -152,7 +152,7 @@ describe("the first-time card's Set your goal", () => {
 
     await userEvent.click(button);
 
-    expect(router.push).toHaveBeenCalledExactlyOnceWith("/goal");
+    expect(router.push).toHaveBeenCalledExactlyOnceWith("/goal?from=train");
   });
 
   it("should open the first question while the goal is not yet known", async () => {
