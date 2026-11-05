@@ -214,7 +214,7 @@ function exerciseRead(
       .flatMap((entry) => rowsOf([entry["exercises"]])),
     ...trainBackend.searchableExercises,
   ].find((exercise) => exercise["id"] === id);
-  return answer(request, found === undefined ? [] : [found]);
+  return read("exercise", request, found === undefined ? [] : [found]);
 }
 
 /** The update of a logged set, which keeps it where it is and changes the columns the body names. */

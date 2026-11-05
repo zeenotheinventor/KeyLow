@@ -139,13 +139,14 @@ export function SessionScreen() {
         </p>
       ) : null}
       <div className="flex flex-col gap-3 xl:max-w-[800px] xl:gap-5">
-        {view.exercises.map(({ name, target, plan, exercise }) => (
+        {view.exercises.map(({ name, target, plan, muscles, exercise }) => (
           <SessionExerciseCard
             key={exercise.exerciseId}
             sessionId={view.sessionId}
             name={name}
             target={target}
             plan={plan}
+            muscles={muscles}
             unit={view.unit}
             exercise={exercise}
             sessionSets={view.sets}
