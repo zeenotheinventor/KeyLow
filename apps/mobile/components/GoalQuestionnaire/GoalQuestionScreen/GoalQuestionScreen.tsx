@@ -50,7 +50,8 @@ export function GoalQuestionScreen({ step: stepName }: GoalQuestionScreenProps) 
     }, []),
   );
 
-  // The question before this one is the screen under it, since the questions are only reached by Next.
+  // Back returns to the screen under this one. That is the question before it when it was reached by Next, and
+  // the Goal screen when a row of that screen opened it directly.
   const goBack = useCallback(() => {
     if (!hasMoved.current) {
       hasMoved.current = true;

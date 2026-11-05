@@ -412,7 +412,7 @@ describe("the More screen", () => {
       expect(screen.queryByText(withoutGoalSubtitle)).not.toBeOnTheScreen();
     });
 
-    it("should open the first question when pressed", async () => {
+    it("should open the Goal screen when pressed, which asks the first question itself when there is no goal", async () => {
       const user = userEvent.setup();
       diaryBackend.trainingGoals = [storedGoalRow];
       await renderMore();
@@ -420,17 +420,17 @@ describe("the More screen", () => {
       await user.press(await screen.findByRole("button", { name: /^Goal/ }));
 
       expect(routerMock.push).toHaveBeenCalledTimes(1);
-      expect(routerMock.push).toHaveBeenCalledWith("/goal/1");
+      expect(routerMock.push).toHaveBeenCalledWith("/goal");
     });
 
-    it("should open the questions even while the goal is still being read", async () => {
+    it("should open the Goal screen even while the goal is still being read", async () => {
       const user = userEvent.setup();
       diaryBackend.hungTables.add("training_goals");
       await renderMore();
 
       await user.press(screen.getByRole("button", { name: "Goal" }));
 
-      expect(routerMock.push).toHaveBeenCalledWith("/goal/1");
+      expect(routerMock.push).toHaveBeenCalledWith("/goal");
     });
 
     it("should open the questions once on a double tap", async () => {

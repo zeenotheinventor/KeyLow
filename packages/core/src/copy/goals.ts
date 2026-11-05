@@ -381,10 +381,12 @@ export const GOAL_SUMMARY = {
 /** The fixed words of the goal screen. */
 export const GOAL_SCREEN = {
   title: "Goal",
-  backLabel: "Back to Train",
+  backLabel: "Back",
   changeNote:
     "Changing an answer starts your new goal from today. Suggestions you already took keep their reasons.",
   prioritiesAction: "See your priorities",
+  /** What a screen reader hears while the goal is being read. */
+  loadingName: "Loading your goal",
 } as const;
 
 /** The label of each answer row on the goal screen. */

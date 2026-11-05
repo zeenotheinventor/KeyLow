@@ -23,7 +23,7 @@ import { BodyMapRendererSetting } from "../../../components/BodyMapRendererSetti
 import { DashboardBodyChartSetting } from "../../../components/DashboardBodyChartSetting";
 import { ScreenHeader } from "../../../components/ScreenHeader";
 import { GroupedList, ListRow } from "../../../components/ui";
-import { goalQuestionPath } from "../../../lib/goalRoutes";
+import { goalPath } from "../../../lib/goalRoutes";
 import { recipesPath } from "../../../lib/recipeRoutes";
 import { signOut } from "../../../lib/signOut";
 import { useOpenOnce } from "../../../lib/useOpenOnce";
@@ -34,10 +34,10 @@ import { useReadsEnabled } from "../../../lib/useReadsEnabled";
 // Programme sits under it and opens the Programme screen inside this tab, its subtitle the next check-in or the offer to
 // let Ki-Lo set the targets, and Targets says "From your programme" while the programme's targets are in force.
 // Recipes is Nutrition's last row and opens the recipe library inside this tab, where it moved from the bar.
-// Weight opens the Weight screen inside this tab, and Goal sits under it and opens the goal questionnaire at its
-// first question, filled with the current goal's answers, its sub line the day the goal was set or the
-// invitation to set one, and none until both the goal and the time zone it is dated in are read, so the
-// invitation does not show and then flip. Appearance, the Body map and the Dashboard body map are set here, and Account
+// Weight opens the Weight screen inside this tab, and Goal sits under it and opens the Goal screen, which
+// shows the current goal's answers and asks the first question itself when there is no goal. Its sub line is
+// the day the goal was set or the invitation to set one, and none until both the goal and the time zone it is
+// dated in are read, so the invitation does not show and then flip. Appearance, the Body map and the Dashboard body map are set here, and Account
 // holds Export my data, which opens its screen inside this tab, above Sign out.
 // Assistant is the first row of Settings and opens its settings screen inside this tab, its sub line and value
 // following whether the assistant is on, and none until that is read.
@@ -140,7 +140,7 @@ export default function MoreRoute() {
             title={MORE_SCREEN.body.goal.title}
             onPress={() => {
               openOnce(() => {
-                router.push(goalQuestionPath(1));
+                router.push(goalPath());
               });
             }}
           />

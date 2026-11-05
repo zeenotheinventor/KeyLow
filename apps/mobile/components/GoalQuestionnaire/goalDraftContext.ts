@@ -9,6 +9,11 @@ export type GoalDraftContextValue = Readonly<{
   hasChanges: boolean;
   /** Gives answers, each replacing any earlier answer to the same question. */
   answer: (answers: GoalDraftAnswers) => void;
+  /**
+   * Starts the draft over from these answers, which also become the ones it counts changes against. The Goal
+   * screen does it with the stored goal, so every way into the questions starts from the goal as stored.
+   */
+  restart: (answers: GoalDraftAnswers) => void;
 }>;
 
 export const GoalDraftContext = createContext<GoalDraftContextValue | undefined>(undefined);

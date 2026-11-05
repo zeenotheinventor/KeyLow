@@ -232,7 +232,7 @@ describe("the goal questionnaire under the router", () => {
   it("should open every question filled when a goal is stored, so a link to the later ones works", async () => {
     const user = userEvent.setup();
     trainingGoalsRead.row = storedGoalRow;
-    await openAt(goalPath());
+    await openAt(goalQuestionPath(1));
 
     expect(await screen.findByRole("radio", { name: /^Both/ })).toBeChecked();
     for (const [heading, selected] of [
