@@ -117,13 +117,15 @@ describe("More page", () => {
     });
   });
 
-  it("should show Weight as coming soon and not available", async () => {
+  it("should reach the Weight page from the Body section, as a row that goes somewhere", async () => {
     await renderPage();
 
-    const weight = screen.getByRole("link", { name: /Weight/ });
-    expect(weight.getAttribute("aria-disabled")).toBe("true");
-    expect(weight.getAttribute("href")).toBeNull();
-    expect(weight.textContent).toContain("Coming soon");
+    const link = within(screen.getByRole("region", { name: "Body" })).getByRole("link", {
+      name: "Weight",
+    });
+    expect(link.getAttribute("href")).toBe("/weight");
+    expect(link.getAttribute("aria-disabled")).toBeNull();
+    expect(link.textContent).toBe("Weight");
   });
 
   it("should not link to a Settings page, because Appearance is on this page", async () => {

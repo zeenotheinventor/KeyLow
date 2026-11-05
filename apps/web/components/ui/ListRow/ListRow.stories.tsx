@@ -1,4 +1,4 @@
-import { FileText, Shield } from "lucide-react";
+import { FileText, Heart, Pencil, Shield } from "lucide-react";
 import { userEvent } from "storybook/test";
 
 import { ListRow } from "./ListRow";
@@ -53,6 +53,41 @@ export const WithIcon: Story = {
     <>
       <ListRow icon={Shield} title="Privacy Policy" href="/privacy" />
       <ListRow icon={FileText} title="Terms" href="/terms" />
+    </>
+  ),
+};
+
+// The weigh-in list's rows: the figure strong with its unit after it, an imported reading with the heart, and a
+// reading the trend left out with its badge and a muted figure.
+export const WeighIns: Story = {
+  render: () => (
+    <>
+      <ListRow
+        icon={Pencil}
+        title="Today"
+        subtitle="07:10 · Added by you"
+        value="81.4"
+        unit="kg"
+        valueLook="numeral"
+      />
+      <ListRow
+        icon={Heart}
+        title="Yesterday"
+        subtitle="08:17 · Health Connect"
+        value="81.8"
+        unit="kg"
+        valueLook="numeral"
+      />
+      <ListRow
+        icon={Pencil}
+        title="Wed 14 Oct"
+        subtitle="08:31 · Added by you"
+        badge={{ label: "Left out of trend", tone: "warning" }}
+        value="88.9"
+        unit="kg"
+        valueLook="numeral"
+        valueTone="muted"
+      />
     </>
   ),
 };

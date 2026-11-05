@@ -3,6 +3,7 @@ export const storyStates = [
   "Action",
   "WithIcon",
   "WithValue",
+  "WeighIns",
   "Plain",
   "Disabled",
   "Hover",

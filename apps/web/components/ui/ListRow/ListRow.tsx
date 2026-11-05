@@ -4,6 +4,7 @@ import Link from "next/link";
 
 import type { ListRowProps } from "./types";
 
+import { Badge } from "@/components/ui/Badge";
 import { cn } from "@/lib/utils";
 
 // The row sits inside a card that clips its corners, so the keyboard focus ring is drawn inside
@@ -14,12 +15,25 @@ const rowClasses =
 const interactiveClasses =
   "cursor-pointer hover:bg-hover-overlay active:scale-[0.985] active:bg-press-overlay motion-reduce:active:scale-100";
 
+// Each class is written out whole so Tailwind can see it.
+const valueClasses = {
+  quiet: { default: "text-body text-text-secondary", muted: "text-body text-text-muted" },
+  numeral: {
+    default: "text-body-strong text-text-primary",
+    muted: "text-body-strong text-text-muted",
+  },
+} as const;
+
 /** A row of a settings or menu list: a title, an optional subtitle and a chevron when it navigates. Put it inside a `GroupedList`. */
 export function ListRow({
   icon: Icon,
   title,
   subtitle,
+  badge,
   value,
+  unit,
+  valueLook = "quiet",
+  valueTone,
   href,
   onClick,
   submit,
@@ -34,6 +48,13 @@ export function ListRow({
     disabled && "pointer-events-none opacity-50",
     className,
   );
+  const textLines = (
+    <>
+      <span className="text-body-strong">{title}</span>
+      {subtitle !== undefined && <span className="text-caption text-text-muted">{subtitle}</span>}
+    </>
+  );
+  const text = <span className="flex min-w-0 flex-1 flex-col gap-0.5">{textLines}</span>;
   const content = (
     <>
       {Icon !== undefined && (
@@ -41,12 +62,25 @@ export function ListRow({
           <Icon aria-hidden className="size-5" strokeWidth={iconStroke} />
         </span>
       )}
-      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <span className="text-body-strong">{title}</span>
-        {subtitle !== undefined && <span className="text-caption text-text-muted">{subtitle}</span>}
-      </span>
+      {badge === undefined ? (
+        text
+      ) : (
+        // From the medium width the badge sits at the end of the text, beside the value. Below it the
+        // badge is under the subtitle, where the row has no room beside the value.
+        <span className="flex min-w-0 flex-1 flex-col gap-0.5 md:flex-row md:items-center md:justify-between md:gap-3">
+          <span className="flex min-w-0 flex-col gap-0.5">{textLines}</span>
+          <Badge tone={badge.tone} className="mt-0.5 self-start md:mt-0 md:self-auto">
+            {badge.label}
+          </Badge>
+        </span>
+      )}
       {value !== undefined && (
-        <span className="shrink-0 text-body tabular-nums text-text-secondary">{value}</span>
+        <span className="flex shrink-0 items-baseline gap-1">
+          <span className={cn("tabular-nums", valueClasses[valueLook][valueTone ?? "default"])}>
+            {value}
+          </span>
+          {unit !== undefined && <span className="text-caption text-text-muted">{unit}</span>}
+        </span>
       )}
       {interactive && chevron && (
         <ChevronRight

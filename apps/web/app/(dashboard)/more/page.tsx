@@ -1,4 +1,4 @@
-import { COMING_SOON_TITLE, MORE_SCREEN, TAB_TITLES } from "@keylow/core/copy";
+import { MORE_SCREEN, TAB_TITLES } from "@keylow/core/copy";
 import { cookies } from "next/headers";
 
 import { signOut } from "../actions";
@@ -36,14 +36,7 @@ export default async function MorePage() {
           <ListRow title={MORE_SCREEN.nutrition.recipes.title} href={recipesPath()} />
         </GroupedList>
         <GroupedList title={MORE_SCREEN.body.title} headerSize="compact">
-          {/* Weight is not built yet. A disabled row has no destination and does nothing. */}
-          <ListRow
-            title={MORE_SCREEN.body.weight.title}
-            subtitle={COMING_SOON_TITLE}
-            href="/weight"
-            disabled
-            chevron={false}
-          />
+          <ListRow title={MORE_SCREEN.body.weight.title} href="/weight" />
         </GroupedList>
         <GroupedList title={MORE_SCREEN.settings.title} headerSize="compact">
           <AppearanceSetting initialPreference={themePreference} />

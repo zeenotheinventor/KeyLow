@@ -18,12 +18,12 @@ import { trainPath } from "@/lib/trainRoutes";
 import { useIsOnline } from "@/lib/useIsOnline";
 import { cn } from "@/lib/utils";
 
-// Recipes is not a section. Its library is a row of More's Nutrition section, so More stays current on it.
+// Recipes and Weight are not sections. Each is a row of More, so More stays current on its page.
 const SECTIONS: readonly DashboardSection[] = [
   { label: TAB_TITLES.dashboard, href: "/dashboard" },
   { label: TAB_TITLES.diary, href: "/diary" },
   { label: TRAIN_HOME.tabLabel, href: trainPath() },
-  { label: TAB_TITLES.more, href: "/more", alsoCurrentOn: [recipesPath()] },
+  { label: TAB_TITLES.more, href: "/more", alsoCurrentOn: [recipesPath(), "/weight"] },
 ];
 
 // A section is current on its own page, on the pages under it, and on the pages it holds that live elsewhere.

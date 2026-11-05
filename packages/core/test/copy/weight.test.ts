@@ -77,6 +77,7 @@ describe("weight: chart and weigh-ins", () => {
       expect(WEIGHT_EMPTY).toEqual({
         title: "No weigh-ins yet",
         body: "Add one now, or bring in readings from your smart scale through Health Connect. Your trend starts after the first weigh-in.",
+        bodyWeb: "Add your first one here. Your trend starts after the first weigh-in.",
         addWeighIn: "Add weigh-in",
         connectHealth: "Connect Health Connect",
       });
