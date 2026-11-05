@@ -14,6 +14,11 @@ import { ThemeProvider } from "../../lib/theme";
 import { compileKitStyles } from "../support/kitStyles";
 import { registerAppStyles } from "../support/nativeWindStyles";
 import { pressTwiceInTheSameMoment } from "../support/sameTickPress";
+import {
+  resetTrainingGoalsRead,
+  storedGoalRow,
+  trainingGoalsRead,
+} from "../support/trainingGoalsRead";
 import { installVirtualClock } from "../support/virtualClock";
 
 jest.mock("@react-native-async-storage/async-storage", () => ({
@@ -25,6 +30,17 @@ jest.mock(
   () =>
     jest.requireActual<{ default: unknown }>("react-native-safe-area-context/jest/mock").default,
 );
+
+jest.mock("../../lib/useReadsEnabled", () => ({
+  useReadsEnabled: jest.requireActual<{ useReadsEnabledMock: unknown }>(
+    "../support/trainingGoalsRead",
+  ).useReadsEnabledMock,
+}));
+jest.mock("@keylow/api-client", () => ({
+  useTrainingGoals: jest.requireActual<{ useTrainingGoalsMock: unknown }>(
+    "../support/trainingGoalsRead",
+  ).useTrainingGoalsMock,
+}));
 
 // The addresses the questionnaire opens and sends to must be files under app/, or the control that leads
 // there opens the not-found screen.
@@ -63,6 +79,7 @@ async function openAt(location: string) {
         "goal/_layout": GoalLayout,
         "goal/index": GoalIndex,
         "goal/[step]": GoalStepRoute,
+        "goal/summary": standIn("The summary"),
       })}
       location={location}
     />,
@@ -79,6 +96,7 @@ describe("the goal questionnaire under the router", () => {
   beforeEach(() => {
     installVirtualClock();
     registerAppStyles(kitStyles);
+    resetTrainingGoalsRead();
   });
 
   afterEach(async () => {
@@ -189,5 +207,44 @@ describe("the goal questionnaire under the router", () => {
     await user.press(screen.getByRole("button", { name: "Back" }));
     await screen.findByRole("heading", { name: "What are you training for?" });
     expect(router.canGoBack()).toBe(false);
+  });
+
+  it("should walk all six questions with Next and reach the summary from the last button", async () => {
+    const user = userEvent.setup();
+    await openAt(goalPath());
+
+    await user.press(await screen.findByRole("radio", { name: /^Look better/ }));
+    await user.press(screen.getByRole("button", { name: "Next" }));
+    await screen.findByRole("heading", { name: "Anything to focus on?" });
+    await user.press(screen.getByRole("button", { name: "Next" }));
+    await user.press(await screen.findByRole("radio", { name: "4" }));
+    await user.press(screen.getByRole("button", { name: "Next" }));
+    await user.press(await screen.findByRole("radio", { name: "60 min" }));
+    await user.press(screen.getByRole("button", { name: "Next" }));
+    await user.press(await screen.findByRole("checkbox", { name: "Full gym" }));
+    await user.press(screen.getByRole("button", { name: "Next" }));
+    await user.press(await screen.findByRole("radio", { name: /^Intermediate/ }));
+    await user.press(screen.getByRole("button", { name: "See your priorities" }));
+
+    expect(await screen.findByRole("heading", { name: "The summary" })).toBeOnTheScreen();
+  });
+
+  it("should open every question filled when a goal is stored, so a link to the later ones works", async () => {
+    const user = userEvent.setup();
+    trainingGoalsRead.row = storedGoalRow;
+    await openAt(goalPath());
+
+    expect(await screen.findByRole("radio", { name: /^Both/ })).toBeChecked();
+    for (const [heading, selected] of [
+      ["Anything to focus on?", () => screen.getByRole("checkbox", { name: /^Arms/ })],
+      ["How many days a week?", () => screen.getByRole("radio", { name: "5" })],
+      ["How long is a session?", () => screen.getByRole("radio", { name: "Other" })],
+      ["What can you use?", () => screen.getByRole("checkbox", { name: "Cable" })],
+      ["How long have you trained?", () => screen.getByRole("radio", { name: /^Advanced/ })],
+    ] as const) {
+      await user.press(screen.getByRole("button", { name: /^(Next|See your priorities)$/ }));
+      await screen.findByRole("heading", { name: heading });
+      expect(selected()).toBeChecked();
+    }
   });
 });

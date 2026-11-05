@@ -158,6 +158,8 @@ export const GOAL_QUESTIONNAIRE = {
   /** The name of the progress bar. */
   progressName: "Questions answered",
   otherMinutesOption: "Other",
+  /** The unit after the digits of the Other minutes field. */
+  minutesUnit: "min",
 } as const;
 
 /** The text with its first letter in capitals. */
@@ -223,7 +225,8 @@ const EQUIPMENT_PHRASES: Readonly<Record<Equipment, string>> = {
   other: "other equipment",
 };
 
-const isFullGym = (equipment: GoalAnswers["equipment"]): boolean =>
+/** Whether the equipment is exactly what the Full gym shortcut picks: the nine values, with Other not chosen. */
+export const isFullGym = (equipment: readonly Equipment[]): boolean =>
   !equipment.includes("other") && FULL_GYM.equipment.every((value) => equipment.includes(value));
 
 /** The values that were chosen, in the order of the list, whatever order they were chosen in. */

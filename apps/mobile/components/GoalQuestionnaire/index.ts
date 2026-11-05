@@ -3,6 +3,7 @@ export { GoalQuestionScreen } from "./GoalQuestionScreen";
 export { GoalSummaryScreen } from "./GoalSummaryScreen";
 export { PriorityRow } from "./PriorityRow";
 export { QuestionScreen } from "./QuestionScreen";
+export { goalAnswersOfRow } from "./goalAnswersOfRow";
 export { firstUnansweredStep } from "./goalDraftReducer";
 export { priorityFigureValues } from "./priorityFigureValues";
 export { useGoalDraft } from "./useGoalDraft";

@@ -302,33 +302,13 @@ describe("GoalQuestionScreen", () => {
       expect(screen.getByRole("radio", { name: "6" })).toBeChecked();
     });
 
-    it("should lead on to the fourth question, which the next ticket builds", async () => {
+    it("should lead on to the fourth question", async () => {
       const user = userEvent.setup();
       await renderQuestion("days", { days_per_week: 4 });
 
       await user.press(screen.getByRole("button", { name: "Next" }));
 
       expect(routerMock.push).toHaveBeenCalledWith(goalQuestionPath(4));
-    });
-  });
-
-  describe("a question whose answers are not built yet", () => {
-    it.each(["minutes", "equipment", "experience"] as const)(
-      "should still ask the %s question, with the main button disabled",
-      async (step) => {
-        await renderQuestion(step);
-
-        expect(screen.getByRole("heading", { name: GOAL_QUESTIONS[step].title })).toBeOnTheScreen();
-        expect(screen.getByRole("button", { name: /^(Next|See your priorities)$/ })).toBeDisabled();
-      },
-    );
-
-    it("should word Next as See your priorities at the sixth question", async () => {
-      await renderQuestion("experience");
-
-      expect(
-        screen.getByRole("button", { name: GOAL_QUESTIONNAIRE.finalAction }),
-      ).toBeOnTheScreen();
     });
   });
 
@@ -343,20 +323,43 @@ describe("GoalQuestionScreen", () => {
       expect(screen.queryByText(GOAL_QUESTIONNAIRE.closeConfirmation)).not.toBeOnTheScreen();
     });
 
-    it("should ask first when there are answers", async () => {
+    it("should ask first when an answer was given", async () => {
       const user = userEvent.setup();
-      await renderQuestion("goal", { goal: "strength" });
+      await renderQuestion("goal");
 
+      await user.press(screen.getByRole("radio", { name: /^Get stronger/ }));
       await user.press(screen.getByRole("button", { name: "Close, your answers are not saved" }));
 
       expect(screen.getByRole("heading", { name: "Your answers are not saved" })).toBeOnTheScreen();
       expect(routerMock.parentGoBack).not.toHaveBeenCalled();
     });
 
+    it("should leave at once when the flow opened filled with the current goal and nothing changed", async () => {
+      const user = userEvent.setup();
+      await renderQuestion("goal", { goal: "strength", focus: ["legs"] });
+
+      await user.press(screen.getByRole("button", { name: "Close, your answers are not saved" }));
+
+      expect(routerMock.parentGoBack).toHaveBeenCalledTimes(1);
+      expect(screen.queryByText(GOAL_QUESTIONNAIRE.closeConfirmation)).not.toBeOnTheScreen();
+    });
+
+    it("should ask first once an answer of a filled flow has been changed", async () => {
+      const user = userEvent.setup();
+      await renderQuestion("goal", { goal: "strength", focus: ["legs"] });
+
+      await user.press(screen.getByRole("radio", { name: /^Both/ }));
+      await user.press(screen.getByRole("button", { name: "Close, your answers are not saved" }));
+
+      expect(routerMock.parentGoBack).not.toHaveBeenCalled();
+      expect(screen.getByText(GOAL_QUESTIONNAIRE.closeConfirmation)).toBeOnTheScreen();
+    });
+
     it("should ask first when only a focus has been chosen", async () => {
       const user = userEvent.setup();
-      await renderQuestion("focus", { focus: ["legs"] });
+      await renderQuestion("focus");
 
+      await user.press(screen.getByRole("checkbox", { name: /^Legs/ }));
       await user.press(screen.getByRole("button", { name: "Close, your answers are not saved" }));
 
       expect(screen.getByRole("heading", { name: "Your answers are not saved" })).toBeOnTheScreen();
@@ -364,7 +367,8 @@ describe("GoalQuestionScreen", () => {
 
     it("should draw Close as the main button and Keep answering as the secondary one", async () => {
       const user = userEvent.setup();
-      await renderQuestion("goal", { goal: "strength" });
+      await renderQuestion("goal");
+      await user.press(screen.getByRole("radio", { name: /^Get stronger/ }));
       await user.press(screen.getByRole("button", { name: "Close, your answers are not saved" }));
 
       expect(await screen.findByRole("button", { name: "Close" })).toHaveStyle({
@@ -377,7 +381,8 @@ describe("GoalQuestionScreen", () => {
 
     it("should stay on the question when the person keeps answering", async () => {
       const user = userEvent.setup();
-      await renderQuestion("goal", { goal: "strength" });
+      await renderQuestion("goal");
+      await user.press(screen.getByRole("radio", { name: /^Get stronger/ }));
       await user.press(screen.getByRole("button", { name: "Close, your answers are not saved" }));
 
       await user.press(screen.getByRole("button", { name: "Keep answering" }));
@@ -391,7 +396,8 @@ describe("GoalQuestionScreen", () => {
 
     it("should leave the flow when the person closes it, and keep nothing", async () => {
       const user = userEvent.setup();
-      await renderQuestion("goal", { goal: "strength" });
+      await renderQuestion("goal");
+      await user.press(screen.getByRole("radio", { name: /^Get stronger/ }));
       await user.press(screen.getByRole("button", { name: "Close, your answers are not saved" }));
 
       await user.press(screen.getByRole("button", { name: "Close" }));
@@ -412,8 +418,10 @@ describe("GoalQuestionScreen", () => {
   });
 
   describe("the Android back button", () => {
-    it("should close the first question as Close does, asking first when there are answers", async () => {
-      await renderQuestion("goal", { goal: "strength" });
+    it("should close the first question as Close does, asking first when an answer was given", async () => {
+      const user = userEvent.setup();
+      await renderQuestion("goal");
+      await user.press(screen.getByRole("radio", { name: /^Get stronger/ }));
 
       const wasHandled = await pressAndroidBackButton();
 
@@ -422,6 +430,16 @@ describe("GoalQuestionScreen", () => {
         await screen.findByRole("heading", { name: "Your answers are not saved" }),
       ).toBeOnTheScreen();
       expect(routerMock.back).not.toHaveBeenCalled();
+    });
+
+    it("should leave the first question at once when the flow opened filled and nothing changed", async () => {
+      await renderQuestion("goal", { goal: "strength" });
+
+      const wasHandled = await pressAndroidBackButton();
+
+      expect(wasHandled).toBe(true);
+      expect(routerMock.parentGoBack).toHaveBeenCalledTimes(1);
+      expect(screen.queryByText(GOAL_QUESTIONNAIRE.closeConfirmation)).not.toBeOnTheScreen();
     });
 
     it("should leave the first question at once when nothing has been answered", async () => {

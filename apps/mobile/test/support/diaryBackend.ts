@@ -33,6 +33,8 @@ export const diaryBackend: {
   dayLogs: Row[];
   /** The `day_totals` rows, which the week's read returns for the days it asks for. Empty by default. */
   dayTotals: Row[];
+  /** The `training_goals` rows the current goal read sees. Empty by default, so the user has no goal. */
+  trainingGoals: Row[];
   /** Fails the reads of this table with a database error. */
   failingTables: Set<string>;
   /** Never answers the reads of this table, as a slow connection does. */
@@ -60,6 +62,8 @@ export const diaryBackend: {
   hungWeekStarts: Set<string>;
   /** Fails the read of the profile's time zone alone, so the terms acceptance still loads. */
   timeZoneReadFails: boolean;
+  /** Never answers the read of the profile's time zone alone, as a slow connection does. */
+  timeZoneReadHangs: boolean;
   /** The bodies of the updates made to the profile. */
   saves: unknown[];
   /** Every request made, as the table, its query string and its method. */
@@ -76,6 +80,7 @@ export const diaryBackend: {
   recipes: [],
   dayLogs: [],
   dayTotals: [],
+  trainingGoals: [],
   failingTables: new Set(),
   hungTables: new Set(),
   failingWriteTables: new Set(),
@@ -87,6 +92,7 @@ export const diaryBackend: {
   failingUpdates: 0,
   targetsReadFails: false,
   timeZoneReadFails: false,
+  timeZoneReadHangs: false,
   weekReadsFail: false,
   weekReadsHang: false,
   hungWeekStarts: new Set(),
@@ -113,6 +119,7 @@ export function resetDiaryBackend(): void {
   diaryBackend.recipes = [];
   diaryBackend.dayLogs = [];
   diaryBackend.dayTotals = [];
+  diaryBackend.trainingGoals = [];
   diaryBackend.failingTables.clear();
   diaryBackend.hungTables.clear();
   diaryBackend.failingWriteTables.clear();
@@ -125,6 +132,7 @@ export function resetDiaryBackend(): void {
   diaryBackend.saves = [];
   diaryBackend.targetsReadFails = false;
   diaryBackend.timeZoneReadFails = false;
+  diaryBackend.timeZoneReadHangs = false;
   diaryBackend.weekReadsFail = false;
   diaryBackend.weekReadsHang = false;
   diaryBackend.hungWeekStarts.clear();
@@ -705,6 +713,9 @@ export async function fakeFetch(
       if (init?.method === "PATCH") {
         return Promise.resolve(saveTargets(init.body));
       }
+      if (diaryBackend.timeZoneReadHangs && searchParams.get("select")?.includes("timezone")) {
+        return new Promise<Response>(() => undefined);
+      }
       if (
         (diaryBackend.targetsReadFails && searchParams.get("select")?.includes("target_kcal")) ||
         (diaryBackend.timeZoneReadFails && searchParams.get("select")?.includes("timezone"))
@@ -790,8 +801,8 @@ export async function fakeFetch(
         ),
       );
     case "training_goals":
-      // The user has no goal, so the training reads that wait for it are not held up by an error.
-      return Promise.resolve(jsonResponse([]));
+      // By default the user has no goal, so the training reads that wait for it are not held up by an error.
+      return Promise.resolve(jsonResponse(diaryBackend.trainingGoals));
     case "accepted_suggestions":
       // The user has accepted no suggestion, so the projection that waits for them is not held up by an error.
       return Promise.resolve(jsonResponse([]));

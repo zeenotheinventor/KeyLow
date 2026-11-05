@@ -16,6 +16,7 @@ import {
   EXPERIENCE_OPTIONS,
   FOCUS_OPTIONS,
   FULL_GYM,
+  isFullGym,
   GOAL_ANSWER_ROWS,
   GOAL_ERRORS,
   GOAL_OPTIONS,
@@ -187,6 +188,28 @@ describe("the questions", () => {
       "90 min",
     ]);
     expect(GOAL_QUESTIONNAIRE.otherMinutesOption).toBe("Other");
+    expect(GOAL_QUESTIONNAIRE.minutesUnit).toBe("min");
+  });
+});
+
+describe("whether the equipment is a full gym", () => {
+  const nine = FULL_GYM.equipment;
+
+  it("should be true for the nine values Full gym picks, in any order", () => {
+    expect(isFullGym(nine)).toBe(true);
+    expect(isFullGym([...nine].reverse())).toBe(true);
+  });
+
+  it("should be false when one of the nine is missing", () => {
+    expect(isFullGym(nine.slice(1))).toBe(false);
+  });
+
+  it("should be false when Other is chosen too, as Full gym leaves it out", () => {
+    expect(isFullGym([...nine, "other"])).toBe(false);
+  });
+
+  it("should be false for none", () => {
+    expect(isFullGym([])).toBe(false);
   });
 });
 
