@@ -31,6 +31,12 @@ export const WithAction: Story = {
   args: { action: { label: "Create a food", icon: Plus, onClick: () => undefined } },
 };
 
+export const DisabledAction: Story = {
+  args: {
+    action: { label: "Create a food", icon: Plus, disabled: true, onClick: () => undefined },
+  },
+};
+
 export const WithLinkAction: Story = {
   args: { action: { label: "Create a food", icon: Plus, href: "/foods/new" } },
 };

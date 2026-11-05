@@ -5,7 +5,15 @@ export type EmptyStateAction = {
   icon?: LucideIcon;
   /** Secondary unless the state is the first thing a person does, such as the first recipe, where it is primary. */
   variant?: "primary" | "secondary";
-} & ({ href: string; onClick?: never } | { onClick: () => void; href?: never });
+} & (
+  | { href: string; onClick?: never; disabled?: never }
+  | {
+      onClick: () => void;
+      href?: never;
+      /** Dims the button and stops it, for an action that needs a connection. */
+      disabled?: boolean;
+    }
+);
 
 /**
  * How much room the state takes, as the boards draw it in four places: the list on the foods page

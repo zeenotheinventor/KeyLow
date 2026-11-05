@@ -7,6 +7,7 @@ import {
   describeEditSetSheet,
   describeHistoryRow,
   describeHistorySessionName,
+  describeHistoryTableRow,
   describeHistorySet,
   describeHistoryWeek,
   describeLoadFieldLabel,
@@ -26,6 +27,7 @@ import {
   HISTORY_SESSION_DETAIL,
   HISTORY_SESSION_LOADING_NAME,
   HISTORY_SESSION_NOT_FOUND,
+  HISTORY_TABLE,
 } from "../../src/copy";
 import * as historyCopy from "../../src/copy/history";
 
@@ -175,6 +177,55 @@ describe("describeHistorySessionName", () => {
 
   it("should be Session for a session that follows no routine day, as the Train home names it", () => {
     expect(describeHistorySessionName(null)).toBe("Session");
+  });
+});
+
+describe("HISTORY_TABLE", () => {
+  it("should name the table's section and its five columns as the web-history · list board does", () => {
+    expect(HISTORY_TABLE).toStrictEqual({
+      sectionName: "Sessions",
+      columns: {
+        date: "Date",
+        session: "Session",
+        time: "Time",
+        sets: "Sets",
+        muscles: "Muscles",
+      },
+    });
+  });
+});
+
+describe("describeHistoryTableRow", () => {
+  it("should read the golden Tuesday Pull as the web-history · list board draws its row", () => {
+    expect(
+      describeHistoryTableRow({ localDate: "2026-10-13", summary: pullSummary }),
+    ).toStrictEqual({
+      date: "Tue 13 Oct",
+      name: "Pull",
+      time: "51 min",
+      sets: "17",
+      muscles: "Lats, biceps, mid traps",
+      isInProgress: false,
+      resumeName: null,
+    });
+  });
+
+  it("should give an open session In progress for its time, and a name for the control that resumes it", () => {
+    const row = describeHistoryTableRow({ localDate: "2026-10-15", summary: legsSummary });
+
+    expect(row.time).toBe("In progress");
+    expect(row.isInProgress).toBe(true);
+    expect(row.sets).toBe("8");
+    expect(row.resumeName).toBe("Legs, Thu 15 October, 8 sets, in progress, resume session");
+  });
+
+  it("should leave the muscles null when no muscle worked", () => {
+    const row = describeHistoryTableRow({
+      localDate: "2026-10-13",
+      summary: { ...pullSummary, topMuscles: [] },
+    });
+
+    expect(row.muscles).toBeNull();
   });
 });
 

@@ -1,8 +1,10 @@
 import {
   describeMoment,
   describeSets,
+  describeShortDate,
   describeWeekdayShortName,
   describeWeekRange,
+  formatSetCount,
 } from "./bodyMap";
 import { describeCount } from "./counts";
 import { describeDateInWords } from "./diary";
@@ -85,6 +87,18 @@ export const HISTORY_ERROR = {
   title: "Your history did not load",
   body: "Your sessions are safe. Check your connection, then try again.",
   action: "Try again",
+} as const;
+
+/** The web history table, as the `web-history · list` board draws it: its section's name and its column headings. */
+export const HISTORY_TABLE = {
+  sectionName: "Sessions",
+  columns: {
+    date: "Date",
+    session: "Session",
+    time: HISTORY_SESSION_DETAIL.timeLabel,
+    sets: HISTORY_SESSION_DETAIL.setsLabel,
+    muscles: "Muscles",
+  },
 } as const;
 
 /** The fixed words of the edit set sheet. */
@@ -179,14 +193,17 @@ export type HistoryRowCopy = {
   accessibleName: string;
 };
 
-const describeMusclesLine = (muscles: SessionSummary["topMuscles"]): string | null =>
+const describeMusclesLine = (
+  muscles: SessionSummary["topMuscles"],
+  separator: string,
+): string | null =>
   muscles.length === 0
     ? null
     : muscles
         .map((muscle, index) =>
           index === 0 ? MUSCLE_NAMES[muscle] : MUSCLE_NAMES[muscle].toLowerCase(),
         )
-        .join(SEPARATOR);
+        .join(separator);
 
 const describeRowDate = (localDate: string): string => {
   const { month, day } = parseCalendarDay(localDate);
@@ -222,11 +239,48 @@ export const describeHistoryRow = ({ localDate, summary }: HistoryRowInput): His
     name,
     meta: [...minutes, sets].join(SEPARATOR),
     isInProgress,
-    muscles: describeMusclesLine(summary.topMuscles),
+    muscles: describeMusclesLine(summary.topMuscles, SEPARATOR),
     description,
     accessibleName: isInProgress
       ? describeResumeSessionName(description)
       : describeOpenSessionName(description),
+  };
+};
+
+export type HistoryTableRowCopy = {
+  /** "Tue 13 Oct". */
+  date: string;
+  /** "Pull". */
+  name: string;
+  /** "51 min", or "In progress" for an open session, which has no minutes yet. */
+  time: string;
+  /** The working sets: "17". */
+  sets: string;
+  /** "Lats, biceps, mid traps", or null when no muscle worked. The table writes them as the web board does, with commas. */
+  muscles: string | null;
+  /** Whether the session is open. */
+  isInProgress: boolean;
+  /** The name of the control that resumes an open session, or null for a finished one, whose row opens nothing yet. */
+  resumeName: string | null;
+};
+
+/** One session of the web history table: a cell's words for each column. */
+export const describeHistoryTableRow = ({
+  localDate,
+  summary,
+}: HistoryRowInput): HistoryTableRowCopy => {
+  const row = describeHistoryRow({ localDate, summary });
+  return {
+    date: describeShortDate(localDate),
+    name: row.name,
+    time:
+      summary.durationMinutes === null
+        ? TRAIN_TODAY_CARD.inProgressLabel
+        : `${summary.durationMinutes} ${MINUTES_ABBREVIATION}`,
+    sets: formatSetCount(summary.workingSets),
+    muscles: describeMusclesLine(summary.topMuscles, ", "),
+    isInProgress: row.isInProgress,
+    resumeName: row.isInProgress ? row.accessibleName : null,
   };
 };
 

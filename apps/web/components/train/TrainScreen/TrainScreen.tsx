@@ -10,6 +10,7 @@ import {
 } from "@keylow/core/copy";
 import { formatClockTime } from "@keylow/core/dates";
 import { WifiOff } from "lucide-react";
+import Link from "next/link";
 
 import { PlanWeek } from "../PlanWeek";
 import { TodayCard } from "../TodayCard";
@@ -21,7 +22,9 @@ import { plannedExercisesOf } from "./plannedExercises";
 import type { TrainScreenProps, TrainSessionStart } from "./types";
 
 import { Banner } from "@/components/ui/Banner";
+import { Button } from "@/components/ui/Button";
 import { ErrorState } from "@/components/ui/ErrorState";
+import { trainHistoryPath } from "@/lib/trainRoutes";
 import { useIsOnline } from "@/lib/useIsOnline";
 import { useNow } from "@/lib/useNow";
 
@@ -74,7 +77,16 @@ export function TrainScreen({
       : undefined;
   const routine = useRoutine(plannedRoutineId);
 
-  const title = <h1 className="text-h1">{TRAIN_HOME.title}</h1>;
+  const title = (
+    <div className="flex items-center justify-between gap-3">
+      <h1 className="text-h1">{TRAIN_HOME.title}</h1>
+      <div className="flex gap-2">
+        <Button asChild className="text-label-small" size="sm" variant="secondary">
+          <Link href={trainHistoryPath()}>{TRAIN_HOME.historyLink}</Link>
+        </Button>
+      </div>
+    </div>
+  );
 
   if (home.status === "error") {
     return (
