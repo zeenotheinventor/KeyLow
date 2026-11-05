@@ -1,4 +1,4 @@
-import { SUGGESTION_NO_GOAL } from "@keylow/core/copy";
+import { SUGGESTION_CARD, SUGGESTION_NO_GOAL } from "@keylow/core/copy";
 import { Pressable, View } from "react-native";
 
 import { Button, Card, Icon, Text } from "../ui";
@@ -42,14 +42,18 @@ function Tile({
 
 function Offer({
   state,
+  isStarting,
   onDismiss,
   onOpenDetail,
 }: {
   state: SuggestionOfferState;
+  isStarting: boolean;
   onDismiss: SuggestionCardProps["onDismiss"];
   onOpenDetail: SuggestionCardProps["onOpenDetail"];
 }) {
   const { copy } = state;
+  // Add for a day to come, Start for today: one primary button, whose handler is the one the state holds.
+  const primary = state.accept ?? state.start;
   const words = (
     <View className="min-w-0 flex-1 gap-0.5">
       <Text tone="muted" variant="caption">
@@ -93,8 +97,14 @@ function Offer({
           ))}
         </View>
         <View className="flex-row gap-2">
-          {state.accept === undefined ? null : (
-            <Button className="flex-1" loading={state.isAccepting} size="sm" onPress={state.accept}>
+          {primary === undefined ? null : (
+            <Button
+              accessibilityLabel={copy.primaryActionName}
+              className="flex-1"
+              loading={state.isAccepting || (state.isForToday && isStarting)}
+              size="sm"
+              onPress={primary}
+            >
               {copy.primaryAction}
             </Button>
           )}
@@ -121,22 +131,27 @@ function Statement({
   tile,
   title,
   body,
+  action,
 }: {
   name: string;
   tile: ReactNode;
   title: string;
   body: string;
+  action?: ReactNode;
 }) {
   return (
     <Card aria-label={name} role="region">
-      <View className="flex-row items-center gap-3">
-        {tile}
-        <View className="min-w-0 flex-1 gap-0.5">
-          <Text variant="body-strong">{title}</Text>
-          <Text tone="secondary" variant="caption">
-            {body}
-          </Text>
+      <View className="gap-3">
+        <View className="flex-row items-center gap-3">
+          {tile}
+          <View className="min-w-0 flex-1 gap-0.5">
+            <Text variant="body-strong">{title}</Text>
+            <Text tone="secondary" variant="caption">
+              {body}
+            </Text>
+          </View>
         </View>
+        {action}
       </View>
     </Card>
   );
@@ -146,21 +161,48 @@ function Statement({
  * The suggestion card on the Train home in its four states, as the `suggestion · *` boards draw them: the
  * offer with the reasons behind it and its two buttons, the card once it is added to the day, the card that
  * says there is nothing to add, and the card for a user with no goal. Every word is core's, given in the
- * state. A button is drawn only when its handler is given, and the offer for today draws no Add, so no
- * control is dead. Only the offer opens the detail, through the board's See why link on its heading, and
+ * state. A button is drawn only when its handler is given: the offer for today draws Start where a day to
+ * come draws Add, and the accepted card draws a Start only for today, so no control is dead. `isStarting`
+ * is a start under way anywhere on the screen, which dims Start so that a second press does nothing. Only the offer opens the detail, through the board's See why link on its heading, and
  * only when it holds the detail. The accepted card, the nothing to add card and the no goal card have no
  * session to show (the accepted one is worded from the stored row, which the live suggestion may differ
  * from), and the boards draw no link on them.
  */
-export function SuggestionCard({ state, onDismiss, onSetGoal, onOpenDetail }: SuggestionCardProps) {
+export function SuggestionCard({
+  state,
+  isStarting = false,
+  onDismiss,
+  onSetGoal,
+  onOpenDetail,
+}: SuggestionCardProps) {
   switch (state.status) {
     case "hidden":
       return null;
     case "offer":
-      return <Offer state={state} onDismiss={onDismiss} onOpenDetail={onOpenDetail} />;
+      return (
+        <Offer
+          isStarting={isStarting}
+          state={state}
+          onDismiss={onDismiss}
+          onOpenDetail={onOpenDetail}
+        />
+      );
     case "accepted":
       return (
         <Statement
+          action={
+            state.start === undefined ? undefined : (
+              <Button
+                accessibilityLabel={state.copy.startActionName}
+                fullWidth
+                loading={isStarting}
+                size="sm"
+                onPress={state.start}
+              >
+                {SUGGESTION_CARD.startAction}
+              </Button>
+            )
+          }
           body={state.copy.detail}
           name={state.copy.cardName}
           tile={<Tile icon="Check" tile="success" tone="success" />}

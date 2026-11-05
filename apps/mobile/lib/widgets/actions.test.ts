@@ -1,6 +1,7 @@
 import { EntryNotFoundError } from "@keylow/api-client";
 import { buildLogEntry } from "@keylow/core/diary";
 import { buildFood } from "@keylow/core/testing";
+import { buildSetSnapshot } from "@keylow/core/training";
 
 import { logAgain, logNextSet, undoLast } from "./actions";
 import { createInMemoryWidgetBridge } from "./inMemoryWidgetBridge";
@@ -16,6 +17,7 @@ import {
 
 import type { WidgetActionDependencies, WidgetRepositories } from "./actions";
 import type { FoodLogEntry } from "@keylow/api-client";
+import type { AcceptedSuggestion } from "@keylow/core/training";
 
 const food = buildFood();
 const entry: FoodLogEntry = {
@@ -29,6 +31,51 @@ const entry: FoodLogEntry = {
   id: ENTRY_ID,
   created_at: "2026-11-02T08:00:00.000Z",
   kcal: 150,
+};
+
+const ADDED_EXERCISE_ID = "0b0f6a52-8f3c-4a39-a8c8-5d2f6a1b9c20";
+const SESSION_DATE = "2026-11-03";
+
+/** The suggestion accepted for the session's date: 2 sets of an exercise the day does not plan. */
+const acceptedFor = (routineDayId: string | null, date = SESSION_DATE): AcceptedSuggestion => {
+  const exercise = {
+    id: ADDED_EXERCISE_ID,
+    name: "Dumbbell curl",
+    equipment: "dumbbell",
+    mechanic: "isolation",
+  } as const;
+  const muscles = [{ muscle_id: "biceps", role: "primary", weight: 1 }] as const;
+  return {
+    local_date: date,
+    routine_day_id: routineDayId,
+    exercises: [
+      {
+        id: ADDED_EXERCISE_ID,
+        position: 0,
+        exercise_id: ADDED_EXERCISE_ID,
+        target_sets: 2,
+        target_rir: 2,
+        rep_min: 10,
+        rep_max: 12,
+        exercise,
+        muscles: [...muscles],
+        snapshot: buildSetSnapshot(exercise, [...muscles]),
+      },
+    ],
+  };
+};
+
+const previousAddedSet = {
+  id: "77777777-7777-4777-8777-777777777777",
+  exercise_id: ADDED_EXERCISE_ID,
+  position: 0,
+  set_type: "working" as const,
+  reps: 12,
+  load_kg: 14,
+  rir: 2,
+  rpe: null,
+  performed_at: "2026-10-27T11:00:00.000Z",
+  deleted_at: null,
 };
 
 const DAY_ID = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
@@ -87,6 +134,7 @@ function createRepositories() {
       Promise.resolve({
         id: SESSION_ID,
         routine_day_id: DAY_ID,
+        local_date: SESSION_DATE,
         sets: [sessionSet(0), sessionSet(1)],
       }),
     ),
@@ -94,6 +142,9 @@ function createRepositories() {
       Promise.resolve({ id: ROUTINE_ID }),
     ),
     getRoutine: mocked<Repository<"getRoutine">>(() => Promise.resolve(routineDetail)),
+    listAcceptedSuggestions: mocked<Repository<"listAcceptedSuggestions">>(() =>
+      Promise.resolve({ suggestions: [] }),
+    ),
     getLastPerformance: mocked<Repository<"getLastPerformance">>(() => Promise.resolve([])),
     addSet: mocked<Repository<"addSet">>(() => Promise.resolve({ id: NEW_ROW_ID })),
     removeSet: mocked<Repository<"removeSet">>(() => Promise.resolve(undefined)),
@@ -301,6 +352,121 @@ describe("logNextSet", () => {
     expect(repositories.addSet).not.toHaveBeenCalled();
   });
 
+  describe("with a suggestion accepted for the session's day", () => {
+    const allThreeSets = [sessionSet(0), sessionSet(1), sessionSet(2)];
+    const addedSetOne = { sessionId: SESSION_ID, exerciseId: ADDED_EXERCISE_ID, setNumber: 1 };
+
+    it("should log the first added set once the day's own sets are done, as the snapshot offers it", async () => {
+      const { repositories, dependencies } = setUp();
+      repositories.getActiveSession.mockResolvedValue({
+        id: SESSION_ID,
+        routine_day_id: DAY_ID,
+        local_date: SESSION_DATE,
+        sets: allThreeSets,
+      });
+      repositories.listAcceptedSuggestions.mockResolvedValue({
+        suggestions: [acceptedFor(DAY_ID)],
+      });
+      repositories.getLastPerformance.mockResolvedValue([{ sets: [previousAddedSet] }]);
+
+      const result = await logNextSet(addedSetOne, dependencies);
+
+      expect(result).toEqual({ status: "done" });
+      expect(repositories.addSet.mock.calls[0]?.[0]).toMatchObject({
+        exerciseId: ADDED_EXERCISE_ID,
+        draft: { load: "14", reps: "12" },
+      });
+    });
+
+    it("should log the first set of a free session that the suggestion pre-fills", async () => {
+      const { repositories, dependencies } = setUp();
+      repositories.getActiveSession.mockResolvedValue({
+        id: SESSION_ID,
+        routine_day_id: null,
+        local_date: SESSION_DATE,
+        sets: [],
+      });
+      repositories.listAcceptedSuggestions.mockResolvedValue({
+        suggestions: [acceptedFor(null)],
+      });
+      repositories.getLastPerformance.mockResolvedValue([{ sets: [previousAddedSet] }]);
+
+      const result = await logNextSet(addedSetOne, dependencies);
+
+      expect(result).toEqual({ status: "done" });
+      expect(repositories.getRoutine).not.toHaveBeenCalled();
+      expect(repositories.addSet).toHaveBeenCalledTimes(1);
+    });
+
+    it("should still refuse a free session that nothing pre-fills", async () => {
+      const { repositories, dependencies } = setUp();
+      repositories.getActiveSession.mockResolvedValue({
+        id: SESSION_ID,
+        routine_day_id: null,
+        local_date: SESSION_DATE,
+        sets: [],
+      });
+
+      const result = await logNextSet(addedSetOne, dependencies);
+
+      expect(result).toMatchObject({ status: "failed", failure: "session_moved_on" });
+      expect(repositories.addSet).not.toHaveBeenCalled();
+    });
+
+    it("should leave a suggestion accepted for another day out of the plan", async () => {
+      const { repositories, dependencies } = setUp();
+      repositories.getActiveSession.mockResolvedValue({
+        id: SESSION_ID,
+        routine_day_id: DAY_ID,
+        local_date: SESSION_DATE,
+        sets: allThreeSets,
+      });
+      repositories.listAcceptedSuggestions.mockResolvedValue({
+        suggestions: [acceptedFor(DAY_ID, "2026-11-04")],
+      });
+
+      const result = await logNextSet(addedSetOne, dependencies);
+
+      expect(result).toMatchObject({ status: "failed", failure: "session_moved_on" });
+      expect(repositories.addSet).not.toHaveBeenCalled();
+    });
+
+    it("should read the week the session's date is in", async () => {
+      const { repositories, dependencies } = setUp();
+
+      await logNextSet(logSetInput, dependencies);
+
+      expect(repositories.listAcceptedSuggestions).toHaveBeenCalledWith("2026-11-02");
+    });
+
+    describe("when the accepted suggestions cannot be read", () => {
+      it("should still log the day's own next set, and not throw", async () => {
+        const { repositories, dependencies } = setUp();
+        repositories.listAcceptedSuggestions.mockRejectedValue(new Error("offline"));
+
+        const result = await logNextSet(logSetInput, dependencies);
+
+        expect(result).toEqual({ status: "done" });
+      });
+
+      it("should log nothing for an added set the snapshot offered, and say the session moved on", async () => {
+        const { repositories, dependencies } = setUp();
+        repositories.getActiveSession.mockResolvedValue({
+          id: SESSION_ID,
+          routine_day_id: DAY_ID,
+          local_date: SESSION_DATE,
+          sets: allThreeSets,
+        });
+        repositories.listAcceptedSuggestions.mockRejectedValue(new Error("offline"));
+
+        const result = await logNextSet(addedSetOne, dependencies);
+
+        expect(result).toMatchObject({ status: "failed", failure: "session_moved_on" });
+        expect(repositories.addSet).not.toHaveBeenCalled();
+      });
+    });
+  });
+
   it("should write nothing offline", async () => {
     const { repositories, dependencies } = setUp({ isOnline: () => Promise.resolve(false) });
 
@@ -327,6 +493,7 @@ describe("logNextSet", () => {
     repositories.getActiveSession.mockResolvedValue({
       id: SESSION_ID,
       routine_day_id: DAY_ID,
+      local_date: SESSION_DATE,
       sets: [],
     });
 

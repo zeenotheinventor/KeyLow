@@ -1,15 +1,28 @@
-import { planProgress, scaffoldSession, sessionExercises } from "@keylow/core/training";
+import {
+  planProgress,
+  scaffoldSessionWithAdditions,
+  sessionExercises,
+} from "@keylow/core/training";
 import { useMemo } from "react";
 
+import { acceptedSuggestionsOf } from "./acceptedSuggestionsOf";
 import { describeMuscles, describeSessionExercise } from "./describeSessionExercise";
 import { NO_PENDING_SETS, withPendingSets } from "./pendingSets";
+import { useAcceptedSuggestions } from "./useAcceptedSuggestions";
 import { useActiveRoutine } from "./useActiveRoutine";
 import { useActiveSession } from "./useActiveSession";
 import { useAddedExercises } from "./useAddedExercises";
 import { useRoutine } from "./useRoutine";
 import { useWeightUnit } from "./useWeightUnit";
+import { weekStartOf } from "../weekStartOf";
 
 import type { PendingSet, SessionView } from "./sessionViewTypes";
+import type { AcceptedSuggestion } from "@keylow/core/training";
+
+const NO_ACCEPTED_SUGGESTIONS: readonly AcceptedSuggestion[] = [];
+
+// The week asked for while there is no session to ask about, which is never read.
+const NO_WEEK = "1970-01-05";
 
 /**
  * What an active session screen shows, from the reads it waits on: the session in progress, the profile's
@@ -21,6 +34,14 @@ import type { PendingSet, SessionView } from "./sessionViewTypes";
  * is shown as a session with no plan. The rows are worked out again only when the session, the routine or
  * the sets being saved change, never on the header's tick. The sets being saved are drawn as logged, so the
  * header and the rows move at the press.
+ *
+ * The suggestion accepted for the session's date and routine day (`useAcceptedSuggestions`, saved on the
+ * device like the rest) adds its exercises to the plan, after the day's own, with their sets, rep range and
+ * RIR (`scaffoldSessionWithAdditions`), so the header's total and the rows count them once. A session
+ * waits for that read as it waits for its routine, unless it failed or is paused for want of a connection,
+ * when the session is shown without the additions and gains them when the read lands. Undoing the
+ * suggestion while the session is open takes the additions off again: a card with no set logged goes, one
+ * with sets stays, its sets beyond the plan.
  */
 export function useSessionView(
   { enabled }: { enabled: boolean },
@@ -32,6 +53,13 @@ export function useSessionView(
   const detail = useRoutine(routine.data?.id, { enabled });
 
   const open = session.data;
+  const accepted = useAcceptedSuggestions(
+    open === null || open === undefined ? NO_WEEK : weekStartOf(open.local_date),
+    { enabled: enabled && open !== null && open !== undefined },
+  );
+  // A read that failed with nothing saved counts as none, so a failure here never hides the session.
+  const acceptedRows =
+    acceptedSuggestionsOf(accepted) ?? (accepted.isError ? NO_ACCEPTED_SUGGESTIONS : undefined);
   const { added, add: addExercise } = useAddedExercises(open?.id);
   const followsRoutineDay = open?.routine_day_id !== null && open?.routine_day_id !== undefined;
   const detailData = detail.data;
@@ -41,8 +69,12 @@ export function useSessionView(
       return null;
     }
     const day = detailData?.days.find((entry) => entry.id === open.routine_day_id) ?? null;
-    const scaffold = day === null ? null : scaffoldSession(day);
-    const plan = day === null || scaffold === null ? null : { day, scaffold };
+    const { scaffold, additions } = scaffoldSessionWithAdditions(
+      open,
+      day,
+      acceptedRows ?? NO_ACCEPTED_SUGGESTIONS,
+    );
+    const plan = scaffold === null ? null : { day, scaffold };
     const sets = withPendingSets(open.sets, pendingSets);
     const progress = planProgress(scaffold, sets);
     return {
@@ -51,22 +83,34 @@ export function useSessionView(
       plannedNames:
         plan === null
           ? null
-          : plan.day.exercises.map((entry) => ({
-              exerciseId: entry.exercise_id,
-              name: entry.exercise.name,
-            })),
+          : [
+              ...(day?.exercises ?? []).map((entry) => ({
+                exerciseId: entry.exercise_id,
+                name: entry.exercise.name,
+              })),
+              ...additions.map((entry) => ({
+                exerciseId: entry.exercise_id,
+                name: entry.exercise.name,
+              })),
+            ],
       exercises: sessionExercises(
         scaffold,
         sets,
         added.map((entry) => entry.id),
       ).flatMap((exercise) => {
-        const described = describeSessionExercise(exercise, plan, added);
+        const described = describeSessionExercise(exercise, plan, added, additions);
         return described === null
           ? []
-          : [{ ...described, muscles: describeMuscles(exercise, routineData), exercise }];
+          : [
+              {
+                ...described,
+                muscles: describeMuscles(exercise, routineData, additions),
+                exercise,
+              },
+            ];
       }),
     };
-  }, [open, detailData, routineData, pendingSets, added]);
+  }, [open, detailData, routineData, acceptedRows, pendingSets, added]);
 
   const reads = followsRoutineDay ? [session, unit, routine, detail] : [session, unit];
   if (reads.some((read) => read.isError && read.data === undefined)) {
@@ -91,7 +135,9 @@ export function useSessionView(
     routine.data !== null &&
     detail.data === undefined &&
     detail.fetchStatus !== "paused";
-  const isWaitingForPlan = followsRoutineDay && (isWaitingForRoutine || isWaitingForDetail);
+  const isWaitingForAccepted = acceptedRows === undefined;
+  const isWaitingForPlan =
+    (followsRoutineDay && (isWaitingForRoutine || isWaitingForDetail)) || isWaitingForAccepted;
   if (open === undefined || content === null || unit.data === undefined || isWaitingForPlan) {
     return { status: "loading" };
   }

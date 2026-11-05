@@ -229,6 +229,7 @@ export function TrainScreen({
           )
         ) : null}
         <SuggestionCard
+          isStarting={isStarting}
           state={suggestion.state}
           onDismiss={suggestion.dismiss}
           onOpenDetail={

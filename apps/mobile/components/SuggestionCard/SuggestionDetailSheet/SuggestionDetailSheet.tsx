@@ -15,7 +15,8 @@ const SNAP_POINTS = ["90%"];
  * Not now and Add under them. The sheet's own scroll view is the only scrollable, so its drag and the list's
  * scroll do not fight (KEY-747). Every word is core's, given in the offer's `detail`. Add does what the card's
  * does and closes the sheet, and a failure shows as the toast at the top, since the card keeps the offer to
- * try again from. For today's suggestion Add is not drawn, as on the card.
+ * try again from. For today's suggestion the button is Start, which is the card's too: it closes the sheet and
+ * the app opens the session.
  */
 export function SuggestionDetailSheet({
   open,
@@ -33,7 +34,8 @@ export function SuggestionDetailSheet({
   if (shown === undefined || detail === undefined) {
     return null;
   }
-  const { accept } = shown;
+  // Add for a day to come, Start for today: one primary button, whose handler is the one the offer holds.
+  const primary = shown.accept ?? shown.start;
 
   return (
     <BottomSheet label={detail.title} open={open} snapPoints={SNAP_POINTS} onClose={onClose}>
@@ -83,12 +85,13 @@ export function SuggestionDetailSheet({
         >
           {detail.dismissAction}
         </Button>
-        {accept === undefined ? null : (
+        {primary === undefined ? null : (
           <Button
+            accessibilityLabel={detail.primaryActionName}
             className="flex-[2]"
             loading={shown.isAccepting}
             onPress={() => {
-              accept();
+              primary();
               onClose();
             }}
           >
