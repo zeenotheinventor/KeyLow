@@ -105,11 +105,16 @@ describe("the history page", () => {
       ]);
     });
 
-    it("should draw the rows as plain text, since the session detail is not built", async () => {
+    it("should open a session's detail from its name in the table", async () => {
       renderHistory();
 
-      await screen.findByRole("table");
-      expect(screen.queryAllByRole("link")).toHaveLength(0);
+      const pull = await screen.findByRole("link", {
+        name: "Pull, Tue 13 October, 51 minutes · 17 sets, open session",
+      });
+      expect(pull.getAttribute("href")).toBe(
+        `/train/history/${String(goldenHistoryWeek[1]?.["id"])}`,
+      );
+      expect(screen.getAllByRole("link")).toHaveLength(7);
       expect(screen.queryAllByRole("button")).toHaveLength(0);
     });
 
@@ -173,14 +178,18 @@ describe("the history page", () => {
       expect(within(row).getByRole("cell", { name: "8" })).toBeTruthy();
     });
 
-    it("should link it to the session page, and no other row", async () => {
+    it("should link it to the session page, where the finished rows link to their detail", async () => {
       renderHistory();
 
       const link = await screen.findByRole("link", {
         name: "Legs, Thu 15 October, 8 sets, in progress, resume session",
       });
       expect(link.getAttribute("href")).toBe("/train/session");
-      expect(screen.getAllByRole("link")).toHaveLength(1);
+      expect(
+        screen
+          .getAllByRole("link")
+          .filter((other) => other.getAttribute("href") === "/train/session"),
+      ).toHaveLength(1);
     });
   });
 

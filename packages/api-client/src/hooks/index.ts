@@ -132,6 +132,16 @@ export { useStartSessionAction } from "./useStartSessionAction";
 export type { SessionStartRequest } from "./useStartSessionAction";
 export { useDiscardSession } from "./useDiscardSession";
 export { useSessionView } from "./useSessionView";
+export { describeSessionDetail } from "./describeSessionDetail";
+export { useSessionDetail } from "./useSessionDetail";
+export type { SessionDetailSettings } from "./useSessionDetail";
+export type {
+  SessionDetailContent,
+  SessionDetailExercise,
+  SessionDetailMuscles,
+  SessionDetailSet,
+  SessionDetailView,
+} from "./sessionDetailTypes";
 export { describeFinishDetails } from "./describeFinishDetails";
 export type { FinishDetails } from "./describeFinishDetails";
 export { useSetLogging } from "./useSetLogging";

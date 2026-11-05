@@ -31,6 +31,24 @@ function moveOn(event: React.KeyboardEvent<HTMLInputElement>) {
 /** One set of the table: a logged set with its numbers as text, or a set to log with them as fields. */
 export function SetTableRow({ row }: SetTableRowProps) {
   const errorId = useId();
+  if (row.state === "readOnly") {
+    return (
+      <tr aria-label={row.name} className="h-10">
+        <td
+          className={cn(
+            "pl-3 text-label-small tabular-nums md:px-4",
+            row.setType === "warmup" ? "text-warning-ink" : "text-text-secondary",
+          )}
+        >
+          {row.label}
+        </td>
+        <td className="text-body tabular-nums">{row.what}</td>
+        <td className="pr-3 text-right text-caption tabular-nums text-text-secondary md:pr-4">
+          {row.rir}
+        </td>
+      </tr>
+    );
+  }
   const isLogged = row.state === "done";
   const markClasses = row.setType === "warmup" ? "text-warning-ink" : "text-text-secondary";
 

@@ -7,8 +7,8 @@ import {
 } from "@keylow/core/copy";
 import { sessionExercises, summariseSession } from "@keylow/core/training";
 
-import type { SessionDetailContent } from "./types";
-import type { SessionWithSets } from "@keylow/api-client";
+import type { SessionDetailContent } from "./sessionDetailTypes";
+import type { SessionWithSets } from "../repos";
 import type { LoadUnit } from "@keylow/core/training";
 
 /** The time of the latest set, or null for none. Every set is a live one, since the read leaves the removed ones out. */

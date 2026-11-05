@@ -38,6 +38,10 @@ const weekCard = () => screen.findByRole("region", { name: TRAIN_HOME.weekSectio
 
 const dayNamed = (card: HTMLElement, name: string) => within(card).getByRole("group", { name });
 
+// A day that holds a logged session is a link to it, named for the day and "open session".
+const loggedDayNamed = (card: HTMLElement, name: string) =>
+  within(card).getByRole("link", { name: `${name}, open session` });
+
 describe("the week strip on the Train page", () => {
   beforeEach(() => {
     resetTrainBackend();
@@ -65,6 +69,17 @@ describe("the week strip on the Train page", () => {
     it.each([
       "Monday 12 October, Push, logged, 16 sets",
       "Tuesday 13 October, Pull, logged, 16 sets",
+    ])(
+      "should name a logged day for a screen reader as a link to its session: %s",
+      async (name) => {
+        renderWithTrain(<TrainScreen />);
+
+        const card = await weekCard();
+        expect(loggedDayNamed(card, name)).toBeTruthy();
+      },
+    );
+
+    it.each([
       "Wednesday 14 October, rest day",
       "Thursday 15 October, today, Legs, planned, 16 sets",
       "Friday 16 October, rest day",
@@ -86,15 +101,21 @@ describe("the week strip on the Train page", () => {
       }
       expect(within(card).getAllByText("Push")).toHaveLength(2);
       expect(within(card).getAllByText("Rest")).toHaveLength(3);
-      expect(within(card).getAllByRole("group")).toHaveLength(7);
+      expect(within(card).getAllByRole("group")).toHaveLength(5);
+      expect(within(card).getAllByRole("link")).toHaveLength(2);
     });
 
-    it("should draw no button or link, since a day only informs until the session page exists", async () => {
+    it("should link each logged day to its session, opened from the Train home, and no other day", async () => {
       renderWithTrain(<TrainScreen />);
 
       const card = await weekCard();
+      expect(
+        loggedDayNamed(card, "Monday 12 October, Push, logged, 16 sets").getAttribute("href"),
+      ).toBe(`/train/history/${mondayPush.id}?from=train`);
+      expect(
+        loggedDayNamed(card, "Tuesday 13 October, Pull, logged, 16 sets").getAttribute("href"),
+      ).toBe(`/train/history/${tuesdayPull.id}?from=train`);
       expect(within(card).queryByRole("button")).toBeNull();
-      expect(within(card).queryByRole("link")).toBeNull();
     });
 
     it("should draw a logged day on the success fill, today in the accent ring and a day to come dashed", async () => {
@@ -102,7 +123,7 @@ describe("the week strip on the Train page", () => {
 
       const card = await weekCard();
       expect(
-        dayNamed(card, "Monday 12 October, Push, logged, 16 sets").classList.contains(
+        loggedDayNamed(card, "Monday 12 October, Push, logged, 16 sets").classList.contains(
           "bg-success-muted",
         ),
       ).toBe(true);
@@ -189,6 +210,38 @@ describe("the week strip on the Train page", () => {
     });
   });
 
+  describe("with Tuesday's Pull made up on Wednesday evening", () => {
+    // Pull was missed on Tuesday and done on Wednesday, a rest day, from 18:00 to 18:51 in London.
+    const pullOnWednesday = {
+      ...tuesdayPull,
+      id: "00000004-0000-4000-8000-0000000000aa",
+      local_date: "2026-10-14",
+      started_at: "2026-10-14T17:00:00+00:00",
+      ended_at: "2026-10-14T17:51:00+00:00",
+    };
+
+    beforeEach(() => {
+      vi.setSystemTime(new Date("2026-10-14T18:30:00Z"));
+      trainBackend.weekSessions = [
+        withSets(mondayPush, 16, 100),
+        withSets(pullOnWednesday, 12, 200),
+      ];
+    });
+
+    it("should link Tuesday to the session that made it up, and not Wednesday", async () => {
+      renderWithTrain(<TrainScreen />);
+
+      const card = await weekCard();
+      expect(
+        loggedDayNamed(
+          card,
+          "Tuesday 13 October, Pull, made up on Wednesday, 12 sets",
+        ).getAttribute("href"),
+      ).toBe(`/train/history/${pullOnWednesday.id}?from=train`);
+      expect(within(card).queryByRole("link", { name: /^Wednesday/ })).toBeNull();
+    });
+  });
+
   describe("with no routine", () => {
     beforeEach(() => {
       trainBackend.routine = null;
@@ -199,7 +252,7 @@ describe("the week strip on the Train page", () => {
 
       const card = await weekCard();
       expect(within(card).getByText("Mon 12 to Sun 18 Oct · 2 sessions")).toBeTruthy();
-      expect(dayNamed(card, "Monday 12 October, session logged, 16 sets")).toBeTruthy();
+      expect(loggedDayNamed(card, "Monday 12 October, session logged, 16 sets")).toBeTruthy();
     });
 
     it("should say nothing logged for a day with nothing on it, and ring today since no rest was planned", async () => {

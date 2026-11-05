@@ -1,4 +1,4 @@
-import { SESSION_ACTIVE } from "@keylow/core/copy";
+import { HISTORY_SESSION_DETAIL, SESSION_ACTIVE } from "@keylow/core/copy";
 
 import { SetTableRow } from "./SetTableRow";
 
@@ -11,9 +11,33 @@ const headingClasses = "text-caption font-medium text-text-muted";
  * last time, the load, the reps and the RIR, and the check in a column whose heading only a screen reader
  * hears. A logged set's numbers are text. A set still to log has its three numbers as fields in the row,
  * with the sentences for any rule they break under it, so the table is the whole entry: nothing opens. The
- * screen holds what is typed and what the check does.
+ * screen holds what is typed and what the check does. With `variant="readOnly"` it is a logged session's
+ * sets as the session detail draws them: each row a sentence of what was done, with no headings, no check
+ * column and nothing to type or press.
  */
-export function SetTable({ columns, rows }: SetTableProps) {
+export function SetTable(props: SetTableProps) {
+  if (props.variant === "readOnly") {
+    return (
+      <table
+        aria-label={HISTORY_SESSION_DETAIL.setsListName}
+        className="w-full table-fixed border-collapse"
+      >
+        <colgroup>
+          <col className="w-11 md:w-14" />
+          <col />
+          <col className="w-20 md:w-24" />
+        </colgroup>
+        <tbody>
+          {props.rows.map((row) => (
+            <SetTableRow key={row.key} row={row} />
+          ))}
+        </tbody>
+      </table>
+    );
+  }
+
+  const { columns, rows } = props;
+
   return (
     <table aria-label={SESSION_ACTIVE.setsListName} className="w-full table-fixed border-collapse">
       <colgroup>

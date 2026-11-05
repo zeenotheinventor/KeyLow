@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   LEGS_DAY_ID,
   THURSDAY_1755,
+  THURSDAY_1900,
   goldenRoutine,
   mondayPush,
   renderWithTrain,
@@ -69,6 +70,21 @@ describe("the Train page's buttons", () => {
       expect(router.push).toHaveBeenCalledWith("/train/session");
     });
     expect(trainBackend.startedSessions[0]).toMatchObject({ routine_day_id: null });
+  });
+
+  it("should open the finished session's detail from View session, as opened from the Train home", async () => {
+    vi.setSystemTime(THURSDAY_1900);
+    trainBackend.weekSessions = [
+      mondayPush,
+      tuesdayPull,
+      { ...thursdayLegsOpen, ended_at: "2026-10-15T18:00:00+00:00" },
+    ];
+    renderRoute();
+
+    await userEvent.click(await screen.findByRole("button", { name: "View session" }));
+
+    expect(router.push).toHaveBeenCalledWith(`/train/history/${thursdayLegsOpen.id}?from=train`);
+    expect(trainBackend.startedSessions).toHaveLength(0);
   });
 
   it("should open the session in progress from Resume without starting another", async () => {

@@ -8,13 +8,13 @@ import { useRouter } from "next/navigation";
 import { TrainScreen } from "../TrainScreen";
 
 import { useToast } from "@/components/ui/Toast";
-import { trainSessionPath } from "@/lib/trainRoutes";
+import { trainSessionDetailPath, trainSessionPath } from "@/lib/trainRoutes";
 
 /**
  * The Train page with its buttons wired: Start and Log a session start a session at the moment of the press
  * and open its page, and Resume opens it. One session is open at a time, so a start with one in progress
  * opens that one. A start that fails shows a danger toast that states the rule, opens nothing and can be
- * pressed again.
+ * pressed again. View session on the Done card opens the session's detail.
  */
 export function TrainRoute() {
   const router = useRouter();
@@ -35,6 +35,9 @@ export function TrainRoute() {
       onStart={start}
       onLogSession={start}
       onResume={openSession}
+      onViewSession={(sessionId) => {
+        router.push(trainSessionDetailPath(sessionId, "train"));
+      }}
     />
   );
 }
