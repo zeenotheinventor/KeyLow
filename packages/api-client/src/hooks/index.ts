@@ -127,6 +127,10 @@ export { useRoutines } from "./useRoutines";
 export type { UseRoutinesOptions } from "./useRoutines";
 export { useSaveRoutine } from "./useSaveRoutine";
 export { useSetActiveRoutine } from "./useSetActiveRoutine";
+export { useMakeRoutineActive } from "./useMakeRoutineActive";
+export { useArchiveRoutineWithUndo } from "./useArchiveRoutineWithUndo";
+export { useRestoreRoutine } from "./useRestoreRoutine";
+export type { RoutineNotices } from "./routineNotices";
 
 export { useDeleteSession } from "./useDeleteSession";
 export { useFinishSession } from "./useFinishSession";
