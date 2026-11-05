@@ -7,4 +7,5 @@ export type MuscleSheetContentProps = {
   /** The detail the words were written from. */
   detail: MuscleDetail;
   onClose: () => void;
+  onEditRoutine?: (() => void) | undefined;
 };
