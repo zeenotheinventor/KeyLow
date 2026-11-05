@@ -4,10 +4,12 @@ import { describe, expect, it } from "vitest";
 
 import {
   FOOD_ROUTES,
+  FOOD_ROUTE_WORDS,
   SEEDED_FOODS,
   lunchOfDay,
   portionsOf,
   seededFood,
+  siblingsOf,
 } from "../fixtures/describeExtras.ts";
 
 const read = (path: string) => readFileSync(new URL(path, import.meta.url), "utf8");
@@ -95,5 +97,32 @@ describe("lunchOfDay", () => {
   it("should leave out a recipe serving and the meals at other hours", () => {
     // Day 0 has a porridge bowl for breakfast, a lunch of bread, egg and apple, and a chicken and rice recipe for dinner.
     expect(lunchOfDay(0).map(({ code }) => code)).toEqual(["11-971", "12-940", "14-319"]);
+  });
+});
+
+describe("FOOD_ROUTES, the chicken breast", () => {
+  it("should be the grilled breasts only, so a stewed or stir-fried one is not a right answer for grilled", () => {
+    expect([...FOOD_ROUTES.chickenBreast]).toEqual(["18-323", "18-324", "18-325"]);
+    for (const code of FOOD_ROUTES.chickenBreast) {
+      expect(seededFood(code).name).toMatch(/grilled/);
+    }
+  });
+});
+
+describe("FOOD_ROUTE_WORDS", () => {
+  it("should give every route the words it is searched with", () => {
+    expect(Object.keys(FOOD_ROUTE_WORDS).sort()).toEqual(Object.keys(FOOD_ROUTES).sort());
+  });
+});
+
+describe("siblingsOf", () => {
+  it("should give the other grilled breasts for the grilled breast and the other white rices for the rice", () => {
+    expect(siblingsOf("18-323")).toEqual(["18-323", "18-324", "18-325"]);
+    expect(siblingsOf("11-862")).toContain("11-858");
+  });
+
+  it("should give the code alone for a food in no route", () => {
+    expect(siblingsOf("12-313")).toEqual(["12-313"]);
+    expect(siblingsOf("99-999")).toEqual(["99-999"]);
   });
 });

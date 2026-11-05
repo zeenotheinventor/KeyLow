@@ -6,15 +6,23 @@
 // A write is graded by the database and by the arguments, and never by the wording of the reply: the call, the
 // `assistant_actions` rows the turn left, and the rows the write changed.
 //
-// ISOLATION. The eval user's rows are shared with the other sets, and a write changes them. Four rules keep a
-// case from changing what another case, or the ask set, reads, whatever order they run in:
-//   1. A case that needs an entry makes it itself, in an earlier turn, on a day of its own (`scratchDay`)
-//      that no other case, no ask question and no diary day names. It never edits or deletes a diary entry.
+// ISOLATION. The eval user's rows are shared with the other sets, and a write changes them. What keeps a case
+// from changing what another case or the ask set reads:
+//   1. A case that needs an entry makes it itself, in an earlier turn, on a scratch day of its own
+//      (`scratchDayOf`). Those days are in the past, before the diary's first day and before every day an ask
+//      question names, and a fair model that is asked about them can query them. It never edits or deletes a
+//      diary entry.
 //   2. A recipe or a food a case archives or removes is one the case made, under a name of its own.
-//   3. A case that logged for today (the describe-style cases) presses Undo for its turns afterwards
-//      (`cleanUp`), which takes the entries out of the one day the ask set reads that is not in the diary.
+//   3. A case that logs for today (the same-message case, yesterday's lunch) or for a diary day (the describe
+//      case "yesterday at 8am") presses Undo for its turns afterwards (`cleanUp`). The ask set reads today and
+//      expects it empty, and the copy cases and the lunch case count yesterday's entries.
 //   4. A case that changes the targets puts the run's targets back afterwards (`cleanUp`), because Undo cannot
 //      for the eval user: it has no programme, so the old numbers are kept nowhere.
+// WHAT DEPENDS ON WHAT. The cases may run in any order as long as every `cleanUp` succeeds. A `cleanUp` that
+// fails ends its case as an error and throws, so the failure is seen, but the rows it could not remove stay: a
+// describe case left on yesterday would make the copy cases and the lunch case count the wrong entries, an
+// entry left on today would fail two ask questions, and targets left changed would fail the ask questions
+// about what is left and the days at target. A cleanUp error is therefore the first thing to read in a run.
 import {
   confirmArchiveButtons,
   confirmCopyButtons,
@@ -27,14 +35,18 @@ import {
 import { READ_TOOLS } from "./ask.ts";
 import {
   actionRows,
+  anyOfRoutes,
   askedOnce,
   calledWith,
+  cardOfKind,
   confirmationEndsWith,
   confirmationLacks,
   inputsOf,
   isRecord,
   loggedItems,
+  loggedRows,
   noActionRowsInTurn,
+  noWriteReplayed,
   noQuestionsAsked,
   onlyTheseTools,
   readBeforeFirstLog,
@@ -45,14 +57,15 @@ import {
   withContext,
 } from "./entryGraders.ts";
 import { ASK_TARGETS } from "../fixtures/askExtras.ts";
-import { FOOD_ROUTES, lunchOfDay } from "../fixtures/describeExtras.ts";
+import { FOOD_ROUTES, lunchOfDay, siblingsOf } from "../fixtures/describeExtras.ts";
 import { diaryDateOf } from "../fixtures/diary.ts";
 import { dayEntries } from "../fixtures/diaryTotals.ts";
-import { answerContainsNumber, noActionRows } from "../src/case.ts";
+import { noActionRows } from "../src/case.ts";
 
 import type { ExpectedItem } from "./entryGraders.ts";
 import type { EvalCase, Grader } from "../src/case.ts";
 import type { EvalDatabase } from "../src/types.ts";
+import type { AssistantCardKind } from "@keylow/core";
 
 const ALL_TOOLS: ReadonlySet<string> = new Set([
   ...READ_TOOLS,
@@ -67,14 +80,16 @@ const ALL_TOOLS: ReadonlySet<string> = new Set([
   "update_targets",
 ]);
 
-// The day after the diary's last day is today. A case's scratch day is the first, second, ... day after the
-// ninth day from today, which is past anything an ask question names (the ask set stops at today).
-const FIRST_SCRATCH_DAY_AFTER_ANCHOR = 10;
-const DIARY_LENGTH = 42;
+// A scratch day is before the diary's first day (42 days back) and before the oldest day an ask question names
+// (the ask set goes back 72 days, to "30 days before the diary"), at 80 to 94 days back. The recipe-import set
+// plants 200 or more days back, so the two do not meet.
+const FIRST_SCRATCH_DAY_BACK = 80;
 
-/** The `k`th scratch day (1, 2, ...) of a run whose today is `anchorDate`. */
+/** The `k`th scratch day (1, 2, ...) of a run whose today is `anchorDate`: 79 + k days before today. */
 export const scratchDayOf = (anchorDate: string, k: number): string =>
-  diaryDateOf(anchorDate, DIARY_LENGTH + FIRST_SCRATCH_DAY_AFTER_ANCHOR - 1 + k);
+  diaryDateOf(anchorDate, DIARY_LENGTH - (FIRST_SCRATCH_DAY_BACK - 1 + k));
+
+const DIARY_LENGTH = 42;
 
 const sayDay = (date: string): string =>
   new Date(`${date}T00:00:00Z`).toLocaleDateString("en-GB", {
@@ -155,6 +170,79 @@ function recipeCreated(
   };
 }
 
+// The card the app draws for each write, by case: the turn (counted from 0) and the kind. A card is the app's
+// own proof that the write is the one the person asked for, so a right-looking write with the wrong card fails.
+const CARDS_OF_THE_WRITE: Readonly<
+  Record<string, readonly (readonly [turnIndex: number, kind: AssistantCardKind])[]>
+> = {
+  "write-update-entry-count": [
+    [0, "logged"],
+    [1, "updated"],
+  ],
+  "write-update-entry-grams": [
+    [0, "logged"],
+    [1, "updated"],
+  ],
+  "write-update-entry-time": [
+    [0, "logged"],
+    [1, "updated"],
+  ],
+  "write-delete-one-entry": [
+    [0, "logged"],
+    [1, "deleted"],
+  ],
+  "write-delete-several-entries-after-a-yes": [
+    [0, "logged"],
+    [2, "deleted"],
+  ],
+  "write-delete-several-entries-after-a-no": [[0, "logged"]],
+  "write-copy-day-onto-an-empty-day": [[0, "day_copied"]],
+  "write-copy-day-after-a-yes": [
+    [0, "logged"],
+    [2, "day_copied"],
+  ],
+  "write-copy-day-after-a-no": [[0, "logged"]],
+  "write-complete-a-day": [
+    [0, "logged"],
+    [1, "day_completed"],
+  ],
+  "write-reopen-a-day": [
+    [0, "logged"],
+    [1, "day_completed"],
+    [2, "day_completed"],
+  ],
+  "write-create-a-recipe": [[0, "recipe_created"]],
+  "write-archive-a-recipe-after-a-yes": [
+    [0, "recipe_created"],
+    [2, "recipe_archived"],
+  ],
+  "write-archive-a-recipe-after-a-no": [[0, "recipe_created"]],
+  "write-create-a-food-per-portion": [[0, "food_created"]],
+  "write-create-a-food-per-100-g": [[0, "food_created"]],
+  "write-set-calories-after-a-yes": [[1, "targets_changed"]],
+  "write-set-calories-after-a-no": [],
+  "write-set-all-the-targets-after-a-yes": [[1, "targets_changed"]],
+  "write-set-calories-and-some-macros-asks": [],
+  "undo-a-logged-entry": [[0, "logged"]],
+  "undo-a-deleted-entry": [
+    [0, "logged"],
+    [1, "deleted"],
+  ],
+  "undo-a-copied-day": [[0, "day_copied"]],
+  "undo-a-completed-day": [
+    [0, "logged"],
+    [1, "day_completed"],
+  ],
+  "undo-a-created-recipe": [[0, "recipe_created"]],
+  "undo-an-archived-recipe": [
+    [0, "recipe_created"],
+    [2, "recipe_archived"],
+  ],
+  "undo-a-created-food": [[0, "food_created"]],
+  "never-repeated-the-same-message-twice": [[0, "logged"]],
+  "log-yesterdays-lunch-again": [[0, "logged"]],
+};
+
 const dayCount = dayEntries(41).length;
 
 /** The cases of the set for a run whose today is `anchorDate`. */
@@ -175,7 +263,11 @@ export function writeCasesOf(anchorDate: string): readonly EvalCase[] {
     id,
     set: "writes",
     messages,
-    expect: [...expect, onlyTheseTools(ALL_TOOLS)].map((grade) => withContext(grade, messages)),
+    expect: [
+      ...expect,
+      ...(CARDS_OF_THE_WRITE[id] ?? []).map(([turnIndex, kind]) => cardOfKind(turnIndex, kind)),
+      onlyTheseTools(ALL_TOOLS),
+    ].map((grade) => withContext(grade, messages)),
     ...extras,
   });
 
@@ -204,8 +296,8 @@ export function writeCasesOf(anchorDate: string): readonly EvalCase[] {
     throw new Error("The ask targets cannot be scaled to 2,000 kcal");
   }
   const restoreTargetsAfter: Pick<EvalCase, "cleanUp"> = {
-    cleanUp: async (turns, environment) => {
-      await undoWrites(turns, environment);
+    // Not Undo first: for the eval user the targets action answers unavailable, and a strict cleanUp would fail.
+    cleanUp: async (_turns, environment) => {
       await environment.restoreTargets();
     },
   };
@@ -324,7 +416,7 @@ export function writeCasesOf(anchorDate: string): readonly EvalCase[] {
       "write-delete-several-entries-after-a-yes",
       [
         `Log two large eggs and a banana on ${sayDay(deleteDays[1])} at 09:00.`,
-        `Delete everything I logged on ${sayDay(deleteDays[1])}.`,
+        `Delete everything I logged on ${sayDay(deleteDays[1])} in one go.`,
         confirmDeleteButtons(2).confirmLabel,
       ],
       [
@@ -344,7 +436,7 @@ export function writeCasesOf(anchorDate: string): readonly EvalCase[] {
       "write-delete-several-entries-after-a-no",
       [
         `Log two large eggs and a banana on ${sayDay(deleteDays[2])} at 09:00.`,
-        `Delete everything I logged on ${sayDay(deleteDays[2])}.`,
+        `Delete everything I logged on ${sayDay(deleteDays[2])} in one go.`,
         confirmDeleteButtons(2).cancelLabel,
       ],
       [
@@ -667,23 +759,39 @@ export function writeCasesOf(anchorDate: string): readonly EvalCase[] {
     ),
   ];
 
-  // The same message twice is two turns, and neither replays the other's write.
+  // The same message twice is two turns. A second log is right, and so is one question ("again?"), but the
+  // second turn must never replay the first's write: each turn leaves at most its own row for the tool, and no
+  // target of the first turn is written again.
+  const bananaLogged = [
+    loggedItems([bananaOnce], anchorDate, [0]),
+    loggedRows([bananaOnce], anchorDate, [0]),
+  ];
   const repeated = make(
     "never-repeated-the-same-message-twice",
     ["I had a banana.", "I had a banana."],
     [
-      loggedItems([bananaOnce, bananaOnce], anchorDate),
-      actionRows("log_entry", 1, [0]),
-      actionRows("log_entry", 1, [1]),
-      actionRows("log_entry", 2),
       distinctTurns(),
+      noWriteReplayed(),
+      actionRows("log_entry", 1, [0]),
+      anyOfRoutes([
+        [
+          loggedItems([bananaOnce, bananaOnce], anchorDate),
+          loggedRows([bananaOnce, bananaOnce], anchorDate),
+          actionRows("log_entry", 1, [1]),
+          cardOfKind(1, "logged"),
+        ],
+        [...bananaLogged, turnEnded(1, "clarify"), askedOnce(), noActionRowsInTurn(1)],
+      ]),
     ],
     { cleanUp: undoWrites },
   );
 
-  // "Log yesterday's lunch again" reads yesterday first, logs what the diary holds, and Undo takes it out.
+  // "Log yesterday's lunch again" reads yesterday first, logs what the diary holds, and Undo takes it out. The
+  // reply is not graded: the prompt tells the model the reply never repeats the card's details, so a count in
+  // the words would be asking for what the prompt forbids. `get_entries` gives names, not food ids, so any
+  // sibling of the fixture's food (the other grilled chicken breasts, the other white rices) is as right.
   const lunchItems = lunchOfDay(41).map(({ code, grams }): ExpectedItem => ({
-    codes: [code],
+    codes: siblingsOf(code),
     amount: { grams },
     time: "any",
   }));
@@ -694,11 +802,12 @@ export function writeCasesOf(anchorDate: string): readonly EvalCase[] {
     [
       readBeforeFirstLog(yesterday),
       loggedItems(lunchItems, anchorDate),
+      loggedRows(lunchItems, anchorDate),
       actionRows("log_entry", lunchItems.length),
-      answerContainsNumber(lunchItems.length),
       undoLunch.undone,
     ],
-    { afterTurn: undoLunch.afterTurn },
+    // The case presses Undo itself, and the cleanUp finds it already undone or fails loudly.
+    { afterTurn: undoLunch.afterTurn, cleanUp: undoWrites },
   );
 
   return [...cases, ...undoCases, repeated, again];

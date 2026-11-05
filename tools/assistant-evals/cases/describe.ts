@@ -1,19 +1,32 @@
-// The describe-to-log set (KEY-700): 20 messages in which a person says what they ate. 16 resolve to
-// `log_entry` calls, and 4 are too vague to log and end in one question. Each is graded by what the
-// database holds and by the arguments of the calls, and never by the wording of the reply, so any good route
-// to a right answer passes.
+// The describe-to-log set (KEY-700): 21 messages in which a person says what they ate. 16 resolve to
+// `log_entry` calls, 4 are too vague to log and end in one question, and 1 is the milestone's own sentence
+// ("two eggs, toast with butter, a flat white"). Each is graded by what the database holds and by the arguments
+// of the calls, and never by the wording of the reply, so any good route to a right answer passes.
 //
 // A food is named by its CoFID code and checked against the database (`entryGraders.ts`), because a seeded
 // food's id is made when the seed runs. Several foods are right for one word ("two eggs"), so each item lists
-// every one of them (`FOOD_ROUTES`). A food that has a portion is logged as a count of that portion, and one
-// that has none is logged in the grams the message gave: a case never expects a guessed weight. No case rests
-// on a meaning-based search (KEY-185, Amendment 2 H): every word is one the plain `search_foods` finds.
+// every one of them (`FOOD_ROUTES`), and the integration test proves the plain `search_foods` surfaces them.
+// A food that has a portion is logged as a count of that portion, and one that has none is logged in the grams
+// the message gave: a case never expects a guessed weight. No case rests on a meaning-based search (KEY-185,
+// Amendment 2 H).
+//
+// FAIR ROUTES. A case fails only when the answer is wrong. Where a good assistant can reasonably ask once
+// instead of logging, the question passes too, and nothing is written: a food that comes in sizes (a banana, an
+// apple, a croissant, a boiled potato) may be answered with one question about the size, because the person
+// said no size and asking is not a guess. A message that names a meal ("for breakfast") may be logged with no
+// time or with a morning time. "Some cheese" may be one question or a logged slice.
 import { READ_TOOLS, onlyReadTools } from "./ask.ts";
 import {
   actionRows,
-  askedForGrams,
+  anyOfRoutes,
+  askedAboutFoodOrAmount,
+  askedAboutSize,
   askedOnce,
+  cardOfKind,
   loggedItems,
+  loggedRows,
+  noGuessedAmounts,
+  onlyFoodsOf,
   onlyTheseTools,
   turnEnded,
   undoWrites,
@@ -26,66 +39,91 @@ import { clarifyingQuestion, noActionRows } from "../src/case.ts";
 import type { ExpectedItem } from "./entryGraders.ts";
 import type { EvalCase, Grader } from "../src/case.ts";
 
-/** A message that resolves to entries: every item has its own `log_entry` call. */
+/**
+ * A message that resolves to entries: every item has its own `log_entry` call. `mayAskAboutSize` for a food
+ * that comes in sizes, where one question about the size is as good an answer.
+ */
 type LogSpec = Readonly<{
   id: string;
   kind: "log";
   message: string;
   items: readonly [ExpectedItem, ...ExpectedItem[]];
+  mayAskAboutSize: boolean;
 }>;
 
-/** A message too vague to log: one question, nothing written. `asksForGrams` when no portion fits the food. */
+/**
+ * A message too vague to log: one question, nothing written. `asksAboutFoodOrAmount` when no portion fits the
+ * food and the question has to be about it. `mayLog` for a message where a natural portion is as good.
+ */
 type ClarifySpec = Readonly<{
   id: string;
   kind: "clarify";
   message: string;
-  asksForGrams: boolean;
+  asksAboutFoodOrAmount: boolean;
+  mayLog: ExpectedItem | null;
 }>;
 
-export type DescribeSpec = LogSpec | ClarifySpec;
+/** The milestone's own sentence, whose butter and flat white have no portion: portions only, or one question. */
+type BriefSpec = Readonly<{ id: string; kind: "brief"; message: string }>;
+
+export type DescribeSpec = LogSpec | ClarifySpec | BriefSpec;
 
 const WRITE_AND_READ_TOOLS: ReadonlySet<string> = new Set([...READ_TOOLS, "log_entry"]);
 
 /** Every case of the set, as plain data. `anchorDate` is today in a run. */
 export function describeSpecs(anchorDate: string): readonly DescribeSpec[] {
   const yesterday = diaryDateOf(anchorDate, 41);
-  const log = (id: string, message: string, items: LogSpec["items"]): LogSpec => ({
-    id,
-    kind: "log",
-    message,
-    items,
-  });
-  const clarify = (id: string, message: string, asksForGrams = false): ClarifySpec => ({
+  const log = (
+    id: string,
+    message: string,
+    items: LogSpec["items"],
+    mayAskAboutSize = false,
+  ): LogSpec => ({ id, kind: "log", message, items, mayAskAboutSize });
+  const clarify = (
+    id: string,
+    message: string,
+    options: { asksAboutFoodOrAmount?: boolean; mayLog?: ExpectedItem } = {},
+  ): ClarifySpec => ({
     id,
     kind: "clarify",
     message,
-    asksForGrams,
+    asksAboutFoodOrAmount: options.asksAboutFoodOrAmount ?? false,
+    mayLog: options.mayLog ?? null,
   });
 
   return [
     // Natural amounts: the food's own portions.
     log("describe-two-eggs", "I had two eggs.", [{ codes: FOOD_ROUTES.egg, amount: { count: 2 } }]),
-    log("describe-a-banana", "I ate a banana.", [
-      { codes: FOOD_ROUTES.banana, amount: { count: 1 } },
-    ]),
+    log(
+      "describe-a-banana",
+      "I ate a banana.",
+      [{ codes: FOOD_ROUTES.banana, amount: { count: 1 } }],
+      true,
+    ),
     log(
       "describe-eggs-toast-and-banana",
       "I had two eggs, a slice of toast and a banana for breakfast.",
       [
-        { codes: FOOD_ROUTES.egg, amount: { count: 2 } },
-        { codes: FOOD_ROUTES.toast, amount: { count: 1 } },
-        { codes: FOOD_ROUTES.banana, amount: { count: 1 } },
+        { codes: FOOD_ROUTES.egg, amount: { count: 2 }, time: "morning" },
+        { codes: FOOD_ROUTES.toast, amount: { count: 1 }, time: "morning" },
+        { codes: FOOD_ROUTES.banana, amount: { count: 1 }, time: "morning" },
       ],
     ),
-    log("describe-an-apple-at-three", "I had an apple at 3pm.", [
-      { codes: FOOD_ROUTES.apple, amount: { count: 1 }, time: "15:00" },
-    ]),
+    log(
+      "describe-an-apple-at-three",
+      "I had an apple at 3pm.",
+      [{ codes: FOOD_ROUTES.apple, amount: { count: 1 }, time: "15:00" }],
+      true,
+    ),
     log("describe-two-slices-of-toast", "I had two slices of wholemeal toast.", [
       { codes: FOOD_ROUTES.wholemealToast, amount: { count: 2 } },
     ]),
-    log("describe-a-croissant", "I ate a croissant.", [
-      { codes: FOOD_ROUTES.croissant, amount: { count: 1 } },
-    ]),
+    log(
+      "describe-a-croissant",
+      "I ate a croissant.",
+      [{ codes: FOOD_ROUTES.croissant, amount: { count: 1 } }],
+      true,
+    ),
     log("describe-a-medium-bagel", "I had a medium bagel.", [
       { codes: FOOD_ROUTES.bagel, amount: { count: 1 } },
     ]),
@@ -93,9 +131,12 @@ export function describeSpecs(anchorDate: string): readonly DescribeSpec[] {
       { codes: FOOD_ROUTES.orange, amount: { count: 1 } },
       { codes: FOOD_ROUTES.kiwi, amount: { count: 1 } },
     ]),
-    log("describe-a-boiled-potato", "I had a boiled potato.", [
-      { codes: FOOD_ROUTES.boiledPotato, amount: { count: 1 } },
-    ]),
+    log(
+      "describe-a-boiled-potato",
+      "I had a boiled potato.",
+      [{ codes: FOOD_ROUTES.boiledPotato, amount: { count: 1 } }],
+      true,
+    ),
     log("describe-three-slices-of-cheddar", "I had three slices of cheddar.", [
       { codes: FOOD_ROUTES.cheddar, amount: { count: 3 } },
     ]),
@@ -129,28 +170,72 @@ export function describeSpecs(anchorDate: string): readonly DescribeSpec[] {
 
     // Too vague to log: one question, nothing written.
     clarify("describe-some-chicken-and-rice", "I had some chicken and rice."),
-    clarify("describe-some-rice", "I had some rice.", true),
-    clarify("describe-a-bowl-of-pasta", "I had a bowl of pasta.", true),
-    clarify("describe-some-cheese", "I had some cheese."),
+    clarify("describe-some-rice", "I had some rice.", { asksAboutFoodOrAmount: true }),
+    clarify("describe-a-bowl-of-pasta", "I had a bowl of pasta.", { asksAboutFoodOrAmount: true }),
+    clarify("describe-some-cheese", "I had some cheese.", {
+      mayLog: { codes: FOOD_ROUTES.cheeseSlice, amount: { portion: true } },
+    }),
+
+    // The milestone's own sentence. Butter and a flat white have no portion in the seed, so a weight for
+    // either would be a guess: the assistant logs portions of the real foods, or asks once.
+    {
+      id: "describe-eggs-toast-butter-and-a-flat-white",
+      kind: "brief",
+      message: "I had two eggs, toast with butter and a flat white.",
+    },
   ];
 }
 
+const onlyQuestion = (): Grader[] => [
+  clarifyingQuestion(),
+  askedOnce(),
+  noActionRows(),
+  onlyReadTools(),
+];
+
+const logged = (items: readonly ExpectedItem[], today: string): Grader[] => [
+  loggedItems(items, today),
+  loggedRows(items, today),
+  actionRows("log_entry", items.length),
+  cardOfKind(0, "logged"),
+  turnEnded(0, "complete"),
+  onlyTheseTools(WRITE_AND_READ_TOOLS),
+];
+
 function gradersOf(spec: DescribeSpec, anchorDate: string): Grader[] {
-  const graders: Grader[] =
-    spec.kind === "log"
-      ? [
-          loggedItems(spec.items, anchorDate),
-          actionRows("log_entry", spec.items.length),
-          turnEnded(0, "complete"),
-          onlyTheseTools(WRITE_AND_READ_TOOLS),
-        ]
-      : [
-          clarifyingQuestion(),
-          askedOnce(),
-          noActionRows(),
-          onlyReadTools(),
-          ...(spec.asksForGrams ? [askedForGrams()] : []),
+  const graders: Grader[] = (() => {
+    switch (spec.kind) {
+      case "log":
+        return spec.mayAskAboutSize
+          ? [anyOfRoutes([logged(spec.items, anchorDate), [...onlyQuestion(), askedAboutSize()]])]
+          : logged(spec.items, anchorDate);
+      case "clarify": {
+        const asking = [
+          ...onlyQuestion(),
+          ...(spec.asksAboutFoodOrAmount ? [askedAboutFoodOrAmount()] : []),
         ];
+        return spec.mayLog === null
+          ? asking
+          : [anyOfRoutes([asking, logged([spec.mayLog], anchorDate)])];
+      }
+      case "brief": {
+        // Two eggs have a portion. Toast has one too, but the message gave no count, so it is optional.
+        const eggs: ExpectedItem = { codes: FOOD_ROUTES.egg, amount: { count: 2 } };
+        return [
+          anyOfRoutes([
+            onlyQuestion(),
+            [
+              loggedItems([eggs], anchorDate),
+              loggedRows([eggs], anchorDate),
+              noGuessedAmounts(),
+              onlyFoodsOf([...FOOD_ROUTES.egg, ...FOOD_ROUTES.toast]),
+              onlyTheseTools(WRITE_AND_READ_TOOLS),
+            ],
+          ]),
+        ];
+      }
+    }
+  })();
   return graders.map((grade) => withContext(grade, [spec.message]));
 }
 
@@ -161,8 +246,9 @@ export function describeCasesOf(anchorDate: string): readonly EvalCase[] {
     set: "describe",
     messages: [spec.message],
     expect: gradersOf(spec, anchorDate),
-    // The entries are logged for today, which the ask set reads, so they are taken out again.
-    ...(spec.kind === "log" ? { cleanUp: undoWrites } : {}),
+    // The entries are logged for today, which the ask set reads, or for yesterday, which the copy cases count,
+    // so they are taken out again. A case that only asks writes nothing, and its Undo is an empty list.
+    cleanUp: undoWrites,
   }));
 }
 

@@ -14,6 +14,7 @@ import { THRESHOLD_PERCENT } from "../src/thresholds.ts";
 
 import type { EvalCase, UndoOutcome } from "../src/case.ts";
 import type { ToolCall, TurnResult, TurnStatus } from "../src/types.ts";
+import type { AssistantCard } from "@keylow/core";
 
 const ANCHOR = "2026-11-05";
 const cases = writeCasesOf(ANCHOR);
@@ -128,34 +129,47 @@ describe("the write set", () => {
       ),
     );
 
-    it("should give each case days of its own, after today, that no other case or ask question names", () => {
+    it("should give each case a day of its own", () => {
       const daysOfCase = new Map<string, Set<string>>();
       for (const [id, day] of sentDays) {
         daysOfCase.set(id, (daysOfCase.get(id) ?? new Set()).add(day));
       }
       const allDays = [...daysOfCase.values()].flatMap((days) => [...days]);
 
-      expect(allDays.every((day) => day > ANCHOR)).toBe(true);
       expect([...daysOfCase.values()].every((days) => days.size === 1)).toBe(true);
       expect(new Set(allDays).size).toBe(allDays.length);
     });
 
-    it("should keep the scratch days away from the diary, today and every day the ask set can name", () => {
-      expect(scratchDayOf(ANCHOR, 1)).toBe("2026-11-15");
-      expect(scratchDayOf(ANCHOR, 15)).toBe("2026-11-29");
-      expect(scratchDayOf(ANCHOR, 1) > ANCHOR).toBe(true);
+    it("should put the scratch days in the past, before the diary and before every day the ask set names", () => {
+      const oldestAskDay = diaryDateOf(ANCHOR, -30);
+      const firstDiaryDay = diaryDateOf(ANCHOR, 0);
+
+      expect(sentDays.length).toBeGreaterThanOrEqual(15);
+      for (const [, day] of sentDays) {
+        expect(day < oldestAskDay).toBe(true);
+        expect(day < firstDiaryDay).toBe(true);
+        // About 80 to 94 days back, and well inside what the recipe set plants (200 or more).
+        expect(day >= diaryDateOf(ANCHOR, -60 - 40)).toBe(true);
+      }
+      expect(scratchDayOf(ANCHOR, 1)).toBe("2026-08-17");
+      expect(scratchDayOf(ANCHOR, 15)).toBe("2026-08-03");
     });
 
-    it("should take today's entries out afterwards in the cases that log for today", async () => {
-      for (const id of ["never-repeated-the-same-message-twice"]) {
-        const environment = fakeEnvironment();
-        const first = turnResult();
-        const second = turnResult();
+    it("should take today's entries out afterwards, and fail loudly when Undo could not", async () => {
+      const id = "never-repeated-the-same-message-twice";
+      const first = turnResult();
+      const second = turnResult();
+      const environment = fakeEnvironment();
 
-        await caseOf(id).cleanUp?.([first, second], environment);
+      await caseOf(id).cleanUp?.([first, second], environment);
 
-        expect(environment.calls).toEqual([`undo ${second.turnId}`, `undo ${first.turnId}`]);
-      }
+      expect(environment.calls).toEqual([`undo ${second.turnId}`, `undo ${first.turnId}`]);
+      await expect(
+        caseOf(id).cleanUp?.(
+          [first],
+          fakeEnvironment({ undoPresses: { [first.turnId]: [["undo_unavailable"]] } }),
+        ),
+      ).rejects.toThrow("could not be undone");
     });
 
     it("should put the targets back after every case that changes them, even a refused one", async () => {
@@ -167,14 +181,19 @@ describe("the write set", () => {
 
         await caseOf(id).cleanUp?.([turnResult()], environment);
 
-        expect(environment.calls.at(-1)).toBe("restore targets");
+        expect(environment.calls).toEqual(["restore targets"]);
       }
     });
 
-    it("should not edit or delete a diary entry: every write names a day after today or yesterday for a copy", () => {
-      const copies = cases.filter(({ id }) => id.includes("copy"));
+    it("should give every case that logs for today or for a diary day a cleanUp", () => {
+      const withCleanUp = cases.filter(({ cleanUp }) => cleanUp !== undefined).map(({ id }) => id);
 
-      for (const { messages } of copies) {
+      expect(withCleanUp).toContain("never-repeated-the-same-message-twice");
+      expect(withCleanUp).toContain("log-yesterdays-lunch-again");
+    });
+
+    it("should copy only from yesterday, which no case changes", () => {
+      for (const { messages } of cases.filter(({ id }) => id.includes("copy"))) {
         expect(messages.some((message) => message.includes("yesterday"))).toBe(true);
       }
     });
@@ -227,6 +246,35 @@ const seedRows: Rows = {
   })),
 };
 
+// The card the app draws for a tool that wrote. The test has its own copy, so a wrong kind in the cases shows.
+const CARD_OF_TOOL: Record<string, AssistantCard["kind"]> = {
+  log_entry: "logged",
+  update_entry: "updated",
+  delete_entry: "deleted",
+  copy_day: "day_copied",
+  set_day_complete: "day_completed",
+  create_recipe: "recipe_created",
+  archive_recipe: "recipe_archived",
+  create_custom_food: "food_created",
+  update_targets: "targets_changed",
+};
+
+const cardOf = (kind: AssistantCard["kind"]): AssistantCard => ({
+  actionIds: ["33333333-3333-4333-8333-333333333333"],
+  kind,
+  title: "Title",
+  sub: null,
+  rows: [],
+  totalText: null,
+  note: null,
+  link: null,
+  undo: "available",
+  undoneSub: null,
+});
+
+const targetOf = (turn: TurnResult, tool: string, index: number) =>
+  `target-${turn.turnId}-${tool}-${index}`;
+
 function play(
   steps: readonly {
     answer?: string;
@@ -235,24 +283,33 @@ function play(
     actions?: [string, number][];
     confirmation?: TurnResult["confirmation"];
   }[],
-  rows: Rows = {},
+  rows: Rows | ((turns: TurnResult[]) => Rows) = {},
 ): Played {
-  const turns = steps.map(({ status = "complete", calls = [], confirmation, answer = "" }) =>
-    turnResult({
-      answer,
-      status,
-      toolCalls: calls,
-      ...(confirmation === undefined ? {} : { confirmation }),
-    }),
+  const turns = steps.map(
+    ({ status = "complete", calls = [], confirmation, answer = "", actions = [] }) =>
+      turnResult({
+        answer,
+        status,
+        toolCalls: calls,
+        ...(confirmation === undefined ? {} : { confirmation }),
+        ...(actions.length === 0
+          ? {}
+          : { cards: actions.flatMap(([tool]) => CARD_OF_TOOL[tool] ?? []).map(cardOf) }),
+      }),
   );
   const actions = steps.flatMap(({ actions: tools = [] }, index) =>
     tools.flatMap(([tool, count]) =>
-      Array.from({ length: count }, () => ({ turn_id: turns[index]?.turnId ?? "", tool })),
+      Array.from({ length: count }, (_, position) => ({
+        turn_id: turns[index]?.turnId ?? "",
+        tool,
+        target_id: targetOf(turns[index] ?? turnResult(), tool, position),
+      })),
     ),
   );
-  const merged: Rows = { ...seedRows, ...rows, assistant_actions: actions };
+  const given = typeof rows === "function" ? rows(turns) : rows;
+  const merged: Rows = { ...seedRows, ...given, assistant_actions: actions };
   for (const [table, held] of Object.entries(seedRows)) {
-    merged[table] = [...held, ...(rows[table] ?? [])];
+    merged[table] = [...held, ...(given[table] ?? [])];
   }
   return { turns, rows: merged };
 }
@@ -283,6 +340,9 @@ const recipeCall = (name: string) =>
     steps: [],
     source_url: null,
   });
+
+const isRecordInput = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
 
 const dayOf = (id: string): string =>
   dayIn(caseOf(id).messages.find((message) => /\d{4}/.test(message)) ?? "");
@@ -654,36 +714,54 @@ const perfect: Record<string, () => Played> = {
       },
     ]),
   "never-repeated-the-same-message-twice": () =>
-    play([
-      { calls: [logPortion("14-318", 1)], actions: [["log_entry", 1]] },
-      { calls: [logPortion("14-318", 1)], actions: [["log_entry", 1]] },
-    ]),
+    play(
+      [
+        { calls: [logPortion("14-318", 1)], actions: [["log_entry", 1]] },
+        { calls: [logPortion("14-318", 1)], actions: [["log_entry", 1]] },
+      ],
+      (turns) => ({
+        food_log_entries: turns.map((turn, index) => ({
+          id: targetOf(turn, "log_entry", 0),
+          food_id: foodIdOf("14-318"),
+          portion_id: portionIdOf("14-318"),
+          unit: "portion",
+          quantity: 1,
+          local_date: ANCHOR,
+          deleted_at: null,
+          ...(index === 0 ? {} : {}),
+        })),
+      }),
+    ),
   "log-yesterdays-lunch-again": () =>
-    play([
-      {
-        calls: [
-          readTool("get_entries", {
-            from: YESTERDAY,
-            to: YESTERDAY,
-            from_time: "12:00",
-            to_time: "14:00",
-          }),
-          ...lunchOfDay(41).map(({ code, grams }) => logGrams(code, grams, { time: "12:30" })),
-        ],
-        actions: [["log_entry", 3]],
-        answer: "Logged 3 entries from yesterday at 12:30.",
-      },
-    ]),
+    play(
+      [
+        {
+          calls: [
+            readTool("get_entries", {
+              from: YESTERDAY,
+              to: YESTERDAY,
+              from_time: "12:00",
+              to_time: "14:00",
+            }),
+            ...lunchOfDay(41).map(({ code, grams }) => logGrams(code, grams, { time: "12:30" })),
+          ],
+          actions: [["log_entry", 3]],
+          answer: "Done.",
+        },
+      ],
+      (turns) => ({
+        food_log_entries: lunchOfDay(41).map(({ code, grams }, position) => ({
+          id: targetOf(turns[0] ?? turnResult(), "log_entry", position),
+          food_id: foodIdOf(code),
+          portion_id: null,
+          unit: "g",
+          quantity: grams,
+          local_date: ANCHOR,
+          deleted_at: null,
+        })),
+      }),
+    ),
 };
-
-// The foods of the lunch are not in the small seed above, so the rows are added for them.
-const lunchFoods = ["18-323", "11-862", "13-503"];
-seedRows["foods"] = [
-  ...(seedRows["foods"] ?? []),
-  ...lunchFoods
-    .filter((code) => !(seedRows["foods"] ?? []).some((row) => row["source_ref"] === code))
-    .map((code) => ({ id: foodIdOf(code), source: "cofid", source_ref: code })),
-];
 
 const UNDO_STEPS: Record<string, { turn: number; actions: number }> = {
   "undo-a-logged-entry": { turn: 0, actions: 1 },
@@ -737,6 +815,27 @@ describe("a write case, played right", () => {
       }
 
       expect(await grade(caseOf(id), play_())).toEqual([]);
+    },
+  );
+});
+
+describe("the cards of the write set", () => {
+  it.each(cases.map(({ id }) => [id]))(
+    "%s should be graded on the card of its write",
+    async (id) => {
+      const played = perfect[id]?.();
+      if (played === undefined) {
+        throw new Error(`No play for ${id}`);
+      }
+      const drawsACard = played.turns.some(({ cards }) => cards !== undefined);
+      const withoutCards = {
+        ...played,
+        turns: played.turns.map(({ cards: _cards, ...turn }) => turn),
+      };
+
+      const reasons = await grade(caseOf(id), withoutCards);
+
+      expect(reasons.some((reason) => reason.includes("card"))).toBe(drawsACard);
     },
   );
 });
@@ -1056,14 +1155,129 @@ describe("a write case, played wrong", () => {
     expect(reasons.some((reason) => reason.includes("no log_entry call matched item"))).toBe(true);
   });
 
-  it("should fail when the reply does not cite the count of entries", async () => {
+  it("should not ask the reply to cite a count, because the prompt says the reply never repeats the card", async () => {
     const reasons = await failures("log-yesterdays-lunch-again", (played) => ({
       ...played,
       turns: played.turns.map((turn) => ({ ...turn, answer: "Done." })),
     }));
 
+    expect(reasons).toEqual([]);
+  });
+
+  it("should accept a sibling of the fixture's food for yesterday's lunch, and fail a food that is not one", async () => {
+    const siblings = await failures("log-yesterdays-lunch-again", (played) => ({
+      turns: played.turns.map((turn) => ({
+        ...turn,
+        toolCalls: turn.toolCalls.map((call) =>
+          call.name === "log_entry" &&
+          isRecordInput(call.input) &&
+          call.input["food_id"] === foodIdOf("18-323")
+            ? logGrams("18-324", 130, { time: "12:30" })
+            : call,
+        ),
+      })),
+      rows: {
+        ...played.rows,
+        foods: [
+          ...(played.rows["foods"] ?? []),
+          { id: foodIdOf("18-324"), source: "cofid", source_ref: "18-324" },
+        ],
+        food_log_entries: (played.rows["food_log_entries"] ?? []).map((row) =>
+          row["food_id"] === foodIdOf("18-323") ? { ...row, food_id: foodIdOf("18-324") } : row,
+        ),
+      },
+    }));
+    const stewed = await failures("log-yesterdays-lunch-again", (played) => ({
+      turns: played.turns.map((turn) => ({
+        ...turn,
+        toolCalls: turn.toolCalls.map((call) =>
+          call.name === "log_entry" &&
+          isRecordInput(call.input) &&
+          call.input["food_id"] === foodIdOf("18-323")
+            ? logGrams("18-307", 130, { time: "12:30" })
+            : call,
+        ),
+      })),
+      rows: {
+        ...played.rows,
+        foods: [
+          ...(played.rows["foods"] ?? []),
+          { id: foodIdOf("18-307"), source: "cofid", source_ref: "18-307" },
+        ],
+      },
+    }));
+
+    expect(siblings).toEqual([]);
+    expect(stewed.some((reason) => reason.includes("no log_entry call matched item 1 of 3"))).toBe(
+      true,
+    );
+  });
+
+  it("should fail a write with the wrong card, which the app would draw differently", async () => {
+    const reasons = await failures("write-copy-day-onto-an-empty-day", (played) => ({
+      ...played,
+      turns: played.turns.map((turn) => ({ ...turn, cards: [cardOf("logged")] })),
+    }));
+
+    expect(reasons).toEqual([expect.stringContaining("turn 1 sent no day_copied card")]);
+  });
+
+  it("should fail the delete of several entries that was done one id at a time, on the confirm check", async () => {
+    const reasons = await failures("write-delete-several-entries-after-a-yes", (played) => ({
+      ...played,
+      turns: [
+        played.turns[0] ?? turnResult(),
+        turnResult({ status: "complete", toolCalls: [writeTool("delete_entry", { ids: ["a"] })] }),
+        turnResult({ toolCalls: [writeTool("delete_entry", { ids: ["b"] })] }),
+      ],
+    }));
+
+    expect(reasons.some((reason) => reason.includes("turn 2 ended complete, not confirm"))).toBe(
+      true,
+    );
+    expect(reasons[0]).toContain('delete_entry({"ids":["a"]})');
+  });
+
+  it("should word the delete of several entries as one go", () => {
+    expect(caseOf("write-delete-several-entries-after-a-yes").messages[1]).toMatch(/in one go\.$/);
+    expect(caseOf("write-delete-several-entries-after-a-no").messages[1]).toMatch(/in one go\.$/);
+  });
+
+  it("should accept one question on the second send, and a second log", async () => {
+    const second = await failures("never-repeated-the-same-message-twice", (played) => ({
+      turns: [
+        played.turns[0] ?? turnResult(),
+        turnResult({
+          status: "clarify",
+          toolCalls: [
+            readTool("ask_user", { question: "Another banana?", quick_replies: ["Yes", "No"] }),
+          ],
+        }),
+      ],
+      rows: {
+        ...played.rows,
+        assistant_actions: (played.rows["assistant_actions"] ?? []).slice(0, 1),
+        food_log_entries: (played.rows["food_log_entries"] ?? []).slice(0, 1),
+      },
+    }));
+
+    expect(second).toEqual([]);
+  });
+
+  it("should fail a second send that replays the first turn's write", async () => {
+    const reasons = await failures("never-repeated-the-same-message-twice", (played) => ({
+      ...played,
+      rows: {
+        ...played.rows,
+        assistant_actions: (played.rows["assistant_actions"] ?? []).map((row) => ({
+          ...row,
+          target_id: "one-target",
+        })),
+      },
+    }));
+
     expect(
-      reasons.some((reason) => reason.includes("the answer has no number within 0 of 3")),
+      reasons.some((reason) => reason.includes("a write of turn 1 was written again in turn 2")),
     ).toBe(true);
   });
 

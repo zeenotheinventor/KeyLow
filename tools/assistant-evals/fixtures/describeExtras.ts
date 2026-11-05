@@ -74,19 +74,44 @@ export const SEEDED_FOODS: readonly SeededFood[] = [
     portion("1 large", 300, false),
   ]),
   food("12-346", "Cheese, Cheddar, English", [portion("1 slice", 28, true)]),
-  food("18-307", "Chicken, breast, casseroled, meat only", []),
-  food("18-308", "Chicken, breast, casseroled, meat and skin", []),
   food("18-323", "Chicken, breast, grilled without skin, meat only", []),
   food("18-324", "Chicken, breast, grilled with skin, meat only", []),
   food("18-325", "Chicken, breast, grilled, meat and skin", []),
-  food("18-326", "Chicken, breast, strips, stir-fried in corn oil", []),
   food("11-858", "Rice, white, basmati, boiled in unsalted water", []),
   food("11-862", "Rice, white, long grain, boiled in unsalted water", []),
   food("11-875", "Rice, Thai fragrant, boiled in unsalted water", []),
   food("13-503", "Broccoli, green, boiled in unsalted water", [portion("1 spear", 37, true)]),
+  food("12-493", "Cheese, Emmental", [portion("1 slice", 28, true)]),
+  food("12-527", "Cheese, processed, plain", [portion("1 slice", 21, true)]),
   food("11-788", "Porridge oats, unfortified", []),
   food("12-313", "Milk, semi-skimmed, pasteurised, average", []),
 ];
+
+/**
+ * The words each route is searched with, as a person says them. The integration test runs the app's own
+ * `searchFoods` with each and fails unless one of the route's codes is among the first five results, so a case
+ * never expects a food the search would not fairly surface (KEY-185, Amendment 2 H).
+ */
+export const FOOD_ROUTE_WORDS: Readonly<Record<keyof typeof FOOD_ROUTES, string>> = {
+  egg: "eggs",
+  boiledEgg: "boiled eggs",
+  banana: "banana",
+  apple: "apple",
+  toast: "toast",
+  wholemealToast: "wholemeal toast",
+  croissant: "croissant",
+  bagel: "bagel",
+  orange: "orange",
+  kiwi: "kiwi",
+  boiledPotato: "boiled potato",
+  cheddar: "cheddar",
+  cheeseSlice: "cheese",
+  chickenBreast: "grilled chicken breast",
+  whiteRice: "boiled white rice",
+  boiledBroccoli: "boiled broccoli",
+  porridgeOats: "porridge oats",
+  semiSkimmedMilk: "semi-skimmed milk",
+};
 
 export function seededFood(code: string): SeededFood {
   const found = SEEDED_FOODS.find((candidate) => candidate.code === code);
@@ -116,7 +141,8 @@ export const FOOD_ROUTES = {
   kiwi: ["14-371"],
   boiledPotato: ["13-490"],
   cheddar: ["12-346"],
-  chickenBreast: ["18-307", "18-308", "18-323", "18-324", "18-325", "18-326"],
+  cheeseSlice: ["12-346", "12-493", "12-527"],
+  chickenBreast: ["18-323", "18-324", "18-325"],
   whiteRice: ["11-858", "11-862", "11-875"],
   boiledBroccoli: ["13-503"],
   porridgeOats: ["11-788"],
@@ -135,4 +161,18 @@ export function lunchOfDay(
         ? []
         : [{ code: FIXTURE_FOOD_CODES[food], grams }];
     });
+}
+
+/**
+ * The foods that are as right as the code itself for a repeated entry: the other foods of the first route that
+ * holds it (the three grilled chicken breasts for 18-323), or the code alone. `get_entries` gives the names of
+ * the entries, so a model that repeats yesterday's chicken may find any of its siblings by search.
+ */
+export function siblingsOf(code: string): readonly [string, ...string[]] {
+  for (const route of Object.values<readonly [string, ...string[]]>(FOOD_ROUTES)) {
+    if (route.includes(code)) {
+      return route;
+    }
+  }
+  return [code];
 }

@@ -89,12 +89,7 @@ export async function openLocalHttpSession(): Promise<EvalSession> {
       environment: createCaseEnvironment({
         client: serviceClient,
         userId: user.id,
-        undoTurn: createUndoTurn({
-          apiUrl: stack.apiUrl,
-          anonKey: stack.anonKey,
-          getAccessToken,
-          client: user.client,
-        }),
+        undoTurn: createUndoTurn({ client: user.client }),
         restoreTargets: () => writeAskExtras(user),
       }),
       close: user.remove,

@@ -5,12 +5,19 @@ import { readTool, turnResult, writeTool } from "./helpers.ts";
 import { rowDatabase } from "./rowDatabase.ts";
 import {
   actionRows,
-  askedForGrams,
+  anyOfRoutes,
+  askedAboutFoodOrAmount,
+  askedAboutSize,
   askedOnce,
   calledWith,
+  cardOfKind,
   confirmationEndsWith,
   confirmationLacks,
   loggedItems,
+  loggedRows,
+  noGuessedAmounts,
+  noWriteReplayed,
+  onlyFoodsOf,
   noQuestionsAsked,
   noActionRowsInTurn,
   onlyTheseTools,
@@ -25,6 +32,7 @@ import {
 import type { ExpectedItem } from "../cases/entryGraders.ts";
 import type { Grader, UndoOutcome } from "../src/case.ts";
 import type { EvalDatabase } from "../src/types.ts";
+import type { AssistantCard } from "@keylow/core";
 
 const TODAY = "2026-11-05";
 const EGG_ID = "egg-id";
@@ -245,7 +253,7 @@ describe("rowCount", () => {
   });
 });
 
-describe("askedOnce and askedForGrams", () => {
+describe("askedOnce, askedAboutFoodOrAmount and askedAboutSize", () => {
   const database = rowDatabase({});
   const ask = (question: string, replies: string[] = []) =>
     readTool("ask_user", { question, quick_replies: replies });
@@ -265,15 +273,39 @@ describe("askedOnce and askedForGrams", () => {
     const inQuestion = [turnResult({ toolCalls: [ask("How many grams of rice?")] })];
     const inReplies = [turnResult({ toolCalls: [ask("How much rice?", ["100 g", "150 g"])] })];
 
-    expect((await askedForGrams()({ turns: inQuestion, database })).passed).toBe(true);
-    expect((await askedForGrams()({ turns: inReplies, database })).passed).toBe(true);
+    expect((await askedAboutFoodOrAmount()({ turns: inQuestion, database })).passed).toBe(true);
+    expect((await askedAboutFoodOrAmount()({ turns: inReplies, database })).passed).toBe(true);
   });
 
-  it("should fail when the question names no amount in grams, or there was none", async () => {
-    const vague = [turnResult({ toolCalls: [ask("How much rice?", ["a bowl"])] })];
+  it("should pass a question about the food or how much of it, in any words", async () => {
+    for (const question of [
+      "How much rice was it?",
+      "Which rice, and how many spoons?",
+      "What kind of pasta?",
+    ]) {
+      const turns = [turnResult({ toolCalls: [ask(question)] })];
 
-    expect((await askedForGrams()({ turns: vague, database })).passed).toBe(false);
-    expect((await askedForGrams()({ turns: [turnResult()], database })).passed).toBe(false);
+      expect((await askedAboutFoodOrAmount()({ turns, database })).passed).toBe(true);
+    }
+  });
+
+  it("should fail a question about something else, or no question at all", async () => {
+    const vague = [turnResult({ toolCalls: [ask("Was it nice?", ["yes", "no"])] })];
+
+    expect((await askedAboutFoodOrAmount()({ turns: vague, database })).passed).toBe(false);
+    expect((await askedAboutFoodOrAmount()({ turns: [turnResult()], database })).passed).toBe(
+      false,
+    );
+  });
+
+  it("should pass a question about the size, and fail one that is not about it", async () => {
+    const size = [
+      turnResult({ toolCalls: [ask("Which size banana?", ["small", "medium", "large"])] }),
+    ];
+    const other = [turnResult({ toolCalls: [ask("Was it ripe?")] })];
+
+    expect((await askedAboutSize()({ turns: size, database })).passed).toBe(true);
+    expect((await askedAboutSize()({ turns: other, database })).passed).toBe(false);
   });
 });
 
@@ -345,6 +377,24 @@ describe("undoOnTurn", () => {
 });
 
 describe("undoWrites", () => {
+  it("should throw, naming what Undo answered, when a write could not be undone", async () => {
+    const turn = turnResult();
+    const environment = fakeEnvironment({
+      undoPresses: { [turn.turnId]: [["undone", "undo_unavailable"]] },
+    });
+
+    await expect(undoWrites([turn], environment)).rejects.toThrow(
+      "the writes of the case could not be undone (Undo answered undone, undo_unavailable), so they may be left in the diary",
+    );
+  });
+
+  it("should accept an action that was already undone, as the Undo cases leave it", async () => {
+    const turn = turnResult();
+    const environment = fakeEnvironment({ undoPresses: { [turn.turnId]: [["already_undone"]] } });
+
+    await expect(undoWrites([turn], environment)).resolves.toBeUndefined();
+  });
+
   it("should press Undo for each turn, the newest first", async () => {
     const environment = fakeEnvironment();
     const first = turnResult();
@@ -553,5 +603,231 @@ describe("an item at any time", () => {
       (await run(loggedItems([anyTime], TODAY), [logEggs({ time: "12:30" })], database)).passed,
     ).toBe(true);
     expect((await run(loggedItems([anyTime], TODAY), [logEggs()], database)).passed).toBe(true);
+  });
+});
+
+describe("an item as a portion of any count, and a time in the morning", () => {
+  const database = rowDatabase(seedRows);
+
+  it("should accept any positive count of a portion of the food", async () => {
+    const anyCount: ExpectedItem = { codes: ["12-940"], amount: { portion: true } };
+
+    expect(
+      (await run(loggedItems([anyCount], TODAY), [logEggs({ count: 3 })], database)).passed,
+    ).toBe(true);
+    expect(
+      (
+        await run(
+          loggedItems([anyCount], TODAY),
+          [logEggs({ kind: "grams", portion_id: null, count: null, grams: 100 })],
+          database,
+        )
+      ).passed,
+    ).toBe(false);
+  });
+
+  it("should accept no time or a morning time, and fail an afternoon one", async () => {
+    const morning: ExpectedItem = { ...eggs, time: "morning" };
+
+    expect((await run(loggedItems([morning], TODAY), [logEggs()], database)).passed).toBe(true);
+    expect(
+      (await run(loggedItems([morning], TODAY), [logEggs({ time: "08:00" })], database)).passed,
+    ).toBe(true);
+    expect(
+      (await run(loggedItems([morning], TODAY), [logEggs({ time: "15:00" })], database)).passed,
+    ).toBe(false);
+  });
+
+  it("should look only at the turns it was given", async () => {
+    const turns = [turnResult({ toolCalls: [] }), turnResult({ toolCalls: [logEggs()] })];
+
+    expect((await loggedItems([eggs], TODAY, [0])({ turns, database })).passed).toBe(false);
+    expect((await loggedItems([eggs], TODAY, [1])({ turns, database })).passed).toBe(true);
+  });
+});
+
+describe("loggedRows", () => {
+  const turn = turnResult();
+  const rows = (
+    entry: Record<string, string | number | null>,
+    extra: Record<string, unknown> = {},
+  ) =>
+    rowDatabase({
+      ...seedRows,
+      assistant_actions: [{ turn_id: turn.turnId, tool: "log_entry", target_id: "entry-1" }],
+      food_log_entries: [
+        {
+          id: "entry-1",
+          food_id: EGG_ID,
+          portion_id: EGG_PORTION_ID,
+          unit: "portion",
+          quantity: 2,
+          local_date: TODAY,
+          deleted_at: null,
+          ...entry,
+          ...(extra as Record<string, string | number | null>),
+        },
+      ],
+    });
+
+  it("should pass when the row the write left is the food, the portion and the count", async () => {
+    expect((await loggedRows([eggs], TODAY)({ turns: [turn], database: rows({}) })).passed).toBe(
+      true,
+    );
+  });
+
+  it("should fail when the row holds another count, which a right-looking call would not show", async () => {
+    const outcome = await loggedRows(
+      [eggs],
+      TODAY,
+    )({ turns: [turn], database: rows({ quantity: 3 }) });
+
+    expect(outcome).toEqual({
+      passed: false,
+      reason: "no logged entry matched item 1 of 1 (12-937|12-940 2 portions)",
+    });
+  });
+
+  it("should fail when the row is on another day or another food", async () => {
+    expect(
+      (
+        await loggedRows(
+          [eggs],
+          TODAY,
+        )({ turns: [turn], database: rows({ local_date: "2026-11-04" }) })
+      ).passed,
+    ).toBe(false);
+    expect(
+      (await loggedRows([eggs], TODAY)({ turns: [turn], database: rows({ food_id: TOAST_ID }) }))
+        .passed,
+    ).toBe(false);
+  });
+
+  it("should read grams as the unit g and the quantity", async () => {
+    const grams: ExpectedItem = { codes: ["11-982"], amount: { grams: 40 } };
+    const database = rows({ food_id: TOAST_ID, portion_id: null, unit: "g", quantity: 40 });
+
+    expect((await loggedRows([grams], TODAY)({ turns: [turn], database })).passed).toBe(true);
+  });
+
+  it("should fail when the write left no row", async () => {
+    const database = rowDatabase({ ...seedRows });
+
+    expect((await loggedRows([eggs], TODAY)({ turns: [turn], database })).passed).toBe(false);
+  });
+});
+
+describe("cardOfKind", () => {
+  const database = rowDatabase({});
+  const card = (kind: AssistantCard["kind"]): AssistantCard => ({
+    actionIds: ["33333333-3333-4333-8333-333333333333"],
+    kind,
+    title: "Title",
+    sub: null,
+    rows: [],
+    totalText: null,
+    note: null,
+    link: null,
+    undo: "available",
+    undoneSub: null,
+  });
+
+  it("should pass when the turn sent a card of that kind and fail when it sent another or none", async () => {
+    const turns = [turnResult({ cards: [card("logged")] }), turnResult()];
+
+    expect((await cardOfKind(0, "logged")({ turns, database })).passed).toBe(true);
+    expect((await cardOfKind(0, "deleted")({ turns, database })).reason).toBe(
+      "turn 1 sent no deleted card",
+    );
+    expect((await cardOfKind(1, "logged")({ turns, database })).reason).toBe(
+      "turn 2 sent no logged card",
+    );
+  });
+});
+
+describe("anyOfRoutes", () => {
+  const database = rowDatabase({});
+  const passes: Grader = () => Promise.resolve({ passed: true, reason: "yes" });
+  const fails =
+    (reason: string): Grader =>
+    () =>
+      Promise.resolve({ passed: false, reason });
+
+  it("should pass when every grader of one route passes", async () => {
+    const outcome = await anyOfRoutes([
+      [fails("a"), passes],
+      [passes, passes],
+    ])({ turns: [], database });
+
+    expect(outcome.passed).toBe(true);
+  });
+
+  it("should fail with the reasons of the route that came closest", async () => {
+    const outcome = await anyOfRoutes([
+      [fails("a"), fails("b")],
+      [passes, fails("c")],
+    ])({ turns: [], database });
+
+    expect(outcome).toEqual({ passed: false, reason: "no route passed, the closest failed on: c" });
+  });
+});
+
+describe("noGuessedAmounts and onlyFoodsOf", () => {
+  const database = rowDatabase(seedRows);
+
+  it("should pass only portion kinds, and fail a gram or millilitre guess", async () => {
+    expect((await run(noGuessedAmounts(), [logEggs()], database)).passed).toBe(true);
+    expect(
+      (await run(noGuessedAmounts(), [logEggs({ kind: "grams", grams: 10 })], database)).reason,
+    ).toBe("log_entry guessed an amount (kind grams)");
+  });
+
+  it("should pass foods of the codes and fail another food", async () => {
+    expect((await run(onlyFoodsOf(["12-940"]), [logEggs()], database)).passed).toBe(true);
+    expect((await run(onlyFoodsOf(["11-982"]), [logEggs()], database)).passed).toBe(false);
+  });
+});
+
+describe("noWriteReplayed", () => {
+  const first = turnResult();
+  const second = turnResult();
+  const action = (turn: { turnId: string }, tool: string, target: string) => ({
+    turn_id: turn.turnId,
+    tool,
+    target_id: target,
+  });
+
+  it("should pass when each turn wrote its own entry", async () => {
+    const database = rowDatabase({
+      assistant_actions: [action(first, "log_entry", "a"), action(second, "log_entry", "b")],
+    });
+
+    expect((await noWriteReplayed()({ turns: [first, second], database })).passed).toBe(true);
+  });
+
+  it("should pass when the second turn wrote nothing", async () => {
+    const database = rowDatabase({ assistant_actions: [action(first, "log_entry", "a")] });
+
+    expect((await noWriteReplayed()({ turns: [first, second], database })).passed).toBe(true);
+  });
+
+  it("should fail when two turns name the same target, which is a write replayed", async () => {
+    const database = rowDatabase({
+      assistant_actions: [action(first, "log_entry", "a"), action(second, "log_entry", "a")],
+    });
+
+    expect((await noWriteReplayed()({ turns: [first, second], database })).reason).toBe(
+      "a write of turn 1 was written again in turn 2",
+    );
+  });
+
+  it("should fail when one turn left two rows for one tool, which is a write repeated", async () => {
+    const database = rowDatabase({
+      assistant_actions: [action(first, "log_entry", "a"), action(first, "log_entry", "b")],
+    });
+
+    expect((await noWriteReplayed()({ turns: [first, second], database })).reason).toBe(
+      "turn 1 left 2 log_entry rows for one message",
+    );
   });
 });

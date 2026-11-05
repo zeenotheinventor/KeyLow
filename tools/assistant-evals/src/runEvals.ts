@@ -86,6 +86,28 @@ function afterCeiling<Result>(
   });
 }
 
+// The tools that ask first. A turn that fails right after a call to one of them is most often the model giving
+// no question to put above the buttons, which the function ends as `confirm_unavailable`.
+const TOOLS_THAT_ASK_FIRST: ReadonlySet<string> = new Set([
+  "delete_entry",
+  "copy_day",
+  "archive_recipe",
+  "update_targets",
+]);
+
+/**
+ * Why a failed turn is an error. The ending code is only in the function's log, so this names the notice the
+ * turn sent and, after a tool that asks first, says it is most likely the assistant's fault, so a reader can
+ * tell it from an infrastructure failure. The status stays `error` and the report keeps its shape.
+ */
+function failedTurnReason(turn: TurnResult): string {
+  const notice = turn.noticeCode === undefined ? "no notice" : `notice ${turn.noticeCode}`;
+  const asked = [...turn.toolCalls].reverse().find(({ name }) => TOOLS_THAT_ASK_FIRST.has(name));
+  return asked === undefined
+    ? `the turn failed (${notice})`
+    : `the turn failed (${notice}) after a call to ${asked.name}, a tool that asks first: most likely confirm_unavailable, the model gave no question to put above the buttons, so this is the assistant's fault and not the infrastructure's`;
+}
+
 /**
  * Runs the cases in order through the driver, grades each, and watches the spend of the eval user.
  *
@@ -148,7 +170,7 @@ export async function runEvals(input: RunInput): Promise<RunReport> {
           throw new CaseError("the case was abandoned after its ceiling");
         }
         if (turn.status === "failed") {
-          throw new CaseError("the turn failed");
+          throw new CaseError(failedTurnReason(turn));
         }
         if (hasNoUsage(await database.usageOfTurn(turn.turnId))) {
           throw new CaseError("no assistant_usage rows for the turn");

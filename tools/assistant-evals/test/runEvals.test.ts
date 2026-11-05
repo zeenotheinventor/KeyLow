@@ -368,7 +368,10 @@ describe("runEvals", () => {
         [costing(5, { status: "failed" })],
       );
 
-      expect(report.cases[0]).toMatchObject({ status: "error", failures: ["the turn failed"] });
+      expect(report.cases[0]).toMatchObject({
+        status: "error",
+        failures: ["the turn failed (no notice)"],
+      });
     });
 
     it("should end a case whose driver never answers after the wall-clock ceiling, and carry on", async () => {
