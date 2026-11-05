@@ -62,6 +62,18 @@ export function createEvalDatabase(client: SupabaseClient<Database>): EvalDataba
       return count ?? 0;
     },
 
+    readRows: async ({ table, where }: RowQuery) => {
+      let query = client.from(table).select("*");
+      for (const [column, value] of Object.entries(where)) {
+        query = value === null ? query.is(column, null) : query.eq(column, value);
+      }
+      const { data, error } = await query;
+      if (error) {
+        throw new Error(`Could not read the rows of ${table} (${error.code})`);
+      }
+      return data;
+    },
+
     usageOfTurn: async (turnId) => {
       const { data, error } = await client
         .from("assistant_usage")

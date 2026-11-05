@@ -51,6 +51,8 @@ describe("the compaction case", () => {
       log.push(`wait ${conversationId}`);
       return Promise.resolve();
     },
+    undoTurn: () => Promise.resolve([]),
+    restoreTargets: () => Promise.resolve(),
   });
 
   async function play(secondAnswer: string, log: string[] = []) {

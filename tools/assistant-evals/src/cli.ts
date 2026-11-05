@@ -14,7 +14,7 @@ import type { EvalDatabase } from "./types.ts";
 export const DEFAULT_BUDGET_TOKENS = 300_000;
 
 const USAGE =
-  "Usage: check:assistant [--set ask|describe|redTeam|compaction]... [--budget <tokens>] [--help]";
+  "Usage: check:assistant [--set ask|describe|redTeam|compaction|writes]... [--budget <tokens>] [--help]";
 
 const HELP = [
   USAGE,
