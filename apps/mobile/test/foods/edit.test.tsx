@@ -252,6 +252,14 @@ describe("edit food screen", () => {
       expect(screen.getByRole("radio", { name: "Per 100 ml" })).toBeChecked();
       expect(screen.getByLabelText("Amount for portion 1 (ml)")).toHaveDisplayValue("250");
     });
+
+    it("should say portion amounts are in millilitres for a per 100 ml food", async () => {
+      Object.assign(foodQuery, { data: { ...foodFixture, basis: "per_100ml" } });
+
+      await renderEditor();
+
+      expect(screen.getByText("Each amount is in ml, to match the basis.")).toBeOnTheScreen();
+    });
   });
 
   describe("saving", () => {

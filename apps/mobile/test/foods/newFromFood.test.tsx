@@ -225,6 +225,14 @@ describe("new food screen, copying a food with the from parameter", () => {
       expect(screen.getByLabelText("Amount for portion 1 (ml)")).toHaveDisplayValue("250");
     });
 
+    it("should say portion amounts are in millilitres when copying a liquid", async () => {
+      Object.assign(foodQuery, { data: { ...suspectFood, basis: "per_100ml" } });
+
+      await renderCopy();
+
+      expect(screen.getByText("Each amount is in ml, to match the basis.")).toBeOnTheScreen();
+    });
+
     it("should leave the values the food is missing blank", async () => {
       await renderCopy();
 
