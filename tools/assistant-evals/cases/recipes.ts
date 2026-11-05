@@ -149,11 +149,17 @@ async function rebuild(
     if (!line.food.namePattern.test(food.name)) {
       return { ingredients, problem: `${label} is a different food (${food.name})` };
     }
-    const portions = (
-      await context.database.readRows({ table: "food_portions", where: { food_id: food.id } })
-    ).flatMap((portion) => {
+    const portionRows = await context.database.readRows({
+      table: "food_portions",
+      where: { food_id: food.id },
+    });
+    // A portion that does not parse is a harness problem, and it must not quietly change what is expected.
+    const portions = portionRows.map((portion) => {
       const parsed = foodPortionSchema.safeParse(portion);
-      return parsed.success ? [parsed.data] : [];
+      if (!parsed.success) {
+        throw new Error(`A portion of ${label} could not be read by core's schema`);
+      }
+      return parsed.data;
     });
     if (line.kind === "vague") {
       const quantity = Number(row?.["quantity"]);

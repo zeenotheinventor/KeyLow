@@ -97,13 +97,20 @@ export async function openLocalHttpSession(): Promise<EvalSession> {
         undoActions: (actionIds) => undoAssistantActions(user.client, actionIds),
       }),
       close: async () => {
-        await user.remove();
-        await pageServer.close();
+        // The server stops even when removing the user fails, or the run would not end.
+        try {
+          await user.remove();
+        } finally {
+          await pageServer.close();
+        }
       },
     };
   } catch (error) {
-    await user.remove();
-    await pageServer.close();
+    try {
+      await user.remove();
+    } finally {
+      await pageServer.close();
+    }
     throw error;
   }
 }

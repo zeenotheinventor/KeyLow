@@ -19,7 +19,10 @@ import type { RecipePageDependencies } from "./recipePage.ts";
 
 export const RECIPE_PAGE_TEST_HOST = "recipes.keylow.test";
 
-// Reachable on no network. It only has to pass the guard as a public address for the reserved name.
+// It only has to pass the guard as a public address for the reserved name. It is a routable address (it was
+// example.com's), not a reserved one, and nothing ever connects to it: `fetchPage` rewrites the request to the
+// test origin before a socket opens. No reserved address would do instead, because the guard refuses every
+// documentation range on purpose (192.0.2.0/24, 198.51.100.0/24, 203.0.113.0/24, 2001:db8::/32, 3fff::/20).
 const ADDRESS_ANSWERED_FOR_TEST_HOST = "93.184.216.34";
 const LOCAL_STACK_HOSTS: ReadonlySet<string> = new Set(["kong", "localhost", "127.0.0.1"]);
 

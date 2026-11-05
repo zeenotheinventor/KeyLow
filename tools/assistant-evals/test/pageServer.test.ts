@@ -50,6 +50,20 @@ describe("the recipe page server", () => {
     expect(response.status).toBe(200);
   });
 
+  it("should answer 400 for a target that is not a path, and keep serving", async () => {
+    const server = await started(new Map([["/pages/a.html", "<p>a</p>"]]));
+
+    const statuses = await Promise.all(
+      ["//", "///"].map(
+        async (target) => (await fetch(`http://127.0.0.1:${server.port}${target}`)).status,
+      ),
+    );
+    const after = await fetch(`http://127.0.0.1:${server.port}/pages/a.html`);
+
+    expect(statuses).toEqual([400, 400]);
+    expect(after.status).toBe(200);
+  });
+
   it("should refuse anything but GET", async () => {
     const server = await started(new Map([["/pages/a.html", "<p>a</p>"]]));
 
@@ -102,6 +116,17 @@ describe("the settings of the served functions", () => {
     const origin = /^RECIPE_PAGE_TEST_ORIGIN=(.+)$/m.exec(envTest)?.[1];
 
     expect(origin).toBe(`http://host.docker.internal:${RECIPE_PAGE_SERVER_PORT}`);
+  });
+
+  it("should be wired into the fetch of the mcp function, or the seam would do nothing", () => {
+    const mcp = readFileSync(
+      new URL("../../../packages/db/supabase/functions/mcp/index.ts", import.meta.url),
+      "utf8",
+    );
+
+    expect(mcp).toMatch(
+      /fetchRecipePage\(url, \{[^}]*\.\.\.recipePageTestOverrides\(\(name\) => Deno\.env\.get\(name\)\)/s,
+    );
   });
 
   it("should reserve the same host name as the seam", () => {

@@ -47,18 +47,18 @@ const SAMPLE_NAMES: Readonly<Record<string, string>> = {
   cheddar: "Cheese, Cheddar, English",
   broccoli: "Broccoli, green, boiled in unsalted water",
   salmon: "Salmon, farmed, flesh only, grilled",
-  rice: "Rice, white, basmati, boiled in unsalted water",
+  "basmati rice": "Rice, white, basmati, boiled in unsalted water",
   spinach: "Spinach, baby, raw",
-  lentils: "Lentils, red, split, dried, raw",
+  "red lentils": "Lentils, red, split, dried, raw",
   garlic: "Garlic, raw",
-  chicken: "Chicken, breast, grilled without skin, meat only",
-  peppers: "Peppers, capsicum, red, raw",
+  "chicken breast": "Chicken, breast, grilled without skin, meat only",
+  "red peppers": "Pepper, capsicum, red, raw",
   eggs: "Eggs, chicken, whole, boiled",
-  bread: "Bread, brown, average",
-  butter: "Butter, unsalted",
+  "brown bread": "Bread, brown, average",
+  "unsalted butter": "Butter, unsalted",
   apples: "Apples, eating, raw, flesh and skin",
-  yogurt: "Yogurt, Greek style, plain",
-  flour: "Flour, wheat, white, plain, soft",
+  "Greek yogurt": "Yogurt, Greek style, plain",
+  "plain flour": "Flour, wheat, white, plain, soft",
   tomatoes: "Tomatoes, standard, raw",
   "spring onions": "Spring onions, bulbs and tops, raw",
 };
@@ -187,7 +187,7 @@ function rightReply(page: RecipePage, variant: Variant = {}) {
   }));
   const cardLines = page.lines.map((line) =>
     line.kind === "unresolved"
-      ? { text: line.text, foodWord: "saffron", food: null }
+      ? { text: line.text, foodWord: "sumac", food: null }
       : {
           text: line.text,
           foodWord: line.food.label,
@@ -377,10 +377,12 @@ describe("the pages", () => {
     }
   });
 
-  it("should hide the injected instruction of the text page from a reader", () => {
-    const html = htmlOf(pageNamed("injection-hidden"));
+  it("should move the injected instruction of the text page off screen, where the text reader keeps it", () => {
+    const html = htmlOf(pageNamed("injection-offscreen"));
 
-    expect(html).toMatch(/<div hidden>[^<]*chocolate bars[^<]*<\/div>/);
+    expect(html).toMatch(/<p style="position:absolute;left:-9999px">[^<]*chocolate bars[^<]*<\/p>/);
+    // These are the ways the reader drops text (recipePageText.ts). None may be used here.
+    expect(html).not.toMatch(/hidden|display\s*:\s*none|visibility/i);
   });
 
   it("should write a yield as text on the page that has one", () => {
@@ -396,6 +398,130 @@ describe("the pages", () => {
     for (const page of recipePages) {
       expect(htmlOf(page), page.id).not.toMatch(/https?:\/\/(?!schema\.org)/);
     }
+  });
+});
+
+// --- The expected foods ----------------------------------------------------------------------------------
+
+describe("the expected foods", () => {
+  // The CI stack seeds exactly these foods (supabase/seeds/10_cofid_subset.sql).
+  const seededNames = readFileSync(
+    new URL("../../../packages/db/data/cofid/subset.txt", import.meta.url),
+    "utf8",
+  )
+    .split("\n")
+    .flatMap((line) => (line.startsWith("#") ? [] : [line.replace(/^\S+ # /, "").trim()]))
+    .filter((name) => name !== "");
+
+  // Foods a person would not mean by the line, most of them the first hit of a tied search (KEY-701 review).
+  const WRONG: Readonly<Record<keyof typeof FOODS, readonly string[]>> = {
+    oats: [
+      "Porridge oats, unfortified, cooked, made up with semi-skimmed milk",
+      "Porridge, made with water",
+    ],
+    milk: [
+      "Milk shake, powder",
+      "Milk bread, homemade",
+      "Milk, goats, pasteurised",
+      "Milk, evaporated, whole",
+      "Milk, soya, non-dairy alternative to milk, sweetened, fortified",
+      "Milk, flavoured, pasteurised, chocolate",
+    ],
+    banana: ["Banana bread, homemade", "Banana split, homemade"],
+    potatoes: [
+      "Potato rings",
+      "Potatoes, duchesse",
+      "Potatoes, old, mashed with butter",
+      "Potato chips, oven ready, no batter, baked",
+      "Potatoes with onions and eggs, fried",
+      "Potatoes, old, roasted in lard",
+    ],
+    carrots: ["Carrot juice", "Carrots, old, microwaved"],
+    onions: ["Onions, fried in lard", "Spring onions, bulbs and tops, raw"],
+    oliveOil: ["Sardines, canned in olive oil, drained", "Oil, rapeseed"],
+    pasta: ["Pasta, egg, fresh, raw", "Pasta, plain, fresh, boiled"],
+    cheddar: ["Cheese, Cheddar type, half fat", "Sandwich, white bread, cheddar cheese and pickle"],
+    broccoli: ["Broccoli, purple sprouting, raw"],
+    salmon: ["Salmon en croute, retail", "Salmon, smoked (cold-smoked)"],
+    rice: [
+      "Rice and split peas",
+      "Rice, Thai fragrant, raw",
+      "Rice, brown, wholegrain, raw",
+      "Rice, pilau, plain, homemade",
+    ],
+    spinach: ["Spinach, dried", "Spinach, frozen, boiled in unsalted water"],
+    lentils: ["Lentils, green and brown, whole, dried, raw", "Lentil roast, homemade"],
+    garlic: ["Garlic powder", "Garlic mushrooms, not coated, homemade"],
+    chicken: [
+      "Chicken slices",
+      "Chicken, mince, raw",
+      "Chicken breast/steak, coated, baked",
+      "Chicken, breast, casseroled, meat only",
+    ],
+    peppers: [
+      "Pepper, black",
+      "Pepper, white",
+      "Peppers, capsicum, chilli, red, raw",
+      "Peppers, capsicum, green, raw",
+    ],
+    eggs: [
+      "Egg fu yung",
+      "Egg nog, homemade",
+      "Eggs, duck, whole, raw",
+      "Eggs, chicken, yolk, raw",
+    ],
+    bread: [
+      "Bread, seeded",
+      "Bread, white, sliced",
+      "Banana bread, homemade",
+      "Flour, wheat, brown, bread/strong",
+    ],
+    butter: ["Butter, salted", "Butteroil, unsalted", "Peanut butter, smooth"],
+    apples: [
+      "Apple juice, clear, ambient and chilled",
+      "Apples, eating, dried",
+      "Apples, cooking, baked without sugar, flesh only",
+    ],
+    yogurt: ["Yogurt, Greek style, fruit", "Yogurt, low fat, plain", "Yogurt, whole milk, fruit"],
+    flour: ["Flour, wheat, wholemeal", "Flour, rice", "Flour, rye"],
+    tomatoes: [
+      "Tomato juice",
+      "Tomato puree",
+      "Tomatoes, canned, whole contents",
+      "Tomatoes, stuffed with rice",
+    ],
+    springOnions: ["Onions, raw", "Noodles, egg, fried with spring onions, homemade"],
+  };
+
+  it.each(Object.entries(FOODS))("should find a right food for %s in the CI seed", (_key, food) => {
+    expect(seededNames.some((name) => food.namePattern.test(name))).toBe(true);
+  });
+
+  it.each(Object.entries(WRONG))("should refuse the wrong foods for %s", (key, names) => {
+    const food = Object.entries(FOODS).find(([foodKey]) => foodKey === key)?.[1];
+
+    expect(food).toBeDefined();
+    expect(names.filter((name) => food?.namePattern.test(name))).toEqual([]);
+  });
+
+  it("should expect a food for every line of every page, and none for a bare spice", () => {
+    const lines = recipePages.flatMap((page) => page.lines);
+
+    expect(
+      lines
+        .filter((line) => line.kind === "unresolved")
+        .map((line) => line.text)
+        .sort(),
+    ).toEqual(
+      expect.arrayContaining([
+        "1 tbsp gochujang",
+        "1 tbsp harissa",
+        "2 tsp sumac",
+        "a pinch of sumac",
+        "a spoonful of harissa",
+      ]),
+    );
+    expect(lines.every((line) => !/\bpaste\b/i.test(line.text))).toBe(true);
   });
 });
 
@@ -415,7 +541,7 @@ describe("a model that answers every page right", () => {
 describe("the graders", () => {
   const plain = pageNamed("jsonld-plain-porridge");
   const vague = pageNamed("vague-milk");
-  const unresolvedPage = pageNamed("vague-saffron");
+  const unresolvedPage = pageNamed("vague-sumac");
   const undone = pageNamed("undo-jsonld-plain-porridge");
 
   const failures = async (page: RecipePage, variant: Variant) => {

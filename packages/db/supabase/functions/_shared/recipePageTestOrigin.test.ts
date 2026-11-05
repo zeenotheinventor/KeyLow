@@ -271,3 +271,43 @@ Deno.test(
     assertEquals(requested, [`${testOrigin}/a`]);
   },
 );
+
+Deno.test(
+  "a trailing dot makes another name, so it falls through to the real resolver and fetch",
+  async () => {
+    const dotted = `${RECIPE_PAGE_TEST_HOST}.`;
+    const stand = realStandIn({ [dotted]: ["10.0.0.9"] });
+    const privateResult = await fetchWith(`https://${dotted}/a`, activeEnvironment, stand);
+    // The real resolver answered a private address for the dotted name, so the guard refused it.
+    assertEquals(privateResult.result, { ok: false, code: "blocked_address" });
+    assertEquals(stand.resolved.includes(`${dotted} A`), true);
+    assertEquals(stand.fetched, []);
+
+    const publicStand = realStandIn();
+    const publicResult = await fetchWith(`https://${dotted}/a`, activeEnvironment, publicStand);
+    assertEquals(publicResult.result.ok, true);
+    // Fetched at its own address, never at the test origin.
+    assertEquals(publicStand.fetched, [`https://${dotted}/a`]);
+  },
+);
+
+Deno.test(
+  "the reserved name in capitals is the same name, because a web address lower-cases its host",
+  async () => {
+    const requested: string[] = [];
+    const stand = realStandIn();
+    const real: Real = {
+      ...stand.real,
+      fetchPage: (url) => {
+        requested.push(String(url));
+        return Promise.resolve(new Response("<p>fixture</p>", { headers: htmlHeaders }));
+      },
+    };
+    const result = await fetchRecipePage("https://RECIPES.Keylow.TEST/a", {
+      ...recipePageTestOverrides(activeEnvironment, real),
+      readUserAgent: () => "KeyLow-test/0.0 (test@keylow.local)",
+    });
+    assertEquals(result.ok, true);
+    assertEquals(requested, [`${testOrigin}/a`]);
+  },
+);

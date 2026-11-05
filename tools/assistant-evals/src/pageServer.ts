@@ -18,6 +18,14 @@ export const RECIPE_PAGE_SERVER_PORT = 24401;
 /** The link a case writes in its message for a page at `path`. */
 export const recipePageUrl = (path: string): string => `https://${RECIPE_PAGE_HOST}${path}`;
 
+function pathOf(target: string | undefined): string | null {
+  try {
+    return new URL(target ?? "/", "http://localhost").pathname;
+  } catch {
+    return null;
+  }
+}
+
 export type PageServer = Readonly<{ port: number; close: () => Promise<void> }>;
 
 /**
@@ -33,7 +41,12 @@ export function startPageServer(
       response.writeHead(405).end();
       return;
     }
-    const path = new URL(request.url ?? "/", "http://localhost").pathname;
+    // A target such as "//" or "///" is not a path `URL` accepts. It is a bad request and not a reason to stop.
+    const path = pathOf(request.url);
+    if (path === null) {
+      response.writeHead(400).end();
+      return;
+    }
     const html = pages.get(path);
     if (html === undefined) {
       response.writeHead(404).end();
