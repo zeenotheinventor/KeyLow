@@ -85,6 +85,8 @@ export const SUGGESTION_DETAIL = {
     "Ki-Lo keeps your plan and adds what your week is short of. Muscles still hot are left out.",
   footnoteWithoutPlan:
     "Ki-Lo builds this from what your week is short of. Muscles still hot are left out.",
+  /** The web dialog's line while there is no connection: Add and Start are off, Not now is not. No board draws it. */
+  offline: "Adding to a day or starting a session needs a connection.",
 } as const;
 
 /** The fixed words of the accepted card and its toast. */

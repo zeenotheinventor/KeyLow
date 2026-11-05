@@ -14,12 +14,14 @@ import Link from "next/link";
 
 import { PlanWeek } from "../PlanWeek";
 import { SuggestionCard } from "../SuggestionCard";
+import { SuggestionDetailDialog } from "../SuggestionDetailDialog";
 import { TodayCard } from "../TodayCard";
 import { TrainBodyMap } from "../TrainBodyMap";
 import { TrainFirstTime } from "../TrainFirstTime";
 import { TrainLoading } from "../TrainLoading";
 import { TrainNoRoutine } from "../TrainNoRoutine";
 import { plannedExercisesOf } from "./plannedExercises";
+import { useSuggestionDetail } from "./useSuggestionDetail";
 import { useTrainSuggestion } from "./useTrainSuggestion";
 
 import type { TrainScreenProps, TrainSessionStart } from "./types";
@@ -61,7 +63,8 @@ function bindViewSession(handler: (sessionId: string) => void, sessionId: string
  * card and the week in the left column and the body map in a column of its own at 360 pixels, which
  * stacks under them below it. The body map is left out on the first visit. The suggestion card sits under the
  * Today card and above the week, so above the body map in either layout, and is drawn only when it is given
- * the notices that show its toast. It is not pressable until the web suggestion detail.
+ * the notices that show its toast. Its heading opens the suggestion detail, a dialog mounted here that shows
+ * the offer the card holds.
  */
 export function TrainScreen({
   isStarting = false,
@@ -84,6 +87,11 @@ export function TrainScreen({
     isOnline,
     notices: suggestionNotices,
     onAddPress: onSuggestionAddPress,
+  });
+  const detail = useSuggestionDetail({
+    state: suggestion.state,
+    isOnline,
+    dismiss: suggestion.dismiss,
   });
   // The board lists the planned day's exercises with their reps, which the active routine's read does not hold.
   const plannedRoutineId =
@@ -191,8 +199,10 @@ export function TrainScreen({
             )
           ) : null}
           <SuggestionCard
+            isStarting={isStarting}
             state={suggestion.state}
             onDismiss={suggestion.dismiss}
+            onOpenDetail={detail.open}
             onSetGoal={onSetGoal}
           />
           {home.status === "ready" && home.week !== null ? (
@@ -205,6 +215,19 @@ export function TrainScreen({
           </div>
         ) : null}
       </div>
+      <SuggestionDetailDialog
+        isOnline={isOnline}
+        isStarting={isStarting}
+        offer={detail.offer}
+        open={detail.isOpen}
+        onClose={detail.close}
+        onDismiss={() => {
+          detail.press("dismiss");
+        }}
+        onPrimary={() => {
+          detail.press("primary");
+        }}
+      />
     </div>
   );
 }

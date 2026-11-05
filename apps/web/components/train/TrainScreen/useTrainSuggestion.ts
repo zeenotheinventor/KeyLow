@@ -1,7 +1,7 @@
 import { useSuggestionCard } from "@keylow/api-client";
 import { useEffect, useRef } from "react";
 
-import { SUGGESTION_ADD_ATTRIBUTE } from "../SuggestionCard";
+import { SUGGESTION_PRIMARY_ATTRIBUTE } from "../SuggestionCard";
 
 import type { SuggestionCardState, SuggestionNotices, TrainHome } from "@keylow/api-client";
 
@@ -19,8 +19,11 @@ const NO_NOTICES: SuggestionNotices = {
 
 type TrainSuggestion = {
   state: SuggestionCardState;
-  /** Puts off the suggestion of the day given, in this browser: "Not now". */
-  dismiss: (day: string) => void;
+  /**
+   * Puts off the suggestion of the day given, in this browser: "Not now". `from` is the card, when the press
+   * was made from the detail and not from the card, so focus goes to the control after the card.
+   */
+  dismiss: (day: string, from?: Element | null) => void;
 };
 
 /**
@@ -68,14 +71,14 @@ export function useTrainSuggestion({
       state.status === "offer" &&
       document.activeElement === document.body
     ) {
-      document.querySelector<HTMLElement>(`[${SUGGESTION_ADD_ATTRIBUTE}]`)?.focus();
+      document.querySelector<HTMLElement>(`[${SUGGESTION_PRIMARY_ATTRIBUTE}]`)?.focus();
     }
     previousStatus.current = state.status;
   }, [state.status]);
 
-  const dismissWithFocus = (day: string) => {
+  const dismissWithFocus = (day: string, from?: Element | null) => {
     // The control after the card, read now while the card is still there. A pointer press has none.
-    const next = keyboardUndo.afterRemovingRow().focusAction?.returnTo;
+    const next = keyboardUndo.afterRemovingRow({ from }).focusAction?.returnTo;
     dismiss(day);
     if (next instanceof HTMLElement) {
       next.focus();
