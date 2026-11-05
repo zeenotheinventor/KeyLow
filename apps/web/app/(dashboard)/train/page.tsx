@@ -1,8 +1,7 @@
 import { PageFrame } from "@/app/(dashboard)/PageFrame";
 import { TrainRoute } from "@/components/train";
 
-// The top bar does not link here yet: the finish ticket adds the Train link, since a page that starts a
-// session you cannot finish would be broken.
+// The top bar's Train link opens this page, and it stays current on the pages under it.
 export default function TrainPage() {
   return (
     <PageFrame variant="diary">

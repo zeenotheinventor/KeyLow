@@ -221,6 +221,7 @@ export {
   useWeightUnit,
 } from "./hooks";
 export {
+  describeFinishDetails,
   isPendingSetId,
   useAddedExercises,
   useDiscardSession,
@@ -233,6 +234,7 @@ export {
 export type {
   AddedExercise,
   ExercisePlan,
+  FinishDetails,
   LogSetRequest,
   PendingSet,
   PendingSets,

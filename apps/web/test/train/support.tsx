@@ -49,6 +49,12 @@ export const trainBackend: {
   hangingSearches: boolean;
   /** Fails the exercise searches, as a database that is down does. */
   failingSearches: boolean;
+  /** The bodies of the finish writes (`ended_at` and `note`) that were stored, in order. */
+  finishedSessions: Row[];
+  /** Holds every finish write until it settles, as a slow connection does. A test opens it by resolving it. */
+  finishGate: Promise<void> | null;
+  /** Never answers the writes that log a set, as a slow connection does. */
+  hangingSetWrites: boolean;
 } = {
   timeZone: "Europe/London",
   routine: null,
@@ -70,6 +76,9 @@ export const trainBackend: {
   searchedNames: [],
   hangingSearches: false,
   failingSearches: false,
+  finishedSessions: [],
+  finishGate: null,
+  hangingSetWrites: false,
 };
 
 export function resetTrainBackend(): void {
@@ -93,6 +102,10 @@ export function resetTrainBackend(): void {
   trainBackend.searchedNames = [];
   trainBackend.hangingSearches = false;
   trainBackend.failingSearches = false;
+  trainBackend.finishedSessions = [];
+  trainBackend.finishGate = null;
+  trainBackend.hangingSetWrites = false;
+  lastFinishedSession = null;
 }
 
 export const readsOf = (name: string): number =>
@@ -171,10 +184,12 @@ function exerciseRead(
     return exerciseSearch(request, nameFilter);
   }
   const id = idParameter(searchParams);
-  const found = rowsOf(trainBackend.routine?.["routine_days"])
-    .flatMap((day) => rowsOf(day["routine_exercises"]))
-    .flatMap((entry) => rowsOf([entry["exercises"]]))
-    .find((exercise) => exercise["id"] === id);
+  const found = [
+    ...rowsOf(trainBackend.routine?.["routine_days"])
+      .flatMap((day) => rowsOf(day["routine_exercises"]))
+      .flatMap((entry) => rowsOf([entry["exercises"]])),
+    ...trainBackend.searchableExercises,
+  ].find((exercise) => exercise["id"] === id);
   return answer(request, found === undefined ? [] : [found]);
 }
 
@@ -196,6 +211,9 @@ async function setRequest(request: Request, searchParams: URLSearchParams): Prom
   }
   if (request.method === "POST") {
     trainBackend.writes.push("add_set");
+    if (trainBackend.hangingSetWrites) {
+      return new Promise<Response>(() => undefined);
+    }
     if (trainBackend.failingWrites) {
       return failedWrite();
     }
@@ -245,6 +263,30 @@ async function setRequest(request: Request, searchParams: URLSearchParams): Prom
   );
 }
 
+// The session that was finished, which the read after the write finds by its id.
+let lastFinishedSession: Row | null = null;
+
+/**
+ * The write that finishes the session: it sets `ended_at` and `note`. The session then stops being the one in
+ * progress and is a session of the week, as the database would have it.
+ */
+async function finishRequest(request: Request): Promise<Response> {
+  trainBackend.writes.push("finish_session");
+  await trainBackend.finishGate;
+  if (trainBackend.failingWrites) {
+    return failedWrite();
+  }
+  const body: unknown = await request.json();
+  const finish = isRow(body) ? body : {};
+  trainBackend.finishedSessions.push(finish);
+  if (trainBackend.activeSession !== null) {
+    lastFinishedSession = { ...trainBackend.activeSession, ...finish };
+    trainBackend.weekSessions = [...trainBackend.weekSessions, lastFinishedSession];
+    trainBackend.activeSession = null;
+  }
+  return new Response(null, { status: 204 });
+}
+
 async function respond(input: string | URL | Request, init?: RequestInit): Promise<Response> {
   const request = new Request(input, init);
   const { pathname, searchParams } = new URL(request.url);
@@ -291,8 +333,12 @@ async function respond(input: string | URL | Request, init?: RequestInit): Promi
     };
     return answer(request, [{ id: idWith("4", 9) }]);
   }
+  if (pathname.endsWith("/workout_sessions") && request.method === "PATCH") {
+    return finishRequest(request);
+  }
   if (pathname.endsWith("/workout_sessions") && searchParams.has("id")) {
-    return answer(request, trainBackend.activeSession === null ? [] : [trainBackend.activeSession]);
+    const session = trainBackend.activeSession ?? lastFinishedSession;
+    return answer(request, session === null ? [] : [session]);
   }
   if (pathname.endsWith("/workout_sessions")) {
     if (searchParams.has("local_date")) {
@@ -323,11 +369,14 @@ export function renderWithTrain(ui: ReactElement) {
   // A failed read is shown at once, where the app's own client would try it again first.
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
-  return renderWithRouter(
-    <KeyLowProvider client={client} queryClient={queryClient}>
-      {ui}
-    </KeyLowProvider>,
-  );
+  return {
+    ...renderWithRouter(
+      <KeyLowProvider client={client} queryClient={queryClient}>
+        {ui}
+      </KeyLowProvider>,
+    ),
+    queryClient,
+  };
 }
 
 const idWith = (group: string, n: number): string =>

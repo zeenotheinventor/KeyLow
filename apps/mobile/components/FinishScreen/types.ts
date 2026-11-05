@@ -1,24 +1,4 @@
-import type { HeatSet } from "@keylow/core/training";
-
-/** What the finish screen shows of the session, worked out when Finish is pressed. */
-export type FinishDetails = {
-  sessionId: string;
-  /** The routine day's name, or null for a session that follows none. */
-  dayName: string | null;
-  startedAt: string;
-  /** The working, drop and failure sets logged. */
-  workingSets: number;
-  /** The sets the plan asks for, or null for a session with no plan. */
-  plannedSets: number | null;
-  warmups: number;
-  exercisesLogged: number;
-  /** The exercises the plan has, or null for a session with no plan. */
-  exercisesPlanned: number | null;
-  /** The sentence naming the planned sets left alone, or null when none are. */
-  notLoggedNote: string | null;
-  /** The sets of the session that the heat model can read: those whose snapshot is stored. The Muscles trained card shows these alone. */
-  sets: readonly HeatSet[];
-};
+import type { FinishDetails } from "@keylow/api-client";
 
 /** How the screen stood when the session was saved. */
 export type SavedOutcome = {
