@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   goalExitPath,
+  goalLeavePath,
   goalPath,
   goalQuestionPath,
   goalRowPath,
@@ -25,7 +26,7 @@ describe("where the last question and the Goal row lead", () => {
     expect(goalSummaryPath()).toBe("/goal/summary");
   });
 
-  it("should open the flow from the Goal row of More for now", () => {
+  it("should open the Goal page from the Goal row of More", () => {
     expect(goalRowPath()).toBe("/goal");
   });
 });
@@ -33,6 +34,16 @@ describe("where the last question and the Goal row lead", () => {
 describe("where the goal questionnaire leaves to", () => {
   it("should leave to More, which is where its row is", () => {
     expect(goalExitPath()).toBe("/more");
+  });
+});
+
+describe("where a saved or closed flow leaves to", () => {
+  it("should leave for the Goal page when a goal was stored, so the new answers show", () => {
+    expect(goalLeavePath(true)).toBe("/goal");
+  });
+
+  it("should leave for More when the first goal is being set", () => {
+    expect(goalLeavePath(false)).toBe("/more");
   });
 });
 

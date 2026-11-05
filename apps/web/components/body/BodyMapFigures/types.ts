@@ -17,6 +17,14 @@ export type BodyMapSideBySide = {
   projectedCaption: string;
 };
 
+/** The 3D layout: one body on a stage, turned to `side`, in place of the front and the back together. */
+export type BodyMapIn3D = {
+  /** The side the body faces. */
+  side: BodyArtworkSide;
+  /** Called when the Front and Back control is pressed, and when a drag of the body settles on the other side. */
+  onSideChange: (side: BodyArtworkSide) => void;
+};
+
 export type BodyMapFiguresProps = {
   /** The scale the values are on: heat steps, volume statuses or gap values. */
   scale: BodyMapScale;
@@ -42,4 +50,10 @@ export type BodyMapFiguresProps = {
   selectedView?: BodyMapView | undefined;
   /** Draws Actual and Projected together instead of the front and the back of the view shown. A click does nothing there. */
   sideBySide?: BodyMapSideBySide | undefined;
+  /**
+   * Draws one body on a dark stage, in 3D when it can be and in 2D inside the stage when it cannot, with the Front
+   * and Back control, the zoom buttons and a hint under it, instead of the front and the back together. A click on
+   * it calls `onTap` and a drag turns it. Left out, or with `sideBySide`, the figures are 2D.
+   */
+  in3d?: BodyMapIn3D | undefined;
 };

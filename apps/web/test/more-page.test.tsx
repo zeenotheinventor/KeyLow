@@ -181,9 +181,18 @@ describe("More page", () => {
         .map((row) => row.textContent),
     ).toEqual([
       expect.stringContaining("Appearance"),
+      expect.stringContaining("Body map"),
       expect.stringContaining("Dashboard body map"),
       "About",
     ]);
+  });
+
+  it("should put the Body map control under Settings, after Appearance, on 2D", async () => {
+    await renderPage();
+
+    const settings = screen.getByRole("region", { name: "Settings" });
+    expect(within(settings).getByRole("radiogroup", { name: "Body map" })).toBeTruthy();
+    expect(within(settings).getByRole("radio", { name: "2D" })).toHaveProperty("checked", true);
   });
 
   it("should put the Dashboard body map control under Settings, between Appearance and About, on Heat", async () => {

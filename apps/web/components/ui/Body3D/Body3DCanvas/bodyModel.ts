@@ -15,5 +15,5 @@ async function readMaleModel(): Promise<BodyModel> {
   return loadBodyModel(await response.arrayBuffer());
 }
 
-/** The male model, fetched and parsed once for the page however many canvases ask. A read that fails is tried again. */
+/** The male model, fetched and parsed once for the page however many canvases ask. A read that fails stays failed until the page is loaded again. */
 export const maleBodyModel = readOnce(readMaleModel);

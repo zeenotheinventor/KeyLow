@@ -73,6 +73,7 @@ export const colors = {
   "role-primary": "#CCF249",
   "role-secondary": "#8FA83A",
   "role-assist": "#66783A",
+  "stage-background": "#0B0E13",
 };
 
 export const lightColors = {
@@ -147,6 +148,7 @@ export const lightColors = {
   "role-primary": "#4D7300",
   "role-secondary": "#76A01A",
   "role-assist": "#B9D67A",
+  "stage-background": "#0B0E13",
 };
 
 export const statusBarStyle = { dark: "light-content", light: "dark-content" };

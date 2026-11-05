@@ -1,11 +1,13 @@
 import { BODY_MAP } from "@keylow/core/copy";
 import { iconStroke } from "@keylow/tokens";
 import { ArrowRightLeft, Columns2 } from "lucide-react";
-import { useId } from "react";
+import { useId, useState } from "react";
 
 import type { BodyMapCardProps } from "./types";
+import type { BodyArtworkSide } from "@keylow/core/training";
 
 import { BodyMapFigures } from "@/components/body/BodyMapFigures";
+import { useBody3DLayout } from "@/components/body/BodyView";
 import { ViewLabel } from "@/components/body/ViewLabel";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -28,6 +30,11 @@ const SIDE_OPTIONS = [
  * With `onToggleSideBySide` the Show side by side button sits at the top right of the card. While
  * `sideBySide` is given the card is the side by side view, with the small Front and Back switch in the view
  * label's place. A `footer` closes the card, as the day scrubber does.
+ *
+ * With 3D chosen in More, a figure that has a 3D body and a browser that can draw it, the figures are one body on a
+ * dark stage with the Front and Back control, the zoom buttons and the hint under it. The layout is decided when the
+ * card first draws, so a failure of the 3D body after that leaves the card as it is, with the 2D figure in the stage.
+ * A click on the body still switches the view and a drag does not. Side by side is always 2D.
  */
 export function BodyMapCard({
   scale,
@@ -51,6 +58,9 @@ export function BodyMapCard({
 }: BodyMapCardProps) {
   const noteId = useId();
   const isSideBySide = sideBySide !== undefined;
+  const isIn3d = useBody3DLayout(body) && !isSideBySide;
+  // The side the 3D body faces, which the control under it and a drag of the body both set.
+  const [side3d, setSide3d] = useState<BodyArtworkSide>("front");
 
   return (
     <Card asChild padding="none">
@@ -104,6 +114,7 @@ export function BodyMapCard({
             selected={selectedMuscle}
             selectedView={selectedView}
             sideBySide={sideBySide}
+            in3d={isIn3d ? { side: side3d, onSideChange: setSide3d } : undefined}
           />
         </div>
         {toggleLabel === null ? null : (

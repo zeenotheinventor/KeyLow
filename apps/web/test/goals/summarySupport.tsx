@@ -188,11 +188,12 @@ function ChangeAnswers({ answers }: { answers: GoalDraftAnswers }) {
  * The summary as the app draws it: the real route inside the flow's answers and the toast host. The flow
  * opens with a goal that differs from `answers` in one answer and then gives `answers`, so the person has
  * changed something and Save goal is drawn. With `isChanged: false` the flow opens with `answers` as they
- * are, as it does for a stored goal that nothing has changed.
+ * are, as it does for a stored goal that nothing has changed. With `hasStoredGoal: false` the flow opens
+ * with nothing, as for the first goal, and the answers are given to it.
  */
 export function renderGoalSummary(
   answers: GoalDraftAnswers = goldenAnswers,
-  { isChanged = true }: { isChanged?: boolean } = {},
+  { isChanged = true, hasStoredGoal = true }: { isChanged?: boolean; hasStoredGoal?: boolean } = {},
 ) {
   // A failed read is shown at once, where the app's own client would try it again first.
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -205,8 +206,8 @@ export function renderGoalSummary(
     ...render(
       <KeyLowProvider client={client} queryClient={queryClient}>
         <ToastProvider>
-          <GoalDraftProvider initialAnswers={opened}>
-            {changesAnAnswer ? <ChangeAnswers answers={answers} /> : null}
+          <GoalDraftProvider initialAnswers={hasStoredGoal ? opened : undefined}>
+            {changesAnAnswer || !hasStoredGoal ? <ChangeAnswers answers={answers} /> : null}
             <GoalSummaryRoute />
           </GoalDraftProvider>
         </ToastProvider>
