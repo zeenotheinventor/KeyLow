@@ -1,4 +1,5 @@
 import type { ExercisePlan, ScreenSet, SetLogging, useChangeSetType } from "@keylow/api-client";
+import type { ExerciseMuscleEntry } from "@keylow/core/schemas";
 import type { LoadUnit, SessionExercise, SetType } from "@keylow/core/training";
 
 export type SessionExerciseCardProps = {
@@ -8,6 +9,8 @@ export type SessionExerciseCardProps = {
   target: string;
   /** The plan's sets, rep range and RIR for the exercise, or null for one added to the session. */
   plan: ExercisePlan | null;
+  /** The exercise's muscle map when the page already holds it, or null when the dialog has to read it. */
+  muscles: readonly ExerciseMuscleEntry[] | null;
   unit: LoadUnit;
   exercise: SessionExercise<ScreenSet>;
   /** Every set of the session, which the next set's numbers are filled from. */
@@ -35,3 +38,6 @@ export type SetTypeOpening = {
   setNumber: number;
   mark: HTMLButtonElement;
 };
+
+/** The Muscles it works dialog being open, and the button that opened it. */
+export type MusclesOpening = { mark: HTMLButtonElement };

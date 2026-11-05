@@ -167,6 +167,7 @@ describe("the package index", () => {
     "saveExercise",
     "archiveExercise",
     "useExercise",
+    "useExerciseMuscles",
     "useExerciseSearch",
     "useSaveExercise",
     "useArchiveExercise",

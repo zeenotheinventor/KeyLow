@@ -339,8 +339,15 @@ export { findPreviousSessionWeek, listSessionsInWeek } from "./repos";
 export type { HistorySessionRow, HistorySetRow } from "./repos";
 export { useSaveTrainingGoals, useTrainingGoals, useTrainingGoalsHistory } from "./hooks";
 export { getCurrentTrainingGoals, listTrainingGoalsHistory, saveTrainingGoals } from "./repos";
-export { useArchiveExercise, useExercise, useExerciseSearch, useSaveExercise } from "./hooks";
+export {
+  useArchiveExercise,
+  useExercise,
+  useExerciseMuscles,
+  useExerciseSearch,
+  useSaveExercise,
+} from "./hooks";
 export type {
+  ExerciseMusclesState,
   ExerciseSearchError,
   ExerciseSearchResult,
   ExerciseState,

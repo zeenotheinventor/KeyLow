@@ -1,6 +1,7 @@
 import { useLastPerformance } from "@keylow/api-client";
 import {
   SESSION_ACTIVE,
+  describeExerciseMusclesButton,
   describeSetCellName,
   describeSetColumns,
   describeSetInputError,
@@ -17,10 +18,10 @@ import {
   validateSetDraft,
   workingNumberOfRow,
 } from "@keylow/core/training";
-import { Plus } from "lucide-react";
+import { PersonStanding, Plus } from "lucide-react";
 import { useRef, useState } from "react";
 
-import type { RowEdits, SessionExerciseCardProps, SetTypeOpening } from "./types";
+import type { MusclesOpening, RowEdits, SessionExerciseCardProps, SetTypeOpening } from "./types";
 import type {
   SetTableColumn,
   SetTableEntryRow,
@@ -28,10 +29,12 @@ import type {
 } from "@/components/train/SetTable";
 import type { SetDraft, SetDraftIssue, SetType } from "@keylow/core/training";
 
+import { ExerciseMusclesDialog } from "@/components/train/ExerciseMusclesDialog";
 import { SetTable } from "@/components/train/SetTable";
 import { SetTypeDialog } from "@/components/train/SetTypeDialog";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { IconButton } from "@/components/ui/IconButton";
 
 const BLANK_DRAFT: Pick<SetDraft, SetTableColumn> = { load: "", reps: "", rir: "" };
 
@@ -61,6 +64,7 @@ export function SessionExerciseCard({
   name,
   target,
   plan,
+  muscles,
   unit,
   exercise,
   sessionSets,
@@ -76,6 +80,7 @@ export function SessionExerciseCard({
   >({});
   const [minimumRows, setMinimumRows] = useState(0);
   const [typeOpening, setTypeOpening] = useState<SetTypeOpening | null>(null);
+  const [musclesOpening, setMusclesOpening] = useState<MusclesOpening | null>(null);
   const addSetRef = useRef<HTMLButtonElement>(null);
   const [latestSession] = lastPerformance.data ?? [];
   const previousSets = latestSession?.sets ?? [];
@@ -292,10 +297,31 @@ export function SessionExerciseCard({
   return (
     <Card asChild padding="none" className="flex flex-col pb-2 pt-3">
       <section aria-label={name}>
-        {/* The header keeps room at its end for the muscles button of the exercise. */}
-        <div className="flex items-baseline justify-between gap-3 px-4 pb-2">
-          <h2 className="min-w-0 text-body-strong">{name}</h2>
-          <span className="shrink-0 text-caption text-text-muted">{target}</span>
+        <div className="flex items-center gap-2 pb-1 pl-4 pr-2">
+          {/* Below sm the target sits under the name, as the mobile board stacks it, so the button does not squeeze the name. From sm up it is right aligned on the name's line, as `web-session · active` draws it. */}
+          <div className="flex min-w-0 flex-1 flex-col sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
+            <h2 className="min-w-0 text-body-strong">
+              {/* A click on the name opens the muscles for a pointer. The button beside it is the way for the keyboard and for screen readers, so the name is no second stop. */}
+              <button
+                type="button"
+                tabIndex={-1}
+                className="max-w-full cursor-pointer rounded-small text-left"
+                onClick={(event) => {
+                  setMusclesOpening({ mark: event.currentTarget });
+                }}
+              >
+                {name}
+              </button>
+            </h2>
+            <span className="text-caption text-text-muted sm:shrink-0">{target}</span>
+          </div>
+          <IconButton
+            icon={PersonStanding}
+            label={describeExerciseMusclesButton(name)}
+            onClick={(event) => {
+              setMusclesOpening({ mark: event.currentTarget });
+            }}
+          />
         </div>
         <SetTable
           columns={describeSetColumns(unit)}
@@ -314,6 +340,17 @@ export function SessionExerciseCard({
             {SESSION_ACTIVE.addSetAction}
           </Button>
         </div>
+        {musclesOpening === null ? null : (
+          <ExerciseMusclesDialog
+            exerciseId={exerciseId}
+            exerciseName={name}
+            muscles={muscles}
+            returnFocusTo={musclesOpening.mark}
+            onClose={() => {
+              setMusclesOpening(null);
+            }}
+          />
+        )}
         {typeOpening === null ? null : (
           <SetTypeDialog
             open
