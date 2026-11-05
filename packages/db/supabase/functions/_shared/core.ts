@@ -2,6 +2,7 @@
 // bundle behind it is written by `bundle-core-for-deno` and typed by the @ts-self-types pragma in
 // it, so a missing or stale bundle fails `deno check` here. Export what a function needs.
 export type {
+  ImportCandidate,
   AssistantCard,
   AssistantCardDraft,
   AssistantNotice,
@@ -54,7 +55,7 @@ export {
   buildUpdatedCard,
   canLogRecipe,
   canMeasureByVolume,
-  importCandidateLabel,
+  importCandidate,
   importedAmountOf,
   importFoodCandidates,
   importSearchWords,

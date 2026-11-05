@@ -83,10 +83,11 @@ export function importSearchWords(foodWord: string): string[] {
 }
 
 /** The most foods offered to the model for one line. */
-export const IMPORT_CANDIDATES_MAX = 20;
+export const IMPORT_CANDIDATES_MAX = 30;
 
 const IMPORT_SEARCH_WORDS_MAX = 3;
-const CANDIDATE_LABEL_MAX_CHARACTERS = 80;
+const CANDIDATE_NAME_MAX_CHARACTERS = 80;
+const CANDIDATE_BRAND_MAX_CHARACTERS = 40;
 
 // "potato" is also "potatos" and "potatoes", "berry" is "berries". Only the forms a name starts with matter.
 function pluralFormsOf(word: string): string[] {
@@ -98,14 +99,32 @@ function pluralFormsOf(word: string): string[] {
 /** The part of a food's name before its first comma, in lower case: "Potatoes" of "Potatoes, old, raw". */
 const firstPartOf = (name: string): string => (name.split(",")[0] ?? "").trim().toLowerCase();
 
+/** The part after the first comma, in lower case: the kind ("old", "semi-skimmed", "Cheddar") or "" when there is none. */
+const kindOf = (name: string): string => (name.split(",")[1] ?? "").trim().toLowerCase();
+
+// Takes one name of each kind in turn, in the order the kinds first appear, so a kind with sixty names does not
+// push out a kind with one: "Cheese, Cheddar, English" is not lost behind forty other cheeses.
+function onePerKindInTurn<Food extends CandidateFood>(foods: readonly Food[]): Food[] {
+  const kinds = new Map<string, Food[]>();
+  for (const food of foods) {
+    const kind = kindOf(food.name);
+    kinds.set(kind, [...(kinds.get(kind) ?? []), food]);
+  }
+  const rounds = Math.max(0, ...[...kinds.values()].map((names) => names.length));
+  return Array.from({ length: rounds }, (_, round) =>
+    [...kinds.values()].flatMap((names) => (names[round] === undefined ? [] : [names[round]])),
+  ).flat();
+}
+
 type CandidateFood = { id: string; name: string };
 
 /**
  * The foods to offer the model for a line. The lists of `importSearchWords` are joined in order and a food
  * found twice is kept once. The foods whose first part is the food word, its plural or one of its words go
- * first ("Potatoes, old, raw" for "potato", where a dish such as "Potato rings" ties with it on score), the
- * rest keep their order, and the list is cut at `IMPORT_CANDIDATES_MAX`. The order is only a way to put the
- * likely foods inside the cut. The model chooses, so there is no list of dish or cooking words here.
+ * first ("Potatoes, old, raw" for "potato", where a dish such as "Potato rings" ties with it on score), taken
+ * one of each kind in turn (the part after the first comma), the rest keep their order, and the list is cut at
+ * `IMPORT_CANDIDATES_MAX`. The order is only a way to put the likely foods inside the cut. The model chooses,
+ * so there is no list of dish or cooking words here.
  */
 export function importFoodCandidates<Food extends CandidateFood>(
   foodWord: string,
@@ -127,21 +146,27 @@ export function importFoodCandidates<Food extends CandidateFood>(
     joined.filter((food) => wanted.has(firstPartOf(food.name))),
     joined.filter((food) => !wanted.has(firstPartOf(food.name))),
   ];
-  return [...named, ...others].slice(0, IMPORT_CANDIDATES_MAX);
+  return [...onePerKindInTurn(named), ...others].slice(0, IMPORT_CANDIDATES_MAX);
 }
 
+/** One food as the model reads it: its name, and whether it is the person's own food. */
+export type ImportCandidate = { name: string; own: boolean };
+
 /**
- * How a candidate food is written to the model: its name, then the brand when it has one, or "(the person's
- * own)" for their own food, cut at 80 characters. The model never sees the food's id.
+ * How a candidate food is written to the model: its name cut at 80 characters, then the brand when it has one
+ * (cut at 40), and `own` for the person's own food. `own` comes from the food's source and never from the text,
+ * so a product named "Potatoes (the person's own)" is not taken for one. The model never sees the food's id.
  */
-export function importCandidateLabel(food: {
+export function importCandidate(food: {
   name: string;
   brand: string | null;
   source: string;
-}): string {
-  const brand = food.brand?.trim() ?? "";
-  const suffix = food.source === "user" ? " (the person's own)" : brand === "" ? "" : ` (${brand})`;
-  return `${food.name}${suffix}`.slice(0, CANDIDATE_LABEL_MAX_CHARACTERS);
+}): ImportCandidate {
+  const brand = food.brand?.trim().slice(0, CANDIDATE_BRAND_MAX_CHARACTERS) ?? "";
+  return {
+    name: `${food.name.slice(0, CANDIDATE_NAME_MAX_CHARACTERS)}${brand === "" ? "" : ` (${brand})`}`,
+    own: food.source === "user",
+  };
 }
 
 /** What the parse read of a line's amount. */

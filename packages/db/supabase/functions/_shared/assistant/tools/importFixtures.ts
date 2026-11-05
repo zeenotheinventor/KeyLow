@@ -238,9 +238,13 @@ export type ImportCalls = {
 };
 
 /** The positions that choose the first candidate of every line, as the pick stub answers by default. */
-export const firstCandidates = (lines: readonly FoodPickLine[]): FoodPickOutcome => ({
+export const firstCandidates = (lines: readonly FoodPickLine[]): FoodPickOutcome =>
+  picked(...lines.map(() => 0));
+
+/** A reply that answers line n with the nth position, as the model does when it keeps the line numbers. */
+export const picked = (...positions: (number | null)[]): FoodPickOutcome => ({
   ok: true,
-  picks: lines.map(() => 0),
+  picks: positions.map((position, line) => ({ line, position })),
 });
 
 // The outside steps, answered from a script, and a record of what was asked of them. Unless a test says

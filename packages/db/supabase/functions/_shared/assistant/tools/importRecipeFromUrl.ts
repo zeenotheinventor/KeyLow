@@ -18,15 +18,15 @@
 // - The whole tool must finish inside the turn loop's 20 s for one MCP call (`MCP_REQUEST_TIMEOUT_MILLISECONDS`
 //   in `assistant/turn.ts`). The fetch gets 5 s, the parse call 9 s, the pick call 4 s, and every step is raced
 //   against a cutoff of 18 s from the start. The save is last, and it is not started after the cutoff, so a call
-//   that the loop gives up on has not saved anything. A save that has started takes one write, well inside the 2 s
-//   left.
+//   that the loop gives up on has not saved anything, and it is not started with less than half a second left. A
+//   save that has started takes one write, well inside the 2.5 s or more that is left.
 // - Nothing here logs or reports a page, a link or a line.
 import { z } from "zod";
 
 import {
   buildRecipeImportedCard,
   buildRecipeIngredient,
-  importCandidateLabel,
+  importCandidate,
   importedAmountOf,
   importFoodCandidates,
   importSearchWords,
@@ -96,6 +96,8 @@ const HITS_PER_SEARCH = 50;
 const SEARCH_TEXT_MAX_CHARACTERS = 80;
 // The page's own line, cut for the pick call.
 const PICK_LINE_MAX_CHARACTERS = 300;
+// The least time left for a save to start (a write tool call measured 77 to 303 ms).
+const SAVE_MINIMUM_MILLISECONDS = 500;
 const SOURCE_URL_MAX_CHARACTERS = 2000;
 
 class BudgetExceeded extends Error {}
@@ -375,7 +377,7 @@ export function createImportRecipeFromUrlTool(
         const pickLines: FoodPickLine[] = offered.map(({ found, read }) => ({
           line: read.text.slice(0, PICK_LINE_MAX_CHARACTERS),
           foodWord: (read.food_name ?? "").trim().slice(0, SEARCH_TEXT_MAX_CHARACTERS),
-          candidates: found.map(importCandidateLabel),
+          candidates: found.map(importCandidate),
         }));
         const picked = await within(
           services.pickFoods(pickLines, {
@@ -391,7 +393,7 @@ export function createImportRecipeFromUrlTool(
         }
         const chosenFoodIds: (string | null)[] = lines.map(() => null);
         offered.forEach(({ index, found }, offeredIndex) => {
-          const position = picked.picks[offeredIndex] ?? null;
+          const position = picked.picks[offeredIndex]?.position ?? null;
           chosenFoodIds[index] = position === null ? null : (found[position]?.id ?? null);
         });
 
@@ -418,8 +420,10 @@ export function createImportRecipeFromUrlTool(
           return checked.refused;
         }
 
-        // The save is last. Past the cutoff the loop may already have given up on this call.
-        if (msLeft() <= 0) {
+        // The save is last. It starts only with a real window left: a write that begins a moment before the cutoff
+        // and hangs would be cut off by the loop with the recipe saved and the tool reporting a failure, and a
+        // retry would save it twice.
+        if (msLeft() < SAVE_MINIMUM_MILLISECONDS) {
           throw new BudgetExceeded();
         }
         const sourceUrl = [fetched.finalUrl, withHttpScheme(url)].find(

@@ -24,6 +24,7 @@ import {
   importContext,
   importFoodIds,
   importServices,
+  picked,
   line,
   splashOfMilk,
   splashOfWhiteWine,
@@ -403,8 +404,8 @@ Deno.test(
     assertEquals(
       calls.picked[0]?.lines.map(({ foodWord, candidates }) => [foodWord, candidates]),
       [
-        ["red onion", ["Onions, raw"]],
-        ["semi skimmed milk", ["Milk, semi-skimmed"]],
+        ["red onion", [{ name: "Onions, raw", own: false }]],
+        ["semi skimmed milk", [{ name: "Milk, semi-skimmed", own: false }]],
       ],
     );
   },
@@ -425,7 +426,7 @@ Deno.test(
       const { services } = importServices({
         page: pageOfLines(["400 g potatoes"]),
         parse: { ok: true, recipe: linesOnly(lines) },
-        pick: { ok: true, picks: [position] },
+        pick: picked(position),
       });
       const { ctx } = importContext(tool, { services, search: script });
       return rowsOf(await executeTool(ctx, "import_recipe_from_url", input)).map(
@@ -457,15 +458,15 @@ Deno.test("the fillet hits of salmon fillet are saved only if the model chooses 
     );
   };
 
-  assertEquals(await run(() => ({ ok: true, picks: [null, 0] })), ["unresolved", "matched"]);
-  assertEquals(await run(() => ({ ok: true, picks: [0, 0] })), ["matched", "matched"]);
+  assertEquals(await run(() => picked(null, 0)), ["unresolved", "matched"]);
+  assertEquals(await run(() => picked(0, 0)), ["matched", "matched"]);
 });
 
 Deno.test("a null pick is food null on the card and out of the numbers", async () => {
   const { services } = importServices({
     page: page(lemonTraybakePage),
     parse: { ok: true, recipe: linesOnly(traybakeLines(splashOfMilk)) },
-    pick: (offered) => ({ ok: true, picks: offered.map((_, index) => (index === 0 ? null : 0)) }),
+    pick: (offered) => picked(...offered.map((_, index) => (index === 0 ? null : 0))),
   });
   const { ctx, stub } = importContext(tool, { services });
 
@@ -529,7 +530,7 @@ Deno.test(
     const { services } = importServices({
       page: page(lemonTraybakePage),
       parse: { ok: true, recipe: linesOnly(traybakeLines(splashOfMilk)) },
-      pick: (offered) => ({ ok: true, picks: offered.map(() => null) }),
+      pick: (offered) => picked(...offered.map(() => null)),
     });
     const { ctx, stub, store } = importContext(tool, { services });
 
@@ -547,10 +548,15 @@ Deno.test(
     const replies: FoodPickOutcome[] = [
       { ok: false, code: "failed" },
       { ok: false, code: "unreadable" },
-      { ok: true, picks: [0] },
-      { ok: true, picks: [0, 0, 0, 0, 0, 0, 0] },
-      { ok: true, picks: [0, 0, 0, 0, 0, 7] },
-      { ok: true, picks: [0, 0, 0, 0, 0, -1] },
+      picked(0),
+      picked(0, 0, 0, 0, 0, 0, 0),
+      picked(0, 0, 0, 0, 0, 7),
+      picked(0, 0, 0, 0, 0, -1),
+      // A line answered under another line's number.
+      {
+        ok: true,
+        picks: [1, 0, 2, 3, 4, 5].map((line) => ({ line, position: 0 })),
+      },
     ];
     for (const pick of replies) {
       const { services } = importServices({
@@ -581,7 +587,7 @@ Deno.test("a pick that outlasts the cutoff answers timed_out and saves nothing",
     parse: { ok: true, recipe: linesOnly(traybakeLines(splashOfMilk)) },
     pick: (offered) =>
       new Promise<FoodPickOutcome>((resolve) =>
-        setTimeout(() => resolve({ ok: true, picks: offered.map(() => 0) }), 200),
+        setTimeout(() => resolve(picked(...offered.map(() => 0))), 200),
       ),
   });
   const { ctx, stub } = importContext([tight], { services });
@@ -591,6 +597,35 @@ Deno.test("a pick that outlasts the cutoff answers timed_out and saves nothing",
   assertEquals(payloadOf(result), { error: "timed_out" });
   assertEquals(recipesOf(stub), []);
 });
+
+Deno.test(
+  "the save is not started with less than half a second left, and nothing is saved",
+  async () => {
+    const run = async (saveCutoffMilliseconds: number) => {
+      const { services } = importServices({
+        page: page(lemonTraybakePage),
+        parse: { ok: true, recipe: linesOnly(traybakeLines(splashOfMilk)) },
+      });
+      const { ctx, stub } = importContext(
+        [
+          createImportRecipeFromUrlTool({
+            fetchMilliseconds: 1000,
+            parseMilliseconds: 1000,
+            pickMilliseconds: 1000,
+            saveCutoffMilliseconds,
+          }),
+        ],
+        { services },
+      );
+      const result = await executeTool(ctx, "import_recipe_from_url", input);
+      return { payload: payloadOf(result), saved: recipesOf(stub).length };
+    };
+
+    // Every step is instant, so only the window left before the save decides.
+    assertEquals(await run(450), { payload: { error: "timed_out" }, saved: 0 });
+    assertEquals((await run(5_000)).saved, 1);
+  },
+);
 
 Deno.test(
   "the pick is given its own time, or what is left of the cutoff when that is less",

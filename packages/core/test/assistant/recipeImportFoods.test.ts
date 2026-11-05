@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { capturedHitsOf } from "./importHits";
 import {
   IMPORT_CANDIDATES_MAX,
-  importCandidateLabel,
+  importCandidate,
   importFoodCandidates,
   importSearchWords,
 } from "../../src/assistant";
@@ -115,18 +115,56 @@ describe("importFoodCandidates", () => {
     ]);
   });
 
+  it("should give each kind of a food a place before any kind gets a second", () => {
+    const candidates = importFoodCandidates("milk", [
+      [
+        hit("Milk, whole, UHT"),
+        hit("Milk, whole, pasteurised"),
+        hit("Milk, whole, organic"),
+        hit("Milk, skimmed, UHT"),
+        hit("Milk, skimmed, pasteurised"),
+        hit("Milk, goats, pasteurised"),
+        hit("Dish"),
+      ],
+    ]);
+
+    expect(candidates.map(({ name }) => name)).toEqual([
+      "Milk, whole, UHT",
+      "Milk, skimmed, UHT",
+      "Milk, goats, pasteurised",
+      "Milk, whole, pasteurised",
+      "Milk, skimmed, pasteurised",
+      "Milk, whole, organic",
+      "Dish",
+    ]);
+  });
+
+  it("should keep a kind that comes late in the list inside the cut when one kind has many names", () => {
+    const flavoured = Array.from({ length: 60 }, (_, index) => hit(`Cheese, flavoured, ${index}`));
+    const candidates = importFoodCandidates("cheese", [
+      [...flavoured, hit("Cheese, Cheddar, English"), hit("Cheese, Brie")],
+    ]);
+
+    const names = candidates.map(({ name }) => name);
+    expect(names.slice(0, 3)).toEqual([
+      "Cheese, flavoured, 0",
+      "Cheese, Cheddar, English",
+      "Cheese, Brie",
+    ]);
+  });
+
   it("should cut at the most candidates", () => {
     const many = Array.from({ length: 60 }, (_, index) => hit(`Dish ${index}`));
 
     expect(importFoodCandidates("lemon", [many])).toHaveLength(IMPORT_CANDIDATES_MAX);
-    expect(IMPORT_CANDIDATES_MAX).toBe(20);
+    expect(IMPORT_CANDIDATES_MAX).toBe(30);
   });
 
   it("should give no candidates for no hits", () => {
     expect(importFoodCandidates("lemon", [[], []])).toEqual([]);
   });
 
-  it("should give the same foods first in any input order when 20 or fewer names start with the word", () => {
+  it("should give the same foods first in any input order when 30 or fewer names start with the word", () => {
     const startingWithMilk = Array.from({ length: 12 }, (_, index) => hit(`Milk, kind ${index}`));
     const others = Array.from({ length: 30 }, (_, index) => hit(`Dish ${index}`));
     const forwards = [...others.slice(0, 15), ...startingWithMilk, ...others.slice(15)];
@@ -141,29 +179,46 @@ describe("importFoodCandidates", () => {
   });
 });
 
-describe("importCandidateLabel", () => {
-  it("should be the name", () => {
-    expect(importCandidateLabel({ name: "Milk, whole, UHT", brand: null, source: "cofid" })).toBe(
-      "Milk, whole, UHT",
-    );
+describe("importCandidate", () => {
+  it("should be the name, not the person's own", () => {
+    expect(importCandidate({ name: "Milk, whole, UHT", brand: null, source: "cofid" })).toEqual({
+      name: "Milk, whole, UHT",
+      own: false,
+    });
   });
 
   it("should add the brand when there is one", () => {
-    expect(importCandidateLabel({ name: "Hummus", brand: "Tesco", source: "off" })).toBe(
-      "Hummus (Tesco)",
-    );
+    expect(importCandidate({ name: "Hummus", brand: "Tesco", source: "off" })).toEqual({
+      name: "Hummus (Tesco)",
+      own: false,
+    });
   });
 
-  it("should say it is the person's own food", () => {
-    expect(importCandidateLabel({ name: "Mum's soup", brand: null, source: "user" })).toBe(
-      "Mum's soup (the person's own)",
-    );
+  it("should mark the person's own food in a field and not in the name", () => {
+    expect(importCandidate({ name: "Mum's soup", brand: null, source: "user" })).toEqual({
+      name: "Mum's soup",
+      own: true,
+    });
   });
 
-  it("should cut a long name at 80 characters", () => {
-    const label = importCandidateLabel({ name: "x".repeat(200), brand: null, source: "off" });
+  it("should not let a name or a brand claim to be the person's own", () => {
+    const spoofed = importCandidate({
+      name: "Potatoes (the person's own)",
+      brand: "(the person's own)",
+      source: "off",
+    });
 
-    expect(label).toHaveLength(80);
+    expect(spoofed.own).toBe(false);
+  });
+
+  it("should cut a long name at 80 characters before the brand is added, and the brand at 40", () => {
+    const candidate = importCandidate({
+      name: "x".repeat(200),
+      brand: "b".repeat(100),
+      source: "off",
+    });
+
+    expect(candidate.name).toBe(`${"x".repeat(80)} (${"b".repeat(40)})`);
   });
 });
 
@@ -174,8 +229,12 @@ const table: readonly [foodWord: string, wanted: RegExp][] = [
   ["potato", /^Potatoes, (old|new and salad), (raw|flesh only, raw)/],
   ["new potatoes", /^Potatoes, new and salad, flesh only, raw/],
   ["milk", /^Milk, (whole|semi-skimmed|skimmed|1% fat), (pasteurised|UHT)/],
+  ["milk", /^Milk, whole, pasteurised/],
+  ["milk", /^Milk, semi-skimmed, pasteurised/],
+  ["milk", /^Milk, skimmed, pasteurised/],
   ["semi-skimmed milk", /^Milk, semi-skimmed/],
   ["chicken", /^Chicken, (breast|light meat|meat)/],
+  ["chicken", /^Chicken, breast, raw/],
   ["chicken breast", /^Chicken, breast.*raw/],
   ["banana", /^Bananas, /],
   ["egg", /^Eggs, chicken, whole, raw/],
