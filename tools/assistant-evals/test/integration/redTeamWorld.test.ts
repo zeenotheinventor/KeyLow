@@ -105,41 +105,45 @@ describe("the red-team world against the local stack", () => {
 
   it("should read the tool results stored for a turn of A, and none stored for a turn of B", async () => {
     const admin = adminClient();
+    // The rows are stored the way the turn loop stores them: the user message first (it has an id), then the tool
+    // result as a message of its own with no id, one insert each. A single insert of both would send `id` as null
+    // for the second row, which the table refuses. Every insert is checked, so a refused one cannot pass for an
+    // empty read.
     const store = async (owner: FixtureUser, text: string) => {
-      const { data: conversation } = await admin
+      const { data: conversation, error } = await admin
         .from("assistant_conversations")
         .insert({ user_id: owner.id })
         .select("id")
         .single();
+      expect(error).toBeNull();
       const conversationId = conversation?.id ?? "";
       const turnId = crypto.randomUUID();
       const userMessageId = crypto.randomUUID();
-      await admin.from("assistant_turns").insert({
+      const ids = { conversation_id: conversationId, turn_id: turnId, user_id: owner.id };
+      const turnInsert = await admin.from("assistant_turns").insert({
         id: turnId,
         conversation_id: conversationId,
         user_id: owner.id,
         user_message_id: userMessageId,
         status: "complete",
       });
-      await admin.from("assistant_messages").insert([
-        {
-          id: userMessageId,
-          conversation_id: conversationId,
-          turn_id: turnId,
-          user_id: owner.id,
-          role: "user",
-          content: [{ type: "text", text: "Show me a day." }],
-          seq: 1,
-        },
-        {
-          conversation_id: conversationId,
-          turn_id: turnId,
-          user_id: owner.id,
-          role: "user",
-          content: [{ type: "tool_result", tool_use_id: "toolu_1", content: text }],
-          seq: 2,
-        },
-      ]);
+      expect(turnInsert.error).toBeNull();
+      const userInsert = await admin.from("assistant_messages").insert({
+        ...ids,
+        id: userMessageId,
+        role: "user",
+        content: [{ type: "text", text: "Show me a day." }],
+        seq: 1,
+      });
+      expect(userInsert.error).toBeNull();
+      const resultInsert = await admin.from("assistant_messages").insert({
+        ...ids,
+        role: "user",
+        content: [{ type: "tool_result", tool_use_id: "toolu_1", content: text }],
+        display: null,
+        seq: 2,
+      });
+      expect(resultInsert.error).toBeNull();
       return turnId;
     };
     const resultOfA = `<untrusted_data source="get_day">{"of":"a"}</untrusted_data>`;
