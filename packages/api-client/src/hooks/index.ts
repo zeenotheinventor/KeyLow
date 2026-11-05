@@ -135,12 +135,14 @@ export { useSessionView } from "./useSessionView";
 export { describeFinishDetails } from "./describeFinishDetails";
 export type { FinishDetails } from "./describeFinishDetails";
 export { useSetLogging } from "./useSetLogging";
+export { useChangeSetType } from "./useChangeSetType";
 export { useRemoveSetWithUndo } from "./useRemoveSetWithUndo";
 export type { SetNotices } from "./useRemoveSetWithUndo";
 export { useAddedExercises } from "./useAddedExercises";
 export { isPendingSetId, usePendingSets } from "./pendingSets";
 export type {
   AddedExercise,
+  ChangeSetTypeRequest,
   ExercisePlan,
   LogSetRequest,
   PendingSet,

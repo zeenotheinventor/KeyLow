@@ -42,17 +42,17 @@ export function useSetLogging(
     }
   }, [sets, prune]);
 
-  const logSet = ({ exerciseId, values }: LogSetRequest) => {
+  const logSet = async ({ exerciseId, values }: LogSetRequest): Promise<boolean> => {
     if (view.status !== "ready") {
-      return;
+      return false;
     }
     const key = JSON.stringify({ exerciseId, values });
     if (logging.current.has(key)) {
-      return;
+      return false;
     }
     if (!onlineManager.isOnline()) {
       notices.onFailure(SET_ENTRY.saveFailed);
-      return;
+      return false;
     }
     logging.current.add(key);
     pendingCount.current += 1;
@@ -71,25 +71,24 @@ export function useSetLogging(
       performed_at: now.toISOString(),
       deleted_at: null,
     } satisfies ScreenSet);
-    void addSet
-      .mutateAsync({
+    try {
+      const stored = await addSet.mutateAsync({
         sessionId: view.sessionId,
         exerciseId,
         draft: setDraftOfValues(values, view.unit),
         unit: view.unit,
         effortMode: "rir",
         now,
-      })
-      .then((stored) => {
-        pending.markSaved(pendingId, stored.id);
-      })
-      .catch(() => {
-        pending.drop(pendingId);
-        notices.onFailure(SET_ENTRY.saveFailed);
-      })
-      .finally(() => {
-        logging.current.delete(key);
       });
+      pending.markSaved(pendingId, stored.id);
+      return true;
+    } catch {
+      pending.drop(pendingId);
+      notices.onFailure(SET_ENTRY.saveFailed);
+      return false;
+    } finally {
+      logging.current.delete(key);
+    }
   };
 
   const removeSetWithUndo = useRemoveSetWithUndo(notices);

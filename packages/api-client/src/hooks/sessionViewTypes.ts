@@ -52,9 +52,16 @@ export type RemoveSetRequest = {
   setNumber: number;
 };
 
+/** Changes the type of a logged set. */
+export type ChangeSetTypeRequest = {
+  setId: string;
+  setType: SetType;
+};
+
 /** What a card does when a check is pressed. */
 export type SetLogging = {
-  logSet: (request: LogSetRequest) => void;
+  /** Resolves to whether the set was stored: false when it was refused, in flight already, or failed to save. */
+  logSet: (request: LogSetRequest) => Promise<boolean>;
   removeSet: (request: RemoveSetRequest) => void;
   /** Whether a set is one still being saved, whose check does nothing until the database has stored it. */
   isSaving: (setId: string) => boolean;

@@ -2,6 +2,7 @@
 
 import {
   describeFinishDetails,
+  useChangeSetType,
   useSessionView,
   usePendingSets,
   useSetLogging,
@@ -38,9 +39,9 @@ import { trainPath } from "@/lib/trainRoutes";
  * and sets logged, Discard session and Finish in the header, a card for each exercise with its table of sets, and Add
  * exercise, which opens the dialog that puts another exercise's card on the page. The
  * dashboard layout has already sent anyone who has not accepted the current Terms to the accept page, so
- * every read here is behind the terms gate. The logging, the removing with Undo and the discard are the
- * ones the phone uses (`@keylow/api-client`), and this page draws them. With no session in progress, which is
- * also what a discard leaves, it goes back to the Train home.
+ * every read here is behind the terms gate. The logging, the removing with Undo, the change of a set's type
+ * and the discard are the ones the phone uses (`@keylow/api-client`), and this page draws
+ * them. With no session in progress, which is also what a discard leaves, it goes back to the Train home.
  */
 export function SessionScreen() {
   const router = useRouter();
@@ -55,6 +56,7 @@ export function SessionScreen() {
       setLogging.removeSet(request);
     },
   };
+  const typeChange = useChangeSetType(notices);
   const [isDiscardOpen, setIsDiscardOpen] = useState(false);
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   // What the finish dialog was opened with, which it keeps while the saved session stops being the open one.
@@ -145,6 +147,7 @@ export function SessionScreen() {
             exercise={exercise}
             sessionSets={view.sets}
             logging={logging}
+            typeChange={typeChange}
           />
         ))}
         <Button

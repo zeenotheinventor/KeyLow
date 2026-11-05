@@ -224,6 +224,7 @@ export {
   describeFinishDetails,
   isPendingSetId,
   useAddedExercises,
+  useChangeSetType,
   useDiscardSession,
   usePendingSets,
   useRemoveSetWithUndo,
@@ -233,6 +234,7 @@ export {
 } from "./hooks";
 export type {
   AddedExercise,
+  ChangeSetTypeRequest,
   ExercisePlan,
   FinishDetails,
   LogSetRequest,

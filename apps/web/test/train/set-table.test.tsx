@@ -95,6 +95,38 @@ describe("the set table", () => {
     expect(screen.getByRole<HTMLButtonElement>("button", { name: /undo$/ }).disabled).toBe(true);
   });
 
+  it("should leave the mark as plain text for a table that gives its rows no way to change the type", () => {
+    renderTable([loggedRow({ label: "W", setType: "warmup" })]);
+
+    expect(screen.getByRole("cell", { name: "W" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /^Set type/ })).toBeNull();
+  });
+
+  it("should make the mark a button that opens the types, which Enter and Space press", async () => {
+    const onPress = vi.fn();
+    renderTable([loggedRow({ typeEdit: { name: "Set type, leg press set 1", onPress } })]);
+    const mark = screen.getByRole("button", { name: "Set type, leg press set 1" });
+    expect(mark.textContent).toBe("1");
+
+    mark.focus();
+    await userEvent.keyboard("{Enter}");
+    await userEvent.keyboard(" ");
+
+    expect(onPress).toHaveBeenCalledTimes(2);
+  });
+
+  it("should leave the mark inert, and still focusable, when it has nothing to do", () => {
+    renderTable([
+      loggedRow({ typeEdit: { name: "Set type, leg press set 1", onPress: undefined } }),
+    ]);
+    const mark = screen.getByRole("button", { name: "Set type, leg press set 1" });
+
+    mark.focus();
+
+    expect(mark.getAttribute("aria-disabled")).toBe("true");
+    expect(document.activeElement).toBe(mark);
+  });
+
   it("should draw a set still to log as three fields holding its numbers", () => {
     renderTable([entryRow()]);
 

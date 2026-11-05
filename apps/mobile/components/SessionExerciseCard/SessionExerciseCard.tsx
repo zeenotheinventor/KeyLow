@@ -10,6 +10,7 @@ import {
   prefillNextSet,
   sameAgain,
   setValuesOfPrefill,
+  workingNumberOfRow,
 } from "@keylow/core/training";
 import { useState } from "react";
 
@@ -112,7 +113,7 @@ export function SessionExerciseCard({
           openEntry(setType, setNumber);
         }
       : () => {
-          logging.logSet({ exerciseId, values });
+          void logging.logSet({ exerciseId, values });
         };
 
   // Removing a set takes a row away only when the sets done are beyond the plan, or it is a warm-up (which
@@ -142,10 +143,7 @@ export function SessionExerciseCard({
         };
       }
       // A warm-up has no number of its own, so it is shown the one it would have as a working set.
-      const workingNumber =
-        setType === "warmup"
-          ? rows.slice(0, index).filter((row) => row.setType !== "warmup").length + 1
-          : setNumber;
+      const workingNumber = workingNumberOfRow(rows, index);
       return {
         key: setId,
         state,
