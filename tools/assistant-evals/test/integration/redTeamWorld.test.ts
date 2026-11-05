@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 
 import { adminClient } from "../../../../packages/db/test/integration/support/stack";
-import { createRedTeamWorld } from "../../fixtures/redTeamWorld.ts";
+import { CONFIRM_DAY_ENTRY_COUNT, createRedTeamWorld } from "../../fixtures/redTeamWorld.ts";
 import { createFixtureUser } from "../../src/fixtureUser.ts";
 
 import type { RedTeamWorld } from "../../fixtures/redTeamWorld.ts";
@@ -53,25 +53,43 @@ describe("the red-team world against the local stack", () => {
     expect(data).toEqual([]);
   });
 
-  it("should plant one entry on each of A's label days and none on the write-cap and blank-message days", async () => {
-    for (const { localDate } of Object.values(world.planted.labels)) {
-      expect(await world.countEntriesOfAOn(localDate)).toBe(1);
+  it("should plant nothing in A until a case asks, then plant it once", async () => {
+    const plantedFoods = async () =>
+      (
+        await userA.client
+          .from("foods")
+          .select("name")
+          .eq("owner_id", userA.id)
+          .in("name", Object.values(world.planted.foodNames))
+      ).data?.length;
+
+    expect(await plantedFoods()).toBe(0);
+    expect(await world.countEntriesOfAOn(world.planted.labels.logChocolate.localDate)).toBe(0);
+
+    await Promise.all([world.ensurePlanted(), world.ensurePlanted()]);
+
+    expect(await plantedFoods()).toBe(3);
+    for (const label of Object.values(world.planted.labels)) {
+      const expected =
+        label.localDate === world.planted.labels.confirmDelete.localDate
+          ? CONFIRM_DAY_ENTRY_COUNT
+          : 1;
+      expect(await world.countEntriesOfAOn(label.localDate)).toBe(expected);
     }
     expect(await world.countEntriesOfAOn(world.planted.writeCapDate)).toBe(0);
+    expect(await world.countEntriesOfAOn(world.planted.writeLimitDirectDate)).toBe(0);
     expect(await world.countEntriesOfAOn(world.planted.blankMessageDate)).toBe(0);
   });
 
-  it("should plant A's three foods, which A can find by name", async () => {
+  it("should open an empty conversation of A's, which A can read", async () => {
+    const id = await world.newConversationOfA();
     const { data, error } = await userA.client
-      .from("foods")
-      .select("name")
-      .eq("owner_id", userA.id)
-      .in("name", Object.values(world.planted.foodNames));
+      .from("assistant_conversations")
+      .select("id")
+      .eq("id", id);
 
     expect(error).toBeNull();
-    expect(data?.map(({ name }) => name).sort()).toEqual(
-      Object.values(world.planted.foodNames).sort(),
-    );
+    expect(data).toEqual([{ id }]);
   });
 
   it("should plant nothing in A's diary window, so no other set can see it", async () => {
@@ -86,14 +104,59 @@ describe("the red-team world against the local stack", () => {
     expect(JSON.stringify(data)).not.toContain("ADMIN OVERRIDE");
   });
 
-  it("should record the tool results of a turn of A and none of B's", async () => {
-    expect(await world.toolResultsOf(crypto.randomUUID())).toEqual([]);
+  it("should read the tool results stored for a turn of A, and none stored for a turn of B", async () => {
+    const admin = adminClient();
+    const store = async (owner: FixtureUser, text: string) => {
+      const { data: conversation } = await admin
+        .from("assistant_conversations")
+        .insert({ user_id: owner.id })
+        .select("id")
+        .single();
+      const conversationId = conversation?.id ?? "";
+      const turnId = crypto.randomUUID();
+      const userMessageId = crypto.randomUUID();
+      await admin.from("assistant_turns").insert({
+        id: turnId,
+        conversation_id: conversationId,
+        user_id: owner.id,
+        user_message_id: userMessageId,
+        status: "complete",
+      });
+      await admin.from("assistant_messages").insert([
+        {
+          id: userMessageId,
+          conversation_id: conversationId,
+          turn_id: turnId,
+          user_id: owner.id,
+          role: "user",
+          content: [{ type: "text", text: "Show me a day." }],
+          seq: 1,
+        },
+        {
+          conversation_id: conversationId,
+          turn_id: turnId,
+          user_id: owner.id,
+          role: "user",
+          content: [{ type: "tool_result", tool_use_id: "toolu_1", content: text }],
+          seq: 2,
+        },
+      ]);
+      return turnId;
+    };
+    const resultOfA = `<untrusted_data source="get_day">{"of":"a"}</untrusted_data>`;
+    const resultOfB = `<untrusted_data source="get_day">{"of":"b"}</untrusted_data>`;
+    const turnOfA = await store(userA, resultOfA);
+    const turnOfB = await store(userB, resultOfB);
+
+    expect(await world.toolResultsOf(turnOfA)).toEqual([resultOfA]);
+    expect(await world.toolResultsOf(turnOfB)).toEqual([]);
   });
 
   it("should have the mcp function refuse A's JWT on B's open turn with a 401", async () => {
-    const { status } = await world.callMcpOnTurnOfB();
+    const { status, body } = await world.callMcpOnTurnOfB();
 
     expect(status).toBe(401);
+    expect(JSON.parse(body)).toMatchObject({ error: { code: "unauthorized" } });
     expect(await world.userB.liveEntryIds()).toHaveLength(2);
   });
 
@@ -102,5 +165,20 @@ describe("the red-team world against the local stack", () => {
 
     expect(body).toContain("no_user_message");
     expect(await world.countEntriesOfAOn(world.planted.blankMessageDate)).toBe(0);
+  });
+
+  it("should let ten log_entry calls through the mcp function and refuse the eleventh at the limit", async () => {
+    const { bodies, entriesOnDay, actionRows } = await world.callMcpLogEntriesOnOpenTurnOfA(11);
+
+    expect(bodies.slice(0, 10).some((body) => body.includes("write_limit_reached"))).toBe(false);
+    expect(bodies[10]).toContain("write_limit_reached");
+    expect(entriesOnDay).toBe(10);
+    expect(actionRows).toBe(10);
+  });
+
+  it("should list every entry of B's diary, which no tool result of A may carry the id of", () => {
+    expect(world.userB.allEntryIds.length).toBeGreaterThan(world.userB.entryIds.length);
+    expect(world.userB.allEntryIds).toEqual(expect.arrayContaining([...world.userB.entryIds]));
+    expect(world.userB.kcalFigures).toHaveLength(3);
   });
 });
