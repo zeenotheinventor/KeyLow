@@ -229,6 +229,7 @@ export {
   useAddedExercises,
   useChangeSetType,
   useDiscardSession,
+  useEditSet,
   usePendingSets,
   useRemoveSetWithUndo,
   useSessionDetail,
@@ -239,6 +240,9 @@ export {
 export type {
   AddedExercise,
   ChangeSetTypeRequest,
+  EditSet,
+  EditSetOpening,
+  EditSetOpeningState,
   ExercisePlan,
   FinishDetails,
   LogSetRequest,
@@ -256,6 +260,7 @@ export type {
   SessionStartRequest,
   SessionView,
   SessionViewExercise,
+  SetChanges,
   SetLogging,
   SetNotices,
 } from "./hooks";

@@ -7,6 +7,7 @@ export type {
   SetTableField,
   SetTableLoggedRow,
   SetTableProps,
+  SetTableReadOnlyEdit,
   SetTableReadOnlyRow,
   SetTableRow,
   SetTableTypeEdit,

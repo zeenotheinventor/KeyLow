@@ -112,6 +112,8 @@ export const HISTORY_EDIT_SET = {
   effectHint: "Changing a past set updates that day's heat and the week's sets.",
   deleteSetAction: "Delete set",
   saveAction: "Save changes",
+  /** The web dialog's line while there is no connection: Save changes and Delete set are off. No board draws it. */
+  offline: "Changing or deleting a set needs a connection.",
 } as const;
 
 /** The fixed words of the confirmation before a session is deleted. Its body is `describeDeleteSessionBody`. */
@@ -119,6 +121,8 @@ export const HISTORY_DELETE_SESSION = {
   title: "Delete this session?",
   confirmAction: "Delete session",
   cancelAction: "Keep it",
+  /** The web page's line while there is no connection: Delete session is off. No board draws it. */
+  offline: "Deleting a session needs a connection.",
   /** The toast when the delete does not go through. It states the rule and never a value. No board draws it. */
   failed: "The session was not deleted, check your connection and try again",
 } as const;
