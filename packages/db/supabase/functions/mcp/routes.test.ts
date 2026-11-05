@@ -3,6 +3,7 @@ import { assert, assertEquals, assertStringIncludes } from "@std/assert";
 import { createRegistry, toolRegistry } from "../_shared/assistant/registry.ts";
 import {
   createFakeActionStore,
+  fakeAsk,
   fakeReadTool,
   fakeWriteTool,
   spyOnConsole,
@@ -184,7 +185,7 @@ Deno.test(
 );
 
 Deno.test("tools/list carries a write tool's annotations and its confirmation_id", async () => {
-  const write = fakeWriteTool({ needsConfirmation: () => true }).definition;
+  const write = fakeWriteTool({ needsConfirmation: () => fakeAsk }).definition;
   const registry = createRegistry([fakeReadTool("read_one").definition, write]);
 
   const { tools } = await resultOf(await post(fake({ registry }).dependencies, listTools));
@@ -385,9 +386,9 @@ Deno.test("a write on a turn without a user message answers no_user_message", as
 });
 
 Deno.test(
-  "a write that needs a confirmation answers the confirmation id as structuredContent",
+  "a write that needs a confirmation answers the confirmation id and the question as structuredContent",
   async () => {
-    const write = fakeWriteTool({ needsConfirmation: () => true });
+    const write = fakeWriteTool({ needsConfirmation: () => fakeAsk });
     const made = fake({ registry: createRegistry([write.definition]) });
 
     const result = await resultOf(
@@ -399,19 +400,20 @@ Deno.test(
     const outcome = Object.entries(result["structuredContent"] ?? {});
     assertEquals(
       outcome.map(([key]) => key),
-      ["status", "confirmationId"],
+      ["status", "confirmationId", "question"],
     );
     assertEquals(outcome[0]?.[1], "needs_confirmation");
     assertEquals(typeof outcome[1]?.[1], "string");
+    assertEquals(outcome[2]?.[1], fakeAsk.question);
     assertEquals(result["isError"] ?? false, false);
     assertEquals(write.runs, []);
   },
 );
 
 Deno.test(
-  "a write that asks with a note answers the note as structuredContent after the confirmation id",
+  "a write that asks with a note answers the note as structuredContent after the question",
   async () => {
-    const write = fakeWriteTool({ needsConfirmation: () => ({ note: "A line." }) });
+    const write = fakeWriteTool({ needsConfirmation: () => ({ ...fakeAsk, note: "A line." }) });
     const made = fake({ registry: createRegistry([write.definition]) });
 
     const result = await resultOf(
@@ -423,9 +425,9 @@ Deno.test(
     const outcome = Object.entries(result["structuredContent"] ?? {});
     assertEquals(
       outcome.map(([key]) => key),
-      ["status", "confirmationId", "note"],
+      ["status", "confirmationId", "question", "note"],
     );
-    assertEquals(outcome[2]?.[1], "A line.");
+    assertEquals(outcome[3]?.[1], "A line.");
     assertEquals(write.runs, []);
   },
 );

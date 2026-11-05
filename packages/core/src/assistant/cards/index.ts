@@ -1,7 +1,7 @@
 export { confirmCopyButtons, confirmCopyQuestion } from "./confirmCopy";
 export { confirmArchiveButtons, confirmArchiveQuestion } from "./confirmArchive";
 export { confirmTargetsButtons, confirmTargetsQuestion } from "./confirmTargets";
-export { confirmDeleteButtons, confirmDeleteQuestion } from "./confirmDelete";
+export { confirmDeleteButtons, confirmDeleteDayWord, confirmDeleteQuestion } from "./confirmDelete";
 export { buildDayCompletedCard } from "./dayCompleted";
 export { buildDayCopiedCard } from "./dayCopied";
 export { buildDeletedCard } from "./deleted";

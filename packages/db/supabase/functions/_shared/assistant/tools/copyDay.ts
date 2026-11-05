@@ -4,7 +4,13 @@
 // went onto in `target_local_date` (ADR 0003, Amendment 14).
 import { z } from "zod";
 
-import { buildDayCopiedCard, cardEntryOfRow, localToday } from "../../core.ts";
+import {
+  buildDayCopiedCard,
+  cardEntryOfRow,
+  confirmCopyButtons,
+  confirmCopyQuestion,
+  localToday,
+} from "../../core.ts";
 import {
   CopyDayPartialWriteError,
   copyDay,
@@ -18,7 +24,7 @@ import { invalidInput, leftAsWritten, targetIdsOf } from "./entryWrite.ts";
 import { localDateSchema } from "./shared.ts";
 
 import type { CardEntry } from "../../core.ts";
-import type { WriteRunOutput, WriteToolDefinition } from "../tool.ts";
+import type { ConfirmationNeed, WriteRunOutput, WriteToolDefinition } from "../tool.ts";
 
 // The copies are inserted one by one and then stamped together by one request that names every id, so a
 // day with more entries than this is answered with `too_many_entries` and never copied.
@@ -46,17 +52,18 @@ export const copyDayTool: WriteToolDefinition<CopyDayInput> = {
     "Copies every entry of one diary day onto another day, with Undo, and replaces nothing. Read the day " +
     "you copy from with get_day first, and pass the number of entries it has as entry_count. A day with " +
     `more than ${maxEntriesPerDay} entries cannot be copied. When the day you copy onto already has ` +
-    "entries the call first answers needs_confirmation with a confirmation_id: ask the user in your own " +
-    "words how many entries it has, how many you would add, and that nothing is replaced, and when they " +
-    "say yes call again with the same input and that confirmation_id. To copy a single meal, use " +
-    "get_entries and log_entry instead.",
+    "entries the call first answers needs_confirmation with a confirmation_id: in the same response as " +
+    "the call, before it, write the question in your own words, saying how many entries the day already " +
+    "has, how many you would add, and that nothing is replaced, and when they say yes call again with " +
+    "the same input and that confirmation_id. When they say no, do not call again. To copy a single " +
+    "meal, use get_entries and log_entry instead.",
   kind: "write",
   input: copyDayInput,
   annotations: { readOnlyHint: false, destructiveHint: false },
   targetTable: "food_log_entries",
   // Asks only for a copy that `run` would make: a refusal (the same day, a day that is not the number the
   // model counted, a day too large or empty) must not spend a confirmation or show a button for it.
-  async needsConfirmation({ from, to, entry_count }, ctx) {
+  async needsConfirmation({ from, to, entry_count }, ctx): Promise<ConfirmationNeed> {
     if (to === from) {
       return false;
     }
@@ -65,7 +72,21 @@ export const copyDayTool: WriteToolDefinition<CopyDayInput> = {
       return false;
     }
     const { entries } = await getDiaryDay(ctx.caller, to);
-    return entries.length > 0;
+    if (entries.length === 0) {
+      return false;
+    }
+    const timeZone = zoneOrUtc(await getMyTimeZone(ctx.caller));
+    return {
+      question: confirmCopyQuestion({
+        from,
+        to,
+        // The person's own today, as the card reads it.
+        today: localToday(new Date().toISOString(), timeZone),
+        existingCount: entries.length,
+        copyingCount: entry_count,
+      }),
+      confirmLabel: confirmCopyButtons(entry_count).confirmLabel,
+    };
   },
   async run(ctx, { from, to, entry_count }): Promise<WriteRunOutput> {
     if (to === from) {

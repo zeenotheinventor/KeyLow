@@ -446,9 +446,13 @@ async function finishCall(
   const { outcome } = result;
   if (outcome.status === "needs_confirmation") {
     const words = confirmWordsFor(toolUse.name, toolUse.input);
-    const question = responseText.trim();
+    // The model's own words when it wrote some, and the tool's otherwise, so a model that wrote no
+    // question does not fail the turn. The tool's words are the board's, built from the person's own rows.
+    const modelWords = responseText.trim();
+    const question = modelWords === "" ? (outcome.question ?? "") : modelWords;
     if (words === null || question === "") {
-      // A bug the evals catch: the model did not word the question, or the tool has no buttons yet.
+      // A bug the evals catch: neither the model nor the tool worded the question, or the tool has no
+      // buttons yet. The tool's words are missing only while the `mcp` function is the old one (a deploy).
       await storeToolResult(run, block, null);
       run.dependencies.report(
         "assistant",
@@ -458,8 +462,8 @@ async function finishCall(
       return failedEnding("confirm_unavailable");
     }
     // The model worded the question before the tool answered, so a line the tool wrote (the figures the
-    // model could not know) is added after it, as its own paragraph. The guard above tests the model's own text, so a note
-    // alone never makes a confirmation.
+    // model could not know) is added after it, as its own paragraph. The guard above tests the question, so
+    // a note alone never makes a confirmation.
     const confirm = {
       confirmationId: outcome.confirmationId,
       question: outcome.note === undefined ? question : `${question}\n\n${outcome.note}`,

@@ -3,11 +3,15 @@
 // archive, and the question and the buttons are the board's (Amendment 1 A).
 import { z } from "zod";
 
-import { buildRecipeArchivedCard } from "../../core.ts";
+import {
+  buildRecipeArchivedCard,
+  confirmArchiveButtons,
+  confirmArchiveQuestion,
+} from "../../core.ts";
 import { getRecipe, setRecipeArchived } from "../../repos.ts";
 import { notFound } from "./entryWrite.ts";
 
-import type { WriteToolDefinition } from "../tool.ts";
+import type { ConfirmationNeed, WriteToolDefinition } from "../tool.ts";
 
 const archiveRecipeInput = z.strictObject({
   id: z.guid().describe("The id of the recipe, from get_recipes."),
@@ -19,9 +23,10 @@ export const archiveRecipeTool: WriteToolDefinition<ArchiveRecipeInput> = {
   name: "archive_recipe",
   description:
     "Archives one of the user's recipes, with Undo. Take the id from get_recipes, never from memory. The " +
-    "call first answers needs_confirmation with a confirmation_id: ask the user in your own words, naming " +
-    "the recipe, that it leaves their recipe list and that entries already logged from it stay in their " +
-    "diary, and when they say yes call again with the same id and that confirmation_id. A recipe that is " +
+    "call first answers needs_confirmation with a confirmation_id: in the same response as the call, " +
+    "before it, write the question in your own words, naming the recipe, that it leaves their recipe " +
+    "list and that entries already logged from it stay in their diary, and when they say yes call again " +
+    "with the same id and that confirmation_id. When they say no, do not call again. A recipe that is " +
     "not the user's is reported as not found.",
   kind: "write",
   input: archiveRecipeInput,
@@ -29,9 +34,15 @@ export const archiveRecipeTool: WriteToolDefinition<ArchiveRecipeInput> = {
   targetTable: "recipes",
   // Asks only about a recipe that is there to archive. One the user cannot see is answered `not_found`, and
   // one that is archived already is answered as it is, by `run`, without a question or a button.
-  async needsConfirmation({ id }, ctx) {
+  async needsConfirmation({ id }, ctx): Promise<ConfirmationNeed> {
     const recipe = await getRecipe(ctx.caller, id);
-    return recipe !== null && !recipe.is_archived;
+    if (recipe === null || recipe.is_archived) {
+      return false;
+    }
+    return {
+      question: confirmArchiveQuestion(recipe.name),
+      confirmLabel: confirmArchiveButtons().confirmLabel,
+    };
   },
   async run(ctx, { id }) {
     const recipe = await getRecipe(ctx.caller, id);

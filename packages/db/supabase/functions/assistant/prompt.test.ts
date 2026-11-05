@@ -117,6 +117,7 @@ Deno.test("the system prompt holds the product rules the boards print", () => {
     "copies a day over a day that already has entries",
     "archives a recipe",
     "changes targets",
+    "The question and the call belong in the same response.",
     "never from multiplying",
     "log those grams",
     "do not convert them to a portion",

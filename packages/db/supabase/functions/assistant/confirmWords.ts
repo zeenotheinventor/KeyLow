@@ -1,7 +1,9 @@
 // The words on the buttons of a confirmation, one line per tool that asks for one. The question above
-// the buttons is the model's own text, so only the buttons and the tone come from here. The code may add
-// a line of its own after that text: a tool's `note`, which the turn loop appends (KEY-824). A confirming
-// tool with no line cannot be confirmed in the app, and the loop ends that turn as failed.
+// the buttons is the model's own text when it wrote one, and the tool's own words (`question` in its
+// answer, built from the same core functions) when it wrote none, so only the buttons and the tone come
+// from here. The code may add a line of its own after that text: a tool's `note`, which the turn loop
+// appends (KEY-824). A confirming tool with no line cannot be confirmed in the app, and the loop ends that
+// turn as failed.
 import { z } from "zod";
 
 import {
