@@ -1,12 +1,15 @@
+import { describe, expect, it } from "vitest";
+
 import {
+  goalAnswersOfRow,
   goalDraftReducer,
   firstUnansweredStep,
   hasGoalDraftChanged,
   initialGoalDraft,
   isGoalStepAnswered,
-} from "../../components/GoalQuestionnaire/goalDraftReducer";
+} from "../../src/training/goalDraft";
 
-import type { GoalDraftAnswers } from "../../components/GoalQuestionnaire/goalDraftReducer";
+import type { GoalDraftAnswers } from "../../src/training/goalDraft";
 
 describe("the goal draft", () => {
   describe("at the start", () => {
@@ -229,6 +232,35 @@ describe("the goal draft", () => {
 
     it("should not look at the step itself or the ones after it", () => {
       expect(firstUnansweredStep(initialGoalDraft({ goal: "strength" }), 2)).toBeUndefined();
+    });
+  });
+
+  describe("the answers of a stored goal", () => {
+    it("should be the six answers and nothing else of the row", () => {
+      expect(
+        goalAnswersOfRow({
+          id: "11111111-1111-4111-8111-111111111111",
+          user_id: "22222222-2222-4222-8222-222222222222",
+          goal: "hybrid",
+          focus: ["arms"],
+          days_per_week: 5,
+          session_minutes: 50,
+          equipment: ["dumbbell"],
+          experience: "advanced",
+          muscle_priority: {},
+          params_version: "v1",
+          effective_from: "2026-09-21T08:00:00+00:00",
+          effective_to: null,
+          created_at: "2026-09-21T08:00:00+00:00",
+        }),
+      ).toStrictEqual({
+        goal: "hybrid",
+        focus: ["arms"],
+        days_per_week: 5,
+        session_minutes: 50,
+        equipment: ["dumbbell"],
+        experience: "advanced",
+      });
     });
   });
 });

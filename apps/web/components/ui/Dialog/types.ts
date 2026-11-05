@@ -7,6 +7,8 @@ export type DialogProps = {
   /** The dialog's accessible name, shown as its heading. */
   title: string;
   children?: React.ReactNode;
+  /** The name of the icon button in the header, which calls `onClose`. Say what closing does when "Close" would be ambiguous. */
+  closeLabel?: string;
   /** The actions, right aligned, such as Cancel and a primary button. */
   footer?: React.ReactNode;
   /** An action set apart on the left of the footer, such as a destructive Delete. */

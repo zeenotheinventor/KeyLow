@@ -369,3 +369,12 @@ export type {
 } from "./trainingReminders";
 export { weekDayLookOf, type WeekDayLook } from "./weekDayLook";
 export { workingNumberOfRow } from "./exerciseRows";
+export {
+  firstUnansweredStep,
+  goalAnswersOfRow,
+  goalDraftReducer,
+  hasGoalDraftChanged,
+  initialGoalDraft,
+  isGoalStepAnswered,
+} from "./goalDraft";
+export type { GoalDraft, GoalDraftAction, GoalDraftAnswers } from "./goalDraft";

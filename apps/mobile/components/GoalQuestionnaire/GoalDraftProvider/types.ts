@@ -1,4 +1,4 @@
-import type { GoalDraftAnswers } from "../goalDraftReducer";
+import type { GoalDraftAnswers } from "@keylow/core/training";
 import type { ReactNode } from "react";
 
 export type GoalDraftProviderProps = {
