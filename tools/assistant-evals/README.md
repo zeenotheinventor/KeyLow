@@ -19,7 +19,7 @@ The command runs under `tsx`, because it loads `@keylow/api-client` and `@keylow
 
 A run stops before the case that would take it past `--budget` tokens (default 300,000, Q2 of ADR 0006). The budget counts **input, output and cache creation tokens**. Cache read tokens are reported on their own and not counted, because a working prompt cache makes them most of a conversation, and counting them would punish the very thing the cache grader wants to see.
 
-- Spend is the sum of every `assistant_usage` row of the eval user, read after every turn, so compaction calls and turns whose driver failed are counted. A turn that reports no usage at all is an error, because a budget that cannot see spend does not stop anything.
+- Spend is the sum of every `assistant_usage` row of the eval user, read after every turn, so compaction calls and turns whose driver failed are counted. A turn that reports no usage at all is an error, because a budget that cannot see spend does not stop anything. The one exception is the press of a confirm button (the message is exactly the words of the button the previous turn asked with): the turn loop runs it in code with no model call, so it has no row, and the `madeNoModelCall` grader fails a press that did make one.
 - Before each case the runner expects it to cost as much as the largest case so far. Inside a case, no further turn is sent once the budget is reached. A run that still ends over budget prints `OVER BUDGET` and exits non-zero.
 - Cases the run did not reach count as misses in their set's pass rate. If every set is still at or above its threshold, the exit code is 0.
 

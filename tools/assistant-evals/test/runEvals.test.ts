@@ -226,6 +226,63 @@ describe("runEvals", () => {
       expect(report.cases[0]?.failures).toEqual(["no assistant_usage rows for the turn"]);
     });
 
+    describe("a turn with no usage row", () => {
+      const asking = (label = "Archive recipe") =>
+        costing(30, {
+          status: "confirm",
+          conversationId: "conversation-a",
+          confirmation: { question: "Archive it?", confirmLabel: label, cancelLabel: "Keep it" },
+        });
+      const press = (): ScriptedTurn => ({
+        result: turnResult({ conversationId: "conversation-a" }),
+      });
+      const pressCase = (message: string) =>
+        simpleCase("press", { messages: ["Archive my recipe.", message] });
+
+      it("should be allowed for the press of the confirm button, which makes no model call", async () => {
+        const { report } = await run([pressCase("Archive recipe")], [asking(), press()]);
+
+        expect(report.cases[0]).toMatchObject({ status: "passed", failures: [] });
+      });
+
+      it("should be allowed for the button's words in any case and with spaces around them", async () => {
+        const { report } = await run([pressCase("  archive RECIPE ")], [asking(), press()]);
+
+        expect(report.cases[0]?.status).toBe("passed");
+      });
+
+      it("should still be an error for a typed answer after a confirmation", async () => {
+        const { report } = await run([pressCase("yes please")], [asking(), press()]);
+
+        expect(report.cases[0]).toMatchObject({
+          status: "error",
+          failures: ["no assistant_usage rows for the turn"],
+        });
+      });
+
+      it("should still be an error for the cancel button's words", async () => {
+        const { report } = await run([pressCase("Keep it")], [asking(), press()]);
+
+        expect(report.cases[0]?.status).toBe("error");
+      });
+
+      it("should still be an error for the button's words when the turn before did not ask", async () => {
+        const answered = costing(30, { conversationId: "conversation-a" });
+        const { report } = await run([pressCase("Archive recipe")], [answered, press()]);
+
+        expect(report.cases[0]?.status).toBe("error");
+      });
+
+      it("should still be an error for the first turn of a case", async () => {
+        const { report } = await run(
+          [simpleCase("first", { messages: ["Archive recipe"] })],
+          [press()],
+        );
+
+        expect(report.cases[0]?.status).toBe("error");
+      });
+    });
+
     it("should stop the run when the spend of the user cannot be read", async () => {
       const stack = scriptedStack([costing(10), costing(10)]);
       const database = {

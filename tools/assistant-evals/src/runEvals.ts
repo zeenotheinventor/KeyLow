@@ -1,3 +1,5 @@
+import { isConfirmAnswer } from "@keylow/core";
+
 import type { CaseEnvironment, EvalCase } from "./case.ts";
 import type { TurnDriver } from "./driver.ts";
 import type { EvalSetName } from "./thresholds.ts";
@@ -59,6 +61,16 @@ const hasNoUsage = (usage: TurnUsage): boolean =>
     usage.cacheCreationInputTokens ===
   0;
 
+/**
+ * Whether the message is the press of a confirm button: the previous turn ended asking for a confirmation, and
+ * the message is exactly the words of its confirm button, compared as the app and the executor compare them. The
+ * turn loop runs such a turn in code and makes no model call (KEY-840), so it has no `assistant_usage` row on
+ * purpose. Anything else, a typed answer included, is a model turn.
+ */
+const isConfirmPress = (previous: TurnResult | undefined, text: string): boolean =>
+  previous?.status === "confirm" &&
+  isConfirmAnswer(text, previous.confirmation?.confirmLabel ?? null);
+
 const messageOf = (error: unknown): string =>
   error instanceof Error ? error.message : "unknown error";
 
@@ -116,7 +128,8 @@ function failedTurnReason(turn: TurnResult): string {
  * The spend is the sum of every `assistant_usage` row of the eval user, read after every turn, so a row with
  * the wrong turn id, a compaction call and a turn whose driver threw are all counted. The user is new for the
  * run, so the sum is the run's. A turn that reports no usage at all is a harness error, because a budget that
- * cannot see spend would let a run go on for ever. Before each case the runner expects it to cost as much as the
+ * cannot see spend would let a run go on for ever. The one exception is the press of a confirm button, which
+ * makes no model call. Before each case the runner expects it to cost as much as the
  * largest case so far, and when that would pass `budgetTokens` it stops: that case and the ones after it are not
  * run and never sent. The first case has no history, so it always runs. Inside a case, no further turn is sent
  * once the budget is reached.
@@ -176,7 +189,12 @@ export async function runEvals(input: RunInput): Promise<RunReport> {
         if (turn.status === "failed") {
           throw new CaseError(failedTurnReason(turn));
         }
-        if (hasNoUsage(await database.usageOfTurn(turn.turnId))) {
+        // A press makes no model call, so it may have no usage row. Every other turn must have one, because a
+        // turn that reports none would hide its spend from the budget.
+        if (
+          hasNoUsage(await database.usageOfTurn(turn.turnId)) &&
+          !isConfirmPress(turns.at(-2), text)
+        ) {
           throw new CaseError("no assistant_usage rows for the turn");
         }
         if (evalCase.afterTurn !== undefined && environment !== undefined) {

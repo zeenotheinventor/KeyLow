@@ -577,6 +577,7 @@ Deno.test("readConversation answers the latest earlier turn and its pending tool
   assertEquals(previousTurn, {
     status: "confirm",
     pendingTool: "delete_entry",
+    pendingConfirmationId: "confirmation-1",
     pendingConfirmLabel: "Delete 3 entries",
   });
 });
@@ -606,10 +607,34 @@ Deno.test(
     assertEquals(previousTurn, {
       status: "confirm",
       pendingTool: "delete_entry",
+      pendingConfirmationId: "confirmation-1",
       pendingConfirmLabel: null,
     });
   },
 );
+
+Deno.test("a pending confirmation with no id has no confirmation id", async () => {
+  const { store } = build({
+    tables: {
+      assistant_turns: [
+        turnRow({
+          id: earlierTurnId,
+          user_message_id: "00000000-0000-4000-8000-0000000000f0",
+          status: "confirm",
+          pending_confirmation: { tool: "delete_entry", confirm_label: "Delete 3 entries" },
+          created_at: minutesAgo(20),
+        }),
+        turnRow({ created_at: minutesAgo(0) }),
+      ],
+    },
+  });
+
+  const { previousTurn } = await store.readConversation(userId, conversationId, {
+    excludeMessageId: messageId,
+  });
+
+  assertEquals(previousTurn?.pendingConfirmationId, null);
+});
 
 Deno.test(
   "readConversation answers no previous turn for the first one, and no tool without a pending one",
@@ -636,7 +661,12 @@ Deno.test(
     );
     assertEquals(
       (await second.store.readConversation(userId, conversationId, options)).previousTurn,
-      { status: "complete", pendingTool: null, pendingConfirmLabel: null },
+      {
+        status: "complete",
+        pendingTool: null,
+        pendingConfirmationId: null,
+        pendingConfirmLabel: null,
+      },
     );
   },
 );

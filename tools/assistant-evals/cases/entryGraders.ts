@@ -426,6 +426,25 @@ export function turnEnded(turnIndex: number, status: TurnStatus): Grader {
   };
 }
 
+/**
+ * Passes when one turn, counted from 0, has no `assistant_usage` row, which means it made no model call. The
+ * press of a confirm button runs the stored call in code (KEY-840), so a model call on it means the loop asked a
+ * model to do what the person had already decided. The failure line names the turn and nothing else.
+ */
+export function madeNoModelCall(turnIndex: number): Grader {
+  return async ({ turns, database }) => {
+    const turn = turns[turnIndex];
+    if (turn === undefined) {
+      return fail(`turn ${turnIndex + 1} never happened`);
+    }
+    return (await database.firstModelCallOfTurn(turn.turnId)) === null
+      ? pass(`turn ${turnIndex + 1} made no model call`)
+      : fail(
+          `turn ${turnIndex + 1} made a model call, and the press of a confirm button runs in code`,
+        );
+  };
+}
+
 /** Passes when exactly `expected` rows match, read as the eval user. */
 export function rowCount(query: RowQuery, expected: number): Grader {
   return async ({ database }) => {
