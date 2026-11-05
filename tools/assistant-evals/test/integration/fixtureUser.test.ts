@@ -3,7 +3,8 @@ import { afterAll, describe, expect, inject, it } from "vitest";
 
 import { adminClient } from "../../../../packages/db/test/integration/support/stack";
 import { ASK_TARGETS, writeAskExtras } from "../../fixtures/askExtras.ts";
-import { DIARY_DAY_COUNT, diaryDay, fixtureRecipes } from "../../fixtures/diary.ts";
+import { DIARY_DAY_COUNT, diaryDateOf, diaryDay, fixtureRecipes } from "../../fixtures/diary.ts";
+import { dayTotals } from "../../fixtures/diaryTotals.ts";
 import { createEvalDatabase } from "../../src/database.ts";
 import { createFixtureUser } from "../../src/fixtureUser.ts";
 
@@ -145,6 +146,32 @@ describe("createFixtureUser against the local stack", () => {
     expect(await countOf("weigh_ins", user)).toBe(0);
     expect(await countOf("recipes", user)).toBe(0);
     expect(await countOf("day_logs", user)).toBe(0);
+  });
+});
+
+describe("the totals the ask set expects, against the local stack", () => {
+  it("should match day_totals for days 0, 1 and 2, day 0 holding both recipes", async () => {
+    const user = await newUser("day-totals");
+
+    const { data, error } = await user.client
+      .from("day_totals")
+      .select("local_date,kcal,protein_g,fat_g")
+      .in(
+        "local_date",
+        [0, 1, 2].map((dayNumber) => diaryDateOf(user.anchorDate, dayNumber)),
+      );
+
+    expect(error).toBeNull();
+    expect(data).toHaveLength(3);
+    for (const dayNumber of [0, 1, 2]) {
+      const row = data?.find(
+        ({ local_date }) => local_date === diaryDateOf(user.anchorDate, dayNumber),
+      );
+      const expected = dayTotals(dayNumber);
+      expect(row?.kcal).toBeCloseTo(expected.kcal ?? Number.NaN, 3);
+      expect(row?.protein_g).toBeCloseTo(expected.protein_g ?? Number.NaN, 3);
+      expect(row?.fat_g).toBeCloseTo(expected.fat_g ?? Number.NaN, 3);
+    }
   });
 });
 

@@ -246,6 +246,8 @@ export type DayEntry = Readonly<{
   name: string;
   /** `HH:MM`, the time the entry was logged at (UTC, which is the eval user's zone). */
   time: string;
+  /** The grams of a food, null for a recipe serving. */
+  grams: number | null;
   nutrients: NullableNutrients;
 }>;
 
@@ -259,7 +261,7 @@ export function dayEntries(dayNumber: number): readonly DayEntry[] {
         quantity: item.grams,
         unit: "g",
       });
-      return { name: item.food, time, nutrients };
+      return { name: item.food, time, grams: item.grams, nutrients };
     }
     const { nutrients } = buildRecipeLogEntry({
       ...NOT_USED,
@@ -267,7 +269,7 @@ export function dayEntries(dayNumber: number): readonly DayEntry[] {
       quantity: item.servings,
       unit: "serving",
     });
-    return { name: item.recipe, time, nutrients };
+    return { name: item.recipe, time, grams: null, nutrients };
   });
 }
 

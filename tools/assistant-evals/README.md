@@ -35,6 +35,10 @@ Every expected number and every expected citation line is worked out from the fi
 
 A case passes when the right tool was called for the right dates, the answer holds each number to the Diary's rounding, the citation is the tool's, the Estimate label is there on a trend answer, no tool wrote (`noActionRows()` and a check that every tool is a read tool, because the driver still gives no `readOnlyHint` and `noWrite()` would count every call as a write), and the reply never says "I".
 
+A case should fail only when the answer is wrong, so any good route to a right answer passes: `get_range_totals` over one day counts as `get_day`, and several `get_day` calls count as one `get_entries` over the same days. The citation may hold several lines joined with " · " (a turn that read twice), and passes when every part is a line a read tool gives and one is the expected line. A garnish such as 10 g of olive oil is not required in an answer. A failing case prints its question, the tools it called with their arguments and the expected number, and never the answer or a tool result.
+
+The targets `fixtures/askExtras.ts` writes belong to the run's one eval user, so every set sees them, not only `ask`. The budget is the run's, not the set's: a run without `--set ask` also runs the compaction set (about 55,000 to 65,000 tokens, an estimate) against the same 300,000 tokens, and the ask set's own estimate is about 120,000 to 180,000 with the prompt cache working. `cacheReadOnSecondTurn()` proves little in a full run, because the shared prefix is already cached after the first case, so a read on a second turn would happen even if that conversation's own prefix were not cached.
+
 The set is meant to be copied by the next sets: a spec in plain data (`AskSpec`), the graders made from it, and one test that builds the reply a model would give if it were right and checks that every grader passes it.
 
 ## The compaction set

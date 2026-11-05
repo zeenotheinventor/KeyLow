@@ -26,16 +26,30 @@ import {
 
 import type { DayEntry } from "../fixtures/diaryTotals.ts";
 import type { EvalCase, Grader } from "../src/case.ts";
+import type { ToolCall } from "../src/types.ts";
 
 const pass = (reason: string) => ({ passed: true, reason });
 const fail = (reason: string) => ({ passed: false, reason });
 
-/** Passes when the answer meta of the last turn holds one of these lines, which the tools build. */
+// A turn that read twice sends its lines joined with " · " (the turn loop's `distinctLine`).
+const CITATION_SEPARATOR = " · ";
+// The shapes of the lines the read tools build: "Based on 4 entries today and your targets", "Based on 38
+// entries, 12 to 18 Oct", "Based on 24 weigh-ins, ...", "No entries ..." and "No weigh-ins, ...".
+const TOOL_CITATION =
+  /^(?:Based on \d+ (?:entry|entries|weigh-in|weigh-ins)\b.+|No (?:entries|weigh-ins)\b.+)$/;
+
+/**
+ * Passes when the answer meta of the last turn is made of lines a read tool gives, and one of them is an
+ * expected line. A turn that read several times joins its lines, so the line is looked for among the parts.
+ */
 export function citationIsOneOf(citations: readonly string[]): Grader {
   return (context) => {
-    const citation = context.turns.at(-1)?.answerMeta?.citation ?? null;
+    const parts = (context.turns.at(-1)?.answerMeta?.citation ?? "")
+      .split(CITATION_SEPARATOR)
+      .filter((part) => part !== "");
+    const isToolLine = parts.length > 0 && parts.every((part) => TOOL_CITATION.test(part));
     return Promise.resolve(
-      citation !== null && citations.includes(citation)
+      isToolLine && parts.some((part) => citations.includes(part))
         ? pass("the citation is the tool's")
         : fail(
             `the citation under the answer is not the tool's (wanted ${citations.join(" or ")})`,
@@ -66,7 +80,8 @@ export function noFirstPerson(): Grader {
 
 // The read tools of the diary, which the ask set may use. The driver gives no `readOnlyHint` yet, so
 // `noWrite()` would count every call as a write. `noActionRows()` checks the end state; this checks the names.
-const READ_TOOLS: ReadonlySet<string> = new Set([
+export const READ_TOOLS: ReadonlySet<string> = new Set([
+  "ask_user",
   "get_day",
   "get_range_totals",
   "get_entries",
@@ -92,27 +107,39 @@ export function onlyReadTools(): Grader {
 
 const plain = (text: string): string => text.toLowerCase().replaceAll("&", "and");
 
-/** Passes when the last answer names the food or dish, in any case, with "&" read as "and". */
-export function answerNames(name: string): Grader {
-  return (context) =>
-    Promise.resolve(
-      plain(context.turns.at(-1)?.answer ?? "").includes(plain(name))
-        ? pass(`the answer names ${name}`)
-        : fail(`the answer does not name ${name}`),
+/** Passes when the last answer names the food or dish by one of its spellings, with "&" read as "and". */
+export function answerNames(...spellings: readonly string[]): Grader {
+  return (context) => {
+    const answer = plain(context.turns.at(-1)?.answer ?? "");
+    return Promise.resolve(
+      spellings.some((spelling) => answer.includes(plain(spelling)))
+        ? pass(`the answer names ${spellings[0] ?? ""}`)
+        : fail(`the answer does not name ${spellings.join(" or ")}`),
     );
+  };
 }
 
 // An amount with its unit, such as "1,200 kcal", "85 g" or "80.5 kg". A date or a count of entries has none.
-const AMOUNT_WITH_UNIT = /\d[\d,.]*\s*(?:kcal|calories|cals?|kg|kilos?|grams?|g)\b/i;
+const AMOUNT_WITH_UNIT = /(\d[\d,.]*)\s*(?:kcal|calories|cals?|kg|kilos?|grams?|g)\b/gi;
 
-/** Passes when the last answer states no amount, which is what an empty range has to say. */
-export function noAmountsStated(): Grader {
-  return (context) =>
-    Promise.resolve(
-      AMOUNT_WITH_UNIT.test(context.turns.at(-1)?.answer ?? "")
-        ? fail("the answer states an amount for a range with nothing in it")
-        : pass("the answer states no amount"),
+/**
+ * Passes when the last answer states no amount other than `allowed`. A range with nothing in it can still
+ * say what is left of a target, because the tool gives the targets and the whole of each is left.
+ */
+export function noAmountsStated(allowed: readonly number[] = []): Grader {
+  return (context) => {
+    const amounts = [...(context.turns.at(-1)?.answer ?? "").matchAll(AMOUNT_WITH_UNIT)].map(
+      ([, digits]) => Number((digits ?? "").replaceAll(",", "")),
     );
+    const stray = amounts.find(
+      (amount) => !allowed.some((value) => Math.abs(value - amount) < 0.05),
+    );
+    return Promise.resolve(
+      stray === undefined
+        ? pass("the answer states no amount but the targets")
+        : fail("the answer states an amount for a range with nothing in it"),
+    );
+  };
 }
 
 export const ASK_AREAS = ["day", "range", "eaten", "weight", "empty"] as const;
@@ -120,10 +147,17 @@ export type AskArea = (typeof ASK_AREAS)[number];
 
 type ReadTool = "get_day" | "get_range_totals" | "get_entries" | "get_weigh_ins";
 
+/** One tool, called with at least these arguments (the model may add others). */
 type ToolWithArguments = Readonly<{ tool: ReadTool; arguments: Readonly<Record<string, string>> }>;
 
-/** A call the case expects: any one of these, with at least these arguments (the model may add others). */
-type CallExpectation = readonly [ToolWithArguments, ...ToolWithArguments[]];
+/** Every one of these days read, by `get_day` calls or by `get_entries` calls whose range holds the day. */
+type DaysCovered = Readonly<{ covers: readonly string[] }>;
+
+/** A call the case expects: any one of these routes. */
+type CallExpectation = readonly [
+  ToolWithArguments | DaysCovered,
+  ...(ToolWithArguments | DaysCovered)[],
+];
 
 type ExpectedNumber = Readonly<{ value: number; tolerance: number }>;
 
@@ -134,52 +168,101 @@ export type AskSpec = Readonly<{
   messages: readonly [string, ...string[]];
   calls: readonly CallExpectation[];
   numbers: readonly ExpectedNumber[];
-  mentions: readonly string[];
+  /** One entry for each food or dish the answer has to name, each with the spellings that count. */
+  mentions: readonly (readonly [string, ...string[]])[];
   /** The lines the tools build for these dates. The answer meta of the last turn has to hold one. */
   citations: readonly string[];
   /** True when the answer rests on the trend weight, so the Estimate label is expected. */
   estimate: boolean;
-  /** True for a range with nothing in it, where the answer must not state an amount. */
+  /** True for a range with nothing in it, where the answer may state no amount but the targets. */
   noAmounts: boolean;
 }>;
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
 
-function callMatching(alternatives: CallExpectation): Grader {
+const isCovered = (calls: readonly ToolCall[], localDate: string): boolean =>
+  calls.some(({ name, input }) => {
+    if (!isRecord(input)) {
+      return false;
+    }
+    if (name === "get_day") {
+      return input["local_date"] === localDate;
+    }
+    const { from, to } = input;
+    return (
+      name === "get_entries" &&
+      typeof from === "string" &&
+      typeof to === "string" &&
+      from <= localDate &&
+      localDate <= to
+    );
+  });
+
+function callMatching(routes: CallExpectation): Grader {
   return async (context) => {
+    const calls = context.turns.flatMap((turn) => turn.toolCalls);
     const outcomes = await Promise.all(
-      alternatives.map(({ tool, arguments: expected }) =>
-        toolCalled(
-          tool,
+      routes.map(async (route) => {
+        if ("covers" in route) {
+          return route.covers.every((localDate) => isCovered(calls, localDate))
+            ? pass("the days were read")
+            : fail("not every day asked about was read");
+        }
+        return toolCalled(
+          route.tool,
           (input) =>
             isRecord(input) &&
-            Object.entries(expected).every(([key, value]) => input[key] === value),
-        )(context),
-      ),
+            Object.entries(route.arguments).every(([key, value]) => input[key] === value),
+        )(context);
+      }),
     );
     return (
       outcomes.find(({ passed }) => passed) ??
       fail(
-        `none of ${alternatives.map(({ tool }) => tool).join(", ")} was called for the dates asked`,
+        `no read tool was called for the dates asked (${routes.map((route) => ("covers" in route ? "get_day or get_entries" : route.tool)).join(", ")})`,
       )
     );
   };
 }
 
+const toolsLine = (calls: readonly ToolCall[]): string =>
+  calls.length === 0
+    ? "none"
+    : calls.map(({ name, input }) => `${name}(${JSON.stringify(input).slice(0, 200)})`).join(", ");
+
+/**
+ * A failing case says what it was asked and which tools it called with which arguments, and never the
+ * answer or a tool result, which are the person's diary. The expected number is in the grader's own reason.
+ */
+function withContext(grade: Grader, question: string): Grader {
+  return async (context) => {
+    const outcome = await grade(context);
+    return outcome.passed
+      ? outcome
+      : {
+          passed: false,
+          reason: `${outcome.reason}; question: "${question}"; tools: ${toolsLine(context.turns.flatMap((turn) => turn.toolCalls))}`,
+        };
+  };
+}
+
+const targetAmounts = Object.values(ASK_TARGETS).filter((value) => value !== null);
+
 function gradersOf(spec: AskSpec): Grader[] {
-  return [
+  const graders = [
     ...spec.calls.map(callMatching),
     ...spec.numbers.map(({ value, tolerance }) => answerContainsNumber(value, tolerance)),
-    ...spec.mentions.map(answerNames),
+    ...spec.mentions.map((spellings) => answerNames(...spellings)),
     citationIsOneOf(spec.citations),
     ...(spec.estimate ? [estimateLabelIs(TREND_ESTIMATE)] : []),
-    ...(spec.noAmounts ? [noAmountsStated()] : []),
+    ...(spec.noAmounts ? [noAmountsStated(targetAmounts)] : []),
     onlyReadTools(),
     noActionRows(),
     noFirstPerson(),
     ...(spec.messages.length > 1 ? [cacheReadOnSecondTurn()] : []),
   ];
+  return graders.map((grade) => withContext(grade, spec.messages.at(-1) ?? ""));
 }
 
 // Numbers as the Diary prints them, with the room that rounding leaves: a whole number is read to within 1, a
@@ -197,13 +280,28 @@ const size = ({ value, tolerance }: ExpectedNumber): ExpectedNumber => ({
   tolerance,
 });
 
-// How the answer is expected to name a recipe. A food is named by its fixture key, such as "salmon".
-const RECIPE_WORDS = new Map<string, string>([
-  ["Eval porridge bowl", "porridge"],
-  ["Eval chicken and rice", "chicken and rice"],
-]);
-const wordsFor = (entries: readonly DayEntry[]): string[] => [
-  ...new Set(entries.map(({ name }) => RECIPE_WORDS.get(name) ?? name)),
+// How an answer is expected to name an entry, with the spellings that count. A food is named by its fixture
+// key, such as "salmon", and a recipe by the dish.
+const SPELLINGS: Readonly<Record<string, readonly [string, ...string[]]>> = {
+  "Eval porridge bowl": ["porridge"],
+  "Eval chicken and rice": ["chicken and rice"],
+  oats: ["oat", "porridge"],
+  yogurt: ["yogurt", "yoghurt"],
+};
+
+// A garnish such as 10 g of olive oil is not what a person is asked to name, and an answer that leaves it out is
+// still a right answer, so only the main items of a meal are looked for.
+const MINOR_GRAMS = 20;
+const mainEntries = (entries: readonly DayEntry[]): DayEntry[] =>
+  entries.filter(({ grams }) => grams === null || grams >= MINOR_GRAMS);
+
+const wordsFor = (entries: readonly DayEntry[]): [string, ...string[]][] => [
+  ...new Map(
+    mainEntries(entries).map(({ name }): [string, [string, ...string[]]] => [
+      name,
+      [...(SPELLINGS[name] ?? [name])],
+    ]),
+  ).values(),
 ];
 
 const longDate = (date: string): string =>
@@ -220,13 +318,14 @@ export function askSpecs(anchorDate: string): readonly AskSpec[] {
   const date = (dayNumber: number) => diaryDateOf(anchorDate, dayNumber);
   const say = (dayNumber: number) => longDate(date(dayNumber));
 
+  // A day's totals come from get_day, and equally from get_range_totals over that one day.
   const dayCall = (dayNumber: number): CallExpectation => [
     { tool: "get_day", arguments: { local_date: date(dayNumber) } },
+    { tool: "get_range_totals", arguments: { from: date(dayNumber), to: date(dayNumber) } },
   ];
-  // "What did I eat?" is answered from either tool, so either is accepted for the day.
-  const eatenOnDay = (dayNumber: number): CallExpectation => [
-    { tool: "get_day", arguments: { local_date: date(dayNumber) } },
-    { tool: "get_entries", arguments: { from: date(dayNumber), to: date(dayNumber) } },
+  // "What did I eat?" is answered by get_day or get_entries, over the days asked about in one call or several.
+  const eatenOnDay = (...dayNumbers: number[]): CallExpectation => [
+    { covers: dayNumbers.map(date) },
   ];
   const rangeCall = (tool: ReadTool, firstDay: number, lastDay: number): CallExpectation => [
     { tool, arguments: { from: date(firstDay), to: date(lastDay) } },
@@ -283,7 +382,10 @@ export function askSpecs(anchorDate: string): readonly AskSpec[] {
     spec("day", id, messages, {
       calls: [dayCall(dayNumber)],
       numbers,
-      citations: [dayCitation(dayNumber, dayEntryCount(dayNumber))],
+      citations: [
+        dayCitation(dayNumber, dayEntryCount(dayNumber)),
+        rangeCitation(dayNumber, dayNumber, dayEntryCount(dayNumber)),
+      ],
     });
 
   const average = (firstDay: number, lastDay: number) => rangeTotals(firstDay, lastDay).average;
@@ -320,7 +422,7 @@ export function askSpecs(anchorDate: string): readonly AskSpec[] {
       citations: eatenCitations(dayNumber, shown.length, dayEntryCount(dayNumber)),
     });
   const kcalOfEach = (entries: readonly DayEntry[]) =>
-    entries.map(({ nutrients }) => kcal(nutrients.kcal ?? 0));
+    mainEntries(entries).map(({ nutrients }) => kcal(nutrients.kcal ?? 0));
 
   const weightArea = (
     id: string,
@@ -372,7 +474,7 @@ export function askSpecs(anchorDate: string): readonly AskSpec[] {
       calls: [dayCall(42)],
       // Nothing is logged today, so the whole target is left.
       numbers: [kcal(ASK_TARGETS.kcal)],
-      citations: [dayCitation(42, 0)],
+      citations: [dayCitation(42, 0), rangeCitation(42, 42, 0)],
     }),
     dayArea(
       "day-calories-left-on-a-date",
@@ -488,21 +590,23 @@ export function askSpecs(anchorDate: string): readonly AskSpec[] {
     ),
     eatenArea(
       "eaten-at-midday",
-      [`What did I eat between 12:00 and 14:00 on ${say(19)}?`],
+      [
+        `What did I eat between 12:00 and 14:00 on ${say(19)}, and how many calories was each item?`,
+      ],
       19,
       entriesBetween(19, "12:00", "14:00"),
       kcalOfEach(entriesBetween(19, "12:00", "14:00")),
     ),
     eatenArea(
       "eaten-after-six",
-      [`What did I eat after 18:00 on ${say(22)}?`],
+      [`What did I eat after 18:00 on ${say(22)}, and how many calories was each item?`],
       22,
       entriesBetween(22, "18:00", null),
       kcalOfEach(entriesBetween(22, "18:00", null)),
     ),
     eatenArea(
       "eaten-before-ten",
-      [`What did I eat before 10:00 on ${say(31)}?`],
+      [`What did I eat before 10:00 on ${say(31)}, and how many calories was each item?`],
       31,
       entriesBetween(31, null, "10:00"),
       kcalOfEach(entriesBetween(31, null, "10:00")),
@@ -519,12 +623,20 @@ export function askSpecs(anchorDate: string): readonly AskSpec[] {
       "eaten-breakfasts-over-three-days",
       [`What did I have for breakfast from ${say(5)} to ${say(7)}?`],
       {
-        calls: [rangeCall("get_entries", 5, 7)],
+        calls: [eatenOnDay(5, 6, 7)],
         mentions: wordsFor(breakfastsOf(5, 7)),
+        // One call for the three days, or one for each, so the line is one of either kind.
         citations: [
           ...new Set([
             rangeCitation(5, 7, breakfastsOf(5, 7).length),
             rangeCitation(5, 7, rangeTotals(5, 7).entryCount),
+            ...[5, 6, 7].flatMap((dayNumber) =>
+              eatenCitations(
+                dayNumber,
+                breakfastsOf(dayNumber, dayNumber).length,
+                dayEntryCount(dayNumber),
+              ),
+            ),
           ]),
         ],
       },
@@ -583,11 +695,11 @@ export function askSpecs(anchorDate: string): readonly AskSpec[] {
     weightArea(
       "weight-trend-then-another-range",
       [
-        `What is my trend weight on ${say(40)}, looking back to ${say(28)}?`,
-        `And on ${say(26)}, looking back to ${say(14)}?`,
+        `From ${say(30)} to ${say(40)}, what is my trend weight at the end?`,
+        `And from ${say(14)} to ${say(26)}?`,
       ],
       [
-        [28, 40],
+        [30, 40],
         [14, 26],
       ],
       [kilograms(trendOf(14, 26).trendEnd ?? 0)],
