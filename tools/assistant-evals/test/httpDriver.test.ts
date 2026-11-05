@@ -124,6 +124,34 @@ describe("createHttpDriver, one turn", () => {
     expect(result.toolCalls).toEqual(calls);
   });
 
+  it("should carry the citation and the estimate label of the answer_meta event", async () => {
+    streamOf(
+      turnEvent,
+      sse({ type: "text", delta: "Down 0.4 kg." }),
+      sse({
+        type: "answer_meta",
+        citation: "Based on 7 weigh-ins, 12 to 18 Oct",
+        estimate: "Trend weight is an estimate",
+      }),
+      sse({ type: "done", outcome: "complete" }),
+    );
+
+    const result = await driver().sendMessage({ conversationId: null, text: "weight trend" });
+
+    expect(result.answerMeta).toEqual({
+      citation: "Based on 7 weigh-ins, 12 to 18 Oct",
+      estimate: "Trend weight is an estimate",
+    });
+  });
+
+  it("should leave answerMeta out when the turn sent no answer_meta event", async () => {
+    streamOf(turnEvent, sse({ type: "done", outcome: "complete" }));
+
+    const result = await driver().sendMessage({ conversationId: null, text: "hello" });
+
+    expect(result.answerMeta).toBeUndefined();
+  });
+
   it("should resolve a turn that ends failed with that status, and not throw", async () => {
     streamOf(
       turnEvent,

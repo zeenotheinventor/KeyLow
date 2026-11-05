@@ -1,6 +1,8 @@
+import { getMyTargets } from "@keylow/api-client";
 import { afterAll, describe, expect, inject, it } from "vitest";
 
 import { adminClient } from "../../../../packages/db/test/integration/support/stack";
+import { ASK_TARGETS, writeAskExtras } from "../../fixtures/askExtras.ts";
 import { DIARY_DAY_COUNT, diaryDay, fixtureRecipes } from "../../fixtures/diary.ts";
 import { createEvalDatabase } from "../../src/database.ts";
 import { createFixtureUser } from "../../src/fixtureUser.ts";
@@ -94,6 +96,18 @@ describe("createFixtureUser against the local stack", () => {
     expect(secondRecipes?.some(({ id }) => seenByFirst.has(id))).toBe(false);
   });
 
+  it("should give the user an unlimited assistant plan, so a run is not cut short by the free 15 turns", async () => {
+    const user = await newUser("unlimited");
+
+    const { data, error } = await user.client
+      .from("entitlements")
+      .select("feature,plan,source")
+      .eq("feature", "assistant");
+
+    expect(error).toBeNull();
+    expect(data).toStrictEqual([{ feature: "assistant", plan: "unlimited", source: "eval" }]);
+  });
+
   it("should give back the anchor date it dated the diary from", async () => {
     const user = await createFixtureUser(inject("stack"), {
       namePrefix: `${namePrefix}-anchor`,
@@ -131,6 +145,16 @@ describe("createFixtureUser against the local stack", () => {
     expect(await countOf("weigh_ins", user)).toBe(0);
     expect(await countOf("recipes", user)).toBe(0);
     expect(await countOf("day_logs", user)).toBe(0);
+  });
+});
+
+describe("writeAskExtras against the local stack", () => {
+  it("should leave the user with the targets the ask cases are worked out against", async () => {
+    const user = await newUser("ask-targets");
+
+    await writeAskExtras(user);
+
+    expect(await getMyTargets(user.client)).toMatchObject({ ...ASK_TARGETS, source: "manual" });
   });
 });
 

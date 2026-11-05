@@ -2,7 +2,7 @@ import { parseAssistantEvent } from "@keylow/core";
 import { localToday } from "@keylow/core/engine";
 
 import type { SendMessageInput, TurnDriver } from "./driver.ts";
-import type { ToolCall, TurnResult, TurnStatus } from "./types.ts";
+import type { AnswerMeta, ToolCall, TurnResult, TurnStatus } from "./types.ts";
 import type { AssistantStreamEvent } from "@keylow/core";
 
 export type HttpDriverOptions = Readonly<{
@@ -89,6 +89,7 @@ export function createHttpDriver(options: HttpDriverOptions): TurnDriver {
     let turn: { turnId: string; conversationId: string } | null = null;
     let answer = "";
     let lastNoticeCode: string | null = null;
+    let answerMeta: AnswerMeta | undefined;
     let buffer = "";
     const decoder = new TextDecoder();
     const reader = response.body.getReader();
@@ -103,6 +104,8 @@ export function createHttpDriver(options: HttpDriverOptions): TurnDriver {
             turn = { turnId: event.turnId, conversationId: event.conversationId };
           } else if (event.type === "text") {
             answer += event.delta;
+          } else if (event.type === "answer_meta") {
+            answerMeta = { citation: event.citation, estimate: event.estimate };
           } else if (event.type === "notice") {
             // The code only, so a gate refusal is readable and nothing else of the notice is kept.
             lastNoticeCode = event.notice.code;
@@ -115,6 +118,7 @@ export function createHttpDriver(options: HttpDriverOptions): TurnDriver {
               status: statusOf(event.outcome),
               answer,
               toolCalls: await readToolCalls(turn.turnId),
+              ...(answerMeta === undefined ? {} : { answerMeta }),
             };
           }
         }

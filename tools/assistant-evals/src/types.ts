@@ -16,6 +16,9 @@ export type ToolCall = Readonly<{
   readOnlyHint?: boolean | undefined;
 }>;
 
+/** What the app prints under an answer from the person's data. Either is null when the turn had none. */
+export type AnswerMeta = Readonly<{ citation: string | null; estimate: string | null }>;
+
 /** The result of one user turn, once its stream has ended. */
 export type TurnResult = Readonly<{
   conversationId: string;
@@ -25,6 +28,8 @@ export type TurnResult = Readonly<{
   /** The assistant's final text. */
   answer: string;
   toolCalls: readonly ToolCall[];
+  /** The line under the answer and the Estimate label, from the turn's `answer_meta` event. Absent when the turn sent none. */
+  answerMeta?: AnswerMeta | undefined;
 }>;
 
 /** The sum of the `assistant_usage` rows of one turn (a turn with tool rounds writes several). */

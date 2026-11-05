@@ -6,6 +6,7 @@ import { createEvalDatabase } from "./database.ts";
 import { createFixtureUser } from "./fixtureUser.ts";
 import { createHttpDriver } from "./httpDriver.ts";
 import { readSupabaseStatus } from "../../../packages/db/scripts/supabaseStatus.ts";
+import { writeAskExtras } from "../fixtures/askExtras.ts";
 
 import type { EvalSession } from "./cli.ts";
 import type { FixtureUser } from "./fixtureUser.ts";
@@ -49,6 +50,8 @@ export async function openLocalHttpSession(): Promise<EvalSession> {
   try {
     // Without the consent the first turn is refused with `consent_needed`. It is the app's own write.
     await setAssistantConsent(user.client, user.id, true);
+    // The targets the ask set's "what is left" and "days at target" cases are worked out against.
+    await writeAskExtras(user);
     const timeZone = await timeZoneOf(user);
     const driver = createHttpDriver({
       apiUrl: stack.apiUrl,
