@@ -141,7 +141,7 @@ describe("searchFoods", () => {
     await expect(searchFoods(createTestClient(), "chicken")).rejects.toThrow();
   });
 
-  it("should throw an error carrying the database error when the RPC fails", async () => {
+  it("should throw an error whose cause is the database error code when the RPC fails", async () => {
     server.use(
       http.post(SEARCH_FOODS_URL, () => postgrestError(500, "XX000", "database unavailable")),
     );
@@ -150,6 +150,6 @@ describe("searchFoods", () => {
       (error: unknown) => error,
     );
 
-    expect(failure).toHaveProperty("cause.message", "database unavailable");
+    expect(failure).toHaveProperty("cause", { code: "XX000" });
   });
 });

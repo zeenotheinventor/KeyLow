@@ -655,7 +655,7 @@ describe("useFoodSearch", () => {
       await vi.advanceTimersByTimeAsync(500);
 
       expect(result.current.localError).toMatchObject({ kind: "failed" });
-      expect(result.current.localError?.debugMessage).toContain("database unavailable");
+      expect(result.current.localError?.debugMessage).toContain("(XX000)");
       expect(result.current.local).toEqual([]);
       expect(result.current.off).toEqual([]);
       expect(result.current.isLoadingLocal).toBe(false);

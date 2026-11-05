@@ -1,13 +1,13 @@
 import { z } from "zod";
 
 import { idOfRow, parseRow } from "./diaryRows";
+import { repoError } from "./repoError";
 import {
   ROUTINE_DETAIL_SELECT,
   ROUTINE_LIST_SELECT,
   routineDetailRowSchema,
   routineListRowSchema,
 } from "./routineSchemas";
-import { trainingRepoError } from "./training";
 
 import type { RoutineDetail, RoutineListEntry } from "./routineSchemas";
 import type { Database } from "../database.types";
@@ -50,7 +50,7 @@ export async function listRoutines(
     .order("position", { ascending: true, referencedTable: "routine_days" });
 
   if (error) {
-    throw trainingRepoError("load your routines", error);
+    throw repoError("load your routines", error);
   }
 
   return data.map((row) => parseRow(routineListRowSchema, row, "read the routines", idOfRow));
@@ -76,7 +76,7 @@ export async function getRoutine(
     .maybeSingle();
 
   if (error) {
-    throw trainingRepoError("load your routine", error);
+    throw repoError("load your routine", error);
   }
 
   return data === null ? null : parseRow(routineDetailRowSchema, data, "read the routine", idOfRow);

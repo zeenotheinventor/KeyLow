@@ -1,12 +1,11 @@
 import { TERMS_VERSION, assistantNoticeSchema } from "@keylow/core";
 import { z } from "zod";
 
+import { repoError } from "./repoError";
+
 import type { Database } from "../database.types";
 import type { AssistantNotice } from "@keylow/core";
-import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
-
-const repoError = (action: string, cause: PostgrestError) =>
-  new Error(`Could not ${action}: ${cause.message}`, { cause });
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 /** Whether the signed in user turned the assistant on, and when and under which Terms version. */
 export type AssistantConsent = {

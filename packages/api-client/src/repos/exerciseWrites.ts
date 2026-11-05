@@ -3,7 +3,7 @@ import { customExercisePayload, validateCustomExerciseDraft } from "@keylow/core
 import { ExerciseRuleError } from "../errors";
 import { assertExerciseId, getExercise } from "./exercises";
 import { untypedFunctions } from "./nullableArguments";
-import { trainingRepoError } from "./training";
+import { repoError } from "./repoError";
 
 import type { ExerciseDetail } from "./exercises";
 import type { WithNullable } from "./nullableArguments";
@@ -54,7 +54,7 @@ async function refusal(
   if (id !== undefined && error.code === noMatchCode && (await isLibraryExercise(client, id))) {
     return new ExerciseRuleError(action, "global_exercise");
   }
-  return trainingRepoError(action, error);
+  return repoError(action, error);
 }
 
 /**

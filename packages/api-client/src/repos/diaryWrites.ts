@@ -12,7 +12,7 @@ import { z } from "zod";
 
 import { EntryNotFoundError } from "../errors";
 import { isDeadPortionRefusal, writeWithoutDeadPortion } from "./deadPortion";
-import { ENTRY_COLUMNS, idOfRow, insertDiaryEntry, parseRow, repoError } from "./diaryRows";
+import { ENTRY_COLUMNS, idOfRow, insertDiaryEntry, parseRow } from "./diaryRows";
 import {
   diaryInsertSchema,
   foodLogEntrySchema,
@@ -21,7 +21,7 @@ import {
   recipeLogEntrySchema,
 } from "./diarySchemas";
 import { getFood, listFoodPortions } from "./foods";
-import { recipeRepoError } from "./recipes";
+import { repoError } from "./repoError";
 
 import type {
   DiaryInsert,
@@ -224,7 +224,7 @@ export async function logEntries(
 
   const { data, error } = result;
   if (error) {
-    throw recipeRepoError(LOG_ENTRIES_ACTION, error);
+    throw repoError(LOG_ENTRIES_ACTION, error);
   }
   if (data.length !== items.length) {
     throw new Error(

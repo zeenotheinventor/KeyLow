@@ -11,18 +11,22 @@ import {
 } from "@keylow/core/copy";
 import { addCalendarDays, daysSinceMonday, toLocalDate } from "@keylow/core/dates";
 import { TRAINING_PARAMS_V2 } from "@keylow/core/training";
-import { CircleAlert, Dumbbell, Plus, WifiOff } from "lucide-react";
+import { CircleAlert, Dumbbell, PersonStanding, Plus, WifiOff } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 import { BodyMapBackLink } from "../BodyMapBackLink";
 import { BodyMapCard } from "../BodyMapCard";
 import { BodyMapLegend } from "../BodyMapLegend";
 import { BodyMapLoading } from "../BodyMapLoading";
+import { FigureSettingDialog } from "../FigureSettingDialog";
 import { useBodyMapView } from "./useBodyMapView";
 
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
+import { IconButton } from "@/components/ui/IconButton";
 import { useToast } from "@/components/ui/Toast";
+import { useBodyFigure } from "@/lib/bodyFigure";
 import { trainSessionPath } from "@/lib/trainRoutes";
 import { useIsOnline } from "@/lib/useIsOnline";
 import { useNow } from "@/lib/useNow";
@@ -37,9 +41,13 @@ import { useNow } from "@/lib/useNow";
  * once a minute without a new read. Every read is behind the terms gate the dashboard layout holds. Offline
  * with nothing already read there is no saved body map to show, and it says so.
  *
+ * The figures are drawn as the figure setting has it, male or female, which the page waits for with the
+ * view. The first time it opens it asks which figure, and closing that question without an answer records
+ * Male so it is not asked again. The button at the right of the title opens the question at any time.
+ *
  * The page is a column of two: the card, and the cards that belong beside it (the legend today). The
- * scale switch, the day row, the muscle list, the muscle sheet and the figure setting add to the card's
- * column or the side column.
+ * scale switch, the day row, the muscle list and the muscle sheet add to the card's column or the side
+ * column.
  */
 export function BodyMapScreen() {
   const router = useRouter();
@@ -53,6 +61,25 @@ export function BodyMapScreen() {
   const weekStart = addCalendarDays(today, -daysSinceMonday(today));
   const weekEnd = addCalendarDays(weekStart, 6);
   const { view: chosenView, isRead: isViewRead, setView } = useBodyMapView();
+  const { figure, isReady: isFigureReady, hasChosen, setFigure } = useBodyFigure();
+  const [isFigureDialogOpen, setIsFigureDialogOpen] = useState(false);
+  const [hasAskedFigure, setHasAskedFigure] = useState(false);
+  // The first visit asks once, as soon as the stored figure is known to be none (`hasChosen` is true until
+  // the store is read, so false means read and unanswered). The dialog then stays open
+  // through the choice, so the preview shows it, and the answer is only recorded when it closes. The state is
+  // set while rendering on purpose, so the dialog opens in this render, as the mobile screen does.
+  if (!hasChosen && !hasAskedFigure) {
+    setHasAskedFigure(true);
+    setIsFigureDialogOpen(true);
+  }
+
+  function closeFigureDialog() {
+    // Closing the question without choosing is an answer: Male, which is not asked about again.
+    if (!hasChosen) {
+      setFigure("male");
+    }
+    setIsFigureDialogOpen(false);
+  }
   // Start a session of the empty state starts a free one at the press and opens its page, as the Train
   // home's Log a session does. One session is open at a time, so a start with one in progress opens that one.
   const { start: startSession } = useStartSessionAction({
@@ -72,14 +99,29 @@ export function BodyMapScreen() {
       <div className="-my-2 self-start">
         <BodyMapBackLink />
       </div>
-      <h1 className="text-h1">{BODY_MAP.title}</h1>
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-h1">{BODY_MAP.title}</h1>
+        {/* Left out until the stored figure is known, so closing the dialog can never write over it. */}
+        {isFigureReady ? (
+          <IconButton
+            icon={PersonStanding}
+            label={BODY_MAP.figureSetting.label}
+            aria-haspopup="dialog"
+            onClick={() => {
+              setIsFigureDialogOpen(true);
+            }}
+          />
+        ) : null}
+      </div>
     </div>
   );
 
   function renderBody() {
     const { data: actualData } = actual;
     const { data: projectedData } = projected;
-    if (isViewRead && actualData !== undefined && projectedData !== undefined) {
+    // The figure is waited for only so the server and the first draw in the browser agree: the store is read
+    // at once in the browser, so this adds no wait there.
+    if (isViewRead && isFigureReady && actualData !== undefined && projectedData !== undefined) {
       const { projectedAvailable, todayProjectedIsActual } = projectedData;
       // With no routine Projected shows Actual, so the saved view is only kept for when there is one.
       const view = chosenView === "projected" && projectedAvailable ? "projected" : "actual";
@@ -112,6 +154,7 @@ export function BodyMapScreen() {
             }
             actualValues={actualData.values}
             projectedValues={projectedData.values}
+            body={figure}
             toggleLabel={toggleLabel}
             isToggleEnabled={projectedAvailable}
             onToggle={() => {
@@ -174,6 +217,12 @@ export function BodyMapScreen() {
     <div className="mx-auto flex w-full max-w-[1180px] flex-col gap-3 xl:gap-5">
       {title}
       {renderBody()}
+      <FigureSettingDialog
+        open={isFigureDialogOpen}
+        onClose={closeFigureDialog}
+        figure={figure}
+        onChange={setFigure}
+      />
     </div>
   );
 }

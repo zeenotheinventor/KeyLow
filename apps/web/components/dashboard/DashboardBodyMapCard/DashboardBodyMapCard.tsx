@@ -20,13 +20,13 @@ const figureLabel = (side: "front" | "back") =>
 /**
  * The body map on the dashboard as its board draws it: the title and the view with the Body map label and
  * its chevron, Actual heat now, front and back at 100 pixels, the heat legend from Peak to Rested, the three
- * warmest muscles and today's planned day. The figure is drawn male until the figure setting reaches the web.
+ * warmest muscles and today's planned day. The figure is the one it is given, male unless told otherwise.
  * There is no toggle and no click on the figures. The whole card is one link to the body map page, so it is
  * named by what it shows and ends in "Open the body map", as the weekly card names its link. The section is
  * labelled by the short title, and the words and figures inside the link are hidden from assistive
  * technology, because that name already says all of it.
  */
-export function DashboardBodyMapCard({ bodyMap }: DashboardBodyMapCardProps) {
+export function DashboardBodyMapCard({ bodyMap, body }: DashboardBodyMapCardProps) {
   const { warmestLine, todayLine, accessibleName } = describeDashboardBodyMapCard({
     warmest: bodyMap.warmest,
     today: todayPlanOf(bodyMap.today),
@@ -66,6 +66,7 @@ export function DashboardBodyMapCard({ bodyMap }: DashboardBodyMapCardProps) {
             </div>
             <div className="flex items-end justify-center gap-7">
               <BodyFigure
+                body={body}
                 label={figureLabel("front")}
                 scale="heat"
                 side="front"
@@ -73,6 +74,7 @@ export function DashboardBodyMapCard({ bodyMap }: DashboardBodyMapCardProps) {
                 w={FIGURE_WIDTH}
               />
               <BodyFigure
+                body={body}
                 label={figureLabel("back")}
                 scale="heat"
                 side="back"

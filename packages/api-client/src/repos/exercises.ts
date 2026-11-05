@@ -9,7 +9,7 @@ import { z } from "zod";
 import { idOfRow, parseRow } from "./diaryRows";
 import { escapeLikePattern } from "./escapeLikePattern";
 import { MIN_SEARCH_LENGTH } from "./foods";
-import { trainingRepoError } from "./training";
+import { repoError } from "./repoError";
 
 import type { Database } from "../database.types";
 import type { ExerciseMuscleEntry } from "@keylow/core/schemas";
@@ -117,7 +117,7 @@ export async function searchExercises(
     .limit(Math.min(MAX_SEARCH_LIMIT, Math.max(1, Math.trunc(limit))));
 
   if (error) {
-    throw trainingRepoError("search the exercises", error);
+    throw repoError("search the exercises", error);
   }
 
   return data.map((row) => parseRow(exerciseHitSchema, row, "search the exercises", idOfRow));
@@ -141,7 +141,7 @@ export async function getExercise(
     .maybeSingle();
 
   if (error) {
-    throw trainingRepoError("load the exercise", error);
+    throw repoError("load the exercise", error);
   }
 
   return data === null ? null : parseRow(exerciseDetailSchema, data, "load the exercise", idOfRow);

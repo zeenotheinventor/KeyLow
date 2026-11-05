@@ -1,7 +1,8 @@
 import { z } from "zod";
 
 import { idOfRow, parseRow } from "./diaryRows";
-import { readSnapshot, trainingRepoError } from "./training";
+import { repoError } from "./repoError";
+import { readSnapshot } from "./training";
 import {
   LAST_PERFORMANCE_COLUMNS,
   SESSION_DETAIL_COLUMNS,
@@ -84,7 +85,7 @@ export async function getSession(
     .maybeSingle();
 
   if (error) {
-    throw trainingRepoError("load your session", error);
+    throw repoError("load your session", error);
   }
 
   return data === null ? null : parseSessionRow(data, "read the session");
@@ -112,7 +113,7 @@ export async function getActiveSession(
     .maybeSingle();
 
   if (error) {
-    throw trainingRepoError("load your session", error);
+    throw repoError("load your session", error);
   }
 
   return data === null ? null : parseSessionRow(data, "read the session");
@@ -180,7 +181,7 @@ export async function getLastPerformance(
     .limit(sessions * ROWS_PER_SESSION);
 
   if (error) {
-    throw trainingRepoError("load your last sets", error);
+    throw repoError("load your last sets", error);
   }
 
   // The rows come newest first, so a session is first met at its newest set and the groups keep that order.

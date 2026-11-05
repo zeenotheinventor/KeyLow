@@ -246,7 +246,7 @@ describe("useOwnFoods", () => {
     await waitFor(() => {
       expect(result.current.own.isError).toBe(true);
     });
-    expect(result.current.own.error).toHaveProperty("cause.message", "database unavailable");
+    expect(result.current.own.error).toHaveProperty("cause", { code: "XX000" });
   });
 
   it("should refresh the list after a food is updated", async () => {

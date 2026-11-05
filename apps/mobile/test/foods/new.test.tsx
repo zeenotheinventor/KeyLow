@@ -676,6 +676,21 @@ describe("new food screen", () => {
       expect(screen.getByRole("heading", { name: "Portions" })).toBeOnTheScreen();
     });
 
+    it("should say portion amounts are in grams to match the default basis", async () => {
+      await renderForm();
+
+      expect(screen.getByText("Each amount is in g, to match the basis.")).toBeOnTheScreen();
+    });
+
+    it("should say portion amounts are in millilitres once the basis is per 100 ml", async () => {
+      const user = await renderForm();
+
+      await user.press(screen.getByRole("radio", { name: "Per 100 ml" }));
+
+      expect(screen.getByText("Each amount is in ml, to match the basis.")).toBeOnTheScreen();
+      expect(screen.queryByText("Each amount is in g, to match the basis.")).not.toBeOnTheScreen();
+    });
+
     it("should leave a nutrient the user has not filled in blank, never 0", async () => {
       await renderForm();
 

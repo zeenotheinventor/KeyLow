@@ -148,7 +148,7 @@ describe("logFood", () => {
     );
 
     await expect(logFood(createTestClient(), input)).rejects.toThrow(
-      "Could not log the food: denied",
+      "Could not log the food (42501)",
     );
   });
 });
@@ -212,7 +212,7 @@ describe("softDeleteLogEntry", () => {
     );
 
     await expect(softDeleteLogEntry(createTestClient(), id)).rejects.toThrow(
-      "Could not delete the entry: unavailable",
+      "Could not delete the entry (XX000)",
     );
   });
 });

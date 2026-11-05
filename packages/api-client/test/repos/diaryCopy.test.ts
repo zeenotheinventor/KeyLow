@@ -421,7 +421,7 @@ describe("copyDay", () => {
     ]);
   });
 
-  it("should not carry the database's error, which can quote the failing row, as the cause", async () => {
+  it("should carry only the database's error code as the cause, because its error can quote the failing row", async () => {
     const { handlers } = answerCopyDay({ sourceEntries: sampleDay, failInsertNumber: 1 });
     server.use(...handlers);
 
@@ -432,7 +432,9 @@ describe("copyDay", () => {
     }).catch((error: unknown) => error);
 
     expect(failure).toBeInstanceOf(Error);
-    expect(failure instanceof Error ? failure.cause : "set").toBeUndefined();
+    expect(failure instanceof Error ? failure.cause : "not an error").toStrictEqual({
+      code: "23503",
+    });
     expect(JSON.stringify(failure, Object.getOwnPropertyNames(failure))).not.toMatch(
       /Failing row|187/,
     );

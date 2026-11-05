@@ -8,13 +8,8 @@ import {
 import { z } from "zod";
 
 import { isDeadPortionRefusal } from "./deadPortion";
-import {
-  LIBRARY_COLUMNS,
-  getRecipe,
-  readRecipeRefresh,
-  recipeRepoError,
-  recipeSummaryOf,
-} from "./recipes";
+import { LIBRARY_COLUMNS, getRecipe, readRecipeRefresh, recipeSummaryOf } from "./recipes";
+import { repoError } from "./repoError";
 
 import type { RecipeDetail, RecipeRefreshDiff, RecipeSummary } from "./recipes";
 import type { Database } from "../database.types";
@@ -175,7 +170,7 @@ async function saveRecipe(
   const { data: savedId, error } = saved;
 
   if (error) {
-    throw recipeRepoError("save the recipe", error);
+    throw repoError("save the recipe", error);
   }
 
   const stored = await getRecipe(client, savedId);
@@ -229,7 +224,7 @@ export async function setRecipeArchived(
     .single();
 
   if (error) {
-    throw recipeRepoError(action, error);
+    throw repoError(action, error);
   }
 
   return recipeSummaryOf(data, action);
@@ -252,7 +247,7 @@ export async function duplicateRecipe(
 
   const original = await getRecipe(client, recipeId);
   if (original === null) {
-    throw new Error("Could not duplicate the recipe (P0002)", { cause: { code: "P0002" } });
+    throw repoError("duplicate the recipe", { code: "P0002" });
   }
 
   return saveRecipe(client, null, {
@@ -279,9 +274,7 @@ export async function applyRecipeRefresh(
 ): Promise<RecipeRefreshDiff> {
   const refresh = await readRecipeRefresh(client, recipeId);
   if (refresh === null) {
-    throw new Error("Could not refresh the recipe's ingredients (P0002)", {
-      cause: { code: "P0002" },
-    });
+    throw repoError("refresh the recipe's ingredients", { code: "P0002" });
   }
 
   const { recipe, diff } = refresh;

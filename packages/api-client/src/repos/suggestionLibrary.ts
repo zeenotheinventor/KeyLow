@@ -2,7 +2,7 @@ import { exerciseMuscleEntrySchema, exerciseRowSchema } from "@keylow/core/schem
 import { z } from "zod";
 
 import { idOfRow, parseRow } from "./diaryRows";
-import { trainingRepoError } from "./training";
+import { repoError } from "./repoError";
 
 import type { Database } from "../database.types";
 import type { SuggestExercise } from "@keylow/core/training";
@@ -67,7 +67,7 @@ export async function listSuggestionLibrary(
       .range(offset, offset + PAGE_SIZE - 1);
 
     if (error) {
-      throw trainingRepoError("load the exercise library", error);
+      throw repoError("load the exercise library", error);
     }
 
     library.push(

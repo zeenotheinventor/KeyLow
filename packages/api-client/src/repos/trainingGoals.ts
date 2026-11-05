@@ -2,7 +2,7 @@ import { trainingGoalsRowSchema } from "@keylow/core/schemas";
 import { GOAL_PRESETS_V1, goalAnswersSchema, trainingGoalsPayload } from "@keylow/core/training";
 
 import { idOfRow, parseRow } from "./diaryRows";
-import { trainingRepoError } from "./training";
+import { repoError } from "./repoError";
 
 import type { Database } from "../database.types";
 import type { TrainingGoalsRow } from "@keylow/core/schemas";
@@ -58,7 +58,7 @@ export async function getCurrentTrainingGoals(
     .maybeSingle();
 
   if (error) {
-    throw trainingRepoError("load your training goals", error);
+    throw repoError("load your training goals", error);
   }
 
   return data === null ? null : parseGoalsRow(data);
@@ -75,7 +75,7 @@ export async function listTrainingGoalsHistory(
     .order("id", { ascending: false });
 
   if (error) {
-    throw trainingRepoError("load your training goals history", error);
+    throw repoError("load your training goals history", error);
   }
 
   return data.map(parseGoalsRow);
@@ -113,7 +113,7 @@ export async function saveTrainingGoals(
     response = await client.rpc("save_training_goals", { p_goals: payload });
   }
   if (response.error) {
-    throw trainingRepoError("save your training goals", response.error);
+    throw repoError("save your training goals", response.error);
   }
 
   const { data, error } = await client
@@ -122,7 +122,7 @@ export async function saveTrainingGoals(
     .eq("id", response.data)
     .single();
   if (error) {
-    throw trainingRepoError("load your training goals", error);
+    throw repoError("load your training goals", error);
   }
   return parseGoalsRow(data);
 }

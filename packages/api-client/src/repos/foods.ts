@@ -1,9 +1,11 @@
 import { foodPortionSchema, foodRowSchema } from "@keylow/core/schemas";
 import { z } from "zod";
 
+import { repoError } from "./repoError";
+
 import type { Database } from "../database.types";
 import type { CustomFoodInput, Food, FoodPortion } from "@keylow/core/schemas";
-import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 type FoodInsert = Database["public"]["Tables"]["foods"]["Insert"];
 type FoodPortionInsert = Database["public"]["Tables"]["food_portions"]["Insert"];
@@ -51,9 +53,6 @@ export const OWN_FOODS_PAGE_SIZE = 50;
 export const MIN_SEARCH_LENGTH = 2;
 const DEFAULT_SEARCH_LIMIT = 25;
 const MAX_SEARCH_LIMIT = 50;
-
-const repoError = (action: string, cause: PostgrestError) =>
-  new Error(`Could not ${action}: ${cause.message}`, { cause });
 
 /**
  * Thrown when a write stopped half way and left the food and its portions out of step: the food
@@ -236,10 +235,7 @@ export async function replaceFoodPortions(
   const { error: deleteError } = await client.from("food_portions").delete().eq("food_id", foodId);
 
   if (deleteError) {
-    throw new Error(
-      `Could not remove the old portions of the food ${foodId}: ${deleteError.message}`,
-      { cause: deleteError },
-    );
+    throw repoError(`remove the old portions of the food ${foodId}`, deleteError);
   }
 
   if (portions.length === 0) {
@@ -255,8 +251,8 @@ export async function replaceFoodPortions(
   if (error) {
     throw new FoodsPartialWriteError(
       foodId,
-      `The old portions of the food ${foodId} were removed but the new portions were not saved: ${error.message}`,
-      error,
+      `The old portions of the food ${foodId} were removed but the new portions were not saved (${error.code})`,
+      { code: error.code },
     );
   }
 
@@ -306,8 +302,8 @@ export async function createFood(
   if (portionsError) {
     throw new FoodsPartialWriteError(
       food.id,
-      `The food ${food.id} was created but its portions were not saved: ${portionsError.message}`,
-      portionsError,
+      `The food ${food.id} was created but its portions were not saved (${portionsError.code})`,
+      { code: portionsError.code },
     );
   }
 

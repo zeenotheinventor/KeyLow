@@ -3,7 +3,7 @@ import { MAX_SESSION_NOTE_LENGTH } from "@keylow/core/training";
 import { z } from "zod";
 
 import { parseRow } from "./diaryRows";
-import { trainingRepoError } from "./training";
+import { repoError } from "./repoError";
 import { sessionDetailColumnsSchema } from "./trainingSchemas";
 import { getActiveSession, getSession } from "./trainingSessions";
 
@@ -117,12 +117,12 @@ async function startWithRetry(
         return startWithRetry(client, row, retries - 1);
       }
     }
-    throw trainingRepoError("start the session", error);
+    throw repoError("start the session", error);
   }
 
   const stored = await getSession(client, data.id);
   if (stored === null) {
-    throw new Error(`Could not start the session (${NO_ROW})`, { cause: { code: NO_ROW } });
+    throw repoError("start the session", { code: NO_ROW });
   }
   return stored;
 }
@@ -161,7 +161,7 @@ export async function finishSession(
     .is("deleted_at", null)
     .single();
   if (readError) {
-    throw trainingRepoError("finish the session", readError);
+    throw repoError("finish the session", readError);
   }
   const { started_at, ended_at } = parseRow(
     SESSION_SPAN_SCHEMA,
@@ -184,13 +184,13 @@ export async function finishSession(
       .is("ended_at", null)
       .is("deleted_at", null);
     if (error) {
-      throw trainingRepoError("finish the session", error);
+      throw repoError("finish the session", error);
     }
   }
 
   const stored = await getSession(client, id);
   if (stored === null) {
-    throw new Error(`Could not finish the session (${NO_ROW})`, { cause: { code: NO_ROW } });
+    throw repoError("finish the session", { code: NO_ROW });
   }
   return stored;
 }
@@ -209,6 +209,6 @@ export async function deleteSession(client: SupabaseClient<Database>, id: string
   } satisfies Database["public"]["Functions"]["delete_workout_session"]["Args"]);
 
   if (error) {
-    throw trainingRepoError("delete the session", error);
+    throw repoError("delete the session", error);
   }
 }

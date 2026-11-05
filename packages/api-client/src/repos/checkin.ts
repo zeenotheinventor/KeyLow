@@ -1,6 +1,7 @@
 import { runCheckinRequestSchema, runCheckinResponseSchema } from "@keylow/core/schemas";
 import { FunctionsHttpError } from "@supabase/supabase-js";
 
+import { repoError } from "./repoError";
 import { getMyTimeZone } from "./targets";
 import { invokeEdgeFunction } from "../edge";
 
@@ -36,9 +37,7 @@ export async function getMyCheckinSchedule(
   ]);
 
   if (program.error) {
-    throw new Error(`Could not load your check-in schedule (${program.error.code})`, {
-      cause: { code: program.error.code },
-    });
+    throw repoError("load your check-in schedule", program.error);
   }
 
   return program.data === null

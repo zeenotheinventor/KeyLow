@@ -9,6 +9,7 @@ import { z } from "zod";
 import { idOfRow, parseRow } from "./diaryRows";
 import { escapeLikePattern } from "./escapeLikePattern";
 import { MIN_SEARCH_LENGTH, getFood, listFoodPortions } from "./foods";
+import { repoError } from "./repoError";
 
 import type { Database } from "../database.types";
 import type {
@@ -16,7 +17,7 @@ import type {
   RefreshedRecipeIngredients,
   StoredRecipeIngredient,
 } from "@keylow/core/recipes";
-import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 // A recipe is health data, and the database's own message and details can quote a failing row. So a
 // failure here names the action and the error code only, and the cause holds the code and nothing
@@ -28,9 +29,6 @@ const RECIPE_COLUMNS = `${LIBRARY_COLUMNS},instructions,recipe_ingredients(${ING
 
 const DEFAULT_SEARCH_LIMIT = 25;
 const MAX_SEARCH_LIMIT = 50;
-
-export const recipeRepoError = (action: string, cause: PostgrestError) =>
-  new Error(`Could not ${action} (${cause.code})`, { cause: { code: cause.code } });
 
 const recipeSummarySchema = recipeSchema
   .pick({ name: true, servings: true, yield_grams: true, is_archived: true })
@@ -90,7 +88,7 @@ export async function listRecipes(
     .order("id", { ascending: true });
 
   if (error) {
-    throw recipeRepoError("load your recipes", error);
+    throw repoError("load your recipes", error);
   }
 
   return summariesOf(data, "load your recipes");
@@ -113,7 +111,7 @@ export async function getRecipe(
     .maybeSingle();
 
   if (error) {
-    throw recipeRepoError("load the recipe", error);
+    throw repoError("load the recipe", error);
   }
 
   return data === null ? null : parseRow(recipeDetailSchema, data, "load the recipe", idOfRow);
@@ -147,7 +145,7 @@ export async function searchRecipes(
     .limit(Math.min(MAX_SEARCH_LIMIT, Math.max(1, Math.trunc(limit))));
 
   if (error) {
-    throw recipeRepoError("search your recipes", error);
+    throw repoError("search your recipes", error);
   }
 
   return summariesOf(data, "search your recipes");
@@ -193,9 +191,7 @@ async function readFoodsOf(
     );
     return new Map(found.filter((entry) => entry !== null));
   } catch (error) {
-    throw new Error(`Could not load the foods of the recipe (${errorCodeOf(error)})`, {
-      cause: { code: errorCodeOf(error) },
-    });
+    throw repoError("load the foods of the recipe", { code: errorCodeOf(error) });
   }
 }
 

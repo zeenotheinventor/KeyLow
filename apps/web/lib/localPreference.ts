@@ -5,17 +5,35 @@
  * server has no storage and a first draw that read it would not match the page it sent.
  */
 
+/** What `readLocalPreferenceState` found: a value the guard accepts, nothing usable, or storage that cannot be read. */
+export type LocalPreferenceState<Value extends string> =
+  { status: "saved"; value: Value } | { status: "empty" } | { status: "unreadable" };
+
+/**
+ * What is saved under `key`, telling nothing usable (none saved, or a value the guard refuses) from
+ * storage that cannot be read, for a choice that must not be asked again when it could never be saved.
+ */
+export function readLocalPreferenceState<Value extends string>(
+  key: string,
+  isValue: (stored: string) => stored is Value,
+): LocalPreferenceState<Value> {
+  try {
+    const stored = window.localStorage.getItem(key);
+    return stored !== null && isValue(stored)
+      ? { status: "saved", value: stored }
+      : { status: "empty" };
+  } catch {
+    return { status: "unreadable" };
+  }
+}
+
 /** The value saved under `key`, or null when none is saved, the guard refuses it or storage cannot be read. */
 export function readLocalPreference<Value extends string>(
   key: string,
   isValue: (stored: string) => stored is Value,
 ): Value | null {
-  try {
-    const stored = window.localStorage.getItem(key);
-    return stored !== null && isValue(stored) ? stored : null;
-  } catch {
-    return null;
-  }
+  const state = readLocalPreferenceState(key, isValue);
+  return state.status === "saved" ? state.value : null;
 }
 
 /** Saves `value` under `key`. A value that cannot be saved still applies for the visit, so the failure is not raised. */

@@ -85,6 +85,6 @@ describe("useFoodPortions", () => {
     await waitFor(() => {
       expect(result.current.isError).toBe(true);
     });
-    expect(result.current.error).toHaveProperty("cause.message", "database unavailable");
+    expect(result.current.error).toHaveProperty("cause", { code: "XX000" });
   });
 });

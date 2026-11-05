@@ -3,6 +3,7 @@ import { parseSetSnapshot } from "@keylow/core/training";
 import { z } from "zod";
 
 import { idOfRow, parseRow } from "./diaryRows";
+import { repoError } from "./repoError";
 import {
   SESSION_COLUMNS,
   SET_COLUMNS,
@@ -14,7 +15,7 @@ import {
 import type { ActiveRoutine, TrainingSet, WeekSession } from "./trainingSchemas";
 import type { Database } from "../database.types";
 import type { SetSnapshot } from "@keylow/core/schemas";
-import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 // A set holds an exercise name, a muscle share and an effort, and a routine holds exercise names: all
 // health data. A failure here names the action and the error code only, and the cause holds the code
@@ -27,9 +28,6 @@ const LOCAL_DATE = z.iso.date();
 
 // A session row is read with its sets embedded, and a row without the list is not a session of no sets.
 const sessionWithSetsSchema = sessionColumnsSchema.extend({ workout_sets: z.array(z.unknown()) });
-
-export const trainingRepoError = (action: string, cause: PostgrestError) =>
-  new Error(`Could not ${action} (${cause.code})`, { cause: { code: cause.code } });
 
 function assertLocalDate(localDate: string): void {
   if (!LOCAL_DATE.safeParse(localDate).success) {
@@ -103,7 +101,7 @@ export async function listSetsFrom(
       .range(offset, offset + PAGE_SIZE - 1);
 
     if (error) {
-      throw trainingRepoError("load your sets", error);
+      throw repoError("load your sets", error);
     }
 
     sets.push(...data.map((row) => parseSetRow(row, "read the sets")));
@@ -139,7 +137,7 @@ export async function listWeekSessions(
     .order("id", { ascending: true, referencedTable: "workout_sets" });
 
   if (error) {
-    throw trainingRepoError("load your week", error);
+    throw repoError("load your week", error);
   }
 
   return data.map((row) => {
@@ -172,7 +170,7 @@ export async function getActiveRoutine(
     .maybeSingle();
 
   if (error) {
-    throw trainingRepoError("load your routine", error);
+    throw repoError("load your routine", error);
   }
 
   return data === null ? null : parseRow(routineColumnsSchema, data, "read the routine", idOfRow);
@@ -191,7 +189,7 @@ export async function hasLoggedSession(client: SupabaseClient<Database>): Promis
     .limit(1);
 
   if (error) {
-    throw trainingRepoError("check your sessions", error);
+    throw repoError("check your sessions", error);
   }
 
   return data.length > 0;

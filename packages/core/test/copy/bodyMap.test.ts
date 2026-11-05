@@ -229,6 +229,7 @@ describe("the fixed words of the body map, as the boards draw them", () => {
         sheetTitle: "Figure",
         description: "This changes how the body is drawn. Nothing else changes.",
         options: { male: "Male", female: "Female" },
+        done: "Done",
       },
     });
   });

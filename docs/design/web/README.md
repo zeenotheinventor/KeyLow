@@ -103,3 +103,61 @@ Where the sources disagree, the order is: Zee's rulings, then the Ki-Lo design s
 - **Errors never show the raw message.** Each kind maps to one fixed sentence from `packages/core` copy.
 - **The slug is `web`** (orchestrator confirmation), so the files are `web/<state>.png` and `web/<state>.html`.
 - **Out of scope for M2:** forgotten password, account settings and real Dashboard, Diary and Recipes pages.
+
+## 3D body proposal
+
+Boards for the web 3D body ([KEY-831](https://linear.app/sojisoft/issue/KEY-831), part of [KEY-565](https://linear.app/sojisoft/issue/KEY-565)). The design gate was met by these boards, drawn by hand from the mobile boards `body · 3d`, `body · 3d-loading` and `tab-shell.more · body-map-setting`, in the way [KEY-798](https://linear.app/sojisoft/issue/KEY-798) added its boards. Zee reviews them after merge. They are not on the canvas, so they sit in `proposals/`, where `tools/design-export` does not look. Each is a PNG at device pixel ratio 2 and a standalone page that opens from `file://`. The frames are 1280 dark, 1280 light, 375 dark and 375 light, from left to right. The pages link `packages/tokens` by relative path and use no raw hex. The 3D images are the committed renders in `tools/body-model/renders/muscles/`, linked by relative path.
+
+### body-3d
+
+The body map card of `web-body · actual-heat` with one body on a dark stage where the 2D page has two figures. The stage is dark in both themes, and the light frames carry the board's line "Drawn on a dark stage in both themes." Under the stage are the Front / Back control and the zoom buttons, then the hint, then the day row. The Show projected button and the side by side button keep their place at the top of the card (under the figures on a phone, as on the 2D page).
+
+![web body-3d](proposals/body-3d.png)
+
+Open [proposals/body-3d.html](proposals/body-3d.html).
+
+### body-3d-zoomed
+
+The same card zoomed to 2× on the torso, turned three-quarters. The zoom pill (2×) and Reset sit at the top right of the stage, as on mobile. Zoom out is off at the whole body and on here.
+
+![web body-3d-zoomed](proposals/body-3d-zoomed.png)
+
+Open [proposals/body-3d-zoomed.html](proposals/body-3d-zoomed.html).
+
+### body-3d-loading
+
+The 2D front figure in the place of the stage, with "Loading 3D…" at its bottom right corner and the zoom buttons off. The stage is clear and in the page's theme while 3D loads, as on mobile, and it darkens when the body has drawn. The 2D figure shows at once and fades to 3D when it is ready. If 3D cannot load, the 2D figure stays and the label goes. While it loads, the figure's name ends "3D is loading." and the label is a status.
+
+![web body-3d-loading](proposals/body-3d-loading.png)
+
+Open [proposals/body-3d-loading.html](proposals/body-3d-loading.html).
+
+### more-body-map-setting
+
+The More page with the Body map row (2D, 3D) in the Settings group, between Appearance and About. The dark frames show 2D chosen, the default, and the light frames show 3D chosen, as the mobile board shows the two choices. The row is built like Appearance: a label over a segmented control.
+
+![web more-body-map-setting](proposals/more-body-map-setting.png)
+
+Open [proposals/more-body-map-setting.html](proposals/more-body-map-setting.html).
+
+### more-body-map-setting-female
+
+The same page for a female figure: 3D is chosen and the caption `MORE_SCREEN.settings.bodyMap.femaleNote` sits under the control ("3D draws the male body for now. Your figure is female, so the body map stays 2D."). The control keeps the choice, and the body map page stays 2D.
+
+![web more-body-map-setting-female](proposals/more-body-map-setting-female.png)
+
+Open [proposals/more-body-map-setting-female.html](proposals/more-body-map-setting-female.html).
+
+### Decisions for Zee to check after merge
+
+These are recommendations made while Zee was away, and each can be reversed.
+
+- **Zoom on web.** A pinch on touch, and the same on a trackpad (the browser reports the trackpad's pinch as a wheel event with `ctrlKey`). A mouse and the keyboard use the minus and plus buttons. A plain mouse wheel scrolls the page, so the page never traps a scroll.
+- **The hint.** "Drag to turn · Pinch or use + and − to zoom · Press and hold a muscle for details", a new string `BODY_MAP.rotateHintWeb`. Mobile's `rotateHint` says long-press and stays as it is.
+- **3D only on the body map page.** The dashboard and Train cards, the priorities summary and the "Muscles it works" dialog ([KEY-765](https://linear.app/sojisoft/issue/KEY-765)) stay 2D on web. Side by side stays 2D, as on mobile until [KEY-564](https://linear.app/sojisoft/issue/KEY-564).
+- **Where the controls sit.** Front / Back on the left and the two zoom buttons on the right, in one row under the stage, so nothing sits over the body. The buttons are 44 pixels square. Zoom out is off at the whole body.
+- **New strings the build needs, four in all, in `packages/core/src/copy/bodyMap.ts`.** `BODY_MAP.rotateHintWeb` ("Drag to turn · Pinch or use + and − to zoom · Press and hold a muscle for details"), and `BODY_MAP.zoom.in` ("Zoom in"), `BODY_MAP.zoom.out` ("Zoom out") and `BODY_MAP.zoom.groupName` ("Zoom"), beside the existing `zoom.reset` and `zoom.resetName`. The Front / Back group is named by `BODY_MAP.sideSwitch.name` ("Side shown"), where the mobile board's markup says "Snap to".
+- **The stage colour.** The stage is the dark theme's `--background` in both themes. In the app `packages/tokens/css/kilo-tokens.css` defines dark on `:root` and light under `[data-theme="light"]`, and `apps/web/app/layout.tsx` sets `data-theme` on `<html>`, so `var(--background)` is light in a light page and the stage would turn light. The build adds a stage token to `packages/tokens` (`--stage-background`, carrying the dark theme's value in both themes) through the generator `packages/tokens/scripts/generate.ts`. A dark scope around the stage is not the way, because the zoom pill, the buttons and the hint over and under it must keep the page's tokens. The boards' own `--stage-background` is a board-only workaround: each page declares it once on `:root`, where it resolves in dark, and inherits it unchanged. The renders' own backdrop is not exactly `--background`, so the boards feather it into the stage at its two sides.
+- **The top bar and the More page are drawn as main has them.** Every board has the live top bar: Dashboard, Diary, Train and More. Train is current on the body map frames and More on the More frames. The More boards start from `shell-more`, with Recipes out of the top bar (ruling of 2026-10-29) and Train in it, the Nutrition section (Targets, Recipes) and the About row added, so the Body map row sits in the page as it is today. The Weight row is still "Coming soon" there.
+- **The body map boards keep the scale switch, day row, legend and muscle list of `web-body · actual-heat`.** Only the figures inside the card change.
+- **Segmented controls.** Front / Back follows the card's own Scale switch on the canvas board (a 44 pixel track with 36 pixel segments), and the More row follows Appearance on `shell-more`. The two looks differ on the existing boards and are left as drawn.

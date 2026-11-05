@@ -2,7 +2,7 @@ import { buildRecipeLogEntry, recipeLogEntryInsertSchema } from "@keylow/core/di
 
 import { ENTRY_COLUMNS, idOfRow, parseRow } from "./diaryRows";
 import { recipeLogEntrySchema } from "./diarySchemas";
-import { recipeRepoError } from "./recipes";
+import { repoError } from "./repoError";
 
 import type { RecipeLogEntry } from "./diarySchemas";
 import type { Database } from "../database.types";
@@ -75,7 +75,7 @@ export async function logRecipe(
     .single();
 
   if (error) {
-    throw recipeRepoError(ACTION, error);
+    throw repoError(ACTION, error);
   }
 
   return parseRow(recipeLogEntrySchema, data, "read the new entry", idOfRow);
