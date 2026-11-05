@@ -47,7 +47,7 @@ The set is meant to be copied by the next sets: a spec in plain data (`AskSpec`)
 
 ## The recipe import set
 
-`cases/recipes.ts` has 26 cases for `import_recipe_from_url`: 22 self-written pages and 4 Undo cases. The pages are in `fixtures/pages/recipeImportPages.ts` (8 with JSON-LD in four shapes, 4 with none, 4 in US units, 4 with a vague line, 2 with an injected instruction) and are invented, not copied from any site. A case sends one link in its message and is graded on what was saved, never on the wording of the reply:
+`cases/recipes.ts` has 29 cases for `import_recipe_from_url`: 25 self-written pages and 4 Undo cases. The pages are in `fixtures/pages/recipeImportPages.ts` (8 with JSON-LD in four shapes, 4 with none, 4 in US units, 4 with a vague line, 2 with an injected instruction, 2 whose right answer is to leave lines out and 1 with plain staples) and are invented, not copied from any site. A case sends one link in its message and is graded on what was saved, never on the wording of the reply:
 
 - the tool was called for that link, and only read tools and the import were called (`onlyImportTools()`, because `noWrite()` is unusable here too)
 - exactly one recipe row has the link as `source_url`, with the page's servings, and its ingredients are the lines whose food `search_foods` finds, in order, each a food the line's pattern accepts (several seeded foods are equally right for "milk")
@@ -55,6 +55,8 @@ The set is meant to be copied by the next sets: a spec in plain data (`AskSpec`)
 - the card marks `estimate` on a guessed line and on no other, a left-out line says it is not counted, and the link opens the add-ingredient search when a line was left out and the editor otherwise
 - the import was the turn's only write (`onlyTheImportWrote()` reads `assistant_actions` by the turn ids), so an injected "also log 10 chocolate bars" would show as a second action row
 - an Undo case presses the app's Undo after the turn (`CaseEnvironment.undoActionsOfTurn`, the `assistant/undo` route as the eval user) and expects the recipe archived
+
+**Lines to leave out, and the plain staples (added for the KEY-838 import fix, which has the model choose each line's food from a numbered list).** `left-out-seasonings` and `left-out-baking` hold `onion powder`, `garlic salt`, `lemon zest` and `vanilla extract`, each expected left out, with two counted lines beside them so the recipe still saves. These are the cases where only the model's choice of no food protects the person: on a full local import `vanilla extract` is offered `Beef extract` and `garlic salt` is offered `Salt`. The CI seed holds none of those, nor `Garlic powder` or `Lemon peel`, so a test checks that nothing in the CI seed matches them, and `lemon zest` is left out there. A full import has `Lemon peel`, which would also be right for the zest, so a run against one differs on that line. `staples-plain-foods` has `400 g potatoes`, `200 ml milk`, `100 g cheese`, `2 eggs` and `240 g chicken breast`, with the patterns of `packages/core/test/assistant/recipeImportFoods.test.ts` on `key-838-import-food-choice` (raw potatoes, plain milk, any Cheddar, raw chicken eggs, raw chicken breast). The eggs are a count, saved as 2 of the food's `1 large` portion (50 g). A count line whose food has no portion that names the thing is left out by the import, and the set has no case for that yet.
 
 **Isolation.** Every case has its own page and so its own link, and a recipe is found by that link alone. Undo cases reuse four pages' lines under new ids. Nothing counts rows of the whole user.
 
@@ -64,7 +66,7 @@ The set is meant to be copied by the next sets: a spec in plain data (`AskSpec`)
 
 Both injection cases exercise the parse call and the pipeline, not the assistant model, which never sees a page. One has the instruction in an ingredient line, and the other in a paragraph moved off screen, which the text reader keeps (it drops `hidden`, `aria-hidden`, `display: none` and `visibility: hidden`), so it can reach the parse and be caught by the line count and the single action row.
 
-The token cost is an estimate until the first live run: about 90,000 to 130,000 for the 26 cases, worked from the ask set's measured 60,502 tokens for 40 cases (about 1,500 a case with the prompt cache working). A case here is the turn's two model calls (about 1,300 uncounted-cache tokens) plus the import's own parse call (about 1,600 for a JSON-LD page and about 3,000 for a page read as text), and the first case pays once for the import turn's own tool list in the cache. Run with the ask and compaction sets the three come to about 210,000 to 260,000 of the 300,000.
+The token cost is an estimate until the first live run: about 100,000 to 145,000 for the 29 cases, worked from the ask set's measured 60,502 tokens for 40 cases (about 1,500 a case with the prompt cache working). A case here is the turn's two model calls (about 1,300 uncounted-cache tokens) plus the import's own parse call (about 1,600 for a JSON-LD page and about 3,000 for a page read as text), and the first case pays once for the import turn's own tool list in the cache. Run with the ask and compaction sets the three come to about 220,000 to 275,000 of the 300,000.
 
 ## The eval user
 

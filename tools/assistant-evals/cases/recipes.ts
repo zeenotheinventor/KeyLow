@@ -1,4 +1,4 @@
-// The recipe import set (KEY-701): 22 pages and 4 Undo cases for `import_recipe_from_url`. A case sends the
+// The recipe import set (KEY-701): 25 pages and 4 Undo cases for `import_recipe_from_url`. A case sends the
 // link of one self-written page (`fixtures/pages/recipeImportPages.ts`, served by `src/pageServer.ts`) and is
 // graded on what was saved, never on the wording of the reply.
 //
@@ -21,7 +21,7 @@ import { READ_TOOLS } from "./ask.ts";
 import { pagePathOf, recipePages } from "../fixtures/pages/recipeImportPages.ts";
 import { recipePageUrl } from "../src/pageServer.ts";
 
-import type { ExpectedLine, RecipePage } from "../fixtures/pages/recipeImportPages.ts";
+import type { Amount, ExpectedLine, RecipePage } from "../fixtures/pages/recipeImportPages.ts";
 import type { EvalCase, GradeContext, GradeOutcome, Grader } from "../src/case.ts";
 import type { ToolCall } from "../src/types.ts";
 import type { RecipeIngredient, RecipeIngredientInput } from "@keylow/core/recipes";
@@ -110,15 +110,21 @@ async function recipeOf(context: GradeContext, page: RecipePage) {
   return recipes.length === 1 ? (recipes[0] ?? null) : null;
 }
 
-function spoonAmount(
-  spoon: "tsp" | "tbsp" | "cup",
-  quantity: number,
-  portions: readonly FoodPortion[],
-): RecipeIngredientInput | null {
-  const portion = spoonPortionWithLabel(`1 ${spoon}`);
-  return portion === undefined
-    ? null
-    : { quantity, unit: "portion", portion, foodPortions: portions };
+/** The ingredient input for the amount a page asks for, or null when the food has no such portion or spoon. */
+function inputOf(amount: Amount, portions: readonly FoodPortion[]): RecipeIngredientInput | null {
+  if ("spoon" in amount) {
+    const spoon = spoonPortionWithLabel(`1 ${amount.spoon}`);
+    return spoon === undefined
+      ? null
+      : { quantity: amount.quantity, unit: "portion", portion: spoon, foodPortions: portions };
+  }
+  if ("portionLabel" in amount) {
+    const portion = portions.find(({ label }) => label === amount.portionLabel);
+    return portion === undefined
+      ? null
+      : { quantity: amount.quantity, unit: "portion", portion, foodPortions: portions };
+  }
+  return { quantity: amount.quantity, unit: amount.unit, foodPortions: portions };
 }
 
 type Rebuilt = { ingredients: RecipeIngredient[]; problem: string | null };
@@ -172,13 +178,9 @@ async function rebuild(
       }
       ingredients.push(buildRecipeIngredient(food, { quantity, unit, foodPortions: portions }));
     } else {
-      const { amount } = line;
-      const input =
-        "spoon" in amount
-          ? spoonAmount(amount.spoon, amount.quantity, portions)
-          : { quantity: amount.quantity, unit: amount.unit, foodPortions: portions };
+      const input = inputOf(line.amount, portions);
       if (input === null) {
-        return { ingredients, problem: `${label} is measured in a spoon core does not know` };
+        return { ingredients, problem: `${label} is measured in a portion the food does not have` };
       }
       ingredients.push(buildRecipeIngredient(food, input));
     }

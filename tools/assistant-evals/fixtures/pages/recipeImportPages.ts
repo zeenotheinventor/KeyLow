@@ -80,6 +80,14 @@ export const FOODS = {
   yogurt: { label: "Greek yogurt", namePattern: /^Yogurt, Greek style, plain$/ },
   flour: { label: "plain flour", namePattern: /^Flour, wheat, white, plain/ },
   tomatoes: { label: "tomatoes", namePattern: /^Tomatoes, (?:standard|cherry), raw$/ },
+  // The plain staples of the KEY-838 table (packages/core/test/assistant/recipeImportFoods.test.ts), with its patterns.
+  rawPotatoes: {
+    label: "raw potatoes",
+    namePattern: /^Potatoes, (?:old|new and salad), (?:raw|flesh only, raw)/,
+  },
+  cheese: { label: "cheese", namePattern: /^Cheese, Cheddar/ },
+  rawEggs: { label: "raw eggs", namePattern: /^Eggs, chicken, whole, raw/ },
+  rawChickenBreast: { label: "raw chicken breast", namePattern: /^Chicken, breast.*raw/ },
   springOnions: {
     label: "spring onions",
     namePattern: /^Spring onions, (?:bulbs and tops|bulbs only), raw$/,
@@ -89,7 +97,9 @@ export const FOODS = {
 /** What a line asks for, in the page's own units. `spoon` is a teaspoon, tablespoon or cup of the food. */
 export type Amount =
   | Readonly<{ quantity: number; unit: "g" | "ml" | "oz" }>
-  | Readonly<{ quantity: number; spoon: "tsp" | "tbsp" | "cup" }>;
+  | Readonly<{ quantity: number; spoon: "tsp" | "tbsp" | "cup" }>
+  /** A count of the thing itself ("2 eggs"), saved as that many of the food's portion with this label. */
+  | Readonly<{ quantity: number; portionLabel: string }>;
 
 export type ExpectedLine =
   /** A line with an amount whose food the search finds: counted, at that amount. */
@@ -116,7 +126,7 @@ export const unresolved = (text: string): ExpectedLine => ({ kind: "unresolved",
 export type PageShape = "plain" | "graph" | "howToSection" | "plainYieldText" | "text";
 
 /** What the page is for, which is how a case is grouped. */
-export type PageKind = "jsonld" | "text" | "us" | "vague" | "injection";
+export type PageKind = "jsonld" | "text" | "us" | "vague" | "injection" | "leftOut" | "staples";
 
 export type RecipePage = Readonly<{
   /** The case id, and the last part of the path. */
@@ -477,6 +487,55 @@ const importPages: readonly RecipePage[] = [
       unresolved("a spoonful of harissa"),
     ],
     steps: ["Rub the salmon with the harissa.", "Roast with the potatoes."],
+  },
+
+  // Two with lines whose right answer is to leave them out: the CI seed holds no onion powder, garlic salt,
+  // vanilla extract or lemon peel (a lemon zest is not `Lemons, peeled, flesh only`). Only the model's choice of
+  // no food protects the person from a near miss such as `Beef extract`, `Salt` or `Garlic powder`.
+  {
+    id: "left-out-seasonings",
+    kind: "leftOut",
+    shape: "plain",
+    name: "Seasoned Broccoli and Carrots",
+    servings: 2,
+    lines: [
+      measured("250 g broccoli", F.broccoli, { quantity: 250, unit: "g" }),
+      measured("150 g carrots", F.carrots, { quantity: 150, unit: "g" }),
+      unresolved("1 tsp onion powder"),
+      unresolved("1 tsp garlic salt"),
+    ],
+    steps: ["Steam the vegetables.", "Season at the end."],
+  },
+  {
+    id: "left-out-baking",
+    kind: "leftOut",
+    shape: "text",
+    name: "Banana Oat Squares",
+    servings: 4,
+    lines: [
+      measured("200 g bananas", F.banana, { quantity: 200, unit: "g" }),
+      measured("60 g porridge oats", F.oats, { quantity: 60, unit: "g" }),
+      unresolved("1 tsp lemon zest"),
+      unresolved("1 tsp vanilla extract"),
+    ],
+    steps: ["Mash the banana.", "Stir in the oats and the flavourings.", "Bake until firm."],
+  },
+
+  // The plain staples that were silently wrong before the import chose from a list (KEY-838), with amounts.
+  {
+    id: "staples-plain-foods",
+    kind: "staples",
+    shape: "plain",
+    name: "Everyday Supper Bake",
+    servings: 2,
+    lines: [
+      measured("400 g potatoes", F.rawPotatoes, { quantity: 400, unit: "g" }),
+      measured("200 ml milk", F.milk, { quantity: 200, unit: "ml" }),
+      measured("100 g cheese", F.cheese, { quantity: 100, unit: "g" }),
+      measured("2 eggs", F.rawEggs, { quantity: 2, portionLabel: "1 large" }),
+      measured("240 g chicken breast", F.rawChickenBreast, { quantity: 240, unit: "g" }),
+    ],
+    steps: ["Slice the potatoes.", "Layer everything and bake."],
   },
 
   // Two with an injected instruction: in an ingredient line, and in text moved off screen.

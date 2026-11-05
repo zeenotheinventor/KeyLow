@@ -29,6 +29,7 @@ import type {
 } from "../fixtures/pages/recipeImportPages.ts";
 import type { EvalCase, GradeContext } from "../src/case.ts";
 import type { EvalDatabase, RowQuery, TurnResult } from "../src/types.ts";
+import type { RecipeIngredientInput } from "@keylow/core/recipes";
 import type { Food, FoodPortion } from "@keylow/core/schemas";
 
 type Row = Record<string, unknown>;
@@ -61,6 +62,10 @@ const SAMPLE_NAMES: Readonly<Record<string, string>> = {
   "plain flour": "Flour, wheat, white, plain, soft",
   tomatoes: "Tomatoes, standard, raw",
   "spring onions": "Spring onions, bulbs and tops, raw",
+  "raw potatoes": "Potatoes, old, raw, flesh only",
+  cheese: "Cheese, Cheddar, English",
+  "raw eggs": "Eggs, chicken, whole, raw",
+  "raw chicken breast": "Chicken, breast, raw, meat and skin",
 };
 
 const DENSITIES: Readonly<Record<string, number>> = { milk: 1.03, "olive oil": 0.92 };
@@ -108,6 +113,19 @@ const guessFor = (food: Food) =>
     ? ({ quantity: 20, unit: "g" } as const)
     : ({ quantity: 30, unit: "ml" } as const);
 
+// The one counted portion a food of the pages has: a large egg.
+const largeEgg = (food: Food): FoodPortion => ({
+  id: "e99e0000-0000-4000-8000-000000000001",
+  food_id: food.id,
+  owner_id: null,
+  label: "1 large",
+  grams: 50,
+  ml: null,
+  is_default: true,
+  position: 0,
+  created_at: "2026-01-01T00:00:00Z",
+});
+
 type Variant = {
   recipeId?: string;
   isArchived?: boolean;
@@ -134,7 +152,6 @@ function rightReply(page: RecipePage, variant: Variant = {}) {
       },
     ],
   });
-  const portions: FoodPortion[] = [];
   const ingredients = page.lines.flatMap((line, index) => {
     if (line.kind === "unresolved") {
       return [];
@@ -151,17 +168,21 @@ function rightReply(page: RecipePage, variant: Variant = {}) {
       ];
     }
     const { amount } = line;
-    const portion = "spoon" in amount ? spoonPortionWithLabel(`1 ${amount.spoon}`) : undefined;
-    return [
-      buildRecipeIngredient(
-        food,
-        "spoon" in amount && portion !== undefined
-          ? { quantity: amount.quantity, unit: "portion", portion, foodPortions: portions }
-          : "spoon" in amount
-            ? { quantity: 1, unit: "g" }
-            : { quantity: amount.quantity, unit: amount.unit },
-      ),
-    ];
+    const spoon = "spoon" in amount ? spoonPortionWithLabel(`1 ${amount.spoon}`) : undefined;
+    const input: RecipeIngredientInput =
+      "spoon" in amount && spoon !== undefined
+        ? { quantity: amount.quantity, unit: "portion", portion: spoon, foodPortions: [] }
+        : "portionLabel" in amount
+          ? {
+              quantity: amount.quantity,
+              unit: "portion",
+              portion: largeEgg(food),
+              foodPortions: [largeEgg(food)],
+            }
+          : "unit" in amount
+            ? { quantity: amount.quantity, unit: amount.unit }
+            : { quantity: 1, unit: "g" };
+    return [buildRecipeIngredient(food, input)];
   });
   const kept = variant.dropFirstIngredient === true ? ingredients.slice(1) : ingredients;
   const computed = computeRecipe({ servings: page.servings, yieldGrams: null, ingredients: kept });
@@ -230,7 +251,7 @@ function rightReply(page: RecipePage, variant: Variant = {}) {
     recipes: [recipe, ...(variant.secondRecipe === true ? [{ ...recipe, id: "other" }] : [])],
     recipe_ingredients: ingredientRows,
     foods: foodRows,
-    food_portions: [],
+    food_portions: [largeEgg(foodFor(FOODS.rawEggs))],
     assistant_actions: [
       { turn_id: turn.turnId, tool: "import_recipe_from_url" },
       ...(variant.extraAction === undefined
@@ -279,10 +300,10 @@ const pageNamed = (id: string): RecipePage => {
 describe("the recipe import set", () => {
   const cases = recipeCasesOf();
 
-  it("should have 22 pages and 4 Undo cases, 26 in all", () => {
-    expect(cases).toHaveLength(26);
+  it("should have 25 pages and 4 Undo cases, 29 in all", () => {
+    expect(cases).toHaveLength(29);
     expect(cases.every(({ set }) => set === "recipes")).toBe(true);
-    expect(new Set(cases.map(({ id }) => id)).size).toBe(26);
+    expect(new Set(cases.map(({ id }) => id)).size).toBe(29);
   });
 
   it("should have the kinds the ticket asks for", () => {
@@ -294,6 +315,8 @@ describe("the recipe import set", () => {
     expect(count("us")).toBe(4);
     expect(count("vague")).toBe(4);
     expect(count("injection")).toBe(2);
+    expect(count("leftOut")).toBe(2);
+    expect(count("staples")).toBe(1);
     expect(recipePages.filter((page) => page.undoes === true)).toHaveLength(4);
   });
 
@@ -407,13 +430,23 @@ describe("the expected foods", () => {
   // The CoFID foods the CI stack seeds (supabase/seeds/10_cofid_subset.sql). It also holds 59 USDA chicken and
   // turkey foods and 5 Open Food Facts samples. This only shows that a right food exists in the seed. It does not
   // show that a correct import reaches it, which is what the live run is for.
-  const seededNames = readFileSync(
+  const cofidNames = readFileSync(
     new URL("../../../packages/db/data/cofid/subset.txt", import.meta.url),
     "utf8",
   )
     .split("\n")
     .flatMap((line) => (line.startsWith("#") ? [] : [line.replace(/^\S+ # /, "").trim()]))
     .filter((name) => name !== "");
+  const usdaNames = [
+    ...readFileSync(
+      new URL(
+        "../../../packages/db/supabase/migrations/20261029010000_usda_foods.sql",
+        import.meta.url,
+      ),
+      "utf8",
+    ).matchAll(/"name":"([^"]+)"/g),
+  ].flatMap(([, name]) => (name === undefined ? [] : [name]));
+  const seededNames = [...cofidNames, ...usdaNames];
 
   // Foods a person would not mean by the line, most of them the first hit of a tied search (KEY-701 review).
   const WRONG: Readonly<Record<keyof typeof FOODS, readonly string[]>> = {
@@ -492,6 +525,29 @@ describe("the expected foods", () => {
       "Tomatoes, canned, whole contents",
       "Tomatoes, stuffed with rice",
     ],
+    rawPotatoes: [
+      "Potato rings",
+      "Potatoes, duchesse",
+      "Potatoes, old, mashed with butter",
+      "Potatoes, old, boiled in unsalted water, flesh only",
+    ],
+    cheese: [
+      "Cheese, Brie, with outer rind removed",
+      "Cheese, cottage, plain",
+      "Cheese, processed, plain",
+    ],
+    rawEggs: [
+      "Egg fu yung",
+      "Eggs, duck, whole, raw",
+      "Eggs, chicken, whole, boiled",
+      "Eggs, chicken, yolk, raw",
+    ],
+    rawChickenBreast: [
+      "Chicken slices",
+      "Chicken, mince, raw",
+      "Chicken, breast, fried, meat only",
+      "Chicken breast/steak, coated, baked",
+    ],
     springOnions: ["Onions, raw", "Noodles, egg, fried with spring onions, homemade"],
   };
 
@@ -504,6 +560,16 @@ describe("the expected foods", () => {
 
     expect(food).toBeDefined();
     expect(names.filter((name) => food?.namePattern.test(name))).toEqual([]);
+  });
+
+  it("should find none of the left-out seasonings in the CI seed, so leaving them out is the right answer", () => {
+    // Only the model's choice of no food protects the person from a near miss (Beef extract, Salt, Garlic powder),
+    // and the CI seed holds not even those. A full local import has `Lemon peel`, which would also be right for
+    // the zest, so a run against one differs on that line. If the CI seed gains a food here, change the page.
+    const seasonings =
+      /onion.*powder|garlic.*(?:salt|powder)|vanilla|extract|zest|^lemon peel|^salt(?:,|$)/i;
+
+    expect(seededNames.filter((name) => seasonings.test(name))).toEqual([]);
   });
 
   it("should expect a food for every line of every page, and none for a bare spice", () => {
