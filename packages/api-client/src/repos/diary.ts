@@ -1,8 +1,9 @@
 import { foodSnapshotSchema, isEntryId, weekOf } from "@keylow/core/diary";
 import { z } from "zod";
 
-import { ENTRY_COLUMNS, dateOfRow, idOfRow, parseRow, repoError } from "./diaryRows";
+import { ENTRY_COLUMNS, dateOfRow, idOfRow, parseRow } from "./diaryRows";
 import { dayLogSchema, dayTotalsSchema, logEntrySchema } from "./diarySchemas";
+import { repoError } from "./repoError";
 
 import type { DayLog, DayTotals, LogEntry } from "./diarySchemas";
 import type { Database } from "../database.types";

@@ -17,7 +17,7 @@ import {
 import { z } from "zod";
 
 import { parseRow } from "./diaryRows";
-import { trainingRepoError } from "./training";
+import { repoError } from "./repoError";
 import { SESSION_SET_COLUMNS } from "./trainingSchemas";
 import { parseSessionSet } from "./trainingSessions";
 
@@ -63,7 +63,7 @@ async function readExerciseWithMap(client: SupabaseClient<Database>, exerciseId:
     .is("deleted_at", null)
     .single();
   if (error) {
-    throw trainingRepoError("log the set", error);
+    throw repoError("log the set", error);
   }
   return parseRow(exerciseWithMapSchema, data, "log the set", () => exerciseId);
 }
@@ -78,7 +78,7 @@ async function liveSetsOf(client: SupabaseClient<Database>, sessionId: string, a
     .order("position", { ascending: false })
     .limit(1);
   if (error) {
-    throw trainingRepoError(action, error);
+    throw repoError(action, error);
   }
   if (count === null) {
     throw new Error(`Could not ${action}`);
@@ -144,7 +144,7 @@ export async function addSet(
     .select(SESSION_SET_COLUMNS)
     .single();
   if (error) {
-    throw trainingRepoError("log the set", error);
+    throw repoError("log the set", error);
   }
   return parseSessionSet(data, "log the set");
 }
@@ -274,7 +274,7 @@ export async function updateSet(
     .select(SESSION_SET_COLUMNS)
     .single();
   if (error) {
-    throw trainingRepoError("update the set", error);
+    throw repoError("update the set", error);
   }
   return parseSessionSet(data, "update the set");
 }
@@ -287,7 +287,7 @@ async function readSet(client: SupabaseClient<Database>, id: string, action: str
     .eq("id", id)
     .single();
   if (error) {
-    throw trainingRepoError(action, error);
+    throw repoError(action, error);
   }
   return parseSessionSet(data, action);
 }
@@ -308,7 +308,7 @@ export async function removeSet(client: SupabaseClient<Database>, id: string): P
     .is("deleted_at", null)
     .select(SESSION_SET_COLUMNS);
   if (error) {
-    throw trainingRepoError("remove the set", error);
+    throw repoError("remove the set", error);
   }
 
   const [removed] = data;
@@ -347,7 +347,7 @@ export async function restoreSet(
     .select(SESSION_SET_COLUMNS)
     .single();
   if (error) {
-    throw trainingRepoError("restore the set", error);
+    throw repoError("restore the set", error);
   }
   return parseSessionSet(data, "restore the set");
 }
@@ -403,7 +403,7 @@ export async function reorderSets(
     .is("deleted_at", null)
     .in("id", [...orderedIds]);
   if (error) {
-    throw trainingRepoError("reorder the sets", error);
+    throw repoError("reorder the sets", error);
   }
   if (data.length !== orderedIds.length) {
     throw new RangeError("Every set to reorder must be a live set of the session");
@@ -433,6 +433,6 @@ export async function reorderSets(
   );
   const failed = results.find(({ error: failure }) => failure !== null);
   if (failed?.error) {
-    throw trainingRepoError("reorder the sets", failed.error);
+    throw repoError("reorder the sets", failed.error);
   }
 }

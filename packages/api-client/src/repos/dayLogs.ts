@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { repoError } from "./diaryRows";
+import { repoError } from "./repoError";
 
 import type { Database } from "../database.types";
 import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";

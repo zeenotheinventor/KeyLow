@@ -1,9 +1,8 @@
+import { repoError } from "./repoError";
+
 import type { Database } from "../database.types";
 import type { TermsAcceptance } from "@keylow/core/terms";
-import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
-
-const repoError = (action: string, cause: PostgrestError) =>
-  new Error(`Could not ${action}: ${cause.message}`, { cause });
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
  * Reads when, and which version of, the Terms the signed in user accepted. Row level security
@@ -31,8 +30,8 @@ export async function getMyTermsAcceptance(
  * Records that the signed in user accepted this version of the Terms, through the `accept_terms`
  * RPC. The database sets the time and overwrites any earlier acceptance. It refuses with the error
  * code 28000 when nobody is signed in, 22023 for a blank version and P0002 when the user has no
- * profile row. Each is thrown as an `Error` whose `cause` is the database error, so the code is
- * on `cause.code`.
+ * profile row. Each is thrown as an `Error` whose `cause` is `{ code }`, so the code is on
+ * `cause.code`.
  */
 export async function acceptTerms(client: SupabaseClient<Database>, version: string) {
   const { error } = await client.rpc("accept_terms", { p_version: version });

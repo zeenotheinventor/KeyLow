@@ -1,13 +1,14 @@
 import { buildManualWeighIn } from "@keylow/core/weight";
 
 import { recomputeMyTargets } from "./program";
+import { repoError } from "./repoError";
 import { addWeighIn } from "./weighIns";
 import { toEdgeErrorKind } from "../errors";
 
 import type { Database } from "../database.types";
 import type { EdgeErrorKind } from "../errors";
 import type { StartingPlan } from "@keylow/core/setup";
-import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 // The setup state is health data: the stats, the program and the weight never reach a message. A failure
 // names the action and the error code only, and the cause holds the code and nothing else, because the
@@ -58,9 +59,6 @@ export type SetupState = {
   /** The newest live weigh-in on any date, or null when there is none. */
   latestWeighIn: SetupWeighIn | null;
 };
-
-const repoError = (action: string, cause: PostgrestError) =>
-  new Error(`Could not ${action} (${cause.code})`, { cause: { code: cause.code } });
 
 /**
  * Reads what the setup wizard starts from and what decides whether it shows: whether the signed in user

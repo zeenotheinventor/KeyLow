@@ -3,9 +3,9 @@ import { routinePayload, validateRoutineDraft } from "@keylow/core/training";
 import { RoutineRuleError } from "../errors";
 import { idOfRow, parseRow } from "./diaryRows";
 import { untypedFunctions } from "./nullableArguments";
+import { repoError } from "./repoError";
 import { assertRoutineId, getRoutine } from "./routines";
 import { ROUTINE_RECORD_COLUMNS, routineRecordSchema } from "./routineSchemas";
-import { trainingRepoError } from "./training";
 
 import type { WithNullable } from "./nullableArguments";
 import type { RoutineDetail, RoutineRecord } from "./routineSchemas";
@@ -63,7 +63,7 @@ export async function saveRoutine(
   } satisfies WithNullable<Functions["save_routine"]["Args"], "p_routine_id">);
 
   if (response.error) {
-    throw trainingRepoError("save the routine", response.error);
+    throw repoError("save the routine", response.error);
   }
 
   const savedId: unknown = response.data;
@@ -94,7 +94,7 @@ export async function setActiveRoutine(
   } satisfies WithNullable<Functions["set_active_routine"]["Args"], "p_routine_id">);
 
   if (error) {
-    throw trainingRepoError("make the routine active", error);
+    throw repoError("make the routine active", error);
   }
 
   if (id === null) {
@@ -134,7 +134,7 @@ export async function setRoutineArchived(
     if (error.code === CHECK_VIOLATION && error.message.includes(ACTIVE_NOT_ARCHIVED_CHECK)) {
       throw new RoutineRuleError(action, "active_routine");
     }
-    throw trainingRepoError(action, error);
+    throw repoError(action, error);
   }
 
   return parseRow(routineRecordSchema, data, action, idOfRow);

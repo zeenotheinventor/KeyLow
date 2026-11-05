@@ -104,7 +104,7 @@ describe("useDiaryDay", () => {
     await waitFor(() => {
       expect(result.current.isError).toBe(true);
     });
-    expect(result.current.error).toHaveProperty("cause.message", "unavailable");
+    expect(result.current.error).toHaveProperty("cause", { code: "XX000" });
   });
 
   it("should not retry a date that is not a calendar date, since asking again cannot change the answer", async () => {

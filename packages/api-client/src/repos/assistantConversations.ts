@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { invokeEdgeFunction } from "../edge";
 import { ENTRY_COLUMNS } from "./diaryRows";
+import { repoError } from "./repoError";
 import { getMyTimeZone } from "./targets";
 
 import type { Database } from "../database.types";
@@ -16,9 +17,6 @@ import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
 // Messages, replies and the rows an action changed are health data. A failure names the action and a
 // database code only: the database's own message can quote a value, so it is never put in a message or a
 // cause.
-const repoError = (action: string, cause: PostgrestError) =>
-  new Error(`Could not ${action} (${cause.code})`, { cause: { code: cause.code } });
-
 const messageRowSchema = z.object({
   id: z.string(),
   turn_id: z.string(),

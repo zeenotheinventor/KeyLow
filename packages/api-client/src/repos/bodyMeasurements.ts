@@ -1,10 +1,11 @@
 import { bodyMeasurementSchema } from "./bodyMeasurementSchemas";
 import { idOfRow, parseRow } from "./diaryRows";
+import { repoError } from "./repoError";
 
 import type { BodyMeasurement } from "./bodyMeasurementSchemas";
 import type { Database } from "../database.types";
 import type { BodyMeasurementInsert, BodyMeasurementKind } from "@keylow/core/weight";
-import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 // A body measurement is health data: the value, the time and a Health sample id never reach a message.
 // A failure here names the action and the error code only, and the cause holds the code and nothing
@@ -16,9 +17,6 @@ const BODY_MEASUREMENT_COLUMNS = "id,kind,measured_at,local_date,tz,value,source
 const PAGE_SIZE = 1000;
 const IMPORT_CHUNK_SIZE = 500;
 const IMPORT_KEY = "user_id,kind,source,external_id";
-
-const bodyMeasurementRepoError = (action: string, cause: PostgrestError) =>
-  new Error(`Could not ${action} (${cause.code})`, { cause: { code: cause.code } });
 
 /**
  * Every live measurement of one kind for the signed in user, newest first: `local_date`, then
@@ -43,7 +41,7 @@ export async function listBodyMeasurements(
       .range(offset, offset + PAGE_SIZE - 1);
 
     if (error) {
-      throw bodyMeasurementRepoError("load your body measurements", error);
+      throw repoError("load your body measurements", error);
     }
 
     measurements.push(
@@ -88,7 +86,7 @@ export async function importBodyMeasurements(
       .select("id");
 
     if (error) {
-      throw bodyMeasurementRepoError("import the body measurements", error);
+      throw repoError("import the body measurements", error);
     }
     inserted += data.length;
   }

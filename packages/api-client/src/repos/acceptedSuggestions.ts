@@ -7,7 +7,8 @@ import {
 import { z } from "zod";
 
 import { idOfRow } from "./diaryRows";
-import { trainingRepoError, trainingWeekBounds } from "./training";
+import { repoError } from "./repoError";
+import { trainingWeekBounds } from "./training";
 
 import type { Database } from "../database.types";
 import type { StoredAcceptedSuggestion } from "@keylow/core/schemas";
@@ -61,7 +62,7 @@ export async function listAcceptedSuggestions(
     .order("local_date", { ascending: true });
 
   if (error) {
-    throw trainingRepoError("load your accepted suggestions", error);
+    throw repoError("load your accepted suggestions", error);
   }
 
   return readRows(data);
@@ -133,7 +134,7 @@ async function softDeleteDay(
     .is("deleted_at", null)
     .select("id");
   if (error) {
-    throw trainingRepoError("accept the suggestion", error);
+    throw repoError("accept the suggestion", error);
   }
   return data.map(({ id }) => id);
 }
@@ -191,7 +192,7 @@ export async function acceptSuggestion(
       continue;
     }
     await restoreRows(client, replaced);
-    throw trainingRepoError("accept the suggestion", error);
+    throw repoError("accept the suggestion", error);
   }
 }
 
@@ -229,13 +230,13 @@ export async function undoAcceptedSuggestion(
     .is("deleted_at", null)
     .select("id");
   if (error) {
-    throw trainingRepoError("undo adding the suggestion", error);
+    throw repoError("undo adding the suggestion", error);
   }
 
   if (data.length === 0) {
     const existing = await client.from("accepted_suggestions").select("id").eq("id", id).single();
     if (existing.error) {
-      throw trainingRepoError("undo adding the suggestion", existing.error);
+      throw repoError("undo adding the suggestion", existing.error);
     }
   }
 }

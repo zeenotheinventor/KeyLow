@@ -4,11 +4,12 @@ import { z } from "zod";
 import { FavouriteRuleError } from "../errors";
 import { FOOD_COLUMNS } from "./foods";
 import { LIBRARY_COLUMNS, recipeSummaryOf } from "./recipes";
+import { repoError } from "./repoError";
 
 import type { Database } from "../database.types";
 import type { RecipeSummary } from "./recipes";
 import type { Food } from "@keylow/core/schemas";
-import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 // What a person favourites is health data. A failure here names the action and the error code only,
 // and the cause holds the code and nothing else. A row that does not parse is reported by its action
@@ -16,9 +17,6 @@ import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
 
 /** The error code the database raises when a person already holds 30 live favourites, foods and recipes together. */
 const FAVOURITE_LIMIT_CODE = "KL004";
-
-const favouriteRepoError = (action: string, cause: PostgrestError) =>
-  new Error(`Could not ${action} (${cause.code})`, { cause: { code: cause.code } });
 
 const favouriteRowSchema = z.object({
   created_at: z.iso.datetime({ offset: true }),
@@ -48,7 +46,7 @@ export async function listFavouriteFoods(
     .order("food_id", { ascending: false });
 
   if (error) {
-    throw favouriteRepoError("load the favourite foods", error);
+    throw repoError("load the favourite foods", error);
   }
 
   return data.map((row) => {
@@ -86,7 +84,7 @@ export async function addFavouriteFood(
     if (error.code === FAVOURITE_LIMIT_CODE) {
       throw new FavouriteRuleError(action, "favourite_limit");
     }
-    throw favouriteRepoError(action, error);
+    throw repoError(action, error);
   }
 }
 
@@ -98,7 +96,7 @@ export async function removeFavouriteFood(
   const { error } = await client.from("food_favourites").delete().eq("food_id", foodId);
 
   if (error) {
-    throw favouriteRepoError("unfavourite the food", error);
+    throw repoError("unfavourite the food", error);
   }
 }
 
@@ -132,7 +130,7 @@ export async function listFavouriteRecipes(
     .order("recipe_id", { ascending: false });
 
   if (error) {
-    throw favouriteRepoError(action, error);
+    throw repoError(action, error);
   }
 
   return data.map((row) => {
@@ -166,7 +164,7 @@ export async function addFavouriteRecipe(
     if (error.code === FAVOURITE_LIMIT_CODE) {
       throw new FavouriteRuleError(action, "favourite_limit");
     }
-    throw favouriteRepoError(action, error);
+    throw repoError(action, error);
   }
 }
 
@@ -178,6 +176,6 @@ export async function removeFavouriteRecipe(
   const { error } = await client.from("recipe_favourites").delete().eq("recipe_id", recipeId);
 
   if (error) {
-    throw favouriteRepoError("unfavourite the recipe", error);
+    throw repoError("unfavourite the recipe", error);
   }
 }
