@@ -102,3 +102,22 @@ export const ReviewWithLinkBelow: Story = {
     actionPlacement: "below",
   },
 };
+
+// The weigh-in dialog's save error: one sentence with no title, at caption size in the secondary ink.
+export const ErrorSentence: Story = {
+  args: {
+    tone: "error",
+    sentence: true,
+    children:
+      "Couldn't save your weigh-in. Check your connection and try again. What you typed is still here.",
+  },
+};
+
+export const ReviewSentence: Story = {
+  args: {
+    tone: "review",
+    sentence: true,
+    children:
+      "Deleting removes it from Ki-Lo only. It stays in Health Connect and won't come back on the next import.",
+  },
+};

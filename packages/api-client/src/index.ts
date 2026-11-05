@@ -186,9 +186,11 @@ export {
   useDeleteWeighIn,
   useImportWeighIns,
   useUpdateWeighIn,
+  useWeighInEntry,
   useWeighIns,
   useWeightTrend,
 } from "./hooks";
+export type { UseWeighInEntryInput } from "./hooks";
 export {
   WeighInNotEditableError,
   addWeighIn,

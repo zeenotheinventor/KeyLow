@@ -10,7 +10,7 @@ import { GroupedList } from "@/components/ui/GroupedList";
  * The Weigh-ins heading over a card of the weigh-ins, newest first. It is a plain list with no virtual
  * scrolling: a weigh-in is a short row, and the longest history a person keeps is some thousands.
  */
-export function WeightList({ weighIns, today, isLeftOut }: WeightListProps) {
+export function WeightList({ weighIns, today, isLeftOut, onOpen }: WeightListProps) {
   return (
     <GroupedList title={WEIGHT_SCREEN.listHeading}>
       {weighIns.map((weighIn) => (
@@ -19,6 +19,7 @@ export function WeightList({ weighIns, today, isLeftOut }: WeightListProps) {
           weighIn={weighIn}
           today={today}
           isLeftOut={isLeftOut(weighIn.local_date)}
+          onOpen={onOpen}
         />
       ))}
     </GroupedList>

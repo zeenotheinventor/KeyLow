@@ -81,6 +81,7 @@ function ActionControl({ action, className }: { action: BannerAction; className:
 export function Banner({
   tone = "info",
   title,
+  sentence = false,
   children,
   icon,
   role,
@@ -108,7 +109,7 @@ export function Banner({
         className={cn("flex min-w-0 flex-1 flex-col", title === undefined ? "gap-1" : "gap-0.5")}
       >
         {title === undefined ? (
-          <span className="text-body">{children}</span>
+          <span className={sentence ? style.sentence : "text-body"}>{children}</span>
         ) : (
           <>
             <span className={cn("text-body-strong", style.ink)}>{title}</span>

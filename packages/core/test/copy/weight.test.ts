@@ -368,6 +368,7 @@ describe("weigh-in-entry: add and edit", () => {
         "Deleting removes it from Ki-Lo only. It stays in Health Connect and won't come back on the next import.",
       saveError:
         "Couldn't save your weigh-in. Check your connection and try again. What you typed is still here.",
+      saveOffline: "Saving a weigh-in needs a connection. Try again when you're back online.",
     });
   });
 
