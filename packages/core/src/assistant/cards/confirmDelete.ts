@@ -1,6 +1,7 @@
 import { describeStoredName, sharedClockTime } from "./entryCardEntry";
 import {
   CONFIRM_DELETE_BUTTONS,
+  describeConfirmDeleteDayWord,
   describeConfirmDeleteQuestion,
 } from "../../copy/assistantEntryCards";
 
@@ -20,3 +21,7 @@ export const confirmDeleteQuestion = (entries: readonly CardEntry[], dayWord: st
     dayWord,
     entries.map(describeStoredName),
   );
+
+/** "today", "yesterday", "on Tue 3 Nov" or "across 2 days": the `dayWord` of the question, from the entries' own days. */
+export const confirmDeleteDayWord = (localDates: readonly string[], today: string): string =>
+  describeConfirmDeleteDayWord(localDates, today);

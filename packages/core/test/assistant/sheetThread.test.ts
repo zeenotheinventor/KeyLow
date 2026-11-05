@@ -765,6 +765,68 @@ describe("buildAssistantSheetThread with a question", () => {
     });
   });
 
+  describe("a confirmation the code worded because the model wrote no question", () => {
+    const NOTE =
+      "Your macros will be adjusted proportionally: protein 118 g, carbs 229 g, fat 68 g.";
+    const CODE_QUESTION =
+      "Change your calorie target from 2,140 to 2,000 kcal? This ends your programme and its weekly check-in. Today and later days use your own targets.";
+    const buttons = {
+      confirmLabel: "Change target",
+      cancelLabel: "Keep 2,140",
+      tone: "primary",
+    } as const;
+    const wordsOf = (entries: ReturnType<typeof build>["entries"]) =>
+      entries.flatMap((entry) => (entry.kind === "assistant" ? entry.paragraphs : []));
+    const kindsOf = (entries: ReturnType<typeof build>["entries"]) =>
+      entries.map((entry) => entry.kind);
+    const sent = { text: "Set my calories to 2,000", afterItemId: null };
+
+    it("should draw the stored question once, with the note as a second paragraph and the buttons once", () => {
+      const thread = build({
+        items: askedItems({
+          kind: "confirm",
+          id: "k1",
+          confirmationId: CONFIRMATION_ID,
+          question: `${CODE_QUESTION}\n\n${NOTE}`,
+          ...buttons,
+          answered: false,
+        }),
+      });
+
+      expect(wordsOf(thread.entries)).toEqual([CODE_QUESTION, NOTE]);
+      expect(kindsOf(thread.entries)).toEqual(["you", "assistant", "confirm"]);
+    });
+
+    it("should draw the live question once, with the note as a second paragraph and the buttons once", () => {
+      const thread = build({
+        sent,
+        live: liveTurn({
+          text: "",
+          confirm: { question: `${CODE_QUESTION}\n\n${NOTE}`, ...buttons },
+        }),
+      });
+
+      expect(wordsOf(thread.entries)).toEqual([CODE_QUESTION, NOTE]);
+      expect(kindsOf(thread.entries)).toEqual(["you", "assistant", "confirm"]);
+    });
+
+    it("should draw the stored question without its buttons once a later turn exists", () => {
+      const thread = build({
+        items: askedItems({
+          kind: "confirm",
+          id: "k1",
+          confirmationId: CONFIRMATION_ID,
+          question: CODE_QUESTION,
+          ...buttons,
+          answered: true,
+        }),
+      });
+
+      expect(wordsOf(thread.entries)).toEqual([CODE_QUESTION]);
+      expect(kindsOf(thread.entries)).toEqual(["you", "assistant"]);
+    });
+  });
+
   describe("the message that answers a question", () => {
     it("should draw the stored question without its quick replies while the next turn is drawn", () => {
       const items = askedItems(clarifyItem());

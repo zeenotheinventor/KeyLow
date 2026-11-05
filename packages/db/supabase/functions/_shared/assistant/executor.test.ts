@@ -11,6 +11,7 @@ import {
   conversationId,
   createFakeActionStore,
   createFakeContext,
+  fakeAsk,
   fakeReadTool,
   fakeWriteTool,
   spyOnConsole,
@@ -354,7 +355,7 @@ Deno.test("a read still runs in a turn with no user message", async () => {
   assertEquals((await executeTool(ctx, "get_day", input)).status, "ok");
 });
 
-const needsYes = { needsConfirmation: () => true };
+const needsYes = { needsConfirmation: () => fakeAsk };
 const earlier = "00000000-0000-4000-8000-0000000000f1";
 const middle = "00000000-0000-4000-8000-0000000000f2";
 const later = "00000000-0000-4000-8000-0000000000f3";
@@ -406,7 +407,9 @@ Deno.test(
 Deno.test(
   "a tool that asks with a note adds it to the result and to the text the model reads, and not to the stored confirmation",
   async () => {
-    const write = fakeWriteTool({ needsConfirmation: () => ({ note: "A line about 118 g." }) });
+    const write = fakeWriteTool({
+      needsConfirmation: () => ({ ...fakeAsk, note: "A line about 118 g." }),
+    });
 
     const { store, confirmationId, asked } = await ask(write, [later]);
 
@@ -414,6 +417,7 @@ Deno.test(
       status: "needs_confirmation",
       confirmationId,
       text: asked.text,
+      question: fakeAsk.question,
       note: "A line about 118 g.",
     });
     assertEquals(payloadOf(asked), {
@@ -433,7 +437,7 @@ Deno.test(
 Deno.test(
   "a tool that asks with a note still needs the confirmation id on the next call",
   async () => {
-    const write = fakeWriteTool({ needsConfirmation: () => ({ note: "A line." }) });
+    const write = fakeWriteTool({ needsConfirmation: () => ({ ...fakeAsk, note: "A line." }) });
     const { store, confirmationId } = await ask(write, [later]);
 
     const result = await executeTool(contextOn(write, store, later), "fake_write", {
@@ -446,13 +450,31 @@ Deno.test(
   },
 );
 
-Deno.test("a tool that asks with true leaves the note key out of the result", async () => {
+Deno.test("a tool that asks with no note leaves the note key out of the result", async () => {
   const write = fakeWriteTool(needsYes);
 
   const { asked } = await ask(write, [later]);
 
   assertFalse("note" in asked);
 });
+
+Deno.test(
+  "the question goes in the result for the turn loop, and not in the text the model reads or the stored confirmation",
+  async () => {
+    const write = fakeWriteTool(needsYes);
+
+    const { store, asked } = await ask(write, [later]);
+
+    assertEquals(asked.question, fakeAsk.question);
+    assertFalse(asked.text.includes(fakeAsk.question));
+    assertFalse(JSON.stringify(store.turns).includes(fakeAsk.question));
+    assertEquals(Object.keys(store.turns.find((turn) => turn.id === earlier)?.pending ?? {}), [
+      "id",
+      "tool",
+      "inputHash",
+    ]);
+  },
+);
 
 Deno.test("a confirmation from the previous turn is accepted and the write runs", async () => {
   const write = fakeWriteTool(needsYes);
@@ -678,7 +700,9 @@ Deno.test("a refusal for the write limit leaves the confirmation valid", async (
 });
 
 Deno.test("a write whose call does not need a confirmation ignores a confirmation id", async () => {
-  const write = fakeWriteTool({ needsConfirmation: (value) => value.note === "everything" });
+  const write = fakeWriteTool({
+    needsConfirmation: (value) => (value.note === "everything" ? fakeAsk : false),
+  });
   const { ctx } = createFakeContext([write.definition]);
 
   const result = await executeTool(ctx, "fake_write", {

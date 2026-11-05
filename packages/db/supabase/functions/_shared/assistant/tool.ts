@@ -54,7 +54,10 @@ export type WriteRunOutput = ToolRunOutput & {
   target: ActionTarget | null;
 };
 
-export type ConfirmationNeed = boolean | { note: string };
+// False asks nothing. Otherwise the tool gives the board's words for the call, built from its own rows with
+// the same core functions the buttons use: the `question` the app shows when the model wrote none, the
+// `confirmLabel` of the button that confirms, and a `note` line the turn loop adds after the question.
+export type ConfirmationNeed = false | { question: string; confirmLabel: string; note?: string };
 
 export type InverseOutcome = "undone" | "unavailable";
 
@@ -80,10 +83,11 @@ export type WriteToolDefinition<Input = unknown> = ToolBase<Input> & {
   kind: "write";
   // The table the write changes, recorded on its action.
   targetTable: string;
-  // Present when the call can be destructive or bulk. A true answer asks for a confirmation first. A `note`
-  // asks too, and carries one line the tool wrote from the person's own rows. The turn loop adds it after
-  // the model's question, because the model words that question in the same response as the call, before
-  // the tool has answered.
+  // Present when the call can be destructive or bulk. An answer other than false asks for a confirmation
+  // first, and carries the tool's own question. The turn loop shows the model's question when it wrote one
+  // and this one when it did not. A `note` is one line the tool wrote from the person's own rows. The turn
+  // loop adds it after the question, because the model words that question in the same response as the
+  // call, before the tool has answered.
   needsConfirmation?(input: Input, ctx: ToolContext): ConfirmationNeed | Promise<ConfirmationNeed>;
   // Must not throw once its write has landed. A throw releases the slot and answers `tool_failed`, so
   // a write that landed and then threw would be retried by the model and done twice. Do the write

@@ -529,7 +529,7 @@ Deno.test(
           ),
           reply("must not be asked for"),
         ],
-        answers: { update_targets: confirmationResult("update_targets", confirmationId, note) },
+        answers: { update_targets: confirmationResult("update_targets", confirmationId, { note }) },
       },
       async (harness) => {
         const result = await harness.take("set my calories to 2000");
@@ -582,6 +582,136 @@ Deno.test("a confirmation with no note leaves the model's question as it is", as
   );
 });
 
+const deleteQuestion =
+  "Delete 3 entries at 13:00 today? Chicken and rice, Greek yoghurt and an apple.";
+const macrosNote = "Your macros will be adjusted proportionally: protein 118 g.";
+
+Deno.test(
+  "a model that wrote no question gets the tool's own words in the confirm event and the stored row, and the turn ends confirm",
+  async () => {
+    await withHarness(
+      {
+        responses: [
+          callTools([{ id: "d1", name: "delete_entry", input: { ids: entryIds } }]),
+          reply("must not be asked for"),
+        ],
+        answers: {
+          delete_entry: confirmationResult("delete_entry", confirmationId, {
+            question: deleteQuestion,
+          }),
+        },
+      },
+      async (harness) => {
+        const result = await harness.take("delete all of my entries on D in one go");
+
+        const expected = {
+          confirmationId,
+          question: deleteQuestion,
+          ...confirmDeleteButtons(3),
+          tone: "danger",
+        };
+        assertEquals(eventsOfType(result.events, "confirm"), [{ type: "confirm", ...expected }]);
+        assertEquals(result.events.at(-1), { type: "done", outcome: "confirm" });
+        assertEquals(turnStatuses(harness), ["confirm"]);
+        assertEquals(harness.mock.bodies.length, 1);
+        assertEquals(harness.reports.length, 0);
+        assertEquals(toolResultRows(harness)[0]?.display, { d1: { confirm: expected } });
+        // The stored thread holds the question once, as the confirm and not as a reply before it.
+        const thread = threadFromMessages(result.rows, []);
+        assertEquals(
+          thread.map((item) => item.kind),
+          ["user", "confirm"],
+        );
+      },
+    );
+  },
+);
+
+Deno.test(
+  "a model that wrote no question gets the tool's note after the tool's words, as its own paragraph",
+  async () => {
+    await withHarness(
+      {
+        responses: [
+          callTools([{ id: "u1", name: "update_targets", input: { current_kcal: 2140 } }]),
+        ],
+        answers: {
+          update_targets: confirmationResult("update_targets", confirmationId, {
+            question: "Change your calorie target from 2,140 to 2,000 kcal?",
+            note: macrosNote,
+          }),
+        },
+      },
+      async (harness) => {
+        const result = await harness.take("set my calories to 2000");
+
+        const question = `Change your calorie target from 2,140 to 2,000 kcal?\n\n${macrosNote}`;
+        assertEquals(eventsOfType(result.events, "confirm")[0]?.["question"], question);
+        assertEquals(toolResultRows(harness)[0]?.display, {
+          u1: {
+            confirm: {
+              confirmationId,
+              question,
+              ...confirmTargetsButtons(2140),
+              tone: "primary",
+            },
+          },
+        });
+        const stored = threadFromMessages(result.rows, []).find((item) => item.kind === "confirm");
+        assertEquals(stored?.kind === "confirm" ? stored.question : null, question);
+      },
+    );
+  },
+);
+
+Deno.test("a model that wrote a question keeps its own words, not the tool's", async () => {
+  await withHarness(
+    {
+      responses: [
+        callTools(
+          [{ id: "d1", name: "delete_entry", input: { ids: entryIds } }],
+          "Shall I delete your lunch?",
+        ),
+      ],
+      answers: {
+        delete_entry: confirmationResult("delete_entry", confirmationId, {
+          question: deleteQuestion,
+        }),
+      },
+    },
+    async (harness) => {
+      const result = await harness.take("delete my lunch");
+
+      assertEquals(
+        eventsOfType(result.events, "confirm")[0]?.["question"],
+        "Shall I delete your lunch?",
+      );
+    },
+  );
+});
+
+Deno.test(
+  "a confirmation with no question from the tool and no text from the model still ends the turn failed",
+  async () => {
+    await withHarness(
+      {
+        responses: [callTools([{ id: "d1", name: "delete_entry", input: { ids: entryIds } }])],
+        answers: { delete_entry: confirmationResult("delete_entry", confirmationId) },
+      },
+      async (harness) => {
+        const result = await harness.take("delete my lunch");
+
+        assertEquals(typesOf(result.events).includes("confirm"), false);
+        assertEquals(result.events.slice(-2), [
+          { type: "notice", notice: { code: "turn_failed" } },
+          { type: "done", outcome: "failed" },
+        ]);
+        assertEquals(harness.reports.length, 1);
+      },
+    );
+  },
+);
+
 Deno.test(
   "a note with no question text from the model still ends the turn failed, and the note alone is never a question",
   async () => {
@@ -591,7 +721,7 @@ Deno.test(
           callTools([{ id: "u1", name: "update_targets", input: { current_kcal: 2140 } }], "   "),
         ],
         answers: {
-          update_targets: confirmationResult("update_targets", confirmationId, "A line."),
+          update_targets: confirmationResult("update_targets", confirmationId, { note: "A line." }),
         },
       },
       async (harness) => {

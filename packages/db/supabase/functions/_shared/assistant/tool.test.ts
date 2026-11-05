@@ -75,7 +75,7 @@ const fixtureWrite: WriteToolDefinition<FixtureInput> = {
   input: fixtureInput,
   annotations: { readOnlyHint: false, destructiveHint: false },
   targetTable: "log_entries",
-  needsConfirmation: () => true,
+  needsConfirmation: () => ({ question: "Do it?", confirmLabel: "Do it" }),
   inverse: null,
   run: () => Promise.resolve({ data: null, target: null }),
 };
