@@ -517,7 +517,7 @@ Deno.test(
 );
 
 Deno.test(
-  "a note on the confirmation is added after the model's question, a space between, and the stored row holds the same question",
+  "a note on the confirmation is added after the model's question as its own paragraph, and the stored row holds the same question",
   async () => {
     const note = "Your macros will be adjusted proportionally: protein 118 g.";
     await withHarness(
@@ -534,7 +534,7 @@ Deno.test(
       async (harness) => {
         const result = await harness.take("set my calories to 2000");
 
-        const question = `Change your calorie target from 2,140 to 2,000 kcal? ${note}`;
+        const question = `Change your calorie target from 2,140 to 2,000 kcal?\n\n${note}`;
         assertEquals(eventsOfType(result.events, "confirm"), [
           {
             type: "confirm",

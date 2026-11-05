@@ -170,9 +170,22 @@ function endsWithWords(reply: readonly string[], question: readonly string[]): b
   );
 }
 
+// How many of the question's leading paragraphs the reply already ends with, the most there are, or 0.
+function paragraphsAlreadyDrawn(reply: readonly string[], question: readonly string[]): number {
+  for (let count = question.length; count > 0; count -= 1) {
+    if (endsWithWords(reply, question.slice(0, count))) {
+      return count;
+    }
+  }
+  return 0;
+}
+
 /**
- * A question as the assistant's words, unless the entry before it is a reply that ends in the same words:
- * the question of a confirmation is the text of the reply that asked it, which is drawn already.
+ * A question as the assistant's words, less what the entry before it already drew. The question of a
+ * confirmation is the text of the reply that asked it, which is drawn already, and it may go on with a line
+ * the code added after the model's words (a tool's note, KEY-824). So when the reply before ends with the
+ * question's leading paragraphs, only the rest is drawn, as its own entry. The whole question matching
+ * draws nothing, and nothing matching draws the whole question.
  */
 function questionEntries(
   key: string,
@@ -180,14 +193,17 @@ function questionEntries(
   previous: DraftEntry | undefined,
 ): DraftEntry[] {
   const paragraphs = paragraphsOf(question);
-  if (previous?.kind === "assistant" && endsWithWords(previous.paragraphs, paragraphs)) {
+  const drawn =
+    previous?.kind === "assistant" ? paragraphsAlreadyDrawn(previous.paragraphs, paragraphs) : 0;
+  const rest = paragraphs.slice(drawn);
+  if (rest.length === 0 && drawn > 0) {
     return [];
   }
   return [
     {
       kind: "assistant",
       key: `${key}:question`,
-      paragraphs,
+      paragraphs: rest,
       isStreaming: false,
       isStopped: false,
       ...answerLinesOf(null),

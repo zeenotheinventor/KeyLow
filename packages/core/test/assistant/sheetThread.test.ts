@@ -651,6 +651,120 @@ describe("buildAssistantSheetThread with a question", () => {
     });
   });
 
+  describe("a confirmation whose question ends with a line the code added", () => {
+    const MODEL_QUESTION = "Change your calorie target from 2,140 to 2,000 kcal?";
+    const NOTE =
+      "Your macros will be adjusted proportionally: protein 118 g, carbs 229 g, fat 68 g.";
+    const WITH_NOTE = `${MODEL_QUESTION}\n\n${NOTE}`;
+    const buttons = {
+      confirmLabel: "Change target",
+      cancelLabel: "Keep 2,140",
+      tone: "primary",
+    } as const;
+    const wordsOf = (entries: ReturnType<typeof build>["entries"]) =>
+      entries.flatMap((entry) => (entry.kind === "assistant" ? entry.paragraphs : []));
+    const reply = (text: string): AssistantThreadItem => ({
+      kind: "reply",
+      id: "r1",
+      text,
+      answerMeta: null,
+      stopped: false,
+    });
+    const storedConfirm: AssistantThreadItem = {
+      kind: "confirm",
+      id: "k1",
+      confirmationId: CONFIRMATION_ID,
+      question: WITH_NOTE,
+      ...buttons,
+      answered: false,
+    };
+    const sent = { text: "Set my calories to 2,000", afterItemId: null };
+
+    it("should draw the model's words once and the note once, from the stored thread", () => {
+      const thread = build({ items: askedItems(reply(MODEL_QUESTION)).concat(storedConfirm) });
+
+      expect(wordsOf(thread.entries)).toEqual([MODEL_QUESTION, NOTE]);
+      expect(thread.entries.map((entry) => entry.kind)).toEqual([
+        "you",
+        "assistant",
+        "assistant",
+        "confirm",
+      ]);
+    });
+
+    it("should draw the note once as its own entry, with a key that stays the same, from the live turn", () => {
+      const thread = build({
+        sent,
+        live: liveTurn({ text: MODEL_QUESTION, confirm: { question: WITH_NOTE, ...buttons } }),
+      });
+
+      expect(wordsOf(thread.entries)).toEqual([MODEL_QUESTION, NOTE]);
+      expect(thread.entries.map((entry) => entry.kind)).toEqual([
+        "you",
+        "assistant",
+        "assistant",
+        "confirm",
+      ]);
+      expect(thread.entries[2]).toMatchObject({ key: "sent:confirm:question" });
+    });
+
+    it("should draw the note once when the live reply has earlier words before the question", () => {
+      const thread = build({
+        sent,
+        live: liveTurn({
+          text: `Looking at your targets.\n\n${MODEL_QUESTION}`,
+          confirm: { question: WITH_NOTE, ...buttons },
+        }),
+      });
+
+      expect(wordsOf(thread.entries)).toEqual(["Looking at your targets.", MODEL_QUESTION, NOTE]);
+    });
+
+    it("should draw a question of several paragraphs once, and only the note after it", () => {
+      const model = `First paragraph of the question.\n\nSecond paragraph?`;
+      const thread = build({
+        sent,
+        live: liveTurn({
+          text: model,
+          confirm: { question: `${model}\n\n${NOTE}`, ...buttons },
+        }),
+      });
+
+      expect(wordsOf(thread.entries)).toEqual([
+        "First paragraph of the question.",
+        "Second paragraph?",
+        NOTE,
+      ]);
+    });
+
+    it("should draw the whole question when the reply before it does not end in its first paragraph", () => {
+      // The reply starts with the question's first paragraph but goes on to something else.
+      const thread = build({
+        sent,
+        live: liveTurn({
+          text: `${MODEL_QUESTION}\n\nAnd something else entirely.`,
+          confirm: { question: WITH_NOTE, ...buttons },
+        }),
+      });
+
+      expect(wordsOf(thread.entries)).toEqual([
+        MODEL_QUESTION,
+        "And something else entirely.",
+        MODEL_QUESTION,
+        NOTE,
+      ]);
+    });
+
+    it("should draw nothing extra when there is no note", () => {
+      const thread = build({
+        sent,
+        live: liveTurn({ text: MODEL_QUESTION, confirm: { question: MODEL_QUESTION, ...buttons } }),
+      });
+
+      expect(wordsOf(thread.entries)).toEqual([MODEL_QUESTION]);
+    });
+  });
+
   describe("the message that answers a question", () => {
     it("should draw the stored question without its quick replies while the next turn is drawn", () => {
       const items = askedItems(clarifyItem());

@@ -266,7 +266,7 @@ describe("a turn that asks to change the targets", () => {
   it("ends asking, with the board's buttons and the question followed by the line about the macros, and changes nothing", () => {
     expect(askEvents.find((event) => event.type === "confirm")).toMatchObject({
       type: "confirm",
-      question: `Change your calorie target from 2,140 to 2,000 kcal? ${macrosNote}`,
+      question: `Change your calorie target from 2,140 to 2,000 kcal?\n\n${macrosNote}`,
       confirmLabel: "Change target",
       cancelLabel: "Keep 2,140",
       tone: "primary",

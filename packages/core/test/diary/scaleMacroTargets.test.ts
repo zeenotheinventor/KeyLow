@@ -21,11 +21,12 @@ describe("scaleMacroTargets", () => {
     });
   });
 
-  it("should round a value that lands on .5 up", () => {
-    // 25 * 1,100 / 1,000 = 27.5
+  it("should round a value that lands on exactly .5 up, which dividing first would get wrong", () => {
+    // 38 * 1,500 / 912 is exactly 62.5. 38 * (1,500 / 912) is 62.49999999999999 in floating point, so
+    // dividing first would round it down to 62.
     expect(
-      scaleMacroTargets({ kcal: 1000, protein_g: 25, carbs_g: null, fat_g: null }, 1100),
-    ).toMatchObject({ macros: { protein_g: 28 } });
+      scaleMacroTargets({ kcal: 912, protein_g: 38, carbs_g: null, fat_g: null }, 1500),
+    ).toMatchObject({ macros: { protein_g: 63 } });
   });
 
   it("should keep a null macro null and scale the rest", () => {
