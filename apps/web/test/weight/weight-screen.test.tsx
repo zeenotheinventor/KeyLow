@@ -87,12 +87,14 @@ describe("WeightScreen", () => {
       );
     });
 
-    it("should draw Add weigh-in, and no other control until the explainer is built", () => {
+    it("should draw the explainer button and Add weigh-in, and no other control", () => {
       renderScreen();
 
-      expect(screen.getAllByRole("button").map((button) => button.textContent)).toEqual([
-        WEIGHT_SCREEN.addLabel,
-      ]);
+      expect(
+        screen
+          .getAllByRole("button")
+          .map((button) => button.getAttribute("aria-label") ?? button.textContent),
+      ).toEqual([WEIGHT_SCREEN.explainerLabel, WEIGHT_SCREEN.addLabel]);
     });
   });
 
@@ -173,10 +175,11 @@ describe("WeightScreen", () => {
       renderScreen();
       await screen.findByRole("heading", { level: 2, name: WEIGHT_EMPTY.title });
 
-      expect(screen.getAllByRole("button").map((button) => button.textContent)).toEqual([
-        WEIGHT_SCREEN.addLabel,
-        WEIGHT_EMPTY.addWeighIn,
-      ]);
+      expect(
+        screen
+          .getAllByRole("button")
+          .map((button) => button.getAttribute("aria-label") ?? button.textContent),
+      ).toEqual([WEIGHT_SCREEN.explainerLabel, WEIGHT_SCREEN.addLabel, WEIGHT_EMPTY.addWeighIn]);
     });
   });
 

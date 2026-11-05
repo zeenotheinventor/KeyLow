@@ -258,6 +258,99 @@ describe("Banner", () => {
     });
   });
 
+  describe("hasIcon", () => {
+    it.each(["info", "review", "error"] as const)(
+      "should draw the %s icon unless told not to",
+      (tone) => {
+        render(
+          <Banner tone={tone} title="A title">
+            The sentence.
+          </Banner>,
+        );
+
+        expect(
+          screen
+            .getByRole(tone === "review" ? "note" : tone === "error" ? "alert" : "status")
+            .querySelector("svg"),
+        ).not.toBeNull();
+      },
+    );
+
+    it("should leave the icon out when hasIcon is false, and keep the words", () => {
+      render(
+        <Banner tone="review" hasIcon={false} title="A title">
+          The sentence.
+        </Banner>,
+      );
+
+      expect(screen.getByRole("note").querySelector("svg")).toBeNull();
+      expect(screen.getByText("A title")).toBeTruthy();
+      expect(screen.getByText("The sentence.")).toBeTruthy();
+    });
+  });
+
+  describe("compact size, as the trend explainer board draws it", () => {
+    it("should pad 12 on every side, where the default review pads 16 across", () => {
+      render(
+        <Banner tone="review" size="compact" title="A title">
+          The sentence.
+        </Banner>,
+      );
+
+      const classes = classesOf(screen.getByRole("note"));
+
+      expect(classes).toContain("p-3");
+      expect(classes).not.toContain("px-4");
+      expect(classes).not.toContain("py-3");
+    });
+
+    it("should keep the tone's border and fill, as the board draws a warning border", () => {
+      render(
+        <Banner tone="review" size="compact" title="A title">
+          The sentence.
+        </Banner>,
+      );
+
+      const classes = classesOf(screen.getByRole("note"));
+
+      expect(classes).toContain("border");
+      expect(classes).toContain("border-warning");
+      expect(classes).toContain("bg-warning-muted");
+    });
+
+    it("should set the title at 14 over 20 semibold in the primary ink in both themes, not the warning ink", () => {
+      render(
+        <Banner tone="review" size="compact" title="A title">
+          The sentence.
+        </Banner>,
+      );
+
+      const classes = classesOf(screen.getByText("A title"));
+
+      expect(classes).toContain("text-label-small");
+      expect(classes).toContain("text-text-primary");
+      expect(classes).not.toContain("text-body-strong");
+      expect(classes).not.toContain("text-warning");
+      expect(classes).not.toContain(lightTextRule);
+    });
+
+    it("should leave the default size alone: 16 across, a strong body title in the warning ink", () => {
+      render(
+        <Banner tone="review" title="A title">
+          The sentence.
+        </Banner>,
+      );
+
+      const frame = classesOf(screen.getByRole("note"));
+      const title = classesOf(screen.getByText("A title"));
+
+      expect(frame).toContain("px-4");
+      expect(title).toContain("text-body-strong");
+      expect(title).toContain("text-warning");
+      expect(title).not.toContain("text-label-small");
+    });
+  });
+
   describe("review and error look, unchanged", () => {
     it.each(["review", "error"] as const)(
       "should keep %s padding at 16 across and 12 down",
