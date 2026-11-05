@@ -28,12 +28,18 @@ import type { ChosenExercise } from "../types";
 /**
  * What is inside the Add exercise sheet: the title with Close, the search and the results as the
  * `session · add-exercise` board draws them, "Your exercises" over "Library", with the `Create "…"` row
- * under them when the caller can create one. It is mounted only while the sheet is open, so the search
- * starts empty each time. Under two characters nothing is searched or drawn, and offline the search cannot
- * run, so the offline line stands in for the results.
+ * under them once something is searched for. It is mounted only while the sheet is open, so the search
+ * starts empty each time, except when a person comes back from the New exercise form with their words.
+ * Under two characters nothing is searched or drawn, and offline the search cannot run, so the offline
+ * line stands in for the results.
  */
-export function AddExercisePicker({ onChoose, onClose, onCreate }: AddExercisePickerProps) {
-  const [query, setQuery] = useState("");
+export function AddExercisePicker({
+  initialQuery,
+  onChoose,
+  onClose,
+  onCreate,
+}: AddExercisePickerProps) {
+  const [query, setQuery] = useState(initialQuery);
   // A second press while the sheet is closing must not choose the exercise again.
   const hasChosen = useRef(false);
   const isOnline = useIsOnline();
@@ -128,7 +134,7 @@ export function AddExercisePicker({ onChoose, onClose, onCreate }: AddExercisePi
         keyboardShouldPersistTaps="handled"
       >
         {renderResults()}
-        {isSearched && onCreate !== undefined ? (
+        {isSearched ? (
           <PressableSurface
             className="min-h-[52px] flex-row items-center gap-3 rounded-medium border border-dashed border-border-strong px-3"
             label={create.title}

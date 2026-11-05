@@ -88,6 +88,12 @@ export const CUSTOM_EXERCISE = {
   roleExplanation:
     "A set counts in full for a primary muscle, half for a secondary and a fifth for an assisting one.",
   privacyNote: "Only you see your own exercises.",
+  /** The way back from the Add a muscle list to the form. The boards do not draw the list. */
+  muscleChooserBackName: "Back to New exercise",
+  /** The banner when the save fails. The boards do not draw it. */
+  saveFailed: "Your exercise did not save. Check your connection, then try again.",
+  /** The line when the phone is offline and Save is off. The boards do not draw it. */
+  saveOffline: "Saving an exercise needs a connection. Try again when you're back online.",
 } as const;
 
 /** The role control's labels and what each role counts for. Core weighs them 1, a half and a fifth. */
