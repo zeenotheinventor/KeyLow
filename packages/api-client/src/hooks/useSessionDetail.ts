@@ -1,26 +1,35 @@
-import { useProfileTimeZone, useSession, useWeightUnit } from "@keylow/api-client";
 import { useMemo } from "react";
 
 import { describeSessionDetail } from "./describeSessionDetail";
-import { useIsOnline } from "../../lib/connectivity";
-import { useReadsEnabled } from "../../lib/useReadsEnabled";
+import { useProfileTimeZone } from "./useProfileTimeZone";
+import { useSession } from "./useSession";
+import { useWeightUnit } from "./useWeightUnit";
 
-import type { SessionDetailView } from "./types";
+import type { SessionDetailView } from "./sessionDetailTypes";
+
+/** What the session detail is told by the screen that uses it: the connection, and whether its reads may run. */
+export type SessionDetailSettings = {
+  /** Whether the device is online. Offline with nothing saved is an error without a Try again. */
+  isOnline: boolean;
+  /** False makes no request at all: the mobile app passes false while the terms gate is up. */
+  enabled: boolean;
+};
 
 /**
- * What the session detail shows, from the reads it waits on: the session (kept on the phone, so one that was
- * opened before opens offline) and the profile's unit and zone. Every read waits until the account has accepted
- * the current Terms. It reads no routine and compares nothing with one, so it never waits on a routine and opens
- * whatever became of the routine the session followed.
+ * What the session detail shows, from the reads it waits on: the session and the profile's unit and zone.
+ * The mobile cache keeps the session, so one that was opened before opens offline there. Every read waits for
+ * `enabled`, which is the terms gate. It reads no routine and compares nothing with one, so it never waits on
+ * a routine and opens whatever became of the routine the session followed.
  *
  * A session that does not exist, is deleted or is another person's reads as null, and an id that is not a
  * UUID fails at once: both are not found, not an error, and neither is asked again. Anything else that fails
  * with nothing saved is an error, and offline with nothing saved is the same error without a Try again, which
  * would only join the wait.
  */
-export function useSessionDetail(id: string | undefined): SessionDetailView {
-  const enabled = useReadsEnabled();
-  const isOnline = useIsOnline();
+export function useSessionDetail(
+  id: string | undefined,
+  { isOnline, enabled }: SessionDetailSettings,
+): SessionDetailView {
   const session = useSession(id, { enabled });
   const timeZone = useProfileTimeZone({ enabled });
   const unit = useWeightUnit({ enabled });

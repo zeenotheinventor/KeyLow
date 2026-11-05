@@ -9,4 +9,6 @@ export type PlanWeekDayProps = {
   accessibleName: string;
   look: WeekDayLook;
   isToday: boolean;
+  /** Where a day that holds a logged session opens it. Without it the day only informs. */
+  href?: string | undefined;
 };

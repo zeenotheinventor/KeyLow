@@ -1,5 +1,5 @@
-import type { SetTableRow } from "../types";
+import type { SetTableReadOnlyRow, SetTableRow } from "../types";
 
 export type SetTableRowProps = {
-  row: SetTableRow;
+  row: SetTableRow | SetTableReadOnlyRow;
 };

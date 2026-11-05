@@ -55,7 +55,37 @@ export type SetTableEntryRow = SetTableRowBase & {
 
 export type SetTableRow = SetTableLoggedRow | SetTableEntryRow;
 
-export type SetTableProps = {
+/** A set of a logged session as the session detail draws it: what was done, with no check and nothing to press. */
+export type SetTableReadOnlyRow = {
+  key: string;
+  state: "readOnly";
+  /** A warm-up's mark is drawn in the warning ink. */
+  setType: SetType;
+  /** "W", "3", "D" or "F". */
+  label: string;
+  /** "70 kg × 10", or "10 reps" for a set with no load. */
+  what: string;
+  /** "RIR 2" or "No RIR". */
+  rir: string;
+  /** The name of the row, which says the whole set: "Set 3, 70 kg by 10, RIR 2". */
+  name: string;
+};
+
+export type ActiveSetTableProps = {
+  /** The table of the session in progress. This is the default. */
+  variant?: "active";
   columns: SetColumnsCopy;
   rows: readonly SetTableRow[];
 };
+
+/**
+ * The table of a logged session as the session detail draws it, with `variant="readOnly"`: one row for each
+ * set, with no column headings (each row reads as a sentence, as the phone's does), no check column and no
+ * fields.
+ */
+export type ReadOnlySetTableProps = {
+  variant: "readOnly";
+  rows: readonly SetTableReadOnlyRow[];
+};
+
+export type SetTableProps = ActiveSetTableProps | ReadOnlySetTableProps;

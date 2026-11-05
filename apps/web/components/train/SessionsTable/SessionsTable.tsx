@@ -1,11 +1,16 @@
-import { HISTORY_TABLE, describeHistoryTableRow, describeHistoryWeek } from "@keylow/core/copy";
+import {
+  HISTORY_TABLE,
+  describeHistoryRow,
+  describeHistoryTableRow,
+  describeHistoryWeek,
+} from "@keylow/core/copy";
 import Link from "next/link";
 
 import type { SessionsTableProps } from "./types";
 
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
-import { trainSessionPath } from "@/lib/trainRoutes";
+import { trainSessionDetailPath, trainSessionPath } from "@/lib/trainRoutes";
 
 const headingCell = "py-3 font-medium";
 const focusRing =
@@ -15,8 +20,8 @@ const focusRing =
  * The sessions of the history as the `web-history · list` board draws them: one table of Date, Session, Time,
  * Sets and Muscles, with a heading row over each calendar week that names it and totals it. Below a tablet the
  * card scrolls sideways and keeps the table's width, as the 375 px board does. The session in progress is a row
- * like the others, with In progress for its time, and its name resumes the session. The other rows are plain
- * text until the session detail page exists.
+ * like the others, with In progress for its time. A row's name is a link: it resumes the session in progress,
+ * and opens the detail of any other.
  */
 export function SessionsTable({ weeks, thisWeekStart }: SessionsTableProps) {
   const { columns } = HISTORY_TABLE;
@@ -64,26 +69,24 @@ export function SessionsTable({ weeks, thisWeekStart }: SessionsTableProps) {
                   </th>
                 </tr>
                 {week.sessions.map((session) => {
-                  const row = describeHistoryTableRow({
-                    localDate: session.local_date,
-                    summary: session.summary,
-                  });
+                  const input = { localDate: session.local_date, summary: session.summary };
+                  const row = describeHistoryTableRow(input);
 
                   return (
                     <tr key={session.id} className="h-[52px] border-t border-border">
                       <td className="whitespace-nowrap px-4 text-body tabular-nums">{row.date}</td>
                       <td className="text-body-strong text-text-primary">
-                        {row.resumeName === null ? (
-                          row.name
-                        ) : (
-                          <Link
-                            href={trainSessionPath()}
-                            aria-label={row.resumeName}
-                            className={`rounded-small underline ${focusRing}`}
-                          >
-                            {row.name}
-                          </Link>
-                        )}
+                        <Link
+                          href={
+                            row.isInProgress
+                              ? trainSessionPath()
+                              : trainSessionDetailPath(session.id)
+                          }
+                          aria-label={describeHistoryRow(input).accessibleName}
+                          className={`rounded-small underline ${focusRing}`}
+                        >
+                          {row.name}
+                        </Link>
                       </td>
                       <td className="text-right text-body tabular-nums">
                         {row.isInProgress ? (

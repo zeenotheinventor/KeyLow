@@ -1,3 +1,6 @@
+import { describeOpenSessionName } from "@keylow/core/copy";
+import Link from "next/link";
+
 import type { PlanWeekDayProps } from "./types";
 import type { WeekDayLook } from "@keylow/core/training";
 
@@ -14,34 +17,59 @@ const lookClassName: Record<WeekDayLook, string> = {
   rest: "border border-border bg-surface",
 };
 
+const tileClassName =
+  "flex min-h-16 flex-col items-center justify-center gap-1 rounded-medium text-text-primary";
+const linkClassName =
+  "outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-focus-ring-offset";
+
 /**
  * One day of the week strip: its short name and the name of what it holds, in a tile. The tile is one named
- * group for a screen reader that says the whole day. It only informs: the session detail turns a logged day
- * into a link.
+ * group for a screen reader that says the whole day. A day that holds a logged session is the same tile as a
+ * link to the session, named for the whole day and "open session", as the phone names it.
  */
-export function PlanWeekDay({ weekday, label, accessibleName, look, isToday }: PlanWeekDayProps) {
+export function PlanWeekDay({
+  weekday,
+  label,
+  accessibleName,
+  look,
+  isToday,
+  href,
+}: PlanWeekDayProps) {
+  const contents = (
+    <>
+      <span
+        aria-hidden="true"
+        className={cn("text-caption", isToday ? "font-bold" : "font-medium")}
+      >
+        {weekday}
+      </span>
+      {label === "" ? null : (
+        <span aria-hidden="true" className="max-w-full truncate text-caption text-text-secondary">
+          {label}
+        </span>
+      )}
+    </>
+  );
+
   return (
     <li className="min-w-0">
-      <div
-        role="group"
-        aria-label={accessibleName}
-        className={cn(
-          "flex min-h-16 flex-col items-center justify-center gap-1 rounded-medium text-text-primary",
-          lookClassName[look],
-        )}
-      >
-        <span
-          aria-hidden="true"
-          className={cn("text-caption", isToday ? "font-bold" : "font-medium")}
+      {href === undefined ? (
+        <div
+          role="group"
+          aria-label={accessibleName}
+          className={cn(tileClassName, lookClassName[look])}
         >
-          {weekday}
-        </span>
-        {label === "" ? null : (
-          <span aria-hidden="true" className="max-w-full truncate text-caption text-text-secondary">
-            {label}
-          </span>
-        )}
-      </div>
+          {contents}
+        </div>
+      ) : (
+        <Link
+          href={href}
+          aria-label={describeOpenSessionName(accessibleName)}
+          className={cn(tileClassName, linkClassName, lookClassName[look])}
+        >
+          {contents}
+        </Link>
+      )}
     </li>
   );
 }
