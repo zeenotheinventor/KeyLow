@@ -21,6 +21,7 @@ vi.mock("@keylow/api-client", async (importOriginal) => ({
     asked.list.push(options);
     return read(goldenMuscleList());
   },
+  useActiveRoutine: () => read(null),
 }));
 
 const read = <Data,>(data: Data): TrainingReadResult<Data> => ({

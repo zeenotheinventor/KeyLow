@@ -73,6 +73,8 @@ vi.mock("@keylow/api-client", async (importOriginal) => ({
   // The page's Muscles card reads this on the scale on screen, which main's body map screen does.
   useMuscleScaleList: () => muscleListRead,
   useStartSessionAction: () => ({ start: vi.fn(), isStarting: false }),
+  // The body map screen's sheet reads the routine for its Edit routine button.
+  useActiveRoutine: () => ({ data: null }),
 }));
 
 const refetch = () => Promise.resolve();
