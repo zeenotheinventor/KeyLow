@@ -169,6 +169,8 @@ export const GOAL_ERRORS = {
   minutes: `Enter minutes from ${MIN_SESSION_MINUTES} to ${MAX_SESSION_MINUTES}.`,
   /** No board draws this line. */
   save: "Your goal did not save. Check your connection, then try again.",
+  /** The line under Save goal on the web when the browser is offline and Save is off. No board draws it. */
+  saveOffline: "Saving your goal needs a connection. Try again when you're back online.",
 } as const;
 
 const assertStep = (step: number): void => {
