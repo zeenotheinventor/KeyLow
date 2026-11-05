@@ -1,7 +1,7 @@
-import { describeRoutineRule } from "@keylow/core/copy";
-import { validateRoutineDraft } from "@keylow/core/training";
+import { validateRoutineDraft } from "./routineDraft";
+import { describeRoutineRule } from "../copy/routines";
 
-import type { RoutineDraft, RoutineDraftIssue } from "@keylow/core/training";
+import type { RoutineDraft, RoutineDraftIssue } from "./routineDraft";
 
 /** The sentences under an exercise's fields, and the one line under its row that says them all. */
 export type ExerciseMarks = Readonly<{

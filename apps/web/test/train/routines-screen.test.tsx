@@ -9,6 +9,7 @@ import {
   describeArchivedRoutinesLink,
   describeOtherRoutineMeta,
 } from "@keylow/core/copy";
+import { onlineManager } from "@tanstack/react-query";
 import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -213,6 +214,59 @@ describe("the routines page", () => {
     await userEvent.click(screen.getByRole("button", { name: RETRY_LABEL }));
 
     expect(await screen.findByRole("region", { name: /Push Pull Legs, active/ })).toBeTruthy();
+  });
+});
+
+describe("the routines pages without a connection", () => {
+  beforeEach(() => {
+    resetRoutinesBackend();
+    goldenLibrary();
+    onlineManager.setOnline(false);
+  });
+
+  afterEach(() => {
+    cleanup();
+    onlineManager.setOnline(true);
+  });
+
+  it("should say the routines could not be read, with no Try again, on a first visit to the list", () => {
+    renderWithRoutines(<RoutinesScreen />);
+
+    expect(screen.getByText(GENERIC_ERROR)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: RETRY_LABEL })).toBeNull();
+    expect(screen.queryByRole("status", { name: TRAIN_LOADING_NAME })).toBeNull();
+  });
+
+  it("should say the routines could not be read, with no Try again, on a first visit to the archived list", () => {
+    renderWithRoutines(<ArchivedRoutinesScreen />);
+
+    expect(screen.getByText(GENERIC_ERROR)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: RETRY_LABEL })).toBeNull();
+    expect(screen.queryByRole("status", { name: TRAIN_LOADING_NAME })).toBeNull();
+  });
+});
+
+describe("the active routine's heading", () => {
+  beforeEach(() => {
+    resetRoutinesBackend();
+    routinesBackend.routines = [pushPullLegs];
+  });
+
+  afterEach(cleanup);
+
+  it("should not wrap the card's own region in a region of its own", async () => {
+    renderWithRoutines(<RoutinesScreen />);
+
+    await screen.findByRole("region", { name: /Push Pull Legs, active/ });
+    expect(screen.getByRole("heading", { name: ROUTINES_SCREEN.activeLabel })).toBeTruthy();
+    expect(screen.queryByRole("region", { name: ROUTINES_SCREEN.activeLabel })).toBeNull();
+  });
+
+  it("should not name a region Active around the card when the card is a button", async () => {
+    renderWithRoutines(<RoutinesScreen onEditRoutine={vi.fn()} />);
+
+    await screen.findByRole("button", { name: /Push Pull Legs/ });
+    expect(screen.queryByRole("region", { name: ROUTINES_SCREEN.activeLabel })).toBeNull();
   });
 });
 

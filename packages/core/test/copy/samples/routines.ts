@@ -80,6 +80,7 @@ export const samples: Record<string, () => string[]> = {
     return [names.sets, names.reps, names.rir];
   },
   describeExerciseMenuName: () => [copy.describeExerciseMenuName("Barbell squat")],
+  describeRemoveDay: () => [copy.describeRemoveDay("Push")],
   describeRemoveExercise: () => [copy.describeRemoveExercise("Barbell squat")],
   describeRepRange: () => [copy.describeRepRange(5, 8), copy.describeRepRange(8, 8)],
   describeRoutineRule: () => [

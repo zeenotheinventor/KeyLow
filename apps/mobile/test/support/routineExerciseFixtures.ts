@@ -1,6 +1,6 @@
 import { pushPullLegsDraft } from "./routineEditorFixtures";
 
-import type { ExerciseNames } from "../../components/RoutineEditor";
+import type { ExerciseNames } from "@keylow/core/training";
 
 // The names of the golden Push Pull Legs' exercises (KEY-353), in the order the draft lists them: Push,
 // Pull, Legs, then Push again.

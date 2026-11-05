@@ -25,7 +25,7 @@ import type { TrainScreenProps, TrainSessionStart } from "./types";
 import { Banner } from "@/components/ui/Banner";
 import { Button } from "@/components/ui/Button";
 import { ErrorState } from "@/components/ui/ErrorState";
-import { trainHistoryPath } from "@/lib/trainRoutes";
+import { trainHistoryPath, trainRoutinesPath } from "@/lib/trainRoutes";
 import { useIsOnline } from "@/lib/useIsOnline";
 import { useNow } from "@/lib/useNow";
 
@@ -85,6 +85,9 @@ export function TrainScreen({
       <div className="flex gap-2">
         <Button asChild className="text-label-small" size="sm" variant="secondary">
           <Link href={trainHistoryPath()}>{TRAIN_HOME.historyLink}</Link>
+        </Button>
+        <Button asChild className="text-label-small" size="sm" variant="secondary">
+          <Link href={trainRoutinesPath()}>{TRAIN_HOME.routinesLink}</Link>
         </Button>
       </div>
     </div>

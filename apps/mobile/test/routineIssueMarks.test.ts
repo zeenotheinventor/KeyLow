@@ -1,13 +1,8 @@
+import { routineMarksOf } from "@keylow/core/training";
+
 import { pushPullLegsDraft } from "./support/routineEditorFixtures";
-import { routineMarksOf } from "../components/RoutineEditor";
 
 import type { RoutineDraft } from "@keylow/core/training";
-
-// The folder's index brings the editor with it, which reads the theme and the router.
-jest.mock("@react-native-async-storage/async-storage", () => ({
-  __esModule: true,
-  default: { getItem: () => Promise.resolve(null), setItem: () => Promise.resolve() },
-}));
 
 // Where `validateRoutineDraft`'s problems are marked in the editor, and how many the banner counts: one for
 // each place the `routines · invalid` board marks (the name, a day's weekday, an exercise's row).

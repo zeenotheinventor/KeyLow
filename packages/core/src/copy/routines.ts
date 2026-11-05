@@ -96,6 +96,8 @@ export const ROUTINE_EDITOR = {
   /** The title when the routine is being created. The boards do not draw it. */
   newTitle: "New routine",
   cancelLabel: "Cancel editing",
+  /** The web editor's Cancel button, which the web board draws beside Save. */
+  cancelAction: "Cancel",
   saveAction: "Save",
   nameLabel: "Name",
   daysHeading: "Days",
@@ -444,6 +446,9 @@ export const describeDayNameFieldName = (dayName: string): string => `Day name f
 
 /** What a screen reader hears while a routine loads for the editor. No board draws the state. */
 export const ROUTINE_EDITOR_LOADING_LABEL = "Loading routine";
+
+/** The name of the control that removes a day, which says which day: "Remove Push". */
+export const describeRemoveDay = (dayName: string): string => `Remove ${dayName}`;
 
 /** The name a day added to a routine starts with, from its place in the routine: "Day 3". */
 export const describeNewDayName = (position: number): string => `Day ${position}`;

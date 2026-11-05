@@ -23,3 +23,9 @@ export const trainSessionDetailPath = (
   sessionId: string,
   origin: SessionOrigin = "history",
 ): string => `${trainHistoryPath()}/${sessionId}${origin === "train" ? "?from=train" : ""}`;
+
+/** The editor for a new routine. */
+export const trainRoutineNewPath = (): string => `${trainRoutinesPath()}/new`;
+
+/** The editor for one stored routine. */
+export const trainRoutineEditPath = (id: string): string => `${trainRoutinesPath()}/${id}`;

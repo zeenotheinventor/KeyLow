@@ -137,6 +137,18 @@ export type {
   SessionWeek,
 } from "./historySummary";
 
+export type { EditorExercise, ExerciseField, ExerciseNames } from "./editorExercise";
+export {
+  draftOfState,
+  routineDraftReducer,
+  startingStateOf,
+  summaryOf,
+} from "./routineDraftReducer";
+export { routineMarksOf } from "./routineMarks";
+export type { DayMarks, ExerciseMarks, RoutineMarks } from "./routineMarks";
+export { draftOfStoredRoutine, exerciseNamesOfStoredRoutine } from "./storedRoutineDraft";
+export type { StoredRoutineForEditing } from "./storedRoutineDraft";
+export type { EditorAction, EditorDay, EditorState, MoveDirection } from "./routineEditorState";
 export { validateRoutineDraft } from "./routineDraft";
 export type {
   RoutineDraft,

@@ -1,6 +1,6 @@
-import { describeRepRange } from "@keylow/core/copy";
+import { describeRepRange } from "../copy/routines";
 
-import type { RoutineDraftExercise } from "@keylow/core/training";
+import type { RoutineDraftExercise } from "./routineDraft";
 
 /** The names of the exercises of a stored routine, by exercise id, for the rows that show them. */
 export type ExerciseNames = Readonly<Record<string, string>>;

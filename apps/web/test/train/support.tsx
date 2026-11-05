@@ -67,6 +67,10 @@ export const trainBackend: {
   exerciseSaveGate: Promise<void> | null;
   /** Every `save_exercise` call that arrived, stored or not. */
   exerciseSaveCalls: number;
+  /** The bodies of the `save_routine` calls, in order. A save answers the id of `routine`, which the read after it returns. */
+  savedRoutines: Row[];
+  /** Holds every `save_routine` call until it settles, as a slow connection does. A test opens it by resolving it. */
+  saveRoutineGate: Promise<void> | null;
 } = {
   timeZone: "Europe/London",
   routine: null,
@@ -97,6 +101,8 @@ export const trainBackend: {
   failingExerciseSave: false,
   exerciseSaveGate: null,
   exerciseSaveCalls: 0,
+  savedRoutines: [],
+  saveRoutineGate: null,
 };
 
 export function resetTrainBackend(): void {
@@ -129,6 +135,8 @@ export function resetTrainBackend(): void {
   trainBackend.failingExerciseSave = false;
   trainBackend.exerciseSaveGate = null;
   trainBackend.exerciseSaveCalls = 0;
+  trainBackend.savedRoutines = [];
+  trainBackend.saveRoutineGate = null;
   lastFinishedSession = null;
 }
 
@@ -394,6 +402,16 @@ async function respond(input: string | URL | Request, init?: RequestInit): Promi
   }
   if (pathname.endsWith("/rpc/save_exercise")) {
     return saveExerciseRequest(request);
+  }
+  if (pathname.endsWith("/rpc/save_routine")) {
+    trainBackend.writes.push("save_routine");
+    await trainBackend.saveRoutineGate;
+    if (trainBackend.failingWrites) {
+      return failedWrite();
+    }
+    const body: unknown = await request.json();
+    trainBackend.savedRoutines.push(isRow(body) ? body : {});
+    return jsonResponse(trainBackend.routine?.["id"] ?? null);
   }
   if (pathname.endsWith("/rpc/delete_workout_session")) {
     trainBackend.writes.push("delete_session");
