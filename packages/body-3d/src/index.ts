@@ -12,6 +12,8 @@ export { applyLooks } from "./applyLooks";
 export { createLookFade } from "./lookFade";
 export type { LookFade } from "./lookFade";
 export type { Look, LookEmphasis } from "./Look";
+export { fillsOf, GLOW_INTENSITY_AT_FULL_ALPHA, looksOf, parseRgba } from "./looksOf";
+export type { LookValues } from "./looksOf";
 export {
   BODY_SIDE_YAW,
   nearestSide,

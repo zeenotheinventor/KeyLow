@@ -1,8 +1,8 @@
+import { looksOf } from "@keylow/body-3d/looksOf";
 import { bodyMapPalette, motionDuration, themes } from "@keylow/tokens";
 import { render, screen } from "@testing-library/react-native";
 
 import { Body3D } from "../../components/ui";
-import { looksOf } from "../../components/ui/Body3D/looks";
 import { ThemeProvider } from "../../lib/theme";
 import { compileKitStyles } from "../support/kitStyles";
 import { registerAppStyles } from "../support/nativeWindStyles";
