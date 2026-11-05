@@ -1,6 +1,6 @@
 # @keylow/assistant-evals
 
-The harness that judges the Ki-Lo assistant: a case type, deterministic graders, a runner with a token budget, and a synthetic eval user. It is the acceptance mechanism of ADR 0006 ("Evals"). The case sets (KEY-699 to KEY-702) are added by their own tickets. The ask set (KEY-699, `cases/ask.ts`) and the compaction set (KEY-706, `cases/compaction.ts`) are registered so far.
+The harness that judges the Ki-Lo assistant: a case type, deterministic graders, a runner with a token budget, and a synthetic eval user. It is the acceptance mechanism of ADR 0006 ("Evals"). The case sets (KEY-699 to KEY-702) are added by their own tickets. The ask set (KEY-699, `cases/ask.ts`), the compaction set (KEY-706, `cases/compaction.ts`) and the describe and write sets (KEY-700, `cases/describe.ts` and `cases/writes.ts`) are registered so far.
 
 `src/httpDriver.ts` is the `TurnDriver` against the served `assistant` function: it posts each message as the eval user, reads the stream with core's `parseAssistantEvent` and resolves when `done` arrives. `src/httpSession.ts` opens the session for `check:assistant` on the local stack (the eval user, the driver and the eval user's own view of the database). The stream carries no tool calls, so the driver reads them from the turn's stored messages, and it has no source for each tool's `readOnlyHint`: the `mcp` function lists tools only for an open turn. A tool call has no hint and counts as a write, so a set that needs `noWrite()` has to supply the hints first. The ask set checks the end state and the tool names instead.
 
@@ -44,6 +44,33 @@ The set is meant to be copied by the next sets: a spec in plain data (`AskSpec`)
 ## The compaction set
 
 `cases/compaction.ts` has one case. It seeds a long, text-only conversation for the run's own eval user (45 turns, one early reply that says "Your average last week was 1,850 kcal a day"), sends one short message so the prompt passes the 20,000 token compaction threshold, waits for the note to be stored (`compacted_through_turn_id` set, polled once a second for up to 60 s), and then asks what the assistant said the average was. It passes when the note was stored for the first turn and the answer holds 1,850. The turns are seeded by `src/caseEnvironment.ts` with the service role, because only the service role writes the conversation tables. About 55,000 to 65,000 tokens are expected for the whole set (an estimate, not yet measured: the first live run, through the `assistant-evals` workflow, gives the figure).
+
+## The describe set
+
+`cases/describe.ts` has 20 messages in which a person says what they ate: 16 that resolve to `log_entry` calls and 4 that are too vague to log ("I had some chicken and rice", "I had some rice", "I had a bowl of pasta", "I had some cheese") and end in exactly one question with nothing written. The 16 are portions ("two eggs", "a slice of toast", "an apple at 3pm"), plain grams where the message gave them and the food has no portion, a named day and time, and the three-item breakfast. Resolution is by the plain `search_foods` only, so every word is one it finds (KEY-185, Amendment 2 H).
+
+A food is named by its CoFID code, never by an id, because the ids of the seeded foods are made when the seed runs. `loggedItems` asks the database whether the `food_id` of each call is the row of one of the item's codes, and whether the `portion_id` belongs to that food. Several foods are right for one word (a boiled, a poached and a fried egg), so an item lists them all (`FOOD_ROUTES` in `fixtures/describeExtras.ts`). A food with a portion is expected as a count of that portion, and a food with none as the grams the message gave, so a guessed weight never passes. The time is expected only when the message names one, and the day only when it names another day than today. The graders are in `cases/entryGraders.ts`, shared with the write set.
+
+`fixtures/describeExtras.ts` holds the foods the two sets resolve to, with their seed portions. The harness sources read no file, so `test/describeExtras.test.ts` reads `data/cofid/subset.txt` and `data/portions/cofid-portions.csv` and fails when a row differs, and `test/integration/describeWrites.test.ts` checks the same against the local database.
+
+## The write set
+
+`cases/writes.ts` has 29 cases: 20 that check one tool (`update_entry` 3, `delete_entry` 3, `copy_day` 3, `set_day_complete` 2, `create_recipe` 1, `archive_recipe` 2, `create_custom_food` 2 and `update_targets` 4), 7 Undo cases, 1 that sends the same message twice and 1 that logs yesterday's lunch again. The four writes that ask first (`delete_entry` of several entries, `copy_day` onto a day with entries, `archive_recipe`, `update_targets`) are each answered both ways: the first turn ends `confirm` and writes nothing, the confirm button's words write, and the cancel button's words write nothing. The words are the ones the buttons carry (`confirmDeleteButtons` and the others in core), because a button press is sent as the next message.
+
+A write is graded by the database and by the arguments, and never by the wording of the reply: the call and its arguments, the `assistant_actions` rows the turn left (a write that landed has one, a write repeated has two), and the rows the write changed. `update_targets` for calories alone is graded as `macros: null` with the person's current calories as `current_kcal`, no question asked, and the question the app shows ending with the line about the macros (`describeMacrosAdjustedNote`, KEY-824). The driver reads that question from the `confirm` event (`TurnResult.confirmation`), since the line is added by the code and is not in the model's text.
+
+**Undo.** `undoOnTurn` presses Undo twice on one turn, through `CaseEnvironment.undoTurn` (the same `POST assistant/undo` the card calls, as the eval user). The first press must answer `undone` for every action of the turn, the second `already_undone`, and the rows must be back (or gone, for a log). `update_entry` has no Undo (ADR 0006), and `update_targets` has none that works for the eval user: it has no programme, so the old numbers are kept nowhere and Undo answers unavailable. Neither has an Undo case.
+
+**Isolation.** The eval user's rows are the run's, and every set reads them, so a write must not change what another case, or the ask set, expects:
+
+1. A case that needs an entry makes it in an earlier turn, on a scratch day of its own (`scratchDayOf`, from ten days after today). No ask question and no diary day names those days, and no two cases share one. A case never edits or deletes a diary entry.
+2. A recipe or a food a case archives or removes is one the case made, under a name of its own ("Scratch oat pot").
+3. A case that logs for today (every describe case that logs, the same-message case, yesterday's lunch) presses Undo for its turns afterwards (`cleanUp`), because the ask set reads today and expects it empty.
+4. A case that changes the targets restores the run's targets afterwards (`CaseEnvironment.restoreTargets`), because the ask set's "left" and "days at target" questions are worked out from them.
+
+`cleanUp` runs after the graders and also when a turn failed, and a failure in it ends the case as an error, so a case that could not clean up is never reported as a pass. Case order does not matter.
+
+**What it cannot show.** The "never repeated" rule has one case here, the same message twice, plus the exactly-one-action-row check in every write case. The other half of the ticket's rule, a failure of the MCP client after a tool ran, needs a way to make the served client fail, and the served function has none. That case is KEY-794's unit test of the turn loop.
 
 ## The eval user
 

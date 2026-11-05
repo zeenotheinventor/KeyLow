@@ -19,6 +19,13 @@ export type ToolCall = Readonly<{
 /** What the app prints under an answer from the person's data. Either is null when the turn had none. */
 export type AnswerMeta = Readonly<{ citation: string | null; estimate: string | null }>;
 
+/** What the app draws for a write that waits for a yes: the question, with the note the code added, and the buttons. */
+export type Confirmation = Readonly<{
+  question: string;
+  confirmLabel: string;
+  cancelLabel: string;
+}>;
+
 /** The result of one user turn, once its stream has ended. */
 export type TurnResult = Readonly<{
   conversationId: string;
@@ -30,6 +37,8 @@ export type TurnResult = Readonly<{
   toolCalls: readonly ToolCall[];
   /** The line under the answer and the Estimate label, from the turn's `answer_meta` event. Absent when the turn sent none. */
   answerMeta?: AnswerMeta | undefined;
+  /** The `confirm` event of a turn that ended waiting for a yes. Absent otherwise. */
+  confirmation?: Confirmation | undefined;
 }>;
 
 /** The sum of the `assistant_usage` rows of one turn (a turn with tool rounds writes several). */

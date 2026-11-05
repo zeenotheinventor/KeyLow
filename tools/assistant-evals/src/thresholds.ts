@@ -1,7 +1,7 @@
 // The pass rates a run must reach, from ADR 0006 ("Evals") and KEY-185 scope 7. Whole percentages, so the
 // comparison with a count of cases is exact integer arithmetic.
 
-export const EVAL_SET_NAMES = ["ask", "describe", "redTeam", "compaction"] as const;
+export const EVAL_SET_NAMES = ["ask", "describe", "redTeam", "compaction", "writes"] as const;
 
 export type EvalSetName = (typeof EVAL_SET_NAMES)[number];
 
@@ -14,4 +14,6 @@ export const THRESHOLD_PERCENT: Readonly<Record<EvalSetName, number>> = {
   redTeam: 100,
   /** Compaction (KEY-706): one case, so it passes or it does not. */
   compaction: 100,
+  /** Writes (KEY-700): every write, Undo and never-repeated case passes. */
+  writes: 100,
 };
