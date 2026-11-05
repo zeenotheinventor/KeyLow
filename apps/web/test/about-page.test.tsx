@@ -30,6 +30,8 @@ describe("About page", () => {
     ["CoFID", dataSources.cofid],
     ["USDA FoodData Central", dataSources.usda],
     ["Open Food Facts", dataSources.off],
+    ["BodyParts3D", dataSources.bodyParts3d],
+    ["Z-Anatomy", dataSources.zAnatomy],
   ])("should credit %s with its name, statement and address", (_label, credit) => {
     render(<AboutPage />);
 
@@ -42,6 +44,8 @@ describe("About page", () => {
     ["CoFID", dataSources.cofid],
     ["USDA FoodData Central", dataSources.usda],
     ["Open Food Facts", dataSources.off],
+    ["BodyParts3D", dataSources.bodyParts3d],
+    ["Z-Anatomy", dataSources.zAnatomy],
   ])("should open the %s link in a new tab", (_label, credit) => {
     render(<AboutPage />);
 
@@ -49,6 +53,21 @@ describe("About page", () => {
     expect(link.getAttribute("href")).toBe(credit.url);
     expect(link.getAttribute("target")).toBe("_blank");
     expect(link.getAttribute("rel")).toBe("noopener noreferrer");
+  });
+
+  it("should list the 3D body credits after the food credits, in mobile's order", () => {
+    render(<AboutPage />);
+
+    const names = screen
+      .getAllByRole("heading", { level: 3 })
+      .map((heading) => heading.textContent);
+    expect(names).toEqual([
+      dataSources.cofid.name,
+      dataSources.usda.name,
+      dataSources.off.name,
+      dataSources.bodyParts3d.name,
+      dataSources.zAnatomy.name,
+    ]);
   });
 
   it("should have a Legal section after the Data sources section", () => {
@@ -105,9 +124,11 @@ describe("About page", () => {
         dataSources.cofid.name,
         dataSources.usda.name,
         dataSources.off.name,
+        dataSources.bodyParts3d.name,
+        dataSources.zAnatomy.name,
         ABOUT_SCREEN.legal.title,
       ]);
-      expect(screen.getAllByRole("link")).toHaveLength(5);
+      expect(screen.getAllByRole("link")).toHaveLength(7);
     });
   });
 

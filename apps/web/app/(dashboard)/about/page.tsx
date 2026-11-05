@@ -36,6 +36,16 @@ export default function AboutPage() {
             text={dataSources.off.text}
             url={dataSources.off.url}
           />
+          <DataSourceCredit
+            name={dataSources.bodyParts3d.name}
+            text={dataSources.bodyParts3d.text}
+            url={dataSources.bodyParts3d.url}
+          />
+          <DataSourceCredit
+            name={dataSources.zAnatomy.name}
+            text={dataSources.zAnatomy.text}
+            url={dataSources.zAnatomy.url}
+          />
         </section>
         <GroupedList title={legal.title} headerSize="compact">
           <ListRow icon={Shield} title={legal.privacy} href={LEGAL_PATHS.privacy} />
