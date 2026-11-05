@@ -207,6 +207,8 @@ type Run = {
   counts: { modelCalls: number; toolCalls: number };
   // Writes that landed this turn: the answers that hold an action (a write that changed nothing holds none).
   landedWrites: number;
+  // The code of the last tool error the loop read, so a press that wrote nothing can tell a refusal from a fault.
+  lastErrorCode: string | null;
   // The prompt of the last model call that answered, which is what the next request's size will start from.
   lastPromptTokens: number | null;
   unparseableInputRetries: number;
@@ -490,6 +492,7 @@ async function finishCall(
     return ending("confirm");
   }
   if (outcome.status === "error") {
+    run.lastErrorCode = outcome.code;
     await storeToolResult(run, block, null);
     return null;
   }
@@ -676,6 +679,12 @@ async function runModelCalls(run: Run, session: Session): Promise<Ending> {
   return failedEnding("model_call_limit");
 }
 
+// The executor's refusals that a person can cause on a press, and that the notice already answers.
+const PRESS_REFUSALS: ReadonlySet<string> = new Set([
+  "confirmation_invalid",
+  "write_limit_reached",
+]);
+
 // The press of a confirm button (KEY-840). The person has decided, so the loop makes the stored call itself and
 // no model is asked: a model that answered in prose would leave a press that does nothing, under words that
 // may say it is done. The executor stays the guard, because `runToolUse` sends the same call a model's would,
@@ -718,12 +727,18 @@ async function runConfirmedCall(
     );
     return ending("complete", "confirm_written_no_card");
   }
-  // An error, `not_found` and a write that changed nothing all end here.
-  run.dependencies.report(
-    "assistant",
-    "internal_error",
-    new Error("a confirmed call wrote nothing"),
-  );
+  // An error, `not_found` and a write that changed nothing all end here. Only what is unexpected is reported: a
+  // call that never ran, or an error that is not a refusal the person can cause. `not_found` and a state already
+  // in place are answers and not errors, and a spent confirmation or the write limit is a refusal.
+  const refused = run.lastErrorCode !== null && PRESS_REFUSALS.has(run.lastErrorCode);
+  const benign = run.counts.toolCalls > 0 && (run.lastErrorCode === null || refused);
+  if (!benign) {
+    run.dependencies.report(
+      "assistant",
+      "internal_error",
+      new Error("a confirmed call wrote nothing"),
+    );
+  }
   return failedEnding("confirm_nothing_written");
 }
 
@@ -898,6 +913,7 @@ export function createRunTurn(
       dependencies,
       counts: { modelCalls: 0, toolCalls: 0 },
       landedWrites: 0,
+      lastErrorCode: null,
       lastPromptTokens: null,
       unparseableInputRetries: 0,
       pendingCards: [],
