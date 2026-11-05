@@ -317,7 +317,8 @@ jobs:
       # postgres-meta v0.96.6 is what `supabase start` runs for the meta service and v0.96.1 is
       # what `supabase gen types` runs (the failed log named it), so both are pulled.
       # edge-runtime is what `supabase functions serve` runs and pg_prove is what `supabase test
-      # db` runs. Bump a tag here when the CLI pin above moves.
+      # db` runs. Bump a tag here when the CLI pin above moves. assistant-evals.yml copies the pin and
+      # the postgres-meta v0.96.6 and edge-runtime tags, so it moves with them.
       #
       # `supabase start` keeps the services the tests and type generation need. That is the database,
       # the API gateway (kong), rest and meta (gen types). Auth always starts and cannot be excluded.

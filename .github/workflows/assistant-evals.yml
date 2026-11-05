@@ -1,0 +1,124 @@
+name: Assistant evals
+
+# The eval sets of the Ki-Lo assistant (ADR 0006, "Evals") against a local Supabase stack, with the
+# Edge Functions served and the live Anthropic API behind them. Every case is a paid call, so this
+# workflow has `workflow_dispatch` and nothing else: it never runs on a pull request or a push, and it is
+# not part of the `checks` aggregator in ci.yml. A dispatch reads the workflow from the ref it is started
+# on, so the file has to be on the default branch before it can be started:
+#
+#   gh workflow run assistant-evals.yml --ref main -f sets="ask redTeam"
+#
+# The stack and the serving copy the `db` job of ci.yml, minus what this job does not use (pgTAP, type
+# generation and the Open Food Facts mock). Read that job for the long account of why each step is shaped
+# the way it is. The CLI pin and the image tags below are copies, so bump them here whenever they move
+# there.
+on:
+  workflow_dispatch:
+    inputs:
+      sets:
+        description: Space-separated names of the eval sets to run, for example "ask redTeam". Empty runs every registered set. The names are in tools/assistant-evals/src/thresholds.ts.
+        type: string
+        required: false
+        default: ""
+
+# A second dispatch on the same ref replaces the first, so one ref never spends tokens twice at once.
+concurrency:
+  group: assistant-evals-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  evals:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    # The environment holds the secret ANTHROPIC_EVAL_API_KEY and has no branch rule (ADR 0006). The
+    # production environment is never used here.
+    environment: assistant-evals
+    # packages: read lets the job's token log in to GitHub's registry below.
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v7
+      # The same CLI pin as the `db` job of ci.yml.
+      - uses: supabase/setup-cli@v3
+        with:
+          version: 2.106.0
+      # Authenticated pulls from GitHub's registry are not throttled the way anonymous ones are.
+      - name: Log in to GitHub's registry
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: echo "$GITHUB_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+      - uses: ./.github/actions/setup
+      # The functions import the @keylow/core bundle, so it is written before they are served. Serving
+      # needs no declarations.
+      - name: Bundle @keylow/core for Deno
+        working-directory: packages/db
+        run: node --experimental-strip-types scripts/bundle-core-for-deno.ts --skip-declarations
+      # public.ecr.aws refuses pulls from a busy runner address, so the two images this job needs are
+      # pulled from GitHub's registry and tagged with the names the CLI looks for. postgres-meta is the
+      # meta service of `supabase start` and edge-runtime is what `supabase functions serve` runs. Each
+      # pull is tried up to five times, and a pull that never lands fails the tag. There is no pg_prove
+      # and no second postgres-meta, because the job runs no pgTAP and no `gen types`.
+      #
+      # The -x list and the two environment overrides are those of the `db` job, which explains them.
+      # They keep the start to the database, the gateway, rest, meta and auth.
+      - name: Start the local Supabase stack
+        working-directory: packages/db
+        env:
+          SUPABASE_REALTIME_ENABLED: "false"
+          SUPABASE_STORAGE_ENABLED: "false"
+        run: |
+          printf "%s\n" postgres-meta:v0.96.6 edge-runtime:v1.74.1 |
+            xargs -P 2 -I {} sh -c "for try in 1 2 3 4 5; do docker pull ghcr.io/supabase/{} && break; sleep \$((try * 5)); done; docker tag ghcr.io/supabase/{} public.ecr.aws/supabase/{}"
+          supabase start -x edge-runtime,imgproxy,logflare,mailpit,realtime,storage-api,studio,vector
+      # `functions serve` starts its own edge-runtime container, which reaches a server on the runner
+      # through the gateway address of the stack's Docker network. Docker Desktop resolves
+      # host.docker.internal and a Linux runner does not, so the env file gets the gateway address in
+      # its place. No mock runs in this job, but the recipe import eval starts a page server on the
+      # runner, and the functions have to reach it.
+      #
+      # .env.test points the Anthropic client at the msw mock and holds a dummy key. These are live calls,
+      # so both lines come out and the real key is appended. The key comes in through `env:` and is never
+      # written into the script. The loop is bounded, a function that never answers fails the step, and
+      # the last step prints the serve log.
+      - name: Serve the Edge Functions
+        id: serve
+        working-directory: packages/db
+        env:
+          ANTHROPIC_EVAL_API_KEY: ${{ secrets.ANTHROPIC_EVAL_API_KEY }}
+        run: |
+          gateway=$(docker network inspect supabase_network_keylow --format '{{(index .IPAM.Config 0).Gateway}}')
+          sed -e '/^ANTHROPIC_BASE_URL=/d' -e '/^ANTHROPIC_API_KEY=/d' -e "s/host.docker.internal/$gateway/" \
+            supabase/functions/.env.test > "$RUNNER_TEMP/functions.env"
+          printf 'ANTHROPIC_API_KEY=%s\n' "$ANTHROPIC_EVAL_API_KEY" >> "$RUNNER_TEMP/functions.env"
+          nohup supabase functions serve --env-file "$RUNNER_TEMP/functions.env" --no-verify-jwt \
+            > "$RUNNER_TEMP/functions-serve.log" 2>&1 &
+          for _ in $(seq 1 45); do
+            status=$(curl -s -o /dev/null -w '%{http_code}' -X OPTIONS http://127.0.0.1:54321/functions/v1/off-product || true)
+            if [ "$status" = "204" ] || [ "$status" = "401" ]; then
+              echo "The functions are being served."
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "The functions were not served within 90 seconds. The last status was $status."
+          exit 1
+      # The function and the command each need the key, so it is in this step's environment as well as in
+      # the env file above. The command refuses to run without it. The sets come in through `env:` too and
+      # become one --set each. An empty input leaves a lone `--`, which the command drops, and a name that
+      # is not a set is refused by the command with a message listing the sets.
+      - name: Run the evals
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_EVAL_API_KEY }}
+          EVAL_SETS: ${{ inputs.sets }}
+        run: |
+          read -r -a names <<< "$EVAL_SETS"
+          args=()
+          for name in "${names[@]}"; do
+            args+=(--set "$name")
+          done
+          pnpm --filter @keylow/assistant-evals check:assistant -- "${args[@]}"
+      # Shows what the functions logged, which is where a failed turn is explained.
+      - name: Print the functions serve log
+        if: ${{ failure() && steps.serve.outcome != 'skipped' }}
+        run: cat "$RUNNER_TEMP/functions-serve.log" || true
