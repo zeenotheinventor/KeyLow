@@ -34,6 +34,8 @@ export const samples: Record<string, () => string[]> = {
   describeQuestionStep: () => [1, 2, 3, 4, 5, 6].map(copy.describeQuestionStep),
   describeQuestionStepName: () => [1, 2, 3, 4, 5, 6].map(copy.describeQuestionStepName),
   describeOptionName: () => Object.values(copy.GOAL_OPTIONS).map(copy.describeOptionName),
+  // A yes or no and not a sentence, so it has nothing to sweep.
+  isFullGym: () => [],
   describeMinutesOption: () => copy.MINUTES_PRESETS.map(copy.describeMinutesOption),
   describeGoalAnswersSentence: () => {
     const variants: GoalAnswers[] = [

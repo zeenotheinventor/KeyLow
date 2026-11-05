@@ -6,9 +6,12 @@ import { BackHandler } from "react-native";
 import { goalQuestionPath, goalSummaryPath } from "../../../lib/goalRoutes";
 import { ConfirmDialog } from "../../ui";
 import { DaysStep } from "../DaysStep";
+import { EquipmentStep } from "../EquipmentStep";
+import { ExperienceStep } from "../ExperienceStep";
 import { FocusStep } from "../FocusStep";
-import { hasGoalAnswers, isGoalStepAnswered } from "../goalDraftReducer";
+import { isGoalStepAnswered } from "../goalDraftReducer";
 import { GoalStep } from "../GoalStep";
+import { MinutesStep } from "../MinutesStep";
 import { QuestionScreen } from "../QuestionScreen";
 import { useCloseGoalFlow } from "../useCloseGoalFlow";
 import { useGoalDraft } from "../useGoalDraft";
@@ -17,13 +20,12 @@ import type { GoalQuestionScreenProps } from "./types";
 
 /**
  * One question of the goal questionnaire. The answers are kept in the flow's provider, so Back loses none,
- * and nothing is saved here: the summary saves them at the end. Close asks first when there is any answer to
- * lose, and the Android back button does what Close and Back do. The questions after the third are drawn
- * with their words and no answers until the ticket that builds them.
+ * and nothing is saved here: the summary saves them at the end. Close asks first when the answers differ from those the flow opened with, so there is something to
+ * lose, and the Android back button does what Close and Back do.
  */
 export function GoalQuestionScreen({ step: stepName }: GoalQuestionScreenProps) {
   const router = useRouter();
-  const { draft, answer } = useGoalDraft();
+  const { draft, hasChanges, answer } = useGoalDraft();
   const closeFlow = useCloseGoalFlow();
   const [isAsking, setIsAsking] = useState(false);
   const step = GOAL_QUESTION_STEPS.indexOf(stepName) + 1;
@@ -32,12 +34,12 @@ export function GoalQuestionScreen({ step: stepName }: GoalQuestionScreenProps) 
   const question = GOAL_QUESTIONS[stepName];
 
   const requestClose = useCallback(() => {
-    if (hasGoalAnswers(draft)) {
+    if (hasChanges) {
       setIsAsking(true);
     } else {
       closeFlow();
     }
-  }, [closeFlow, draft]);
+  }, [closeFlow, hasChanges]);
 
   // Set by the first Next or Back, so a second press in the same moment does not push or pop twice. It is
   // let go when this question is in front again.
@@ -111,8 +113,33 @@ export function GoalQuestionScreen({ step: stepName }: GoalQuestionScreenProps) 
             }}
           />
         );
-      default:
-        return null;
+      case "minutes":
+        return (
+          <MinutesStep
+            value={draft.session_minutes}
+            onChange={(minutes) => {
+              answer({ session_minutes: minutes });
+            }}
+          />
+        );
+      case "equipment":
+        return (
+          <EquipmentStep
+            value={draft.equipment ?? []}
+            onChange={(equipment) => {
+              answer({ equipment });
+            }}
+          />
+        );
+      case "experience":
+        return (
+          <ExperienceStep
+            value={draft.experience}
+            onChange={(experience) => {
+              answer({ experience });
+            }}
+          />
+        );
     }
   }
 

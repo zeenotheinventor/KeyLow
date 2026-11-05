@@ -1,11 +1,19 @@
-import { useAssistantConsent, useProgramSummary, useTargets } from "@keylow/api-client";
+import {
+  useAssistantConsent,
+  useProfileTimeZone,
+  useProgramSummary,
+  useTargets,
+  useTrainingGoals,
+} from "@keylow/api-client";
 import {
   ACCOUNT_EXPORT_COPY,
   MORE_SCREEN,
   TAB_TITLES,
   describeAssistantMoreRow,
+  describeGoalSetOn,
   describeNextCheckInSubtitle,
 } from "@keylow/core/copy";
+import { toLocalDate } from "@keylow/core/dates";
 import { formatCalories } from "@keylow/core/format";
 import { useRouter } from "expo-router";
 import { ScrollView, View } from "react-native";
@@ -15,6 +23,7 @@ import { BodyMapRendererSetting } from "../../../components/BodyMapRendererSetti
 import { DashboardBodyChartSetting } from "../../../components/DashboardBodyChartSetting";
 import { ScreenHeader } from "../../../components/ScreenHeader";
 import { GroupedList, ListRow } from "../../../components/ui";
+import { goalQuestionPath } from "../../../lib/goalRoutes";
 import { recipesPath } from "../../../lib/recipeRoutes";
 import { signOut } from "../../../lib/signOut";
 import { useOpenOnce } from "../../../lib/useOpenOnce";
@@ -25,7 +34,10 @@ import { useReadsEnabled } from "../../../lib/useReadsEnabled";
 // Programme sits under it and opens the Programme screen inside this tab, its subtitle the next check-in or the offer to
 // let Ki-Lo set the targets, and Targets says "From your programme" while the programme's targets are in force.
 // Recipes is Nutrition's last row and opens the recipe library inside this tab, where it moved from the bar.
-// Weight opens the Weight screen inside this tab, Appearance, the Body map and the Dashboard body map are set here, and Account
+// Weight opens the Weight screen inside this tab, and Goal sits under it and opens the goal questionnaire at its
+// first question, filled with the current goal's answers, its sub line the day the goal was set or the
+// invitation to set one, and none until both the goal and the time zone it is dated in are read, so the
+// invitation does not show and then flip. Appearance, the Body map and the Dashboard body map are set here, and Account
 // holds Export my data, which opens its screen inside this tab, above Sign out.
 // Assistant is the first row of Settings and opens its settings screen inside this tab, its sub line and value
 // following whether the assistant is on, and none until that is read.
@@ -37,6 +49,8 @@ export default function MoreRoute() {
   const targets = useTargets({ enabled: isReadEnabled });
   const programSummary = useProgramSummary({ enabled: isReadEnabled });
   const assistantConsent = useAssistantConsent({ enabled: isReadEnabled });
+  const trainingGoals = useTrainingGoals({ enabled: isReadEnabled });
+  const timeZone = useProfileTimeZone({ enabled: isReadEnabled });
   const openOnce = useOpenOnce();
   const assistantRow = describeAssistantMoreRow(assistantConsent.data?.isOn);
   const kcalTarget = targets.data?.kcal ?? null;
@@ -50,6 +64,18 @@ export default function MoreRoute() {
         : program.nextCheckinDate === null
           ? undefined
           : describeNextCheckInSubtitle(program.nextCheckinDate);
+
+  // Nothing is said until the read is in. A goal that cannot be read says nothing either, as it is not known
+  // that there is none. A goal is dated in the user's time zone, which is read with it.
+  const goal = trainingGoals.data;
+  const goalSubtitle =
+    goal === undefined
+      ? undefined
+      : goal === null
+        ? MORE_SCREEN.body.goal.subtitleWithoutGoal
+        : timeZone.isPending
+          ? undefined
+          : describeGoalSetOn(toLocalDate(new Date(goal.effective_from), timeZone.data ?? "UTC"));
 
   return (
     <View className="flex-1">
@@ -106,6 +132,16 @@ export default function MoreRoute() {
             title={MORE_SCREEN.body.weight.title}
             onPress={() => {
               router.push("/more/weight");
+            }}
+          />
+          <ListRow
+            icon="Dumbbell"
+            subtitle={goalSubtitle}
+            title={MORE_SCREEN.body.goal.title}
+            onPress={() => {
+              openOnce(() => {
+                router.push(goalQuestionPath(1));
+              });
             }}
           />
         </GroupedList>

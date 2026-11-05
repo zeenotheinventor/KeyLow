@@ -1,7 +1,7 @@
 import {
   goalDraftReducer,
   firstUnansweredStep,
-  hasGoalAnswers,
+  hasGoalDraftChanged,
   initialGoalDraft,
   isGoalStepAnswered,
 } from "../../components/GoalQuestionnaire/goalDraftReducer";
@@ -62,6 +62,16 @@ describe("the goal draft", () => {
       expect(draft).toStrictEqual({ goal: "aesthetic", focus: ["chest", "arms"] });
     });
 
+    it("should take an answer back when it is given as undefined, as the Other minutes field does when it is emptied", () => {
+      const draft = goalDraftReducer(initialGoalDraft({ session_minutes: 60 }), {
+        type: "answered",
+        answers: { session_minutes: undefined },
+      });
+
+      expect(isGoalStepAnswered(draft, 4)).toBe(false);
+      expect(hasGoalDraftChanged(draft, initialGoalDraft())).toBe(false);
+    });
+
     it("should not change the draft it was given", () => {
       const before = initialGoalDraft();
 
@@ -98,6 +108,19 @@ describe("the goal draft", () => {
       expect(isGoalStepAnswered(initialGoalDraft(), step)).toBe(false);
     });
 
+    it("should not count equipment until at least one value is chosen, though the schema allows none", () => {
+      expect(isGoalStepAnswered(initialGoalDraft({ equipment: [] }), 5)).toBe(false);
+      expect(isGoalStepAnswered(initialGoalDraft({ equipment: ["other"] }), 5)).toBe(true);
+    });
+
+    it.each([14, 181, 0, 60.5])("should not count %s minutes", (minutes) => {
+      expect(isGoalStepAnswered(initialGoalDraft({ session_minutes: minutes }), 4)).toBe(false);
+    });
+
+    it.each([15, 180])("should count %s minutes, the ends of the range", (minutes) => {
+      expect(isGoalStepAnswered(initialGoalDraft({ session_minutes: minutes }), 4)).toBe(true);
+    });
+
     it("should count the minutes, equipment and experience once they are valid", () => {
       expect(isGoalStepAnswered(initialGoalDraft({ session_minutes: 60 }), 4)).toBe(true);
       expect(isGoalStepAnswered(initialGoalDraft({ session_minutes: 10 }), 4)).toBe(false);
@@ -106,9 +129,9 @@ describe("the goal draft", () => {
     });
   });
 
-  describe("whether anything has been answered", () => {
-    it("should say no for a draft that has only its empty focus", () => {
-      expect(hasGoalAnswers(initialGoalDraft())).toBe(false);
+  describe("whether the draft differs from the one the flow opened with", () => {
+    it("should say no for a draft that has only its empty focus, as for one nothing was given", () => {
+      expect(hasGoalDraftChanged(initialGoalDraft(), initialGoalDraft())).toBe(false);
     });
 
     it.each([
@@ -118,8 +141,64 @@ describe("the goal draft", () => {
       ["the minutes", { session_minutes: 45 }],
       ["the equipment, even none", { equipment: [] }],
       ["the experience", { experience: "advanced" }],
-    ] satisfies [string, GoalDraftAnswers][])("should say yes for %s", (_name, answers) => {
-      expect(hasGoalAnswers(initialGoalDraft(answers))).toBe(true);
+    ] satisfies [string, GoalDraftAnswers][])(
+      "should say yes for %s given to a flow that opened empty",
+      (_name, answers) => {
+        expect(hasGoalDraftChanged(initialGoalDraft(answers), initialGoalDraft())).toBe(true);
+      },
+    );
+
+    const stored: GoalDraftAnswers = {
+      goal: "hybrid",
+      focus: ["arms", "chest"],
+      days_per_week: 5,
+      session_minutes: 50,
+      equipment: ["dumbbell", "cable"],
+      experience: "advanced",
+    };
+
+    it("should say no for a draft that is only the stored goal", () => {
+      expect(hasGoalDraftChanged(initialGoalDraft(stored), initialGoalDraft(stored))).toBe(false);
+    });
+
+    it("should say no when lists hold the same values in another order", () => {
+      const reordered: GoalDraftAnswers = {
+        ...stored,
+        focus: ["chest", "arms"],
+        equipment: ["cable", "dumbbell"],
+      };
+
+      expect(hasGoalDraftChanged(initialGoalDraft(reordered), initialGoalDraft(stored))).toBe(
+        false,
+      );
+    });
+
+    it.each([
+      ["the goal", { goal: "strength" }],
+      ["the focus", { focus: ["arms"] }],
+      ["the days", { days_per_week: 4 }],
+      ["the minutes", { session_minutes: 60 }],
+      ["the equipment", { equipment: ["dumbbell"] }],
+      ["the experience", { experience: "beginner" }],
+    ] satisfies [string, GoalDraftAnswers][])(
+      "should say yes when %s was changed from the stored goal",
+      (_name, change) => {
+        expect(
+          hasGoalDraftChanged(initialGoalDraft({ ...stored, ...change }), initialGoalDraft(stored)),
+        ).toBe(true);
+      },
+    );
+
+    it("should say no when an answer given as undefined was never there", () => {
+      expect(
+        hasGoalDraftChanged(
+          goalDraftReducer(initialGoalDraft(), {
+            type: "answered",
+            answers: { session_minutes: undefined },
+          }),
+          initialGoalDraft(),
+        ),
+      ).toBe(false);
     });
   });
 

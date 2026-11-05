@@ -58,7 +58,11 @@ describe("the tab shell copy", () => {
         program: { title: "Programme", subtitleWithoutProgram: "Let Ki-Lo set your targets" },
         recipes: { title: "Recipes" },
       },
-      body: { title: "Body", weight: { title: "Weight" } },
+      body: {
+        title: "Body",
+        weight: { title: "Weight" },
+        goal: { title: "Goal", subtitleWithoutGoal: "Tell Ki-Lo what you are training for" },
+      },
       settings: {
         title: "Settings",
         appearance: {

@@ -25,6 +25,7 @@ import {
   showProgramWithoutSnapshot,
 } from "./support/programBackend";
 import { mockSupabaseClient, resetSupabaseMock } from "./support/supabaseMock";
+import { storedGoalRow } from "./support/trainingGoalsRead";
 import { installVirtualClock } from "./support/virtualClock";
 
 const mockStorageItems = new Map<string, string>();
@@ -344,6 +345,103 @@ describe("the More screen", () => {
       await user.press(screen.getByRole("button", { name: "Weight" }));
 
       expect(routerMock.push).toHaveBeenCalledWith("/more/weight");
+    });
+  });
+
+  describe("Goal", () => {
+    const withoutGoalSubtitle = "Tell Ki-Lo what you are training for";
+
+    it("should be an enabled row in Body, after Weight, with its icon and a chevron because it goes somewhere", async () => {
+      await renderMore();
+
+      const body = within(screen.getByLabelText("Body"));
+      const rows = body.getAllByRole("button");
+
+      const goalRow = body.getByRole("button", { name: /^Goal/ });
+
+      expect(rows).toHaveLength(2);
+      expect(rows[0]).toHaveAccessibleName("Weight");
+      expect(rows[1]).toBe(goalRow);
+      expect(goalRow).toBeEnabled();
+      expect(drawingsIn(goalRow)).toHaveLength(2);
+    });
+
+    it("should invite the user to say what they train for when there is no goal", async () => {
+      await renderMore();
+
+      expect(
+        await screen.findByRole("button", { name: `Goal, ${withoutGoalSubtitle}` }),
+      ).toBeEnabled();
+    });
+
+    it("should say when the goal was set, in the user's own day, once the goal is read", async () => {
+      diaryBackend.trainingGoals = [storedGoalRow];
+      await renderMore();
+
+      expect(await screen.findByRole("button", { name: "Goal, Set on Mon 21 Sep" })).toBeEnabled();
+      expect(screen.queryByText(withoutGoalSubtitle)).not.toBeOnTheScreen();
+    });
+
+    it("should say nothing under its title while the goal is being read, so no invitation flashes and flips", async () => {
+      diaryBackend.hungTables.add("training_goals");
+      await renderMore();
+      // Targets arrive from the same fake database, so the reads of this screen have settled.
+      await screen.findByRole("button", { name: "Targets, Set by you, 2,200 kcal" });
+
+      expect(screen.getByRole("button", { name: "Goal" })).toBeEnabled();
+      expect(screen.queryByText(withoutGoalSubtitle)).not.toBeOnTheScreen();
+    });
+
+    it("should say nothing under its title while the time zone the goal is dated in is being read", async () => {
+      diaryBackend.trainingGoals = [storedGoalRow];
+      diaryBackend.timeZoneReadHangs = true;
+      await renderMore();
+      await screen.findByRole("button", { name: "Targets, Set by you, 2,200 kcal" });
+
+      expect(requestsTo("training_goals")).toBeGreaterThan(0);
+      expect(screen.getByRole("button", { name: "Goal" })).toBeEnabled();
+      expect(screen.queryByText(/^Set on /)).not.toBeOnTheScreen();
+    });
+
+    it("should say nothing under its title when the goal cannot be read, as it does not know there is none", async () => {
+      diaryBackend.failingTables.add("training_goals");
+      await renderMore();
+      await screen.findByRole("button", { name: "Targets, Set by you, 2,200 kcal" });
+
+      expect(screen.getByRole("button", { name: "Goal" })).toBeEnabled();
+      expect(screen.queryByText(withoutGoalSubtitle)).not.toBeOnTheScreen();
+    });
+
+    it("should open the first question when pressed", async () => {
+      const user = userEvent.setup();
+      diaryBackend.trainingGoals = [storedGoalRow];
+      await renderMore();
+
+      await user.press(await screen.findByRole("button", { name: /^Goal/ }));
+
+      expect(routerMock.push).toHaveBeenCalledTimes(1);
+      expect(routerMock.push).toHaveBeenCalledWith("/goal/1");
+    });
+
+    it("should open the questions even while the goal is still being read", async () => {
+      const user = userEvent.setup();
+      diaryBackend.hungTables.add("training_goals");
+      await renderMore();
+
+      await user.press(screen.getByRole("button", { name: "Goal" }));
+
+      expect(routerMock.push).toHaveBeenCalledWith("/goal/1");
+    });
+
+    it("should open the questions once on a double tap", async () => {
+      const user = userEvent.setup();
+      await renderMore();
+      const row = await screen.findByRole("button", { name: /^Goal/ });
+
+      await user.press(row);
+      await user.press(row);
+
+      expect(routerMock.push).toHaveBeenCalledTimes(1);
     });
   });
 
