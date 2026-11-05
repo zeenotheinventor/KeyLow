@@ -1,6 +1,6 @@
 import { createContext } from "react";
 
-import type { GoalDraft, GoalDraftAnswers } from "./goalDraftReducer";
+import type { GoalDraft, GoalDraftAnswers } from "@keylow/core/training";
 
 export type GoalDraftContextValue = Readonly<{
   /** The answers given so far, which the steps read and the summary will save. */

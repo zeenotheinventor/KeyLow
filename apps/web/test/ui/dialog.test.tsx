@@ -89,6 +89,22 @@ describe("Dialog", () => {
     cleanup();
   });
 
+  it("should name its icon button Close, and call onClose when it is pressed", () => {
+    const onClose = vi.fn();
+    render(<AddFoodDialog onClose={onClose} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("should name its icon button as it is told to, when Close would be ambiguous", () => {
+    render(<AddFoodDialog closeLabel="Keep answering" />);
+
+    expect(screen.getByRole("button", { name: "Keep answering" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Close" })).toBeNull();
+  });
+
   it("should give focus back to the element it is told to, not the one focused when it opened", () => {
     const { rerender } = render(
       <>

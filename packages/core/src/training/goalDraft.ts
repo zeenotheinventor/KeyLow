@@ -1,6 +1,7 @@
-import { goalAnswersSchema } from "@keylow/core/training";
+import { goalAnswersSchema } from "./goalAnswers";
 
-import type { GoalAnswers } from "@keylow/core/training";
+import type { GoalAnswers } from "./goalAnswers";
+import type { TrainingGoalsRow } from "../schemas";
 
 /**
  * Answers to some of the questions, such as the current goal's to open the flow filled. An answer given as
@@ -31,6 +32,18 @@ const answerKeyOfStep = [
   "equipment",
   "experience",
 ] as const satisfies readonly (keyof GoalAnswers)[];
+
+/** The six answers of a stored goal and nothing else of the row, so the flow opens filled with them. */
+export function goalAnswersOfRow(row: TrainingGoalsRow): GoalDraftAnswers {
+  return {
+    goal: row.goal,
+    focus: row.focus,
+    days_per_week: row.days_per_week,
+    session_minutes: row.session_minutes,
+    equipment: row.equipment,
+    experience: row.experience,
+  };
+}
 
 /** The draft to start from: the answers given, if any, with an empty focus where none was. */
 export function initialGoalDraft(answers: GoalDraftAnswers = {}): GoalDraft {
