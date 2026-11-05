@@ -1,4 +1,5 @@
-import { getFood, logFood, searchFoods } from "@keylow/api-client";
+import { getFood, logFood, searchFoods, updateMyTargets } from "@keylow/api-client";
+import { createClient } from "@supabase/supabase-js";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 
 import { adminClient } from "../../../../packages/db/test/integration/support/stack";
@@ -16,6 +17,7 @@ import { openLocalHttpSession } from "../../src/httpSession.ts";
 import { createUndoTurn } from "../../src/undoTurn.ts";
 
 import type { FixtureUser } from "../../src/fixtureUser.ts";
+import type { Database } from "@keylow/api-client";
 
 // These need the local stack with its seeds, and the Undo test needs the `assistant` function served as well.
 // Every user is new for the run, named under key700-<run id> at keylow.test, and afterAll removes them.
@@ -123,8 +125,31 @@ describe("the targets the write set puts back", () => {
       };
       expect(await session.database.countRows({ table: "profiles", where: askTargets })).toBe(1);
 
-      const { error } = await admin.from("profiles").update({ target_kcal: 2000 }).eq("id", userId);
-      expect(error).toBeNull();
+      // The service role cannot write the targets (42501), so the change is made as the app makes it: signed in as
+      // the eval user, through the repo function. The user is signed in with a one-time link the service role asks
+      // for, because the session does not hand out its client or its password.
+      const stack = inject("stack");
+      const { data: found } = await admin.auth.admin.getUserById(userId);
+      const { data: link, error: linkError } = await admin.auth.admin.generateLink({
+        type: "magiclink",
+        email: found.user?.email ?? "",
+      });
+      expect(linkError).toBeNull();
+      const userClient = createClient<Database>(stack.apiUrl, stack.anonKey, {
+        auth: { persistSession: false, autoRefreshToken: false },
+      });
+      const { error: signInError } = await userClient.auth.verifyOtp({
+        type: "magiclink",
+        token_hash: link.properties?.hashed_token ?? "",
+      });
+      expect(signInError).toBeNull();
+      await updateMyTargets(userClient, userId, {
+        kcal: 2000,
+        protein_g: 138,
+        carbs_g: 231,
+        fat_g: 77,
+      });
+      // If restoreTargets did nothing, the count after it would stay 0 and the test would fail.
       expect(await session.database.countRows({ table: "profiles", where: askTargets })).toBe(0);
 
       await environment.restoreTargets();
