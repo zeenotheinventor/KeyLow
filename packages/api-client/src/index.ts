@@ -357,6 +357,8 @@ export type {
 } from "./hooks";
 export { useSuggestion } from "./hooks";
 export type { SuggestionRead, SuggestionUnavailableReason, UseSuggestionInput } from "./hooks";
+export { useSuggestionCard } from "./hooks";
+export type { SuggestionCardState, SuggestionNotices, UseSuggestionCardInput } from "./hooks";
 export { listSuggestionLibrary } from "./repos";
 export type { SuggestionLibraryOptions } from "./repos";
 export { useAcceptedSuggestions, useAcceptSuggestion, useUndoAcceptedSuggestion } from "./hooks";
