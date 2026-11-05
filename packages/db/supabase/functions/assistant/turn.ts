@@ -55,9 +55,9 @@ export const MAX_MODEL_CALLS = 12;
 
 // The MCP client's default is 60 s per attempt, and a connect, a list or a read call retries once, so a hung
 // connect could take 120 s. 20 s is far more than most tools take (the `mcp` function measured a few
-// milliseconds on loopback). The one exception is `import_recipe_from_url`, which fetches a page and makes a
-// model call. It keeps itself inside 15 s (fetch 5 s, parse 9 s, a cutoff before it saves), so it needs no
-// longer timeout here.
+// milliseconds on loopback). The one exception is `import_recipe_from_url`, which fetches a page and makes two
+// model calls. It keeps itself inside 18 s (fetch 5 s, parse 9 s, pick 4 s, a cutoff before it saves), so it
+// needs no longer timeout here.
 export const MCP_REQUEST_TIMEOUT_MILLISECONDS = 20_000;
 
 // Supabase Edge Functions stop a worker after 150 s of wall-clock time on the free plan and 400 s on paid
