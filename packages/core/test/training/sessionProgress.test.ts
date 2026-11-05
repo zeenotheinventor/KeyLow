@@ -19,6 +19,7 @@ import {
   planProgress,
   scaffoldSession,
   sessionClock,
+  sessionHeatReadingTime,
   sessionHeatValues,
   sessionMuscleSets,
 } from "../../src/training";
@@ -367,5 +368,33 @@ describe("sessionClock", () => {
   it("should throw a RangeError that states the rule, and not the value, for a time without a zone", () => {
     expect(() => sessionClock(open, "2026-10-15 19:00")).toThrow(RangeError);
     expect(() => sessionClock(open, "2026-10-15 19:00")).not.toThrow(/19:00/);
+  });
+});
+
+describe("sessionHeatReadingTime", () => {
+  const lastSet = goldenLegsSets.reduce((latest, set) =>
+    Date.parse(set.performed_at) > Date.parse(latest.performed_at) ? set : latest,
+  );
+
+  it("should be now when every set was logged before it", () => {
+    expect(sessionHeatReadingTime(goldenLegsSets, "2026-10-15T19:00:00Z")).toBe(
+      "2026-10-15T19:00:00Z",
+    );
+  });
+
+  it("should be the latest set when now is before it, so a set just logged is read", () => {
+    expect(sessionHeatReadingTime(goldenLegsSets, "2026-10-15T17:00:00Z")).toBe(
+      lastSet.performed_at,
+    );
+  });
+
+  it("should leave out a removed set, which is never read", () => {
+    const removed = { ...lastSet, deleted_at: "2026-10-15T18:58:00Z" };
+
+    expect(sessionHeatReadingTime([removed], "2026-10-15T17:00:00Z")).toBe("2026-10-15T17:00:00Z");
+  });
+
+  it("should be now for no sets", () => {
+    expect(sessionHeatReadingTime([], "2026-10-15T17:00:00Z")).toBe("2026-10-15T17:00:00Z");
   });
 });

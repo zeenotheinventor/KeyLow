@@ -107,12 +107,14 @@ describe("the routines page", () => {
       expect(link.getAttribute("href")).toBe("/train");
     });
 
-    it("should draw no button, since no handler is given", async () => {
+    it("should draw only Make active on each other routine, since no handler opens an editor", async () => {
       renderWithRoutines(<RoutinesScreen />);
 
       await screen.findByRole("heading", { name: ROUTINES_SCREEN.title, level: 1 });
       await screen.findByRole("region", { name: ROUTINES_SCREEN.otherSectionName });
-      expect(screen.queryAllByRole("button")).toEqual([]);
+      expect(
+        screen.getAllByRole("button").map((button) => button.getAttribute("aria-label")),
+      ).toEqual(["Make active, Full body", "Make active, Upper Lower"]);
     });
 
     it("should make the cards open the editor, and draw New routine, when handlers are given", async () => {
@@ -292,13 +294,15 @@ describe("the archived routines page", () => {
     expect(screen.queryByText("Push Pull Legs")).toBeNull();
   });
 
-  it("should link back to the routines, and draw no Restore without a handler", async () => {
+  it("should link back to the routines, and draw a Restore on each archived routine", async () => {
     renderWithRoutines(<ArchivedRoutinesScreen />);
 
     const back = await screen.findByRole("link", { name: ROUTINES_ARCHIVED.backLabel });
     expect(back.getAttribute("href")).toBe("/train/routines");
     await screen.findAllByRole("listitem");
-    expect(screen.queryAllByRole("button")).toEqual([]);
+    expect(
+      screen.getAllByRole("button").map((button) => button.getAttribute("aria-label")),
+    ).toEqual(["Restore Starting strength"]);
   });
 
   it("should show the error with Try again", async () => {

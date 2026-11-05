@@ -5,7 +5,9 @@ import { createCaseEnvironment } from "./caseEnvironment.ts";
 import { createEvalDatabase } from "./database.ts";
 import { createFixtureUser } from "./fixtureUser.ts";
 import { createHttpDriver } from "./httpDriver.ts";
+import { stopPageServer } from "./pageServerHolder.ts";
 import { attachRedTeamWorld } from "./redTeamSession.ts";
+import { createUndoTurn } from "./undoTurn.ts";
 import { readSupabaseStatus } from "../../../packages/db/scripts/supabaseStatus.ts";
 import { writeAskExtras } from "../fixtures/askExtras.ts";
 import { redTeamWorldHolder } from "../fixtures/redTeamWorld.ts";
@@ -21,16 +23,73 @@ const databaseWorkdir = new URL("../../../packages/db", import.meta.url).pathnam
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
 
+const blocksOf = (content: unknown): unknown[] =>
+  Array.isArray(content) ? (content as unknown[]) : [];
+
 /** The `tool_use` blocks of a stored assistant message, in order. Anything else in the content is left out. */
 export function toolCallsOf(content: unknown): ToolCall[] {
-  if (!Array.isArray(content)) {
-    return [];
-  }
-  return content.flatMap((block: unknown) =>
+  return blocksOf(content).flatMap((block) =>
     isRecord(block) && block["type"] === "tool_use" && typeof block["name"] === "string"
       ? [{ name: block["name"], input: block["input"] }]
       : [],
   );
+}
+
+// The code a tool answered with: `"error": "not_found"` in the text of its result, which the tools write as JSON.
+// Only the code is kept, never the rest of the result.
+const NEEDS_CONFIRMATION = /"status"\s*:\s*"needs_confirmation"/;
+const ERROR_CODE = /"error"\s*:\s*"([a-z_]+)"/;
+
+/**
+ * The calls of a whole turn, in order, from every stored message of it: each `tool_use` block, with the error
+ * code its `tool_result` block carried when the tool refused it. The code says why a write did not land, such as
+ * `not_found` for an id the tool could not find.
+ */
+export function toolCallsOfTurn(contents: readonly unknown[]): ToolCall[] {
+  const codes = new Map<string, string>();
+  const asked = new Set<string>();
+  const answered = new Set<string>();
+  for (const block of contents.flatMap(blocksOf)) {
+    if (
+      isRecord(block) &&
+      block["type"] === "tool_result" &&
+      typeof block["tool_use_id"] === "string"
+    ) {
+      const id = block["tool_use_id"];
+      answered.add(id);
+      const text = block["content"];
+      const code = typeof text === "string" ? ERROR_CODE.exec(text)?.[1] : undefined;
+      if (code !== undefined) {
+        codes.set(id, code);
+      } else if (typeof text === "string" && NEEDS_CONFIRMATION.test(text)) {
+        asked.add(id);
+      }
+    }
+  }
+  return contents.flatMap(blocksOf).flatMap((block) => {
+    if (!isRecord(block) || block["type"] !== "tool_use" || typeof block["name"] !== "string") {
+      return [];
+    }
+    const id = typeof block["id"] === "string" ? block["id"] : undefined;
+    const code = id === undefined ? undefined : codes.get(id);
+    const outcome =
+      id === undefined || code !== undefined
+        ? undefined
+        : asked.has(id)
+          ? ("asked to confirm" as const)
+          : // `ask_user` is turned into a question by the loop and never gets a result.
+            !answered.has(id) && block["name"] !== "ask_user"
+            ? ("no result" as const)
+            : undefined;
+    return [
+      {
+        name: block["name"],
+        input: block["input"],
+        ...(code === undefined ? {} : { errorCode: code }),
+        ...(outcome === undefined ? {} : { outcome }),
+      },
+    ];
+  });
 }
 
 async function timeZoneOf(user: FixtureUser): Promise<string | null> {
@@ -42,9 +101,31 @@ async function timeZoneOf(user: FixtureUser): Promise<string | null> {
 }
 
 /**
+ * Closes what a session holds, each step whatever the others do: the red-team world (user B), the page server and
+ * the eval user. The first failure is thrown once all three have been tried.
+ */
+const closeEverything = (user: FixtureUser) => async (): Promise<void> => {
+  const failures: unknown[] = [];
+  for (const step of [
+    () => redTeamWorldHolder.detach(),
+    () => stopPageServer(),
+    () => user.remove(),
+  ]) {
+    try {
+      await step();
+    } catch (error) {
+      failures.push(error);
+    }
+  }
+  if (failures.length > 0) {
+    throw failures[0];
+  }
+};
+
+/**
  * The session of a run against the local stack: a new eval user with the synthetic diary and the assistant consent, the HTTP driver
- * for the served `assistant` function, and the eval user's own view of the database. Closing it removes the
- * user.
+ * for the served `assistant` function, and the eval user's own view of the database. Closing it removes the user and
+ * stops the page server if a case started one (`src/pageServerHolder.ts`).
  */
 export async function openLocalHttpSession(): Promise<EvalSession> {
   const stack = await readSupabaseStatus(databaseWorkdir);
@@ -55,28 +136,28 @@ export async function openLocalHttpSession(): Promise<EvalSession> {
     // The targets the ask set's "what is left" and "days at target" cases are worked out against.
     await writeAskExtras(user);
     const timeZone = await timeZoneOf(user);
+    const getAccessToken = async () => {
+      const { data } = await user.client.auth.getSession();
+      if (data.session === null) {
+        throw new Error("The eval user has no session");
+      }
+      return data.session.access_token;
+    };
     const driver = createHttpDriver({
       apiUrl: stack.apiUrl,
       anonKey: stack.anonKey,
-      getAccessToken: async () => {
-        const { data } = await user.client.auth.getSession();
-        if (data.session === null) {
-          throw new Error("The eval user has no session");
-        }
-        return data.session.access_token;
-      },
+      getAccessToken,
       timeZone,
       readToolCalls: async (turnId) => {
         const { data, error } = await user.client
           .from("assistant_messages")
           .select("content")
           .eq("turn_id", turnId)
-          .eq("role", "assistant")
           .order("seq", { ascending: true });
         if (error) {
           throw new Error(`Could not read the tool calls of the turn (${error.code})`);
         }
-        return data.flatMap(({ content }) => toolCallsOf(content));
+        return toolCallsOfTurn(data.map(({ content }) => content));
       },
     });
     // The service role writes the conversations a case seeds, and nothing else uses it.
@@ -88,13 +169,16 @@ export async function openLocalHttpSession(): Promise<EvalSession> {
     return {
       driver,
       database: createEvalDatabase(user.client),
-      environment: createCaseEnvironment({ client: serviceClient, userId: user.id }),
-      // B goes first, and A is removed whatever happens to B.
-      close: () => redTeamWorldHolder.detach().finally(user.remove),
+      environment: createCaseEnvironment({
+        client: serviceClient,
+        userId: user.id,
+        undoTurn: createUndoTurn({ client: user.client }),
+        restoreTargets: () => writeAskExtras(user),
+      }),
+      close: closeEverything(user),
     };
   } catch (error) {
-    await redTeamWorldHolder.detach().catch(() => undefined);
-    await user.remove();
+    await closeEverything(user)().catch(() => undefined);
     throw error;
   }
 }

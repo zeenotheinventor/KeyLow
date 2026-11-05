@@ -19,7 +19,9 @@ export const trainBackend: {
   weekSessions: Row[];
   /** The newest session that has not ended, or null for none. */
   activeSession: Row | null;
-  /** Fails the reads of this table: `routines`, `week_sessions`, `active_session`, `ever_logged` or `routine_detail`. */
+  /** The current goal row, or null for none. */
+  goal: Row | null;
+  /** Fails the reads of this table: `routines`, `week_sessions`, `active_session`, `ever_logged`, `routine_detail` or `training_goals`. */
   failingReads: Set<string>;
   /** Never answers the reads of these tables, as a slow connection does. */
   hangingReads: Set<string>;
@@ -71,12 +73,18 @@ export const trainBackend: {
   savedRoutines: Row[];
   /** Holds every `save_routine` call until it settles, as a slow connection does. A test opens it by resolving it. */
   saveRoutineGate: Promise<void> | null;
+  /**
+   * A test file's own tables, asked before the fake's own: it answers a request, or null to leave it to them.
+   * The suggestion card's `suggestionBackend.tsx` serves the goal, the library and the accepted suggestions so.
+   */
+  extraRoute: ((request: Request, url: URL) => Response | Promise<Response> | null) | null;
 } = {
   timeZone: "Europe/London",
   routine: null,
   everLogged: false,
   weekSessions: [],
   activeSession: null,
+  goal: null,
   failingReads: new Set(),
   hangingReads: new Set(),
   reads: [],
@@ -103,6 +111,7 @@ export const trainBackend: {
   exerciseSaveCalls: 0,
   savedRoutines: [],
   saveRoutineGate: null,
+  extraRoute: null,
 };
 
 export function resetTrainBackend(): void {
@@ -111,6 +120,7 @@ export function resetTrainBackend(): void {
   trainBackend.everLogged = false;
   trainBackend.weekSessions = [];
   trainBackend.activeSession = null;
+  trainBackend.goal = null;
   trainBackend.failingReads.clear();
   trainBackend.hangingReads.clear();
   trainBackend.reads = [];
@@ -137,6 +147,7 @@ export function resetTrainBackend(): void {
   trainBackend.exerciseSaveCalls = 0;
   trainBackend.savedRoutines = [];
   trainBackend.saveRoutineGate = null;
+  trainBackend.extraRoute = null;
   lastFinishedSession = null;
 }
 
@@ -379,6 +390,10 @@ async function respond(input: string | URL | Request, init?: RequestInit): Promi
   const request = new Request(input, init);
   const { pathname, searchParams } = new URL(request.url);
 
+  const extra = trainBackend.extraRoute?.(request, new URL(request.url)) ?? null;
+  if (extra !== null) {
+    return extra;
+  }
   if (pathname.endsWith("/profiles")) {
     return searchParams.get("select") === "weight_unit"
       ? answer(request, [{ weight_unit: trainBackend.weightUnit }])
@@ -387,8 +402,11 @@ async function respond(input: string | URL | Request, init?: RequestInit): Promi
   if (pathname.endsWith("/workout_sets")) {
     return setRequest(request, searchParams);
   }
-  // The body map card reads these too. The golden week has no goal and no accepted suggestion.
-  if (pathname.endsWith("/training_goals") || pathname.endsWith("/accepted_suggestions")) {
+  if (pathname.endsWith("/training_goals")) {
+    return read("training_goals", request, trainBackend.goal === null ? [] : [trainBackend.goal]);
+  }
+  // The body map card reads this too. The golden week has no accepted suggestion.
+  if (pathname.endsWith("/accepted_suggestions")) {
     return answer(request, []);
   }
   if (pathname.endsWith("/exercises")) {

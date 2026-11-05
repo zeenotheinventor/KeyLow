@@ -3,6 +3,7 @@ import { assert, assertEquals, assertStringIncludes } from "@std/assert";
 import { createRegistry, toolRegistry } from "../_shared/assistant/registry.ts";
 import {
   createFakeActionStore,
+  fakeAsk,
   fakeReadTool,
   fakeWriteTool,
   spyOnConsole,
@@ -12,7 +13,11 @@ import { createMcpEndpoint } from "./routes.ts";
 import { turnStatuses } from "./turns.ts";
 
 import type { FakeActionStore } from "../_shared/assistant/testing.ts";
-import type { ToolDefinition, ToolRegistry } from "../_shared/assistant/tool.ts";
+import type {
+  ReadToolDefinition,
+  ToolDefinition,
+  ToolRegistry,
+} from "../_shared/assistant/tool.ts";
 import type { ReportError } from "../_shared/report.ts";
 import type { McpDependencies } from "./routes.ts";
 import type { McpTurn } from "./turns.ts";
@@ -39,6 +44,7 @@ type FakeOptions = {
   turnOwner?: string;
   signedIn?: boolean;
   userMessageText?: string | null;
+  personsWords?: string | null;
   ageMilliseconds?: number;
 };
 
@@ -72,11 +78,12 @@ function fake(options: FakeOptions = {}): Fake {
             ? turn
             : null,
         ),
-      userMessageText: (_forUser, forTurn) => {
+      userMessage: (_forUser, forTurn) => {
         messageLookups.push(forTurn.id);
-        return Promise.resolve(
-          "userMessageText" in options ? (options.userMessageText ?? null) : "log my lunch",
-        );
+        return Promise.resolve({
+          text: "userMessageText" in options ? (options.userMessageText ?? null) : "log my lunch",
+          personsWords: options.personsWords ?? null,
+        });
       },
     },
     caller: () => Object.create(null),
@@ -184,7 +191,7 @@ Deno.test(
 );
 
 Deno.test("tools/list carries a write tool's annotations and its confirmation_id", async () => {
-  const write = fakeWriteTool({ needsConfirmation: () => true }).definition;
+  const write = fakeWriteTool({ needsConfirmation: () => fakeAsk }).definition;
   const registry = createRegistry([fakeReadTool("read_one").definition, write]);
 
   const { tools } = await resultOf(await post(fake({ registry }).dependencies, listTools));
@@ -322,6 +329,30 @@ Deno.test(
   },
 );
 
+Deno.test("the tool's turn carries the person's words and the message text apart", async () => {
+  const seen: unknown[] = [];
+  const read: ReadToolDefinition<{ note: string }> = {
+    ...fakeReadTool("read_one").definition,
+    run(ctx) {
+      seen.push({ text: ctx.turn.userMessageText, personsWords: ctx.turn.personsWords });
+      return Promise.resolve({ data: { rows: [] } });
+    },
+  };
+  const made = fake({
+    registry: createRegistry([read]),
+    userMessageText: "Today is Tue 3 Nov.\nShow me what I logged",
+    personsWords: "Show me what I logged",
+  });
+
+  await post(made.dependencies, callTool("read_one", { note: "x" }), {
+    headers: { "x-kilo-allowed-tools": "read_one" },
+  });
+
+  assertEquals(seen, [
+    { text: "Today is Tue 3 Nov.\nShow me what I logged", personsWords: "Show me what I logged" },
+  ]);
+});
+
 Deno.test("a write runs under the turn and the user message the function loaded", async () => {
   const write = fakeWriteTool();
   const made = fake({ registry: createRegistry([write.definition]) });
@@ -355,6 +386,7 @@ Deno.test("a tool is given the recipe import's services when the function has th
   const services = {
     fetchPage: () => Promise.resolve({ ok: false as const, code: "timeout" as const }),
     parse: () => Promise.resolve({ ok: false as const, code: "failed" as const }),
+    pickFoods: () => Promise.resolve({ ok: false as const, code: "failed" as const }),
   };
   const call = (dependencies: McpDependencies) =>
     post(dependencies, callTool("read_probe", { note: "x" }), {
@@ -384,9 +416,9 @@ Deno.test("a write on a turn without a user message answers no_user_message", as
 });
 
 Deno.test(
-  "a write that needs a confirmation answers the confirmation id as structuredContent",
+  "a write that needs a confirmation answers the confirmation id and the question as structuredContent",
   async () => {
-    const write = fakeWriteTool({ needsConfirmation: () => true });
+    const write = fakeWriteTool({ needsConfirmation: () => fakeAsk });
     const made = fake({ registry: createRegistry([write.definition]) });
 
     const result = await resultOf(
@@ -398,19 +430,20 @@ Deno.test(
     const outcome = Object.entries(result["structuredContent"] ?? {});
     assertEquals(
       outcome.map(([key]) => key),
-      ["status", "confirmationId"],
+      ["status", "confirmationId", "question"],
     );
     assertEquals(outcome[0]?.[1], "needs_confirmation");
     assertEquals(typeof outcome[1]?.[1], "string");
+    assertEquals(outcome[2]?.[1], fakeAsk.question);
     assertEquals(result["isError"] ?? false, false);
     assertEquals(write.runs, []);
   },
 );
 
 Deno.test(
-  "a write that asks with a note answers the note as structuredContent after the confirmation id",
+  "a write that asks with a note answers the note as structuredContent after the question",
   async () => {
-    const write = fakeWriteTool({ needsConfirmation: () => ({ note: "A line." }) });
+    const write = fakeWriteTool({ needsConfirmation: () => ({ ...fakeAsk, note: "A line." }) });
     const made = fake({ registry: createRegistry([write.definition]) });
 
     const result = await resultOf(
@@ -422,9 +455,9 @@ Deno.test(
     const outcome = Object.entries(result["structuredContent"] ?? {});
     assertEquals(
       outcome.map(([key]) => key),
-      ["status", "confirmationId", "note"],
+      ["status", "confirmationId", "question", "note"],
     );
-    assertEquals(outcome[2]?.[1], "A line.");
+    assertEquals(outcome[3]?.[1], "A line.");
     assertEquals(write.runs, []);
   },
 );
@@ -598,7 +631,7 @@ Deno.test(
 
 Deno.test("a failed read of the user message is reported and answers tool_failed", async () => {
   const made = fake();
-  made.dependencies.turns.userMessageText = () => Promise.reject(new Error(secretNote));
+  made.dependencies.turns.userMessage = () => Promise.reject(new Error(secretNote));
   const spy = spyOnConsole();
   let text: string;
   try {

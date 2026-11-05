@@ -107,6 +107,14 @@ describe("kilo-tokens.css", () => {
     });
   });
 
+  it("should hold the dark theme's background as the 3D stage's in both themes, since the stage is dark whatever the app's theme", () => {
+    const darkBackground = readTokenJson().dark.background;
+
+    expect(darkBackground).toBe("#0B0E13");
+    expect(committedScopes[":root"]?.["--stage-background"]).toBe(darkBackground);
+    expect(committedScopes['[data-theme="light"]']?.["--stage-background"]).toBe(darkBackground);
+  });
+
   it("should set color-scheme for each theme", () => {
     expect(committedScopes[":root"]?.["color-scheme"]).toBe("dark");
     expect(committedScopes['[data-theme="light"]']?.["color-scheme"]).toBe("light");

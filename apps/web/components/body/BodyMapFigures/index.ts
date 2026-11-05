@@ -1,2 +1,2 @@
 export { BodyMapFigures } from "./BodyMapFigures";
-export type { BodyMapFiguresProps } from "./types";
+export type { BodyMapFiguresProps, BodyMapIn3D, BodyMapSideBySide } from "./types";

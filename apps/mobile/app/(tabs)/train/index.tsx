@@ -24,7 +24,7 @@ export default function TrainRoute() {
   const hasGoal = trainingGoals.data !== undefined && trainingGoals.data !== null;
 
   const toast = useToast();
-  // The suggestion card's toast: the add with Undo, and the failure of an add or an Undo.
+  // The suggestion card's toast: the add with Undo, and the failure of an add or an Undo. Its Start is ours.
   const suggestionNotices = useMemo<SuggestionNotices>(
     () => ({
       onAccepted: ({ message, actionLabel, undo }) => {
@@ -33,8 +33,10 @@ export default function TrainRoute() {
       onFailure: (message: string) => {
         toast.show({ message, icon: "CircleAlert", tone: "danger" });
       },
+      // A suggestion for today is stored first, then started the way every Start is, which opens the session.
+      onStart: start,
     }),
-    [toast],
+    [toast, start],
   );
 
   return (

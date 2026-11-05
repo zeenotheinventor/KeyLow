@@ -50,7 +50,7 @@ async function serveMcpFunction(): Promise<Served> {
               },
         );
       },
-      userMessageText: () => Promise.resolve("log my lunch"),
+      userMessage: () => Promise.resolve({ text: "log my lunch", personsWords: null }),
     },
     caller: () => Object.create(null),
     actions: createFakeActionStore(),

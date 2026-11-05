@@ -17,7 +17,12 @@ import { z } from "zod";
 import { toAnthropicTools } from "../_shared/assistant/adapters/anthropic.ts";
 import { askUserTool } from "../_shared/assistant/tools/askUser.ts";
 import { wrapUntrusted } from "../_shared/assistant/untrusted.ts";
-import { assistantCardSchema, mergeAssistantCards, withActionIds } from "../_shared/core.ts";
+import {
+  assistantCardSchema,
+  isConfirmAnswer,
+  mergeAssistantCards,
+  withActionIds,
+} from "../_shared/core.ts";
 import { allowedToolsFor } from "./allowlist.ts";
 import { COMPACTION_TIMEOUT_MILLISECONDS, planCompaction, promptTokensOf } from "./compact.ts";
 import { confirmWordsFor } from "./confirmWords.ts";
@@ -55,9 +60,9 @@ export const MAX_MODEL_CALLS = 12;
 
 // The MCP client's default is 60 s per attempt, and a connect, a list or a read call retries once, so a hung
 // connect could take 120 s. 20 s is far more than most tools take (the `mcp` function measured a few
-// milliseconds on loopback). The one exception is `import_recipe_from_url`, which fetches a page and makes a
-// model call. It keeps itself inside 15 s (fetch 5 s, parse 9 s, a cutoff before it saves), so it needs no
-// longer timeout here.
+// milliseconds on loopback). The one exception is `import_recipe_from_url`, which fetches a page and makes two
+// model calls. It keeps itself inside 18 s (fetch 5 s, parse 9 s, pick 4 s, a cutoff before it saves), so it
+// needs no longer timeout here.
 export const MCP_REQUEST_TIMEOUT_MILLISECONDS = 20_000;
 
 // Supabase Edge Functions stop a worker after 150 s of wall-clock time on the free plan and 400 s on paid
@@ -446,9 +451,16 @@ async function finishCall(
   const { outcome } = result;
   if (outcome.status === "needs_confirmation") {
     const words = confirmWordsFor(toolUse.name, toolUse.input);
-    const question = responseText.trim();
+    // The model's own words when it wrote some, and the tool's otherwise, so a model that wrote no
+    // question does not fail the turn. The tool's words are the board's, built from the person's own rows.
+    // When the confirmation is asked again, the model's text is never the question, because a model that
+    // misread "Keep them" may have written "Deleting those now." That text has already streamed, so it
+    // stays above the question.
+    const modelWords = outcome.asksAgain === true ? "" : responseText.trim();
+    const question = modelWords === "" ? (outcome.question ?? "") : modelWords;
     if (words === null || question === "") {
-      // A bug the evals catch: the model did not word the question, or the tool has no buttons yet.
+      // A bug the evals catch: neither the model nor the tool worded the question, or the tool has no
+      // buttons yet. The tool's words are missing only while the `mcp` function is the old one (a deploy).
       await storeToolResult(run, block, null);
       run.dependencies.report(
         "assistant",
@@ -458,8 +470,8 @@ async function finishCall(
       return failedEnding("confirm_unavailable");
     }
     // The model worded the question before the tool answered, so a line the tool wrote (the figures the
-    // model could not know) is added after it, as its own paragraph. The guard above tests the model's own text, so a note
-    // alone never makes a confirmation.
+    // model could not know) is added after it, as its own paragraph. The guard above tests the question, so
+    // a note alone never makes a confirmation.
     const confirm = {
       confirmationId: outcome.confirmationId,
       question: outcome.note === undefined ? question : `${question}\n\n${outcome.note}`,
@@ -699,7 +711,14 @@ async function takeTurn(run: Run): Promise<Ending> {
   }
   const allowedTools = allowedToolsFor({
     text: context.text,
-    pendingConfirmationTool: previousTurn?.pendingTool ?? null,
+    // A confirmation adds its own tool only when the person's message is the button's words, so a
+    // read-looking message after one no longer has the write at all.
+    pendingConfirmationTool: isConfirmAnswer(
+      context.text,
+      previousTurn?.pendingConfirmLabel ?? null,
+    )
+      ? (previousTurn?.pendingTool ?? null)
+      : null,
     tools: dependencies.availableTools,
   });
   const cachedTools = dependencies.toolListCache.read();

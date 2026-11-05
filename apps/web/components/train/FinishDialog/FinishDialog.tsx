@@ -13,6 +13,7 @@ import {
 import { MAX_SESSION_NOTE_LENGTH, sessionClock } from "@keylow/core/training";
 import { useEffect, useRef, useState } from "react";
 
+import { SessionMusclesCard } from "../SessionMusclesCard";
 import { FinishStat } from "./FinishStat";
 import { useSaveSession } from "./useSaveSession";
 
@@ -28,7 +29,7 @@ const SECONDS_PER_MINUTE = 60;
 /**
  * The finish screen of the phone as a dialog, as the `session · finish`, `session · saving` and
  * `session · save-error` boards draw it: the Time, Sets and Exercises cards, the planned sets left alone,
- * the optional note and Save session. The Muscles trained card is KEY-470's and has no slot yet.
+ * the Muscles trained card, the optional note and Save session.
  * The session ends when the dialog opens, so the Time card and the end that is saved are the same moment.
  * While it saves the button reads Saving session, the note cannot change and the dialog cannot be closed.
  * A failure keeps the note, takes focus to the error and offers Try again. Mount it to open it and
@@ -99,6 +100,7 @@ export function FinishDialog({
         {details.notLoggedNote === null ? null : (
           <Banner role="note">{details.notLoggedNote}</Banner>
         )}
+        <SessionMusclesCard variant="summary" sets={details.sets} at={endedAtText} />
         <TextArea
           label={FINISH_SCREEN.noteLabel}
           placeholder={FINISH_SCREEN.notePlaceholder}

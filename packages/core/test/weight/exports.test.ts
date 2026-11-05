@@ -42,6 +42,7 @@ describe("the weight module", () => {
       "parseWeightInput",
       "parseWeightInputIn",
       "pointsInRange",
+      "prepareWeightChart",
       "rangeWindow",
       "validateNote",
       "weeklyRateKg",

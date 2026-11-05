@@ -63,6 +63,54 @@ function driver(overrides: Partial<HttpDriverOptions> = {}) {
   });
 }
 
+describe("createHttpDriver, cards", () => {
+  const card = {
+    actionIds: ["33333333-3333-4333-8333-333333333333"],
+    kind: "recipe_created",
+    title: "Added recipe Test, 2 servings",
+    sub: null,
+    rows: [],
+    totalText: null,
+    note: null,
+    link: null,
+    undo: "available",
+    undoneSub: null,
+  };
+
+  it("should keep the cards a turn sent, in order", async () => {
+    streamOf(
+      turnEvent,
+      sse({ type: "card", card }),
+      sse({ type: "text", delta: "Done." }),
+      sse({ type: "done", outcome: "complete" }),
+    );
+
+    const result = await driver().sendMessage({ conversationId: null, text: "add it" });
+
+    expect(result.cards).toEqual([card]);
+  });
+
+  it("should leave cards out when the turn sent none", async () => {
+    streamOf(turnEvent, sse({ type: "done", outcome: "complete" }));
+
+    const result = await driver().sendMessage({ conversationId: null, text: "hello" });
+
+    expect(result).not.toHaveProperty("cards");
+  });
+
+  it("should keep the code of the notice a failed turn sent, and nothing else of it", async () => {
+    streamOf(
+      turnEvent,
+      sse({ type: "notice", notice: { code: "turn_failed" } }),
+      sse({ type: "done", outcome: "failed" }),
+    );
+
+    const result = await driver().sendMessage({ conversationId: null, text: "delete them" });
+
+    expect(result.noticeCode).toBe("turn_failed");
+  });
+});
+
 describe("createHttpDriver, one turn", () => {
   it("should post the turn with the day in the user's time zone, and no hour", async () => {
     streamOf(turnEvent, sse({ type: "done", outcome: "complete" }));
@@ -150,6 +198,40 @@ describe("createHttpDriver, one turn", () => {
     const result = await driver().sendMessage({ conversationId: null, text: "hello" });
 
     expect(result.answerMeta).toBeUndefined();
+  });
+
+  it("should carry the question and the button words of the confirm event", async () => {
+    streamOf(
+      turnEvent,
+      sse({
+        type: "confirm",
+        confirmationId: "33333333-3333-4333-8333-333333333333",
+        question:
+          "Change your calorie target from 1,300 to 2,000 kcal?\n\nYour macros will be adjusted.",
+        confirmLabel: "Change target",
+        cancelLabel: "Keep 1,300",
+        tone: "primary",
+      }),
+      sse({ type: "done", outcome: "confirm" }),
+    );
+
+    const result = await driver().sendMessage({ conversationId: null, text: "set my calories" });
+
+    expect(result.status).toBe("confirm");
+    expect(result.confirmation).toEqual({
+      question:
+        "Change your calorie target from 1,300 to 2,000 kcal?\n\nYour macros will be adjusted.",
+      confirmLabel: "Change target",
+      cancelLabel: "Keep 1,300",
+    });
+  });
+
+  it("should leave confirmation out when the turn asked for none", async () => {
+    streamOf(turnEvent, sse({ type: "done", outcome: "complete" }));
+
+    const result = await driver().sendMessage({ conversationId: null, text: "hello" });
+
+    expect(result.confirmation).toBeUndefined();
   });
 
   it("should resolve a turn that ends failed with that status, and not throw", async () => {

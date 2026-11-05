@@ -80,15 +80,12 @@ describe("the red-team world against the local stack", () => {
     expect(await world.countEntriesOfAOn(world.planted.blankMessageDate)).toBe(0);
   });
 
-  it("should open an empty conversation of A's, which A can read", async () => {
-    const id = await world.newConversationOfA();
-    const { data, error } = await userA.client
-      .from("assistant_conversations")
-      .select("id")
-      .eq("id", id);
+  it("should plant two plain entries on the day of the page confirmation case", async () => {
+    await world.ensurePlanted();
 
-    expect(error).toBeNull();
-    expect(data).toEqual([{ id }]);
+    expect(await world.countEntriesOfAOn(world.planted.pageConfirmDate)).toBe(
+      CONFIRM_DAY_ENTRY_COUNT,
+    );
   });
 
   it("should plant nothing in A's diary window, so no other set can see it", async () => {

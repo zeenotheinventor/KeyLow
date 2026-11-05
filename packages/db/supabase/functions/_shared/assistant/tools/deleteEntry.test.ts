@@ -1,4 +1,10 @@
-import { assert, assertEquals, assertFalse, assertObjectMatch } from "@std/assert";
+import {
+  assert,
+  assertEquals,
+  assertFalse,
+  assertObjectMatch,
+  assertStringIncludes,
+} from "@std/assert";
 
 import { executeTool } from "../executor.ts";
 import {
@@ -11,10 +17,14 @@ import { undoAction } from "../undo.ts";
 import { deleteEntryTool } from "./deleteEntry.ts";
 import { logEntryTool } from "./logEntry.ts";
 import { payloadOf } from "./testing.ts";
-import { dietRows, structuredOf } from "./writeFixtures.ts";
+import { confirmWordsFor } from "../../../assistant/confirmWords.ts";
+import { dietRows, fixClock, structuredOf } from "./writeFixtures.ts";
 import { writeStub } from "./writeStub.ts";
 
 import type { ToolContext } from "../tool.ts";
+
+// The person's today is read from the clock, so the clock stops on the day the fixtures are written for.
+fixClock("2026-11-03T12:00:00.000Z");
 
 const earlier = "00000000-0000-4000-8000-0000000000d1";
 const later = "00000000-0000-4000-8000-0000000000d2";
@@ -65,6 +75,7 @@ async function diaryOfThree() {
   const contextOn = (turnId: string): ToolContext => {
     const made = createFakeContext([logEntryTool, deleteEntryTool], {
       store,
+      personsWords: "Delete 3 entries",
       turn: { id: turnId, conversationId: store.turns[0]?.conversationId ?? "" },
       localDate: "2026-11-03",
       localTime: "13:00",
@@ -176,4 +187,70 @@ Deno.test("undo brings back all the entries it deleted", async () => {
   assertEquals(result, { status: "undone", actionId: deleted.actionId });
   const mine = (stub.tables["food_log_entries"] ?? []).filter((row) => row["user_id"] === userId);
   assert(mine.every((row) => row["deleted_at"] === null));
+});
+
+Deno.test(
+  "the question is the board's, from the entries' own rows, and the label is its button",
+  async () => {
+    const { asking, ids } = await diaryOfThree();
+
+    const asked = await executeTool(asking, "delete_entry", { ids });
+    const need = await deleteEntryTool.needsConfirmation?.({ ids }, asking);
+
+    assert(asked.status === "needs_confirmation");
+    assertEquals(
+      asked.question,
+      "Delete 3 entries at 13:00 today? Chicken and rice, Greek yoghurt and apple.",
+    );
+    assertEquals(
+      need !== false && need !== undefined ? need.confirmLabel : null,
+      confirmWordsFor("delete_entry", { ids })?.confirmLabel,
+    );
+  },
+);
+
+Deno.test("two ids that are not the user's ask nothing, and run reports not found", async () => {
+  const { asking } = await diaryOfThree();
+  const foreign = ["00000000-0000-4000-8000-0000000a0001", "00000000-0000-4000-8000-0000000a0002"];
+
+  const result = await executeTool(asking, "delete_entry", { ids: foreign });
+
+  assertEquals(result.status, "ok");
+  assertEquals(payloadOf(result), { error: "not_found" });
+});
+
+Deno.test(
+  "the description tells the model to word the question in the same response as the call",
+  () => {
+    const { description } = deleteEntryTool;
+
+    assertStringIncludes(
+      description,
+      "in the same response as the call, before it, write the question",
+    );
+    assertStringIncludes(description, "When they say no, do not call again.");
+    assertStringIncludes(description, "To delete several entries, pass all their ids in one call.");
+    assertFalse(description.includes("ask the user"));
+  },
+);
+
+Deno.test("after Keep them the confirmation asks again and nothing is deleted", async () => {
+  const { asking, confirming, stub, store, ids } = await diaryOfThree();
+  const asked = await executeTool(asking, "delete_entry", { ids });
+  assert(asked.status === "needs_confirmation");
+
+  const result = await executeTool(
+    { ...confirming, turn: { ...confirming.turn, personsWords: "Keep them" } },
+    "delete_entry",
+    { ids, confirmation_id: asked.confirmationId },
+  );
+
+  assert(result.status === "needs_confirmation");
+  assertEquals(result.asksAgain, true);
+  assertEquals(
+    result.question,
+    "Delete 3 entries at 13:00 today? Chicken and rice, Greek yoghurt and apple.",
+  );
+  assertFalse((stub.tables["food_log_entries"] ?? []).some((row) => row["deleted_at"] !== null));
+  assertEquals(store.actions.filter((action) => action.tool === "delete_entry").length, 0);
 });

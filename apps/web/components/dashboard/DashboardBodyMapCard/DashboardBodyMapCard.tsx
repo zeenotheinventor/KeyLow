@@ -1,5 +1,10 @@
 import { todayPlanOf } from "@keylow/api-client";
-import { BODY_MAP, describeBodyFigureLabel, describeDashboardBodyMapCard } from "@keylow/core/copy";
+import {
+  BODY_MAP,
+  describeBodyFigureLabel,
+  describeDashboardBodyMapCard,
+  describeDashboardVolumeCard,
+} from "@keylow/core/copy";
 import { TRAINING_PARAMS_V2 } from "@keylow/core/training";
 import { iconStroke } from "@keylow/tokens";
 import { ChevronRight, Dumbbell } from "lucide-react";
@@ -10,35 +15,34 @@ import type { DashboardBodyMapCardProps } from "./types";
 import { BodyFigure } from "@/components/ui/BodyFigure";
 import { Card } from "@/components/ui/Card";
 import { HeatLegendStrip } from "@/components/ui/HeatLegendStrip";
+import { VolumeLegendStrip } from "@/components/ui/VolumeLegendStrip";
+import { bodyMapPath } from "@/lib/bodyMapRoutes";
 
 const FIGURE_WIDTH = 100;
-const BODY_MAP_HREF = "/body-map";
-
-const figureLabel = (side: "front" | "back") =>
-  describeBodyFigureLabel({ scale: "heat", view: "actual", side, hint: null });
 
 /**
- * The body map on the dashboard as its board draws it: the title and the view with the Body map label and
- * its chevron, Actual heat now, front and back at 100 pixels, the heat legend from Peak to Rested, the three
- * warmest muscles and today's planned day. The figure is the one it is given, male unless told otherwise.
- * There is no toggle and no click on the figures. The whole card is one link to the body map page, so it is
- * named by what it shows and ends in "Open the body map", as the weekly card names its link. The section is
- * labelled by the short title, and the words and figures inside the link are hidden from assistive
- * technology, because that name already says all of it.
+ * The body map on the dashboard as its boards draw it: the title and the view with the Body map label and
+ * its chevron, front and back at 100 pixels, the legend of the scale beside them, a summary line and
+ * today's planned day. Heat, the default, shows Actual heat now, the heat legend from Peak to Rested and
+ * the three warmest muscles. Weekly volume shows this week's Actual volume, Monday to Sunday, on the Volume
+ * scale of the body map, with the volume legend from High to None and the count of muscles at Growing or
+ * above. The figure is the one it is given, male unless told otherwise. There is no toggle and no click on
+ * the figures. The whole card is one link to the body map page, on Volume in Weekly volume, so it is named
+ * by what it shows and ends in the words that open the map, as the weekly card names its link. The section
+ * is labelled by the short title in both, and the words and figures inside the link are hidden from
+ * assistive technology, because that name already says all of it.
  */
-export function DashboardBodyMapCard({ bodyMap, body }: DashboardBodyMapCardProps) {
-  const { warmestLine, todayLine, accessibleName } = describeDashboardBodyMapCard({
-    warmest: bodyMap.warmest,
-    today: todayPlanOf(bodyMap.today),
-    heatWindowDays: TRAINING_PARAMS_V2.heatWindowDays,
-    opensBodyMap: true,
-  });
+export function DashboardBodyMapCard({ bodyMap, body, scale = "heat" }: DashboardBodyMapCardProps) {
+  const { viewLabel, summaryLine, todayLine, accessibleName } =
+    scale === "volume" ? volumeWordsOf(bodyMap) : heatWordsOf(bodyMap);
+  const figureLabel = (side: "front" | "back") =>
+    describeBodyFigureLabel({ scale, view: "actual", side, hint: null });
 
   return (
     <Card asChild padding="none">
       <section aria-label={BODY_MAP.dashboardCard.title}>
         <Link
-          href={BODY_MAP_HREF}
+          href={bodyMapPath(scale)}
           aria-label={accessibleName}
           className="block rounded-large outline-none transition-colors duration-quick hover:bg-hover-overlay focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus-ring"
         >
@@ -54,7 +58,7 @@ export function DashboardBodyMapCard({ bodyMap, body }: DashboardBodyMapCardProp
                 </p>
                 <p className="flex items-center gap-2 text-body-strong">
                   <span className="size-2 shrink-0 rounded-full bg-text-primary" />
-                  {BODY_MAP.dashboardCard.view}
+                  {viewLabel}
                 </p>
               </div>
               <span className="flex min-h-touch-target items-center gap-0.5 text-text-secondary">
@@ -68,7 +72,7 @@ export function DashboardBodyMapCard({ bodyMap, body }: DashboardBodyMapCardProp
               <BodyFigure
                 body={body}
                 label={figureLabel("front")}
-                scale="heat"
+                scale={scale}
                 side="front"
                 values={bodyMap.values}
                 w={FIGURE_WIDTH}
@@ -76,15 +80,15 @@ export function DashboardBodyMapCard({ bodyMap, body }: DashboardBodyMapCardProp
               <BodyFigure
                 body={body}
                 label={figureLabel("back")}
-                scale="heat"
+                scale={scale}
                 side="back"
                 values={bodyMap.values}
                 w={FIGURE_WIDTH}
               />
-              <HeatLegendStrip />
+              {scale === "volume" ? <VolumeLegendStrip /> : <HeatLegendStrip />}
             </div>
             <div className="flex items-baseline justify-between gap-3 border-t border-border pt-2">
-              <p className="flex-1 text-caption text-text-secondary">{warmestLine}</p>
+              <p className="flex-1 text-caption text-text-secondary">{summaryLine}</p>
               {todayLine === null ? null : (
                 <p className="shrink-0 whitespace-nowrap text-caption tabular-nums text-text-muted">
                   {todayLine}
@@ -96,4 +100,27 @@ export function DashboardBodyMapCard({ bodyMap, body }: DashboardBodyMapCardProp
       </section>
     </Card>
   );
+}
+
+function volumeWordsOf({ values, today }: DashboardBodyMapCardProps["bodyMap"]) {
+  const { summaryLine, todayLine, accessibleName } = describeDashboardVolumeCard({
+    values,
+    today: todayPlanOf(today),
+  });
+  return { viewLabel: BODY_MAP.dashboardCard.volumeView, summaryLine, todayLine, accessibleName };
+}
+
+function heatWordsOf({ warmest, today }: DashboardBodyMapCardProps["bodyMap"]) {
+  const { warmestLine, todayLine, accessibleName } = describeDashboardBodyMapCard({
+    warmest,
+    today: todayPlanOf(today),
+    heatWindowDays: TRAINING_PARAMS_V2.heatWindowDays,
+    opensBodyMap: true,
+  });
+  return {
+    viewLabel: BODY_MAP.dashboardCard.view,
+    summaryLine: warmestLine,
+    todayLine,
+    accessibleName,
+  };
 }

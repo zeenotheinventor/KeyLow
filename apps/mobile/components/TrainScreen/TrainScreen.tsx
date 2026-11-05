@@ -17,12 +17,13 @@ import { useReadsEnabled } from "../../lib/useReadsEnabled";
 import { PickDaySheet } from "../PickDaySheet";
 import { PlanWeekStrip } from "../PlanWeekStrip";
 import { ScreenHeader } from "../ScreenHeader";
+import { SuggestionCard, SuggestionDetailSheet } from "../SuggestionCard";
 import { TodayCard } from "../TodayCard";
 import { Banner, Button, ErrorState, Skeleton } from "../ui";
 import { TrainBodyMap } from "./TrainBodyMap";
 import { TrainFirstTime } from "./TrainFirstTime";
 import { TrainNoRoutine } from "./TrainNoRoutine";
-import { TrainSuggestionCard } from "./TrainSuggestionCard";
+import { useTrainSuggestion } from "./useTrainSuggestion";
 
 import type { TrainScreenProps, TrainSessionStart } from "./types";
 
@@ -56,7 +57,8 @@ function bindViewSession(handler: (sessionId: string) => void, sessionId: string
  * sheet of the routine's days and starts the one pressed the way Start does. The body map card sits under the
  * Today card or the no routine card and above the week strip, on every home but the first visit's, and
  * opens the body map when it is given a handler. The suggestion card sits between them, as the boards
- * compose it, and is drawn only when it is given the notices that show its toast.
+ * compose it, and is drawn only when it is given the notices that show its toast. Its heading opens the
+ * suggestion detail, a sheet mounted here with the other sheets, which shows the offer the card holds.
  */
 export function TrainScreen({
   isStarting = false,
@@ -77,6 +79,19 @@ export function TrainScreen({
   const isOnline = useIsOnline();
   const [isPickDayOpen, setIsPickDayOpen] = useState(false);
   const [pickedDayId, setPickedDayId] = useState<string | null>(null);
+  const suggestion = useTrainSuggestion({
+    home,
+    now,
+    enabled,
+    isOnline,
+    notices: suggestionNotices,
+  });
+  // The day whose suggestion the detail sheet is open on, or null for closed. The sheet shows the offer the card
+  // holds, so it is open only while that offer is there for that day with its detail.
+  const [suggestionDetailDay, setSuggestionDetailDay] = useState<string | null>(null);
+  const suggestionOffer = suggestion.state.status === "offer" ? suggestion.state : undefined;
+  const isSuggestionDetailOpen =
+    suggestionOffer?.detail !== undefined && suggestionOffer.day === suggestionDetailDay;
   // The day pressed first in this tick. Neither `isStarting` nor the state is new to a second press in the same
   // moment, so this is what keeps that press from moving the spinner. A press after the tick sees `isStarting`.
   const pickedDayRef = useRef<string | null>(null);
@@ -92,6 +107,12 @@ export function TrainScreen({
     home.routineDays.length > 0;
   if (!canPickDay && isPickDayOpen) {
     setIsPickDayOpen(false);
+  }
+
+  // The offer goes when the phone goes offline, when the day is put off or accepted, or when the day moves on.
+  // The sheet is closed then, so it does not come back open when the offer returns.
+  if (suggestionDetailDay !== null && !isSuggestionDetailOpen) {
+    setSuggestionDetailDay(null);
   }
 
   if (home.status === "error") {
@@ -207,9 +228,19 @@ export function TrainScreen({
             />
           )
         ) : null}
-        {home.status === "ready" && suggestionNotices !== undefined ? (
-          <TrainSuggestionCard home={home} notices={suggestionNotices} onSetGoal={onSetGoal} />
-        ) : null}
+        <SuggestionCard
+          isStarting={isStarting}
+          state={suggestion.state}
+          onDismiss={suggestion.dismiss}
+          onOpenDetail={
+            suggestionOffer === undefined
+              ? undefined
+              : () => {
+                  setSuggestionDetailDay(suggestionOffer.day);
+                }
+          }
+          onSetGoal={onSetGoal}
+        />
         {home.status === "ready" && !isFirstTime ? (
           <TrainBodyMap
             savedAt={home.savedAt}
@@ -225,6 +256,14 @@ export function TrainScreen({
           />
         ) : null}
       </ScrollView>
+      <SuggestionDetailSheet
+        offer={suggestionOffer}
+        open={isSuggestionDetailOpen}
+        onClose={() => {
+          setSuggestionDetailDay(null);
+        }}
+        onDismiss={suggestion.dismiss}
+      />
       {home.status === "ready" ? (
         <PickDaySheet
           days={home.routineDays}

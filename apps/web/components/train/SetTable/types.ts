@@ -55,7 +55,18 @@ export type SetTableEntryRow = SetTableRowBase & {
 
 export type SetTableRow = SetTableLoggedRow | SetTableEntryRow;
 
-/** A set of a logged session as the session detail draws it: what was done, with no check and nothing to press. */
+/** What pressing a logged session's set does: it opens the set to change it. */
+export type SetTableReadOnlyEdit = {
+  /** The name of the press, which says which set and what it does: "Set 3, 70 kg by 10, RIR 2, edit". */
+  name: string;
+  /** Given the row's button, which is where focus goes back to when what it opened closes. */
+  onPress: (event: React.MouseEvent<HTMLButtonElement>) => void;
+};
+
+/**
+ * A set of a logged session as the session detail draws it: what was done, with no check. It is plain text
+ * unless it is given `edit`, and then the whole row is one button.
+ */
 export type SetTableReadOnlyRow = {
   key: string;
   state: "readOnly";
@@ -69,6 +80,7 @@ export type SetTableReadOnlyRow = {
   rir: string;
   /** The name of the row, which says the whole set: "Set 3, 70 kg by 10, RIR 2". */
   name: string;
+  edit?: SetTableReadOnlyEdit;
 };
 
 export type ActiveSetTableProps = {
@@ -81,7 +93,7 @@ export type ActiveSetTableProps = {
 /**
  * The table of a logged session as the session detail draws it, with `variant="readOnly"`: one row for each
  * set, with no column headings (each row reads as a sentence, as the phone's does), no check column and no
- * fields.
+ * fields. A row given `edit` is a button, as the phone's is, with a chevron at its end.
  */
 export type ReadOnlySetTableProps = {
   variant: "readOnly";

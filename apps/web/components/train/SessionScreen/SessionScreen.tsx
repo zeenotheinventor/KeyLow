@@ -2,6 +2,7 @@
 
 import {
   describeFinishDetails,
+  heatSetsOf,
   useChangeSetType,
   useSessionView,
   usePendingSets,
@@ -16,17 +17,18 @@ import {
 } from "@keylow/core/copy";
 import { Check, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 
 import { AddExerciseDialog } from "../AddExerciseDialog";
 import { CustomExerciseDialog } from "../CustomExerciseDialog";
 import { FinishDialog } from "../FinishDialog";
+import { SessionMusclesCard } from "../SessionMusclesCard";
 import { DiscardSessionDialog } from "./DiscardSessionDialog";
 import { SessionClock } from "./SessionClock";
 import { SessionExerciseCard } from "./SessionExerciseCard";
 import { useSetNotices } from "./useSetNotices";
 
-import type { FinishDetails, RemoveSetRequest } from "@keylow/api-client";
+import type { FinishDetails, RemoveSetRequest, ScreenSet } from "@keylow/api-client";
 
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -34,11 +36,15 @@ import { ErrorState } from "@/components/ui/ErrorState";
 import { Skeleton, SkeletonBone } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
 import { trainPath } from "@/lib/trainRoutes";
+import { useNow } from "@/lib/useNow";
+
+const NO_SETS: readonly ScreenSet[] = [];
 
 /**
  * The session in progress, as the `web-session · active` board draws it: the session's name with its clock
- * and sets logged, Discard session and Finish in the header, a card for each exercise with its table of sets, and Add
- * exercise, which opens the dialog that puts another exercise's card on the page. The
+ * and sets logged, Discard session and Finish in the header, a card for each exercise with its table of sets, and
+ * beside them (below them on a phone) the This session so far card, which holds Add exercise, which opens the
+ * dialog that puts another exercise's card on the page. The
  * dashboard layout has already sent anyone who has not accepted the current Terms to the accept page, so
  * every read here is behind the terms gate. The logging, the removing with Undo, the change of a set's type
  * and the discard are the ones the phone uses (`@keylow/api-client`), and this page draws
@@ -67,7 +73,12 @@ export function SessionScreen() {
   // Held here, so Keep logging does not drop a note of up to 1,000 characters.
   const [note, setNote] = useState("");
   const toast = useToast();
+  const now = useNow();
   const nothingLoggedHintId = useId();
+
+  // The sets the heat model can read, which are the ones the finish dialog counts too.
+  const viewSets = view.status === "ready" ? view.sets : NO_SETS;
+  const heatSets = useMemo(() => heatSetsOf(viewSets), [viewSets]);
 
   useEffect(() => {
     if (view.status === "none") {
@@ -138,32 +149,43 @@ export function SessionScreen() {
           {FINISH_SCREEN.nothingLoggedHint}
         </p>
       ) : null}
-      <div className="flex flex-col gap-3 xl:max-w-[800px] xl:gap-5">
-        {view.exercises.map(({ name, target, plan, muscles, exercise }) => (
-          <SessionExerciseCard
-            key={exercise.exerciseId}
-            sessionId={view.sessionId}
-            name={name}
-            target={target}
-            plan={plan}
-            muscles={muscles}
-            unit={view.unit}
-            exercise={exercise}
-            sessionSets={view.sets}
-            logging={logging}
-            typeChange={typeChange}
+      <div className="flex flex-col items-start gap-3 xl:flex-row xl:gap-5">
+        <div className="flex w-full min-w-0 flex-1 flex-col gap-3 xl:gap-5">
+          {view.exercises.map(({ name, target, plan, muscles, exercise }) => (
+            <SessionExerciseCard
+              key={exercise.exerciseId}
+              sessionId={view.sessionId}
+              name={name}
+              target={target}
+              plan={plan}
+              muscles={muscles}
+              unit={view.unit}
+              exercise={exercise}
+              sessionSets={view.sets}
+              logging={logging}
+              typeChange={typeChange}
+            />
+          ))}
+        </div>
+        <div className="w-full shrink-0 xl:w-[360px]">
+          <SessionMusclesCard
+            variant="side"
+            sets={heatSets}
+            at={now.toISOString()}
+            action={
+              <Button
+                variant="secondary"
+                className="w-full"
+                onClick={() => {
+                  setIsPickerOpen(true);
+                }}
+              >
+                <Plus aria-hidden />
+                {SESSION_ACTIVE.addExerciseAction}
+              </Button>
+            }
           />
-        ))}
-        <Button
-          variant="secondary"
-          className="w-full"
-          onClick={() => {
-            setIsPickerOpen(true);
-          }}
-        >
-          <Plus aria-hidden />
-          {SESSION_ACTIVE.addExerciseAction}
-        </Button>
+        </div>
       </div>
       <AddExerciseDialog
         open={isPickerOpen}

@@ -22,6 +22,7 @@ import {
 } from "../training/bounds";
 
 import type { RoutineDraftRule } from "../training/routineDraft";
+import type { MoveDirection } from "../training/routineEditorState";
 
 /*
  * The words of the routines list, the archived list, the routine editor and the make active confirmation,
@@ -86,6 +87,17 @@ export const ROUTINE_RESTORE_FAILED =
 /** The toast when archiving a routine did not go through, worded as the one above. The boards do not draw it. */
 export const ROUTINE_ARCHIVE_FAILED =
   "Your routine was not archived. Check your connection, then try again.";
+
+/**
+ * The line shown while there is no connection, beside the control that is off for it: Make active on the
+ * list, Archive routine in the editor and Restore on the archived list. A write is never held back to run
+ * later, so the control is off and says why. The web draws them, and no board does.
+ */
+export const ROUTINES_OFFLINE = {
+  makeActive: "Making a routine active needs a connection.",
+  archive: "Archiving a routine needs a connection.",
+  restore: "Restoring a routine needs a connection.",
+} as const;
 
 /** The caption under the dimmed Archive routine item while the draft has changes that are not saved. The boards do not draw it. */
 export const ROUTINE_ARCHIVE_UNSAVED = "Save or cancel your changes first.";
@@ -421,12 +433,31 @@ export const ROUTINE_WEEKDAY_CHOICES: readonly Readonly<{
 
 /**
  * The two moves in a day's menu and in an exercise's menu. The boards draw no way to reorder (canvas gap 4,
- * KEY-454 proposes these words, to be drawn by the designers): there is no drag.
+ * there is no drag). KEY-454 proposed these words and KEY-764 proposes the named moves below, all awaiting a
+ * designer.
  */
 export const ROUTINE_MOVE = {
   upAction: "Move up",
   downAction: "Move down",
 } as const;
+
+/**
+ * The name of a day's move button: "Move Legs up". A day with no name yet is "Move day up". The boards draw
+ * no such button (KEY-764 proposes these words, awaiting a designer).
+ */
+export const describeMoveDay = (dayName: string, direction: MoveDirection): string =>
+  `Move ${dayName.trim() === "" ? "day" : dayName} ${direction}`;
+
+/** The name of an exercise's move button: "Move Leg press down". Proposed under KEY-764, awaiting a designer. */
+export const describeMoveExercise = (exerciseName: string, direction: MoveDirection): string =>
+  `Move ${exerciseName} ${direction}`;
+
+/**
+ * What a screen reader hears after a day or an exercise moves: "Legs moved to position 1 of 4", or "Moved to
+ * position 2 of 4" when the item has no name. Proposed under KEY-764, awaiting a designer.
+ */
+export const describeMovedPosition = (itemName: string, position: number, count: number): string =>
+  `${itemName.trim() === "" ? "Moved" : `${itemName} moved`} to position ${position} of ${count}`;
 
 /** The toast when a routine could not be saved, offline or not: the draft is still on the screen. No board draws it. */
 export const ROUTINE_SAVE_FAILED = "Your routine did not save, check your connection and try again";

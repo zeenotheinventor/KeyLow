@@ -12,7 +12,8 @@ export type TokenCounts = {
 };
 
 // `describe_or_ask` is a call of the turn loop, which reaches its tools over MCP. `compact` is the call that
-// writes a conversation's note, and `recipe_parse` the call that reads an imported recipe's lines. Both have
+// writes a conversation's note, and `recipe_parse` the two calls of a recipe import: the one that reads its lines and the
+// one that chooses each line's food from its search hits. Both routes have
 // no tools and no transport (the table's own check lists all three).
 export type UsageRoute = "describe_or_ask" | "compact" | "recipe_parse";
 

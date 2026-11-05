@@ -31,7 +31,9 @@ const reads = vi.hoisted(
 );
 const details = vi.hoisted((): { byMuscle: Record<string, unknown> } => ({ byMuscle: {} }));
 
-vi.mock("next/navigation", () => ({ useRouter: () => ({ back: vi.fn(), push: vi.fn() }) }));
+const router = vi.hoisted(() => ({ back: vi.fn(), push: vi.fn() }));
+
+vi.mock("next/navigation", () => ({ useRouter: () => router }));
 vi.mock("@keylow/api-client", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@keylow/api-client")>()),
   useProfileTimeZone: () => ({ data: "Europe/London" }),
@@ -47,6 +49,13 @@ vi.mock("@keylow/api-client", async (importOriginal) => ({
   useActiveRoutine: () => ({ data: reads.routine }),
   // The Muscles card has its own test file, so the list is never read here.
   useMuscleList: () => ({
+    data: undefined,
+    isPending: true,
+    isError: false,
+    error: null,
+    refetch: () => Promise.resolve(),
+  }),
+  useMuscleScaleList: () => ({
     data: undefined,
     isPending: true,
     isError: false,
@@ -198,6 +207,7 @@ describe("the muscle sheet on the body map", () => {
     onlineManager.setOnline(true);
     reads.detailAsked = [];
     reads.bodyMapAsked = [];
+    router.push.mockReset();
     reads.routine = routine;
     reads.byView = {
       actual: read(bodyMap),
@@ -417,7 +427,6 @@ describe("the muscle sheet on the body map", () => {
       expect(dialog.getByText(copy.lastTrained.value)).toBeTruthy();
       expect(dialog.getByText(copy.footnote)).toBeTruthy();
       expect(dialog.queryByRole("img")).toBeNull();
-      expect(dialog.queryByRole("button", { name: MUSCLE_SHEET.editRoutine })).toBeNull();
     });
 
     it("should keep the muscle's name as the heading while the detail is read, and say it is loading", () => {
@@ -453,6 +462,99 @@ describe("the muscle sheet on the body map", () => {
       );
 
       expect(refetch).toHaveBeenCalledTimes(1);
+    });
+  });
+  describe("Edit routine on the Not trained sheet", () => {
+    const openAbsSheet = () => {
+      const absButton = muscleButton("Abs");
+      absButton.focus();
+      fireEvent.keyDown(absButton, { key: "Enter" });
+      return absButton;
+    };
+    const editRoutineButton = () =>
+      within(screen.getByRole("dialog", { name: "Abs" })).queryByRole("button", {
+        name: MUSCLE_SHEET.editRoutine,
+      });
+
+    const pressEditRoutine = () => {
+      const button = editRoutineButton();
+      if (button === null) {
+        throw new Error("The Not trained sheet has an Edit routine button");
+      }
+      fireEvent.click(button);
+    };
+
+    it("should sit between Last trained and the footnote, as the board draws it", () => {
+      render(<BodyMapScreen />);
+
+      openAbsSheet();
+
+      const button = editRoutineButton();
+      const copy = describeMuscleSheet(abs, context);
+      if (button === null || copy.kind !== "not_trained") {
+        throw new Error("The Not trained sheet has an Edit routine button");
+      }
+      const dialog = screen.getByRole("dialog", { name: "Abs" });
+      const lastTrained = within(dialog).getByText(copy.lastTrained.value);
+      const footnote = within(dialog).getByText(copy.footnote);
+      expect(
+        lastTrained.compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      expect(
+        button.compareDocumentPosition(footnote) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    });
+
+    it("should close the sheet and open the active routine's editor", () => {
+      render(<BodyMapScreen />);
+      openAbsSheet();
+
+      pressEditRoutine();
+
+      expect(screen.queryByRole("dialog")).toBeNull();
+      expect(router.push).toHaveBeenCalledExactlyOnceWith("/train/routines/routine-1");
+    });
+
+    it("should open the create page when there is no active routine", () => {
+      reads.routine = null;
+      render(<BodyMapScreen />);
+      openAbsSheet();
+
+      pressEditRoutine();
+
+      expect(screen.queryByRole("dialog")).toBeNull();
+      expect(router.push).toHaveBeenCalledExactlyOnceWith("/train/routines/new");
+    });
+
+    it("should draw no button until the routine read has answered, so a routine is never taken for none", () => {
+      reads.routine = undefined;
+      render(<BodyMapScreen />);
+
+      openAbsSheet();
+
+      expect(screen.getByRole("dialog", { name: "Abs" })).toBeTruthy();
+      expect(editRoutineButton()).toBeNull();
+    });
+
+    it("should give focus back to the muscle as the sheet closes", () => {
+      render(<BodyMapScreen />);
+      const absButton = openAbsSheet();
+
+      pressEditRoutine();
+
+      expect(document.activeElement).toBe(absButton);
+    });
+
+    it("should not offer it on the sheet of a muscle with sets", () => {
+      render(<BodyMapScreen />);
+
+      fireEvent.keyDown(muscleButton("Side delts"), { key: "Enter" });
+
+      expect(
+        within(screen.getByRole("dialog", { name: "Side delts" })).queryByRole("button", {
+          name: MUSCLE_SHEET.editRoutine,
+        }),
+      ).toBeNull();
     });
   });
 });

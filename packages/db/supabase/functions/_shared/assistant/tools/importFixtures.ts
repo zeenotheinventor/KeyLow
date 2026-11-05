@@ -2,7 +2,13 @@
 import { saveRecipeRpc } from "./recipeFixtures.ts";
 import { dietRows, foodRow, writeContext } from "./writeFixtures.ts";
 
-import type { ParsedMeasure, RecipeImportServices, RecipeParseOutcome } from "../recipeParse.ts";
+import type {
+  FoodPickLine,
+  FoodPickOutcome,
+  ParsedMeasure,
+  RecipeImportServices,
+  RecipeParseOutcome,
+} from "../recipeParse.ts";
 import type { RecipePageResult } from "../../recipePage.ts";
 import type { ToolContext, ToolDefinition } from "../tool.ts";
 import type { RpcHandler } from "./writeStub.ts";
@@ -132,8 +138,8 @@ const importPortions = () => [
 ];
 
 // Which foods a query finds, by the words as the tool sends them, lower case, and with what score. The scores
-// are the kind the real search gives (see `IMPORT_MATCH_MIN_SCORE`): about 2 for a food with every word of the
-// query and under 1 for a trigram guess.
+// are the kind the real search gives: about 2 for a food with every word of the query and under 1 for a trigram
+// guess. The import does not read them, and the order is the search's.
 export type SearchScript = Record<string, readonly { foodId: string; score: number }[]>;
 
 export const traybakeSearch: SearchScript = {
@@ -146,10 +152,15 @@ export const traybakeSearch: SearchScript = {
 };
 
 // `search_foods` as the database answers it: the foods the script lists for the query, in that order.
-export function searchFoodsRpc(script: SearchScript, queries: string[]): RpcHandler {
+export function searchFoodsRpc(
+  script: SearchScript,
+  queries: string[],
+  limits: number[] = [],
+): RpcHandler {
   return (args, tables) => {
     const query = String(args["q"]).toLowerCase();
     queries.push(query);
+    limits.push(Number(args["lim"]));
     const rows = (script[query] ?? []).flatMap(({ foodId, score }) => {
       const food = (tables["foods"] ?? []).find((row) => row["id"] === foodId);
       return food === undefined
@@ -222,14 +233,31 @@ export const splashOfWhiteWine = line({
 export type ImportCalls = {
   fetched: string[];
   parsed: { kind: string; payload: unknown }[];
+  /** What each pick call was asked, and the time it was given. */
+  picked: { lines: readonly FoodPickLine[]; timeoutMilliseconds: number }[];
 };
 
-// The two outside steps, answered from a script, and a record of what was asked of them.
+/** The positions that choose the first candidate of every line, as the pick stub answers by default. */
+export const firstCandidates = (lines: readonly FoodPickLine[]): FoodPickOutcome =>
+  picked(...lines.map(() => 0));
+
+/** A reply that answers line n with the nth position, as the model does when it keeps the line numbers. */
+export const picked = (...positions: (number | null)[]): FoodPickOutcome => ({
+  ok: true,
+  picks: positions.map((position, line) => ({ line, position })),
+});
+
+// The outside steps, answered from a script, and a record of what was asked of them. Unless a test says
+// otherwise, the pick chooses the first candidate of every line, so a test that is not about the choice sees the
+// foods its search script lists.
 export function importServices(options: {
   page?: RecipePageResult | (() => Promise<RecipePageResult>);
   parse?: RecipeParseOutcome | (() => Promise<RecipeParseOutcome>);
+  pick?:
+    | FoodPickOutcome
+    | ((lines: readonly FoodPickLine[]) => FoodPickOutcome | Promise<FoodPickOutcome>);
 }): { services: RecipeImportServices; calls: ImportCalls } {
-  const calls: ImportCalls = { fetched: [], parsed: [] };
+  const calls: ImportCalls = { fetched: [], parsed: [], picked: [] };
   const answer = <T>(value: T | (() => Promise<T>)): Promise<T> =>
     typeof value === "function" ? (value as () => Promise<T>)() : Promise.resolve(value);
   return {
@@ -246,6 +274,11 @@ export function importServices(options: {
         });
         return answer(options.parse ?? { ok: false, code: "failed" });
       },
+      pickFoods(lines, { timeoutMilliseconds }) {
+        calls.picked.push({ lines, timeoutMilliseconds });
+        const pick = options.pick ?? firstCandidates;
+        return Promise.resolve(typeof pick === "function" ? pick(lines) : pick);
+      },
     },
   };
 }
@@ -260,6 +293,7 @@ export function importContext(
   } = {},
 ) {
   const queries: string[] = [];
+  const searchLimits: number[] = [];
   const diet = dietRows();
   const made = writeContext(tools, {
     rows: {
@@ -269,7 +303,7 @@ export function importContext(
     },
     rpc: {
       save_recipe: saveRecipeRpc,
-      search_foods: searchFoodsRpc(options.search ?? traybakeSearch, queries),
+      search_foods: searchFoodsRpc(options.search ?? traybakeSearch, queries, searchLimits),
     },
   });
   const ctx: ToolContext = {
@@ -281,7 +315,7 @@ export function importContext(
     },
     ...(options.services === undefined ? {} : { recipeImport: options.services }),
   };
-  return { ...made, ctx, queries };
+  return { ...made, ctx, queries, searchLimits };
 }
 
 export const traybakeUrl = "https://example.com/lemon-traybake";

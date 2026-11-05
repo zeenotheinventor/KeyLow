@@ -4,6 +4,7 @@
 //
 // A failure never throws to the model. It comes back as a typed result holding a code and no wording,
 // and the code is the only thing Sentry hears besides the tool's name.
+import { isConfirmAnswer } from "../core.ts";
 import { inputHash } from "./inputHash.ts";
 import { reserveNextSlot } from "./store.ts";
 import { confirmationIdKey, parseToolInput } from "./tool.ts";
@@ -24,9 +25,19 @@ export type ToolErrorCode =
 export type ExecutionResult =
   // `text` is what the model reads. `structured` is for the turn loop only.
   | { status: "ok"; text: string; structured: JsonValue | null; actionId: string | null }
-  // `note` is a line the tool wrote for the turn loop to add after the model's question. It is absent when
-  // the tool had none, and it is never stored with the pending confirmation.
-  | { status: "needs_confirmation"; text: string; confirmationId: string; note?: string }
+  // `question` is the tool's own words, for the turn loop to show when the model wrote none. `note` is a line
+  // the tool wrote to add after the question, and is absent when the tool had none. Neither is in `text`,
+  // and neither is stored with the pending confirmation.
+  | {
+      status: "needs_confirmation";
+      text: string;
+      confirmationId: string;
+      question: string;
+      note?: string;
+      // True when the call carried a valid confirmation but the person's message was not the confirm
+      // button's words, so a new confirmation was stored and the buttons are drawn again.
+      asksAgain?: true;
+    }
   | { status: "error"; code: ToolErrorCode; text: string };
 
 function failed(
@@ -137,42 +148,65 @@ async function runWrite(
   const need =
     tool.needsConfirmation === undefined ? false : await tool.needsConfirmation(parsed.data, ctx);
   if (need !== false) {
-    const note = typeof need === "object" ? need.note : undefined;
+    const { question, confirmLabel, note } = need;
     const hash = await inputHash(parsed.data);
-    if (split.confirmationId === null) {
+    // Asks, and holds the call until the person confirms. The confirmation is stored on this turn with
+    // the words of the button that confirms it. A turn holds one pending confirmation. If the model asks
+    // for several in one turn, the last one stored wins and the earlier ids stop working, which is the
+    // safe way round.
+    const ask = async (asksAgain: boolean): Promise<ExecutionResult> => {
       const confirmationId = crypto.randomUUID();
-      // A turn holds one pending confirmation. If the model asks for several in one turn, the last
-      // one stored wins and the earlier ids stop working, which is the safe way round.
       await ctx.actions.storePendingConfirmation(ctx.turn.id, ctx.userId, {
         id: confirmationId,
         tool: tool.name,
         inputHash: hash,
+        confirmLabel,
       });
       return {
         status: "needs_confirmation",
         confirmationId,
+        question,
         ...(note === undefined ? {} : { note }),
+        ...(asksAgain ? { asksAgain: true as const } : {}),
         text: wrapUntrusted(tool.name, {
           status: "needs_confirmation",
           confirmation_id: confirmationId,
+          ...(asksAgain ? { asked_again: true } : {}),
           ...(note === undefined ? {} : { note }),
         }),
       };
-    }
+    };
     const previous = await ctx.actions.previousPendingConfirmation(
       ctx.turn.conversationId,
       ctx.userId,
       ctx.turn.id,
     );
+    // The call is the one the previous turn asked about: the same tool and the same input. The hash is of
+    // the input without `confirmation_id`, so it is the same whether or not the model sent the id.
+    const isSameCall =
+      previous !== null &&
+      previous.confirmation.tool === tool.name &&
+      previous.confirmation.inputHash === hash;
+    // An id the model gives must be the one issued for this call. A call with no id, or a null one, has no
+    // id to check, and is judged on the tool, the input and the person's words alone.
     if (
-      previous === null ||
-      previous.confirmation.id !== split.confirmationId ||
-      previous.confirmation.tool !== tool.name ||
-      previous.confirmation.inputHash !== hash
+      split.confirmationId !== null &&
+      !(isSameCall && previous.confirmation.id === split.confirmationId)
     ) {
       return failed(tool.name, "confirmation_invalid");
     }
-    confirmedOn = { turnId: previous.turnId, confirmationId: split.confirmationId };
+    if (!isSameCall) {
+      return await ask(false);
+    }
+    // It is spent only on the person's own next message being the words of the confirm button, compared
+    // with the words stored with the confirmation, and not on the model copying an id. Anything else, and
+    // anything missing, asks again and writes nothing: no slot is taken and the tool does not run. So a
+    // model that misreads an answer, or text inside a tool result, cannot spend it, and one that forgets
+    // the id after the button is pressed does not leave the person asked again.
+    if (!isConfirmAnswer(ctx.turn.personsWords, previous.confirmation.confirmLabel)) {
+      return await ask(true);
+    }
+    confirmedOn = { turnId: previous.turnId, confirmationId: previous.confirmation.id };
   }
 
   const reservation = await reserveNextSlot(ctx.actions, {
