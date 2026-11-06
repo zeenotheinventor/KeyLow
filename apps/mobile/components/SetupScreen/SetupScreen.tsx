@@ -11,7 +11,7 @@ import {
   describeStepProgress,
   SAVE_FAILED_BANNER,
   SETUP_GROUP_TITLES,
-  SETUP_QUESTIONS,
+  setupQuestionFor,
   SETUP_SHELL,
   TARGETS_SAVED_TOAST,
 } from "@keylow/core/copy";
@@ -48,31 +48,6 @@ import { useReadsEnabled } from "../../lib/useReadsEnabled";
 import { Banner, useToast } from "../ui";
 
 import type { SetupScreenProps } from "./types";
-import type { SetupDraft, SetupStep } from "@keylow/core/setup";
-
-// The rate is only asked for a goal that moves the weight, and its question names the direction.
-function questionWordsOf(step: SetupStep, draft: SetupDraft) {
-  switch (step) {
-    case "sex":
-      return SETUP_QUESTIONS.sex;
-    case "birthDate":
-      return SETUP_QUESTIONS.birthDate;
-    case "body":
-      return SETUP_QUESTIONS.body;
-    case "activity":
-      return SETUP_QUESTIONS.activity;
-    case "goal":
-      return SETUP_QUESTIONS.goal;
-    case "rate":
-      return isRateGoal(draft.goal) ? SETUP_QUESTIONS.rate[draft.goal] : undefined;
-    case "protein":
-      return SETUP_QUESTIONS.protein;
-    case "diet":
-      return SETUP_QUESTIONS.diet;
-    case "estimate":
-      return undefined;
-  }
-}
 
 // How far back the expenditure history is read, a year of weekly check-ins. The newest snapshot decides whether
 // the recompute keeps its mean (28 days at most), and the same list holds the newest check-in that measured,
@@ -272,7 +247,7 @@ export function SetupScreen({ mode }: SetupScreenProps) {
   }
 
   const progress = describeStepProgress(draft, step);
-  const words = questionWordsOf(step, draft);
+  const words = setupQuestionFor(step, draft);
   // Until the saved answers arrive the draft has no unit, and the fields start from the stored one or the region's.
   const weightUnit =
     draft.weightUnit ?? entryWeightUnit(setupState.data?.stats.weightUnit ?? null, regionCode);

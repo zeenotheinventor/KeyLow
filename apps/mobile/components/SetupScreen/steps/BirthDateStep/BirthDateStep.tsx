@@ -1,12 +1,13 @@
 import { describeAgeLine, describeBirthDateProblem, SETUP_FIELDS } from "@keylow/core/copy";
 import { ageInYears } from "@keylow/core/dates";
+import { readBirthDate } from "@keylow/core/setup";
 import { useState } from "react";
 import { View } from "react-native";
 
-import { readBirthDate } from "./readBirthDate";
 import { FieldError, NumericInput, Text } from "../../../ui";
 
-import type { BirthDateFieldTexts, BirthDateStepProps } from "./types";
+import type { BirthDateStepProps } from "./types";
+import type { BirthDateFieldTexts } from "@keylow/core/setup";
 
 const YEAR_LENGTH = 4;
 

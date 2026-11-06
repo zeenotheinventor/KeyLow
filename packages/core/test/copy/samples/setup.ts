@@ -16,6 +16,17 @@ export const samples: Record<string, () => string[]> = {
     copy.describeSetupStepLabel(3, 8),
     copy.describeSetupStepLabel(5, 7),
   ],
+  describeSetupCaption: () => [
+    copy.describeSetupCaption({}, "sex"),
+    copy.describeSetupCaption({ goal: "maintain" }, "protein"),
+    copy.describeSetupCaption({}, "estimate"),
+  ],
+  setupQuestionFor: () =>
+    [
+      copy.setupQuestionFor("rate", { goal: "lose" }),
+      copy.setupQuestionFor("rate", { goal: "gain" }),
+      copy.setupQuestionFor("sex", {}),
+    ].flatMap((question) => (question === undefined ? [] : [question.question, question.helper])),
   describeSetupOptionName: () => [
     copy.describeSetupOptionName("Female"),
     copy.describeSetupOptionName("Lose weight", copy.SETUP_GOAL_NOT_OFFERED_UNDER_18),

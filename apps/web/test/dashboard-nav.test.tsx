@@ -174,6 +174,20 @@ describe("DashboardNav", () => {
     },
   );
 
+  it.each(["/setup", "/setup/birth-date", "/setup/body"])(
+    "should mark More as the current page on %s, in both modes of the setup wizard",
+    (path) => {
+      pathname.mockReturnValue(path);
+      render(<DashboardNav />);
+
+      const current = within(screen.getByRole("navigation", { name: "Main" })).getAllByRole(
+        "link",
+        { current: "page" },
+      );
+      expect(current.map((link) => link.textContent)).toEqual(["More"]);
+    },
+  );
+
   it("should not mark More current on a page whose address only begins like the library's", () => {
     pathname.mockReturnValue(`${recipesPath()}-old`);
     render(<DashboardNav />);

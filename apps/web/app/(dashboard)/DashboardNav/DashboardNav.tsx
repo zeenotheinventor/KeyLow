@@ -15,16 +15,21 @@ import { SearchLauncher } from "@/components/ui/SearchField";
 import { useFoodLogActions } from "@/lib/foodLogActions";
 import { goalPath } from "@/lib/goalRoutes";
 import { recipesPath } from "@/lib/recipeRoutes";
+import { setupRootPath } from "@/lib/setupRoutes";
 import { trainPath } from "@/lib/trainRoutes";
 import { useIsOnline } from "@/lib/useIsOnline";
 import { cn } from "@/lib/utils";
 
-// Recipes, Weight and the goal questionnaire are not sections. Each is opened from a row of More, so More stays current on its page.
+// Recipes, Weight, the goal questionnaire and the setup wizard are not sections. Each is opened from a row of More, so More stays current on its page.
 const SECTIONS: readonly DashboardSection[] = [
   { label: TAB_TITLES.dashboard, href: "/dashboard" },
   { label: TAB_TITLES.diary, href: "/diary" },
   { label: TRAIN_HOME.tabLabel, href: trainPath(), alsoCurrentOn: ["/body-map"] },
-  { label: TAB_TITLES.more, href: "/more", alsoCurrentOn: [recipesPath(), "/weight", goalPath()] },
+  {
+    label: TAB_TITLES.more,
+    href: "/more",
+    alsoCurrentOn: [recipesPath(), "/weight", goalPath(), setupRootPath()],
+  },
 ];
 
 // A section is current on its own page, on the pages under it, and on the pages it holds that live elsewhere.
