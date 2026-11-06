@@ -1,4 +1,4 @@
-import { MORE_SCREEN, TAB_TITLES } from "@keylow/core/copy";
+import { ACCOUNT_EXPORT_COPY, MORE_SCREEN, TAB_TITLES } from "@keylow/core/copy";
 import { cookies } from "next/headers";
 
 import { signOut } from "../actions";
@@ -50,6 +50,11 @@ export default async function MorePage() {
         </GroupedList>
         <form action={signOut}>
           <GroupedList title={MORE_SCREEN.account.title} headerSize="compact">
+            <ListRow
+              title={ACCOUNT_EXPORT_COPY.moreRow.title}
+              subtitle={ACCOUNT_EXPORT_COPY.moreRow.subtitle}
+              href="/more/export"
+            />
             <ListRow
               title={MORE_SCREEN.account.signOut}
               subtitle={user?.email}

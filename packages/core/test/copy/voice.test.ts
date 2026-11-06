@@ -31,6 +31,8 @@ const exportedFunctionNames = Object.entries(copy)
 const personsOwnStatements = [
   copy.ACCOUNT_EXPORT_COPY.moreRow.title,
   copy.ACCOUNT_EXPORT_COPY.title,
+  // The web's downloaded footer sends the person back to the page by its name.
+  copy.ACCOUNT_EXPORT_WEB_COPY.saved.footer,
   // The Privacy Policy names the row by its label.
   ...copy.PRIVACY_POLICY.sections
     .flatMap((section) => section.paragraphs)
