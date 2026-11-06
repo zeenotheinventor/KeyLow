@@ -92,6 +92,7 @@ describe("the package index", () => {
     "useWeightTrend",
     "listBodyMeasurements",
     "importBodyMeasurements",
+    "useBodyCompositionKind",
     "useBodyMeasurements",
     "useImportBodyMeasurements",
     "useBodyTrend",

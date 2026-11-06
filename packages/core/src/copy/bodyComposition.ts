@@ -30,6 +30,11 @@ export const BODY_COMPOSITION = {
     title: "No body fat or lean mass readings yet",
     text: `Weigh in on a smart scale that saves body fat and lean mass to ${HEALTH_CONNECT_NAME}. New readings show here the next time you open Ki-Lo.`,
   },
+  /**
+   * The web's one quiet line for allowed kinds with nothing read. The web has no Health Connect and no
+   * permission flow, so it says where readings come from and offers no action.
+   */
+  noReadingsWeb: `No body fat or lean mass readings yet. They come from a smart scale, through ${HEALTH_CONNECT_NAME} in the Ki-Lo phone app.`,
   /** The `partial` prompt, by the kind that cannot be read yet. */
   partial: {
     body_fat_pct: { text: "Ki-Lo can't read body fat yet.", action: "Add body fat" },

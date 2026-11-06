@@ -1,4 +1,4 @@
-import { useBodyTrend } from "@keylow/api-client";
+import { useBodyCompositionKind, useBodyTrend } from "@keylow/api-client";
 import {
   BODY_COMPOSITION,
   BODY_COMPOSITION_CHART,
@@ -14,7 +14,6 @@ import { Text as NativeText, View } from "react-native";
 import { useReadsEnabled } from "../../lib/useReadsEnabled";
 import { BodyCompositionChart, prepareBodyCompositionChart } from "../BodyCompositionChart";
 import { BodyCompositionPrompt } from "../BodyCompositionPrompt";
-import { useBodyCompositionKind } from "../BodyCompositionSection";
 import { Badge, Skeleton, SegmentedControl, Text } from "../ui";
 
 import type { BodyCompositionViewProps } from "./types";
@@ -54,12 +53,12 @@ export function BodyCompositionView({
   const isBodyFatAllowed = isConnected && access?.bodyFat === true;
   const isLeanMassAllowed = isConnected && access?.leanMass === true;
   const bodyFat = useBodyCompositionKind("body_fat_pct", {
-    isEnabled: isBodyFatAllowed && isReadEnabled,
+    enabled: isBodyFatAllowed && isReadEnabled,
     range,
     today,
   });
   const leanMass = useBodyCompositionKind("lean_mass_kg", {
-    isEnabled: isLeanMassAllowed && isReadEnabled,
+    enabled: isLeanMassAllowed && isReadEnabled,
     range,
     today,
   });

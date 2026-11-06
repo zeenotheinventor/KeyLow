@@ -622,7 +622,7 @@ describe("the trend card and the chart on the Weight page", () => {
       seed(aYearOfReadings());
       render();
       const card = await screen.findByRole("region", { name: "Trend weight" });
-      const columns = card.parentElement?.parentElement;
+      const columns = card.parentElement?.parentElement?.parentElement;
       const css = await compileUtilities(columns?.getAttribute("class") ?? "");
       const largeRules = css.slice(css.indexOf("@media"));
 

@@ -106,7 +106,7 @@ The phone's `invalid` and `saving` states of the weigh-in sheet have no board. T
 
 ## Left out on purpose (phone only)
 
-The web adds weigh-ins by hand, so there are no `importing` or `not-connected` states, no Connect Health Connect, no pull to refresh and no Health access screen. There is no Weight / Composition switch, no Body composition section ([KEY-655](https://linear.app/sojisoft/issue/KEY-655) stays mobile for now) and so no sixth "Body fat and lean mass" section in the explainer (`TREND_EXPLAINER.sections` has five, and `TREND_EXPLAINER_BODY_SECTION` is not used). Imported rows still show in the list, read only, because a phone's readings are in the same list.
+The web adds weigh-ins by hand, so there are no `importing` or `not-connected` states, no Connect Health Connect, no pull to refresh and no Health access screen. There is no Weight / Composition switch yet ([KEY-866](https://linear.app/sojisoft/issue/KEY-866) adds it). The Body composition cards sit under the chart ([KEY-861](https://linear.app/sojisoft/issue/KEY-861), `docs/design/web/proposals/body-composition.md`), and the explainer has the sixth "Body fat and lean mass" section after Weekly rate (`TREND_EXPLAINER_BODY_SECTION`). Imported rows still show in the list, read only, because a phone's readings are in the same list.
 
 ## Decisions for Zee to check after merge
 

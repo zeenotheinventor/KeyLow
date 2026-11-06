@@ -7,18 +7,15 @@ import {
   describeTrendLine,
 } from "@keylow/core/copy";
 import { WEIGHT_RANGES, prepareWeightChart } from "@keylow/core/weight";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
 import { WeightChart } from "../WeightChart";
 
 import type { WeightTrendCardProps } from "./types";
-import type { WeightRange } from "@keylow/core/weight";
 
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
-
-const DEFAULT_RANGE: WeightRange = 90;
 
 const rangeOptions = WEIGHT_RANGES.map((range) => ({
   value: String(range),
@@ -31,14 +28,19 @@ const oneDecimal = (kilograms: number): string => (Math.round(kilograms * 10) / 
  * The Trend weight card of the Weight page, with the range control and the chart under it, as the
  * `web-weight, page-chart` board draws them. The card says where the trend stands: the weekly rate, or
  * "Settling" while the trend has too few readings, the trend to one decimal and a line about the last
- * weigh-in. The range is held here, starts on 90 days and is not kept. A range only chooses which days are
+ * weigh-in. The range is held by the page, which gives it to the Body composition cards too. A range only chooses which days are
  * drawn, because the trend is worked out once from every weigh-in and never again for a range. The page reads
  * the weigh-ins and works the trend out, and gives both to the card: a card that read them itself would be a
  * second reader of the whole history. The prepared chart is kept for the inputs it was made from, so a
  * re-render with the same weigh-ins, range and day does not place a year of points again.
  */
-export function WeightTrendCard({ weighIns, trend, today }: WeightTrendCardProps) {
-  const [range, setRange] = useState<WeightRange>(DEFAULT_RANGE);
+export function WeightTrendCard({
+  weighIns,
+  trend,
+  today,
+  range,
+  onRangeChange,
+}: WeightTrendCardProps) {
   const chart = useMemo(
     () => prepareWeightChart({ points: trend.points, weighIns, range, today }),
     [trend.points, weighIns, range, today],
@@ -88,7 +90,7 @@ export function WeightTrendCard({ weighIns, trend, today }: WeightTrendCardProps
         options={rangeOptions}
         value={String(range)}
         onChange={(next) => {
-          setRange(WEIGHT_RANGES.find((option) => String(option) === next) ?? DEFAULT_RANGE);
+          onRangeChange(WEIGHT_RANGES.find((option) => String(option) === next) ?? range);
         }}
       />
       <WeightChart
