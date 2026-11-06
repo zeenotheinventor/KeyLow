@@ -1,4 +1,5 @@
 import type { RecipePortionDraft } from "../useRecipePortionDraft";
+import type { IconButtonProps } from "@/components/ui/IconButton";
 import type { Ref } from "react";
 
 export type RecipePortionStepProps = {
@@ -8,6 +9,8 @@ export type RecipePortionStepProps = {
   /** The time is still the moment the dialog opened, so the Time field says Now. */
   isNow: boolean;
   onTimeChange: (time: string) => void;
+  /** The favourite heart, at the other end of the Results link's row. */
+  favouriteHeart?: IconButtonProps | undefined;
   /** The Results link: back to the search, with what was typed still in it. */
   onBack: () => void;
   /** Reaches the amount field, so the cursor can start in it. */

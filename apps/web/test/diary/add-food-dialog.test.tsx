@@ -3,6 +3,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testi
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { foodEntry } from "./support";
+import { noFavouriteHooks } from "../favourites/noFavouriteHooks";
 import { makeFood, makePortion, makeSearchHit } from "../foods/support";
 
 import type { AddFoodRequest } from "@/lib/foodLogActions";
@@ -95,6 +96,7 @@ const api = vi.hoisted((): Api => ({
 
 vi.mock("@keylow/api-client", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@keylow/api-client")>()),
+  ...noFavouriteHooks,
   // The refresh of an old branded food is the off refresh tests' business.
   useRefreshOutdatedOffFood: () => undefined,
   // Recent is the Recent tests' business: here the history is empty.

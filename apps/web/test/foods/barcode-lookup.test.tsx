@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { makeFood, makePortion } from "./support";
 import { foodEntry } from "../diary/support";
+import { noFavouriteHooks } from "../favourites/noFavouriteHooks";
 import { reachOf } from "../ui/hitArea";
 
 import type {
@@ -31,6 +32,7 @@ const { useFoodByBarcode, push, router, logFood, foods } = vi.hoisted(() => {
 
 vi.mock("@keylow/api-client", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@keylow/api-client")>()),
+  ...noFavouriteHooks,
   // The refresh of an old branded food is the off refresh tests' business.
   useRefreshOutdatedOffFood: () => undefined,
   useFoodByBarcode,

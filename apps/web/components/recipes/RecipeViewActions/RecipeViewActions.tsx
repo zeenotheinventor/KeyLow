@@ -13,6 +13,7 @@ import Link from "next/link";
 import type { RecipeViewActionsProps } from "./types";
 
 import { Button } from "@/components/ui/Button";
+import { IconButton } from "@/components/ui/IconButton";
 import { cn } from "@/lib/utils";
 
 // The boards draw the icons of these buttons at 18 px, where the small size has 16.
@@ -22,8 +23,8 @@ const ICON_CLASSES = "[&_svg]:size-[18px]";
 const DISABLED_CLASSES = "aria-disabled:pointer-events-none aria-disabled:opacity-40";
 
 /**
- * The buttons in the header of the recipe view, in the order the board draws them: Edit, Refresh
- * ingredients, Add to shopping list, Duplicate, then Archive. They sit in a row that wraps, to the right
+ * The buttons in the header of the recipe view, in the order the board draws them: the favourite heart,
+ * Edit, Refresh ingredients, Add to shopping list, Duplicate, then Archive. They sit in a row that wraps, to the right
  * of the title when there is room and under it when there is not. Offline, each stays focusable and says it
  * is disabled, with no handler, so neither a click nor a key press does anything. Duplicate is the same
  * until the library has been read. A busy button has no handler either, so a second press does nothing more.
@@ -36,6 +37,7 @@ export function RecipeViewActions({
   isLibraryRead,
   isDuplicating,
   isArchiving,
+  favouriteHeart,
   onRefresh,
   onAddToList,
   onDuplicate,
@@ -46,7 +48,8 @@ export function RecipeViewActions({
   const isDuplicateDisabled = !isOnline || !isLibraryRead;
 
   return (
-    <div className="flex flex-wrap gap-2 lg:justify-end">
+    <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+      {favouriteHeart !== undefined && <IconButton {...favouriteHeart} />}
       {isOnline ? (
         <Button asChild variant="secondary" size="sm" className={ICON_CLASSES}>
           <Link href={editHref} aria-label={editLabel}>

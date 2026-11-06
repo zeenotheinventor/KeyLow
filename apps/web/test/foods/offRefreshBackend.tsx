@@ -7,6 +7,8 @@ import { makeFood, makePortion } from "./support";
 import type { Food, FoodPortion, OffProductResponse } from "@keylow/core/schemas";
 import type { ReactNode } from "react";
 
+import { ToastProvider } from "@/components/ui/Toast";
+
 /** A time before `OFF_PORTION_RULES_FROM`, so a food fetched then is asked for again. */
 export const FETCHED_BEFORE_THE_RULES = "2026-10-20T10:00:00.000000+00:00";
 /** A time after `OFF_PORTION_RULES_FROM`, so a food fetched then needs nothing. */
@@ -220,7 +222,7 @@ export function OffRefreshProvider({ children }: { children: ReactNode }) {
 
   return (
     <KeyLowProvider client={client} queryClient={queryClient}>
-      {children}
+      <ToastProvider>{children}</ToastProvider>
     </KeyLowProvider>
   );
 }

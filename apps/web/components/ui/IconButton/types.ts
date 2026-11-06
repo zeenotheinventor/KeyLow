@@ -26,4 +26,10 @@ export type IconButtonProps = Omit<
    * also sets `aria-pressed` itself.
    */
   isSelected?: boolean | undefined;
+  /**
+   * Fills the glyph with the accent colour, as a choice that is on looks, such as a favourite's heart. The
+   * button keeps its rest fill and border. The look only: the name says the state, so do not set
+   * `aria-pressed` as well. `isSelected` wins when both are set.
+   */
+  isFilled?: boolean | undefined;
 };

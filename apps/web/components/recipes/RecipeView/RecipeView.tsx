@@ -1,6 +1,6 @@
 "use client";
 
-import { useRecipes } from "@keylow/api-client";
+import { summaryOfStoredRecipe, useRecipes } from "@keylow/api-client";
 import { OFFLINE_BANNER, RECIPE_VIEW, RECIPES_LIBRARY } from "@keylow/core/copy";
 import {
   enteredViewServings,
@@ -11,7 +11,7 @@ import {
 } from "@keylow/core/recipes";
 import { WifiOff } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { AddToListDialog } from "../AddToListDialog";
 import { PerServingCard } from "../PerServingCard";
@@ -28,6 +28,7 @@ import type { ServingsStepDirection } from "@/components/ui/ServingsStepper";
 
 import { BackToFoodsLink } from "@/components/foods/FoodDetail";
 import { Banner } from "@/components/ui/Banner";
+import { useFavouriteRecipeHeart } from "@/lib/favourites";
 import { useRecipeActions } from "@/lib/recipeActions";
 import { editRecipePath, recipePath, recipesPath } from "@/lib/recipeRoutes";
 import { useIsOnline } from "@/lib/useIsOnline";
@@ -48,6 +49,9 @@ export function RecipeView({ recipe }: RecipeViewProps) {
   const router = useRouter();
   const isOnline = useIsOnline();
   const actions = useRecipeActions();
+  const favouriteHeart = useFavouriteRecipeHeart(
+    useMemo(() => summaryOfStoredRecipe(recipe), [recipe]),
+  );
   // A copy is named from the names in the library, archived ones included, so it is read here too.
   const library = useRecipes({ archived: true });
   // Null is the recipe's own servings, so the number is never one the recipe has since stopped having.
@@ -166,6 +170,7 @@ export function RecipeView({ recipe }: RecipeViewProps) {
           isLibraryRead={!library.isPending}
           isDuplicating={actions.isDuplicating(recipe.id)}
           isArchiving={actions.isArchiving(recipe.id)}
+          favouriteHeart={favouriteHeart}
           onRefresh={() => {
             setIsRefreshOpen(true);
           }}

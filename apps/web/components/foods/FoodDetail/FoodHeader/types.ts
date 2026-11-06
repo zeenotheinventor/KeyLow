@@ -1,5 +1,6 @@
 import type { Food } from "@keylow/core/schemas";
 
 export type FoodHeaderProps = {
-  food: Pick<Food, "id" | "name" | "brand" | "source">;
+  /** The whole food, which the favourite heart lists the food with. */
+  food: Food;
 };
