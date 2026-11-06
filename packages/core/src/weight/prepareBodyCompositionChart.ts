@@ -1,20 +1,19 @@
-import { WEIGHT_SCREEN, describeChartDate } from "@keylow/core/copy";
-import { addCalendarDays } from "@keylow/core/dates";
-import { rangeWindow } from "@keylow/core/weight";
+import { WEIGHT_SCREEN, describeChartDate } from "../copy/weight";
+import { addCalendarDays } from "../dates";
+import { buildCompositionAxis } from "./buildCompositionAxis";
+import { rangeWindow } from "./ranges";
 
-import { buildAxis } from "./buildAxis";
-
+import type { BodySplitPoint } from "./bodyTypes";
 import type {
   BodyCompositionChartData,
   BodyCompositionChartPlot,
   BodyCompositionChartPoint,
-  CompositionInputPoint,
-} from "./types";
-import type { WeightRange } from "@keylow/core/weight";
+} from "./compositionChartTypes";
+import type { WeightRange } from "./types";
 
 type PrepareBodyCompositionChartInput = {
-  /** The composition trend over every day, as core made it. It is filtered here and never worked out again. */
-  points: readonly CompositionInputPoint[];
+  /** The composition trend over every day, as `composeBodySplit` made it. It is filtered here and never worked out again. */
+  points: readonly BodySplitPoint[];
   range: WeightRange;
   /** Today in the profile's time zone, `YYYY-MM-DD`. */
   today: string;
@@ -30,7 +29,7 @@ function buildPlot(points: readonly BodyCompositionChartPoint[]): BodyCompositio
   return {
     points: [...points],
     latest: points.at(-1) ?? null,
-    yAxis: buildAxis(points.map((point) => point.value)),
+    yAxis: buildCompositionAxis(points.map((point) => point.value)),
   };
 }
 
@@ -47,7 +46,7 @@ export function prepareBodyCompositionChart({
   const window = rangeWindow(range, today);
   // `YYYY-MM-DD` sorts as text in date order, so the dates compare without being parsed.
   const inRange = points.filter((point) => point.date >= window.from && point.date <= window.to);
-  const placed = (point: CompositionInputPoint, value: number): BodyCompositionChartPoint => ({
+  const placed = (point: BodySplitPoint, value: number): BodyCompositionChartPoint => ({
     date: point.date,
     dayIndex: daysBetween(window.from, point.date),
     value,

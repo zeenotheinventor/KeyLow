@@ -1,5 +1,5 @@
 export { BodyCompositionChart } from "./BodyCompositionChart";
-export { prepareBodyCompositionChart } from "./prepareBodyCompositionChart";
+export { prepareBodyCompositionChart } from "@keylow/core/weight";
 export type {
   BodyCompositionChartAxis,
   BodyCompositionChartData,

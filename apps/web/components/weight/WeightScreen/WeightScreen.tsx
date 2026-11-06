@@ -7,6 +7,7 @@ import { Plus, Weight } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { BodyCompositionSection } from "../BodyCompositionSection";
+import { BodyCompositionView } from "../BodyCompositionView";
 import { WeighInDialog } from "../WeighInDialog";
 import { WeightHeader } from "../WeightHeader";
 import { WeightList } from "../WeightList";
@@ -20,6 +21,7 @@ import { ErrorState } from "@/components/ui/ErrorState";
 import { Skeleton, SkeletonBone } from "@/components/ui/Skeleton";
 import { useIsOnline } from "@/lib/useIsOnline";
 import { useNow } from "@/lib/useNow";
+import { useWeightChartView } from "@/lib/weightChartView";
 
 const DEFAULT_RANGE: WeightRange = 90;
 
@@ -58,7 +60,8 @@ function WeightLoading() {
  * the read goes ahead by itself when the connection returns.
  *
  * The trend card, the chart and the Body composition cards are the page's first column and the list is its second, beside it from the
- * large breakpoint and under it before. Add weigh-in, in the header and on the
+ * large breakpoint and under it before. The card draws the weight chart or the Composition view, as the page's
+ * Chart view choice says, which this browser keeps with the kg or % choice. Add weigh-in, in the header and on the
  * empty board, and a row of the list open the weigh-in dialog, which this screen holds open or closed. It is
  * not a route, so the page behind it keeps its place.
  */
@@ -68,6 +71,7 @@ export function WeightScreen() {
   const timeZone = useProfileTimeZone();
   const now = useNow();
   const isOnline = useIsOnline();
+  const chartView = useWeightChartView();
   // One range for the trend chart and both body cards. It starts on 90 days and is not kept.
   const [range, setRange] = useState<WeightRange>(DEFAULT_RANGE);
   // The weigh-in the dialog is open on, or `undefined` for a new one. Closed is `null`.
@@ -119,8 +123,23 @@ export function WeightScreen() {
               today={today}
               range={range}
               onRangeChange={setRange}
+              view={chartView.view}
+              onViewChange={chartView.setView}
+              composition={
+                <BodyCompositionView
+                  weightPoints={trend.points}
+                  range={range}
+                  today={today}
+                  unit={chartView.unit}
+                  onUnitChange={chartView.setUnit}
+                />
+              }
             />
-            <BodyCompositionSection range={range} today={today} />
+            <BodyCompositionSection
+              range={range}
+              today={today}
+              isUnderComposition={chartView.view === "composition"}
+            />
           </div>
           <WeightList
             weighIns={weighIns.data}

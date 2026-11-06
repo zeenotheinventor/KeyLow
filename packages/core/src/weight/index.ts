@@ -64,3 +64,19 @@ export { bodyChangeOverRange, bodyPointsInRange, isBodyTrendSettling } from "./b
 export { computeBodyTrend } from "./computeBodyTrend";
 export { mapHealthBodyFatSamples, mapHealthLeanMassSamples } from "./mapHealthBodyMeasurements";
 export { composeBodySplit } from "./composeBodySplit";
+export { buildCompositionAxis } from "./buildCompositionAxis";
+export type {
+  BodyCompositionChartAxis,
+  BodyCompositionChartData,
+  BodyCompositionChartPlot,
+  BodyCompositionChartPoint,
+} from "./compositionChartTypes";
+export {
+  COMPOSITION_PLOT_PADDING,
+  COMPOSITION_VALUE_COLUMN_WIDTH,
+  compositionEmptyGridOffsets,
+  compositionPlotOffsetOf,
+} from "./compositionPlotLayout";
+export { prepareBodyCompositionChart } from "./prepareBodyCompositionChart";
+export { bodyCompositionSectionStage, bodyCompositionViewStage } from "./bodyCompositionStage";
+export type { BodyCompositionKindStatus, BodyCompositionStage } from "./bodyCompositionStage";

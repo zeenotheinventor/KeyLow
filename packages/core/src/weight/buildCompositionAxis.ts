@@ -1,4 +1,4 @@
-import type { BodyCompositionChartAxis } from "./types";
+import type { BodyCompositionChartAxis } from "./compositionChartTypes";
 
 // The margin left above the highest and below the lowest value before rounding out to a tick.
 const AXIS_MARGIN = 0.5;
@@ -11,7 +11,7 @@ const STEP_DIGITS = [1, 2, 5];
  * that holds every value, with a margin of 0.5 each side, in at most 4 ticks. Null with no value. The axis
  * runs from the first tick to the last, so the plot is no larger than the labels say.
  */
-export function buildAxis(values: readonly number[]): BodyCompositionChartAxis | null {
+export function buildCompositionAxis(values: readonly number[]): BodyCompositionChartAxis | null {
   if (values.length === 0) {
     return null;
   }
