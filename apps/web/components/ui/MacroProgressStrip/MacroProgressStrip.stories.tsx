@@ -2,6 +2,7 @@ import { progressBars } from "@keylow/core/diary";
 import { userEvent } from "storybook/test";
 
 import { MacroProgressStrip } from "./MacroProgressStrip";
+import { MacroProgressStripSkeleton } from "./MacroProgressStripSkeleton";
 
 import type { Meta, StoryObj } from "@storybook/nextjs";
 
@@ -83,4 +84,61 @@ export const Focused: Story = {
   play: async () => {
     await userEvent.tab();
   },
+};
+
+// The plate: four foods come to 658 kcal, P 57.2, C 79.1, F 11.9, so the day reads 1,697 kcal. Each bar draws
+// the plate's share after the eaten fill, in the same colour at 45 per cent.
+const goldenPlate = { kcal: 658, protein_g: 57.2, carbs_g: 79.1, fat_g: 11.9 };
+// With the naan and the crisps on top: 2,257 kcal, P 157.2, C 295.1, F 46.4. Calories and carbs are over.
+const overPlate = { kcal: 1218, protein_g: 71.2, carbs_g: 166.1, fat_g: 27.4 };
+
+const platePlaceLabel = "Today with your plate";
+
+// No button and a label, as the add dialog shows it: leaving for Targets would drop the plate.
+export const WithPlateShare: Story = {
+  args: { bars: progressBars(thursday, targets, goldenPlate) },
+  render: ({ bars }) => <MacroProgressStrip bars={bars} label={platePlaceLabel} />,
+};
+
+// Over target, in a dialog: the outline's gap is the sheet's surface colour and the number stays in primary text.
+export const OverTargetOnSheet: Story = {
+  args: { bars: progressBars(thursday, targets, overPlate) },
+  render: ({ bars }) => <MacroProgressStrip bars={bars} label={platePlaceLabel} surface="sheet" />,
+  decorators: [
+    (Story) => (
+      <div className="bg-surface-sheet">
+        <Story />
+      </div>
+    ),
+  ],
+};
+
+const cardDecorator: NonNullable<Story["decorators"]> = [
+  (Story) => (
+    <div className="max-w-[360px] rounded-large border border-border bg-surface p-4">
+      <Story />
+    </div>
+  ),
+];
+
+// On a card the columns size to their numbers, four across from 1024 px, and two by two below.
+export const AsCard: Story = {
+  args: { bars: progressBars(thursday, targets, goldenPlate) },
+  render: ({ bars }) => <MacroProgressStrip bars={bars} label={platePlaceLabel} surface="card" />,
+  decorators: cardDecorator,
+};
+
+export const AsCardOnPhone: Story = {
+  ...AsCard,
+  globals: { viewport: { value: "mobile", isRotated: false } },
+};
+
+export const OverTargetAsCard: Story = {
+  ...AsCard,
+  args: { bars: progressBars(thursday, targets, overPlate) },
+};
+
+// The place of the strip while the day is read: 26 px high with four placeholder columns.
+export const Loading: Story = {
+  render: () => <MacroProgressStripSkeleton />,
 };

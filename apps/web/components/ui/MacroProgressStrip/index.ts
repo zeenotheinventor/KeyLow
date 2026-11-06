@@ -1,7 +1,9 @@
 export { MacroProgressStrip } from "./MacroProgressStrip";
-export type { MacroProgressStripProps } from "./types";
+export { MacroProgressStripSkeleton } from "./MacroProgressStripSkeleton";
+export type { MacroProgressStripProps, MacroProgressStripSurface } from "./types";
 export {
   overTargetOutline,
+  overTargetOutlineOnSheet,
   overTargetOutlineOnSurface,
   overTargetRingStroke,
 } from "./overTargetOutline";

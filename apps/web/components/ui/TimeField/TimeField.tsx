@@ -1,6 +1,11 @@
 "use client";
 
-import { TIME_FIELD, TIME_ROW_LABEL, describeTimeRowName } from "@keylow/core/copy";
+import {
+  TIME_FIELD,
+  TIME_ROW_LABEL,
+  describeTimeRowName,
+  describeTimeValue,
+} from "@keylow/core/copy";
 import { iconStroke } from "@keylow/tokens";
 import { ChevronDown, Clock } from "lucide-react";
 import { useId, useRef, useState } from "react";
@@ -13,19 +18,22 @@ import { cn } from "@/lib/utils";
 // The box is the input's: 44 high, raised surface, medium radius, the accent border on focus and while
 // the picker is open, with the ring added in light where the accent border is under 3:1.
 const boxClasses =
-  "flex h-control-md items-center rounded-medium border border-border bg-surface-raised text-text-primary outline-none transition-[border-color,box-shadow] duration-quick focus-visible:border-accent focus-visible:ring-focus-ring focus-visible:ring-offset-focus-ring-offset light-theme:focus-visible:ring-2 light-theme:focus-visible:ring-offset-2 aria-expanded:border-accent aria-expanded:ring-1 aria-expanded:ring-accent";
+  "flex h-control-md items-center rounded-medium border border-border bg-surface-raised text-text-primary outline-none transition-[border-color,box-shadow] duration-quick focus-visible:border-accent focus-visible:ring-focus-ring focus-visible:ring-offset-focus-ring-offset light-theme:focus-visible:ring-2 light-theme:focus-visible:ring-offset-2 aria-expanded:border-accent aria-expanded:ring-1 aria-expanded:ring-accent disabled:opacity-40";
 
 /**
  * The field that shows the time of an entry and opens the time picker, wherever a person can change it:
  * the add, edit and quick add dialogs. The full form has "Time" above a button that holds the clock, the
- * time and a chevron; the compact form sits beside the search field. It keeps the picker's open state, and
+ * time and a chevron. The compact form sits beside the search field. The row form is one line, "Time", then
+ * the value and a chevron, as the plate's panel draws its one time. It keeps the picker's open state, and
  * the focus returns to it when the picker closes from the keyboard.
  */
 export function TimeField({
   value,
   onChange,
   compact = false,
+  row = false,
   isNow = false,
+  disabled = false,
   className,
 }: TimeFieldProps) {
   const [open, setOpen] = useState(false);
@@ -52,6 +60,32 @@ export function TimeField({
     setOpen(!open);
   };
 
+  if (row) {
+    return (
+      <div className={className}>
+        <button
+          ref={button}
+          type="button"
+          aria-haspopup="dialog"
+          aria-expanded={open}
+          aria-label={describeTimeRowName(value, isNow)}
+          className={cn(boxClasses, "w-full gap-2 px-4 text-left text-body")}
+          disabled={disabled}
+          onClick={toggle}
+        >
+          <span>{TIME_ROW_LABEL}</span>
+          <span className="ml-auto tabular-nums">{describeTimeValue(value, isNow)}</span>
+          <ChevronDown
+            aria-hidden
+            className="size-4 shrink-0 text-text-muted"
+            strokeWidth={iconStroke}
+          />
+        </button>
+        {picker}
+      </div>
+    );
+  }
+
   if (compact) {
     return (
       <div className={className}>
@@ -62,6 +96,7 @@ export function TimeField({
           aria-expanded={open}
           aria-label={describeTimeRowName(value, isNow)}
           className={cn(boxClasses, "gap-2 px-3 text-label-small")}
+          disabled={disabled}
           onClick={toggle}
         >
           <Clock
@@ -91,6 +126,7 @@ export function TimeField({
           aria-labelledby={`${labelId} ${valueId}`}
           aria-describedby={isNow ? helperId : undefined}
           className={cn(boxClasses, "w-full gap-2 px-4 text-left")}
+          disabled={disabled}
           onClick={toggle}
         >
           <Clock

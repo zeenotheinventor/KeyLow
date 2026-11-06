@@ -63,7 +63,9 @@ export function RecentFoods({ addDisabled, onOpen, onAdd }: RecentFoodsProps) {
           <FoodRow
             key={food.foodId}
             layout="search"
-            nameSegments={[{ text: snapshot.name, matched: false }]}
+            // No search matched anything here, and the boards draw the whole name semibold, as the phone does:
+            // the `search` layout gives a matched part that weight and an unmatched one the regular weight.
+            nameSegments={[{ text: snapshot.name, matched: true }]}
             caption={describeLoggedAmount(snapshot)}
             energy={nutrients.kcal === null ? undefined : formatCalories(nutrients.kcal)}
             macros={{

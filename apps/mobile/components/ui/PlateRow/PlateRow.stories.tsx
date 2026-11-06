@@ -1,3 +1,4 @@
+import { PLATE } from "@keylow/core/copy";
 import { useState } from "react";
 import { View } from "react-native";
 
@@ -20,7 +21,7 @@ const meta = {
   decorators: [
     (Story) => (
       <View className="flex-1 justify-center p-4">
-        <GroupedList hidesTitle title="Foods on your plate">
+        <GroupedList hidesTitle title={PLATE.rowsLabel}>
           <Story />
         </GroupedList>
       </View>
@@ -109,7 +110,7 @@ export const InBottomSheet: Story = {
   ],
   render: (args) => (
     <BottomSheet open title="Your plate" onClose={() => undefined}>
-      <GroupedList hidesTitle title="Foods on your plate">
+      <GroupedList hidesTitle title={PLATE.rowsLabel}>
         <TypingPlateRow {...args} />
       </GroupedList>
     </BottomSheet>

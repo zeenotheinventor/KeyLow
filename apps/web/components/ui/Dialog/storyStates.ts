@@ -6,4 +6,10 @@ export const storyStates = [
   "LongTitle",
   "Narrow",
   "WithTrigger",
+  "WithHeaderAction",
+  "WithStrip",
+  "WithOverTargetStrip",
+  "WithStripLoading",
+  "WithoutBodyPadding",
+  "CloseDisabled",
 ];

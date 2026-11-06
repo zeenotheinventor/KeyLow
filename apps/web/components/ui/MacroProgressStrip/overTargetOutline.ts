@@ -25,6 +25,18 @@ export const overTargetOutlineOnSurface: Record<ProgressBarKey, string> = {
   fat: "[box-shadow:0_0_0_1px_rgb(var(--kl-surface)),0_0_0_2.5px_color-mix(in_srgb,rgb(var(--kl-fat))_55%,white)]",
 };
 
+// The same outline for a bar that sits in a dialog, where the gap is the sheet's surface colour (the add
+// dialog's strip, under its header).
+export const overTargetOutlineOnSheet: Record<ProgressBarKey, string> = {
+  calories:
+    "[box-shadow:0_0_0_1px_rgb(var(--kl-surface-sheet)),0_0_0_2.5px_color-mix(in_srgb,rgb(var(--kl-calories))_55%,white)]",
+  protein:
+    "[box-shadow:0_0_0_1px_rgb(var(--kl-surface-sheet)),0_0_0_2.5px_color-mix(in_srgb,rgb(var(--kl-protein))_55%,white)]",
+  carbs:
+    "[box-shadow:0_0_0_1px_rgb(var(--kl-surface-sheet)),0_0_0_2.5px_color-mix(in_srgb,rgb(var(--kl-carbs))_55%,white)]",
+  fat: "[box-shadow:0_0_0_1px_rgb(var(--kl-surface-sheet)),0_0_0_2.5px_color-mix(in_srgb,rgb(var(--kl-fat))_55%,white)]",
+};
+
 // The calorie ring's two outline circles are strokes, which a shadow cannot draw, so the same colour mix
 // is written as a stroke.
 export const overTargetRingStroke =
