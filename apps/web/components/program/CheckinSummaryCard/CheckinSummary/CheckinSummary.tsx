@@ -6,15 +6,24 @@ import type { CheckinSummaryProps } from "./types";
 
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
+import { cn } from "@/lib/utils";
 
 /**
  * The card as `program-default` and `program-checkin-not-measured` draw it: the eyebrow with the check-in's date
  * and the Measured or Not measured badge, the expenditure and the calorie target as two rows, and the lines that
- * say why. It is named "Last check-in, Friday 9 October, measured".
+ * say why. It is named "Last check-in, Friday 9 October, measured". On the first open after a new check-in it
+ * cuts in from the side once, and under reduced motion it only fades.
  */
-export function CheckinSummary({ view }: CheckinSummaryProps) {
+export function CheckinSummary({ view, isArriving }: CheckinSummaryProps) {
   return (
-    <Card role="group" aria-label={view.name} className="flex flex-col gap-3">
+    <Card
+      role="group"
+      aria-label={view.name}
+      className={cn(
+        "flex flex-col gap-3",
+        isArriving && "animate-kl-cut-in motion-reduce:animate-kl-fade-in",
+      )}
+    >
       <div className="flex items-start justify-between gap-2">
         <div className="flex flex-col gap-0.5">
           <span className="text-caption uppercase tracking-[0.04em] text-text-secondary">

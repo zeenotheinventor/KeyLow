@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 
+import { CheckinRunner } from "./CheckinRunner";
 import { DashboardNav } from "./DashboardNav";
 import { Providers } from "./Providers";
 import { SessionBarFrame } from "./SessionBar";
@@ -29,6 +30,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   return (
     <Providers>
       <SentryUser userId={user.id} />
+      <CheckinRunner />
       <DashboardNav />
       <SessionBarFrame>
         <main className="px-4 lg:px-8">{children}</main>

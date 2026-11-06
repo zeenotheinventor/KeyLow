@@ -18,6 +18,7 @@ import { YourProgramme } from "../YourProgramme";
 import { BackToFoodsLink } from "@/components/foods/FoodDetail";
 import { Banner } from "@/components/ui/Banner";
 import { ErrorState } from "@/components/ui/ErrorState";
+import { useCheckinArrival } from "@/lib/checkinSeen";
 import { useIsOnline } from "@/lib/useIsOnline";
 import { useNow } from "@/lib/useNow";
 
@@ -34,10 +35,17 @@ const MORE_HREF = "/more";
  * Offline with nothing read is the error board with no Try again, which would do nothing: the read goes ahead by
  * itself when the connection returns. The connection going while the page is open keeps the figures read in this
  * session under an offline banner over both columns, with Edit programme off in the actions card.
+ *
+ * The first open after a new check-in (remembered per browser by its date) counts the estimate up from the one
+ * before, flashes the accent and cuts the check-in card in, once. The programme is read in the browser only, so
+ * this browser's answer is there before the estimate is first drawn, and the motion is never played from a guess.
  */
 export function ProgramScreen() {
   const state = useProgramScreen({ enabled: true, now: useNow() });
   const isOnline = useIsOnline();
+  const { isNew: isCheckinNew } = useCheckinArrival(
+    state.status === "program" ? (state.view.checkin?.date ?? null) : null,
+  );
 
   function renderBody() {
     switch (state.status) {
@@ -71,10 +79,19 @@ export function ProgramScreen() {
             )}
             <div className={COLUMNS_CLASS_NAME}>
               <div className="flex flex-col gap-4">
-                <ExpenditureHeroCard view={hero} />
+                <ExpenditureHeroCard
+                  arrival={
+                    isCheckinNew && checkin !== null
+                      ? { fromKcal: checkin.previousMuKcal ?? hero.muKcal }
+                      : null
+                  }
+                  view={hero}
+                />
                 {settlingChecklist === null ? null : <SettlingChecklist {...settlingChecklist} />}
                 {targets === null ? null : <WeekTargetsCard view={targets} />}
-                {checkin === null ? null : <CheckinSummaryCard {...checkin.card} />}
+                {checkin === null ? null : (
+                  <CheckinSummaryCard {...checkin.card} isArriving={isCheckinNew} />
+                )}
                 <ExpenditureChartCard />
               </div>
               <div className="flex flex-col gap-4">
