@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ReactNode, Ref } from "react";
 
 export type SetupShellProps = {
   /** Names the step on show. Focus moves to the question when it changes. */
@@ -11,13 +11,27 @@ export type SetupShellProps = {
   progressFraction: number;
   /** The question, in the h1. */
   question: string;
-  /** The one helper line under the question. */
-  helper: string;
+  /** The one helper line under the question. The estimate has none. */
+  helper?: string | undefined;
   /** Back in the footer. Left out on the first step. */
   onBack?: (() => void) | undefined;
   /** Close in the footer, for a recalculation. Left out on the first run. */
   onClose?: (() => void) | undefined;
-  continueAction: { isEnabled: boolean; onPress: () => void };
+  /**
+   * The footer's main button. `label` is Continue unless a step says otherwise (the estimate's is Start or Save
+   * targets). `isLoading` shows the spinner and keeps the button inert.
+   */
+  continueAction: {
+    isEnabled: boolean;
+    onPress: () => void;
+    label?: string;
+    isLoading?: boolean;
+    loadingLabel?: string;
+  };
+  /** Lets a screen put focus back on the main button after a failed save, since the press turned it off. */
+  continueButtonRef?: Ref<HTMLButtonElement>;
+  /** Back and Close are dimmed and inert, while a save runs. */
+  isLeavingInert?: boolean | undefined;
   /** A banner above the buttons, such as the read's failure. */
   notice?: ReactNode;
   /** The step's answers. */

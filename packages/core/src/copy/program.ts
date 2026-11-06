@@ -5,6 +5,8 @@ import { MONTH_NAMES_LONG } from "./diaryDay";
 import { RETRY_LABEL } from "./errors";
 import { NOT_MEDICAL_ADVICE } from "./legal";
 import {
+  ACCURACY_LINE_WITH_CHECKIN,
+  SETUP_ESTIMATE,
   SETUP_FLOOR_ABOVE_EXPENDITURE_ADVICE,
   SETUP_GOAL_NOT_OFFERED_UNDER_18,
   SETUP_GOAL_NOTES,
@@ -24,7 +26,7 @@ import { PROTEIN_G_PER_KG, bindingCalorieClamp } from "../setup";
 import type { SetupGuardrailFigures } from "./setup";
 import type { MeasurementCounts, MeasurementReason } from "../engine";
 import type { ExpenditureBand } from "../program";
-import type { ProteinPreset, SetupClamp } from "../setup";
+import type { EstimateMeasurement, ProteinPreset, SetupClamp } from "../setup";
 import type { WeightDisplayUnit } from "../weight";
 
 /*
@@ -559,6 +561,41 @@ export const PROGRAM_SETUP_CARRIED_FORWARD = {
 /** The estimate's accuracy line after a measurement, from the date of the last check-in. */
 export const describeMeasuredAccuracyLine = (measuredOn: string): string =>
   `Ki-Lo measured your expenditure at your last check-in, on ${describeDateInWords(measuredOn)}. Changing your answers keeps it and changes only your targets.`;
+
+/** The estimate's heading, the expenditure row's subtitle and the accuracy line for one source of the expenditure. */
+export type EstimateWords = Readonly<{
+  heading: string;
+  expenditureSubtitle: string;
+  accuracyLine: string;
+}>;
+
+/**
+ * The estimate's words by where its expenditure came from. After a check-in the screen says so, and that changing
+ * the answers keeps it. With no measurement (the first run, or a recalculation that starts again from the answers)
+ * it is the starting estimate's. The phone and the web both read this.
+ */
+export function describeEstimateWords(measurement: EstimateMeasurement | undefined): EstimateWords {
+  switch (measurement?.kind) {
+    case "measured":
+      return {
+        heading: PROGRAM_SETUP_MEASURED.heading,
+        expenditureSubtitle: PROGRAM_SETUP_MEASURED.expenditureSubtitle,
+        accuracyLine: describeMeasuredAccuracyLine(measurement.measuredOn),
+      };
+    case "carried-forward":
+      return {
+        heading: PROGRAM_SETUP_MEASURED.heading,
+        expenditureSubtitle: PROGRAM_SETUP_CARRIED_FORWARD.expenditureSubtitle,
+        accuracyLine: PROGRAM_SETUP_CARRIED_FORWARD.accuracyLine,
+      };
+    case undefined:
+      return {
+        heading: SETUP_ESTIMATE.heading,
+        expenditureSubtitle: SETUP_ESTIMATE.expenditure.caption,
+        accuracyLine: ACCURACY_LINE_WITH_CHECKIN,
+      };
+  }
+}
 
 /**
  * The tip under the settling counts when older weigh-ins make the date that completes the cover earlier than the

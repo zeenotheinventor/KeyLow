@@ -119,6 +119,60 @@ describe("the Targets page", () => {
   });
 });
 
+describe("Estimate my targets on the Targets page", () => {
+  const estimateLink = () => screen.getByRole("link", { name: /^Estimate my targets/ });
+
+  it("should be a row that opens the wizard in recalculate mode, with the Calculator row's words", () => {
+    render(<TargetsPage />);
+
+    expect(estimateLink().getAttribute("href")).toBe("/setup?mode=recalculate");
+    expect(screen.getByText("From a few questions about you and your goal")).toBeTruthy();
+  });
+
+  it("should come first under the heading, before the form", () => {
+    render(<TargetsPage />);
+
+    const heading = screen.getByRole("heading", { level: 1, name: "Targets" });
+    const form = screen.getByRole("button", { name: "Save" });
+    expect(
+      heading.compareDocumentPosition(estimateLink()) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      estimateLink().compareDocumentPosition(form) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it("should come first while a programme runs, before the Programme row", () => {
+    useTargets.mockReturnValue({ data: GOLDEN_PROGRAMME, isError: false, refetch });
+    useProgramSummary.mockReturnValue(SUMMARY_WITH_SINCE);
+
+    render(<TargetsPage />);
+
+    const programmeRow = screen.getByRole("link", { name: /^Programme/ });
+    expect(
+      estimateLink().compareDocumentPosition(programmeRow) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it("should stay on the page offline, since answering the questions needs no connection", () => {
+    act(() => {
+      onlineManager.setOnline(false);
+    });
+
+    render(<TargetsPage />);
+
+    expect(estimateLink().getAttribute("href")).toBe("/setup?mode=recalculate");
+  });
+
+  it("should not be drawn while the targets load or when they could not be read", () => {
+    useTargets.mockReturnValue({ data: undefined, isError: true, refetch });
+
+    render(<TargetsPage />);
+
+    expect(screen.queryByRole("link", { name: /^Estimate my targets/ })).toBeNull();
+  });
+});
+
 describe("the Targets page while a programme runs", () => {
   beforeEach(() => {
     useTargets.mockReturnValue({ data: GOLDEN_PROGRAMME, isError: false, refetch });

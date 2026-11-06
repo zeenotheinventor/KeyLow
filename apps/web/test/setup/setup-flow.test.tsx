@@ -423,8 +423,8 @@ describe("a read that fails and then succeeds", () => {
   });
 });
 
-describe("the end of the built steps", () => {
-  it("should keep Continue off on the last question, since the estimate is not built yet", async () => {
+describe("the last question", () => {
+  it("should turn Continue on and open the estimate, now that it is built", async () => {
     setupBackend.profile = { ...savedProfile };
     setupBackend.program = {
       id: "33333333-3333-4333-8333-333333333333",
@@ -443,7 +443,9 @@ describe("the end of the built steps", () => {
     await waitFor(() => {
       expect(router.replace).not.toHaveBeenCalled();
     });
-    expect((await continueButton()).disabled).toBe(true);
+    await userEvent.click(await continueButton());
+
+    expect(router.push).toHaveBeenCalledWith("/setup/estimate?mode=recalculate");
   });
 });
 

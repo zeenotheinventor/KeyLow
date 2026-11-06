@@ -26,6 +26,7 @@ export function MacroTile({
   share,
   variant = "detail",
   isBlank = false,
+  className,
 }: MacroTileProps) {
   const isAmount = variant !== "detail";
   const isRow = variant === "row";
@@ -40,6 +41,7 @@ export function MacroTile({
               !isRow && "min-[700px]:flex-col min-[700px]:items-stretch min-[700px]:gap-1",
             )
           : "flex flex-col gap-1 py-[10px]",
+        className,
       )}
     >
       <dt

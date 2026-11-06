@@ -12,6 +12,8 @@ export type MacroTileProps = {
    * row at every width, for a card in a narrow column such as the recipe editor's.
    */
   variant?: "detail" | "amount" | "row";
+  /** Added to the tile's own classes, such as an arrival animation. A tile has no wrapper to carry one. */
+  className?: string;
   /** There is no valid amount, so the tile writes a dash in place of its value. */
   isBlank?: boolean;
 };

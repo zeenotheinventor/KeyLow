@@ -1,6 +1,6 @@
 "use client";
 
-import { keys, useEditProgram } from "@keylow/api-client";
+import { useEditProgram } from "@keylow/api-client";
 import { PROGRAM_EDIT, TARGETS_SAVED_TOAST, setupGoalNoteFor } from "@keylow/core/copy";
 import { changesOf, chooseGoal, initialDraftOf } from "@keylow/core/program";
 import { goalsAllowed, isRateGoal } from "@keylow/core/setup";
@@ -22,6 +22,7 @@ import { ProteinOptions } from "@/components/setup/SetupOptions/ProteinOptions";
 import { RateOptions } from "@/components/setup/SetupOptions/RateOptions";
 import { Banner } from "@/components/ui/Banner";
 import { useToast } from "@/components/ui/Toast";
+import { dropStaleTargetReads } from "@/lib/dropStaleTargetReads";
 import { useElementSize } from "@/lib/useElementSize";
 import { useIsOnline } from "@/lib/useIsOnline";
 import { vars } from "@/lib/vars";
@@ -131,8 +132,7 @@ export function ProgramEditForm({
     // figures from before it, and the refresh `useEditProgram` starts is not waited for (a refetch pauses
     // offline, and the page must never hang on one). So they are dropped, and the next screen reads fresh and
     // shows its loading state until the new figures land, never the old ones under "Targets saved".
-    queryClient.removeQueries({ queryKey: keys.profiles.targets });
-    queryClient.removeQueries({ queryKey: keys.program.all });
+    dropStaleTargetReads(queryClient);
     // The provider sits above every page, so the toast tells a person who left by Back that it saved.
     toast.show({ message: TARGETS_SAVED_TOAST, tone: "success", icon: Check });
     // The way on is only for a page that is still here.

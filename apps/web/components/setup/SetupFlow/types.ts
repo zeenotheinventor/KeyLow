@@ -1,4 +1,5 @@
 import type { SetupReadFailure } from "../useSetupRead";
+import type { SetupState } from "@keylow/api-client";
 import type { SetupWizardAction, SetupWizardState } from "@keylow/core/setup";
 import type { WeightDisplayUnit } from "@keylow/core/weight";
 import type { Dispatch, ReactNode } from "react";
@@ -17,6 +18,11 @@ export type SetupFlowValue = Readonly<{
    * none to come, so a recalculation is not sent back to the first step before its answers arrive.
    */
   isAddressJudgeable: boolean;
+  /**
+   * The saved setup as read, or undefined while it is not known: pending, paused offline or failed. A save is
+   * held on this being there, because without it the stored weight unit and the latest weigh-in are unknown.
+   */
+  setupState: SetupState | undefined;
   /** The saved answers could not be read. The steps stay usable, with a banner and Try again. */
   readFailure: SetupReadFailure | undefined;
 }>;

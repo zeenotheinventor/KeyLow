@@ -1069,6 +1069,21 @@ describe("the words for reading the saved answers", () => {
   });
 });
 
+describe("the words for the estimate's two holds on the web", () => {
+  it("should say the saved answers are needed before saving, and that offline the answers stay", () => {
+    expect(SETUP_ESTIMATE.readFailedBody).toBe(
+      "Couldn't load your saved answers. Ki-Lo needs them before it can save.",
+    );
+    expect(SETUP_ESTIMATE.offlineBody).toBe(
+      "Your answers stay on this page. Saving needs a connection.",
+    );
+  });
+
+  it("should not talk of the diary in the offline sentence", () => {
+    expect(SETUP_ESTIMATE.offlineBody).not.toMatch(/diary/i);
+  });
+});
+
 describe("exhaustiveness", () => {
   it("should have a title for every setup step", () => {
     expect(Object.keys(SETUP_GROUP_TITLES).sort()).toEqual([...SETUP_STEPS].sort());

@@ -1,10 +1,17 @@
 import * as copy from "../../../src/copy";
 
+import type { EstimateMeasurement } from "../../../src/setup";
+
 // Every function `src/copy/program.ts` exports, called with representative arguments. The voice test fails when
 // a function has no row, so no sentence escapes the sweep.
 const settlingBand = { muKcal: 2413.125, lowKcal: 1950, highKcal: 2880 };
 const goldenBand = { muKcal: 2579.54, lowKcal: 2430, highKcal: 2730 };
 const counts = { spanDays: 9, weighDays: 5, completeDays: 9 };
+const estimateMeasurements: (EstimateMeasurement | undefined)[] = [
+  undefined,
+  { kind: "measured", measuredOn: "2026-10-23" },
+  { kind: "carried-forward" },
+];
 
 export const samples: Record<string, () => string[]> = {
   describeCountOfTarget: () => [
@@ -117,6 +124,11 @@ export const samples: Record<string, () => string[]> = {
     }),
   ],
   describeEditFootnote: () => [copy.describeEditFootnote(2579.54)],
+  describeEstimateWords: () =>
+    estimateMeasurements.flatMap((measurement) => {
+      const words = copy.describeEstimateWords(measurement);
+      return [words.heading, words.expenditureSubtitle, words.accuracyLine];
+    }),
   describeTargetsScreenSince: () => [copy.describeTargetsScreenSince("2026-10-23")],
   describeMeasuredAccuracyLine: () => [copy.describeMeasuredAccuracyLine("2026-10-23")],
 };

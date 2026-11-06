@@ -8,13 +8,12 @@ import { useMemo } from "react";
 import { regionOfLanguage } from "./regionOfLanguage";
 import { SetupFlowContext } from "./setupFlowContext";
 import { SetupScreenSkeleton } from "../SetupScreenSkeleton";
+import { timeZoneOrDevice } from "../timeZoneOrDevice";
 import { useSetupRead } from "../useSetupRead";
 
 import type { SetupFlowProps } from "./types";
 
 import { useNow } from "@/lib/useNow";
-
-const deviceTimeZone = (): string => Intl.DateTimeFormat().resolvedOptions().timeZone;
 
 /**
  * Holds the answers for every address under /setup. The reducer lives here, above the skeleton and the
@@ -24,7 +23,7 @@ const deviceTimeZone = (): string => Intl.DateTimeFormat().resolvedOptions().tim
  */
 export function SetupFlow({ children }: SetupFlowProps) {
   const read = useSetupRead();
-  const today = toLocalDate(useNow(), deviceTimeZone());
+  const today = toLocalDate(useNow(), timeZoneOrDevice());
   const regionCode = useMemo(
     () => (typeof navigator === "undefined" ? undefined : regionOfLanguage(navigator.language)),
     [],
@@ -42,6 +41,7 @@ export function SetupFlow({ children }: SetupFlowProps) {
       // Paused offline or failed with nothing to come, or the answers have joined.
       isAddressJudgeable:
         state.hasLoadedSavedAnswers || (read.hasOpened && read.setupState === undefined),
+      setupState: read.setupState,
       readFailure: read.failure,
     }),
     [state, dispatch, today, read.setupState, read.hasOpened, read.failure, regionCode],

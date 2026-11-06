@@ -60,7 +60,12 @@ export { defaultUnitsForRegion, entryWeightUnit, heightUnitFor, weightUnitToSave
 export type { DefaultUnits } from "./units";
 export { bindingCalorieClamp } from "./bindingClamp";
 export type { CalorieClampCode } from "./bindingClamp";
-export { measuredEstimateOf } from "./measuredEstimate";
+export {
+  ESTIMATE_HISTORY_WEEKS,
+  fallbackWeightKgOf,
+  isWaitingForProgramme,
+  measuredEstimateOf,
+} from "./measuredEstimate";
 export type {
   EstimateMeasurement,
   EstimateSnapshot,

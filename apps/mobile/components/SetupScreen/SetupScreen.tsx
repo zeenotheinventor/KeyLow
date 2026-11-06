@@ -18,8 +18,11 @@ import {
 import {
   allowedGoalsOf,
   entryWeightUnit,
+  ESTIMATE_HISTORY_WEEKS,
+  fallbackWeightKgOf,
   isRateGoal,
   isStepComplete,
+  isWaitingForProgramme,
   measuredEstimateOf,
   previousStep,
   setupAnswersSchemaFor,
@@ -48,11 +51,6 @@ import { useReadsEnabled } from "../../lib/useReadsEnabled";
 import { Banner, useToast } from "../ui";
 
 import type { SetupScreenProps } from "./types";
-
-// How far back the expenditure history is read, a year of weekly check-ins. The newest snapshot decides whether
-// the recompute keeps its mean (28 days at most), and the same list holds the newest check-in that measured,
-// which can be much older.
-const EXPENDITURE_HISTORY_WEEKS = 52;
 
 /**
  * The setup wizard. Steps and their order come from core, the answers are kept in a reducer so Back
@@ -88,12 +86,15 @@ export function SetupScreen({ mode }: SetupScreenProps) {
   // A new account has no programme, and its first run reads none of it.
   const areProgrammeReadsEnabled = isReadEnabled && isRecalculating;
   const expenditureHistory = useExpenditureHistory({
-    weeks: EXPENDITURE_HISTORY_WEEKS,
+    weeks: ESTIMATE_HISTORY_WEEKS,
     enabled: areProgrammeReadsEnabled,
   });
   const weightTrend = useWeightTrend({ enabled: areProgrammeReadsEnabled });
-  const isWaitingForProgramme =
-    isRecalculating && (expenditureHistory.isPending || weightTrend.isLoading);
+  const isProgrammeWaited = isWaitingForProgramme({
+    isRecalculating,
+    isHistoryPending: expenditureHistory.isPending,
+    isTrendLoading: weightTrend.isLoading,
+  });
   // The first run's one way out of step 1. A recalculation has Close, and later steps have Back.
   const isFirstRunEscapeShown = !isRecalculating && !hasPreviousStep;
   // Busy from the press until the screen has gone, so the moment between the save settling and the
@@ -183,7 +184,10 @@ export function SetupScreen({ mode }: SetupScreenProps) {
       today: estimateToday,
       history,
       trendPoints: weightTrend.points,
-      fallbackWeightKg: setupState.data?.latestWeighIn?.weightKg ?? estimate.answers.weightKg,
+      fallbackWeightKg: fallbackWeightKgOf(
+        setupState.data?.latestWeighIn?.weightKg,
+        estimate.answers,
+      ),
     });
   }, [
     estimate,
@@ -350,7 +354,7 @@ export function SetupScreen({ mode }: SetupScreenProps) {
         answers={(measuredEstimate ?? estimate).answers}
         isOffline={!isOnline}
         isSaving={isSaving}
-        isWaitingForProgramme={isWaitingForProgramme}
+        isWaitingForProgramme={isProgrammeWaited}
         measurement={measuredEstimate?.measurement}
         mode={mode}
         plan={(measuredEstimate ?? estimate).plan}

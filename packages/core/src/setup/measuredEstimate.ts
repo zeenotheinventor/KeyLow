@@ -49,6 +49,35 @@ export type MeasuredEstimate = Readonly<{
   measurement: EstimateMeasurement;
 }>;
 
+/**
+ * How far back the expenditure history is read for the estimate, a year of weekly check-ins. The newest snapshot
+ * decides whether the recompute keeps its mean (28 days at most), and the same list holds the newest check-in
+ * that measured, which can be much older.
+ */
+export const ESTIMATE_HISTORY_WEEKS = 52;
+
+/**
+ * Whether a recalculation is still reading the programme it keeps the expenditure of, so that Start waits: the
+ * figures on the screen are not yet the ones the save will make. A first run reads none of it.
+ */
+export function isWaitingForProgramme({
+  isRecalculating,
+  isHistoryPending,
+  isTrendLoading,
+}: Readonly<{
+  isRecalculating: boolean;
+  isHistoryPending: boolean;
+  isTrendLoading: boolean;
+}>): boolean {
+  return isRecalculating && (isHistoryPending || isTrendLoading);
+}
+
+/** The weight `measuredEstimateOf` falls back to: the latest weigh-in's, or the answers' own when there is none. */
+export const fallbackWeightKgOf = (
+  latestWeighInKg: number | null | undefined,
+  answers: SetupAnswers,
+): number => latestWeighInKg ?? answers.weightKg;
+
 // No day of week offsets exist in v1, and no screen sets them (ADR 0002, Amendment 2).
 const NO_DAY_OF_WEEK_OFFSETS = [0, 0, 0, 0, 0, 0, 0] as const;
 

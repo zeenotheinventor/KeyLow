@@ -26,6 +26,8 @@ export function SetupShell({
   onBack,
   onClose,
   continueAction,
+  continueButtonRef,
+  isLeavingInert = false,
   notice,
   children,
 }: SetupShellProps) {
@@ -60,22 +62,30 @@ export function SetupShell({
         <h1 ref={titleRef} id={titleId} tabIndex={-1} className="mt-2 text-h1 outline-none">
           {question}
         </h1>
-        <p className="text-body text-text-secondary">{helper}</p>
+        {helper === undefined ? null : <p className="text-body text-text-secondary">{helper}</p>}
         {children}
         {notice}
         <div className="mt-2 flex justify-end gap-2">
           {onClose === undefined ? null : (
-            <Button variant="ghost" onClick={onClose}>
+            <Button variant="ghost" disabled={isLeavingInert} onClick={onClose}>
               {SETUP_SHELL.closeName}
             </Button>
           )}
           {onBack === undefined ? null : (
-            <Button variant="secondary" onClick={onBack}>
+            <Button variant="secondary" disabled={isLeavingInert} onClick={onBack}>
               {SETUP_SHELL.backName}
             </Button>
           )}
-          <Button disabled={!continueAction.isEnabled} onClick={continueAction.onPress}>
-            {SETUP_SHELL.continueLabel}
+          <Button
+            ref={continueButtonRef}
+            disabled={!continueAction.isEnabled}
+            loading={continueAction.isLoading ?? false}
+            {...(continueAction.loadingLabel === undefined
+              ? {}
+              : { loadingLabel: continueAction.loadingLabel })}
+            onClick={continueAction.onPress}
+          >
+            {continueAction.label ?? SETUP_SHELL.continueLabel}
           </Button>
         </div>
       </section>

@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { measuredEstimateOf, startingPlan } from "../../src/setup";
+import {
+  ESTIMATE_HISTORY_WEEKS,
+  fallbackWeightKgOf,
+  isWaitingForProgramme,
+  measuredEstimateOf,
+  startingPlan,
+} from "../../src/setup";
 
 import type { EstimateSnapshot, MeasuredEstimateInput, SetupAnswers } from "../../src/setup";
 
@@ -270,5 +276,48 @@ describe("measuredEstimateOf", () => {
 
       expect(result?.answers.weightKg).toBe(78);
     });
+  });
+});
+
+describe("the reads a recalculation keeps the measured expenditure from", () => {
+  it("should read a year of weekly check-ins", () => {
+    expect(ESTIMATE_HISTORY_WEEKS).toBe(52);
+  });
+
+  it("should wait while the history is pending or the trend is loading, in a recalculation only", () => {
+    expect(
+      isWaitingForProgramme({
+        isRecalculating: true,
+        isHistoryPending: true,
+        isTrendLoading: false,
+      }),
+    ).toBe(true);
+    expect(
+      isWaitingForProgramme({
+        isRecalculating: true,
+        isHistoryPending: false,
+        isTrendLoading: true,
+      }),
+    ).toBe(true);
+    expect(
+      isWaitingForProgramme({
+        isRecalculating: true,
+        isHistoryPending: false,
+        isTrendLoading: false,
+      }),
+    ).toBe(false);
+    expect(
+      isWaitingForProgramme({
+        isRecalculating: false,
+        isHistoryPending: true,
+        isTrendLoading: true,
+      }),
+    ).toBe(false);
+  });
+
+  it("should fall back to the latest weigh-in's weight, and to the answers' own when there is none", () => {
+    expect(fallbackWeightKgOf(79.5, answers)).toBe(79.5);
+    expect(fallbackWeightKgOf(null, answers)).toBe(80);
+    expect(fallbackWeightKgOf(undefined, answers)).toBe(80);
   });
 });
