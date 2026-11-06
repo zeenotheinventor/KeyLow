@@ -14,12 +14,13 @@ export function RecipePortionStep({
   draft,
   favouriteHeart,
   onBack,
+  backLabel,
   amountRef,
 }: RecipePortionStepProps) {
   return (
     <>
       <div className="flex items-center justify-between gap-3">
-        <BackToResults onClick={onBack} />
+        <BackToResults onClick={onBack} label={backLabel} />
         {favouriteHeart !== undefined && <IconButton {...favouriteHeart} />}
       </div>
       <RecipeAmountFields recipe={draft.recipe} draft={draft} amountRef={amountRef} />

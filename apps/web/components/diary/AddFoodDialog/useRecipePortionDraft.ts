@@ -5,14 +5,14 @@ import {
 } from "@keylow/core/diary";
 import { useState } from "react";
 
-import type { RecipeSummary } from "@keylow/api-client";
-import type { RecipeEntryUnit, TypedRecipeAmount } from "@keylow/core/diary";
+import type { RecipeAmount, RecipeEntryUnit, TypedRecipeAmount } from "@keylow/core/diary";
+import type { RecipeOfSnapshot } from "@keylow/core/recipes";
 
 type Edits = { recipeId: string; quantityText?: string; unit?: RecipeEntryUnit };
 
 /** The amount step of a recipe: what the person has typed and what that comes to. */
 export type RecipePortionDraft = {
-  recipe: RecipeSummary;
+  recipe: RecipeOfSnapshot;
   /** The amount in the field. */
   quantityText: string;
   /** Servings, or grams of cooked weight. */
@@ -26,12 +26,14 @@ export type RecipePortionDraft = {
 
 /**
  * The recipe amount step's state for the recipe a row opened: the amount and the unit the person has typed,
- * which start at one serving and start again for another recipe, and what they come to (core's
+ * which start at one serving (or at the plate row's amount, when a row is being edited) and start again for
+ * another recipe, and what they come to (core's
  * `previewTypedRecipeAmount`, so the hero is what the entry stores). It writes nothing: Add to plate puts the
  * amount on the plate. Returns undefined while no recipe is chosen.
  */
 export function useRecipePortionDraft(
-  recipe: RecipeSummary | undefined,
+  recipe: RecipeOfSnapshot | undefined,
+  start: RecipeAmount = recipeAmountStart(),
 ): RecipePortionDraft | undefined {
   const [edits, setEdits] = useState<Edits | undefined>(undefined);
 
@@ -39,7 +41,6 @@ export function useRecipePortionDraft(
     return undefined;
   }
 
-  const start = recipeAmountStart();
   const ownEdits = edits?.recipeId === recipe.id ? edits : undefined;
   const quantityText = ownEdits?.quantityText ?? String(start.quantity);
   const unit = ownEdits?.unit ?? start.unit;

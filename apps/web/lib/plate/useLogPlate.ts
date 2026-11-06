@@ -13,8 +13,19 @@ import { usePlate } from "./usePlate";
 import { useToast } from "@/components/ui/Toast";
 import { useIsOnline } from "@/lib/useIsOnline";
 
-/** `wasIgnored` is set when nothing was tried: a log was already running, or the plate could not be logged yet. */
-export type LogPlateResult = { ok: true } | { ok: false; wasIgnored?: true };
+/**
+ * `wasIgnored` is set when nothing was tried: a log was already running, or the plate could not be logged yet.
+ * `refusal` is the sentence for a log that failed, which names no food and no amount.
+ */
+export type LogPlateResult =
+  | { ok: true }
+  | { ok: false; wasIgnored: true }
+  | { ok: false; wasIgnored?: undefined; refusal: string };
+
+export type LogPlateOptions = {
+  /** Say a failure in a toast, as the default. Set to false where the caller draws the sentence itself, such as Your plate's banner. */
+  showsFailureToast?: boolean;
+};
 
 // What the toast says when the log failed: the food is gone, the food needs review, or the write did not go through.
 function refusalOf(error: unknown): string {
@@ -33,13 +44,14 @@ function refusalOf(error: unknown): string {
  * all-or-nothing write at the plate's time on the dialog's day, and on success shows the logged toast and calls
  * `onLogged`, which closes the dialog. A failed log writes nothing, keeps the plate and says so in a toast: a
  * food that is gone says so, and one that needs review says that, and any other failure says it was not logged.
+ * Where the caller draws the sentence itself (`showsFailureToast: false`) the toast is left out and `refusal` has the words.
  * It never throws, and a call that did nothing because a log was running, or the plate could not be logged,
  * says so with `wasIgnored` and needs no sentence. Nothing from the plate goes into an error, a log or a breadcrumb.
  */
 export function useLogPlate(
   day: string | undefined,
   onLogged: () => void,
-): { logPlate: () => Promise<LogPlateResult>; canLog: boolean } {
+): { logPlate: (options?: LogPlateOptions) => Promise<LogPlateResult>; canLog: boolean } {
   const { items, time, isLogging, startLogging, finishLogging } = usePlate();
   const toast = useToast();
   const isOnline = useIsOnline();
@@ -49,7 +61,9 @@ export function useLogPlate(
   const timeZone = profileTimeZone.data === undefined ? undefined : (profileTimeZone.data ?? "UTC");
   const canLog = canLogPlate(items) && isOnline && timeZone !== undefined && !isLogging;
 
-  async function logPlate(): Promise<LogPlateResult> {
+  async function logPlate({
+    showsFailureToast = true,
+  }: LogPlateOptions = {}): Promise<LogPlateResult> {
     if (!canLog || !startLogging()) {
       return { ok: false, wasIgnored: true };
     }
@@ -61,9 +75,12 @@ export function useLogPlate(
       // The failure is not kept: it can quote a food or an amount, which is health data. A food that is gone, or
       // that needs review, is not a connection problem, so it does not say to check the connection.
       finishLogging();
-      toast.show({ message: refusalOf(error), tone: "danger", icon: CircleAlert });
+      const refusal = refusalOf(error);
+      if (showsFailureToast) {
+        toast.show({ message: refusal, tone: "danger", icon: CircleAlert });
+      }
 
-      return { ok: false };
+      return { ok: false, refusal };
     }
     // The plate is logged, so the log stays held: the dialog is closing, and a second press in that time
     // would log the plate again.

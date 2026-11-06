@@ -1,5 +1,6 @@
 import { controlHeight, touchTarget } from "@keylow/tokens";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { createRef } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { compileUtilities } from "./compileUtilities";
@@ -12,6 +13,13 @@ afterEach(() => {
 });
 
 describe("PlateChip", () => {
+  it("should reach its button through buttonRef", () => {
+    const buttonRef = createRef<HTMLButtonElement>();
+    render(<PlateChip count={2} buttonRef={buttonRef} onPress={() => undefined} />);
+
+    expect(buttonRef.current).toBe(screen.getByRole("button", { name: "Your plate, 2 foods" }));
+  });
+
   it("should be a button named Your plate and the count, for one food", () => {
     render(<PlateChip count={1} onPress={() => undefined} />);
 

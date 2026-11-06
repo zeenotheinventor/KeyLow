@@ -11,6 +11,7 @@ export { plateItemName } from "./plateItemName";
 export { plateLoggedAt } from "./plateLoggedAt";
 export type { PlateLoggedAtInput } from "./plateLoggedAt";
 export { plateFoodAmount } from "./plateFoodAmount";
+export { plateFoodRowStart, plateRecipeOfRow, plateRecipeRowStart } from "./plateRowStart";
 export {
   addToPlate,
   clearPlate,

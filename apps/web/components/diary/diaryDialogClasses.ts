@@ -8,3 +8,7 @@ export const DIARY_DIALOG_CLASSES =
 // the bottom of the window instead of 64, as the web-diary recipe boards draw it, to keep the Time field in view.
 export const DIARY_RECIPE_AMOUNT_DIALOG_CLASSES =
   "min-[700px]:h-[calc(100%-theme(spacing.8)-theme(spacing.8))]";
+
+// While Your plate is open beside the results, from 1024 px, the dialog grows from 560 to 960 wide, centred,
+// as the plate boards draw it. It is used only while the panel is open, and never on the amount step.
+export const DIARY_PLATE_COLUMN_DIALOG_CLASSES = "min-[1024px]:w-[960px]";

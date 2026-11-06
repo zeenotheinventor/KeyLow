@@ -1,7 +1,7 @@
 import { keys, useRecipe } from "@keylow/api-client";
 import { describeAddedToPlate } from "@keylow/core/copy";
-import { canLogRecipe, usualQuantityOfUnit } from "@keylow/core/diary";
-import { isPlateItemValid, plateItemOfRecipe } from "@keylow/core/plate";
+import { canLogRecipe } from "@keylow/core/diary";
+import { plateItemOfRecipe, plateRecipeRowStart } from "@keylow/core/plate";
 import { isRecipeId } from "@keylow/core/recipes";
 import { useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -107,12 +107,7 @@ export default function RecipeAmountRoute() {
     return (
       <FavouriteRecipePortionPicker
         // A row with no valid amount keeps its unit and starts at that unit's usual amount (1 serving, or 100 g).
-        amount={{
-          quantity: isPlateItemValid(plateRow)
-            ? plateRow.quantity
-            : usualQuantityOfUnit(plateRow.unit),
-          unit: plateRow.unit,
-        }}
+        amount={plateRecipeRowStart(plateRow)}
         mode="edit-plate-recipe"
         recipe={recipe}
         onBack={goBack}

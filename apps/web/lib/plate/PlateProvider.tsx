@@ -31,6 +31,9 @@ export function PlateProvider({ children, initialTime }: PlateProviderProps) {
   const setQuantity = useCallback((key: string, text: string) => {
     dispatch({ type: "setQuantity", key, text });
   }, []);
+  const replace = useCallback((key: string, build: PlateItemBuilder) => {
+    dispatch({ type: "replace", key, item: build(key) });
+  }, []);
   const remove = useCallback((key: string) => {
     dispatch({ type: "remove", key });
   }, []);
@@ -65,6 +68,7 @@ export function PlateProvider({ children, initialTime }: PlateProviderProps) {
       totals: plateTotals(items),
       add,
       setQuantity,
+      replace,
       remove,
       clear,
       restore,
@@ -80,6 +84,7 @@ export function PlateProvider({ children, initialTime }: PlateProviderProps) {
       isLogging,
       add,
       setQuantity,
+      replace,
       remove,
       clear,
       restore,

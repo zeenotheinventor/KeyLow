@@ -13,6 +13,8 @@ export type PlateContextValue = {
   add: (build: PlateItemBuilder) => void;
   /** Sets what a row's amount field holds. */
   setQuantity: (key: string, text: string) => void;
+  /** Swaps a row for another item in place, keeping its key and its place. It never merges. */
+  replace: (key: string, build: PlateItemBuilder) => void;
   remove: (key: string) => void;
   /** Empties the plate, keeping what was on it for `restore`. */
   clear: () => void;

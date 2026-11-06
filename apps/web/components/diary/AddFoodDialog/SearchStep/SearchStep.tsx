@@ -261,7 +261,7 @@ function SearchStepView(props: SearchStepProps & RecipeResults) {
             ? { barcodeButton: props.barcodeButton }
             : {})}
         />
-        {props.mode !== "ingredient" && (
+        {props.mode !== "ingredient" && props.hidesTime !== true && (
           <TimeField
             compact
             value={props.time}
