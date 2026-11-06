@@ -25,6 +25,10 @@ vi.mock("@/components/monitoring/SentryUser", () => ({
 
 vi.mock("@/app/(dashboard)/DashboardNav", () => ({ DashboardNav: () => <nav /> }));
 
+vi.mock("@/app/(dashboard)/SessionBar", () => ({
+  SessionBarFrame: ({ children }: { children: React.ReactNode }) => children,
+}));
+
 vi.mock("@/app/(dashboard)/Providers", () => ({
   Providers: ({ children }: { children: React.ReactNode }) => children,
 }));

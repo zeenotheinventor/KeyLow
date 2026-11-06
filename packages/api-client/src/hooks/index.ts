@@ -104,6 +104,8 @@ export type {
   TrainWeekView,
 } from "./trainHomeTypes";
 export { useActiveSession } from "./useActiveSession";
+export { useSessionBarView } from "./useSessionBarView";
+export type { SessionBarView } from "./useSessionBarView";
 export { useHasLoggedSession } from "./useHasLoggedSession";
 export { useLastPerformance } from "./useLastPerformance";
 export type { UseLastPerformanceOptions } from "./useLastPerformance";
