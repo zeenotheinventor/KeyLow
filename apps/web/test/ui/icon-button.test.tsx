@@ -1,6 +1,6 @@
 import { controlHeight, touchTarget } from "@keylow/tokens";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { ArrowDown, Columns2, Pencil, X } from "lucide-react";
+import { ArrowDown, Columns2, Heart, Pencil, X } from "lucide-react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { compileUtilities, reducedMotionRules } from "./compileUtilities";
@@ -168,6 +168,47 @@ describe("IconButton", () => {
       expect(screen.getByRole("button", { name: "Remove" }).className).not.toContain("text-danger");
     });
   });
+  describe("the filled look, for a choice that is on", () => {
+    it("should draw the glyph filled in the accent colour, and not write text in it", async () => {
+      render(<IconButton icon={Heart} label="Remove from favourites" isFilled />);
+      const { className } = screen.getByRole("button", { name: "Remove from favourites" });
+      const css = await compileUtilities(className);
+
+      expect(className).toContain("[&_svg]:fill-accent");
+      expect(className).toContain("[&_svg]:stroke-accent");
+      expect(className).not.toMatch(/(^|\s)text-accent/);
+      expect(css).toMatch(/svg\s*\{\s*fill:\s*rgb\(var\(--kl-accent\)/);
+    });
+
+    it("should draw an outline in the secondary colour when not asked to fill", () => {
+      render(<IconButton icon={Heart} label="Add to favourites" />);
+      const { className } = screen.getByRole("button", { name: "Add to favourites" });
+
+      expect(className).toContain("text-text-secondary");
+      expect(className).not.toContain("fill-accent");
+    });
+
+    it("should leave aria-pressed to the caller, because the name already says the state", () => {
+      render(<IconButton icon={Heart} label="Remove from favourites" isFilled />);
+
+      expect(
+        screen.getByRole("button", { name: "Remove from favourites" }).hasAttribute("aria-pressed"),
+      ).toBe(false);
+    });
+  });
+
+  describe("aria-disabled, for a button that stays in the tab order", () => {
+    it("should dim it to 40 percent and ignore the pointer, and still be focusable", () => {
+      render(<IconButton icon={Heart} label="Add to favourites" aria-disabled />);
+      const button = screen.getByRole("button", { name: "Add to favourites" });
+
+      expect(button.className).toContain("aria-disabled:opacity-40");
+      expect(button.className).toContain("aria-disabled:pointer-events-none");
+      button.focus();
+      expect(document.activeElement).toBe(button);
+    });
+  });
+
   describe("the size and the selected look, which a caller asks for", () => {
     it("should look as it did before when asked for neither", () => {
       render(<IconButton icon={Pencil} label="Edit" />);

@@ -1,4 +1,4 @@
-import { Archive, ArrowDown, ArrowUp, Columns2, Copy, Pencil, X } from "lucide-react";
+import { Archive, ArrowDown, ArrowUp, Columns2, Copy, Heart, Pencil, X } from "lucide-react";
 import { userEvent } from "storybook/test";
 
 import { IconButton } from "./IconButton";
@@ -99,4 +99,17 @@ export const Selected: Story = { args: { isSelected: true, "aria-pressed": true 
 
 export const CardDisabled: Story = {
   args: { icon: Columns2, label: "Show side by side", size: "card", disabled: true },
+};
+
+// A favourite's heart: an outline that offers to add, and the glyph filled in the accent colour once it is a
+// favourite. The name says the state, so neither sets `aria-pressed`. Offline the heart is `aria-disabled`, so
+// it is dimmed, takes no pointer and stays in the tab order.
+export const FavouriteOff: Story = { args: { icon: Heart, label: "Add to favourites" } };
+
+export const FavouriteOn: Story = {
+  args: { icon: Heart, label: "Remove from favourites", isFilled: true },
+};
+
+export const FavouriteDisabled: Story = {
+  args: { icon: Heart, label: "Add to favourites", "aria-disabled": true },
 };

@@ -18,10 +18,12 @@ import { PortionFields } from "@/components/diary/PortionFields";
 import { Banner } from "@/components/ui/Banner";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
+import { IconButton } from "@/components/ui/IconButton";
 import { Skeleton } from "@/components/ui/Skeleton";
 
 /**
- * The add dialog's second step, for the food a row opened: a Results link, then what the chosen amount
+ * The add dialog's second step, for the food a row opened: a Results link with the favourite heart at the
+ * other end of its row, then what the chosen amount
  * comes to, the amount, its unit and the Time field (an ingredient has none). A food that has to be
  * reviewed first says so, with a way to copy it to the person's own foods, and cannot be added from here.
  */
@@ -30,6 +32,7 @@ export function PortionStep({
   hasSaveError = false,
   opensReviewInNewTab = false,
   note,
+  favouriteHeart,
   onBack,
   amountRef,
   ...timeProps
@@ -62,7 +65,10 @@ export function PortionStep({
 
   return (
     <>
-      {back}
+      <div className="flex items-center justify-between gap-3">
+        {back}
+        {favouriteHeart !== undefined && <IconButton {...favouriteHeart} />}
+      </div>
       <PortionFields
         name={food.name}
         food={food}

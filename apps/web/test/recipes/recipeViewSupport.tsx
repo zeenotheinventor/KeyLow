@@ -3,6 +3,7 @@ import { computeRecipe } from "@keylow/core/recipes";
 import { createClient } from "@supabase/supabase-js";
 import { QueryClient } from "@tanstack/react-query";
 
+import { answerFavouriteRequest } from "../favourites/favouritesBackend";
 import { renderWithRouter } from "../ui/appRouter";
 
 import type { StoredRecipe } from "@keylow/core/recipes";
@@ -65,6 +66,10 @@ function fakeFetch(input: string | URL | Request, init?: RequestInit): Promise<R
   const { pathname, searchParams } = new URL(request.url);
   recipeViewBackend.requests.push({ method: request.method, path: pathname });
 
+  const favourite = answerFavouriteRequest(request);
+  if (favourite !== undefined) {
+    return favourite;
+  }
   if (!pathname.endsWith("/recipes") || request.method !== "GET") {
     return Promise.resolve(jsonResponse({ message: "unexpected request" }, 404));
   }

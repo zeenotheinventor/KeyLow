@@ -1,5 +1,9 @@
 import { FavouriteRuleError } from "@keylow/api-client";
-import { FAVOURITE_HEART, FAVOURITE_TOAST, GENERIC_ERROR } from "@keylow/core/copy";
+import {
+  describeFavouriteChange,
+  describeFavouriteFailure,
+  describeFavouriteHeart,
+} from "@keylow/core/copy";
 
 import { useToast } from "../../components/ui";
 import { useIsOnline } from "../connectivity";
@@ -36,19 +40,19 @@ export function useFavouriteHeart({
     toast.show(
       favourite
         ? {
-            message: FAVOURITE_TOAST.added,
+            message: describeFavouriteChange(true),
             icon: "Heart",
             isIconFilled: true,
             tone: "accent",
             topOffset: headerHeight,
           }
-        : { message: FAVOURITE_TOAST.removed, icon: "Heart", topOffset: headerHeight },
+        : { message: describeFavouriteChange(false), icon: "Heart", topOffset: headerHeight },
     );
     // The promise belongs to this tap, so the failure is told even when a later tap has replaced it or the
     // sheet has closed. The toast layer is above the screens, so it is still there to show it.
     toggle(favourite).catch((error: unknown) => {
       toast.show({
-        message: error instanceof FavouriteRuleError ? FAVOURITE_TOAST.limitReached : GENERIC_ERROR,
+        message: describeFavouriteFailure(error instanceof FavouriteRuleError),
         icon: "CircleAlert",
         tone: "danger",
         topOffset: headerHeight,
@@ -56,11 +60,13 @@ export function useFavouriteHeart({
     });
   }
 
+  const heart = describeFavouriteHeart({ isFavourite, isOnline, isRead });
+
   return {
     icon: "Heart",
-    label: isFavourite ? FAVOURITE_HEART.remove : FAVOURITE_HEART.add,
-    isFilled: isFavourite,
-    disabled: !isOnline || !isRead,
+    label: heart.label,
+    isFilled: heart.isFilled,
+    disabled: heart.isDisabled,
     onPress: press,
   };
 }

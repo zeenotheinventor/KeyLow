@@ -10,4 +10,7 @@ export const storyStates = [
   "CardSelected",
   "Selected",
   "CardDisabled",
+  "FavouriteOff",
+  "FavouriteOn",
+  "FavouriteDisabled",
 ];

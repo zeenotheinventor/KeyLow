@@ -414,9 +414,13 @@ describe("RecipeViewScreen", () => {
       fireEvent.click(resetButton());
 
       expect(recipeViewBackend.requests.every((request) => request.method === "GET")).toBe(true);
-      expect(recipeViewBackend.requests.every((request) => request.path.endsWith("/recipes"))).toBe(
-        true,
-      );
+      // The recipe, and the favourites the heart reads.
+      expect(
+        recipeViewBackend.requests.every(
+          (request) =>
+            request.path.endsWith("/recipes") || request.path.endsWith("/recipe_favourites"),
+        ),
+      ).toBe(true);
     });
   });
 

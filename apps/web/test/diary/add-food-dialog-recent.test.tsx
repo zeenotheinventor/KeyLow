@@ -4,6 +4,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testi
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { foodEntry } from "./support";
+import { noFavouriteHooks } from "../favourites/noFavouriteHooks";
 import { makeFood, makePortion } from "../foods/support";
 
 import type { LogFoodInput, LogEntry, RecentFood } from "@keylow/api-client";
@@ -68,6 +69,7 @@ const api = vi.hoisted((): Api => ({
 
 vi.mock("@keylow/api-client", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@keylow/api-client")>()),
+  ...noFavouriteHooks,
   useRefreshOutdatedOffFood: () => undefined,
   useProfileTimeZone: () => ({ data: "UTC" }),
   useRecentFoods: () => {

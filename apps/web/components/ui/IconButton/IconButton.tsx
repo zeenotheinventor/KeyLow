@@ -10,33 +10,42 @@ import type { IconButtonProps, IconButtonSize } from "./types";
 // overlap, where the later one answers. The fill is the button's own background, because the overlay tokens
 // are translucent.
 const baseClassName =
-  "relative inline-flex shrink-0 items-center justify-center outline-none transition-transform duration-instant ease-spring active:scale-press motion-reduce:active:scale-100 focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-focus-ring-offset disabled:pointer-events-none disabled:opacity-40 after:absolute [&_svg]:size-[18px] [&_svg]:pointer-events-none [&_svg]:shrink-0";
+  "relative inline-flex shrink-0 items-center justify-center outline-none transition-transform duration-instant ease-spring active:scale-press motion-reduce:active:scale-100 focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-focus-ring-offset disabled:pointer-events-none disabled:opacity-40 aria-disabled:pointer-events-none aria-disabled:opacity-40 after:absolute [&_svg]:size-[18px] [&_svg]:pointer-events-none [&_svg]:shrink-0";
 
 const sizeClassName: Record<IconButtonSize, string> = {
   default: "h-control-sm w-control-sm rounded-small after:-inset-1",
   card: "h-[40px] w-[40px] rounded-medium border after:-inset-[2px]",
 };
 
-// The look of the button at rest and when it is selected. A selected button swaps its fill and border for the
+// The look of the button at rest, when it is filled and when it is selected. A filled button is a choice that
+// is on, such as a favourite: its glyph is drawn in the accent colour, filled, and the button keeps its rest fill
+// and border. A selected button swaps its fill and border for the
 // accent's and its glyph for accent ink, and keeps them under the pointer, as the board draws it. The card
 // size has the border and the raised fill at rest, and the default size has neither.
-const lookClassName: Record<IconButtonSize, { rest: string; selected: string }> = {
+const lookClassName: Record<IconButtonSize, { rest: string; filled: string; selected: string }> = {
   default: {
     rest: "text-text-secondary hover:bg-hover-overlay active:bg-press-overlay",
+    filled:
+      "text-text-secondary hover:bg-hover-overlay active:bg-press-overlay [&_svg]:fill-accent [&_svg]:stroke-accent",
     selected: "border border-accent bg-accent-muted text-accent-ink",
   },
   card: {
     rest: "border-border bg-surface-raised text-text-primary hover:bg-hover-overlay active:bg-press-overlay",
+    filled:
+      "border-border bg-surface-raised text-text-secondary hover:bg-hover-overlay active:bg-press-overlay [&_svg]:fill-accent [&_svg]:stroke-accent",
     selected: "border-accent bg-accent-muted text-accent-ink",
   },
 };
 
 const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
-  ({ icon: Icon, label, size = "default", isSelected = false, ...props }, ref) => (
+  (
+    { icon: Icon, label, size = "default", isSelected = false, isFilled = false, ...props },
+    ref,
+  ) => (
     <button
       type="button"
       aria-label={label}
-      className={`${baseClassName} ${sizeClassName[size]} ${lookClassName[size][isSelected ? "selected" : "rest"]}`}
+      className={`${baseClassName} ${sizeClassName[size]} ${lookClassName[size][isSelected ? "selected" : isFilled ? "filled" : "rest"]}`}
       ref={ref}
       {...props}
     >

@@ -1,5 +1,6 @@
 import type { AmountDraft } from "../useAmountDraft";
 import type { PortionTimeProps } from "@/components/diary/PortionFields";
+import type { IconButtonProps } from "@/components/ui/IconButton";
 import type { Ref } from "react";
 
 export type PortionStepProps = PortionTimeProps & {
@@ -16,6 +17,8 @@ export type PortionStepProps = PortionTimeProps & {
    * for a food opened from Recent. Leave it out for a food opened from a search.
    */
   note?: string | undefined;
+  /** The favourite heart, at the other end of the Results link's row. Left out while the food is not loaded. */
+  favouriteHeart?: IconButtonProps | undefined;
   /** The Results link: back to the search, with what was typed still in it. */
   onBack: () => void;
   /** Reaches the amount field, so the cursor can start in it. */

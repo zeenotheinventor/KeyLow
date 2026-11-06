@@ -30,6 +30,7 @@ import { useLoggingTime } from "@/components/diary/useLoggingTime";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
 import { useToast } from "@/components/ui/Toast";
+import { useFavouriteFoodHeart, useFavouriteRecipeHeart } from "@/lib/favourites";
 import { useIsOnline } from "@/lib/useIsOnline";
 
 /**
@@ -64,6 +65,8 @@ export function AddFoodDialog({ request, opener, onClose, onQuickAdd }: AddFoodD
   const draft = usePortionDraft(foodId, recent);
   const { addHit, addRecent, addRecipe } = useAddServing(resolveLoggedAt);
   const recipeDraft = useRecipePortionDraft(recipe);
+  const foodHeart = useFavouriteFoodHeart(draft.status === "ready" ? draft.food : undefined);
+  const recipeHeart = useFavouriteRecipeHeart(recipeDraft?.recipe);
   const isAmountReady = draft.status === "ready" || recipeDraft !== undefined;
 
   // The cursor starts where the step's work is: in the search, and in the amount once a food or a recipe is chosen.
@@ -159,6 +162,7 @@ export function AddFoodDialog({ request, opener, onClose, onQuickAdd }: AddFoodD
             isNow={isNow}
             onTimeChange={chooseTime}
             amountRef={amountField}
+            favouriteHeart={recipeHeart}
             onBack={() => {
               setRecipe(undefined);
             }}
@@ -190,6 +194,7 @@ export function AddFoodDialog({ request, opener, onClose, onQuickAdd }: AddFoodD
             draft={draft}
             hasSaveError={draft.status === "ready" && draft.hasSaveError}
             note={lastLoggedLine}
+            favouriteHeart={foodHeart}
             time={time}
             isNow={isNow}
             onTimeChange={chooseTime}

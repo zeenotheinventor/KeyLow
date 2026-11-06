@@ -44,7 +44,8 @@ describe("the food page for an old branded food", () => {
     await screen.findByText("1 can");
 
     expect(offRefreshBackend.refreshedCodes).toEqual([BRANDED_CODE]);
-    expect(screen.queryByRole("status")).toBeNull();
+    // The toast layer is always there for the favourite heart, and holds no message.
+    expect(screen.queryByRole("status")?.textContent ?? "").toBe("");
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
@@ -63,7 +64,8 @@ describe("the food page for an old branded food", () => {
     expect(screen.getByText("1 serving")).toBeTruthy();
     expect(screen.queryByText("1 can")).toBeNull();
     expect(screen.queryByRole("alert")).toBeNull();
-    expect(screen.queryByRole("status")).toBeNull();
+    // The toast layer is always there for the favourite heart, and holds no message.
+    expect(screen.queryByRole("status")?.textContent ?? "").toBe("");
   });
 
   it("should keep the old portions and show nothing when off-product fails", async () => {
