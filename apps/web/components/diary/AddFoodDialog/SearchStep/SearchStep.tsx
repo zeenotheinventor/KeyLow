@@ -19,6 +19,7 @@ import {
 import { SearchX, Zap } from "lucide-react";
 import { useState } from "react";
 
+import { FavouriteFoods } from "./FavouriteFoods";
 import { RecentFoods } from "./RecentFoods";
 import { RecipeLogGroup } from "./RecipeLogGroup";
 import { NO_RECIPES, useRecipesToLog } from "./useRecipesToLog";
@@ -63,7 +64,7 @@ function limitsFor(
  * found, each with the serving its one-tap plus logs. The rows keep the database's ranking order. A row
  * shows the food's serving and the values for that serving, a food with a missing value shows Needs review
  * and a chevron in place of the plus, and a press on the row goes to the portion step. Before anything is
- * typed the search offers Quick add and the Recent foods, each at the amount last logged. The user's recipes
+ * typed the search offers Quick add, the Favourites strip and the Recent foods, each at the amount last logged. The user's recipes
  * that match come first, in their own group, each with a plus that logs one serving, and a press on the row
  * goes to the amount step for the recipe. In `ingredient` mode, a recipe's, there is no Time field, no plus,
  * no Quick add row and no recipes (a recipe is not an ingredient of itself), and Recent has no plus: a press
@@ -106,10 +107,10 @@ function SearchStepView(props: SearchStepProps & RecipeResults) {
 
   const renderResults = () => {
     if (!isSearchable) {
-      // Before anything is typed the search offers Quick add and, under it, Recent, as the mobile search does
-      // (the web has no idle board, so it follows the mobile `log-search.idle` one). An ingredient search
-      // offers Recent alone, with no plus, as the phone's does: a row opens the amount step. The hint to type
-      // something is Recent's to give, when it has no rows.
+      // Before anything is typed the search offers Quick add, the Favourites strip and Recent, as the web idle
+      // board (`plate-dialog-idle`) draws them. An ingredient search offers Recent alone, with no plus, as the
+      // phone's does: a row opens the amount step. The hint to type something is Recent's to give, when it has
+      // no rows.
       return (
         <>
           {props.mode !== "ingredient" && (
@@ -123,6 +124,13 @@ function SearchStepView(props: SearchStepProps & RecipeResults) {
                 />
               </ul>
             </Card>
+          )}
+          {props.mode !== "ingredient" && (
+            <FavouriteFoods
+              onOpenFood={onOpenFood}
+              onOpenRecent={props.onOpenRecent}
+              onOpenRecipe={props.onOpenRecipe}
+            />
           )}
           <RecentFoods
             addDisabled={!isOnline}

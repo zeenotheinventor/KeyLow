@@ -3,6 +3,9 @@ export const FAVOURITES_STRIP = {
   heading: "Favourites",
 } as const;
 
-/** What a screen reader says on a tile of the strip: "Log Porridge", or "Log Chicken and rice, recipe". */
-export const describeLogFavouriteName = (name: string, kind: "food" | "recipe"): string =>
-  kind === "recipe" ? `Log ${name}, recipe` : `Log ${name}`;
+/**
+ * What a screen reader says on a tile of the strip: "Choose an amount of Porridge", or "Choose an amount of
+ * Chicken and rice, recipe". A tile opens the amount step, it does not log.
+ */
+export const describeFavouriteTileName = (name: string, kind: "food" | "recipe"): string =>
+  kind === "recipe" ? `Choose an amount of ${name}, recipe` : `Choose an amount of ${name}`;

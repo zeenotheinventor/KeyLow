@@ -19,6 +19,8 @@ type FavouritesBackend = {
   favouriteRecipeIds: string[];
   /** Answers the favourite reads with a server error. */
   failsReads: boolean;
+  /** Answers the read of one favourite table only with a server error, and the other normally. */
+  failsReadsOf: "food_favourites" | "recipe_favourites" | undefined;
   /** Never answers the favourite reads, as a read paused offline does not. */
   hangsReads: boolean;
   /** Answers a write with a server error, or with the database's refusal of a 31st favourite. */
@@ -35,6 +37,7 @@ export const favouritesBackend: FavouritesBackend = {
   favouriteFoodIds: [],
   favouriteRecipeIds: [],
   failsReads: false,
+  failsReadsOf: undefined,
   hangsReads: false,
   writeOutcome: "saves",
   holdsWrites: false,
@@ -50,6 +53,7 @@ export function resetFavouritesBackend(): void {
   favouritesBackend.favouriteFoodIds = [];
   favouritesBackend.favouriteRecipeIds = [];
   favouritesBackend.failsReads = false;
+  favouritesBackend.failsReadsOf = undefined;
   favouritesBackend.hangsReads = false;
   favouritesBackend.writeOutcome = "saves";
   favouritesBackend.holdsWrites = false;
@@ -131,7 +135,7 @@ function answerRead(table: "food_favourites" | "recipe_favourites"): Promise<Res
   if (favouritesBackend.hangsReads) {
     return new Promise<Response>(() => undefined);
   }
-  if (favouritesBackend.failsReads) {
+  if (favouritesBackend.failsReads || favouritesBackend.failsReadsOf === table) {
     return Promise.resolve(serverError());
   }
   if (table === "food_favourites") {

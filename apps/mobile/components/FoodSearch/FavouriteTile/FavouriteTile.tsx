@@ -1,4 +1,4 @@
-import { describeLogFavouriteName } from "@keylow/core/copy";
+import { describeFavouriteTileName } from "@keylow/core/copy";
 import { View } from "react-native";
 
 import { Icon, PressableSurface, Text } from "../../ui";
@@ -15,7 +15,7 @@ export function FavouriteTile({ kind, name, onPress }: FavouriteTileProps) {
   return (
     <PressableSurface
       className="w-[72px] items-center gap-1"
-      label={describeLogFavouriteName(name, kind)}
+      label={describeFavouriteTileName(name, kind)}
       onPress={onPress}
     >
       <View className="h-control-lg w-[52px] items-center justify-center rounded-full border border-border bg-surface-raised">
