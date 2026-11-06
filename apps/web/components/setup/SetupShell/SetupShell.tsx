@@ -7,7 +7,11 @@ import type { SetupShellProps } from "./types";
 
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { cn } from "@/lib/utils";
 import { vars } from "@/lib/vars";
+
+// With the escape in the footer the two buttons stack, so each takes the width, and from 700 px they sit in a row.
+const FOOTER_BUTTON_WIDTH = "w-full min-[700px]:w-auto";
 
 /**
  * What every step of the setup wizard sits in, in the shape of `QuestionStepper`: a card 560 px wide at most,
@@ -27,6 +31,8 @@ export function SetupShell({
   onClose,
   continueAction,
   continueButtonRef,
+  escapeAction,
+  escapeButtonRef,
   isLeavingInert = false,
   notice,
   children,
@@ -65,7 +71,26 @@ export function SetupShell({
         {helper === undefined ? null : <p className="text-body text-text-secondary">{helper}</p>}
         {children}
         {notice}
-        <div className="mt-2 flex justify-end gap-2">
+        {/* The stack is reversed by flex direction, so the tab order stays the escape, then Continue. */}
+        <div
+          className={cn(
+            "mt-2 flex justify-end gap-2",
+            // Under 700 px the escape and Continue do not fit in a row, so they stack with Continue on top.
+            escapeAction !== undefined &&
+              "flex-col-reverse gap-1 min-[700px]:flex-row min-[700px]:gap-2",
+          )}
+        >
+          {escapeAction === undefined ? null : (
+            <Button
+              ref={escapeButtonRef}
+              variant="ghost"
+              className={cn(FOOTER_BUTTON_WIDTH, "text-text-secondary")}
+              loading={escapeAction.isLoading}
+              onClick={escapeAction.onPress}
+            >
+              {escapeAction.label}
+            </Button>
+          )}
           {onClose === undefined ? null : (
             <Button variant="ghost" disabled={isLeavingInert} onClick={onClose}>
               {SETUP_SHELL.closeName}
@@ -78,6 +103,7 @@ export function SetupShell({
           )}
           <Button
             ref={continueButtonRef}
+            className={escapeAction === undefined ? undefined : FOOTER_BUTTON_WIDTH}
             disabled={!continueAction.isEnabled}
             loading={continueAction.isLoading ?? false}
             {...(continueAction.loadingLabel === undefined

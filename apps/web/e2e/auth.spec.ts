@@ -46,7 +46,7 @@ test("keeps Create account and Google disabled until the Terms are accepted", as
   await expect(page.getByRole("button", { name: "Continue with Google" })).toBeEnabled();
 });
 
-test("creates an account and lands on the dashboard", async ({ page }) => {
+test("creates an account and lands on the first run of the setup wizard", async ({ page }) => {
   await page.goto("/sign-up");
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(password);
@@ -54,7 +54,8 @@ test("creates an account and lands on the dashboard", async ({ page }) => {
 
   await page.getByRole("button", { name: "Create account" }).click();
 
-  await expect(page).toHaveURL(/\/dashboard$/);
+  // A new account is not set up, so the first run gate sends it from the dashboard to step 1.
+  await expect(page).toHaveURL(/\/setup\?mode=first-run$/);
   await expect(page.getByRole("link", { name: "Dashboard" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Diary" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Recipes" })).toHaveCount(0);
@@ -68,7 +69,8 @@ test("signs out and protects the dashboard again", async ({ page }) => {
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(password);
   await page.getByRole("button", { name: "Sign in" }).click();
-  await expect(page).toHaveURL(/\/dashboard$/);
+  // The account never finished the wizard, so the gate sends it there. Wait for that before moving on.
+  await expect(page).toHaveURL(/\/setup\?mode=first-run$/);
 
   await page.getByRole("link", { name: "More" }).click();
   await expect(page).toHaveURL(/\/more$/);
@@ -86,7 +88,7 @@ test("signs in with the account that was created", async ({ page }) => {
 
   await page.getByRole("button", { name: "Sign in" }).click();
 
-  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page).toHaveURL(/\/setup\?mode=first-run$/);
   await expect(page.getByRole("link", { name: "Diary" })).toBeVisible();
 });
 

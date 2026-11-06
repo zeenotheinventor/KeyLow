@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   ESTIMATE_HISTORY_WEEKS,
   fallbackWeightKgOf,
+  isProgrammeKnown,
   isWaitingForProgramme,
   measuredEstimateOf,
   startingPlan,
@@ -313,6 +314,15 @@ describe("the reads a recalculation keeps the measured expenditure from", () => 
         isTrendLoading: true,
       }),
     ).toBe(false);
+  });
+
+  it.each([
+    ["history in hand, trend settled", [], false, false, true],
+    ["history missing", undefined, false, false, false],
+    ["trend loading", [], true, false, false],
+    ["trend failed", [], false, true, false],
+  ])("should know the programme when %s: %s", (_case, history, isLoading, isError, expected) => {
+    expect(isProgrammeKnown(history, { isLoading, isError })).toBe(expected);
   });
 
   it("should fall back to the latest weigh-in's weight, and to the answers' own when there is none", () => {

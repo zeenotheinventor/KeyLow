@@ -2,6 +2,7 @@
 
 import {
   fallbackWeightKgOf,
+  isProgrammeKnown,
   measuredEstimateOf,
   setupAnswersSchemaFor,
   startingPlan,
@@ -43,11 +44,13 @@ export function useEstimate({ draft, today, setupState, programme }: EstimateInp
   // failed. The estimate of the answers is then drawn as it is, and the save's recompute still writes the engine's
   // targets.
   const measured = useMemo(() => {
+    const history = expenditureHistory.data;
     if (
       base === undefined ||
-      expenditureHistory.data === undefined ||
-      weightTrend.isLoading ||
-      weightTrend.isError
+      !isProgrammeKnown(history, {
+        isLoading: weightTrend.isLoading,
+        isError: weightTrend.isError,
+      })
     ) {
       return undefined;
     }
@@ -55,7 +58,7 @@ export function useEstimate({ draft, today, setupState, programme }: EstimateInp
       answers: base.answers,
       plan: base.plan,
       today,
-      history: expenditureHistory.data,
+      history,
       trendPoints: weightTrend.points,
       fallbackWeightKg: fallbackWeightKgOf(setupState?.latestWeighIn?.weightKg, base.answers),
     });

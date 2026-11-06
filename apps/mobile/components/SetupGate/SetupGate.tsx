@@ -1,4 +1,5 @@
 import { useSetupState } from "@keylow/api-client";
+import { shouldSendToSetup } from "@keylow/core/setup";
 import { useRouter, useSegments } from "expo-router";
 import { useEffect, useRef } from "react";
 
@@ -26,9 +27,11 @@ export function SetupGate() {
   // there when someone signed out and another signed in.
   const isKnownNotSetUp =
     isReadEnabled &&
-    !setupState.isError &&
-    !setupState.isFetching &&
-    setupState.data?.isSetUp === false;
+    shouldSendToSetup({
+      isError: setupState.isError,
+      isFetching: setupState.isFetching,
+      isSetUp: setupState.data?.isSetUp,
+    });
 
   useEffect(() => {
     if (!isKnownNotSetUp || hasSentToSetup.current || firstSegment !== "(tabs)") {

@@ -63,6 +63,7 @@ export type { CalorieClampCode } from "./bindingClamp";
 export {
   ESTIMATE_HISTORY_WEEKS,
   fallbackWeightKgOf,
+  isProgrammeKnown,
   isWaitingForProgramme,
   measuredEstimateOf,
 } from "./measuredEstimate";
@@ -72,6 +73,7 @@ export type {
   MeasuredEstimate,
   MeasuredEstimateInput,
 } from "./measuredEstimate";
+export { shouldSendToSetup } from "./firstRunGate";
 export { savedAnswersOf } from "./savedAnswers";
 export type { SavedSetupState } from "./savedAnswers";
 export {

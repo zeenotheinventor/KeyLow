@@ -20,6 +20,7 @@ import {
   entryWeightUnit,
   ESTIMATE_HISTORY_WEEKS,
   fallbackWeightKgOf,
+  isProgrammeKnown,
   isRateGoal,
   isStepComplete,
   isWaitingForProgramme,
@@ -172,9 +173,10 @@ export function SetupScreen({ mode }: SetupScreenProps) {
     const history = expenditureHistory.data;
     if (
       estimate === undefined ||
-      history === undefined ||
-      weightTrend.isLoading ||
-      weightTrend.isError
+      !isProgrammeKnown(history, {
+        isLoading: weightTrend.isLoading,
+        isError: weightTrend.isError,
+      })
     ) {
       return undefined;
     }

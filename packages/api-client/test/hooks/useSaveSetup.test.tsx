@@ -108,6 +108,41 @@ describe("useSaveSetup", () => {
     expect(isInvalidated(queryClient, keys.weighIns.list)).toBe(true);
   });
 
+  it("should mark the cached setup state set up before anything reads it again, so the first run gate cannot send the person back", async () => {
+    installSetupSaveFake(server);
+    const { queryClient, result } = await renderSignedIn();
+    queryClient.setQueryData(keys.profiles.setupState, { isSetUp: false, stats: { sex: "male" } });
+
+    await act(() => result.current.mutateAsync(input));
+
+    expect(queryClient.getQueryData(keys.profiles.setupState)).toEqual({
+      isSetUp: true,
+      stats: { sex: "male" },
+    });
+  });
+
+  it("should not make up a setup state when none was cached", async () => {
+    installSetupSaveFake(server);
+    const { queryClient, result } = await renderSignedIn();
+    queryClient.removeQueries({ queryKey: keys.profiles.setupState });
+
+    await act(() => result.current.mutateAsync(input));
+
+    expect(queryClient.getQueryData(keys.profiles.setupState)).toBeUndefined();
+  });
+
+  it("should leave the cached setup state as it is when the save fails", async () => {
+    const fake = installSetupSaveFake(server);
+    fake.failWith("PATCH profiles", "42501");
+    const { queryClient, result } = await renderSignedIn();
+
+    await act(async () => {
+      await result.current.mutateAsync(input).catch(() => undefined);
+    });
+
+    expect(queryClient.getQueryData(keys.profiles.setupState)).toEqual({ isSetUp: false });
+  });
+
   it("should invalidate the program reads, which the first snapshot and the first targets change, on success", async () => {
     installSetupSaveFake(server);
     const { queryClient, result } = await renderSignedIn();
