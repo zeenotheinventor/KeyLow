@@ -1,22 +1,32 @@
 "use client";
 
-import { useDeleteSession, useEditSet, useSession, useSessionDetail } from "@keylow/api-client";
+import {
+  useAddToPastSession,
+  useDeleteSession,
+  useEditSet,
+  useSession,
+  useSessionDetail,
+} from "@keylow/api-client";
 import {
   HISTORY_DELETE_SESSION,
   HISTORY_ERROR,
   HISTORY_SCREEN,
   HISTORY_SESSION_NOT_FOUND,
+  SESSION_ACTIVE,
   describeDeleteSessionBody,
   describeSessionBackLabel,
 } from "@keylow/core/copy";
 import { planProgress } from "@keylow/core/training";
-import { CircleAlert, History } from "lucide-react";
+import { CircleAlert, History, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useId, useState } from "react";
 
+import { AddExerciseDialog } from "../AddExerciseDialog";
+import { CustomExerciseDialog } from "../CustomExerciseDialog";
 import { FinishStat } from "../FinishDialog/FinishStat";
 import { SessionMusclesCard } from "../SessionMusclesCard";
 import { SetTable } from "../SetTable";
+import { AddSetDialog } from "./AddSetDialog";
 import { DeleteSessionDialog } from "./DeleteSessionDialog";
 import { EditSetDialog } from "./EditSetDialog";
 import { SessionDetailLoading } from "./SessionDetailLoading";
@@ -35,12 +45,22 @@ import { useToast } from "@/components/ui/Toast";
 import { trainHistoryPath, trainPath } from "@/lib/trainRoutes";
 import { useIsOnline } from "@/lib/useIsOnline";
 
+type SessionDetailActions = {
+  onEditSet: (setId: string, row: HTMLButtonElement) => void;
+  onAddSet: (exerciseId: string, name: string, button: HTMLButtonElement) => void;
+  onAddExercise: (button: HTMLButtonElement) => void;
+  /** Whether adding is possible: it needs a connection. */
+  canAdd: boolean;
+  /** The id of the line that says why adding is off, or undefined while it is on. */
+  whyNotId: string | undefined;
+};
+
 function SessionDetailBody({
   content,
-  onEditSet,
+  actions: { onEditSet, onAddSet, onAddExercise, canAdd, whyNotId },
 }: {
   content: SessionDetailContent;
-  onEditSet: (setId: string, row: HTMLButtonElement) => void;
+  actions: SessionDetailActions;
 }) {
   const { when, stats, exercises } = content;
 
@@ -80,20 +100,43 @@ function SessionDetailBody({
                 },
               }))}
             />
+            <div className="px-2 pt-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={!canAdd}
+                aria-describedby={whyNotId}
+                onClick={(event) => {
+                  onAddSet(exerciseId, name, event.currentTarget);
+                }}
+              >
+                <Plus aria-hidden />
+                {SESSION_ACTIVE.addSetAction}
+              </Button>
+            </div>
           </section>
         </Card>
       ))}
+      <Button
+        variant="secondary"
+        className="w-full"
+        disabled={!canAdd}
+        aria-describedby={whyNotId}
+        onClick={(event) => {
+          onAddExercise(event.currentTarget);
+        }}
+      >
+        <Plus aria-hidden />
+        {SESSION_ACTIVE.addExerciseAction}
+      </Button>
     </>
   );
 }
 
-function renderBody(
-  detail: SessionDetailView,
-  onEditSet: (setId: string, row: HTMLButtonElement) => void,
-) {
+function renderBody(detail: SessionDetailView, actions: SessionDetailActions) {
   switch (detail.status) {
     case "ready":
-      return <SessionDetailBody content={detail.content} onEditSet={onEditSet} />;
+      return <SessionDetailBody content={detail.content} actions={actions} />;
     case "notFound":
       return (
         <EmptyState
@@ -141,6 +184,10 @@ export function SessionDetailScreen({ id, origin }: SessionDetailScreenProps) {
   const toast = useToast();
   const { notices, prepareRemoval } = useSetNotices();
   const { openSet, edit } = useEditSet(id, { notices, enabled: true });
+  const { openAddSet, chooseExercise, add } = useAddToPastSession(id, {
+    notices,
+    enabled: true,
+  });
   const deleteSession = useDeleteSession();
   // Deleting the session takes it out of the cache before the page has left, so what was shown stays until then.
   const [isLeaving, setIsLeaving] = useState(false);
@@ -157,6 +204,11 @@ export function SessionDetailScreen({ id, origin }: SessionDetailScreenProps) {
   // The Delete session control that asked, which focus goes back to when the question closes.
   const [deleteButton, setDeleteButton] = useState<HTMLButtonElement | null>(null);
   const offlineLineId = useId();
+  // The control that opened an add (Add set, or Add exercise), which focus goes back to when the entry closes.
+  const [addButton, setAddButton] = useState<HTMLButtonElement | null>(null);
+  const [isPickerOpen, setIsPickerOpen] = useState(false);
+  // The words searched for when the person chose to create the exercise, or null while no form is open.
+  const [creatingName, setCreatingName] = useState<string | null>(null);
 
   function askToDelete(button: HTMLButtonElement) {
     const loaded = session.data;
@@ -221,9 +273,21 @@ export function SessionDetailScreen({ id, origin }: SessionDetailScreenProps) {
             <Banner tone="info">{HISTORY_DELETE_SESSION.offline}</Banner>
           </div>
         ) : null}
-        {renderBody(detail, (setId, row) => {
-          setPressedRow(row);
-          openSet(setId);
+        {renderBody(detail, {
+          onEditSet: (setId, row) => {
+            setPressedRow(row);
+            openSet(setId);
+          },
+          onAddSet: (exerciseId, name, button) => {
+            setAddButton(button);
+            openAddSet(exerciseId, name);
+          },
+          onAddExercise: (button) => {
+            setAddButton(button);
+            setIsPickerOpen(true);
+          },
+          canAdd: isOnline,
+          whyNotId: isOnline ? undefined : offlineLineId,
         })}
       </div>
       {edit !== null && edit.isOpen ? (
@@ -240,6 +304,43 @@ export function SessionDetailScreen({ id, origin }: SessionDetailScreenProps) {
           onClose={edit.close}
         />
       ) : null}
+      {add !== null && add.isOpen ? (
+        <AddSetDialog
+          key={add.openingId}
+          entry={add.entry}
+          unit={add.unit}
+          returnFocusTo={addButton}
+          onLogSet={add.logSet}
+          onClose={add.close}
+        />
+      ) : null}
+      {isReady ? (
+        <AddExerciseDialog
+          open={isPickerOpen}
+          mode="session"
+          onAddToSession={(exercise) => {
+            void chooseExercise(exercise);
+          }}
+          onCreate={setCreatingName}
+          onClose={() => {
+            setIsPickerOpen(false);
+          }}
+        />
+      ) : null}
+      {creatingName === null ? null : (
+        <CustomExerciseDialog
+          destination={{ kind: "session", dayName: session.data?.routine_day_name ?? null }}
+          initialName={creatingName}
+          onClose={() => {
+            setCreatingName(null);
+          }}
+          onSaved={(exercise) => {
+            void chooseExercise(exercise);
+            setCreatingName(null);
+            setIsPickerOpen(false);
+          }}
+        />
+      )}
       {question === null ? null : (
         <DeleteSessionDialog
           body={question}

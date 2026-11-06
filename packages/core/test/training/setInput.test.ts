@@ -8,6 +8,8 @@ import {
   MIN_REPS,
   MIN_RIR,
   MIN_RPE,
+  exactKilogramsText,
+  loggedLoad,
   parseEffortInput,
   parseLoadInput,
   parseRepsInput,
@@ -317,5 +319,44 @@ describe("setDraftOfValues", () => {
 
     expect(draft.load).toBe("225");
     expect(parseLoadInput(draft.load, "lb")).toEqual({ ok: true, kg: stored.kg });
+  });
+});
+
+describe("loggedLoad", () => {
+  const filled: SetDraft = { setType: "working", load: "132.3", reps: "9", rir: "1", rpe: "" };
+
+  it("should log a load left as it was filled as the exact kilograms it came from, in kilograms", () => {
+    const logged = loggedLoad(filled, { edited: false, prefillKg: 60, unit: "lb" });
+
+    expect(logged).toEqual({ draft: { ...filled, load: "60.0000" }, unit: "kg" });
+    expect(validateSetDraft(logged.draft, { unit: logged.unit, effortMode: "rir" })).toMatchObject({
+      ok: true,
+      values: { loadKg: 60 },
+    });
+  });
+
+  it("should keep a typed load as it was typed, in the unit it was typed in", () => {
+    const typed = { ...filled, load: "135" };
+
+    expect(loggedLoad(typed, { edited: true, prefillKg: 60, unit: "lb" })).toEqual({
+      draft: typed,
+      unit: "lb",
+    });
+  });
+
+  it("should keep a blank load blank when there was nothing to fill it from", () => {
+    const blank = { ...filled, load: "" };
+
+    expect(loggedLoad(blank, { edited: false, prefillKg: null, unit: "kg" })).toEqual({
+      draft: blank,
+      unit: "kg",
+    });
+  });
+});
+
+describe("exactKilogramsText", () => {
+  it("should write a stored load to a fourth decimal, which the thousands separator rule leaves alone", () => {
+    expect(exactKilogramsText(102.058)).toBe("102.0580");
+    expect(parseLoadInput(exactKilogramsText(102.058), "kg")).toEqual({ ok: true, kg: 102.058 });
   });
 });

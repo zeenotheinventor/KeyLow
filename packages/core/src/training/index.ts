@@ -107,6 +107,8 @@ export { SET_SNAPSHOT_VERSION } from "./versions";
 export { displayLoad, loadToKg } from "./loads";
 export type { LoadUnit } from "./loads";
 export {
+  exactKilogramsText,
+  loggedLoad,
   parseEffortInput,
   parseLoadInput,
   parseRepsInput,

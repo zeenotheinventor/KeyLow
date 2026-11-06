@@ -29,6 +29,16 @@ export const detailBackend: {
   failingWrites: boolean;
   /** Holds every write until it is released, as a slow connection does. */
   writeGate: Promise<void> | null;
+  /** The exercises the picker and the set write can read, by id. */
+  exercises: Row[];
+  /** The sets of earlier sessions that the last-time read answers with, whatever exercise it asks for. */
+  lastTime: Row[];
+  /** Fails the last-time read with a database error. */
+  failingLastTime: boolean;
+  /** When set, the count of live sets the session is said to hold, whatever it holds. */
+  liveSetCount: number | null;
+  /** The bodies of the sets inserted, in order. */
+  inserts: Row[];
 } = {
   sessions: [],
   weightUnit: "kg",
@@ -38,6 +48,11 @@ export const detailBackend: {
   writes: [],
   failingWrites: false,
   writeGate: null,
+  exercises: [],
+  lastTime: [],
+  failingLastTime: false,
+  liveSetCount: null,
+  inserts: [],
 };
 
 export function resetDetailBackend(): void {
@@ -49,7 +64,15 @@ export function resetDetailBackend(): void {
   detailBackend.writes = [];
   detailBackend.failingWrites = false;
   detailBackend.writeGate = null;
+  detailBackend.exercises = [];
+  detailBackend.lastTime = [];
+  detailBackend.failingLastTime = false;
+  detailBackend.liveSetCount = null;
+  detailBackend.inserts = [];
+  insertedCount = 0;
 }
+
+let insertedCount = 0;
 
 const idWith = (group: number, n: number): string =>
   `0000000${group}-0000-4000-8000-${String(n).padStart(12, "0")}`;
@@ -161,6 +184,23 @@ async function write(request: Request, pathname: string, searchParams: URLSearch
       500,
     );
   }
+  if (target === "workout_sets" && request.method === "POST" && isRow(body)) {
+    detailBackend.inserts.push(body);
+    insertedCount += 1;
+    const inserted = {
+      ...body,
+      id: idWith(8, insertedCount),
+      deleted_at: null,
+    };
+    const session = detailBackend.sessions.find((entry) => entry["id"] === body["session_id"]);
+    if (session !== undefined) {
+      const sets = Array.isArray(session["workout_sets"])
+        ? session["workout_sets"].filter(isRow)
+        : [];
+      session["workout_sets"] = [...sets, inserted];
+    }
+    return jsonResponse(inserted, 201);
+  }
   if (target === "delete_workout_session" && isRow(body)) {
     for (const session of detailBackend.sessions) {
       if (session["id"] === body["p_session_id"]) {
@@ -220,16 +260,39 @@ async function respond(input: string | URL | Request, init?: RequestInit): Promi
     );
   }
   if (pathname.endsWith("/workout_sets")) {
-    // A restore reads the set and counts the session's live sets first.
+    // A restore or an added set counts the session's live sets first, and reads the highest position.
     if (searchParams.get("select") === "position") {
       const live = detailBackend.sessions.flatMap(liveSets);
-      return new Response(JSON.stringify(live.map((row) => ({ position: row["position"] }))), {
-        status: 200,
-        headers: { "Content-Type": "application/json", "Content-Range": `0-0/${live.length}` },
-      });
+      const highestFirst = [...live].sort((a, b) => Number(b["position"]) - Number(a["position"]));
+      return new Response(
+        JSON.stringify(highestFirst.slice(0, 1).map((row) => ({ position: row["position"] }))),
+        {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json",
+            "Content-Range": `0-0/${detailBackend.liveSetCount ?? live.length}`,
+          },
+        },
+      );
+    }
+    if (searchParams.has("exercise_id")) {
+      return detailBackend.failingLastTime
+        ? jsonResponse(
+            { code: "XX000", message: "raw database text", details: null, hint: null },
+            500,
+          )
+        : jsonResponse(detailBackend.lastTime);
     }
     const id = (searchParams.get("id") ?? "").replace("eq.", "");
     return answer(allSets().filter((row) => row["id"] === id));
+  }
+  if (pathname.endsWith("/exercises")) {
+    // A search is answered with every exercise the test set, whatever was typed.
+    if (searchParams.has("name")) {
+      return jsonResponse(detailBackend.exercises);
+    }
+    const id = (searchParams.get("id") ?? "").replace("eq.", "");
+    return answer(detailBackend.exercises.filter((exercise) => exercise["id"] === id));
   }
   return jsonResponse({ message: "unexpected request" }, 404);
 }

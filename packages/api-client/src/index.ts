@@ -228,6 +228,7 @@ export {
   describeSessionDetail,
   heatSetsOf,
   isPendingSetId,
+  useAddToPastSession,
   useAddedExercises,
   useChangeSetType,
   useDiscardSession,
@@ -240,6 +241,9 @@ export {
   useStartSessionAction,
 } from "./hooks";
 export type {
+  AddSetEntry,
+  AddToPastSession,
+  AddToPastSessionOpening,
   AddedExercise,
   ChangeSetTypeRequest,
   EditSet,
@@ -250,6 +254,7 @@ export type {
   LogSetRequest,
   PendingSet,
   PendingSets,
+  PickedExercise,
   PlannedExerciseName,
   RemoveSetRequest,
   ScreenSet,
@@ -263,6 +268,7 @@ export type {
   SessionView,
   SessionViewExercise,
   SetChanges,
+  SetLogRequest,
   SetLogging,
   SetNotices,
 } from "./hooks";

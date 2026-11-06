@@ -31,6 +31,10 @@ const card = (name: string) => screen.findByRole("region", { name });
 const CURL_SET_3 = "Set 3, 30 kg by 9, RIR 1, edit";
 const EDIT_FORM = "Edit Barbell curl, set 3";
 
+/** The buttons of the sets of a card: Add set under the table is not one of them. */
+const setButtonsOf = (exerciseCard: HTMLElement) =>
+  within(within(exerciseCard).getByRole("table", { name: "Sets" })).getAllByRole("button");
+
 const curlSet3 = async () =>
   within(await card("Barbell curl")).getByRole("button", { name: CURL_SET_3 });
 
@@ -68,7 +72,7 @@ describe("the session detail, changing a past session", () => {
       renderDetail();
 
       const curl = await card("Barbell curl");
-      expect(within(curl).getAllByRole("button")).toHaveLength(4);
+      expect(setButtonsOf(curl)).toHaveLength(4);
       expect(within(curl).getByRole("button", { name: CURL_SET_3 })).toBeTruthy();
     });
 
@@ -422,14 +426,14 @@ describe("the session detail, changing a past session", () => {
       expect(screen.queryByRole("dialog")).toBeNull();
       const curl = await card("Barbell curl");
       await waitFor(() => {
-        expect(within(curl).getAllByRole("button")).toHaveLength(3);
+        expect(setButtonsOf(curl)).toHaveLength(3);
       });
       expect(writesTo("workout_sets").map(({ method }) => method)).toEqual(["PATCH"]);
 
       await userEvent.click(screen.getByRole("button", { name: "Undo" }));
 
       await waitFor(() => {
-        expect(within(curl).getAllByRole("button")).toHaveLength(4);
+        expect(setButtonsOf(curl)).toHaveLength(4);
       });
       expect(within(curl).getByRole("button", { name: CURL_SET_3 })).toBeTruthy();
     });

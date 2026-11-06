@@ -1,45 +1,21 @@
 "use client";
 
-import {
-  HISTORY_EDIT_SET,
-  RIR_CHIP_LABELS,
-  SET_ENTRY,
-  describeEditSetSheet,
-  describeLoadFieldLabel,
-  describeSetInputError,
-  isWordedSetInputRule,
-} from "@keylow/core/copy";
-import { displayLoad, validateSetDraft } from "@keylow/core/training";
+import { HISTORY_EDIT_SET, describeEditSetSheet } from "@keylow/core/copy";
+import { displayLoad } from "@keylow/core/training";
 import { Trash2 } from "lucide-react";
 import { useId, useRef, useState } from "react";
 
+import { SetNumbersFields, useTypedSet } from "../SetNumbersFields";
+
 import type { EditSetDialogProps } from "./types";
 import type { SetChanges } from "@keylow/api-client";
-import type { SetDraft } from "@keylow/core/training";
 
 import { Banner } from "@/components/ui/Banner";
 import { Button } from "@/components/ui/Button";
-import { ChipGroup } from "@/components/ui/ChipGroup";
 import { Dialog } from "@/components/ui/Dialog";
-import { NumericInput } from "@/components/ui/NumericInput";
 import { useIsOnline } from "@/lib/useIsOnline";
 
-type EditedFields = Readonly<{ load: boolean; reps: boolean }>;
 type Pending = "save" | "delete";
-
-// RIR is held as the text of its number, which is what a chip stands for: "6+" is 6.
-const RIR_OPTIONS = RIR_CHIP_LABELS.map((label, index) => ({ value: String(index), label }));
-const LAST_RIR_CHIP = RIR_OPTIONS.length - 1;
-
-/** The chip that stands for the RIR held as text: the 6+ chip for six or more, none for a blank. */
-function chipOf(rir: string): string {
-  const number = rir.trim() === "" ? Number.NaN : Number(rir);
-  return Number.isInteger(number) && number >= 0 ? String(Math.min(number, LAST_RIR_CHIP)) : "";
-}
-
-// The load and reps are the board's 32 px numbers in a 64 px box.
-const numberFrameClasses = "h-16 justify-center px-3";
-const numberClasses = "text-center text-[32px] leading-10 font-semibold";
 
 /**
  * The dialog that changes a set of a past session, as the `history · edit-set` board draws its sheet (the web
@@ -63,13 +39,14 @@ export function EditSetDialog({
   onDelete,
   onClose,
 }: EditSetDialogProps) {
-  const [opening] = useState(() => ({
-    load: entry.loadKg === null ? "" : displayLoad(entry.loadKg, unit),
-    reps: String(entry.reps),
-    rir: entry.rir === null ? "" : String(entry.rir),
-  }));
-  const [typed, setTyped] = useState(opening);
-  const [edited, setEdited] = useState<EditedFields>({ load: false, reps: false });
+  const { opening, typed, checked, fields } = useTypedSet(
+    {
+      load: entry.loadKg === null ? "" : displayLoad(entry.loadKg, unit),
+      reps: String(entry.reps),
+      rir: entry.rir === null ? "" : String(entry.rir),
+    },
+    { unit, setType: entry.setType },
+  );
   const [pending, setPending] = useState<Pending | null>(null);
   // The state would still read idle for a second submit that arrives before React has drawn the first.
   const isAnswering = useRef(false);
@@ -77,15 +54,6 @@ export function EditSetDialog({
   const formId = useId();
   const offlineId = useId();
 
-  const draft: SetDraft = { setType: entry.setType, ...typed, rpe: "" };
-  const checked = validateSetDraft(draft, { unit, effortMode: "rir" });
-  const issues = checked.ok ? [] : checked.issues;
-  const errorOf = (field: "load" | "reps"): string | undefined => {
-    const rule = issues.find((issue) => issue.field === field)?.rule;
-    return edited[field] && rule !== undefined && isWordedSetInputRule(rule)
-      ? describeSetInputError(rule, unit)
-      : undefined;
-  };
   const copy = describeEditSetSheet(entry);
   // The board's line is about a working set, which counts as hard with no RIR.
   const rirHelp =
@@ -176,57 +144,7 @@ export function EditSetDialog({
         }}
       >
         <p className="text-caption text-text-secondary">{copy.subtitle}</p>
-        <div className="grid grid-cols-2 gap-3">
-          <NumericInput
-            label={describeLoadFieldLabel(unit)}
-            value={typed.load}
-            placeholder="–"
-            error={errorOf("load")}
-            frameClassName={numberFrameClasses}
-            className={numberClasses}
-            onChange={(event) => {
-              setTyped((current) => ({ ...current, load: event.target.value }));
-              setEdited((current) => ({ ...current, load: true }));
-            }}
-          />
-          <NumericInput
-            // The dialog leaves focus alone when a child inside it has taken focus, so the reps are first, as the board draws, not Close.
-            // eslint-disable-next-line jsx-a11y/no-autofocus
-            autoFocus
-            inputMode="numeric"
-            label={SET_ENTRY.repsLabel}
-            value={typed.reps}
-            placeholder="–"
-            error={errorOf("reps")}
-            frameClassName={numberFrameClasses}
-            className={numberClasses}
-            onChange={(event) => {
-              setTyped((current) => ({ ...current, reps: event.target.value }));
-              setEdited((current) => ({ ...current, reps: true }));
-            }}
-          />
-        </div>
-        <div className="flex flex-col gap-2">
-          <span aria-hidden className="text-caption text-text-secondary">
-            {SET_ENTRY.rirHeading}
-          </span>
-          <ChipGroup
-            label={SET_ENTRY.rirHeading}
-            options={RIR_OPTIONS}
-            value={chipOf(typed.rir)}
-            className="[&>button]:flex-1 [&>button]:justify-center [&>button]:px-0"
-            onChange={(chip) => {
-              setTyped((current) => ({ ...current, rir: chip }));
-            }}
-            onChipPress={(chip) => {
-              // Pressing the chosen chip takes it back, so a set can be left with no RIR.
-              if (chipOf(typed.rir) === chip) {
-                setTyped((current) => ({ ...current, rir: "" }));
-              }
-            }}
-          />
-          {rirHelp === null ? null : <p className="text-caption text-text-muted">{rirHelp}</p>}
-        </div>
+        <SetNumbersFields {...fields} rirHelp={rirHelp} />
         <p className="text-caption text-text-secondary">{HISTORY_EDIT_SET.effectHint}</p>
         {isOnline ? null : (
           <div id={offlineId}>
