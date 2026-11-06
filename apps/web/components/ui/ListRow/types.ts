@@ -39,8 +39,17 @@ type ListRowContent = {
 /** A row goes to a page, runs an action, submits the form around it, or is plain text. It cannot do two of these. */
 export type ListRowProps = ListRowContent &
   (
-    | { href: string; onClick?: never; submit?: never }
-    | { onClick: () => void; href?: never; submit?: never }
-    | { submit: true; href?: never; onClick?: never }
-    | { href?: never; onClick?: never; submit?: never }
+    | { href: string; onClick?: never; submit?: never; loading?: never }
+    | {
+        onClick: () => void;
+        href?: never;
+        submit?: never;
+        /**
+         * Shows a spinner in place of the chevron and marks the row busy, for a row whose press is being
+         * worked on. The row stays enabled, so focus is kept, but a press does nothing until it clears.
+         */
+        loading?: boolean;
+      }
+    | { submit: true; href?: never; onClick?: never; loading?: never }
+    | { href?: never; onClick?: never; submit?: never; loading?: never }
   );

@@ -1,6 +1,7 @@
-import { TRAIN_HOME } from "@keylow/core/copy";
+import { TRAIN_HOME, TRAIN_PICK_DAY } from "@keylow/core/copy";
 import { cleanup, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { TodayCardWithSession } from "@keylow/core/copy";
 
@@ -116,5 +117,140 @@ describe("TodayCard", () => {
 
     expect(within(card).getAllByRole("listitem")).toHaveLength(1);
     expect(within(card).queryByRole("status")).toBeNull();
+  });
+});
+
+describe("TodayCard's Pick day", () => {
+  const done: TodayCardWithSession = {
+    kind: "done",
+    dayName: "Legs",
+    minutes: 52,
+    setsLogged: 16,
+    setsPlanned: 16,
+    next: null,
+  };
+  const rest: TodayCardWithSession = { kind: "rest", next: null };
+  const pickDay = () => screen.getByRole("button", { name: TRAIN_PICK_DAY.action });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("should draw Pick day beside Start on the planned card and report a press", async () => {
+    const onPickDay = vi.fn();
+    render(
+      <TodayCard
+        card={planned(5)}
+        context={context}
+        isStartAndResumeDisabled={false}
+        onPickDay={onPickDay}
+        onStart={() => undefined}
+      />,
+    );
+
+    await userEvent.click(pickDay());
+
+    expect(onPickDay).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("button", { name: "Start Legs" })).toBeTruthy();
+  });
+
+  it("should draw it as a secondary button, so Start stays the one primary action", () => {
+    render(
+      <TodayCard
+        card={planned(5)}
+        context={context}
+        isStartAndResumeDisabled={false}
+        onPickDay={() => undefined}
+        onStart={() => undefined}
+      />,
+    );
+
+    expect(pickDay().className).not.toBe(
+      screen.getByRole("button", { name: "Start Legs" }).className,
+    );
+  });
+
+  it("should draw it on the planned card when the day has no Start, as on a day the plan leaves open", () => {
+    render(
+      <TodayCard
+        card={planned(5)}
+        context={context}
+        isStartAndResumeDisabled={false}
+        onPickDay={() => undefined}
+      />,
+    );
+
+    expect(pickDay()).toBeTruthy();
+  });
+
+  it("should draw no Pick day while no handler is given", () => {
+    render(
+      <TodayCard
+        card={planned(5)}
+        context={context}
+        isStartAndResumeDisabled={false}
+        onStart={() => undefined}
+      />,
+    );
+
+    expect(screen.queryByRole("button", { name: TRAIN_PICK_DAY.action })).toBeNull();
+  });
+
+  it("should draw it on the rest card and the done card", () => {
+    const { rerender } = render(
+      <TodayCard
+        card={rest}
+        context={context}
+        isStartAndResumeDisabled={false}
+        onLogSession={() => undefined}
+        onPickDay={() => undefined}
+      />,
+    );
+    expect(pickDay()).toBeTruthy();
+
+    rerender(
+      <TodayCard
+        card={done}
+        context={context}
+        isStartAndResumeDisabled={false}
+        onLogAnother={() => undefined}
+        onPickDay={() => undefined}
+      />,
+    );
+    expect(pickDay()).toBeTruthy();
+  });
+
+  it("should dim it when starting is off, as Start is", () => {
+    render(
+      <TodayCard
+        card={planned(5)}
+        context={context}
+        isStartAndResumeDisabled
+        onPickDay={() => undefined}
+        onStart={() => undefined}
+      />,
+    );
+
+    expect(pickDay()).toHaveProperty("disabled", true);
+  });
+
+  it("should stop responding while a start is under way", () => {
+    render(
+      <TodayCard
+        card={planned(5)}
+        context={context}
+        isStarting
+        isStartAndResumeDisabled={false}
+        onPickDay={() => undefined}
+        onStart={() => undefined}
+      />,
+    );
+
+    // The spinner replaces the label on the buttons of a start, as Start's does.
+    const busy = screen.getAllByRole("button", { busy: true });
+    expect(busy).toHaveLength(2);
+    for (const button of busy) {
+      expect(button).toHaveProperty("disabled", true);
+    }
   });
 });
