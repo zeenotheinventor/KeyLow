@@ -202,6 +202,8 @@ describe("BodyMapScreen", () => {
     window.localStorage.clear();
     // The figure question was answered on an earlier visit, so only the tests of the setting see it.
     window.localStorage.setItem("bodyMap.figure", "male");
+    // The first-open hint was dismissed on an earlier visit, so only its own tests see it.
+    window.localStorage.setItem("bodyMap.hintSeen", "true");
     resetBodyFigureForTests();
     onlineManager.setOnline(true);
     reads.asked = [];

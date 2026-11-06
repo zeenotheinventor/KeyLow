@@ -194,7 +194,11 @@ describe("the fixed words of the body map, as the boards draw them", () => {
         gap: "Gap compares this week's sets with your plan, so it has no Actual or Projected.",
         gapSoFar: "It counts your planned days up to yesterday, and today once you have logged it.",
       },
-      coachMark: { text: "Long-press a muscle for details", dismiss: "Got it" },
+      coachMark: {
+        text: "Long-press a muscle for details",
+        textWeb: "Press and hold a muscle for details",
+        dismiss: "Got it",
+      },
       emptyState: {
         title: "Nothing to show yet",
         body: "Log a session and the muscles you train warm up here, then cool over a day or two as they recover.",

@@ -19,6 +19,11 @@ const SIDE_OPTIONS = [
   { value: "back", label: BODY_MAP.sideSwitch.back },
 ] as const;
 
+// Two thirds of the way down the figures, where the board lays the strip over the legs, 12 in from each side.
+// A share of the height keeps it there when the figures are narrower, and from the tablet width it is the
+// width of a Toast, centred, since a strip across both figures would be wider than its words need.
+const OVERLAY_PLACEMENT = "absolute inset-x-3 top-[67%] z-10 mx-auto md:max-w-[360px]";
+
 /**
  * The body map as the web board draws it: the view label, the toggle that switches between Actual and
  * Projected, and the front and back of the body with a line under them. The toggle button sits at the top
@@ -29,7 +34,9 @@ const SIDE_OPTIONS = [
  *
  * With `onToggleSideBySide` the Show side by side button sits at the top right of the card. While
  * `sideBySide` is given the card is the side by side view, with the small Front and Back switch in the view
- * label's place. A `footer` closes the card, as the day scrubber does.
+ * label's place. A `footer` closes the card, as the day scrubber does. An `overlay` is laid over the figures
+ * two thirds of the way down, where the board lays the first-open hint over the legs, and only on the 2D
+ * figures.
  *
  * With 3D chosen in More, a figure that has a 3D body and a browser that can draw it, the figures are one body on a
  * dark stage with the Front and Back control, the zoom buttons and the hint under it. The layout is decided when the
@@ -54,6 +61,7 @@ export function BodyMapCard({
   sideBySide,
   onToggleSideBySide,
   isSideBySideEnabled = true,
+  overlay,
   footer,
 }: BodyMapCardProps) {
   const noteId = useId();
@@ -102,7 +110,7 @@ export function BodyMapCard({
             />
           </div>
         )}
-        <div className="col-span-full md:row-start-2">
+        <div className="relative col-span-full md:row-start-2">
           <BodyMapFigures
             scale={scale}
             view={view}
@@ -116,6 +124,9 @@ export function BodyMapCard({
             sideBySide={sideBySide}
             in3d={isIn3d ? { side: side3d, onSideChange: setSide3d } : undefined}
           />
+          {overlay === undefined || isIn3d ? null : (
+            <div className={OVERLAY_PLACEMENT}>{overlay}</div>
+          )}
         </div>
         {toggleLabel === null ? null : (
           <Button

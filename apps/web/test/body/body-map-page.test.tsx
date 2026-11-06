@@ -56,6 +56,8 @@ describe("the body map page", () => {
   beforeEach(() => {
     window.localStorage.clear();
     window.localStorage.setItem("bodyMap.figure", "male");
+    // The first-open hint was dismissed on an earlier visit, so only its own tests see it.
+    window.localStorage.setItem("bodyMap.hintSeen", "true");
     resetBodyFigureForTests();
     onlineManager.setOnline(true);
     vi.useFakeTimers({ toFake: ["Date"] });

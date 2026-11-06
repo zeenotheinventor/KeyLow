@@ -48,6 +48,11 @@ export type BodyMapCardProps = {
   onToggleSideBySide?: (() => void) | undefined;
   /** False disables the Show side by side button: with no routine there is no plan to show beside what is logged. Defaults to true. */
   isSideBySideEnabled?: boolean | undefined;
+  /**
+   * A strip laid over the figures, such as the first-open hint. It is left out on the 3D body, which has its
+   * own hint line, and the screen leaves it out in the side by side view.
+   */
+  overlay?: ReactNode;
   /** The row under the card's content, such as the day scrubber. */
   footer?: ReactNode;
 };
