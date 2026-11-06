@@ -1,2 +1,2 @@
 export { ExpenditureHeroCard } from "./ExpenditureHeroCard";
-export type { ExpenditureHeroCardProps } from "./types";
+export type { ExpenditureHeroArrival, ExpenditureHeroCardProps } from "./types";
