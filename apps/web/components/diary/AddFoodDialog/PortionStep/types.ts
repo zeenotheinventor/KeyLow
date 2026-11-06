@@ -5,8 +5,6 @@ import type { Ref } from "react";
 
 export type PortionStepProps = PortionTimeProps & {
   draft: AmountDraft;
-  /** A save of the amount failed. The banner says what to do and not what the amount was. */
-  hasSaveError?: boolean | undefined;
   /**
    * The Copy to your foods link of a food that needs review opens in a new tab, so the screen behind the
    * dialog, a recipe with unsaved changes, is not left. The diary leaves it in the same tab.

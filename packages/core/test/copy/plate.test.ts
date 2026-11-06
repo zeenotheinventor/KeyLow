@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import {
   DIARY_PROBLEMS,
-  LOG_SEARCH,
   OFFLINE_BANNER,
   PLATE,
+  UNDO_LABEL,
   describeAddToPlateName,
   describeAddedToPlate,
   describeDiscardPlateBody,
@@ -47,7 +47,7 @@ describe("the plate's words", () => {
   });
 
   it("should reuse Undo and the amount message rather than say them again", () => {
-    expect(LOG_SEARCH.undo).toBe("Undo");
+    expect(UNDO_LABEL).toBe("Undo");
     expect(DIARY_PROBLEMS.quantity).toBe("Enter an amount above 0.");
     expect(Object.values(PLATE)).not.toContain("Undo");
   });

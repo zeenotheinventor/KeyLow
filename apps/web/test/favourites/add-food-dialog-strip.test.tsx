@@ -56,8 +56,10 @@ const { useFoodWithPortions, useRecipeSearch, recent } = vi.hoisted((): Hoisted 
 
 // What the amount steps and Recent read is the other dialog tests' business. The favourites are real, over a
 // fake database.
+// This file imports the api-client before its own helpers, so the helper is loaded inside the factory.
 vi.mock("@keylow/api-client", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@keylow/api-client")>()),
+  ...(await import("../diary/noPlateHooks")).noPlateHooks,
   useFoodWithPortions,
   useRecipeSearch,
   useRefreshOutdatedOffFood: () => undefined,
@@ -78,12 +80,7 @@ const NO_RECIPES_FOUND = { recipes: [], isLoading: false, isDebouncing: false, e
 
 function renderDialog() {
   renderWithFavourites(
-    <AddFoodDialog
-      request={{ date: "2026-10-15" }}
-      opener={null}
-      onClose={vi.fn()}
-      onQuickAdd={vi.fn()}
-    />,
+    <AddFoodDialog request={{ date: "2026-10-15" }} opener={null} onClose={vi.fn()} />,
   );
 }
 
@@ -195,7 +192,7 @@ describe("the Favourites strip in the add food dialog", () => {
       fireEvent.click(porridgeTile());
 
       expect(await screen.findByRole("button", { name: "Results" })).toBeTruthy();
-      expect(screen.getByRole("button", { name: "Add" })).toBeTruthy();
+      expect(screen.getByRole("button", { name: "Add to plate" })).toBeTruthy();
       expect(useFoodWithPortions).toHaveBeenLastCalledWith(porridge.id);
     });
 
@@ -233,7 +230,9 @@ describe("the Favourites strip in the add food dialog", () => {
       fireEvent.click(porridgeTile());
 
       expect(await screen.findByRole("button", { name: "Results" })).toBeTruthy();
-      expect(screen.getByRole("button", { name: "Add" }).hasAttribute("disabled")).toBe(true);
+      expect(screen.getByRole("button", { name: "Add to plate" }).hasAttribute("disabled")).toBe(
+        true,
+      );
     });
 
     it("should say a food deleted since the strip was read does not exist, and not blame the connection", async () => {

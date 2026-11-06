@@ -5,7 +5,11 @@ export {
   plateItemOfRecipe,
 } from "./buildPlateItem";
 export type { PlateHit, PlatePickedFood, PlateRecent, PlateRecipeInput } from "./buildPlateItem";
+export { plateDayBars } from "./plateDayBars";
+export type { PlateDayBars, PlateDayBarsInput } from "./plateDayBars";
 export { plateItemName } from "./plateItemName";
+export { plateLoggedAt } from "./plateLoggedAt";
+export type { PlateLoggedAtInput } from "./plateLoggedAt";
 export { plateFoodAmount } from "./plateFoodAmount";
 export {
   addToPlate,

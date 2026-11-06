@@ -14,21 +14,23 @@ type CommonSearchStepProps = {
   onOpenRecent: (food: RecentFood) => void;
 };
 
-/** The diary's search: foods found are logged at a time, and each row has a plus that logs its serving at once. */
+/** The diary's search: foods found go on the plate, and each row has a plus that puts its serving there. */
 export type LogSearchStepProps = CommonSearchStepProps & {
   mode?: "log" | undefined;
-  /** The Time field's value, `HH:mm`. */
+  /** The Time field's value, `HH:mm`: the plate's time. */
   time: string;
-  /** The time is still the moment the dialog opened. */
+  /** The time is still Now. */
   isNow: boolean;
   onTimeChange: (time: string) => void;
-  /** A press on a row's plus: log its serving at once. */
+  /** Dims the pluses and the Time field and stops them responding, while the plate is being logged. */
+  isLogging: boolean;
+  /** A press on a row's plus: put its serving on the plate. */
   onAddServing: (hit: FoodSearchHit) => void;
   /** A press on a recipe row: go to the amount step for that recipe. */
   onOpenRecipe: (recipe: RecipeSummary) => void;
-  /** A press on a recipe row's plus: log one serving of it at once. */
+  /** A press on a recipe row's plus: put one serving of it on the plate. */
   onAddRecipeServing: (recipe: RecipeSummary) => void;
-  /** A press on a Recent row's plus: log the amount it was last logged with at once. */
+  /** A press on a Recent row's plus: put the amount it was last logged with on the plate. */
   onAddRecent: (food: RecentFood) => void;
   /** A press on the Quick add row, which the idle search offers: calories and macros by hand. */
   onQuickAdd: () => void;

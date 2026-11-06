@@ -99,20 +99,10 @@ async function recipeSearch(url: URL): Promise<Response> {
   );
 }
 
-async function entryInsert(request: Request): Promise<Response> {
-  const body: unknown = await request.json();
-  if (typeof body !== "object" || body === null) {
-    return jsonResponse({ message: "unexpected request" }, 400);
-  }
-  recipeLogBackend.inserts.push({ ...body });
-  await recipeLogBackend.insertGate;
-  if (recipeLogBackend.failsInsert) {
-    return serverError();
-  }
+// One row the database stores: it works the entry's energy out of its nutrients, and answers with it.
+function storedRow(body: object): Record<string, unknown> {
   storedEntries += 1;
   const id = `00000000-0000-4000-8000-${String(900 + storedEntries).padStart(12, "0")}`;
-
-  // The database works the entry's energy out of its nutrients, and answers with it.
   const kcal =
     "nutrients" in body &&
     typeof body.nutrients === "object" &&
@@ -121,7 +111,28 @@ async function entryInsert(request: Request): Promise<Response> {
       ? body.nutrients.kcal
       : null;
 
-  return jsonResponse({ ...body, id, kcal, created_at: "2026-10-15T12:40:31+00:00" }, 201);
+  return { ...body, id, kcal, created_at: "2026-10-15T12:40:31+00:00" };
+}
+
+// A plate is one insert of several rows, answered with all of them in order. A single row is answered alone.
+async function entryInsert(request: Request): Promise<Response> {
+  const body: unknown = await request.json();
+  const rows = (Array.isArray(body) ? body : [body]).filter(
+    (row): row is object => typeof row === "object" && row !== null,
+  );
+  if (rows.length === 0) {
+    return jsonResponse({ message: "unexpected request" }, 400);
+  }
+  for (const row of rows) {
+    recipeLogBackend.inserts.push({ ...row });
+  }
+  await recipeLogBackend.insertGate;
+  if (recipeLogBackend.failsInsert) {
+    return serverError();
+  }
+  const stored = rows.map((row) => storedRow(row));
+
+  return jsonResponse(Array.isArray(body) ? stored : stored[0], 201);
 }
 
 function entryDelete(url: URL): Response {

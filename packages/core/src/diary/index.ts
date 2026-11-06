@@ -80,7 +80,7 @@ export {
   usualQuantityOfUnit,
 } from "./startingAmount";
 export type { UnitOption } from "./startingAmount";
-export { foodNeedsReview, missingFieldsOf } from "./foodNeedsReview";
+export { foodNeedsReview, missingFieldsOf, snapshotNeedsReview } from "./foodNeedsReview";
 export { isNumberBeingTyped } from "./isNumberBeingTyped";
 export { amountForPicker, amountLastLogged } from "./amountLastLogged";
 export type { LastLoggedFood, LoggableAmount } from "./amountLastLogged";

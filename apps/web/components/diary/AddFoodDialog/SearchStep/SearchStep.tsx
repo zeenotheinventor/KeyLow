@@ -2,10 +2,13 @@ import { MIN_SEARCH_LENGTH, useFoodSearch } from "@keylow/api-client";
 import {
   ADD_FOOD_DIALOG,
   DIARY_ACTIONS,
+  OFFLINE_BANNER,
+  PLATE,
   SEARCH_EMPTY,
   SEARCH_FAILED_WEB,
   SEARCH_GROUP_HEADINGS,
   SEARCH_STATUS,
+  describeAddToPlateName,
 } from "@keylow/core/copy";
 import { foodNeedsReview } from "@keylow/core/diary";
 import { formatCalories } from "@keylow/core/format";
@@ -16,7 +19,7 @@ import {
   groupFoodSearchResults,
   servingOfSearchHit,
 } from "@keylow/core/search";
-import { SearchX, Zap } from "lucide-react";
+import { SearchX, WifiOff, Zap } from "lucide-react";
 import { useState } from "react";
 
 import { FavouriteFoods } from "./FavouriteFoods";
@@ -29,6 +32,7 @@ import type { RecipeSummary } from "@keylow/api-client";
 import type { FoodSearchGroupKey, FoodSearchGroupLimits } from "@keylow/core/search";
 
 import { InlineStatus } from "@/components/foods/InlineStatus";
+import { Banner } from "@/components/ui/Banner";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
@@ -41,8 +45,8 @@ import { TimeField } from "@/components/ui/TimeField";
 import { useIsOnline } from "@/lib/useIsOnline";
 import { cn } from "@/lib/utils";
 
-// Only the foods in the database are searched here, so the one-tap plus has a food to log: the live Open
-// Food Facts candidates are not, because they would have to be added to the database first.
+// Only the foods in the database are searched here, so the plus has a food to put on the plate: the
+// live Open Food Facts candidates are not, because they would have to be added to the database first.
 const LOCAL_ONLY = { offThreshold: 0 };
 
 type Expansion = { query: string; groups: readonly FoodSearchGroupKey[] };
@@ -61,11 +65,11 @@ function limitsFor(
 
 /**
  * The add dialog's first step: the search field with the Time field beside it, and under them the foods
- * found, each with the serving its one-tap plus logs. The rows keep the database's ranking order. A row
+ * found, each with the serving its plus puts on the plate. The rows keep the database's ranking order. A row
  * shows the food's serving and the values for that serving, a food with a missing value shows Needs review
  * and a chevron in place of the plus, and a press on the row goes to the portion step. Before anything is
  * typed the search offers Quick add, the Favourites strip and the Recent foods, each at the amount last logged. The user's recipes
- * that match come first, in their own group, each with a plus that logs one serving, and a press on the row
+ * that match come first, in their own group, each with a plus that puts one serving on the plate, and a press on the row
  * goes to the amount step for the recipe. In `ingredient` mode, a recipe's, there is no Time field, no plus,
  * no Quick add row and no recipes (a recipe is not an ingredient of itself), and Recent has no plus: a press
  * on a row is the only way on.
@@ -92,6 +96,8 @@ type RecipeResults = {
 
 function SearchStepView(props: SearchStepProps & RecipeResults) {
   const { query, onQueryChange, searchRef, onOpenFood, recipes } = props;
+  // Only the log search has a plate to dim, and an ingredient search has no plus.
+  const isLogging = props.mode !== "ingredient" && props.isLogging;
   const isOnline = useIsOnline();
   const trimmedQuery = query.trim();
   const { local, isLoadingLocal, isDebouncing, localError } = useFoodSearch(
@@ -120,6 +126,7 @@ function SearchStepView(props: SearchStepProps & RecipeResults) {
                   icon={Zap}
                   title={DIARY_ACTIONS.quickAdd}
                   subtitle={DIARY_ACTIONS.quickAddCaption}
+                  disabled={isLogging}
                   onClick={props.onQuickAdd}
                 />
               </ul>
@@ -133,7 +140,7 @@ function SearchStepView(props: SearchStepProps & RecipeResults) {
             />
           )}
           <RecentFoods
-            addDisabled={!isOnline}
+            addDisabled={isLogging}
             onOpen={props.onOpenRecent}
             onAdd={props.mode === "ingredient" ? undefined : props.onAddRecent}
           />
@@ -175,7 +182,7 @@ function SearchStepView(props: SearchStepProps & RecipeResults) {
           <RecipeLogGroup
             recipes={recipes}
             query={trimmedQuery}
-            addDisabled={!isOnline}
+            addDisabled={isLogging}
             onOpen={props.onOpenRecipe}
             onAdd={props.onAddRecipeServing}
           />
@@ -221,7 +228,8 @@ function SearchStepView(props: SearchStepProps & RecipeResults) {
                     {...(props.mode === "ingredient"
                       ? {}
                       : {
-                          addDisabled: !isOnline,
+                          addDisabled: isLogging,
+                          addLabel: describeAddToPlateName(hit.name, serving.caption),
                           onAdd: () => {
                             props.onAddServing(hit);
                           },
@@ -254,10 +262,22 @@ function SearchStepView(props: SearchStepProps & RecipeResults) {
             : {})}
         />
         {props.mode !== "ingredient" && (
-          <TimeField compact value={props.time} isNow={props.isNow} onChange={props.onTimeChange} />
+          <TimeField
+            compact
+            value={props.time}
+            isNow={props.isNow}
+            disabled={props.isLogging}
+            onChange={props.onTimeChange}
+          />
         )}
       </div>
       {props.mode === "ingredient" && props.barcodePanel}
+      {props.mode !== "ingredient" && !isOnline && (
+        // The plus still works offline because it writes nothing, so the banner says why Log foods is off.
+        <Banner title={OFFLINE_BANNER.title} icon={WifiOff}>
+          {PLATE.offlineBody}
+        </Banner>
+      )}
       {renderResults()}
     </>
   );

@@ -26,7 +26,7 @@ import { useIsOnline } from "@/lib/useIsOnline";
  * The quick add dialog: the quick add fields (Calories, Protein, Carbohydrate and Fat, a Label) and the
  * Time field. Only calories are needed, and above 0. Saving is allowed whatever the line under Calories says.
  */
-export function QuickAddDialog({ request, opener, onClose }: QuickAddDialogProps) {
+export function QuickAddDialog({ request, opener, onClose, onLogged }: QuickAddDialogProps) {
   const toast = useToast();
   const quickAdd = useQuickAdd();
   const isOnline = useIsOnline();
@@ -64,7 +64,7 @@ export function QuickAddDialog({ request, opener, onClose }: QuickAddDialogProps
         localDate,
       });
       toast.show({ message: ADDED_TOAST, tone: "success", icon: Check });
-      onClose();
+      (onLogged ?? onClose)();
     } catch {
       // Not kept: the failure can quote the values, which are health data.
       setHasSaveError(true);

@@ -2,6 +2,7 @@ import { onlineManager } from "@tanstack/react-query";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { noPlateHooks } from "../diary/noPlateHooks";
 import { noFavouriteHooks } from "../favourites/noFavouriteHooks";
 import { makeFood, makePortion } from "../foods/support";
 
@@ -37,6 +38,7 @@ const { useFoodByBarcode, foods } = vi.hoisted(() => ({
 vi.mock("@keylow/api-client", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@keylow/api-client")>()),
   ...noFavouriteHooks,
+  ...noPlateHooks,
   useRefreshOutdatedOffFood: () => undefined,
   useProfileTimeZone: () => ({ data: "UTC" }),
   useRecentFoods: () => ({ data: [], isError: false, fetchStatus: "idle" }),
@@ -115,12 +117,7 @@ describe("a barcode typed in the Add ingredient dialog", () => {
       render(
         <ToastProvider>
           <FoodLogActionsProvider>
-            <AddFoodDialog
-              request={{ date: "2026-10-15" }}
-              opener={null}
-              onClose={vi.fn()}
-              onQuickAdd={vi.fn()}
-            />
+            <AddFoodDialog request={{ date: "2026-10-15" }} opener={null} onClose={vi.fn()} />
           </FoodLogActionsProvider>
         </ToastProvider>,
       );

@@ -4,7 +4,6 @@ import {
   FOOD_NOT_LOADED,
   FOOD_REVIEW_ACTION_IN_NEW_TAB,
   FOOD_REVIEW_BANNER,
-  SAVE_FAILED_BANNER,
   describeMissingValuesBeforeLogging,
 } from "@keylow/core/copy";
 import { missingFieldsOf } from "@keylow/core/diary";
@@ -24,12 +23,12 @@ import { Skeleton } from "@/components/ui/Skeleton";
 /**
  * The add dialog's second step, for the food a row opened: a Results link with the favourite heart at the
  * other end of its row, then what the chosen amount
- * comes to, the amount, its unit and the Time field (an ingredient has none). A food that has to be
+ * comes to, the amount and its unit. The diary's add dialog has no Time field here, as the time belongs to the
+ * plate, and an ingredient has none. A food that has to be
  * reviewed first says so, with a way to copy it to the person's own foods, and cannot be added from here.
  */
 export function PortionStep({
   draft,
-  hasSaveError = false,
   opensReviewInNewTab = false,
   note,
   favouriteHeart,
@@ -103,7 +102,6 @@ export function PortionStep({
                 )}
               </Banner>
             )}
-            {hasSaveError && <Banner tone="error">{SAVE_FAILED_BANNER}</Banner>}
             {note !== undefined && <p className="text-caption text-text-muted">{note}</p>}
           </>
         }

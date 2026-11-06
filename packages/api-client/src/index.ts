@@ -527,5 +527,10 @@ export type {
   UseAccountExportFileInput,
 } from "./hooks";
 
-export { plateEntriesOf, useLogPlateEntries } from "./hooks";
+export {
+  PlateFoodGoneError,
+  PlateFoodNeedsReviewError,
+  plateEntriesOf,
+  useLogPlateEntries,
+} from "./hooks";
 export type { LogPlateEntriesInput, PlateFoodReaders, PlateLoggedWhen } from "./hooks";

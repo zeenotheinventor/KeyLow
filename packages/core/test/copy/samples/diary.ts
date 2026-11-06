@@ -4,7 +4,6 @@ import { progressBars } from "../../../src/diary/rules";
 // Every function `src/copy/diary.ts` exports, called with representative arguments. The voice test fails when
 // a function has no row, so no sentence escapes the sweep.
 export const samples: Record<string, () => string[]> = {
-  describeAddedFood: () => ["Banana", "Chicken breast, grilled"].map(copy.describeAddedFood),
   describeCopiedFromYesterday: () => [1, 8].map(copy.describeCopiedFromYesterday),
   describeTimeValue: () => [
     copy.describeTimeValue("12:40", false),

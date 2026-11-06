@@ -34,7 +34,12 @@ export type {
 export { useFoodWithPortions } from "./useFoodWithPortions";
 export type { FoodWithPortionsState } from "./useFoodWithPortions";
 export { useLogEntries } from "./useLogEntries";
-export { plateEntriesOf, useLogPlateEntries } from "./useLogPlateEntries";
+export {
+  PlateFoodGoneError,
+  PlateFoodNeedsReviewError,
+  plateEntriesOf,
+  useLogPlateEntries,
+} from "./useLogPlateEntries";
 export type { LogPlateEntriesInput, PlateFoodReaders, PlateLoggedWhen } from "./useLogPlateEntries";
 export { useLogEntry } from "./useLogEntry";
 export { useLogFood } from "./useLogFood";

@@ -1,13 +1,13 @@
 import { buildFoodSnapshot } from "@keylow/core/diary";
 import { onlineManager } from "@tanstack/react-query";
-import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { foodEntry } from "./support";
+import { noPlateHooks } from "./noPlateHooks";
 import { noFavouriteHooks } from "../favourites/noFavouriteHooks";
 import { makeFood, makePortion } from "../foods/support";
 
-import type { LogFoodInput, LogEntry, RecentFood } from "@keylow/api-client";
+import type { LogPlateEntriesInput, RecentFood } from "@keylow/api-client";
 import type { RecipeIngredient } from "@keylow/core/recipes";
 import type { Food, FoodPortion } from "@keylow/core/schemas";
 
@@ -54,8 +54,9 @@ type Api = {
   recentReads: number;
   foods: Map<string, Food>;
   portions: Map<string, FoodPortion[]>;
-  logFood: { mutateAsync: ReturnType<typeof vi.fn<(input: LogFoodInput) => Promise<LogEntry>>> };
-  deleteEntry: { mutateAsync: ReturnType<typeof vi.fn<(entry: LogEntry) => Promise<void>>> };
+  logPlate: {
+    mutateAsync: ReturnType<typeof vi.fn<(input: LogPlateEntriesInput) => Promise<unknown[]>>>;
+  };
 };
 
 const api = vi.hoisted((): Api => ({
@@ -63,13 +64,13 @@ const api = vi.hoisted((): Api => ({
   recentReads: 0,
   foods: new Map(),
   portions: new Map(),
-  logFood: { mutateAsync: undefined as never },
-  deleteEntry: { mutateAsync: undefined as never },
+  logPlate: { mutateAsync: undefined as never },
 }));
 
 vi.mock("@keylow/api-client", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@keylow/api-client")>()),
   ...noFavouriteHooks,
+  ...noPlateHooks,
   useRefreshOutdatedOffFood: () => undefined,
   useProfileTimeZone: () => ({ data: "UTC" }),
   useRecentFoods: () => {
@@ -93,11 +94,8 @@ vi.mock("@keylow/api-client", async (importOriginal) => ({
       ? { status: "notFound" }
       : { status: "ready", food, portions: api.portions.get(id) ?? [] };
   },
-  useLogFood: () => api.logFood,
-  useDeleteEntry: () => api.deleteEntry,
+  useLogPlateEntries: () => api.logPlate,
   useSupabase: () => ({}),
-  getFood: (_client: unknown, id: string) => Promise.resolve(api.foods.get(id) ?? null),
-  listFoodPortions: (_client: unknown, id: string) => Promise.resolve(api.portions.get(id) ?? []),
 }));
 
 // 12:40 on Thursday 15 October 2026 in UTC.
@@ -129,12 +127,7 @@ function recentOf(
 function renderDialog() {
   render(
     <ToastProvider>
-      <AddFoodDialog
-        request={{ date: "2026-10-15" }}
-        opener={null}
-        onClose={vi.fn()}
-        onQuickAdd={vi.fn()}
-      />
+      <AddFoodDialog request={{ date: "2026-10-15" }} opener={null} onClose={vi.fn()} />
     </ToastProvider>,
   );
 }
@@ -158,22 +151,7 @@ beforeEach(() => {
     [OATS_ID, oats],
   ]);
   api.portions = new Map([[EGGS_ID, [largeEgg]]]);
-  api.logFood.mutateAsync = vi.fn((input: LogFoodInput) =>
-    Promise.resolve(
-      foodEntry({
-        date: input.localDate,
-        time: "12:00",
-        name: input.food.name,
-        quantity: input.quantity,
-        unit: input.unit === "portion" ? "portion" : input.unit === "ml" ? "ml" : "g",
-        kcal: 1,
-        protein: 1,
-        fat: 1,
-        carbs: 1,
-      }),
-    ),
-  );
-  api.deleteEntry.mutateAsync = vi.fn(() => Promise.resolve());
+  api.logPlate.mutateAsync = vi.fn(() => Promise.resolve([]));
 });
 
 afterEach(() => {
@@ -267,78 +245,74 @@ describe("Recent in the add food dialog", () => {
   });
 
   describe("the plus", () => {
-    it("should log the amount last logged at once, and say so with an Undo", async () => {
+    const logPlate = () =>
+      fireEvent.click(
+        screen.getByRole("button", { name: /^Log foods?, \d+ foods? on your plate$/ }),
+      );
+
+    it("should put the amount last logged on the plate, write nothing and draw no toast", () => {
       renderDialog();
 
-      fireEvent.click(plusOf("Add Eggs, whole, boiled, 2 × 1 large egg (120 g)"));
+      fireEvent.click(plusOf("Add Eggs, whole, boiled, 2 × 1 large egg (120 g), to your plate"));
 
-      await waitFor(() => {
-        expect(api.logFood.mutateAsync).toHaveBeenCalledOnce();
-      });
-      expect(api.logFood.mutateAsync).toHaveBeenCalledWith(
-        expect.objectContaining({
-          food: eggs,
-          quantity: 2,
-          unit: "portion",
-          portion: largeEgg,
-          localDate: "2026-10-15",
-        }),
-      );
-      expect(await screen.findByText("Added Eggs, whole, boiled")).toBeTruthy();
-      expect(screen.getByRole("button", { name: "Undo" })).toBeTruthy();
+      expect(screen.getByRole("button", { name: "Your plate, 1 food" })).toBeTruthy();
+      expect(api.logPlate.mutateAsync).not.toHaveBeenCalled();
+      expect(screen.queryByText(/^Added/)).toBeNull();
       expect(screen.getByRole("dialog", { name: "Add food" })).toBeTruthy();
     });
 
-    it("should log grams as grams", async () => {
+    it("should log the amount last logged when the plate is logged", async () => {
       renderDialog();
+      fireEvent.click(plusOf("Add Eggs, whole, boiled, 2 × 1 large egg (120 g), to your plate"));
 
-      fireEvent.click(plusOf("Add Porridge oats, 40 g"));
+      logPlate();
 
       await waitFor(() => {
-        expect(api.logFood.mutateAsync).toHaveBeenCalledWith(
-          expect.objectContaining({ food: oats, quantity: 40, unit: "g" }),
-        );
+        expect(api.logPlate.mutateAsync).toHaveBeenCalledOnce();
+      });
+      expect(api.logPlate.mutateAsync.mock.calls[0]?.[0].items[0]).toMatchObject({
+        kind: "food",
+        foodId: EGGS_ID,
+        quantity: 2,
+        unit: { kind: "portion", portionId: largeEgg.id, label: "1 large egg" },
       });
     });
 
-    it("should keep the grams a replaced portion came to", async () => {
-      api.portions = new Map([[EGGS_ID, []]]);
+    it("should put grams on the plate as grams", async () => {
       renderDialog();
+      fireEvent.click(plusOf("Add Porridge oats, 40 g, to your plate"));
 
-      fireEvent.click(plusOf("Add Eggs, whole, boiled, 2 × 1 large egg (120 g)"));
+      logPlate();
 
       await waitFor(() => {
-        expect(api.logFood.mutateAsync).toHaveBeenCalledWith(
-          expect.objectContaining({ food: eggs, quantity: 120, unit: "g" }),
-        );
+        expect(api.logPlate.mutateAsync).toHaveBeenCalledOnce();
+      });
+      expect(api.logPlate.mutateAsync.mock.calls[0]?.[0].items[0]).toMatchObject({
+        foodId: OATS_ID,
+        quantity: 40,
+        unit: { kind: "g" },
       });
     });
 
-    it("should be off when offline, and log nothing", () => {
+    it("should stay pressable offline, because it writes nothing", () => {
       onlineManager.setOnline(false);
       renderDialog();
 
-      const plus = plusOf("Add Eggs, whole, boiled, 2 × 1 large egg (120 g)");
+      const plus = plusOf("Add Eggs, whole, boiled, 2 × 1 large egg (120 g), to your plate");
       fireEvent.click(plus);
 
-      expect(plus.getAttribute("aria-disabled")).toBe("true");
-      expect(api.logFood.mutateAsync).not.toHaveBeenCalled();
+      expect(plus.getAttribute("aria-disabled")).toBeNull();
+      expect(screen.getByRole("button", { name: "Your plate, 1 food" })).toBeTruthy();
     });
 
-    it("should log once for a double press", async () => {
+    it("should merge a double press into one row", () => {
       renderDialog();
-      const plus = plusOf("Add Porridge oats, 40 g");
+      const plus = plusOf("Add Porridge oats, 40 g, to your plate");
 
       fireEvent.click(plus);
-      fireEvent.click(plus);
+      fireEvent.click(plusOf("Add Porridge oats, 40 g, to your plate"));
 
-      await waitFor(() => {
-        expect(api.logFood.mutateAsync).toHaveBeenCalledOnce();
-      });
-      await act(async () => {
-        await Promise.resolve();
-      });
-      expect(api.logFood.mutateAsync).toHaveBeenCalledOnce();
+      expect(screen.getByRole("button", { name: "Your plate, 1 food" })).toBeTruthy();
     });
   });
 
@@ -371,16 +345,19 @@ describe("Recent in the add food dialog", () => {
       expect(screen.getByRole<HTMLInputElement>("textbox", { name: /^Amount/ }).value).toBe("120");
     });
 
-    it("should log the amount it opened on when Add is pressed", async () => {
+    it("should put the amount it opened on the plate when Add to plate is pressed", async () => {
       renderDialog();
       fireEvent.click(screen.getByRole("button", { name: /^Eggs, whole, boiled/ }));
 
-      fireEvent.click(screen.getByRole("button", { name: "Add" }));
+      fireEvent.click(screen.getByRole("button", { name: "Add to plate" }));
+      fireEvent.click(screen.getByRole("button", { name: "Log food, 1 food on your plate" }));
 
       await waitFor(() => {
-        expect(api.logFood.mutateAsync).toHaveBeenCalledWith(
-          expect.objectContaining({ quantity: 2, unit: "portion", portion: largeEgg }),
-        );
+        expect(api.logPlate.mutateAsync).toHaveBeenCalledOnce();
+      });
+      expect(api.logPlate.mutateAsync.mock.calls[0]?.[0].items[0]).toMatchObject({
+        quantity: 2,
+        unit: { kind: "portion", label: "1 large egg" },
       });
     });
 
@@ -395,41 +372,75 @@ describe("Recent in the add food dialog", () => {
     });
   });
 
-  describe("a food that needs review", () => {
-    // The live food has lost its fat value since it was logged.
+  describe("a food that was missing a value when it was logged", () => {
+    // The search shows Needs review and a chevron for such a food, so the plate never takes one.
     beforeEach(() => {
-      api.foods.set(EGGS_ID, { ...eggs, fat_g: null });
+      const eggsWithoutFat = { ...eggs, fat_g: null };
+      api.foods.set(EGGS_ID, eggsWithoutFat);
+      api.recent = {
+        data: [recentOf(eggsWithoutFat, { quantity: 2, portion: largeEgg })],
+        isError: false,
+        fetchStatus: "idle",
+      };
     });
 
-    it("should not be logged by the plus, and should open its portion step instead", async () => {
+    it("should show Needs review and a chevron in place of the plus", () => {
       renderDialog();
 
-      fireEvent.click(plusOf("Add Eggs, whole, boiled, 2 × 1 large egg (120 g)"));
+      const list = within(screen.getByRole("region", { name: /Recent/ }));
 
-      expect(await screen.findByRole("button", { name: "Results" })).toBeTruthy();
-      expect(api.logFood.mutateAsync).not.toHaveBeenCalled();
-      expect(screen.queryByText("Added Eggs, whole, boiled")).toBeNull();
-      expect(screen.getByText("Last logged 2 × 1 large egg (120 g), yesterday")).toBeTruthy();
-      expect(screen.getByRole("button", { name: "Add" }).hasAttribute("disabled")).toBe(true);
+      expect(list.getByText("Needs review")).toBeTruthy();
+      expect(list.queryByRole("button", { name: /^Add Eggs/ })).toBeNull();
+    });
+
+    it("should open its amount step on a press, where Add to plate is off", () => {
+      renderDialog();
+
+      fireEvent.click(screen.getByRole("button", { name: /^Eggs, whole, boiled/ }));
+
+      expect(screen.getByRole("button", { name: "Results" })).toBeTruthy();
+      expect(screen.getByRole("button", { name: "Add to plate" }).hasAttribute("disabled")).toBe(
+        true,
+      );
+      expect(screen.queryByRole("button", { name: /^Your plate/ })).toBeNull();
     });
   });
 
-  describe("a deleted food", () => {
-    beforeEach(() => {
-      api.foods.set(EGGS_ID, { ...eggs, deleted_at: "2026-10-15T09:00:00+00:00" });
-    });
+  describe("a food deleted after the list was read", () => {
+    const platePlus = "Add Eggs, whole, boiled, 2 × 1 large egg (120 g), to your plate";
 
-    it("should not be logged by the plus, and should not blame the connection", async () => {
+    // The api-client refuses the whole log before any write when a food on the plate is gone.
+    async function refuseWith(name: "PlateFoodGoneError" | "PlateFoodNeedsReviewError") {
+      const original =
+        await vi.importActual<typeof import("@keylow/api-client")>("@keylow/api-client");
+      api.logPlate.mutateAsync = vi.fn(() => Promise.reject(new original[name]()));
+    }
+
+    it("should refuse the log, say the food is gone and not blame the connection, and keep the plate", async () => {
+      await refuseWith("PlateFoodGoneError");
       renderDialog();
+      fireEvent.click(plusOf(platePlus));
 
-      fireEvent.click(plusOf("Add Eggs, whole, boiled, 2 × 1 large egg (120 g)"));
+      fireEvent.click(screen.getByRole("button", { name: "Log food, 1 food on your plate" }));
 
       expect(
         await screen.findByText("This food does not exist, or you cannot see it."),
       ).toBeTruthy();
-      expect(api.logFood.mutateAsync).not.toHaveBeenCalled();
       expect(screen.queryByText(/Check your connection/)).toBeNull();
-      expect(screen.queryByText("Added Eggs, whole, boiled")).toBeNull();
+      expect(screen.queryByText(/^Logged/)).toBeNull();
+      expect(screen.getByRole("button", { name: "Your plate, 1 food" })).toBeTruthy();
+    });
+
+    it("should say the food needs review when it was flagged since it was added, and keep the plate", async () => {
+      await refuseWith("PlateFoodNeedsReviewError");
+      renderDialog();
+      fireEvent.click(plusOf(platePlus));
+
+      fireEvent.click(screen.getByRole("button", { name: "Log food, 1 food on your plate" }));
+
+      expect(await screen.findByText("Needs review")).toBeTruthy();
+      expect(screen.queryByText(/Check your connection/)).toBeNull();
+      expect(screen.getByRole("button", { name: "Your plate, 1 food" })).toBeTruthy();
     });
   });
 

@@ -21,7 +21,6 @@ import {
   EMPTY_DAY,
   TIME_ROW_LABEL,
   describeAddFoodAtHour,
-  describeAddedFood,
   describeCopiedEntriesToToday,
   describeCopiedFromYesterday,
   describeDateInWords,
@@ -68,10 +67,6 @@ describe("the diary toasts", () => {
 
   it("should say Added, as the one-tap plus and the portion picker's toast do", () => {
     expect(ADDED_TOAST).toBe("Added");
-  });
-
-  it("should say which food the plus added", () => {
-    expect(describeAddedFood("Chicken breast, grilled")).toBe("Added Chicken breast, grilled");
   });
 
   it.each([
@@ -200,7 +195,6 @@ describe("the diary has no meals", () => {
     ...Object.values(diaryCopy).flatMap(collectStrings),
     ...[1, 8].flatMap((count) => [diaryCopy.describeCopiedEntriesToToday(count)]),
     diaryCopy.describeMacroTotal(131),
-    diaryCopy.describeAddedFood("Banana"),
     ...[1, 8].map(diaryCopy.describeCopiedFromYesterday),
     diaryCopy.describeTimeValue("12:40", true),
     diaryCopy.describeTimeRowName("12:40", true),
