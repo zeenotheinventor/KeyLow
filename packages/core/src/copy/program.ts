@@ -472,6 +472,8 @@ export const describeExpenditureChartSummary = ({
 /** Edit programme: the title, the four groups, the button, and the setup canvas's banners and reason, reused. */
 export const PROGRAM_EDIT = {
   title: "Edit programme",
+  /** The web's way back to the Programme page, which leaves without saving and without asking. */
+  backName: "Back to Programme",
   groups: {
     goal: { title: "Goal" },
     rate: {
@@ -488,6 +490,8 @@ export const PROGRAM_EDIT = {
     },
   },
   saveLabel: "Save changes",
+  /** The web's footer notice while offline, over the footnote, with Save changes off. */
+  saveOffline: "Saving your programme needs a connection. Try again when you're back online.",
   /** Under the goal cards, always shown, and different for someone under 18. */
   goalNotes: SETUP_GOAL_NOTES,
   /** On the disabled Lose card for someone aged 13 to 17. */

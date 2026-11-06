@@ -7,7 +7,12 @@ import {
   useWeightUnit,
 } from "@keylow/api-client";
 import { PROGRAM_ERROR, PROGRAM_SCREEN } from "@keylow/core/copy";
-import { ageInYears, toLocalDate } from "@keylow/core/dates";
+import { toLocalDate } from "@keylow/core/dates";
+import {
+  newestExpenditureKcal,
+  programEditAgeYears,
+  programEditWeightKg,
+} from "@keylow/core/program";
 import { Redirect } from "expo-router";
 import { View } from "react-native";
 
@@ -62,10 +67,11 @@ export function ProgramEditScreen() {
   }
 
   const program = summary.data?.program;
-  const weightKg =
-    weightTrend.points.at(-1)?.trendKg ??
-    setupState.data?.latestWeighIn?.weightKg ??
-    summary.data?.currentTargets?.basis.trendWeightKg;
+  const weightKg = programEditWeightKg({
+    trendKg: weightTrend.points.at(-1)?.trendKg,
+    latestWeighInKg: setupState.data?.latestWeighIn?.weightKg,
+    currentTargetsKg: summary.data?.currentTargets?.basis.trendWeightKg,
+  });
 
   if (
     !isFailed &&
@@ -77,15 +83,11 @@ export function ProgramEditScreen() {
     // If the zone cannot be read the day is UTC, as the other screens read it.
     const today = toLocalDate(now, timeZone.data ?? "UTC");
     const birthDate = setupState.data.stats.birthDate ?? null;
-    const newestSnapshot = [...(expenditureHistory.data ?? [])]
-      .sort((first, second) => first.asOfDate.localeCompare(second.asOfDate))
-      .at(-1);
 
     return (
       <ProgramEditForm
-        // No birth date is no proof of age, so the age is 0 and Lose is not offered, as the save decides it.
-        ageYears={birthDate === null ? 0 : ageInYears(birthDate, today)}
-        expenditureKcal={newestSnapshot?.muKcal ?? null}
+        ageYears={programEditAgeYears(birthDate, today)}
+        expenditureKcal={newestExpenditureKcal(expenditureHistory.data)}
         program={program}
         today={today}
         weightKg={weightKg}

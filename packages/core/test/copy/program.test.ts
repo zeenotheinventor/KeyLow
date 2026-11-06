@@ -1092,6 +1092,13 @@ describe("program-edit: default, under-18, saving, save-error", () => {
     );
   });
 
+  it("should name the way back to the Programme page, and say a save needs a connection", () => {
+    expect(PROGRAM_EDIT.backName).toBe("Back to Programme");
+    expect(PROGRAM_EDIT.saveOffline).toBe(
+      "Saving your programme needs a connection. Try again when you're back online.",
+    );
+  });
+
   it("should give the Save button", () => {
     expect(PROGRAM_EDIT.saveLabel).toBe("Save changes");
     expectOnCanvas(["Save changes"]);
