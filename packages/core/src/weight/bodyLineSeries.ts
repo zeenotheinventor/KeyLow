@@ -1,7 +1,8 @@
-import { addCalendarDays } from "@keylow/core/dates";
-import { rangeWindow } from "@keylow/core/weight";
+import { addCalendarDays } from "../dates";
+import { rangeWindow } from "./ranges";
 
-import type { BodyTrendPoint, WeightRange } from "@keylow/core/weight";
+import type { BodyTrendPoint } from "./bodyTypes";
+import type { WeightRange } from "./types";
 
 /**
  * The trend of each day of the range, oldest first, for the card's line. A day with no point is `null`,

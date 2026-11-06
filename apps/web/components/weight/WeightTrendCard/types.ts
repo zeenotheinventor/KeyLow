@@ -1,5 +1,6 @@
 import type { WeighIn } from "@keylow/api-client";
 import type { TrendPoint } from "@keylow/core/engine";
+import type { WeightRange } from "@keylow/core/weight";
 
 export type WeightTrendCardProps = {
   /** Every weigh-in, as the hook returns them. */
@@ -13,4 +14,8 @@ export type WeightTrendCardProps = {
   };
   /** Today in the profile's time zone, `YYYY-MM-DD`. */
   today: string;
+  /** The range the chart draws, which the page holds so the Body composition cards use the same one. */
+  range: WeightRange;
+  /** The range control's choice. */
+  onRangeChange: (range: WeightRange) => void;
 };

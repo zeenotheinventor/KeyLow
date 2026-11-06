@@ -52,6 +52,14 @@ export type {
   HealthBodyFatSample,
   HealthLeanMassSample,
 } from "./bodyTypes";
+export { bodyLineSeries } from "./bodyLineSeries";
+export { buildBodyCompositionCard } from "./buildBodyCompositionCard";
+export type {
+  BodyCompositionCardData,
+  BodyCompositionChartCardData,
+  BodyCompositionRangeEmptyCardData,
+  BodyCompositionSettlingCardData,
+} from "./buildBodyCompositionCard";
 export { bodyChangeOverRange, bodyPointsInRange, isBodyTrendSettling } from "./bodyTrendHelpers";
 export { computeBodyTrend } from "./computeBodyTrend";
 export { mapHealthBodyFatSamples, mapHealthLeanMassSamples } from "./mapHealthBodyMeasurements";

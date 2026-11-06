@@ -88,6 +88,8 @@ export type { UseWeighInEntryInput } from "./useWeighInEntry";
 export { useWeightTrend } from "./useWeightTrend";
 export { useBodyMeasurements } from "./useBodyMeasurements";
 export { useBodyTrend } from "./useBodyTrend";
+export { useBodyCompositionKind } from "./useBodyCompositionKind";
+export type { BodyCompositionKind } from "./useBodyCompositionKind";
 export { useImportBodyMeasurements } from "./useImportBodyMeasurements";
 export { useHeatSets } from "./useHeatSets";
 export { useMuscleState } from "./useMuscleState";
