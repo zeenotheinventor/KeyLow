@@ -1,10 +1,28 @@
-import { addCalendarDays } from "@keylow/core/dates";
-import { profileBmr, recomputeTargets, startSnapshotAction } from "@keylow/core/engine";
+import { addCalendarDays } from "../dates";
+import { profileBmr, recomputeTargets, startSnapshotAction } from "../engine";
 
-import type { EstimateMeasurement } from "./steps/EstimateStep";
-import type { ExpenditureSnapshot } from "@keylow/api-client";
-import type { TrendPoint } from "@keylow/core/engine";
-import type { SetupAnswers, StartingPlan } from "@keylow/core/setup";
+import type { TrendPoint } from "../engine";
+import type { SetupAnswers, StartingPlan } from "./types";
+
+/**
+ * Where the expenditure of a plan after a check-in came from: a check-in measured it (on the date given,
+ * `YYYY-MM-DD`), or none has and the estimate from the last check-in is carried forward.
+ */
+export type EstimateMeasurement =
+  Readonly<{ kind: "measured"; measuredOn: string }> | Readonly<{ kind: "carried-forward" }>;
+
+/**
+ * The part of an expenditure snapshot the estimate reads. It is the shape of api-client's
+ * `ExpenditureSnapshot`, which core cannot import, so that value is handed over as it is.
+ */
+export type EstimateSnapshot =
+  | Readonly<{ kind: "start"; asOfDate: string; muKcal: number; measurement: null }>
+  | Readonly<{
+      kind: "checkin";
+      asOfDate: string;
+      muKcal: number;
+      measurement: Readonly<{ eligible: boolean }>;
+    }>;
 
 export type MeasuredEstimateInput = Readonly<{
   answers: SetupAnswers;
@@ -16,7 +34,7 @@ export type MeasuredEstimateInput = Readonly<{
    * The user's expenditure history in any order, from `useExpenditureHistory`: at least the last 28 days, which
    * is as far back as the recompute keeps a snapshot. Snapshots of an ended program count, as they do there.
    */
-  history: readonly ExpenditureSnapshot[];
+  history: readonly EstimateSnapshot[];
   /** The weight trend in date order, from `useWeightTrend`. */
   trendPoints: readonly Pick<TrendPoint, "date" | "trendKg">[];
   /** The weight to use when no trend point is on or before yesterday: the latest weigh-in's. */
@@ -34,12 +52,12 @@ export type MeasuredEstimate = Readonly<{
 // No day of week offsets exist in v1, and no screen sets them (ADR 0002, Amendment 2).
 const NO_DAY_OF_WEEK_OFFSETS = [0, 0, 0, 0, 0, 0, 0] as const;
 
-function isMeasuredCheckin(snapshot: ExpenditureSnapshot): boolean {
+function isMeasuredCheckin(snapshot: EstimateSnapshot): boolean {
   return snapshot.kind === "checkin" && snapshot.measurement.eligible;
 }
 
 /** The date of the newest check-in that measured, or undefined when none did. */
-function newestMeasuredDate(history: readonly ExpenditureSnapshot[]): string | undefined {
+function newestMeasuredDate(history: readonly EstimateSnapshot[]): string | undefined {
   return history
     .filter(isMeasuredCheckin)
     .map((snapshot) => snapshot.asOfDate)

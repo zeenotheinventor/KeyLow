@@ -163,6 +163,7 @@ export type {
   Targets,
 } from "./repos";
 export { useSaveSetup, useSetupState, useSkipSetup } from "./hooks";
+export { useSetupDraft } from "./hooks";
 export type { SaveSetupInput } from "./hooks";
 export { getMySetupState, markMySetupDone, saveMySetup } from "./repos";
 export type {

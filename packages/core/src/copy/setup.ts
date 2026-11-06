@@ -3,12 +3,16 @@ import { NOT_MEDICAL_ADVICE } from "./legal";
 import { describeWeightProblem, WEIGH_IN_SHEET } from "./weight";
 import { formatCalories, formatGrams } from "../format/numbers";
 import {
+  bindingCalorieClamp,
   DEFAULT_RATE_PCT_PER_WEEK,
   HEIGHT_MAX_CM,
   HEIGHT_MIN_CM,
   MAX_AGE_YEARS,
+  progressFraction,
   PROTEIN_G_PER_KG,
   ratePerWeekKg,
+  stepCount as countSetupSteps,
+  stepNumber as numberOfSetupStep,
 } from "../setup";
 import { displayWeight, kgToLb, WEIGH_IN_MAX_KG, WEIGH_IN_MIN_KG } from "../weight";
 
@@ -20,8 +24,11 @@ import type {
   HeightUnit,
   ProteinPreset,
   RateGoal,
+  SetupAnswers,
+  SetupDraft,
   SetupGoal,
   SetupStep,
+  StartingPlan,
 } from "../setup";
 import type { WeightDisplayUnit, WeightInputReason } from "../weight";
 
@@ -59,6 +66,24 @@ export const SETUP_GROUP_TITLES: Readonly<Record<SetupStep, string>> = {
 /** The header's subtitle and the progress bar's name: "Step 3 of 8", or "of 7" once Maintain skips the rate. */
 export const describeSetupStepLabel = (stepNumber: number, stepCount: number): string =>
   `Step ${stepNumber} of ${stepCount}`;
+
+/** The header's subtitle, the progress bar's name and how full the bar is, from 0 to 100. */
+export type SetupStepProgress = Readonly<{
+  /** "Step 3 of 8". The estimate is not a question, so it has none. */
+  subtitle: string | undefined;
+  progressName: string;
+  percent: number;
+}>;
+
+export function describeStepProgress(draft: SetupDraft, step: SetupStep): SetupStepProgress {
+  const number = numberOfSetupStep(draft, step);
+  const percent = progressFraction(draft, step) * 100;
+  if (number === undefined) {
+    return { subtitle: undefined, progressName: SETUP_SHELL.setupCompleteName, percent };
+  }
+  const label = describeSetupStepLabel(number, countSetupSteps(draft));
+  return { subtitle: label, progressName: label, percent };
+}
 
 type Question = Readonly<{ question: string; helper: string }>;
 
@@ -539,6 +564,83 @@ export const describeRateLine = ({
   const amount = describeRateAmount(ratePctPerWeek, weightKg, unit);
   return `To ${goal} about ${amount} a week (${formatRatePercent(ratePctPerWeek)}% of your weight).`;
 };
+
+/** The words under the calorie numeral: the rate line, or the guardrail lines that replace it. */
+export type EstimateLines = Readonly<{
+  /** What the chosen rate is worth a week. Undefined when a guardrail changed the result. */
+  rateLine: string | undefined;
+  /** The line of the guardrail that set the calories, then the macro fit line when it applies. */
+  guardrailLines: readonly string[];
+}>;
+
+/**
+ * The words under the calorie numeral. The guardrail that set the calories, found by `bindingCalorieClamp`,
+ * replaces the rate line with its own, and a macro fit line follows it. The figures are read from the plan
+ * and the answers as they are, and the words come from this file.
+ */
+export function describeEstimateLines(answers: SetupAnswers, plan: StartingPlan): EstimateLines {
+  const { caloriesKcal, proteinG, fatG } = plan.targets;
+  const rate = {
+    weightKg: answers.weightKg,
+    effectiveRatePctPerWeek: plan.effectiveRatePctPerWeek,
+    wantedRatePctPerWeek: answers.ratePctPerWeek,
+    unit: answers.weightUnit,
+  };
+  const macroFitLines = plan.clamps.includes("macro_fit")
+    ? [
+        SETUP_GUARDRAIL_LINES.macro_fit({
+          proteinGrams: proteinG,
+          caloriesKcal,
+          fatGrams: fatG,
+        }),
+      ]
+    : [];
+
+  switch (bindingCalorieClamp(plan.clamps)) {
+    case "floor": {
+      const floorLine = SETUP_GUARDRAIL_LINES.floor({
+        ...rate,
+        caloriesKcal,
+        expenditureKcal: plan.estimate.expenditureKcal,
+      });
+      // A floor above expenditure is a gain, and the line after it tells the person to talk to someone. The
+      // `describeFloorOutcome` above makes the same test for the words before it, so keep the two in step.
+      const line =
+        plan.effectiveRatePctPerWeek > 0
+          ? floorLine
+          : `${floorLine} ${SETUP_FLOOR_ABOVE_EXPENDITURE_ADVICE}`;
+      return { rateLine: undefined, guardrailLines: [line, ...macroFitLines] };
+    }
+    case "max_deficit":
+      return {
+        rateLine: undefined,
+        guardrailLines: [SETUP_GUARDRAIL_LINES.max_deficit(rate), ...macroFitLines],
+      };
+    case "max_surplus":
+      return {
+        rateLine: undefined,
+        guardrailLines: [SETUP_GUARDRAIL_LINES.max_surplus(rate), ...macroFitLines],
+      };
+    case "profile_max":
+      return {
+        rateLine: undefined,
+        guardrailLines: [
+          SETUP_GUARDRAIL_LINES.profile_max({ ...rate, caloriesKcal }),
+          ...macroFitLines,
+        ],
+      };
+    case undefined:
+      return {
+        rateLine: describeRateLine({
+          goal: answers.goal,
+          ratePctPerWeek: answers.ratePctPerWeek,
+          weightKg: answers.weightKg,
+          unit: answers.weightUnit,
+        }),
+        guardrailLines: macroFitLines,
+      };
+  }
+}
 
 /** The Targets screen's row that opens the wizard in recalculate mode. */
 export const SETUP_TARGETS_ROW = {

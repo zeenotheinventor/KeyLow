@@ -1,4 +1,7 @@
 import * as copy from "../../../src/copy";
+import { startingPlan } from "../../../src/setup";
+
+import type { SetupAnswers } from "../../../src/setup";
 
 // Every function `src/copy/setup.ts` exports, called with representative arguments. The voice test fails when
 // a function has no row, so no sentence escapes the sweep. A field that says nothing gives null, which is left out.
@@ -79,4 +82,29 @@ export const samples: Record<string, () => string[]> = {
     (["lose", "maintain", "gain"] as const).map((goal) =>
       copy.describeRateLine({ goal, ratePctPerWeek: 0.5, weightKg: 80, unit: "kg" }),
     ),
+  describeStepProgress: () =>
+    (["sex", "body", "goal", "estimate"] as const).flatMap((step) => {
+      const { subtitle, progressName } = copy.describeStepProgress({}, step);
+      return sentencesOf(subtitle ?? null, progressName);
+    }),
+  describeEstimateLines: () => {
+    const answers: SetupAnswers = {
+      sex: "male",
+      birthDate: "1991-03-14",
+      heightCm: 180,
+      weightKg: 80,
+      weightUnit: "kg",
+      heightUnit: "cm",
+      activity: "light",
+      goal: "lose",
+      ratePctPerWeek: 0.5,
+      proteinPreset: "moderate",
+      dietStyle: "balanced",
+    };
+    const { rateLine, guardrailLines } = copy.describeEstimateLines(
+      answers,
+      startingPlan(answers, "2026-10-23", null),
+    );
+    return [...sentencesOf(rateLine ?? null), ...guardrailLines];
+  },
 };

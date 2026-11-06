@@ -183,6 +183,7 @@ describe("the package index", () => {
     "useSetupState",
     "useSaveSetup",
     "useSkipSetup",
+    "useSetupDraft",
     "getMyProgramSummary",
     "listMyExpenditureSnapshots",
     "listMyTargetsHistory",

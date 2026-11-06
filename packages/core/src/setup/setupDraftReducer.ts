@@ -1,35 +1,22 @@
-import { describeSetupStepLabel, SETUP_SHELL } from "@keylow/core/copy";
-import { ageInYears } from "@keylow/core/dates";
+import { ageInYears } from "../dates";
+import { checkWeightKg } from "../weight";
+import { checkBirthDate } from "./birthDate";
+import { goalsAllowed, isRateGoal, resetGoalForAge, withGoal } from "./goals";
+import { checkHeightCm } from "./height";
 import {
-  checkBirthDate,
-  checkHeightCm,
   DEFAULT_DIET_STYLE,
   DEFAULT_PROTEIN_PRESET,
   DEFAULT_RATE_PCT_PER_WEEK,
-  goalsAllowed,
-  heightUnitFor,
-  isRateGoal,
   nearestRatePreset,
-  nextStep,
-  previousStep,
-  progressFraction,
   RATE_PRESETS_PCT_PER_WEEK,
-  resetGoalForAge,
-  stepCount,
-  stepNumber,
-  withGoal,
-} from "@keylow/core/setup";
-import { checkWeightKg } from "@keylow/core/weight";
+} from "./presets";
+import { nextStep, previousStep } from "./steps";
+import { heightUnitFor } from "./units";
 
-import type { ActivityLevel, Sex } from "@keylow/core/engine";
-import type {
-  DietStyle,
-  ProteinPreset,
-  SetupDraft,
-  SetupGoal,
-  SetupStep,
-} from "@keylow/core/setup";
-import type { WeightDisplayUnit } from "@keylow/core/weight";
+import type { ActivityLevel, Sex } from "../engine";
+import type { WeightDisplayUnit } from "../weight";
+import type { SetupStep } from "./steps";
+import type { DietStyle, ProteinPreset, SetupDraft, SetupGoal } from "./types";
 
 /**
  * The answers so far and the step the person is on. `hasLoadedSavedAnswers` is true once the saved answers
@@ -57,7 +44,9 @@ export type SetupWizardState = Readonly<{
  * passes `checkBirthDate`, and `undefined` says the fields no longer hold one. The same holds for the
  * height and the weight of `bodyChanged`, which are in centimetres and kilograms whatever the unit the
  * person types in, and the unit is the one the fields show. `weighInDate` is the `YYYY-MM-DD` of the
- * weigh-in the saved weight came from.
+ * weigh-in the saved weight came from. `stepOpened` is for a screen that has an address for each step, so
+ * the browser's Back or a typed address agrees with the reducer: it sets the step and fills in its defaults
+ * as arriving by `continued` does, and checks nothing about the steps before it. The phone never sends it.
  */
 export type SetupWizardAction =
   | Readonly<{ type: "sexChosen"; sex: Sex }>
@@ -80,7 +69,8 @@ export type SetupWizardAction =
   | Readonly<{ type: "proteinChosen"; proteinPreset: ProteinPreset }>
   | Readonly<{ type: "dietChosen"; dietStyle: DietStyle }>
   | Readonly<{ type: "continued"; today: string }>
-  | Readonly<{ type: "wentBack" }>;
+  | Readonly<{ type: "wentBack" }>
+  | Readonly<{ type: "stepOpened"; step: SetupStep }>;
 
 export const initialSetupWizardState: SetupWizardState = {
   draft: {},
@@ -310,23 +300,7 @@ export function setupWizardReducer(
       const step = previousStep(state.draft, state.step);
       return step === undefined ? state : { ...state, step };
     }
+    case "stepOpened":
+      return { ...withDefaultsFor(state, action.step), step: action.step };
   }
-}
-
-/** The header's subtitle, the progress bar's name and how full the bar is, from 0 to 100. */
-export type SetupStepProgress = Readonly<{
-  /** "Step 3 of 8". The estimate is not a question, so it has none. */
-  subtitle: string | undefined;
-  progressName: string;
-  percent: number;
-}>;
-
-export function describeStepProgress(draft: SetupDraft, step: SetupStep): SetupStepProgress {
-  const number = stepNumber(draft, step);
-  const percent = progressFraction(draft, step) * 100;
-  if (number === undefined) {
-    return { subtitle: undefined, progressName: SETUP_SHELL.setupCompleteName, percent };
-  }
-  const label = describeSetupStepLabel(number, stepCount(draft));
-  return { subtitle: label, progressName: label, percent };
 }

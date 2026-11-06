@@ -60,6 +60,7 @@ export { useEditProgram } from "./useEditProgram";
 export type { EditProgramInput } from "./useEditProgram";
 export { useSaveSetup } from "./useSaveSetup";
 export type { SaveSetupInput } from "./useSaveSetup";
+export { useSetupDraft } from "./useSetupDraft";
 export { useSetupState } from "./useSetupState";
 export { useSkipSetup } from "./useSkipSetup";
 export { useTargets } from "./useTargets";

@@ -1,12 +1,14 @@
+import { describe, expect, it } from "vitest";
+
+import { describeStepProgress } from "../../src/copy";
 import {
   allowedGoalsOf,
-  describeStepProgress,
   initialSetupWizardState,
   isStepComplete,
   setupWizardReducer,
-} from "../../components/SetupScreen/setupDraftReducer";
+} from "../../src/setup";
 
-import type { SetupWizardState } from "../../components/SetupScreen/setupDraftReducer";
+import type { SetupWizardState } from "../../src/setup";
 
 const TODAY = "2026-10-23";
 
@@ -387,6 +389,122 @@ describe("setupWizardReducer", () => {
 
       expect(atActivity.draft).toEqual({ heightCm: 180, weightKg: 80 });
       expect(atGoal.draft).toEqual({ activity: "light" });
+    });
+  });
+
+  describe("opening a step by its address", () => {
+    it("should set the step it is given", () => {
+      const state = setupWizardReducer(stateAt("sex", { sex: "male" }), {
+        type: "stepOpened",
+        step: "birthDate",
+      });
+
+      expect(state.step).toBe("birthDate");
+    });
+
+    it("should set the step even when the answers before it are not complete, as a typed address can", () => {
+      const state = setupWizardReducer(stateAt("sex", {}), { type: "stepOpened", step: "goal" });
+
+      expect(state.step).toBe("goal");
+      expect(state.draft).toEqual({});
+    });
+
+    it("should leave the draft as it is on a step that has no default", () => {
+      const draft = { sex: "male", heightCm: 180, weightKg: 80 } as const;
+      const state = setupWizardReducer(stateAt("sex", draft), {
+        type: "stepOpened",
+        step: "activity",
+      });
+
+      expect(state.draft).toEqual(draft);
+      expect(state.unchosenDefaults).toEqual([]);
+    });
+
+    it("should choose 0.5 on opening the rate step for a lose goal that has no rate", () => {
+      const state = setupWizardReducer(stateAt("goal", { goal: "lose" }), {
+        type: "stepOpened",
+        step: "rate",
+      });
+
+      expect(state.draft.ratePctPerWeek).toBe(0.5);
+    });
+
+    it("should snap a saved rate that is not a preset on opening the rate step", () => {
+      const state = setupWizardReducer(stateAt("goal", { goal: "gain", ratePctPerWeek: 0.4 }), {
+        type: "stepOpened",
+        step: "rate",
+      });
+
+      expect(state.draft.ratePctPerWeek).toBe(0.5);
+    });
+
+    it("should choose Moderate on opening the protein step and note that it was not pressed", () => {
+      const state = setupWizardReducer(stateAt("rate", {}), {
+        type: "stepOpened",
+        step: "protein",
+      });
+
+      expect(state.draft.proteinPreset).toBe("moderate");
+      expect(state.unchosenDefaults).toEqual(["proteinPreset"]);
+    });
+
+    it("should choose Balanced on opening the diet step and note that it was not pressed", () => {
+      const state = setupWizardReducer(stateAt("protein", { proteinPreset: "high" }), {
+        type: "stepOpened",
+        step: "diet",
+      });
+
+      expect(state.draft.dietStyle).toBe("balanced");
+      expect(state.unchosenDefaults).toEqual(["dietStyle"]);
+    });
+
+    it("should keep a protein preset that is already chosen", () => {
+      const state = setupWizardReducer(stateAt("rate", { proteinPreset: "high" }), {
+        type: "stepOpened",
+        step: "protein",
+      });
+
+      expect(state.draft.proteinPreset).toBe("high");
+      expect(state.unchosenDefaults).toEqual([]);
+    });
+
+    it("should note a default once when the same step is opened again", () => {
+      const first = setupWizardReducer(stateAt("rate", {}), {
+        type: "stepOpened",
+        step: "protein",
+      });
+      const again = setupWizardReducer(first, { type: "stepOpened", step: "protein" });
+
+      expect(again.unchosenDefaults).toEqual(["proteinPreset"]);
+    });
+
+    it("should let a saved protein preset that arrives late replace the default it filled in", () => {
+      const opened = setupWizardReducer(stateAt("rate", {}), {
+        type: "stepOpened",
+        step: "protein",
+      });
+      const loaded = setupWizardReducer(opened, {
+        type: "savedAnswersLoaded",
+        saved: { proteinPreset: "high" },
+        today: TODAY,
+      });
+
+      expect(loaded.draft.proteinPreset).toBe("high");
+    });
+
+    it.each([
+      ["goal", "rate", { goal: "lose" }],
+      ["rate", "protein", { goal: "lose", ratePctPerWeek: 0.5 }],
+      ["protein", "diet", { proteinPreset: "high" }],
+      ["body", "activity", { heightCm: 180, weightKg: 80 }],
+    ] as const)("should leave the state as continuing from %s to %s does", (from, to, draft) => {
+      const continued = setupWizardReducer(stateAt(from, draft), {
+        type: "continued",
+        today: TODAY,
+      });
+      const opened = setupWizardReducer(stateAt(from, draft), { type: "stepOpened", step: to });
+
+      expect(opened).toEqual(continued);
     });
   });
 
@@ -927,41 +1045,5 @@ describe("allowedGoalsOf", () => {
 
   it("should not offer lose when there is no birth date, which is the safe side", () => {
     expect(allowedGoalsOf({}, TODAY)).toEqual(["maintain", "gain"]);
-  });
-});
-
-describe("describeStepProgress", () => {
-  it("should read Step 1 of 8 and fill a ninth of the bar on the sex step", () => {
-    const progress = describeStepProgress({}, "sex");
-
-    expect(progress.subtitle).toBe("Step 1 of 8");
-    expect(progress.progressName).toBe("Step 1 of 8");
-    expect(progress.percent).toBeCloseTo(11.11, 2);
-  });
-
-  it("should read Step 2 of 8 and fill two ninths on the birth date step", () => {
-    const progress = describeStepProgress({}, "birthDate");
-
-    expect(progress.subtitle).toBe("Step 2 of 8");
-    expect(progress.percent).toBeCloseTo(22.22, 2);
-  });
-
-  it("should read Step 5 of 8 on the goal step when the goal is lose", () => {
-    expect(describeStepProgress({ goal: "lose" }, "goal").subtitle).toBe("Step 5 of 8");
-  });
-
-  it("should read Step 5 of 7 on the goal step when the goal is maintain", () => {
-    const progress = describeStepProgress({ goal: "maintain" }, "goal");
-
-    expect(progress.subtitle).toBe("Step 5 of 7");
-    expect(progress.percent).toBe(62.5);
-  });
-
-  it("should name the bar Setup complete, with no step line, on the estimate", () => {
-    const progress = describeStepProgress({}, "estimate");
-
-    expect(progress.subtitle).toBeUndefined();
-    expect(progress.progressName).toBe("Setup complete");
-    expect(progress.percent).toBe(100);
   });
 });

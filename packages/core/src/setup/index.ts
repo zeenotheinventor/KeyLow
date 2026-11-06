@@ -56,3 +56,20 @@ export { defaultUnitsForRegion, entryWeightUnit, heightUnitFor, weightUnitToSave
 export type { DefaultUnits } from "./units";
 export { bindingCalorieClamp } from "./bindingClamp";
 export type { CalorieClampCode } from "./bindingClamp";
+export { measuredEstimateOf } from "./measuredEstimate";
+export type {
+  EstimateMeasurement,
+  EstimateSnapshot,
+  MeasuredEstimate,
+  MeasuredEstimateInput,
+} from "./measuredEstimate";
+export { savedAnswersOf } from "./savedAnswers";
+export type { SavedSetupState } from "./savedAnswers";
+export {
+  allowedGoalsOf,
+  initialSetupWizardState,
+  isStepComplete,
+  setupWizardReducer,
+} from "./setupDraftReducer";
+export type { DefaultedAnswer, SetupWizardAction, SetupWizardState } from "./setupDraftReducer";
+export { storedWeightUnitOf } from "./storedWeightUnit";
