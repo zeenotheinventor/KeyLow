@@ -1,34 +1,48 @@
-import {
-  useProfileTimeZone,
-  useProgramSummary,
-  useSetupState,
-  useTargets,
-  useWeightUnit,
-} from "@keylow/api-client";
 import { toLocalDate } from "@keylow/core/dates";
 import { requireStats, startSnapshot } from "@keylow/core/engine";
+import { buildProgramView } from "@keylow/core/program";
 
-import { buildProgramView } from "./buildProgramView";
-import { useNow } from "../../lib/useNow";
-import { useReadsEnabled } from "../../lib/useReadsEnabled";
+import { useProfileTimeZone } from "./useProfileTimeZone";
+import { useProgramSummary } from "./useProgramSummary";
+import { useSetupState } from "./useSetupState";
+import { useTargets } from "./useTargets";
+import { useWeightUnit } from "./useWeightUnit";
 
-import type { ProgramScreenState } from "./types";
+import type { ExpenditureSnapshot } from "../repos/program";
+import type { ProgramView } from "@keylow/core/program";
+
+/** What the Programme screen shows: the reads' states, and when they are in, the view to write. */
+export type ProgramScreenState =
+  | {
+      status: "loading";
+      /** True when a read is waiting for a connection with nothing read yet, which stays loading until it returns. */
+      isPaused: boolean;
+    }
+  | { status: "error"; retry: () => void }
+  | { status: "no-program"; ownTargetKcal: number | null }
+  | { status: "program"; view: ProgramView<ExpenditureSnapshot> };
+
+/** What `useProgramScreen` takes. */
+export type UseProgramScreenOptions = {
+  /** False makes no request at all, as the diary reads do. */
+  enabled: boolean;
+  /** The current time, which gives today in the profile's zone. The caller owns the clock, so it can tick. */
+  now: Date;
+};
 
 /**
  * What the Programme screen reads, put together as one state. The program, its newest snapshots and its
  * current targets row come from `useProgramSummary`, the targets the diary shows from `useTargets`, and the
  * weight unit and the time zone from the profile. A program with no snapshot yet, between the wizard's save
  * and its first recompute, also reads the saved setup, and its starting estimate is worked out on the device
- * by core's `startSnapshot`, which is the function the first snapshot is made with. Nothing is read while the
- * terms are not accepted. Nothing here is logged: the figures are health data.
+ * by core's `startSnapshot`, which is the function the first snapshot is made with. Nothing is read while
+ * `enabled` is false. Nothing here is logged: the figures are health data.
  */
-export function useProgramScreen(): ProgramScreenState {
-  const enabled = useReadsEnabled();
+export function useProgramScreen({ enabled, now }: UseProgramScreenOptions): ProgramScreenState {
   const summary = useProgramSummary({ enabled });
   const targets = useTargets({ enabled });
   const unit = useWeightUnit({ enabled });
   const timeZone = useProfileTimeZone({ enabled });
-  const now = useNow();
 
   const program = summary.data?.program ?? null;
   const hasNoSnapshot = program !== null && summary.data?.latestSnapshot === null;
@@ -53,7 +67,11 @@ export function useProgramScreen(): ProgramScreenState {
     timeZone.isPending ||
     (hasNoSnapshot && setup.data === undefined)
   ) {
-    return { status: "loading" };
+    const reads = [summary, targets, unit, timeZone, ...(hasNoSnapshot ? [setup] : [])];
+    return {
+      status: "loading",
+      isPaused: reads.some((read) => read.isPending && read.fetchStatus === "paused"),
+    };
   }
   if (program === null) {
     return { status: "no-program", ownTargetKcal: targets.data.kcal };

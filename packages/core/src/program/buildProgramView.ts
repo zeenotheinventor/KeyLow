@@ -1,3 +1,5 @@
+import { expenditureBand } from "./expenditureBand";
+import { settlingProgress } from "./settlingProgress";
 import {
   PROGRAM_GUARDRAIL_LINES,
   PROGRAM_SCREEN,
@@ -15,16 +17,15 @@ import {
   describeShortDate,
   describeTargetsCardName,
   describeTargetsCardSince,
-} from "@keylow/core/copy";
-import { formatCalories } from "@keylow/core/format";
-import { expenditureBand, settlingProgress } from "@keylow/core/program";
+} from "../copy";
+import { formatCalories } from "../format";
 import {
   DIET_STYLES,
   GOALS,
   PROTEIN_G_PER_KG,
   PROTEIN_PRESETS,
   bindingCalorieClamp,
-} from "@keylow/core/setup";
+} from "../setup";
 
 import type {
   BuildProgramViewInput,
@@ -34,11 +35,13 @@ import type {
   MacroTilesView,
   ProgramDetailRow,
   ProgramView,
+  ProgramViewTargetsRow,
   WeekTargetsView,
-} from "./types";
-import type { TargetsRow, Targets } from "@keylow/api-client";
-import type { CalorieClampCode } from "@keylow/core/setup";
-import type { WeightDisplayUnit } from "@keylow/core/weight";
+} from "./programViewTypes";
+import type { ProgramSnapshot } from "./types";
+import type { ProgressTargets } from "../diary/rules";
+import type { CalorieClampCode } from "../setup";
+import type { WeightDisplayUnit } from "../weight";
 
 // Settling reads the schedule alone when it is given no snapshots, so this is the days from today to a date,
 // from today on, which is what "In 7 days" says. Core keeps the rule in one place.
@@ -84,7 +87,16 @@ function checkInRowOf(
   };
 }
 
-function macrosOf(targetsRead: Targets, row: TargetsRow | null): MacroTilesView | null {
+function isCheckin<Snapshot extends ProgramSnapshot>(
+  snapshot: Snapshot | null,
+): snapshot is Snapshot & { kind: "checkin" } {
+  return snapshot?.kind === "checkin";
+}
+
+function macrosOf(
+  targetsRead: ProgressTargets,
+  row: ProgramViewTargetsRow | null,
+): MacroTilesView | null {
   if (row !== null) {
     return { proteinG: row.proteinG, carbsG: row.carbsG, fatG: row.fatG };
   }
@@ -100,7 +112,7 @@ function macrosOf(targetsRead: Targets, row: TargetsRow | null): MacroTilesView 
  * start snapshot, or there is no snapshot. The targets are the program's current row, or, before it has one,
  * what the targets read holds. Null when there is no estimate to show. Every word is core's copy.
  */
-export function buildProgramView({
+export function buildProgramView<Snapshot extends ProgramSnapshot>({
   program,
   latestSnapshot,
   previousSnapshot,
@@ -110,7 +122,7 @@ export function buildProgramView({
   fallbackWeightKg,
   unit,
   today,
-}: BuildProgramViewInput): ProgramView | null {
+}: BuildProgramViewInput<Snapshot>): ProgramView<Snapshot> | null {
   const belief = latestSnapshot ?? startBelief;
   if (belief === null) {
     return null;
@@ -171,18 +183,17 @@ export function buildProgramView({
       ? { firstCheckinDate, daysLeft, today }
       : null;
 
-  const checkin: CheckinView | null =
-    latestSnapshot?.kind === "checkin"
-      ? {
-          date: latestSnapshot.asOfDate,
-          previousMuKcal: previousSnapshot?.muKcal ?? null,
-          card: {
-            snapshot: latestSnapshot,
-            programStartedOn: program.startedOn,
-            unit,
-          },
-        }
-      : null;
+  const checkin: CheckinView<Snapshot> | null = isCheckin(latestSnapshot)
+    ? {
+        date: latestSnapshot.asOfDate,
+        previousMuKcal: previousSnapshot?.muKcal ?? null,
+        card: {
+          snapshot: latestSnapshot,
+          programStartedOn: program.startedOn,
+          unit,
+        },
+      }
+    : null;
 
   return { hero, checkin, settlingChecklist, targets, details: detailsOf(program, weightKg, unit) };
 }

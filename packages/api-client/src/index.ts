@@ -411,6 +411,14 @@ export {
   useTargetsHistory,
 } from "./hooks";
 export type { EditProgramInput, ProgramHistoryOptions } from "./hooks";
+export { useExpenditureChart, useProgramScreen, useRunCheckinsIfDue } from "./hooks";
+export type {
+  ExpenditureChartState,
+  ProgramScreenState,
+  UseExpenditureChartOptions,
+  UseProgramScreenOptions,
+  UseRunCheckinsIfDueOptions,
+} from "./hooks";
 export {
   getMyCheckinSchedule,
   getMyProgramSummary,

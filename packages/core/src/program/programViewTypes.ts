@@ -1,8 +1,12 @@
-import type { CheckinSummaryCardProps } from "./CheckinSummaryCard";
-import type { SettlingChecklistProps } from "./SettlingChecklist";
-import type { ExpenditureSnapshot, ProgramSummary, Targets, TargetsRow } from "@keylow/api-client";
-import type { ExpenditureBelief } from "@keylow/core/engine";
-import type { WeightDisplayUnit } from "@keylow/core/weight";
+import type { ProgramSnapshot, ProgramTargets } from "./types";
+import type { ProgressTargets } from "../diary/rules";
+import type { ExpenditureBelief } from "../engine";
+import type { WeightDisplayUnit } from "../weight";
+
+/*
+ * What the Programme screen of each app writes, and what it is built from. The input types name only the
+ * fields the view reads, so the client's rows go in as they are and core does not import the client.
+ */
 
 /** The hero: the estimate of what the person burns in a day, in whole kilocalories, with its likely range. */
 export type ExpenditureHeroView = {
@@ -51,39 +55,69 @@ export type ProgramDetailRow = {
   value: string;
 };
 
-/** The programme's newest check-in, when the newest snapshot is one: what its card describes and its motion starts from. */
-export type CheckinView = {
+/** What the settling checklist is given: the first check-in's date, the days to it and today. */
+export type SettlingChecklistInput = {
+  /** The first check-in's date, `YYYY-MM-DD`: the day whose window the counts are over. */
+  firstCheckinDate: string;
+  /** Whole days from today to the first check-in, 0 on the day. */
+  daysLeft: number;
+  /** The user's local date, `YYYY-MM-DD`. */
+  today: string;
+};
+
+/**
+ * The programme's newest check-in, when the newest snapshot is one: what its card describes and its
+ * motion starts from. `Snapshot` is the snapshot type of the rows that were passed in.
+ */
+export type CheckinView<Snapshot extends ProgramSnapshot = ProgramSnapshot> = {
   /** The check-in's date, `YYYY-MM-DD`, which the device remembers when its arrival has been shown. */
   date: string;
   /** The estimate before the check-in, which the hero counts up from. Null when the programme has no snapshot before it. */
   previousMuKcal: number | null;
-  card: Omit<CheckinSummaryCardProps, "isArriving">;
+  card: {
+    snapshot: Snapshot & { kind: "checkin" };
+    programStartedOn: string;
+    unit: WeightDisplayUnit;
+  };
 };
 
-export type ProgramView = {
+export type ProgramView<Snapshot extends ProgramSnapshot = ProgramSnapshot> = {
   hero: ExpenditureHeroView;
   /** Null unless the newest snapshot is a check-in. */
-  checkin: CheckinView | null;
+  checkin: CheckinView<Snapshot> | null;
   /** What the settling checklist is given. Null once the program has a check-in, and before the schedule is set. */
-  settlingChecklist: SettlingChecklistProps | null;
+  settlingChecklist: SettlingChecklistInput | null;
   /** Null for a program with no targets to show yet. */
   targets: WeekTargetsView | null;
   details: readonly ProgramDetailRow[];
 };
 
-export type ProgramScreenState =
-  | { status: "loading" }
-  | { status: "error"; retry: () => void }
-  | { status: "no-program"; ownTargetKcal: number | null }
-  | { status: "program"; view: ProgramView };
+/** The active program as the view reads it. `goal` and `splitPreset` are stored keys, read as far as they are known. */
+export type ProgramViewProgram = Readonly<{
+  goal: string;
+  ratePctPerWeek: number;
+  proteinGPerKg: number;
+  splitPreset: string;
+  startedOn: string;
+  nextCheckinDate: string | null;
+}>;
 
-export type BuildProgramViewInput = {
-  program: NonNullable<ProgramSummary["program"]>;
-  latestSnapshot: ExpenditureSnapshot | null;
-  previousSnapshot: ExpenditureSnapshot | null;
-  currentTargets: TargetsRow | null;
+/** A row of targets as the view reads it. */
+export type ProgramViewTargetsRow = ProgramTargets &
+  Readonly<{
+    effectiveFrom: string;
+    proteinG: number;
+    carbsG: number;
+    fatG: number;
+  }>;
+
+export type BuildProgramViewInput<Snapshot extends ProgramSnapshot = ProgramSnapshot> = {
+  program: ProgramViewProgram;
+  latestSnapshot: Snapshot | null;
+  previousSnapshot: Snapshot | null;
+  currentTargets: ProgramViewTargetsRow | null;
   /** The targets read: what the diary shows, which is all there is to show for a program with no targets row yet. */
-  targetsRead: Targets;
+  targetsRead: ProgressTargets;
   /** The starting estimate worked out on the device from the saved stats, for a program with no snapshot. */
   startBelief: ExpenditureBelief | null;
   /** The weight the rate lines use when the targets row does not say, which is the one the starting estimate used. */

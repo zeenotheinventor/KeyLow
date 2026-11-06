@@ -1,11 +1,6 @@
-export type SettlingChecklistProps = {
-  /** The first check-in's date, `YYYY-MM-DD`: the day whose window the counts are over. */
-  firstCheckinDate: string;
-  /** Whole days from today to the first check-in, 0 on the day. */
-  daysLeft: number;
-  /** The user's local date, `YYYY-MM-DD`. */
-  today: string;
-};
+import type { SettlingChecklistInput } from "@keylow/core/program";
+
+export type SettlingChecklistProps = SettlingChecklistInput;
 
 /** One count the first check-in needs, drawn as a bar. */
 export type SettlingChecklistRow = {
