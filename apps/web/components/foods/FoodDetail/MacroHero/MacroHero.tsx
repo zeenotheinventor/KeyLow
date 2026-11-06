@@ -9,11 +9,10 @@ import {
 import { formatCalories } from "@keylow/core/format";
 import { energyShares } from "@keylow/core/search";
 
-import { MacroTile } from "./MacroTile";
-
 import type { MacroHeroProps } from "./types";
 
 import { Card } from "@/components/ui/Card";
+import { MacroTile } from "@/components/ui/MacroTile";
 import { cn } from "@/lib/utils";
 
 const NO_VALUES = { kcal: null, protein_g: null, carbs_g: null, fat_g: null };

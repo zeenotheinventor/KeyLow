@@ -1,5 +1,4 @@
-import type { CheckinTargetsRows } from "./types";
-import type { TargetsRow } from "@keylow/api-client";
+import type { CheckinTargetsRow, CheckinTargetsRows } from "./programViewTypes";
 
 /**
  * The check-in's own targets row and the one before it, from the targets history (oldest first). After an edit
@@ -8,11 +7,11 @@ import type { TargetsRow } from "@keylow/api-client";
  * began is another's). The check-in's row is the newest one that came from a check-in and is in force from the
  * check-in's day on. Null when there is no such row, or no row of the programme before it to compare with.
  */
-export function selectCheckinTargetsRows(
-  history: readonly TargetsRow[],
+export function selectCheckinTargetsRows<Row extends CheckinTargetsRow>(
+  history: readonly Row[],
   checkinDate: string,
   programStartedOn: string,
-): CheckinTargetsRows | null {
+): CheckinTargetsRows<Row> | null {
   const ownRows = history.filter((row) => row.effectiveFrom >= programStartedOn);
   const targets = ownRows
     .filter((row) => row.basis.source === "checkin" && row.effectiveFrom >= checkinDate)

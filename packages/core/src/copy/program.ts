@@ -83,6 +83,8 @@ export const PROGRAM_SCREEN = {
   },
   editLabel: "Edit programme",
   howItWorksLabel: "How it works",
+  /** On the web, under the offline banner's title (`OFFLINE_BANNER.title`): the page holds only what this session read. */
+  offlineBody: "Showing your programme from this session. Changes need a connection.",
   /** Under the cards, muted: the legal copy's own sentence, not a second copy of it. */
   notMedicalAdvice: NOT_MEDICAL_ADVICE,
 } as const;

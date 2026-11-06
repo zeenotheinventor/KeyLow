@@ -7,6 +7,7 @@ import { AppearanceSetting } from "./AppearanceSetting";
 import { BodyMapRendererSetting } from "./BodyMapRendererSetting";
 import { DashboardBodyChartSetting } from "./DashboardBodyChartSetting";
 import { GoalRow } from "./GoalRow";
+import { ProgramRow } from "./ProgramRow";
 import { TargetsRow } from "./TargetsRow";
 
 import { GroupedList } from "@/components/ui/GroupedList";
@@ -36,6 +37,7 @@ export default async function MorePage() {
         </GroupedList>
         <GroupedList title={MORE_SCREEN.nutrition.title} headerSize="compact">
           <TargetsRow />
+          <ProgramRow />
           <ListRow title={MORE_SCREEN.nutrition.recipes.title} href={recipesPath()} />
         </GroupedList>
         <GroupedList title={MORE_SCREEN.body.title} headerSize="compact">

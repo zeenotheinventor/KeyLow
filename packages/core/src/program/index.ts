@@ -18,11 +18,20 @@ export type { ProgramSnapshot, ProgramTargets } from "./types";
 export { buildExpenditureChartView } from "./buildExpenditureChartView";
 export type { ExpenditureChartView } from "./buildExpenditureChartView";
 export { buildProgramView } from "./buildProgramView";
+export { buildCheckinSummaryView } from "./buildCheckinSummaryView";
+export type { BuildCheckinSummaryViewInput } from "./buildCheckinSummaryView";
+export { buildSettlingChecklistView } from "./buildSettlingChecklistView";
+export type { BuildSettlingChecklistViewInput } from "./buildSettlingChecklistView";
+export { selectCheckinTargetsRows } from "./selectCheckinTargetsRows";
 export { changesOf, chooseGoal, initialDraftOf } from "./programEditDraft";
 export type { ProgramEditChanges, ProgramEditDraft, ProgramEditSource } from "./programEditDraft";
 export type {
   BuildProgramViewInput,
   CheckInRowView,
+  CheckinSnapshot,
+  CheckinSummaryView,
+  CheckinTargetsRow,
+  CheckinTargetsRows,
   CheckinView,
   ExpenditureHeroView,
   MacroTilesView,
@@ -31,5 +40,10 @@ export type {
   ProgramViewProgram,
   ProgramViewTargetsRow,
   SettlingChecklistInput,
+  SettlingChecklistRow,
+  SettlingChecklistView,
+  SummaryLineKind,
+  SummaryLineView,
+  SummaryRowView,
   WeekTargetsView,
 } from "./programViewTypes";

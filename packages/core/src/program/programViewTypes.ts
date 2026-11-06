@@ -126,3 +126,66 @@ export type BuildProgramViewInput<Snapshot extends ProgramSnapshot = ProgramSnap
   /** The user's local date, `YYYY-MM-DD`. */
   today: string;
 };
+
+/** The newest snapshot of a program when it is a check-in's. */
+export type CheckinSnapshot<Snapshot extends ProgramSnapshot = ProgramSnapshot> = Snapshot & {
+  kind: "checkin";
+};
+
+/** A row of targets as the check-in summary reads it: the days it held for, and what it was worked out from. */
+export type CheckinTargetsRow = ProgramTargets &
+  Readonly<{
+    effectiveFrom: string;
+    effectiveTo: string | null;
+    proteinG: number;
+    fatG: number;
+  }>;
+
+/** The check-in's own targets row, and the row of the same programme that held before it. */
+export type CheckinTargetsRows<Row extends CheckinTargetsRow = CheckinTargetsRow> = {
+  targets: Row;
+  previousTargets: Row;
+};
+
+/** The four kinds of line: the data line, a guardrail, a reason the week did not measure, and a plain line. */
+export type SummaryLineKind = "data" | "guardrail" | "reason" | "plain";
+
+export type SummaryLineView = {
+  kind: SummaryLineKind;
+  text: string;
+};
+
+/** One of the two rows, "Expenditure" and "Calorie target". */
+export type SummaryRowView = {
+  label: string;
+  value: string;
+  /** "Expenditure: 2,500 to 2,560 kcal". */
+  name: string;
+};
+
+export type CheckinSummaryView = {
+  /** "Last check-in, Friday 9 October, measured". */
+  name: string;
+  /** "Friday 9 October". */
+  dateText: string;
+  isMeasured: boolean;
+  rows: readonly SummaryRowView[];
+  lines: readonly SummaryLineView[];
+};
+
+/** One count the first check-in needs, drawn as a bar. */
+export type SettlingChecklistRow = {
+  label: string;
+  /** The words the bar's accessible name starts with, before the count. */
+  name: string;
+  count: number;
+  target: number;
+};
+
+export type SettlingChecklistView = {
+  /** "First check-in Friday 6 November, in 9 days". */
+  title: string;
+  rows: readonly SettlingChecklistRow[];
+  /** What to do to cover the full 14 days, or null when there is nothing to say. */
+  tip: string | null;
+};

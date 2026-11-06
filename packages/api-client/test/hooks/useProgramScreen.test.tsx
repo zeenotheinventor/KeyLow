@@ -1,9 +1,13 @@
+import { PROGRAM_SCREEN } from "@keylow/core/copy";
+import { startSnapshot } from "@keylow/core/engine";
 import { onlineManager } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
+import { http } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { useProgramScreen } from "../../src/hooks/useProgramScreen";
+import { REST_URL, postgrestRows } from "../support/postgrest";
 import {
   installProgramFake,
   programRow,
@@ -11,6 +15,11 @@ import {
   startSnapshotRow,
   targetsRow,
 } from "../support/program";
+import {
+  RECOGNISABLE_SETUP_BIRTH_DATE,
+  RECOGNISABLE_SETUP_HEIGHT,
+  setUpProfileRow,
+} from "../support/setupState";
 import { createWrapper } from "../support/wrapper";
 
 const server = setupServer();
@@ -100,6 +109,48 @@ describe("useProgramScreen", () => {
     expect(view.hero.isSettling).toBe(false);
     expect(view.checkin?.date).toBe("2026-10-30");
     expect(view.targets?.macros).toEqual({ proteinG: 126, carbsG: 245, fatG: 73 });
+  });
+
+  it("should work out the starting estimate on the device for a programme with no snapshot yet", async () => {
+    installProgramFake(server, { programs: [programRow()], snapshots: [], targets: [] });
+    // The saved setup the estimate is worked out from: the profile's stats and the latest weigh-in.
+    server.use(
+      http.get(`${REST_URL}/profiles`, ({ request }) => {
+        const columns = (new URL(request.url).searchParams.get("select") ?? "").split(",");
+        const row = { ...setUpProfileRow, timezone: "Europe/London" };
+        return postgrestRows(request, [
+          Object.fromEntries(columns.map((column) => [column, Reflect.get(row, column)])),
+        ]);
+      }),
+      http.get(`${REST_URL}/weigh_ins`, ({ request }) =>
+        postgrestRows(request, [{ weight_kg: 83.4, local_date: "2026-10-29" }]),
+      ),
+    );
+    const expected = startSnapshot({
+      stats: {
+        sex: "female",
+        birthDate: RECOGNISABLE_SETUP_BIRTH_DATE,
+        heightCm: RECOGNISABLE_SETUP_HEIGHT,
+        activity: "moderate",
+      },
+      onboardingWeightKg: 83.4,
+      asOfDate: "2026-10-30",
+      trendWeightKg: null,
+    });
+
+    const { result } = renderScreen();
+
+    await waitFor(() => {
+      expect(result.current.status).toBe("program");
+    });
+    if (result.current.status !== "program") {
+      throw new Error("The program state was expected");
+    }
+    const { view } = result.current;
+    expect(view.hero.muKcal).toBe(expected.mu_kcal);
+    expect(view.hero.isSettling).toBe(true);
+    expect(view.hero.captionText).toBe(PROGRAM_SCREEN.hero.settlingLine);
+    expect(view.checkin).toBeNull();
   });
 
   it("should be the error state when a read fails, and read again on retry", async () => {
