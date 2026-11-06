@@ -34,7 +34,7 @@ const MORE_HREF = "/more";
  * The web has no persisted cache and a read pauses offline, so `useProgramScreen` stays loading with nothing read.
  * Offline with nothing read is the error board with no Try again, which would do nothing: the read goes ahead by
  * itself when the connection returns. The connection going while the page is open keeps the figures read in this
- * session under an offline banner over both columns. Edit programme comes with its own ticket.
+ * session under an offline banner over both columns, with Edit programme off in the actions card.
  *
  * The first open after a new check-in (remembered per browser by its date) counts the estimate up from the one
  * before, flashes the accent and cuts the check-in card in, once. The programme is read in the browser only, so

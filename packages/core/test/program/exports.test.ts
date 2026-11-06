@@ -20,7 +20,10 @@ describe("the program module", () => {
       "expenditureChartWeeks",
       "firstCheckinReadiness",
       "initialDraftOf",
+      "newestExpenditureKcal",
       "programCheckInDate",
+      "programEditAgeYears",
+      "programEditWeightKg",
       "selectCheckinTargetsRows",
       "settlingProgress",
     ]);

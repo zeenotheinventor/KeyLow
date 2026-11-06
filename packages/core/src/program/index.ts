@@ -26,6 +26,12 @@ export type { BuildSettlingChecklistViewInput } from "./buildSettlingChecklistVi
 export { selectCheckinTargetsRows } from "./selectCheckinTargetsRows";
 export { changesOf, chooseGoal, initialDraftOf } from "./programEditDraft";
 export type { ProgramEditChanges, ProgramEditDraft, ProgramEditSource } from "./programEditDraft";
+export {
+  newestExpenditureKcal,
+  programEditAgeYears,
+  programEditWeightKg,
+} from "./programEditInputs";
+export type { ProgramEditWeightSources } from "./programEditInputs";
 export type {
   BuildProgramViewInput,
   CheckInRowView,
