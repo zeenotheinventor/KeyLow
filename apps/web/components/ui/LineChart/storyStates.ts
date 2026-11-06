@@ -1,0 +1,17 @@
+export const storyStates = [
+  "SeveralWeeks",
+  "SelectedWeek",
+  "WithGap",
+  "ReadingAloneBetweenGaps",
+  "OneReading",
+  "OneWeek",
+  "BandOverFiveWeeks",
+  "BandWithBrokenWeek",
+  "BandWeekAlone",
+  "ProgrammeColumn",
+  "TwoColumnPage",
+  "InCard",
+  "Phone",
+  "InAutoMinimumGrid",
+  "InFlexRow",
+];

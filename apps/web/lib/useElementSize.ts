@@ -1,14 +1,18 @@
 import { useLayoutEffect, useRef, useState } from "react";
 
-type ElementSize = { width: number; height: number };
+/** An element's box in CSS pixels, as the page lays it out. */
+export type ElementSize = {
+  width: number;
+  height: number;
+};
 
 /**
- * The size of an element as the page lays it out, read before the first paint and again whenever it changes, so
- * a drawing that fills its box follows the box at a new window width or breakpoint. It is null until the element
- * has a size, which it does not in the server's markup or in a browser that has not laid it out.
+ * The size of an element as the page lays it out, read before the first paint and again whenever it changes,
+ * so a drawing that fills its column follows the column at a new window width or breakpoint. It is null until
+ * the element has a size, which it does not in the server's markup or in a browser that has not laid it out.
  */
-export function useElementSize<Element extends HTMLElement>() {
-  const reference = useRef<Element>(null);
+export function useElementSize<ElementType extends Element>() {
+  const reference = useRef<ElementType>(null);
   const [size, setSize] = useState<ElementSize | null>(null);
 
   useLayoutEffect(() => {

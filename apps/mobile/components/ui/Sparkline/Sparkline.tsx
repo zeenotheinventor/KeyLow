@@ -1,6 +1,3 @@
-import { Circle, Path } from "@shopify/react-native-skia";
-import { View } from "react-native";
-
 import {
   latestIndex,
   lineRuns,
@@ -8,7 +5,10 @@ import {
   plotPoints,
   runPath,
   valueDomain,
-} from "../../../lib/chart/linePlot";
+} from "@keylow/core/chart";
+import { Circle, Path } from "@shopify/react-native-skia";
+import { View } from "react-native";
+
 import { strokePaint } from "../../../lib/skia/strokePaint";
 import { StyledCanvas } from "../../../lib/skia/StyledCanvas";
 import { useTheme } from "../../../lib/theme";
