@@ -5,6 +5,7 @@ export const storyStates = [
   "WithValue",
   "WeighIns",
   "WithTick",
+  "WithMacro",
   "Plain",
   "Disabled",
   "Loading",

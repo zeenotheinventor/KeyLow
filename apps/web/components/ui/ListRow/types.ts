@@ -8,10 +8,18 @@ export type ListRowIcon = ComponentType<{
   "aria-hidden"?: boolean;
 }>;
 
+/** The four figures a macro key can colour: the calories and the three macros. */
+export type ListRowMacro = "calories" | "protein" | "carbs" | "fat";
+
 type ListRowContent = {
   /** A leading icon, such as `Shield` from `lucide-react`, in a small tile. It is decorative: the title names the row. */
   icon?: ListRowIcon;
   title: string;
+  /**
+   * Draws the macro's colour as an 8 px square before the title, as the Targets page's four figures do, and sets the
+   * title in the body weight, not the strong one. It is decoration, so the row's accessible name is unchanged.
+   */
+  macro?: ListRowMacro | undefined;
   subtitle?: string | undefined;
   /**
    * A short status drawn between the text and the value, such as the weigh-in list's "Left out of trend" in

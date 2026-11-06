@@ -354,6 +354,95 @@ describe("ListRow", () => {
     });
   });
 
+  describe("a macro key", () => {
+    // The key is decoration, so the only way to find it is by what it is: a hidden square before the title.
+    const keyOf = (item: HTMLElement) => item.querySelector("span[aria-hidden='true']");
+
+    it.each([
+      ["calories", "bg-calories"],
+      ["protein", "bg-protein"],
+      ["carbs", "bg-carbs"],
+      ["fat", "bg-fat"],
+    ] as const)(
+      "should draw the %s colour as an 8 px square with a 2 px radius",
+      (macro, colour) => {
+        renderInList(<ListRow macro={macro} title="Protein" value="126" unit="g" />);
+
+        const key = keyOf(screen.getByRole("listitem"));
+
+        expect(key?.className).toContain(colour);
+        expect(key?.className).toContain("size-2");
+        expect(key?.className).toContain("rounded-[2px]");
+        expect(key?.className).toContain("shrink-0");
+      },
+    );
+
+    it("should come before the title and leave the row named by its title alone", () => {
+      renderInList(<ListRow macro="protein" title="Protein" value="126" unit="g" />);
+
+      const item = screen.getByRole("listitem");
+
+      expect(keyOf(item)?.nextElementSibling?.textContent).toBe("Protein");
+      expect(item.textContent).toBe("Protein126g");
+    });
+
+    it("should set the title in the body weight, where a row without a key sets it strong", () => {
+      renderInList(
+        <>
+          <ListRow macro="fat" title="Fat" />
+          <ListRow title="Plain" />
+        </>,
+      );
+
+      expect(screen.getByText("Fat").className).toContain("text-body");
+      expect(screen.getByText("Fat").className).not.toContain("text-body-strong");
+      expect(screen.getByText("Plain").className).toContain("text-body-strong");
+    });
+
+    it("should draw no key on a row that has no macro", () => {
+      renderInList(<ListRow title="Plain" value="2,200" unit="kcal" />);
+
+      expect(keyOf(screen.getByRole("listitem"))).toBeNull();
+    });
+
+    it("should come after a leading icon, before the title", () => {
+      renderInList(<ListRow icon={Shield} macro="carbs" title="Carbohydrate" />);
+
+      const key = keyOf(screen.getByRole("listitem"));
+
+      expect(key?.className).toContain("bg-carbs");
+      expect(key?.previousElementSibling?.querySelector("svg")).not.toBeNull();
+      expect(key?.nextElementSibling?.textContent).toBe("Carbohydrate");
+    });
+
+    it("should stay on a row that goes somewhere, and on one that is loading", () => {
+      renderWithRouter(
+        <ul>
+          <ListRow macro="protein" title="Linked" href="/somewhere" />
+          <ListRow macro="fat" title="Busy" onClick={() => undefined} loading />
+        </ul>,
+      );
+
+      expect(keyOf(screen.getByRole("link", { name: "Linked" }))?.className).toContain(
+        "bg-protein",
+      );
+      const busy = screen.getByRole("button", { name: /^Busy/ });
+      expect(keyOf(busy)?.className).toContain("bg-fat");
+      expect(within(busy).getByRole("img", { name: "Loading" })).toBeTruthy();
+    });
+
+    it("should leave a done tick at the end of the row", () => {
+      renderInList(
+        <ListRow macro="calories" title="Calories" trailing={{ kind: "tick", label: "Set" }} />,
+      );
+
+      const tick = screen.getByRole("img", { name: "Set" });
+
+      expect(keyOf(screen.getByRole("listitem"))?.className).toContain("bg-calories");
+      expect(tick.parentElement?.lastElementChild).toBe(tick);
+    });
+  });
+
   describe("reduced motion", () => {
     it("should drop the press scale under prefers-reduced-motion", async () => {
       renderInList(<ListRow title="Your foods" href="/foods" />);

@@ -136,6 +136,19 @@ export const WithTick: Story = {
   ),
 };
 
+// The Targets page's four figures while a programme runs: the macro's colour as a key before the title, which is
+// set in the body weight, and the figure strong with its unit after it. The row goes nowhere.
+export const WithMacro: Story = {
+  render: () => (
+    <>
+      <ListRow macro="calories" title="Calories" value="2,140" unit="kcal" valueLook="numeral" />
+      <ListRow macro="protein" title="Protein" value="126" unit="g" valueLook="numeral" />
+      <ListRow macro="carbs" title="Carbohydrate" value="245" unit="g" valueLook="numeral" />
+      <ListRow macro="fat" title="Fat" value="73" unit="g" valueLook="numeral" />
+    </>
+  ),
+};
+
 export const Plain: Story = {
   render: () => <ListRow title="Expenditure" subtitle="Estimate" />,
 };
