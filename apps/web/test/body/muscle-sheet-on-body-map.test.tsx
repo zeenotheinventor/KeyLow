@@ -203,6 +203,8 @@ describe("the muscle sheet on the body map", () => {
     vi.setSystemTime(new Date(THURSDAY_19_00));
     window.localStorage.clear();
     window.localStorage.setItem("bodyMap.figure", "male");
+    // The first-open hint was dismissed on an earlier visit, so only its own tests see it.
+    window.localStorage.setItem("bodyMap.hintSeen", "true");
     resetBodyFigureForTests();
     onlineManager.setOnline(true);
     reads.detailAsked = [];

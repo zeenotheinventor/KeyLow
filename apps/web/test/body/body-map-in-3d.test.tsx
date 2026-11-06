@@ -152,6 +152,8 @@ describe("the body map page in 3D", () => {
     vi.setSystemTime(new Date(THURSDAY_19_00));
     window.localStorage.clear();
     window.localStorage.setItem("bodyMap.figure", "male");
+    // The first-open hint was dismissed on an earlier visit, so only its own tests see it.
+    window.localStorage.setItem("bodyMap.hintSeen", "true");
     resetBodyFigureForTests();
     resetBodyMapRendererForTests();
     resetBody3DSupportForTests();
@@ -321,6 +323,17 @@ describe("the body map page in 3D", () => {
       );
 
       expect(reads.asked).toContainEqual({ view: "actual", scale: "heat", at: "2026-10-14" });
+    });
+
+    it("should leave the first-open hint out, since the body has its own hint line", async () => {
+      window.localStorage.removeItem("bodyMap.hintSeen");
+
+      await openIn3D();
+
+      expect(zoomGroup()).toBeTruthy();
+      expect(screen.getByText(BODY_MAP.rotateHintWeb)).toBeTruthy();
+      expect(screen.queryByText(BODY_MAP.coachMark.textWeb)).toBeNull();
+      expect(screen.queryByRole("button", { name: BODY_MAP.coachMark.dismiss })).toBeNull();
     });
 
     it("should draw side by side in 2D, and the body again when it is turned off", async () => {

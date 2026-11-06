@@ -34,6 +34,7 @@ import { useState } from "react";
 
 import { BodyMapBackLink } from "../BodyMapBackLink";
 import { BodyMapCard } from "../BodyMapCard";
+import { BodyMapHint } from "../BodyMapHint";
 import { BodyMapLegend } from "../BodyMapLegend";
 import { BodyMapLoading } from "../BodyMapLoading";
 import { DayScrubber } from "../DayScrubber";
@@ -51,6 +52,7 @@ import { IconButton } from "@/components/ui/IconButton";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { useToast } from "@/components/ui/Toast";
 import { useBodyFigure } from "@/lib/bodyFigure";
+import { useBodyMapHint } from "@/lib/bodyMapHint";
 import { useBodyMapRenderer } from "@/lib/bodyMapRenderer";
 import { muscleListPath } from "@/lib/bodyMapRoutes";
 import { useBodyMapView } from "@/lib/bodyMapView";
@@ -109,6 +111,11 @@ const SCALE_OPTIONS = [
  * the view of the figure it was on. It is local to the visit, it goes when the scale leaves Heat, and its
  * button is off when there is no routine for Projected to show. Turning it off restores the single view
  * in the view that is remembered, and a day after today, which Actual cannot show, falls back to today.
+ *
+ * The first time it opens in a browser a hint over the figures says to press and hold a muscle. It waits for
+ * the figure question to be answered, stays until Got it or a muscle's sheet is opened (from the figures or
+ * the Muscles card), and is never drawn in the nothing logged state, in the side by side view or on the 3D
+ * body, which has its own hint line.
  */
 export function BodyMapScreen({ initialScale = "heat" }: BodyMapScreenProps) {
   const router = useRouter();
@@ -122,6 +129,7 @@ export function BodyMapScreen({ initialScale = "heat" }: BodyMapScreenProps) {
   const weekStart = addCalendarDays(today, -daysSinceMonday(today));
   const weekEnd = addCalendarDays(weekStart, 6);
   const { view: chosenView, isRead: isViewRead, setView } = useBodyMapView();
+  const { isRead: isHintRead, hasSeen: hasSeenHint, markSeen: markHintSeen } = useBodyMapHint();
   const [scale, setScale] = useState<BodyMapScale>(initialScale);
   const { figure, isReady: isFigureReady, hasChosen, setFigure } = useBodyFigure();
   // The renderer is waited for with the view and the figure, so a person with 3D saved never sees the 2D layout
@@ -257,11 +265,13 @@ export function BodyMapScreen({ initialScale = "heat" }: BodyMapScreenProps) {
     setWantsSideBySide(!isSideBySide);
   }
 
-  // The one place a muscle's sheet is opened from the figures.
+  // The one place a muscle's sheet is opened from the figures. Opening one is the answer to the first-open
+  // hint, so it marks the hint seen.
   function openMuscleSheet(muscle: MuscleId, shownView: BodyMapView) {
     setSheetReturnFocus(undefined);
     setSheetView(shownView);
     setSheetMuscle(muscle);
+    markHintSeen();
   }
 
   const title = (
@@ -356,6 +366,11 @@ export function BodyMapScreen({ initialScale = "heat" }: BodyMapScreenProps) {
       const isNothingLogged = scale === "heat" && !isSideBySide && shown.nothingLogged;
       // Gap has neither Actual nor Projected, so it has no toggle and a click on the figures does nothing.
       const isToggleEnabled = scale !== "gap" && projectedAvailable;
+      // The hint waits for the stored mark to be read and for the figure question to be answered, and has no
+      // figures to point at when nothing is logged. Side by side is only reached by someone who is already
+      // using the map, so it is never drawn there. The card leaves it out on the 3D body.
+      const isHintShown =
+        isHintRead && !hasSeenHint && !isFigureDialogOpen && !isNothingLogged && !isSideBySide;
 
       return (
         <>
@@ -387,6 +402,7 @@ export function BodyMapScreen({ initialScale = "heat" }: BodyMapScreenProps) {
               sideBySide={sideBySide}
               onToggleSideBySide={scale === "heat" ? toggleSideBySide : undefined}
               isSideBySideEnabled={projectedAvailable}
+              overlay={isHintShown ? <BodyMapHint onDismiss={markHintSeen} /> : undefined}
               footer={
                 // The scrubber is a Heat control. It stays out of the nothing logged state on today, as the
                 // board has it, and on any other day it stays so there is a way back to today.
@@ -432,6 +448,7 @@ export function BodyMapScreen({ initialScale = "heat" }: BodyMapScreenProps) {
                       onOpenMuscle={(muscle, row) => {
                         setSheetReturnFocus(row);
                         setSheetMuscle(muscle);
+                        markHintSeen();
                       }}
                     />
                   )}
