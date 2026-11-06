@@ -36,6 +36,7 @@ import {
   describeCountedName,
   describeCountOfTarget,
   describeEditFootnote,
+  describeEstimateWords,
   describeExpenditureChartSummary,
   describeExpenditureHeroName,
   describeExpenditureSource,
@@ -1209,6 +1210,33 @@ describe("setup: estimate · carried forward", () => {
       expenditureSubtitle: "Carried forward from your last check-in",
       accuracyLine:
         "Ki-Lo has not measured your expenditure yet, so it keeps the estimate from your last check-in. Changing your answers changes only your targets.",
+    });
+  });
+});
+
+describe("setup: the estimate's words by where its expenditure came from", () => {
+  it("should use the starting estimate's words when nothing was measured", () => {
+    expect(describeEstimateWords(undefined)).toEqual({
+      heading: "Your starting targets",
+      expenditureSubtitle: "The energy you use in a day",
+      accuracyLine:
+        "This is a starting estimate from your answers. Each week, Ki-Lo checks it against your weigh-ins and food log and adjusts your targets.",
+    });
+  });
+
+  it("should say the expenditure was measured, with the date of the check-in", () => {
+    expect(describeEstimateWords({ kind: "measured", measuredOn: "2026-10-23" })).toEqual({
+      heading: "Your new targets",
+      expenditureSubtitle: "Measured from your weigh-ins and food log",
+      accuracyLine: describeMeasuredAccuracyLine("2026-10-23"),
+    });
+  });
+
+  it("should say the expenditure was carried forward when no check-in ever measured", () => {
+    expect(describeEstimateWords({ kind: "carried-forward" })).toEqual({
+      heading: "Your new targets",
+      expenditureSubtitle: "Carried forward from your last check-in",
+      accuracyLine: PROGRAM_SETUP_CARRIED_FORWARD.accuracyLine,
     });
   });
 });

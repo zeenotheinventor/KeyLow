@@ -610,6 +610,10 @@ export const SETUP_ESTIMATE = {
   },
   /** Under the accuracy line. It is the legal copy's own sentence, not a second copy of it. */
   notMedicalAdvice: NOT_MEDICAL_ADVICE,
+  /** The web's banner on the estimate when the saved answers could not be read, beside Try again. Saving is held until they are. */
+  readFailedBody: "Couldn't load your saved answers. Ki-Lo needs them before it can save.",
+  /** The web's banner on the estimate offline, under the offline banner's title. The phone says the diary's words, which are not true here. */
+  offlineBody: "Your answers stay on this page. Saving needs a connection.",
 } as const;
 
 type RateLineInput = Readonly<{

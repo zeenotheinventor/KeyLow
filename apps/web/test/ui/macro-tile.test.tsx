@@ -20,6 +20,15 @@ describe("MacroTile", () => {
     expect(screen.getByText("126 g")).toBeTruthy();
   });
 
+  it("should add the given class to the tile itself, so a tile in a list needs no wrapper", () => {
+    renderTile({ className: "animate-kl-cut-in" });
+
+    const tile = screen.getByText("126 g").parentElement;
+    expect(tile?.className).toContain("animate-kl-cut-in");
+    expect(tile?.className).toContain("rounded-medium");
+    expect(tile?.parentElement?.tagName).toBe("DL");
+  });
+
   it("should put the label above the amount", () => {
     renderTile();
 

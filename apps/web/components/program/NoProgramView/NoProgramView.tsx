@@ -1,20 +1,22 @@
-import { PROGRAM_NO_PROGRAM, PROGRAM_TARGETS_SCREEN } from "@keylow/core/copy";
+import { PROGRAM_NO_PROGRAM, describeOwnTargetsStay } from "@keylow/core/copy";
 import { iconStroke } from "@keylow/tokens";
 import { Calculator, ChartLine, Scale, Target } from "lucide-react";
 import Link from "next/link";
 
+import type { NoProgramViewProps } from "./types";
+
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { ListRow } from "@/components/ui/ListRow";
+import { setupPath } from "@/lib/setupRoutes";
 
 /**
  * `program-no-program`, for a user on their own targets: the chart tile, what a programme does in three points,
- * and the way on. Until the web setup wizard exists, the way on is Set my own targets, a secondary button to the
- * Targets page, so the page does not promise an estimate it cannot make, and the line that the own targets stay
- * until the person starts is left out, as there is nothing to start. The estimate button replaces it with the
- * wizard (KEY-875). The not-medical-advice line is at the foot.
+ * and Estimate my targets, a centred medium button (full width on a phone) that opens the wizard in recalculate
+ * mode. Under it the person's own calorie target stays until they start, when they have one. The
+ * not-medical-advice line is at the foot.
  */
-export function NoProgramView() {
+export function NoProgramView({ ownTargetKcal }: NoProgramViewProps) {
   return (
     <div className="mx-auto flex w-full max-w-[560px] flex-col gap-4">
       <div className="flex flex-col items-center gap-2 pt-2 text-center">
@@ -32,15 +34,15 @@ export function NoProgramView() {
         </ul>
       </Card>
       <div className="flex justify-center">
-        <Button
-          asChild
-          variant="secondary"
-          size="lg"
-          className="w-full md:h-control-md md:w-auto md:px-4"
-        >
-          <Link href="/more/targets">{PROGRAM_TARGETS_SCREEN.setOwnTargetsLabel}</Link>
+        <Button asChild size="lg" className="w-full md:h-control-md md:w-auto md:px-4">
+          <Link href={setupPath("sex", "recalculate")}>{PROGRAM_NO_PROGRAM.startLabel}</Link>
         </Button>
       </div>
+      {ownTargetKcal === null ? null : (
+        <p className="px-1 text-center text-caption tabular-nums text-text-secondary">
+          {describeOwnTargetsStay(ownTargetKcal)}
+        </p>
+      )}
       <p className="px-1 text-caption text-text-muted">{PROGRAM_NO_PROGRAM.notMedicalAdvice}</p>
     </div>
   );

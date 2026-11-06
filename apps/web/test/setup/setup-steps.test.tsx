@@ -225,14 +225,14 @@ describe("the protein and diet steps, the golden sample", () => {
     expect((await continueButton()).disabled).toBe(false);
   });
 
-  it("should choose Balanced on arrival at step 8 of 8 and keep Continue off until the estimate is built", async () => {
+  it("should choose Balanced on arrival at step 8 of 8 and have Continue on, which opens the estimate", async () => {
     await walkToProtein();
     await userEvent.click(await continueButton());
 
     expect(await heading("How do you like to eat?")).toBeTruthy();
     expect(screen.getByText("Macros · Step 8 of 8")).toBeTruthy();
     expect(isChecked(screen.getByRole("radio", { name: /^Balanced/ }))).toBe(true);
-    expect((await continueButton()).disabled).toBe(true);
+    expect((await continueButton()).disabled).toBe(false);
     expect(screen.queryByRole("link")).toBeNull();
   });
 

@@ -66,7 +66,7 @@ export function ProgramScreen() {
           />
         );
       case "no-program":
-        return <NoProgramView />;
+        return <NoProgramView ownTargetKcal={state.ownTargetKcal} />;
       case "program": {
         const { checkin, hero, settlingChecklist, targets, details } = state.view;
 

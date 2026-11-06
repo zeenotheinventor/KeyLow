@@ -285,16 +285,26 @@ describe("ProgramScreen", () => {
       expect(screen.getAllByRole("listitem")).toHaveLength(3);
     });
 
-    it("should offer Set my own targets, a secondary button to the Targets page, and no estimate", () => {
+    it("should offer Estimate my targets, which opens the setup wizard in recalculate mode", () => {
       renderScreen();
 
-      expect(screen.getByRole("link", { name: "Set my own targets" }).getAttribute("href")).toBe(
-        "/more/targets",
+      expect(screen.getByRole("link", { name: "Estimate my targets" }).getAttribute("href")).toBe(
+        "/setup?mode=recalculate",
       );
-      expect(screen.queryByRole("link", { name: "Estimate my targets" })).toBeNull();
+      expect(screen.queryByRole("link", { name: "Set my own targets" })).toBeNull();
     });
 
-    it("should leave out the line that the own targets stay until the person starts", () => {
+    it("should say the own targets stay until the person starts", () => {
+      renderScreen();
+
+      expect(
+        screen.getByText("Your own targets (2,200 kcal a day) stay until you start."),
+      ).toBeTruthy();
+    });
+
+    it("should leave the line out when the person has no calorie target", () => {
+      useProgramScreen.mockReturnValue({ status: "no-program", ownTargetKcal: null });
+
       renderScreen();
 
       expect(screen.queryByText(/stay until you start/)).toBeNull();

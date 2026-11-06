@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 import { EngineTargets } from "../EngineTargets";
+import { EstimateTargetsRow } from "./EstimateTargetsRow";
 import { TargetsForm } from "../TargetsForm";
 
 import { ErrorState } from "@/components/ui/ErrorState";
@@ -21,7 +22,8 @@ import { cn } from "@/lib/utils";
  * gives the date they began, so it never decides which of the two the person sees, and until the targets are
  * known the page draws neither. The web has no persisted cache and a read pauses offline, so with nothing read
  * and no connection the page says so, without a Try again that would do nothing. The dashboard layout has
- * already put the Terms gate in front of it, so the read here is behind the gate.
+ * already put the Terms gate in front of it, so the read here is behind the gate. Estimate my targets is the first
+ * row under the heading in both states, and opens the setup wizard.
  */
 export function TargetsScreen() {
   const targets = useTargets();
@@ -96,6 +98,7 @@ export function TargetsScreen() {
           {TARGETS_SCREEN.title}
         </h1>
       </div>
+      {targets.data === undefined ? null : <EstimateTargetsRow />}
       {renderBody()}
     </div>
   );
