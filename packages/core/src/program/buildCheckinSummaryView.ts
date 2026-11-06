@@ -7,26 +7,27 @@ import {
   describeKcalChange,
   describeNotMeasuredReasons,
   guardrailLineOrder,
-} from "@keylow/core/copy";
-import { DEFAULT_ENGINE_PARAMS, calorieFloorKcal } from "@keylow/core/engine";
-import { checkinSummary, expenditureBand } from "@keylow/core/program";
+} from "../copy";
+import { checkinSummary } from "./checkinSummary";
+import { expenditureBand } from "./expenditureBand";
+import { DEFAULT_ENGINE_PARAMS, calorieFloorKcal } from "../engine";
 
+import type { CheckinSummary } from "./checkinSummary";
 import type {
   CheckinSnapshot,
   CheckinSummaryView,
   CheckinTargetsRows,
   SummaryLineView,
   SummaryRowView,
-} from "./types";
-import type { ExpenditureSnapshot } from "@keylow/api-client";
-import type { ProgramGuardrailEntry } from "@keylow/core/copy";
-import type { CheckinSummary } from "@keylow/core/program";
-import type { SetupClamp } from "@keylow/core/setup";
-import type { WeightDisplayUnit } from "@keylow/core/weight";
+} from "./programViewTypes";
+import type { ProgramSnapshot } from "./types";
+import type { ProgramGuardrailEntry } from "../copy";
+import type { SetupClamp } from "../setup";
+import type { WeightDisplayUnit } from "../weight";
 
-type BuildInput = CheckinTargetsRows & {
+export type BuildCheckinSummaryViewInput = CheckinTargetsRows & {
   snapshot: CheckinSnapshot;
-  previousSnapshot: ExpenditureSnapshot | null;
+  previousSnapshot: ProgramSnapshot | null;
   unit: WeightDisplayUnit;
 };
 
@@ -40,7 +41,7 @@ const row = (label: string, value: string): SummaryRowView => ({
 // targets, so it comes from the summary's own flag. A clamp with no line for this goal gives none.
 function guardrailEntries(
   summary: CheckinSummary,
-  { targets, snapshot, unit }: BuildInput,
+  { targets, snapshot, unit }: BuildCheckinSummaryViewInput,
 ): ProgramGuardrailEntry[] {
   const { basis } = targets;
   const rate = {
@@ -94,7 +95,10 @@ function guardrailEntries(
   ];
 }
 
-function measuredLines(summary: CheckinSummary, input: BuildInput): SummaryLineView[] {
+function measuredLines(
+  summary: CheckinSummary,
+  input: BuildCheckinSummaryViewInput,
+): SummaryLineView[] {
   return [
     { kind: "data", text: describeCheckinDataLine(summary.counts) },
     ...guardrailLineOrder(guardrailEntries(summary, input)).flatMap(
@@ -122,7 +126,9 @@ function notMeasuredLines(summary: CheckinSummary, snapshot: CheckinSnapshot): S
  * words are core's copy, and the lines come in `guardrailLineOrder`. Null when the card has nothing true to say:
  * a measured check-in needs the estimate before it to say where the expenditure moved from.
  */
-export function buildCheckinSummaryView(input: BuildInput): CheckinSummaryView | null {
+export function buildCheckinSummaryView(
+  input: BuildCheckinSummaryViewInput,
+): CheckinSummaryView | null {
   const { snapshot, previousSnapshot, targets, previousTargets } = input;
   const summary = checkinSummary(previousTargets, targets, snapshot);
   const isMeasured = summary.kind === "measured";

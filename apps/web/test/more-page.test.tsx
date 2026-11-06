@@ -5,11 +5,17 @@ import { pagePaddingOf } from "./pagePadding";
 
 import MorePage from "@/app/(dashboard)/more/page";
 
-const { getUser, signOut, themeCookie, useTargets } = vi.hoisted(() => ({
+const { getUser, signOut, themeCookie, useTargets, useProgramSummary } = vi.hoisted(() => ({
   getUser: vi.fn(),
   signOut: vi.fn(),
   themeCookie: vi.fn<() => string | undefined>(),
   useTargets: vi.fn<() => { data: { kcal: number | null } | undefined }>(),
+  useProgramSummary: vi.fn<
+    () => {
+      data: { program: { nextCheckinDate: string | null } | null } | undefined;
+      isError?: boolean;
+    }
+  >(),
 }));
 
 // The Goal row reads the goal and the time zone. Its own tests are in goals/goal-row.test.tsx, so here both
@@ -17,6 +23,7 @@ const { getUser, signOut, themeCookie, useTargets } = vi.hoisted(() => ({
 vi.mock("@keylow/api-client", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@keylow/api-client")>()),
   useTargets,
+  useProgramSummary,
   useTrainingGoals: () => ({ data: undefined, isPending: true, fetchStatus: "paused" }),
   useProfileTimeZone: () => ({ data: undefined, isPending: true, fetchStatus: "paused" }),
 }));
@@ -48,6 +55,7 @@ describe("More page", () => {
     vi.resetAllMocks();
     getUser.mockResolvedValue({ data: { user: { email: "ada@example.com" } }, error: null });
     useTargets.mockReturnValue({ data: { kcal: 2200 } });
+    useProgramSummary.mockReturnValue({ data: undefined });
   });
 
   afterEach(() => {
@@ -108,13 +116,56 @@ describe("More page", () => {
       expect(screen.getByRole("link", { name: /Targets/ }).textContent).toBe("TargetsSet by you");
     });
 
-    it("should reach the recipe library from Recipes, the row after Targets", async () => {
+    it("should reach the Programme page from the row under Targets, with nothing under it until the read is in", async () => {
+      await renderPage();
+
+      const link = screen.getByRole("link", { name: /Programme/ });
+
+      expect(link.getAttribute("href")).toBe("/more/program");
+      expect(link.textContent).toBe("Programme");
+    });
+
+    it("should say the next check-in under Programme while a programme runs", async () => {
+      useProgramSummary.mockReturnValue({ data: { program: { nextCheckinDate: "2026-10-30" } } });
+      await renderPage();
+
+      expect(screen.getByRole("link", { name: /Programme/ }).textContent).toBe(
+        "ProgrammeNext check-in Fri 30 Oct",
+      );
+    });
+
+    it("should offer to let Ki-Lo set the targets under Programme when there is no programme", async () => {
+      useProgramSummary.mockReturnValue({ data: { program: null } });
+      await renderPage();
+
+      expect(screen.getByRole("link", { name: /Programme/ }).textContent).toBe(
+        "ProgrammeLet Ki-Lo set your targets",
+      );
+    });
+
+    it("should say nothing under Programme for a programme with no check-in date yet", async () => {
+      useProgramSummary.mockReturnValue({ data: { program: { nextCheckinDate: null } } });
+      await renderPage();
+
+      expect(screen.getByRole("link", { name: /Programme/ }).textContent).toBe("Programme");
+    });
+
+    it("should say nothing under Programme when the programme cannot be read", async () => {
+      // A failed read has no data, as a read that has not arrived does, so it is not known that there is no programme.
+      useProgramSummary.mockReturnValue({ data: undefined, isError: true });
+      await renderPage();
+
+      expect(screen.getByRole("link", { name: /Programme/ }).textContent).toBe("Programme");
+    });
+
+    it("should reach the recipe library from Recipes, the row after Programme", async () => {
       await renderPage();
 
       const links = within(screen.getByRole("region", { name: "Nutrition" })).getAllByRole("link");
 
       expect(links.map((link) => link.textContent)).toEqual([
         "TargetsSet by you2,200 kcal",
+        "Programme",
         "Recipes",
       ]);
       expect(screen.getByRole("link", { name: "Recipes" }).getAttribute("href")).toBe("/recipes");

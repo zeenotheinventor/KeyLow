@@ -363,8 +363,8 @@ describe("useExerciseProgress", () => {
       const { result, rerender } = renderOffline("3m", true);
       await waitFor(() => {
         expect(result.current.body.status).toBe("error");
+        expect(result.current.shownRange).toBe("3m");
       });
-      expect(result.current.shownRange).toBe("3m");
       expect(result.current.notRead).toBe(false);
 
       rerender({ range: "3m", isOnline: false });

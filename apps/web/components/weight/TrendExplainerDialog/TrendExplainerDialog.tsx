@@ -8,13 +8,12 @@ import {
 } from "@keylow/core/copy";
 import { TREND_SETTLED_OBS } from "@keylow/core/weight";
 
-import { SettlingProgress } from "./SettlingProgress";
-
 import type { TrendExplainerDialogProps } from "./types";
 
 import { Banner } from "@/components/ui/Banner";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
+import { SettlingProgressBar } from "@/components/ui/SettlingProgressBar";
 
 const SECTIONS = [...TREND_EXPLAINER.sections, TREND_EXPLAINER_BODY_SECTION];
 
@@ -49,7 +48,10 @@ export function TrendExplainerDialog({ onClose, returnFocusTo }: TrendExplainerD
             hasIcon={false}
             title={describeSettlingBanner(lastPoint.nObs)}
           >
-            <SettlingProgress
+            {/* The banner's own words say the count, so the track has no caption. The board keeps 8 under the title, 2 of them the banner's. */}
+            <SettlingProgressBar
+              className="mt-1.5"
+              hasCaption={false}
               count={lastPoint.nObs}
               target={TREND_SETTLED_OBS}
               label={TREND_EXPLAINER.progressName}
