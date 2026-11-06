@@ -1,6 +1,6 @@
 import { skipToken, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { newestCachedTrendRows } from "./newestCachedTrendRows";
+import { newestCachedTrendRead } from "./newestCachedTrendRows";
 import { retryUnlessRangeError } from "./retryUnlessRangeError";
 import { toTrainingReadResult } from "./trainingReadResult";
 import { trendReadWindow } from "./trendReadWindow";
@@ -13,6 +13,15 @@ import type { DiaryReadOptions } from "./DiaryReadOptions";
 import type { TrainingReadResult } from "./trainingReadResult";
 import type { TrendSetRows } from "../repos/trainingSchemas";
 import type { TrendRange } from "@keylow/core/training";
+
+/** A trend read, and when the rows it gives were read. */
+export type ExerciseTrendSetsRead = TrainingReadResult<TrendSetRows> & {
+  /**
+   * When the rows in `data` were read, in milliseconds, or undefined while there are none. It moves on when a
+   * refetch returns the same rows. Rows that stand in from an earlier read (see below) have that read's time.
+   */
+  dataUpdatedAt: number | undefined;
+};
 
 export type UseTrendSetsOptions = DiaryReadOptions & {
   /** The moment the range ends at, an ISO timestamp with a zone. Today is read from it in the profile's zone. */
@@ -30,7 +39,8 @@ export type UseTrendSetsOptions = DiaryReadOptions & {
  * Monday, never a name or a load. They are kept in the mobile cache so the trend opens without a
  * connection, and every set or session write marks them stale (`refreshSessions`). The result is pending
  * until the profile's time zone is read. When this week's rows are not there yet (a phone offline in a
- * later week than it last read), the rows of the newest earlier read stand in until they are. Nothing is asked while `exerciseId` is undefined, and `enabled`
+ * later week than it last read), the rows of the newest earlier read stand in until they are, and
+ * `dataUpdatedAt` is the time of that read. Nothing is asked while `exerciseId` is undefined, and `enabled`
  * false makes no request at all. An id that is not a UUID fails without a request, as an error that is
  * not retried. A failure names the action and the database code only.
  */
@@ -38,7 +48,7 @@ export function useExerciseTrendSets(
   exerciseId: string | undefined,
   range: TrendRange,
   { now, enabled = true }: UseTrendSetsOptions,
-): TrainingReadResult<TrendSetRows> {
+): ExerciseTrendSetsRead {
   const client = useSupabase();
   const queryClient = useQueryClient();
   const timeZone = useProfileTimeZone({ enabled });
@@ -57,15 +67,28 @@ export function useExerciseTrendSets(
     placeholderData: () =>
       exerciseId === undefined || window === null
         ? undefined
-        : newestCachedTrendRows(
+        : newestCachedTrendRead(
             queryClient,
             keys.training.exerciseTrendAll,
             exerciseId,
             window.fromWeek,
-          ),
+          )?.rows,
     enabled,
     retry: retryUnlessRangeError,
   });
 
-  return toTrainingReadResult(rows, [timeZone], []);
+  // Rows that stand in were read under another key, whose read time is theirs. The placeholder is the
+  // newest such read, and so is the one looked up here.
+  const standInRead =
+    rows.isPlaceholderData && exerciseId !== undefined && window !== null
+      ? newestCachedTrendRead(
+          queryClient,
+          keys.training.exerciseTrendAll,
+          exerciseId,
+          window.fromWeek,
+        )
+      : undefined;
+  const dataUpdatedAt = rows.isPlaceholderData ? standInRead?.dataUpdatedAt : rows.dataUpdatedAt;
+
+  return { ...toTrainingReadResult(rows, [timeZone], []), dataUpdatedAt };
 }

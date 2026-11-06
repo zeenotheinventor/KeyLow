@@ -1,7 +1,9 @@
+import { useExerciseProgress } from "@keylow/api-client";
 import { useState } from "react";
 
+import { useNow } from "../../lib/useNow";
+import { useReadsEnabled } from "../../lib/useReadsEnabled";
 import { ExerciseProgressView } from "../ExerciseProgressView";
-import { useExerciseProgress } from "./useExerciseProgress";
 
 import type { TrendRange } from "@keylow/core/training";
 
@@ -22,7 +24,10 @@ export function ExerciseProgressScreen({
 }) {
   const [range, setRange] = useState<TrendRange>(DEFAULT_RANGE);
   const [selectedWeek, setSelectedWeek] = useState<string | undefined>(undefined);
-  const { title, body } = useExerciseProgress(exerciseId, range);
+  const { title, body } = useExerciseProgress(exerciseId, range, {
+    enabled: useReadsEnabled(),
+    now: useNow(),
+  });
 
   return (
     <ExerciseProgressView
