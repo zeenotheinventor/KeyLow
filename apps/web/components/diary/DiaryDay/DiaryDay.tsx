@@ -14,6 +14,7 @@ import { DayHeader } from "../DayHeader";
 import { DiaryDayContent } from "../DiaryDayContent";
 import { DiaryLoading } from "../DiaryLoading";
 import { DiaryWeek } from "../DiaryWeek";
+import { useCheckinToast } from "./useCheckinToast";
 import { WeekStepper } from "../WeekStepper";
 
 import type { DiaryDayProps } from "./types";
@@ -35,12 +36,14 @@ const TARGETS_HREF = "/more/targets";
  * button steps through the days. Until the first day has loaded a skeleton stands in for the whole body.
  * After that the header and the strip stay on screen whatever the next day is doing, so a day that is
  * slow to load never leaves the person without a way to another day. The week view takes the body's place
- * and the day stepper takes the title's place, and reads the week alone.
+ * and the day stepper takes the title's place, and reads the week alone. A check-in that has set a new calorie
+ * target is announced here, once, in either view.
  */
 export function DiaryDay({ date, view, timeZone }: DiaryDayProps) {
   const router = useRouter();
   const { setViewedDate } = useFoodLogActions();
   const now = useNow();
+  useCheckinToast();
   // null shows the week of the viewed day. A swipe moves the strip alone, leaving the viewed day as it is.
   const [shownWeekDate, setShownWeekDate] = useState<string | null>(null);
   const [hasLoadedADay, setHasLoadedADay] = useState(false);
@@ -60,7 +63,9 @@ export function DiaryDay({ date, view, timeZone }: DiaryDayProps) {
   // The week view reads the week and the targets itself, and has no use for the day.
   const dayQuery = useDiaryDay(viewedDate, { enabled: view === "day" });
   const weekQuery = useDiaryWeek(weekDays[0] ?? viewedDate, { enabled: view === "day" });
-  const targetsQuery = useTargets({ enabled: view === "day" });
+  // The calories are the viewed day's own figure, as the phone reads them: a programme with day by day targets
+  // gives that weekday's. The day is not in the query key, so a move to another day never reloads the targets.
+  const targetsQuery = useTargets({ enabled: view === "day", localDate: viewedDate });
 
   const day = dayQuery.data;
   const targets = targetsQuery.data;

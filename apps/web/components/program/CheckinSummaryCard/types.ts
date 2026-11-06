@@ -10,4 +10,6 @@ export type CheckinSummaryCardProps = {
   /** The day the active programme began, `YYYY-MM-DD`: targets rows from before it are another programme's. */
   programStartedOn: string;
   unit: WeightDisplayUnit;
+  /** Set on the first open after a new check-in, and false otherwise. */
+  isArriving: boolean;
 };

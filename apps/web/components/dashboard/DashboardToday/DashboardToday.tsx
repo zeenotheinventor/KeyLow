@@ -31,7 +31,8 @@ export function DashboardToday({ timeZone }: DashboardTodayProps) {
   const isOnline = useIsOnline();
   const today = toLocalDate(useNow(), timeZone);
   const dayQuery = useDiaryDay(today);
-  const targetsQuery = useTargets();
+  // Today's own calorie figure, as the phone reads it: a programme with day by day targets gives today's weekday.
+  const targetsQuery = useTargets({ localDate: today });
 
   // When midnight comes the new day is still loading. The card keeps the last day it had until it arrives,
   // and the date has already moved on, so the card never flashes to its skeleton.

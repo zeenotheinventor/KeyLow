@@ -14,6 +14,7 @@ import type {
 } from "@keylow/core/program";
 
 import { ProgramScreen } from "@/components/program";
+import { CHECKIN_SEEN_KEY } from "@/lib/checkinSeen";
 
 const { useProgramScreen, useSettlingChecklist, useCheckinSummary } = vi.hoisted(() => ({
   useProgramScreen: vi.fn<() => ProgramScreenState>(),
@@ -373,6 +374,78 @@ describe("ProgramScreen", () => {
       renderScreen();
 
       expect(screen.queryByText(OFFLINE_BANNER.title)).toBeNull();
+    });
+  });
+  describe("the first open after a new check-in", () => {
+    // The check-in of 23 October moved the estimate from 2,500 to 2,580 kcal.
+    const CHECKIN_DATE = "2026-10-23";
+    const PREVIOUS_SNAPSHOT: ExpenditureSnapshot = { ...START_SNAPSHOT, muKcal: 2500 };
+
+    beforeEach(() => {
+      window.localStorage.clear();
+      useProgramScreen.mockReturnValue({
+        status: "program",
+        view: viewOf({ latestSnapshot: CHECKIN_SNAPSHOT, previousSnapshot: PREVIOUS_SNAPSHOT }),
+      });
+      useCheckinSummary.mockReturnValue(NOT_MEASURED_VIEW);
+    });
+
+    const estimateCard = () => screen.getByRole("region", { name: /^Estimated expenditure/ });
+    const checkinCard = () => screen.getByRole("group", { name: NOT_MEASURED_VIEW.name });
+
+    it("should start the estimate at the one before the check-in and cut the check-in card in", () => {
+      renderScreen();
+
+      expect(within(estimateCard()).getByText("2,500")).toBeTruthy();
+      expect(checkinCard().className).toContain("animate-kl-cut-in");
+    });
+
+    it("should start the estimate at the final figure when there is no estimate before the check-in", () => {
+      useProgramScreen.mockReturnValue({
+        status: "program",
+        view: viewOf({ latestSnapshot: CHECKIN_SNAPSHOT, previousSnapshot: null }),
+      });
+
+      renderScreen();
+
+      expect(within(estimateCard()).getAllByText("2,580")).toHaveLength(2);
+      expect(within(estimateCard()).queryByText("0")).toBeNull();
+    });
+
+    it("should remember the check-in's date for this browser", () => {
+      renderScreen();
+
+      expect(window.localStorage.getItem(CHECKIN_SEEN_KEY)).toBe(CHECKIN_DATE);
+    });
+
+    it("should show the page at rest on the next open, with the estimate as it is", () => {
+      window.localStorage.setItem(CHECKIN_SEEN_KEY, CHECKIN_DATE);
+
+      renderScreen();
+
+      expect(within(estimateCard()).getByText("2,580").className).not.toContain("animate-flash");
+      expect(within(estimateCard()).queryByText("2,500")).toBeNull();
+      expect(checkinCard().className).not.toContain("animate-");
+    });
+
+    it("should play nothing when this browser's storage cannot be read, since it would be a guess", () => {
+      vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+        throw new DOMException("blocked", "SecurityError");
+      });
+
+      renderScreen();
+
+      expect(within(estimateCard()).getByText("2,580").className).not.toContain("animate-flash");
+      expect(checkinCard().className).not.toContain("animate-");
+    });
+
+    it("should play nothing when the latest snapshot is not a check-in", () => {
+      useProgramScreen.mockReturnValue({ status: "program", view: viewOf() });
+
+      renderScreen();
+
+      expect(within(estimateCard()).getByText("2,580").className).not.toContain("animate-flash");
+      expect(window.localStorage.getItem(CHECKIN_SEEN_KEY)).toBeNull();
     });
   });
 });
