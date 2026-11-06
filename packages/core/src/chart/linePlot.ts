@@ -1,4 +1,4 @@
-import { MONTH_NAMES_SHORT } from "@keylow/core/copy";
+import { MONTH_NAMES_SHORT } from "../copy/diaryDay";
 
 /** The rectangle a series is drawn in, in the points of the drawing. */
 export type PlotArea = { left: number; top: number; width: number; height: number };
@@ -188,4 +188,98 @@ export function labelledIndexes(count: number, maxLabels: number): Set<number> {
 export function weekLabel(weekStart: string): string {
   const [, month = "", day = ""] = weekStart.split("-");
   return `${Number(day)} ${MONTH_NAMES_SHORT[Number(month) - 1] ?? ""}`;
+}
+
+/**
+ * The room a weekly chart leaves inside its drawing, in pixels: the weeks sit between `left` and
+ * `right`, and the value axis is written in the column on the right. It is the weight chart's inset, so
+ * the two web charts read alike.
+ */
+export const WEEK_CHART_INSET = { left: 12, right: 44, top: 8, bottom: 12 } as const;
+
+/** The column on the right that holds the axis values, where the grid lines stop. */
+export const VALUE_COLUMN_WIDTH = 40;
+
+/** From this measured width on a weekly chart is drawn tall, with more week labels. */
+export const WIDE_CHART_MIN_WIDTH = 480;
+
+/**
+ * How tall a weekly chart is and how many week labels it can write, decided by the width its container
+ * gives the drawing and by nothing else, so the chart holds in a two column page, a card or a phone.
+ */
+export function weekChartLayout(width: number): { height: number; maxWeekLabels: number } {
+  return width >= WIDE_CHART_MIN_WIDTH
+    ? { height: 220, maxWeekLabels: 7 }
+    : { height: 160, maxWeekLabels: 4 };
+}
+
+/** The rectangle the weeks are drawn in, once the room for the axis is taken off a drawing of this size. */
+export function weekPlotArea(width: number, height: number): PlotArea {
+  return {
+    left: WEEK_CHART_INSET.left,
+    top: WEEK_CHART_INSET.top,
+    width: width - WEEK_CHART_INSET.left - WEEK_CHART_INSET.right,
+    height: height - WEEK_CHART_INSET.top - WEEK_CHART_INSET.bottom,
+  };
+}
+
+/** Where the three grid lines are, from the top of the plot to its bottom through the middle. */
+export function gridLineYs({ top, height }: PlotArea): [number, number, number] {
+  return [top, top + height / 2, top + height];
+}
+
+/** Each week's column on the area, equal in width, which is also the week's press target. */
+export function weekColumns(count: number, area: PlotArea): { left: number; width: number }[] {
+  const width = area.width / count;
+  return Array.from({ length: count }, (_, index) => ({ left: area.left + index * width, width }));
+}
+
+/**
+ * Each reading placed on the area with every week an equal column and its point in the middle of it, as the
+ * phone's chart does with its domain of -0.5 to n - 0.5. The highest value of the domain is at the top. A
+ * gap stays `null` at its own place.
+ */
+export function plotWeekColumns(
+  values: readonly (number | null)[],
+  area: PlotArea,
+  domain: ValueDomain | undefined,
+): (PlotPoint | null)[] {
+  const columns = weekColumns(values.length, area);
+  return values.map((value, index) => {
+    const column = columns[index];
+    if (value === null || domain === undefined || column === undefined) {
+      return null;
+    }
+    const up = (value - domain.min) / (domain.max - domain.min);
+    return { index, x: column.left + column.width / 2, y: area.top + (1 - up) * area.height };
+  });
+}
+
+/**
+ * The path of the band on a weekly chart: the ends of each week's band placed in the week's column, then
+ * `bandPath` for the stretches that have one. Empty without a domain or without a band.
+ */
+export function weekBandPath(
+  values: readonly (number | null)[],
+  band: readonly (BandEnds | null | undefined)[],
+  area: PlotArea,
+  domain: ValueDomain | undefined,
+): string {
+  const bands = weekBands(values, band);
+  const place = (pick: (ends: BandEnds) => number): BandVertex[] => {
+    const columns = weekColumns(values.length, area);
+    const placed = plotWeekColumns(
+      bands.map((ends) => (ends === null ? null : pick(ends))),
+      area,
+      domain,
+    );
+    return placed.map((point, index) => {
+      const column = columns[index];
+      return { x: (column?.left ?? 0) + (column?.width ?? 0) / 2, y: point?.y };
+    });
+  };
+  return bandPath(
+    place((ends) => ends.high),
+    place((ends) => ends.low),
+  );
 }

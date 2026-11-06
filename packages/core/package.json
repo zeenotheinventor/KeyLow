@@ -12,6 +12,7 @@
     "./nutrition": "./src/nutrition/index.ts",
     "./plate": "./src/plate/index.ts",
     "./engine": "./src/engine/index.ts",
+    "./chart": "./src/chart/index.ts",
     "./copy": "./src/copy/index.ts",
     "./format": "./src/format/index.ts",
     "./program": "./src/program/index.ts",

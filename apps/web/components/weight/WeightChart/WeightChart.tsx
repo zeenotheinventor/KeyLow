@@ -1,12 +1,12 @@
 import { useMemo } from "react";
 
 import { emptyGridYs, gridEndOf, labelTopOf, xOfDay, yOfWeight } from "./layout";
-import { useElementSize } from "./useElementSize";
 
 import type { ChartSize, WeightChartProps } from "./types";
 import type { WeightChartData, WeightChartTrendPoint } from "@keylow/core/weight";
 import type { ReactNode } from "react";
 
+import { useElementSize } from "@/lib/useElementSize";
 import { vars } from "@/lib/vars";
 
 // The sizes are the board's, in pixels. A year of readings is too many for the larger dot, and a year does
@@ -129,7 +129,7 @@ function drawMarks(
  * hidden from a screen reader. A range with no point draws the grid and the days, and no marks.
  */
 export function WeightChart({ data, isSettling, name }: WeightChartProps) {
-  const { reference, size } = useElementSize();
+  const { reference, size } = useElementSize<SVGSVGElement>();
   const { grid, marks } = useMemo(
     () => (size === null ? { grid: [], marks: null } : drawMarks(data, isSettling, size)),
     [data, isSettling, size],

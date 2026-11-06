@@ -1,16 +1,25 @@
+import { describe, expect, it } from "vitest";
+
 import {
+  WIDE_CHART_MIN_WIDTH,
   axisTicks,
   bandPath,
   formatTick,
+  gridLineYs,
   labelledIndexes,
   latestIndex,
   lineRuns,
   lonePoints,
   plotPoints,
+  plotWeekColumns,
   runPath,
   valueDomain,
+  weekBandPath,
+  weekChartLayout,
+  weekColumns,
   weekLabel,
-} from "./linePlot";
+  weekPlotArea,
+} from "../../src/chart/linePlot";
 
 const area = { left: 10, top: 20, width: 100, height: 60 };
 
@@ -255,5 +264,126 @@ describe("bandPath", () => {
 
   it("should treat a missing value like a null one", () => {
     expect(bandPath([{ x: 0, y: undefined }], [{ x: 0, y: undefined }])).toBe("");
+  });
+});
+
+describe("weekChartLayout", () => {
+  it("should give the board's wide chart 220 high and 7 week labels at 754 wide", () => {
+    expect(weekChartLayout(754)).toEqual({ height: 220, maxWeekLabels: 7 });
+  });
+
+  it("should give the board's phone chart 160 high and 4 week labels at 341 wide", () => {
+    expect(weekChartLayout(341)).toEqual({ height: 160, maxWeekLabels: 4 });
+  });
+
+  it("should hold at the two column page's 536 wide with the wide layout", () => {
+    expect(weekChartLayout(536)).toEqual({ height: 220, maxWeekLabels: 7 });
+  });
+
+  it("should switch layout at WIDE_CHART_MIN_WIDTH and not by any other width", () => {
+    expect(weekChartLayout(WIDE_CHART_MIN_WIDTH - 1).height).toBe(160);
+    expect(weekChartLayout(WIDE_CHART_MIN_WIDTH).height).toBe(220);
+  });
+});
+
+describe("weekPlotArea", () => {
+  it("should leave 12 left, 44 right, 8 above and 12 below, as the weight chart does", () => {
+    expect(weekPlotArea(576, 220)).toEqual({ left: 12, top: 8, width: 520, height: 200 });
+  });
+});
+
+describe("gridLineYs", () => {
+  it("should run from the top of the plot to its bottom through the middle", () => {
+    expect(gridLineYs(weekPlotArea(576, 220))).toEqual([8, 108, 208]);
+  });
+});
+
+describe("plotWeekColumns", () => {
+  const wide = weekPlotArea(576, 220);
+
+  it("should put each week in the middle of an equal column", () => {
+    const points = plotWeekColumns([55, 55, 55], wide, { min: 55, max: 62.5 });
+    const expected = [12 + 520 / 6, 12 + 520 / 2, 12 + (520 * 5) / 6];
+    points.forEach((point, index) => {
+      expect(point?.x).toBeCloseTo(expected[index] ?? NaN, 6);
+    });
+  });
+
+  it("should match the board's 13 weeks: the first at 32 and the last at 512", () => {
+    const points = plotWeekColumns(
+      Array.from({ length: 13 }, () => 55),
+      wide,
+      { min: 55, max: 62.5 },
+    );
+    expect(points[0]?.x).toBe(32);
+    expect(points[12]?.x).toBe(512);
+  });
+
+  it("should put the lowest value on the bottom of the plot and the highest on the top", () => {
+    const points = plotWeekColumns([55, 62.5], wide, { min: 55, max: 62.5 });
+    expect(points[0]?.y).toBe(208);
+    expect(points[1]?.y).toBe(8);
+  });
+
+  it("should keep a skipped week as null at its own column", () => {
+    const points = plotWeekColumns([55, null, 62.5], wide, { min: 55, max: 62.5 });
+    expect(points[1]).toBeNull();
+    expect(points[2]?.index).toBe(2);
+  });
+
+  it("should put a lone week in the middle of the plot", () => {
+    const [only] = plotWeekColumns([60], wide, { min: 59, max: 61 });
+    expect(only).toEqual({ index: 0, x: 272, y: 108 });
+  });
+
+  it("should place nothing without a domain", () => {
+    expect(plotWeekColumns([null], wide, undefined)).toEqual([null]);
+  });
+});
+
+describe("weekColumns", () => {
+  it("should split the plot into equal columns, which are also each week's press target", () => {
+    expect(weekColumns(4, weekPlotArea(576, 220))).toEqual([
+      { left: 12, width: 130 },
+      { left: 142, width: 130 },
+      { left: 272, width: 130 },
+      { left: 402, width: 130 },
+    ]);
+  });
+});
+
+describe("weekBandPath", () => {
+  const wide = weekPlotArea(576, 220);
+  const domain = { min: 0, max: 100 };
+
+  it("should run along the high ends and back along the low ends through each week's column", () => {
+    const path = weekBandPath(
+      [50, 50],
+      [
+        { low: 25, high: 75 },
+        { low: 40, high: 60 },
+      ],
+      { left: 0, top: 0, width: 200, height: 100 },
+      domain,
+    );
+    expect(path).toBe("M50 25 L150 40 L150 60 L50 75 Z");
+  });
+
+  it("should draw a week alone as a bar 12 wide, and break at a week without a band", () => {
+    const path = weekBandPath(
+      [50, 50, 50],
+      [{ low: 25, high: 75 }, null, { low: 40, high: 60 }],
+      { left: 0, top: 0, width: 300, height: 100 },
+      domain,
+    );
+    expect(path).toBe("M44 25 H56 V75 H44 Z M244 40 H256 V60 H244 Z");
+  });
+
+  it("should draw no band for a week without a value, whatever its band says", () => {
+    expect(weekBandPath([null], [{ low: 1, high: 2 }], wide, domain)).toBe("");
+  });
+
+  it("should draw no band without a domain", () => {
+    expect(weekBandPath([1], [{ low: 1, high: 2 }], wide, undefined)).toBe("");
   });
 });

@@ -7,8 +7,6 @@ import { iconStroke } from "@keylow/tokens";
 import { Minus, Plus, RotateCcw } from "lucide-react";
 import { useLayoutEffect, useRef, useState } from "react";
 
-import { useElementSize } from "./useElementSize";
-
 import type { BodyStageProps } from "./types";
 import type { BodyViewPhase } from "@/components/body/BodyView";
 import type { MouseEvent } from "react";
@@ -18,6 +16,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { IconButton } from "@/components/ui/IconButton";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
+import { useElementSize } from "@/lib/useElementSize";
 import { cn } from "@/lib/utils";
 
 const SIDE_OPTIONS = [
