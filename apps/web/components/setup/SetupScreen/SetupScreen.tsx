@@ -1,9 +1,11 @@
 "use client";
 
+import { useSkipSetup } from "@keylow/api-client";
 import {
   describeSetupCaption,
   describeStepProgress,
   RETRY_LABEL,
+  SAVE_FAILED_BANNER,
   SETUP_SHELL,
   setupQuestionFor,
 } from "@keylow/core/copy";
@@ -16,6 +18,7 @@ import {
   progressFraction,
 } from "@keylow/core/setup";
 import { useRouter } from "next/navigation";
+import { useEffect, useRef } from "react";
 
 import { useSetupFlow } from "../SetupFlow";
 import { SetupShell } from "../SetupShell";
@@ -35,6 +38,9 @@ import type { SetupScreenProps } from "./types";
 import { Banner } from "@/components/ui/Banner";
 import { setupExitPath, setupPath } from "@/lib/setupRoutes";
 
+// The phone's /targets is not a web route: the manual Targets page is under More.
+const OWN_TARGETS_PATH = setupExitPath();
+
 /**
  * One step of the setup wizard, in its shell. The answers are kept by the flow's layout, so Back loses none.
  * Continue sends `continued` and opens the next step's address, and Back opens the previous one's, so the
@@ -51,6 +57,48 @@ export function SetupScreen({ step, mode }: SetupScreenProps) {
   const progress = describeStepProgress(draft, step);
   const previous = previousStep(draft, step);
   const next = nextStep(draft, step);
+  const skipSetup = useSkipSetup();
+  const escapeButton = useRef<HTMLButtonElement>(null);
+  const isSkipStarted = useRef(false);
+  const isMounted = useRef(false);
+  // The first run's one way out of step 1. A recalculation has Close, and later steps have Back.
+  const isEscapeShown = mode === "first-run" && previous === undefined;
+  // Busy from the press until the page has gone, since a skip that is done stays done.
+  const isSkipping = skipSetup.isPending || skipSetup.isSuccess;
+
+  // Not set in the render, so a page the strict mode mounts twice ends up marked mounted.
+  useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
+
+  // The failed write leaves focus on the button that was pressed, which was off while it ran, so it goes back there.
+  useEffect(() => {
+    if (skipSetup.isError) {
+      escapeButton.current?.focus();
+    }
+  }, [skipSetup.isError]);
+
+  async function skip() {
+    if (isSkipStarted.current) {
+      return;
+    }
+    isSkipStarted.current = true;
+    try {
+      await skipSetup.mutateAsync();
+    } catch {
+      // The error's own words are never shown. The next press retries.
+      isSkipStarted.current = false;
+      return;
+    }
+    // The way on is only for a page that is still here. Nothing the programme or the targets read has changed,
+    // so there is nothing to drop from the cache.
+    if (isMounted.current) {
+      router.replace(OWN_TARGETS_PATH);
+    }
+  }
 
   if (step === "estimate") {
     return <EstimateStep mode={mode} programme={programme} />;
@@ -174,7 +222,7 @@ export function SetupScreen({ step, mode }: SetupScreenProps) {
           : undefined
       }
       continueAction={{
-        isEnabled: isStepComplete(draft, step, today) && next !== undefined,
+        isEnabled: isStepComplete(draft, step, today) && next !== undefined && !isSkipping,
         onPress: () => {
           if (next === undefined) {
             return;
@@ -183,8 +231,22 @@ export function SetupScreen({ step, mode }: SetupScreenProps) {
           router.push(setupPath(next, mode));
         },
       }}
+      escapeButtonRef={escapeButton}
+      escapeAction={
+        isEscapeShown
+          ? {
+              label: SETUP_SHELL.setOwnTargetsLabel,
+              onPress: () => {
+                void skip();
+              },
+              isLoading: isSkipping,
+            }
+          : undefined
+      }
       notice={
-        readFailure === undefined ? undefined : (
+        isEscapeShown && skipSetup.isError ? (
+          <Banner tone="error">{SAVE_FAILED_BANNER}</Banner>
+        ) : readFailure === undefined ? undefined : (
           <Banner
             tone="error"
             action={{

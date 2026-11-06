@@ -74,7 +74,7 @@ describe("the first step", () => {
     expect(fill?.className).toContain("w-[var(--progress)]");
   });
 
-  it("should have neither Back nor Close on the first run, whose escape is not here yet", async () => {
+  it("should have neither Back nor Close on the first run, whose way out is the escape", async () => {
     renderSetupFlow(router);
     await screen.findByRole("heading", { level: 1 });
 

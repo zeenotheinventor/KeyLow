@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { useSupabase } from "../KeyLowProvider";
+import { markSetupStateSetUp } from "./markSetupStateSetUp";
 import { keys } from "../queryKeys";
 import { saveMySetup } from "../repos/setup";
 
@@ -17,7 +18,8 @@ export type SaveSetupInput = SaveSetupOptions & {
  * It needs a connection and does not wait for one: offline it fails at once, and nothing is queued. A failure of the first three steps rejects with `Could not
  * save your setup (step, code)` and invalidates nothing. A failure of the recompute does not reject: the
  * mutation succeeds and resolves with `targetsPending: true` and the code (see `SaveSetupResult`). After a
- * success the setup state (so the first run gate reads set up), the targets, the program reads, the
+ * success the cached setup state is marked set up at once, so the first run gate cannot send the person back
+ * before the read returns, and then the setup state, the targets, the program reads, the
  * weigh-ins, the weight unit and the diary are invalidated. The weight trend is worked out from the
  * weigh-ins and has no key of its own.
  */
@@ -37,6 +39,8 @@ export function useSaveSetup() {
       return saveMySetup(client, data.user.id, save, options);
     },
     onSuccess: () => {
+      // First, so the gate does not see the old answer while the read below is on its way.
+      markSetupStateSetUp(queryClient);
       // Not awaited: the save is done, and the screens read again in their own time.
       void queryClient.invalidateQueries({ queryKey: keys.profiles.setupState });
       void queryClient.invalidateQueries({ queryKey: keys.profiles.targets });

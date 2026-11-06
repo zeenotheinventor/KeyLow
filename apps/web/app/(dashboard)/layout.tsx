@@ -4,6 +4,7 @@ import { CheckinRunner } from "./CheckinRunner";
 import { DashboardNav } from "./DashboardNav";
 import { Providers } from "./Providers";
 import { SessionBarFrame } from "./SessionBar";
+import { SetupGate } from "./SetupGate";
 
 import type { ReactNode } from "react";
 
@@ -31,6 +32,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
     <Providers>
       <SentryUser userId={user.id} />
       <CheckinRunner />
+      <SetupGate />
       <DashboardNav />
       <SessionBarFrame>
         <main className="px-4 lg:px-8">{children}</main>

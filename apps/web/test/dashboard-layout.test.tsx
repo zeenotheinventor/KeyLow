@@ -29,6 +29,8 @@ vi.mock("@/app/(dashboard)/CheckinRunner", () => ({
   CheckinRunner: () => <p>Check-in runner</p>,
 }));
 
+vi.mock("@/app/(dashboard)/SetupGate", () => ({ SetupGate: () => <p>Setup gate</p> }));
+
 vi.mock("@/app/(dashboard)/SessionBar", () => ({
   SessionBarFrame: ({ children }: { children: React.ReactNode }) => children,
 }));
@@ -76,6 +78,12 @@ describe("DashboardLayout", () => {
       render(await DashboardLayout({ children: <p>Page content</p> }));
 
       expect(screen.getByText("Check-in runner")).toBeTruthy();
+    });
+
+    it("should mount the first run gate for an account that has accepted, once for the whole shell", async () => {
+      render(await DashboardLayout({ children: <p>Page content</p> }));
+
+      expect(screen.getAllByText("Setup gate")).toHaveLength(1);
     });
 
     it.each([

@@ -241,7 +241,7 @@ async function respond(input: string | URL | Request, init?: RequestInit): Promi
   return wantsObject ? json(row) : json(row === null ? [] : [row]);
 }
 
-const client = createClient("http://localhost:54321", "anon-key", {
+export const setupClient = createClient("http://localhost:54321", "anon-key", {
   auth: { persistSession: false, autoRefreshToken: false },
   global: { fetch: (input, init) => respond(input, init) },
 });
@@ -258,7 +258,7 @@ export async function signInSetupClient(): Promise<void> {
     encodeSegment({ note: "unsigned" }),
   ].join(".");
 
-  const { error } = await client.auth.setSession({
+  const { error } = await setupClient.auth.setSession({
     access_token: accessToken,
     refresh_token: "test-refresh-token",
   });
@@ -334,7 +334,7 @@ export function renderSetupFlow(router: FlowRouter, startAt = "/setup?mode=first
 
   return {
     ...render(
-      <KeyLowProvider client={client} queryClient={queryClient}>
+      <KeyLowProvider client={setupClient} queryClient={queryClient}>
         <ToastProvider>
           <Flow
             startAt={startAt}

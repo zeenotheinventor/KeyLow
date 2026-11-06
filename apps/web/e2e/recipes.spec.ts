@@ -29,7 +29,8 @@ test("walks a new user from More's Recipes row to a saved recipe and back to it 
     .getByRole("checkbox", { name: /I accept the Terms and the Privacy Policy/ })
     .check({ force: true });
   await page.getByRole("button", { name: "Create account" }).click();
-  await expect(page).toHaveURL(/\/dashboard$/);
+  // A new account is sent from the dashboard to step 1 of the setup wizard. The nav is the same there.
+  await expect(page).toHaveURL(/\/setup\?mode=first-run$/);
 
   // Recipes is not in the top bar. More's Recipes row opens the library, which has nothing in it yet.
   const mainNav = page.getByRole("navigation", { name: "Main" });

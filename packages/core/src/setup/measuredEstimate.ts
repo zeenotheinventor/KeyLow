@@ -72,6 +72,18 @@ export function isWaitingForProgramme({
   return isRecalculating && (isHistoryPending || isTrendLoading);
 }
 
+/**
+ * Whether a recalculation has what the measured estimate is made from: the expenditure history is in hand, and the
+ * weight trend has finished and not failed. Without it the estimate of the answers is drawn as it is. It narrows
+ * `history` to what was read.
+ */
+export function isProgrammeKnown<History>(
+  history: History | undefined,
+  weightTrend: Readonly<{ isLoading: boolean; isError: boolean }>,
+): history is History {
+  return history !== undefined && !weightTrend.isLoading && !weightTrend.isError;
+}
+
 /** The weight `measuredEstimateOf` falls back to: the latest weigh-in's, or the answers' own when there is none. */
 export const fallbackWeightKgOf = (
   latestWeighInKg: number | null | undefined,

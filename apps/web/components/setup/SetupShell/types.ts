@@ -30,6 +30,19 @@ export type SetupShellProps = {
   };
   /** Lets a screen put focus back on the main button after a failed save, since the press turned it off. */
   continueButtonRef?: Ref<HTMLButtonElement>;
+  /**
+   * The first run's one way out of step 1, left of Continue from 700 px and under it below, a ghost Button in the
+   * secondary ink. It is the kit's busy Button while it runs. Left out everywhere else.
+   */
+  escapeAction?:
+    | {
+        label: string;
+        onPress: () => void;
+        isLoading: boolean;
+      }
+    | undefined;
+  /** Lets a screen put focus back on the escape after a failed write, since the press turned it off. */
+  escapeButtonRef?: Ref<HTMLButtonElement>;
   /** Back and Close are dimmed and inert, while a save runs. */
   isLeavingInert?: boolean | undefined;
   /** A banner above the buttons, such as the read's failure. */
