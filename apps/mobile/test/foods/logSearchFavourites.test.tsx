@@ -172,7 +172,7 @@ describe("the Favourites strip in the log search", () => {
     await renderLogSearch();
 
     expect(
-      screen.queryByRole("button", { name: "Log Mystery stew, recipe" }),
+      screen.queryByRole("button", { name: "Choose an amount of Mystery stew, recipe" }),
     ).not.toBeOnTheScreen();
     expect(screen.queryByRole("heading", { name: "Favourites" })).not.toBeOnTheScreen();
   });
@@ -185,7 +185,7 @@ describe("the Favourites strip in the log search", () => {
     };
     const user = await renderLogSearch();
 
-    await user.press(screen.getByRole("button", { name: "Log Porridge" }));
+    await user.press(screen.getByRole("button", { name: "Choose an amount of Porridge" }));
 
     expect(routerMock.push).toHaveBeenCalledWith(
       `/foods/${porridgeId}/log?day=2026-10-14&time=12%3A00&recent=1`,
@@ -205,7 +205,9 @@ describe("the Favourites strip in the log search", () => {
     };
     const user = await renderLogSearch();
 
-    await user.press(screen.getByRole("button", { name: "Log Overnight oats, recipe" }));
+    await user.press(
+      screen.getByRole("button", { name: "Choose an amount of Overnight oats, recipe" }),
+    );
 
     expect(routerMock.push).toHaveBeenCalledWith(
       `/foods/recipe/${oatsRecipeId}/log?day=2026-10-14&time=12%3A00`,
@@ -241,7 +243,9 @@ describe("the Favourites strip in the log search", () => {
     await renderLogSearch();
 
     expect(screen.queryByRole("heading", { name: "Favourites" })).not.toBeOnTheScreen();
-    expect(screen.queryByRole("button", { name: "Log Porridge" })).not.toBeOnTheScreen();
+    expect(
+      screen.queryByRole("button", { name: "Choose an amount of Porridge" }),
+    ).not.toBeOnTheScreen();
   });
 
   it("should drop a tile when its favourite is removed", async () => {
@@ -251,7 +255,7 @@ describe("the Favourites strip in the log search", () => {
       isError: false,
     };
     await renderLogSearch();
-    expect(screen.getByRole("button", { name: "Log Porridge" })).toBeOnTheScreen();
+    expect(screen.getByRole("button", { name: "Choose an amount of Porridge" })).toBeOnTheScreen();
 
     const searchField = screen.getByRole("searchbox", { name: "Search foods" });
     // Typing and clearing brings the idle list back, which reads the favourites again.
@@ -259,7 +263,9 @@ describe("the Favourites strip in the log search", () => {
     favouriteFoods.current = { data: [], isPending: false, isError: false };
     await fireEvent.changeText(searchField, "");
 
-    expect(screen.queryByRole("button", { name: "Log Porridge" })).not.toBeOnTheScreen();
+    expect(
+      screen.queryByRole("button", { name: "Choose an amount of Porridge" }),
+    ).not.toBeOnTheScreen();
   });
 
   it("should read nothing while the Terms are not accepted", async () => {
