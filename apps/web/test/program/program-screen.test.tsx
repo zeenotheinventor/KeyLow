@@ -4,7 +4,7 @@ import { onlineManager } from "@tanstack/react-query";
 import { act, cleanup, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { renderWithRouter } from "../ui/appRouter";
+import { renderWithProgramBackend, resetProgramBackend } from "./programBackend";
 
 import type { ExpenditureSnapshot, ProgramScreenState } from "@keylow/api-client";
 import type {
@@ -114,12 +114,15 @@ const CHECKIN_SNAPSHOT: ExpenditureSnapshot = {
   },
 };
 
+// The page's own reads are mocked above. The chart card and the How it works row read through the real hooks
+// from a fake database, which `program-chart.test.tsx` fills.
 function renderScreen() {
-  return renderWithRouter(<ProgramScreen />);
+  return renderWithProgramBackend(<ProgramScreen />);
 }
 
 describe("ProgramScreen", () => {
   beforeEach(() => {
+    resetProgramBackend();
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date("2026-10-30T12:00:00Z"));
     useSettlingChecklist.mockReturnValue(null);

@@ -175,4 +175,49 @@ describe("GroupedList", () => {
       expect(screen.queryByRole("status")).toBeNull();
     });
   });
+  describe("hidden title", () => {
+    it("should keep the section's name and draw no heading", () => {
+      render(
+        <GroupedList hidesTitle title="Programme">
+          <ListRow title="How it works" />
+        </GroupedList>,
+      );
+
+      const section = screen.getByRole("region", { name: "Programme" });
+      expect(within(section).queryByRole("heading")).toBeNull();
+      expect(within(section).getByRole("list")).toBeTruthy();
+    });
+
+    it("should name the section by its label when it has one", () => {
+      render(
+        <GroupedList hidesTitle title="Programme" label="Programme actions">
+          <ListRow title="How it works" />
+        </GroupedList>,
+      );
+
+      expect(screen.getByRole("region", { name: "Programme actions" })).toBeTruthy();
+    });
+
+    it("should draw no header row, so the card is the section's first box", () => {
+      render(
+        <GroupedList hidesTitle title="Programme" seeMore={{ hiddenCount: 3, onClick: vi.fn() }}>
+          <ListRow title="How it works" />
+        </GroupedList>,
+      );
+
+      const section = screen.getByRole("region", { name: "Programme" });
+      expect(within(section).queryByRole("button")).toBeNull();
+      expect(section.firstElementChild?.tagName).toBe("UL");
+    });
+
+    it("should keep the heading and the header row by default", () => {
+      render(
+        <GroupedList title="Programme">
+          <ListRow title="How it works" />
+        </GroupedList>,
+      );
+
+      expect(screen.getByRole("heading", { level: 2, name: "Programme" })).toBeTruthy();
+    });
+  });
 });

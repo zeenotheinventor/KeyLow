@@ -1,5 +1,5 @@
 import type { BadgeTone } from "@/components/ui/Badge";
-import type { ComponentType } from "react";
+import type { ComponentType, MouseEvent } from "react";
 
 /** What the row needs of an icon: the props it sets. A `lucide-react` icon fits. */
 export type ListRowIcon = ComponentType<{
@@ -54,7 +54,8 @@ export type ListRowProps = ListRowContent &
   (
     | { href: string; onClick?: never; submit?: never; loading?: never }
     | {
-        onClick: () => void;
+        /** The click's event is passed on, so an owner can keep the button that was pressed, such as to return focus to it. */
+        onClick: (event: MouseEvent<HTMLButtonElement>) => void;
         href?: never;
         submit?: never;
         /**
