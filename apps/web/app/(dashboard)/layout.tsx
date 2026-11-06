@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 
 import { DashboardNav } from "./DashboardNav";
 import { Providers } from "./Providers";
+import { SessionBarFrame } from "./SessionBar";
 
 import type { ReactNode } from "react";
 
@@ -29,7 +30,9 @@ export default async function DashboardLayout({ children }: { children: ReactNod
     <Providers>
       <SentryUser userId={user.id} />
       <DashboardNav />
-      <main className="px-4 lg:px-8">{children}</main>
+      <SessionBarFrame>
+        <main className="px-4 lg:px-8">{children}</main>
+      </SessionBarFrame>
     </Providers>
   );
 }

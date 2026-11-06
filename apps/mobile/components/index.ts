@@ -47,6 +47,6 @@ export type {
   ScannedBarcode,
 } from "./BarcodeScanner";
 export { SessionBar, useSessionBar } from "./SessionBar";
-export type { SessionBarProps, SessionBarView } from "./SessionBar";
+export type { SessionBarProps } from "./SessionBar";
 export { SessionScreen } from "./SessionScreen";
 export type { SessionScreenProps } from "./SessionScreen";

@@ -110,7 +110,7 @@ export function BodyMapCard({
             />
           </div>
         )}
-        <div className="relative col-span-full md:row-start-2">
+        <div className="relative isolate col-span-full md:row-start-2">
           <BodyMapFigures
             scale={scale}
             view={view}
