@@ -2,6 +2,7 @@ import { useEditProgram } from "@keylow/api-client";
 import {
   PROGRAM_EDIT,
   PROGRAM_EDIT_FAILED_BANNER,
+  setupGoalNoteFor,
   TARGETS_SAVED_TOAST,
   describeEditFootnote,
 } from "@keylow/core/copy";
@@ -55,9 +56,7 @@ export function ProgramEditForm({
   // cannot be used to leave twice or to save again.
   const isBusy = editProgram.isPending || hasSaved;
   const allowedGoals = goalsAllowed(ageYears);
-  const goalNote = allowedGoals.includes("lose")
-    ? PROGRAM_EDIT.goalNotes.default
-    : PROGRAM_EDIT.goalNotes.under18;
+  const goalNote = setupGoalNoteFor(allowedGoals);
 
   // Not set in the render, so a screen the strict mode mounts twice ends up marked mounted.
   useEffect(() => {

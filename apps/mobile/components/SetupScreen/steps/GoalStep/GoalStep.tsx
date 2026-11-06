@@ -1,4 +1,4 @@
-import { SETUP_GOAL_NOTES, SETUP_QUESTIONS } from "@keylow/core/copy";
+import { SETUP_QUESTIONS, setupGoalNoteFor } from "@keylow/core/copy";
 
 import { GoalOptions } from "../../../SetupOptions";
 import { Banner } from "../../../ui";
@@ -11,7 +11,7 @@ import type { GoalStepProps } from "./types";
  * someone, and it says it for under 18 too when Lose is not offered.
  */
 export function GoalStep({ value, allowedGoals, onChange }: GoalStepProps) {
-  const note = allowedGoals.includes("lose") ? SETUP_GOAL_NOTES.default : SETUP_GOAL_NOTES.under18;
+  const note = setupGoalNoteFor(allowedGoals);
 
   return (
     <>

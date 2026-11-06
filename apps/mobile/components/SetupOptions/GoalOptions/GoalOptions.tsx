@@ -1,5 +1,4 @@
-import { SETUP_GOAL_NOT_OFFERED_UNDER_18, SETUP_GOAL_OPTIONS } from "@keylow/core/copy";
-import { GOALS } from "@keylow/core/setup";
+import { setupGoalCardsFor } from "@keylow/core/copy";
 
 import { OptionCardGroup } from "../../ui";
 
@@ -10,12 +9,9 @@ import type { GoalOptionsProps } from "./types";
  * for the reason, and the card does not respond.
  */
 export function GoalOptions({ label, allowedGoals, value, onChange }: GoalOptionsProps) {
-  const options = GOALS.map((goal) => ({
+  const options = setupGoalCardsFor(allowedGoals).map(({ goal, ...words }) => ({
     id: goal,
-    title: SETUP_GOAL_OPTIONS[goal].title,
-    ...(allowedGoals.includes(goal)
-      ? { description: SETUP_GOAL_OPTIONS[goal].description }
-      : { disabledReason: SETUP_GOAL_NOT_OFFERED_UNDER_18 }),
+    ...words,
   }));
 
   return <OptionCardGroup label={label} options={options} value={value} onChange={onChange} />;

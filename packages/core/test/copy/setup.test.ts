@@ -43,6 +43,8 @@ import {
   describeSetupCaption,
   describeSetupStepLabel,
   describeSetupWeightProblem,
+  setupGoalCardsFor,
+  setupGoalNoteFor,
   setupQuestionFor,
   describeWeighInSource,
   WEIGH_IN_SHEET,
@@ -457,6 +459,29 @@ describe("setup: goal · under-18", () => {
   it("should count seven steps once Maintain is chosen", () => {
     expect(describeSetupStepLabel(5, 7)).toBe(words.maintainStepLabel);
     expectOnSetupCanvas([words.maintainStepLabel]);
+  });
+});
+
+describe("the goal cards and the note under them", () => {
+  it("should give every goal its line of words when all three are offered", () => {
+    expect(setupGoalCardsFor(GOALS)).toEqual([
+      { goal: "lose", ...SETUP_GOAL_OPTIONS.lose },
+      { goal: "maintain", ...SETUP_GOAL_OPTIONS.maintain },
+      { goal: "gain", ...SETUP_GOAL_OPTIONS.gain },
+    ]);
+  });
+
+  it("should swap the line of a goal that is not offered for the reason, and keep its title", () => {
+    expect(setupGoalCardsFor(["maintain", "gain"])).toEqual([
+      { goal: "lose", title: "Lose weight", disabledReason: SETUP_GOAL_NOT_OFFERED_UNDER_18 },
+      { goal: "maintain", ...SETUP_GOAL_OPTIONS.maintain },
+      { goal: "gain", ...SETUP_GOAL_OPTIONS.gain },
+    ]);
+  });
+
+  it("should give the pregnancy note while Lose is offered and the under 18 note when it is not", () => {
+    expect(setupGoalNoteFor(GOALS)).toBe(SETUP_GOAL_NOTES.default);
+    expect(setupGoalNoteFor(["maintain", "gain"])).toBe(SETUP_GOAL_NOTES.under18);
   });
 });
 
