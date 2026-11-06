@@ -215,3 +215,27 @@ export const setDraftOfValues = (values: SetValues, unit: LoadUnit): SetDraft =>
   rir: values.rir === null ? "" : String(values.rir),
   rpe: "",
 });
+
+/**
+ * A stored load in kilograms written as the text a form submits in kilograms, to the gram. It is written with
+ * a fourth decimal because a load such as 102.058 would be refused as a thousands separator typed by hand,
+ * and the rule leaves a fourth decimal alone.
+ */
+export const exactKilogramsText = (kilograms: number): string => kilograms.toFixed(4);
+
+/**
+ * The draft and unit a form logs. A load the person did not edit, that the form filled from a stored one
+ * (`prefillKg`), is logged as those exact kilograms, so the rounding of the pounds it was shown in never moves
+ * it. A typed load, and a blank one with nothing to fill it from, go as they are, in the unit they were typed in.
+ */
+export const loggedLoad = (
+  draft: SetDraft,
+  {
+    edited,
+    prefillKg,
+    unit,
+  }: Readonly<{ edited: boolean; prefillKg: number | null; unit: LoadUnit }>,
+): Readonly<{ draft: SetDraft; unit: LoadUnit }> =>
+  edited || prefillKg === null
+    ? { draft, unit }
+    : { draft: { ...draft, load: exactKilogramsText(prefillKg) }, unit: "kg" };

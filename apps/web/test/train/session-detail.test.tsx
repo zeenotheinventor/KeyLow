@@ -130,7 +130,9 @@ describe("the session detail", () => {
       renderDetail();
 
       const rowCard = await card("Bent over barbell row");
-      expect(within(rowCard).getAllByRole("button")).toHaveLength(4);
+      expect(
+        within(within(rowCard).getByRole("table", { name: "Sets" })).getAllByRole("button"),
+      ).toHaveLength(4);
       expect(within(rowCard).queryByRole("textbox")).toBeNull();
       expect(within(rowCard).queryByRole("checkbox")).toBeNull();
       expect(within(rowCard).queryByRole("columnheader")).toBeNull();

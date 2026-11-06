@@ -154,6 +154,14 @@ export { describeFinishDetails, heatSetsOf } from "./describeFinishDetails";
 export type { FinishDetails } from "./describeFinishDetails";
 export { useSetLogging } from "./useSetLogging";
 export { useChangeSetType } from "./useChangeSetType";
+export { useAddToPastSession } from "./useAddToPastSession";
+export type {
+  AddSetEntry,
+  AddToPastSession,
+  AddToPastSessionOpening,
+  PickedExercise,
+  SetLogRequest,
+} from "./useAddToPastSession";
 export { useEditSet } from "./useEditSet";
 export type { EditSet, EditSetOpening, EditSetOpeningState, SetChanges } from "./useEditSet";
 export { useRemoveSetWithUndo } from "./useRemoveSetWithUndo";
