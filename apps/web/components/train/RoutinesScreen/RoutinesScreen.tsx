@@ -23,6 +23,7 @@ import { RoutineActionRow } from "../RoutineActionRow";
 import { RoutineCard } from "../RoutineCard";
 import { useRoutineNotices } from "../useRoutineNotices";
 import { activeFromOf, routineItemOf } from "./routineItems";
+import { RoutineProgressSection } from "./RoutineProgressSection";
 
 import type { RoutineRef, RoutinesScreenProps } from "./types";
 
@@ -44,7 +45,9 @@ import { useNow } from "@/lib/useNow";
  * routines in one request, so the archived page opened from here already has them. The date the active
  * routine began is in the profile's time zone, and the list does not wait for the zone: until it is known
  * the date is left out. New routine, Create routine and the routines that open an editor are drawn only
- * when their handlers are given, so none is a dead control.
+ * when their handlers are given, so none is a dead control. For the active routine the Progress section
+ * follows the list, as the `web-train · routines-progress` boards draw it: a second column beside the list
+ * from the extra large breakpoint, so the title row spans the page, and under the list below it.
  *
  * Make active on an other routine asks first, as the `routines · set-active` board draws it, with today in
  * the profile's zone: the routine plans from that day. Until the zone is known the question cannot name the
@@ -90,7 +93,7 @@ export function RoutinesScreen({ onCreateRoutine, onEditRoutine }: RoutinesScree
   const localDate = zone === null ? null : toLocalDate(now, zone);
 
   const title = (
-    <div className="flex items-center justify-between gap-3 xl:max-w-[800px]">
+    <div className="flex items-center justify-between gap-3">
       <h1 className="text-h1">{ROUTINES_SCREEN.title}</h1>
       {onCreateRoutine === undefined || (active === undefined && others.length === 0) ? null : (
         <Button variant="secondary" onClick={onCreateRoutine}>
@@ -226,7 +229,10 @@ export function RoutinesScreen({ onCreateRoutine, onEditRoutine }: RoutinesScree
     <div className="mx-auto flex w-full max-w-[1180px] flex-col gap-3 xl:gap-5">
       <BackToFoodsLink tone="accent" label={ROUTINES_SCREEN.backLabel} href={trainPath()} />
       {title}
-      <div className="flex flex-col gap-4 xl:max-w-[800px]">{renderBody()}</div>
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:gap-5">
+        <div className="flex min-w-0 flex-col gap-4 xl:max-w-[800px] xl:flex-1">{renderBody()}</div>
+        {active === undefined ? null : <RoutineProgressSection routineId={active.id} />}
+      </div>
       {makeActive.question === null ? null : (
         <Dialog
           open={makeActive.isOpen}

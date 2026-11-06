@@ -4,12 +4,14 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  BENCH_ID,
   PUSH_PULL_LEGS_ID,
   UPPER_LOWER_ID,
   pushPullLegs,
   renderWithRoutines,
   resetRoutinesBackend,
   routinesBackend,
+  seedGoldenProgress,
   upperLower,
 } from "./routinesBackend";
 import { renderWithTrain, resetTrainBackend, trainBackend } from "./support";
@@ -69,7 +71,10 @@ describe("the routines page's buttons", () => {
     router.push.mockReset();
   });
 
-  afterEach(cleanup);
+  afterEach(() => {
+    cleanup();
+    vi.useRealTimers();
+  });
 
   it("should open the new routine's editor from New routine, and a routine's own from its card and its row", async () => {
     routinesBackend.routines = [pushPullLegs, upperLower];
@@ -85,6 +90,21 @@ describe("the routines page's buttons", () => {
 
     await userEvent.click(screen.getByRole("button", { name: /^Upper Lower/ }));
     expect(router.push).toHaveBeenLastCalledWith(`/train/routines/${UPPER_LOWER_ID}`);
+  });
+
+  it("should link a row of the Progress section to the exercise's progress page by its id alone", async () => {
+    // The week the golden bench was trained in.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-20T10:00:00Z"));
+    routinesBackend.routines = [pushPullLegs];
+    seedGoldenProgress();
+    renderWithRoutines(<RoutinesRoute />);
+
+    const [benchRow] = await screen.findAllByRole("link", {
+      name: /^Bench press, .* reps, up 2.5 kg/,
+    });
+
+    expect(benchRow?.getAttribute("href")).toBe(`/train/progress/${BENCH_ID}`);
   });
 
   it("should open the new routine's editor from Create routine when there are no routines", async () => {
