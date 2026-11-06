@@ -10,10 +10,26 @@ import {
   PROTEIN_G_PER_KG,
   PROTEIN_PRESETS,
   withGoal,
-} from "@keylow/core/setup";
+} from "../setup";
 
-import type { ProgramChanges, SetupProgram } from "@keylow/api-client";
-import type { DietStyle, ProteinPreset, SetupGoal } from "@keylow/core/setup";
+import type { DietStyle, ProteinPreset, SetupGoal } from "../setup";
+
+/** The stored programme as the form starts from it. */
+export type ProgramEditSource = Readonly<{
+  goal: SetupGoal;
+  ratePctPerWeek: number;
+  proteinGPerKg: number;
+  splitPreset: string;
+}>;
+
+/** The five values of the programme that the form writes, in the values the wizard's presets hold. */
+export type ProgramEditChanges = Readonly<{
+  goal: SetupGoal;
+  ratePctPerWeek: number;
+  proteinGPerKg: number;
+  fatFraction: number;
+  splitPreset: DietStyle;
+}>;
 
 /** The four choices of the form. Each one is always chosen, so a save never lacks one. */
 export type ProgramEditDraft = Readonly<{
@@ -29,7 +45,7 @@ export type ProgramEditDraft = Readonly<{
  * is 0) starts from the goal the age defaults to, with that goal's default rate. A stored protein or diet that is
  * not a preset starts from the default.
  */
-export function initialDraftOf(program: SetupProgram, ageYears: number): ProgramEditDraft {
+export function initialDraftOf(program: ProgramEditSource, ageYears: number): ProgramEditDraft {
   const isGoalAllowed = goalsAllowed(ageYears).includes(program.goal);
   const goal = isGoalAllowed ? program.goal : defaultGoalForAge(ageYears);
 
@@ -57,7 +73,7 @@ export function changesOf({
   ratePctPerWeek,
   proteinPreset,
   dietStyle,
-}: ProgramEditDraft): ProgramChanges {
+}: ProgramEditDraft): ProgramEditChanges {
   return {
     goal,
     ratePctPerWeek,

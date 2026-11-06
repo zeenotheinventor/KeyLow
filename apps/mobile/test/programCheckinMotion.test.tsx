@@ -29,7 +29,7 @@ import {
 import { resolvedColor } from "./support/themeColor";
 import { ExpenditureHeroCard } from "../components/ProgramScreen/ExpenditureHeroCard";
 
-import type { ExpenditureHeroView } from "../components/ProgramScreen";
+import type { ExpenditureHeroView } from "@keylow/core/program";
 
 jest.mock("@react-native-async-storage/async-storage", () => ({
   __esModule: true,

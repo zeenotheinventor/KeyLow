@@ -6,13 +6,18 @@ describe("the program module", () => {
   it("should export its public surface", () => {
     expect(Object.keys(program).sort()).toEqual([
       "acceptedWeighInDates",
+      "buildExpenditureChartView",
+      "buildProgramView",
+      "changesOf",
       "checkinSummary",
       "checkinWindow",
       "checkinWindowWeeks",
+      "chooseGoal",
       "completeDayDates",
       "expenditureBand",
       "expenditureChartWeeks",
       "firstCheckinReadiness",
+      "initialDraftOf",
       "settlingProgress",
     ]);
   });

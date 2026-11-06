@@ -1,17 +1,13 @@
-import {
-  chooseGoal,
-  changesOf,
-  initialDraftOf,
-} from "../components/ProgramEditScreen/programEditDraft";
+import { describe, expect, it } from "vitest";
 
-import type { SetupProgram } from "@keylow/api-client";
+import { changesOf, chooseGoal, initialDraftOf } from "../../src/program";
 
-const loseHalfPercentModerateBalanced: SetupProgram = {
-  id: "66666666-6666-4666-8666-666666666666",
+import type { ProgramEditSource } from "../../src/program";
+
+const loseHalfPercentModerateBalanced: ProgramEditSource = {
   goal: "lose",
   ratePctPerWeek: 0.5,
   proteinGPerKg: 1.6,
-  fatFraction: 0.4,
   splitPreset: "balanced",
 };
 

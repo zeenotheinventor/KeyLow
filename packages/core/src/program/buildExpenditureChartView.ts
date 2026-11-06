@@ -1,8 +1,22 @@
-import { PROGRAM_CHART, describeExpenditureChartSummary } from "@keylow/core/copy";
-import { formatCalories } from "@keylow/core/format";
+import { PROGRAM_CHART, describeExpenditureChartSummary } from "../copy";
+import { formatCalories } from "../format";
 
-import type { ExpenditureChartView } from "./types";
-import type { ExpenditureChartWeek } from "@keylow/core/program";
+import type { ExpenditureChartWeek } from "./chartWeeks";
+
+/** What the chart is given: one point and one band for each week, oldest first, and the sentence that names it. */
+export type ExpenditureChartView = {
+  label: string;
+  unit: string;
+  /** One point for each week. A null value is a week with no estimate, which breaks the line. */
+  points: readonly { week: string; value: number | null }[];
+  /** The likely range of each week, a null for a week with no estimate. */
+  band: readonly ({ low: number; high: number } | null)[];
+  legend: { line: string; band: string };
+  /** "Estimated expenditure over 5 weeks: ...", which is the chart's accessible name and is written under it. */
+  summary: string;
+  /** Writes an axis value to the nearest 10 with a thousands separator: "2,980". */
+  formatValue: (kcal: number) => string;
+};
 
 const AXIS_STEP_KCAL = 10;
 
@@ -19,7 +33,7 @@ export function buildExpenditureChartView(
   weeks: readonly ExpenditureChartWeek[],
 ): ExpenditureChartView | null {
   const first = weeks.find((week) => week.band !== null);
-  const latest = weeks.findLast((week) => week.band !== null);
+  const latest = weeks.filter((week) => week.band !== null).at(-1);
   if (first?.band == null || latest?.band == null) {
     return null;
   }
