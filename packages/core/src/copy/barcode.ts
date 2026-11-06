@@ -58,6 +58,17 @@ export const BARCODE_NOT_FOUND = {
   action: "Create food with this barcode",
 };
 
+/**
+ * The typed lookup inside the recipe's Add ingredient dialog. The recipe is unsaved, so a code nobody has
+ * is turned into a food in another tab and the person comes back to search for it. Offline there is no lookup.
+ */
+export const INGREDIENT_BARCODE = {
+  offline: "Looking up a barcode needs a connection.",
+  notFoundBody:
+    "Create the food with this barcode in a new tab, then search for it here. Your recipe stays as it is.",
+  notFoundAction: "Create food with this barcode (opens in a new tab)",
+};
+
 export const BARCODE_LOOKUP_PROGRESS = {
   lookingUp: "Looking up the barcode",
   openingFood: "Opening the food",

@@ -1,5 +1,6 @@
+import type { BarcodeButton } from "@/components/ui/SearchField";
 import type { FoodSearchHit, RecentFood, RecipeSummary } from "@keylow/api-client";
-import type { Ref } from "react";
+import type { ReactNode, Ref } from "react";
 
 type CommonSearchStepProps = {
   /** What has been typed, untrimmed. The dialog keeps it, so the portion step's Results link finds it again. */
@@ -38,6 +39,12 @@ export type LogSearchStepProps = CommonSearchStepProps & {
  * not logged and its amount matters, so every row ends in a chevron and opens the amount step. Its idle
  * search is Recent alone, as the phone's is.
  */
-type IngredientSearchStepProps = CommonSearchStepProps & { mode: "ingredient" };
+type IngredientSearchStepProps = CommonSearchStepProps & {
+  mode: "ingredient";
+  /** The search field's barcode button, which the owner of the typed lookup panel supplies. */
+  barcodeButton?: BarcodeButton | undefined;
+  /** What sits between the field and the results: the typed barcode lookup panel, or the note that it is off. */
+  barcodePanel?: ReactNode;
+};
 
 export type SearchStepProps = LogSearchStepProps | IngredientSearchStepProps;

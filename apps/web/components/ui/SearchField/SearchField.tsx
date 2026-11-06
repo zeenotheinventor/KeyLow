@@ -74,10 +74,13 @@ function BarcodeIconButton({
   button,
   size,
   disabled = false,
+  dimsWhenDisabled = false,
 }: {
   button: BarcodeButton;
   size: SearchLauncherSize;
   disabled?: boolean;
+  /** The launcher dims its whole frame when disabled, so only a field's own button dims itself. */
+  dimsWhenDisabled?: boolean;
 }) {
   return (
     <button
@@ -90,6 +93,7 @@ function BarcodeIconButton({
       className={cn(
         barcodeButtonSize({ size }),
         disabled && "hover:bg-transparent active:bg-transparent",
+        disabled && dimsWhenDisabled && "opacity-50",
       )}
     >
       <ScanBarcode aria-hidden className={iconSize[size]} strokeWidth={iconStroke} />
@@ -145,7 +149,14 @@ export function SearchField({
       {clear !== undefined && typeof inputProps.value === "string" && inputProps.value !== "" && (
         <ClearIconButton button={clear} disabled={inputProps.disabled} />
       )}
-      {barcodeButton !== undefined && <BarcodeIconButton button={barcodeButton} size={size} />}
+      {barcodeButton !== undefined && (
+        <BarcodeIconButton
+          button={barcodeButton}
+          size={size}
+          disabled={barcodeButton.disabled === true}
+          dimsWhenDisabled
+        />
+      )}
     </div>
   );
 }

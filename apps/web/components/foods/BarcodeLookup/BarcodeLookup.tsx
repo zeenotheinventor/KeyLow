@@ -5,7 +5,7 @@ import { TYPED_BARCODE_PROBLEMS } from "@keylow/core/copy";
 import { normaliseBarcode } from "@keylow/core/foods";
 import { iconStroke } from "@keylow/tokens";
 import { X } from "lucide-react";
-import { useEffect, useId, useRef, useState, type SubmitEvent } from "react";
+import { useEffect, useEffectEvent, useId, useRef, useState, type SubmitEvent } from "react";
 
 import { BarcodeResult } from "./BarcodeResult";
 
@@ -21,9 +21,9 @@ import { useFoodLogActions } from "@/lib/foodLogActions";
  * The panel behind the search field's barcode button. There is no camera on the web, so the
  * digits are typed. A code that is not a barcode is explained beside the field and looks nothing
  * up. A food that is found opens the Add food dialog on its portion step, over the panel, as a
- * search result does.
+ * search result does, or, given `onFound`, is handed to the page that owns the panel.
  */
-export function BarcodeLookup({ onClose, day }: BarcodeLookupProps) {
+export function BarcodeLookup({ onClose, onFound, day }: BarcodeLookupProps) {
   const { openAddFood } = useFoodLogActions();
   const idPrefix = useId();
   const inputId = `${idPrefix}-digits`;
@@ -35,8 +35,8 @@ export function BarcodeLookup({ onClose, day }: BarcodeLookupProps) {
   const [request, setRequest] = useState<BarcodeLookupRequest | null>(null);
 
   const lookup = useFoodByBarcode(request?.code ?? "", { enabled: request !== null });
-  const foundFoodId =
-    request !== null && lookup.result?.status === "found" ? lookup.result.food.id : undefined;
+  const foundFood =
+    request !== null && lookup.result?.status === "found" ? lookup.result.food : undefined;
   const attempt = request?.attempt;
 
   useEffect(() => {
@@ -44,11 +44,21 @@ export function BarcodeLookup({ onClose, day }: BarcodeLookupProps) {
   }, []);
 
   // Each submit is its own request, so looking the same code up again opens its food again.
-  useEffect(() => {
-    if (foundFoodId !== undefined) {
-      openAddFood({ foodId: foundFoodId, ...(day === undefined ? {} : { date: day }) });
+  const openFound = useEffectEvent(() => {
+    if (foundFood === undefined) {
+      return;
     }
-  }, [foundFoodId, attempt, day, openAddFood]);
+    if (onFound === undefined) {
+      openAddFood({ foodId: foundFood.id, ...(day === undefined ? {} : { date: day }) });
+    } else {
+      onFound(foundFood);
+    }
+  });
+  const foundFoodId = foundFood?.id;
+  // The food's id and the attempt are the trigger, not its data: a refetch of the same food opens nothing.
+  useEffect(() => {
+    openFound();
+  }, [foundFoodId, attempt]);
 
   function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -116,7 +126,9 @@ export function BarcodeLookup({ onClose, day }: BarcodeLookupProps) {
             {TYPED_BARCODE_PROBLEMS[problem]}
           </span>
         )}
-        {request !== null && <BarcodeResult {...lookup} day={day} />}
+        {request !== null && (
+          <BarcodeResult {...lookup} day={day} createsInNewTab={onFound !== undefined} />
+        )}
       </section>
     </Card>
   );

@@ -241,11 +241,15 @@ function SearchStepView(props: SearchStepProps & RecipeResults) {
           onChange={(event) => {
             onQueryChange(event.target.value);
           }}
+          {...(props.mode === "ingredient" && props.barcodeButton !== undefined
+            ? { barcodeButton: props.barcodeButton }
+            : {})}
         />
         {props.mode !== "ingredient" && (
           <TimeField compact value={props.time} isNow={props.isNow} onChange={props.onTimeChange} />
         )}
       </div>
+      {props.mode === "ingredient" && props.barcodePanel}
       {renderResults()}
     </>
   );
