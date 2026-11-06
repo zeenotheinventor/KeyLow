@@ -111,6 +111,13 @@ export type { SessionBarView } from "./useSessionBarView";
 export { useHasLoggedSession } from "./useHasLoggedSession";
 export { useLastPerformance } from "./useLastPerformance";
 export type { UseLastPerformanceOptions } from "./useLastPerformance";
+export { useExerciseProgress } from "./useExerciseProgress";
+export type {
+  ExerciseChartData,
+  ExerciseProgress,
+  ExerciseProgressBody,
+  ExerciseWeekItem,
+} from "./exerciseProgressTypes";
 export { useExerciseTrendSets } from "./useExerciseTrendSets";
 export type { UseTrendSetsOptions } from "./useExerciseTrendSets";
 export { useRoutineTrendSets } from "./useRoutineTrendSets";

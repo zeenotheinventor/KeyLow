@@ -215,6 +215,7 @@ export {
   useActiveSession,
   useBodyMap,
   useDashboardBodyMap,
+  useExerciseProgress,
   useExerciseTrendSets,
   useHasLoggedSession,
   useHeatSets,
@@ -338,6 +339,12 @@ export {
 } from "./hooks";
 export type { RoutineNotices } from "./hooks";
 export type { UseRoutinesOptions, UseTrendSetsOptions } from "./hooks";
+export type {
+  ExerciseChartData,
+  ExerciseProgress,
+  ExerciseProgressBody,
+  ExerciseWeekItem,
+} from "./hooks";
 export { RoutineRuleError } from "./errors";
 export type { RoutineRule } from "./errors";
 export {

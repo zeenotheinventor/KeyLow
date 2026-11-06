@@ -29,3 +29,7 @@ export const trainRoutineNewPath = (): string => `${trainRoutinesPath()}/new`;
 
 /** The editor for one stored routine. */
 export const trainRoutineEditPath = (id: string): string => `${trainRoutinesPath()}/${id}`;
+
+/** One exercise's progress by week. The path carries the exercise's id and never its name. */
+export const trainExerciseProgressPath = (exerciseId: string): string =>
+  `${trainPath()}/progress/${exerciseId}`;
