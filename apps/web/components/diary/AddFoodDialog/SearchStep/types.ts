@@ -22,6 +22,8 @@ export type LogSearchStepProps = CommonSearchStepProps & {
   /** The time is still Now. */
   isNow: boolean;
   onTimeChange: (time: string) => void;
+  /** Leaves the compact Time field out while Your plate is open, where the panel's Time row sets the same time. */
+  hidesTime?: boolean | undefined;
   /** Dims the pluses and the Time field and stops them responding, while the plate is being logged. */
   isLogging: boolean;
   /** A press on a row's plus: put its serving on the plate. */

@@ -9,11 +9,13 @@ import {
   reselectPickedUnit,
   startingAmount,
 } from "@keylow/core/diary";
+import { plateFoodRowStart } from "@keylow/core/plate";
 import { useState } from "react";
 
 import type { FoodWithPortionsState } from "@keylow/api-client";
 import type { AmountPortion, AmountPreview, LastLoggedFood, UnitOption } from "@keylow/core/diary";
-import type { Food } from "@keylow/core/schemas";
+import type { PlateFoodItem } from "@keylow/core/plate";
+import type { Food, FoodPortion } from "@keylow/core/schemas";
 
 /** `unitLabel` is the words on the chip pressed, which finds it again when a refresh of the food gives its portions new ids. */
 type Edits = { foodId: string; quantityText?: string; unitValue?: string; unitLabel?: string };
@@ -37,16 +39,35 @@ export type ReadyAmountDraft = {
 export type AmountDraft =
   { status: "idle" } | Exclude<FoodWithPortionsState, { status: "ready" }> | ReadyAmountDraft;
 
+// The amount the step opens on, when it is not the food's default serving: the plate row's, or the one last logged.
+function initialAmountOf(
+  portions: readonly FoodPortion[],
+  lastLogged: LastLoggedFood | undefined,
+  plateRow: PlateFoodItem | undefined,
+) {
+  if (plateRow !== undefined) {
+    const rowAmount = plateFoodRowStart(plateRow, portions);
+
+    return rowAmount === undefined ? undefined : amountForPicker(rowAmount);
+  }
+
+  return lastLogged === undefined
+    ? undefined
+    : amountForPicker(amountLastLogged(lastLogged, portions));
+}
+
 /**
  * The amount step's state for the food chosen from the search: the food and its portions by id, and the
  * amount and the unit the person has typed. The amount and the unit start from core's default serving and
  * start again for another food, unless the food was chosen from Recent: then they start at the amount it was
- * last logged with, on the food as it is now. It writes nothing: the diary logs the amount and the recipe editor adds it
+ * last logged with, on the food as it is now, or unless it is a plate row being edited: then they start at the
+ * row's own amount and unit (`plateFoodRowStart`). It writes nothing: the diary logs the amount and the recipe editor adds it
  * to its draft.
  */
 export function useAmountDraft(
   foodId: string | undefined,
   lastLogged?: LastLoggedFood,
+  plateRow?: PlateFoodItem,
 ): AmountDraft {
   const loaded = useFoodWithPortions(foodId ?? "");
   // An old branded food asks for its refresh, so the portions it has gained since appear as chips.
@@ -71,9 +92,7 @@ export function useAmountDraft(
   const start = startingAmount(
     food,
     choices.portions,
-    lastLogged === undefined
-      ? undefined
-      : amountForPicker(amountLastLogged(lastLogged, loaded.portions)),
+    initialAmountOf(loaded.portions, lastLogged, plateRow),
   );
   const ownEdits = edits?.foodId === foodId ? edits : undefined;
   // A chip pressed before a refresh of the food landed is found again by its label, with the amount kept.

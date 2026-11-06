@@ -33,10 +33,11 @@ export function PortionStep({
   note,
   favouriteHeart,
   onBack,
+  backLabel,
   amountRef,
   ...timeProps
 }: PortionStepProps) {
-  const back = <BackToResults onClick={onBack} />;
+  const back = <BackToResults onClick={onBack} label={backLabel} />;
 
   if (draft.status !== "ready") {
     return (

@@ -1,6 +1,7 @@
 import type { ProgressBar } from "@keylow/core/diary";
 import type { PlateItem } from "@keylow/core/plate";
 import type * as React from "react";
+import type { Ref } from "react";
 
 export type PlatePanelProps = {
   /** What the plate holds, in the order it was added. The panel never changes it: every change goes out through a callback. */
@@ -29,4 +30,8 @@ export type PlatePanelProps = {
   isLogging?: boolean | undefined;
   /** What goes before the heading: the Results link, from 1024 px up, where the chip has moved away from under the pointer. */
   resultsLink?: React.ReactNode;
+  /** Reaches the heading, which takes the focus when the panel opens. It is focusable by script, not by Tab. */
+  headingRef?: Ref<HTMLHeadingElement> | undefined;
+  /** What sits between the heading and the rows, such as the log's error banner or the offline note. */
+  notice?: React.ReactNode;
 };

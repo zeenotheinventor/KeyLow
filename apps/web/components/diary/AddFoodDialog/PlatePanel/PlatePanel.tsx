@@ -51,6 +51,8 @@ export function PlatePanel({
   isOpenDisabled = false,
   isLogging = false,
   resultsLink,
+  headingRef,
+  notice,
 }: PlatePanelProps) {
   const totals = plateTotals(items);
 
@@ -59,7 +61,9 @@ export function PlatePanel({
       <div className="flex min-h-9 shrink-0 items-center gap-2">
         {resultsLink !== undefined && <div className="-mr-1 flex shrink-0">{resultsLink}</div>}
         <div className="flex items-baseline gap-2">
-          <h3 className="text-h2">{PLATE.title}</h3>
+          <h3 ref={headingRef} tabIndex={-1} className="text-h2 outline-none">
+            {PLATE.title}
+          </h3>
           <span className="text-caption text-text-muted">{describeFoodCount(items.length)}</span>
         </div>
         {/* The label's end lines up with the panel's edge, as the board draws it. */}
@@ -75,6 +79,7 @@ export function PlatePanel({
           {PLATE.clear}
         </Button>
       </div>
+      {notice}
       <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
         <Card asChild padding="none">
           <ul aria-label={PLATE.rowsLabel} className="shrink-0 divide-y divide-border">

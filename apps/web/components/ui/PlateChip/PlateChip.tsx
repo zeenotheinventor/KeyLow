@@ -22,11 +22,13 @@ export function PlateChip({
   onPress,
   isExpanded = false,
   disabled = false,
+  buttonRef,
 }: PlateChipProps) {
   if (count === 0) return null;
 
   return (
     <button
+      ref={buttonRef}
       type="button"
       aria-label={describePlateChipName(count)}
       aria-expanded={isExpanded}
