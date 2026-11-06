@@ -1,5 +1,6 @@
 import {
   ACCURACY_LINE_WITH_CHECKIN,
+  describeEstimateLines,
   describeMeasuredAccuracyLine,
   OFFLINE_BANNER,
   PROGRAM_SETUP_CARRIED_FORWARD,
@@ -12,12 +13,12 @@ import {
 import { formatCalories } from "@keylow/core/format";
 import { View } from "react-native";
 
-import { describeEstimateLines } from "./describeEstimateLines";
 import { EstimateCard } from "./EstimateCard";
 import { Banner, Button, GroupedList, ListRow, Text } from "../../../ui";
 import { SetupShell } from "../../SetupShell";
 
-import type { EstimateMeasurement, EstimateStepProps } from "./types";
+import type { EstimateStepProps } from "./types";
+import type { EstimateMeasurement } from "@keylow/core/setup";
 
 type EstimateWords = Readonly<{
   heading: string;

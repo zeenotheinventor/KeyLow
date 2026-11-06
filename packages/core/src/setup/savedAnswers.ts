@@ -1,14 +1,32 @@
-import { SEXES } from "@keylow/core/engine";
-import {
-  DIET_STYLES,
-  entryWeightUnit,
-  heightUnitFor,
-  PROTEIN_G_PER_KG,
-  PROTEIN_PRESETS,
-} from "@keylow/core/setup";
+import { SEXES } from "../engine";
+import { PROTEIN_G_PER_KG } from "./presets";
+import { DIET_STYLES, PROTEIN_PRESETS } from "./types";
+import { entryWeightUnit, heightUnitFor } from "./units";
 
-import type { SetupState } from "@keylow/api-client";
-import type { SetupDraft } from "@keylow/core/setup";
+import type { ActivityLevel } from "../engine";
+import type { SetupDraft, SetupGoal } from "./types";
+
+/**
+ * What the wizard reads of the saved setup. It is the shape of api-client's `SetupState`, which core
+ * cannot import, so that value is handed over as it is. The database keeps the sex, the weight unit and
+ * the diet as plain text, and the activity and the goal as enums.
+ */
+export type SavedSetupState = Readonly<{
+  stats: Readonly<{
+    sex: string | null;
+    birthDate: string | null;
+    heightCm: number | null;
+    activity: ActivityLevel | null;
+    weightUnit: string | null;
+  }>;
+  program: Readonly<{
+    goal: SetupGoal;
+    ratePctPerWeek: number;
+    proteinGPerKg: number;
+    splitPreset: string;
+  }> | null;
+  latestWeighIn: Readonly<{ weightKg: number }> | null;
+}>;
 
 // The database keeps the sex and the diet as plain text, so a value is looked up in the wizard's own list and
 // so comes back with the list's type, or not at all when the wizard does not offer it. The activity and the
@@ -26,7 +44,7 @@ const listed = <Item extends string>(
  * (`regionCode` is the device region). A fresh account has no answers, so nothing is chosen but the units.
  */
 export function savedAnswersOf(
-  { stats, program, latestWeighIn }: SetupState,
+  { stats, program, latestWeighIn }: SavedSetupState,
   regionCode: string | null | undefined,
 ): SetupDraft {
   const weightUnit = entryWeightUnit(stats.weightUnit, regionCode);

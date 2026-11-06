@@ -1,9 +1,7 @@
+import { initialSetupWizardState, savedAnswersOf, setupWizardReducer } from "@keylow/core/setup";
 import { useEffect, useReducer } from "react";
 
-import { savedAnswersOf } from "./savedAnswers";
-import { initialSetupWizardState, setupWizardReducer } from "./setupDraftReducer";
-
-import type { SetupState } from "@keylow/api-client";
+import type { SetupState } from "../repos/setup";
 
 /**
  * The wizard's answers and its step, in the reducer. The saved answers are laid under whatever has been

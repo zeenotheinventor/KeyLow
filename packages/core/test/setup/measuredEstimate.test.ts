@@ -1,10 +1,8 @@
-import { startingPlan } from "@keylow/core/setup";
+import { describe, expect, it } from "vitest";
 
-import { measuredEstimateOf } from "../../components/SetupScreen/measuredEstimate";
+import { measuredEstimateOf, startingPlan } from "../../src/setup";
 
-import type { MeasuredEstimateInput } from "../../components/SetupScreen/measuredEstimate";
-import type { ExpenditureSnapshot } from "@keylow/api-client";
-import type { SetupAnswers } from "@keylow/core/setup";
+import type { EstimateSnapshot, MeasuredEstimateInput, SetupAnswers } from "../../src/setup";
 
 /*
  * Every expected figure is a literal. The golden person is the program canvas's: after the third check-in
@@ -31,44 +29,16 @@ const answers: SetupAnswers = {
   dietStyle: "balanced",
 };
 
-const counts = { spanDays: 28, weighDays: 28, completeDays: 28 };
-
-function startSnapshot(asOfDate: string, muKcal: number): ExpenditureSnapshot {
-  return { id: "start", kind: "start", asOfDate, muKcal, varKcal2: 140625, measurement: null };
+function startSnapshot(asOfDate: string, muKcal: number): EstimateSnapshot {
+  return { kind: "start", asOfDate, muKcal, measurement: null };
 }
 
-function measuredSnapshot(asOfDate: string, muKcal: number): ExpenditureSnapshot {
-  return {
-    id: `measured-${asOfDate}`,
-    kind: "checkin",
-    asOfDate,
-    muKcal,
-    varKcal2: 90000,
-    measurement: {
-      eligible: true,
-      zKcal: 2600,
-      rKcal2: 1,
-      slopeKgPerDay: -0.05,
-      seSlopeKg: 0.001,
-      meanIntakeKcal: 2200,
-      gain: 0.1,
-      rawStepKcal: 5,
-      stepKcal: 5,
-      stepClamped: false,
-      ...counts,
-    },
-  };
+function measuredSnapshot(asOfDate: string, muKcal: number): EstimateSnapshot {
+  return { kind: "checkin", asOfDate, muKcal, measurement: { eligible: true } };
 }
 
-function unmeasuredSnapshot(asOfDate: string, muKcal: number): ExpenditureSnapshot {
-  return {
-    id: `unmeasured-${asOfDate}`,
-    kind: "checkin",
-    asOfDate,
-    muKcal,
-    varKcal2: 90000,
-    measurement: { eligible: false, reasons: ["span"], ...counts },
-  };
+function unmeasuredSnapshot(asOfDate: string, muKcal: number): EstimateSnapshot {
+  return { kind: "checkin", asOfDate, muKcal, measurement: { eligible: false } };
 }
 
 const goldenTrend = [

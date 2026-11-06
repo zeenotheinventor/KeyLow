@@ -2,11 +2,13 @@ import {
   useExpenditureHistory,
   useProfileTimeZone,
   useSaveSetup,
+  useSetupDraft,
   useSetupState,
   useSkipSetup,
   useWeightTrend,
 } from "@keylow/api-client";
 import {
+  describeStepProgress,
   SAVE_FAILED_BANNER,
   SETUP_GROUP_TITLES,
   SETUP_QUESTIONS,
@@ -14,19 +16,21 @@ import {
   TARGETS_SAVED_TOAST,
 } from "@keylow/core/copy";
 import {
+  allowedGoalsOf,
   entryWeightUnit,
   isRateGoal,
+  isStepComplete,
+  measuredEstimateOf,
   previousStep,
   setupAnswersSchemaFor,
   startingPlan,
+  storedWeightUnitOf,
 } from "@keylow/core/setup";
 import { getLocales } from "expo-localization";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BackHandler } from "react-native";
 
-import { measuredEstimateOf } from "./measuredEstimate";
-import { allowedGoalsOf, describeStepProgress, isStepComplete } from "./setupDraftReducer";
 import { SetupShell } from "./SetupShell";
 import { ActivityStep } from "./steps/ActivityStep";
 import { BirthDateStep } from "./steps/BirthDateStep";
@@ -37,8 +41,6 @@ import { GoalStep } from "./steps/GoalStep";
 import { ProteinStep } from "./steps/ProteinStep";
 import { RateStep } from "./steps/RateStep";
 import { SexStep } from "./steps/SexStep";
-import { storedWeightUnitOf } from "./storedWeightUnit";
-import { useSetupDraft } from "./useSetupDraft";
 import { timeZoneOrDevice, useToday } from "./useToday";
 import { useIsOnline } from "../../lib/connectivity";
 import { diaryHref } from "../../lib/navigation";

@@ -1,16 +1,16 @@
-import { savedAnswersOf } from "../../components/SetupScreen/savedAnswers";
+import { describe, expect, it } from "vitest";
 
-import type { SetupState } from "@keylow/api-client";
+import { savedAnswersOf } from "../../src/setup";
 
-const freshAccount: SetupState = {
-  isSetUp: false,
+import type { SavedSetupState } from "../../src/setup";
+
+const freshAccount: SavedSetupState = {
   stats: { sex: null, birthDate: null, heightCm: null, activity: null, weightUnit: null },
   program: null,
   latestWeighIn: null,
 };
 
-const savedAccount: SetupState = {
-  isSetUp: true,
+const savedAccount: SavedSetupState = {
   stats: {
     sex: "male",
     birthDate: "1991-03-14",
@@ -19,14 +19,12 @@ const savedAccount: SetupState = {
     weightUnit: "kg",
   },
   program: {
-    id: "66666666-6666-4666-8666-666666666666",
     goal: "lose",
     ratePctPerWeek: 0.5,
     proteinGPerKg: 1.6,
-    fatFraction: 0.4,
     splitPreset: "balanced",
   },
-  latestWeighIn: { weightKg: 80, localDate: "2026-10-21" },
+  latestWeighIn: { weightKg: 80 },
 };
 
 describe("savedAnswersOf", () => {
@@ -103,7 +101,7 @@ describe("savedAnswersOf", () => {
   });
 
   describe("the units the body step opens in", () => {
-    const withStoredUnit = (weightUnit: string | null): SetupState => ({
+    const withStoredUnit = (weightUnit: string | null): SavedSetupState => ({
       ...freshAccount,
       stats: { ...freshAccount.stats, weightUnit },
     });
@@ -159,10 +157,7 @@ describe("savedAnswersOf", () => {
 
   describe("the weight", () => {
     it("should come from the latest weigh-in, in kilograms, whatever its date", () => {
-      const answers = savedAnswersOf(
-        { ...freshAccount, latestWeighIn: { weightKg: 63.4, localDate: "2025-01-02" } },
-        "GB",
-      );
+      const answers = savedAnswersOf({ ...freshAccount, latestWeighIn: { weightKg: 63.4 } }, "GB");
 
       expect(answers.weightKg).toBe(63.4);
     });

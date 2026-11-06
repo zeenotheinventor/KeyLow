@@ -1,5 +1,5 @@
 import type { SetupMode } from "../../types";
-import type { SetupAnswers, StartingPlan } from "@keylow/core/setup";
+import type { EstimateMeasurement, SetupAnswers, StartingPlan } from "@keylow/core/setup";
 
 export type EstimateStepProps = {
   /** The complete answers, which the rate line and the guardrail lines read their weight, unit and rate from. */
@@ -30,18 +30,3 @@ export type EstimateStepProps = {
   /** Close at the right of the header, which only a recalculation has. */
   onClose?: (() => void) | undefined;
 };
-
-/**
- * Where the expenditure of a plan after a check-in came from: a check-in measured it (on the date given,
- * `YYYY-MM-DD`), or none has and the estimate from the last check-in is carried forward.
- */
-export type EstimateMeasurement =
-  Readonly<{ kind: "measured"; measuredOn: string }> | Readonly<{ kind: "carried-forward" }>;
-
-/** The words under the calorie numeral: the rate line, or the guardrail lines that replace it. */
-export type EstimateLines = Readonly<{
-  /** What the chosen rate is worth a week. Undefined when a guardrail changed the result. */
-  rateLine: string | undefined;
-  /** The line of the guardrail that set the calories, then the macro fit line when it applies. */
-  guardrailLines: readonly string[];
-}>;

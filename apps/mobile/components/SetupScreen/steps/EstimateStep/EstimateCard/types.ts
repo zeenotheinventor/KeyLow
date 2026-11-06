@@ -1,4 +1,4 @@
-import type { EstimateLines } from "../types";
+import type { EstimateLines } from "@keylow/core/copy";
 import type { StartingPlan } from "@keylow/core/setup";
 
 export type EstimateCardProps = {

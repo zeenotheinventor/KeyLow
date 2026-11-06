@@ -1,4 +1,6 @@
-import { storedWeightUnitOf } from "../../components/SetupScreen/storedWeightUnit";
+import { describe, expect, it } from "vitest";
+
+import { storedWeightUnitOf } from "../../src/setup";
 
 describe("storedWeightUnitOf", () => {
   it.each(["kg", "lb", "st"])("should keep the stored unit %s", (unit) => {

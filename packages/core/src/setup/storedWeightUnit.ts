@@ -1,4 +1,4 @@
-import type { WeightUnit } from "@keylow/core/format";
+import type { WeightUnit } from "../format";
 
 /**
  * The profile's stored weight unit as `startingPlan` takes it. The database keeps the unit as plain
