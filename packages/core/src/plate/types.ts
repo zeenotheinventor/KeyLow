@@ -50,3 +50,6 @@ export type PlateRecipeItem = PlateItemBase & {
 };
 
 export type PlateItem = PlateFoodItem | PlateRecipeItem;
+
+/** When the plate is logged: the moment Log foods is pressed, or a clock time (`HH:mm`) on the plate's day. */
+export type PlateTime = { isNow: true } | { isNow: false; time: string };

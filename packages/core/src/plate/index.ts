@@ -15,6 +15,8 @@ export {
   restorePlate,
   setPlateQuantity,
 } from "./plateItems";
+export { plateReducer, startingPlate } from "./plateReducer";
+export type { PlateAction, PlateState } from "./plateReducer";
 export { plateUnitWord, plateUnitWords } from "./plateUnitWords";
 export type { PlateUnitWords } from "./plateUnitWords";
 export { canLogPlate, isPlateItemValid, plateItemValues, plateTotals } from "./plateValues";
@@ -24,5 +26,6 @@ export type {
   PlateFoodUnit,
   PlateItem,
   PlateRecipeItem,
+  PlateTime,
   PlateValues,
 } from "./types";

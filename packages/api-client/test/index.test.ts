@@ -18,6 +18,8 @@ describe("the package index", () => {
     "updateLogEntry",
     "useDeleteEntry",
     "useLogEntries",
+    "useLogPlateEntries",
+    "plateEntriesOf",
     "useLogFood",
     "useQuickAdd",
     "useRestoreEntry",

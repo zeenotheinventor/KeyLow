@@ -1,14 +1,8 @@
-import {
-  getFood,
-  listFoodPortions,
-  useLogEntries,
-  useProfileTimeZone,
-  useSupabase,
-} from "@keylow/api-client";
+import { useLogPlateEntries, useProfileTimeZone } from "@keylow/api-client";
 import { describeLoggedPlate } from "@keylow/core/copy";
 import { formatClockTime, parseClockTime } from "@keylow/core/dates";
 import { clockTimeOn, openingLoggedAt } from "@keylow/core/diary";
-import { plateFoodAmount, plateItemName } from "@keylow/core/plate";
+import { plateItemName } from "@keylow/core/plate";
 import { useRouter } from "expo-router";
 import { useCallback } from "react";
 
@@ -18,68 +12,7 @@ import { diaryHref, useCloseFoodsSheet } from "../navigation";
 import { useReadsEnabled } from "../useReadsEnabled";
 
 import type { LogPlateResult } from "./types";
-import type { LogEntriesItem } from "@keylow/api-client";
 import type { LogContext } from "@keylow/core/diary";
-import type { PlateItem } from "@keylow/core/plate";
-import type { Food, FoodPortion } from "@keylow/core/schemas";
-
-type LoadedFood = { food: Food; portions: FoodPortion[] };
-type Client = ReturnType<typeof useSupabase>;
-
-// Every distinct food on the plate, read once with its portions. A food that cannot be read, or is no longer
-// visible, fails the whole log: the plate is never partly logged.
-async function loadFoods(
-  client: Client,
-  items: readonly PlateItem[],
-): Promise<Map<string, LoadedFood>> {
-  const foodIds = new Set(items.flatMap((item) => (item.kind === "food" ? [item.foodId] : [])));
-  const loaded = await Promise.all(
-    [...foodIds].map(async (foodId) => {
-      const [food, portions] = await Promise.all([
-        getFood(client, foodId),
-        listFoodPortions(client, foodId),
-      ]);
-      if (food === null) {
-        throw new Error("A food on the plate is no longer there");
-      }
-
-      return [foodId, { food, portions }] as const;
-    }),
-  );
-
-  return new Map(loaded);
-}
-
-// What one row is logged as, at the time the whole plate shares. Undefined when the row cannot be logged.
-function entryOfRow(
-  item: PlateItem,
-  foods: ReadonlyMap<string, LoadedFood>,
-  when: { loggedAt: string; localDate: string },
-): LogEntriesItem | undefined {
-  if (item.kind === "recipe") {
-    return {
-      kind: "recipe",
-      input: { recipe: item.recipe, quantity: item.quantity, unit: item.unit, ...when },
-    };
-  }
-  const loaded = foods.get(item.foodId);
-  const amount = loaded === undefined ? undefined : plateFoodAmount(item, loaded.portions);
-  if (loaded === undefined || amount === undefined) {
-    return undefined;
-  }
-
-  return {
-    kind: "food",
-    input: {
-      food: loaded.food,
-      quantity: amount.quantity,
-      unit: amount.unit,
-      ...(amount.unit === "portion" ? { portion: amount.portion } : {}),
-      foodPortions: loaded.portions,
-      ...when,
-    },
-  };
-}
 
 /**
  * The one action that logs the plate. `logPlate` reads the foods on the plate, logs every row in one
@@ -94,15 +27,14 @@ export function useLogPlate(context: LogContext | undefined): {
 } {
   const plate = usePlate();
   const router = useRouter();
-  const client = useSupabase();
   const toast = useToast();
   const closeSheet = useCloseFoodsSheet();
-  const logEntries = useLogEntries();
+  const logPlateEntries = useLogPlateEntries();
   const profileTimeZone = useProfileTimeZone({ enabled: useReadsEnabled() });
   const { items, time, canLog } = plate;
   const { startLogging, finishLogging, markLogged } = usePlateLoggingGuard();
   const day = context?.day;
-  const { mutateAsync } = logEntries;
+  const { mutateAsync } = logPlateEntries;
   const timeZone = profileTimeZone.data === undefined ? undefined : (profileTimeZone.data ?? "UTC");
 
   const logPlate = useCallback(async (): Promise<LogPlateResult> => {
@@ -118,14 +50,7 @@ export function useLogPlate(context: LogContext | undefined): {
       const { loggedAt, localDate } = time.isNow
         ? opening
         : clockTimeOn(opening.localDate, time.time, zone);
-      const when = { loggedAt: loggedAt.toISOString(), localDate };
-      const foods = await loadFoods(client, items);
-      const entries = items.map((item) => entryOfRow(item, foods, when));
-      const loggable = entries.filter((entry) => entry !== undefined);
-      if (loggable.length !== items.length) {
-        return undefined;
-      }
-      await mutateAsync(loggable);
+      await mutateAsync({ items, loggedAt: loggedAt.toISOString(), localDate });
 
       return { loggedAt, localDate };
     }
@@ -161,7 +86,6 @@ export function useLogPlate(context: LogContext | undefined): {
     markLogged,
     day,
     time,
-    client,
     items,
     mutateAsync,
     toast,
