@@ -32,6 +32,17 @@ export const samples: Record<string, () => string[]> = {
     copy.describeSetupOptionName("Lose weight", copy.SETUP_GOAL_NOT_OFFERED_UNDER_18),
     copy.describeSetupOptionName("Prefer not to say", copy.SETUP_SEX_OPTIONS.other.description),
   ],
+  setupGoalCardsFor: () =>
+    [copy.setupGoalCardsFor(["lose", "maintain", "gain"]), copy.setupGoalCardsFor(["maintain"])]
+      .flat()
+      .flatMap((card) =>
+        sentencesOf(card.title, card.description ?? null, card.disabledReason ?? null),
+      ),
+  setupGoalNoteFor: () =>
+    [
+      copy.setupGoalNoteFor(["lose", "maintain", "gain"]),
+      copy.setupGoalNoteFor(["maintain"]),
+    ].flatMap((note) => [note.title, note.body]),
   describeRateTitle: () => [copy.describeRateTitle(0.5), copy.describeRateTitle(1.0)],
   describeRateAmount: () => [
     copy.describeRateAmount(0.5, 80, "kg"),

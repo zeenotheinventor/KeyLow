@@ -8,6 +8,7 @@ import {
   HEIGHT_MAX_CM,
   HEIGHT_MIN_CM,
   MAX_AGE_YEARS,
+  GOALS,
   progressFraction,
   PROTEIN_G_PER_KG,
   ratePerWeekKg,
@@ -227,6 +228,36 @@ export const SETUP_GOAL_NOTES = {
     body: "If you are under 18 and want to lose weight, or you are pregnant or breastfeeding, talk to a doctor, midwife or dietitian first.",
   },
 } as const;
+
+/** A goal card: the goal, its title, and either its line of words or the reason it is not offered. */
+export type SetupGoalCard = Readonly<{
+  goal: SetupGoal;
+  title: string;
+  description?: string;
+  disabledReason?: string;
+}>;
+
+/**
+ * The three goal cards, in the order drawn. A goal that is not allowed keeps its title and swaps its line of
+ * words for the reason it is not offered, which is what a card draws disabled.
+ */
+export function setupGoalCardsFor(allowedGoals: readonly SetupGoal[]): readonly SetupGoalCard[] {
+  return GOALS.map((goal) =>
+    allowedGoals.includes(goal)
+      ? { goal, ...SETUP_GOAL_OPTIONS[goal] }
+      : {
+          goal,
+          title: SETUP_GOAL_OPTIONS[goal].title,
+          disabledReason: SETUP_GOAL_NOT_OFFERED_UNDER_18,
+        },
+  );
+}
+
+/** The note under the goal cards: the under 18 one when Lose is not offered, the pregnancy one otherwise. */
+export const setupGoalNoteFor = (
+  allowedGoals: readonly SetupGoal[],
+): (typeof SETUP_GOAL_NOTES)[keyof typeof SETUP_GOAL_NOTES] =>
+  allowedGoals.includes("lose") ? SETUP_GOAL_NOTES.default : SETUP_GOAL_NOTES.under18;
 
 /** The badge on the rate that is chosen on arrival. */
 export const SETUP_SUGGESTED_BADGE = "Suggested";
