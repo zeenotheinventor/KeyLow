@@ -2,6 +2,7 @@ import { onlineManager } from "@tanstack/react-query";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { noFavouriteHooks } from "../favourites/noFavouriteHooks";
 import { makeFood, makePortion } from "../foods/support";
 
 import type { UseFoodByBarcodeOptions, UseFoodByBarcodeReturn } from "@keylow/api-client";
@@ -35,6 +36,7 @@ const { useFoodByBarcode, foods } = vi.hoisted(() => ({
 
 vi.mock("@keylow/api-client", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@keylow/api-client")>()),
+  ...noFavouriteHooks,
   useRefreshOutdatedOffFood: () => undefined,
   useProfileTimeZone: () => ({ data: "UTC" }),
   useRecentFoods: () => ({ data: [], isError: false, fetchStatus: "idle" }),
