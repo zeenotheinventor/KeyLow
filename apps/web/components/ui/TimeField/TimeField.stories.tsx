@@ -43,6 +43,12 @@ export const CompactNow: Story = {
   render: (args) => <Chosen {...args} />,
 };
 
+// One line across its container, as the plate's panel draws its time.
+export const Row: Story = {
+  args: { row: true, isNow: true, value: "19:20" },
+  render: (args) => <Chosen {...args} />,
+};
+
 // The picker opens as a popover under the field from 700 px and as a bottom panel below it.
 export const Open: Story = {
   args: { isNow: true },

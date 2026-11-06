@@ -198,6 +198,14 @@ describe("Recent in the add food dialog", () => {
       expect(rows[1]?.textContent).toContain("40 g");
     });
 
+    it("should draw each name semibold, as the boards do, with no matched part to set apart", () => {
+      renderDialog();
+      const list = within(screen.getByRole("region", { name: /Recent/ }));
+
+      expect(list.getByText("Eggs, whole, boiled").className).toContain("font-semibold");
+      expect(list.getByText("Porridge oats").className).toContain("font-semibold");
+    });
+
     it("should sit under Quick add", () => {
       renderDialog();
 

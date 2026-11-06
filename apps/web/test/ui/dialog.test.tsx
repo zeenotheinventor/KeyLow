@@ -461,6 +461,118 @@ describe("Dialog", () => {
     });
   });
 
+  describe("the header slot", () => {
+    it("should draw the slot before the Close button, in the header", () => {
+      render(<AddFoodDialog headerAction={<button type="button">Your plate</button>} />);
+      const slot = screen.getByRole("button", { name: "Your plate" });
+      const close = screen.getByRole("button", { name: "Close" });
+
+      expect(screen.getByRole("banner").contains(slot)).toBe(true);
+      expect(slot.compareDocumentPosition(close) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    it("should leave the header as it was when it has no slot", () => {
+      render(<AddFoodDialog />);
+      const header = screen.getByRole("banner");
+
+      expect(Array.from(header.children).map((child) => child.tagName)).toEqual(["H2", "BUTTON"]);
+    });
+  });
+
+  describe("the strip slot", () => {
+    it("should draw the strip between the header and the body, outside the part that scrolls", () => {
+      render(<AddFoodDialog strip={<p>The strip</p>} />);
+      const strip = screen.getByText("The strip");
+      const body = screen.getByText("Quantity").parentElement;
+
+      expect(body).not.toBeNull();
+      expect(body?.contains(strip)).toBe(false);
+      expect(body?.className).toContain("overflow-auto");
+      expect(screen.getByRole("banner").compareDocumentPosition(strip)).toBe(
+        Node.DOCUMENT_POSITION_FOLLOWING,
+      );
+      expect(strip.compareDocumentPosition(body ?? strip)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    });
+
+    it("should be 51 px high around a 26 px strip: 12 px of padding either side and a hairline", () => {
+      render(<AddFoodDialog strip={<p>The strip</p>} />);
+      const slot = screen.getByText("The strip").parentElement;
+
+      expect(slot?.className).toMatch(/\bpy-3\b/);
+      expect(slot?.className).toMatch(/\bborder-b\b/);
+    });
+
+    it("should draw no strip when it is given none", () => {
+      render(<AddFoodDialog />);
+      const dialog = screen.getByRole("dialog", { name: "Add food" });
+
+      expect(Array.from(dialog.children).map((child) => child.tagName)).toEqual([
+        "HEADER",
+        "DIV",
+        "FOOTER",
+      ]);
+    });
+  });
+
+  describe("the body padding", () => {
+    it("should pad the body by default", () => {
+      render(<AddFoodDialog />);
+
+      expect(screen.getByText("Quantity").parentElement?.className).toMatch(/\bp-5\b/);
+    });
+
+    it("should leave the padding off when asked, for children that bring their own", () => {
+      render(<AddFoodDialog bodyPadding={false} />);
+
+      expect(screen.getByText("Quantity").parentElement?.className).not.toMatch(/\bp-5\b/);
+    });
+  });
+
+  describe("closeDisabled", () => {
+    it("should dim the Close button and stop it responding", () => {
+      const onClose = vi.fn();
+      render(<AddFoodDialog closeDisabled onClose={onClose} />);
+      const close = screen.getByRole("button", { name: "Close" });
+
+      fireEvent.click(close);
+
+      expect(close).toHaveProperty("disabled", true);
+      expect(close.className).toContain("opacity-40");
+      expect(onClose).not.toHaveBeenCalled();
+    });
+
+    it("should not close on Escape", () => {
+      const onClose = vi.fn();
+      render(<AddFoodDialog closeDisabled onClose={onClose} />);
+
+      fireEvent.keyDown(screen.getByRole("textbox", { name: "Quantity" }), { key: "Escape" });
+      fireEvent.keyDown(document.body, { key: "Escape" });
+
+      expect(onClose).not.toHaveBeenCalled();
+    });
+
+    it("should not close on a press on the dimmed page", () => {
+      const onClose = vi.fn();
+      render(<AddFoodDialog closeDisabled onClose={onClose} />);
+
+      fireEvent.mouseDown(screen.getByRole("presentation"));
+
+      expect(onClose).not.toHaveBeenCalled();
+    });
+
+    it("should close again once it is lifted", () => {
+      const onClose = vi.fn();
+      const { rerender } = render(<AddFoodDialog closeDisabled onClose={onClose} />);
+
+      rerender(<AddFoodDialog closeDisabled={false} onClose={onClose} />);
+      fireEvent.keyDown(document.body, { key: "Escape" });
+      fireEvent.mouseDown(screen.getByRole("presentation"));
+      fireEvent.click(screen.getByRole("button", { name: "Close" }));
+
+      expect(onClose).toHaveBeenCalledTimes(3);
+    });
+  });
+
   describe("responsive layout", () => {
     it("should be 560 wide from 700 px up and fill the screen below it", async () => {
       render(<AddFoodDialog />);

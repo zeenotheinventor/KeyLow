@@ -30,6 +30,8 @@ describe("the plate's words", () => {
       onYourPlate: "On your plate",
       addToPlate: "Add to plate",
       cleared: "Plate cleared",
+      rowsLabel: "Foods on your plate",
+      totalsLabel: "Totals",
       notLogged: "Not logged. Check your connection and try again.",
       offlineBody: "You can fill your plate. Logging it needs a connection.",
       discard: {

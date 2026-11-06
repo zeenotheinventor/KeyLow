@@ -54,13 +54,17 @@ const panelClasses =
 const headerClasses =
   "flex items-center justify-between gap-3 border-b border-border py-3 pl-5 pr-3 pt-[calc(theme(spacing.3)+env(safe-area-inset-top,0px))] min-[700px]:pt-3";
 
+// The strip under the header is 12 px of padding above and below what it holds, and a hairline. It sits
+// outside the part that scrolls, so it stays while the body moves.
+const stripClasses = "shrink-0 border-b border-border px-5 py-3";
+
 const footerClasses =
   "flex items-center justify-end gap-3 border-t border-border px-5 pt-3 pb-[calc(theme(spacing.3)+env(safe-area-inset-bottom,0px))] min-[700px]:pb-3";
 
 /**
  * A modal on the sheet surface. Focus moves in when it opens, stays inside while it is open and
  * returns to the opener when it closes. Escape and a press on the dimmed page call `onClose`, and
- * the page behind stops scrolling.
+ * the page behind stops scrolling. While `closeDisabled` is set, Escape, the dimmed page and Close do nothing.
  *
  * The panel is `fixed` and is not portalled, so an ancestor with a transform, filter or `contain`
  * would become its containing block and break its layout. Render it outside such an ancestor.
@@ -76,6 +80,10 @@ export function Dialog({
   children,
   footer,
   leadingAction,
+  headerAction,
+  strip,
+  bodyPadding = true,
+  closeDisabled = false,
   className,
   returnFocusTo,
 }: DialogProps) {
@@ -119,7 +127,7 @@ export function Dialog({
     const handleKeyDown = (event: KeyboardEvent) => {
       if (openPanels[openPanels.length - 1] !== panel) return;
       if (event.key === "Escape") {
-        onClose();
+        if (!closeDisabled) onClose();
         return;
       }
       if (event.key !== "Tab") return;
@@ -146,16 +154,28 @@ export function Dialog({
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [open, onClose]);
+  }, [open, onClose, closeDisabled]);
 
   if (!open) return null;
+
+  const closeButton = (
+    <Button
+      variant="ghost"
+      iconOnly
+      aria-label={closeLabel}
+      disabled={closeDisabled}
+      onClick={onClose}
+    >
+      <X aria-hidden />
+    </Button>
+  );
 
   return (
     <div
       role="presentation"
       onMouseDown={(event) => {
         // Only a press on the dimmed page itself closes it, not one that began inside the panel.
-        if (event.target === event.currentTarget) onClose();
+        if (event.target === event.currentTarget && !closeDisabled) onClose();
       }}
       className="fixed inset-0 z-40 flex items-stretch justify-center font-sans min-[700px]:items-center"
     >
@@ -175,11 +195,17 @@ export function Dialog({
           <h2 id={titleId} className="min-w-0 truncate text-h2">
             {title}
           </h2>
-          <Button variant="ghost" iconOnly aria-label={closeLabel} onClick={onClose}>
-            <X aria-hidden />
-          </Button>
+          {isShown(headerAction) ? (
+            <div className="flex items-center gap-2">
+              {headerAction}
+              {closeButton}
+            </div>
+          ) : (
+            closeButton
+          )}
         </header>
-        <div className="min-h-0 flex-1 overflow-auto p-5">{children}</div>
+        {isShown(strip) && <div className={stripClasses}>{strip}</div>}
+        <div className={cn("min-h-0 flex-1 overflow-auto", bodyPadding && "p-5")}>{children}</div>
         {(isShown(footer) || isShown(leadingAction)) && (
           <footer className={footerClasses}>
             {isShown(leadingAction) && <div className="mr-auto">{leadingAction}</div>}
