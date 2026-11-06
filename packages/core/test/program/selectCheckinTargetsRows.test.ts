@@ -1,6 +1,11 @@
-import { selectCheckinTargetsRows } from "./selectCheckinTargetsRows";
+import { describe, expect, it } from "vitest";
 
-import type { TargetsRow } from "@keylow/api-client";
+import { selectCheckinTargetsRows } from "../../src/program";
+
+import type { CheckinTargetsRow } from "../../src/program";
+
+// The rows the apps read have more fields than the selector names, such as `id`, which it hands back as they are.
+type TargetsRow = CheckinTargetsRow & Readonly<{ id: string }>;
 
 // The check-in's own row, and the row of the same programme that held before it.
 
@@ -14,12 +19,9 @@ function row(
     id,
     effectiveFrom,
     effectiveTo,
-    isCurrent: effectiveTo === null,
     caloriesKcal: 2000,
     proteinG: 120,
     fatG: 70,
-    carbsG: 200,
-    dowCaloriesKcal: [2000, 2000, 2000, 2000, 2000, 2000, 2000],
     basis: {
       source,
       tdeeKcal: 2500,

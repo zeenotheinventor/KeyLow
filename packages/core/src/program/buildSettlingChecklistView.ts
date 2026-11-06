@@ -1,14 +1,10 @@
-import {
-  PROGRAM_SETTLING,
-  describeFirstCheckInBanner,
-  describeSettlingTipFor,
-} from "@keylow/core/copy";
+import { PROGRAM_SETTLING, describeFirstCheckInBanner, describeSettlingTipFor } from "../copy";
 
-import type { SettlingChecklistProps, SettlingChecklistView } from "./types";
-import type { FirstCheckinReadiness } from "@keylow/core/program";
+import type { FirstCheckinReadiness } from "./checkinReadiness";
+import type { SettlingChecklistInput, SettlingChecklistView } from "./programViewTypes";
 
-type BuildSettlingChecklistViewInput = Pick<
-  SettlingChecklistProps,
+export type BuildSettlingChecklistViewInput = Pick<
+  SettlingChecklistInput,
   "firstCheckinDate" | "daysLeft"
 > & { readiness: FirstCheckinReadiness };
 

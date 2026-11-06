@@ -265,6 +265,9 @@ describe("program: default", () => {
   it("should name the two buttons and carry the legal sentence by reference", () => {
     expect(PROGRAM_SCREEN.editLabel).toBe("Edit programme");
     expect(PROGRAM_SCREEN.howItWorksLabel).toBe("How it works");
+    expect(PROGRAM_SCREEN.offlineBody).toBe(
+      "Showing your programme from this session. Changes need a connection.",
+    );
     expect(PROGRAM_SCREEN.notMedicalAdvice).toBe(NOT_MEDICAL_ADVICE);
     expectOnCanvas(["Edit programme", "How it works", NOT_MEDICAL_ADVICE]);
   });

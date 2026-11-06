@@ -1,4 +1,4 @@
-import type { SummaryLineKind } from "../types";
+import type { SummaryLineKind } from "@keylow/core/program";
 
 export type SummaryLineProps = {
   kind: SummaryLineKind;
