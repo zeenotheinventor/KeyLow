@@ -1,4 +1,8 @@
 export { checkBirthDate, MAX_AGE_YEARS, MIN_AGE_YEARS } from "./birthDate";
+export { readBirthDate } from "./birthDateFields";
+export type { BirthDateFieldTexts, BirthDateReading } from "./birthDateFields";
+export { fieldTextsOf, readHeight, shouldShowProblem } from "./bodyFields";
+export type { BodyFieldTexts, FieldHistory, ProblemReason } from "./bodyFields";
 export type { BirthDateReason, BirthDateResult } from "./birthDate";
 export { defaultGoalForAge, goalsAllowed, isRateGoal, resetGoalForAge, withGoal } from "./goals";
 export {

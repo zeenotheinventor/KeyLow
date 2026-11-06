@@ -139,6 +139,50 @@ describe("Banner", () => {
       expect(onClick).toHaveBeenCalledTimes(1);
     });
 
+    describe("when disabled", () => {
+      it("should be marked aria-disabled, stay in the tab order and dim to 40 percent", () => {
+        render(
+          <Banner tone="error" action={{ label: "Try again", onClick: vi.fn(), disabled: true }}>
+            Could not load your saved answers.
+          </Banner>,
+        );
+
+        const action = screen.getByRole("button", { name: "Try again" });
+
+        expect(action.getAttribute("aria-disabled")).toBe("true");
+        expect(action.hasAttribute("disabled")).toBe(false);
+        expect(classesOf(action)).toContain("opacity-40");
+      });
+
+      it("should ignore a press", () => {
+        const onClick = vi.fn();
+        render(
+          <Banner tone="error" action={{ label: "Try again", onClick, disabled: true }}>
+            Could not load your saved answers.
+          </Banner>,
+        );
+
+        fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+
+        expect(onClick).not.toHaveBeenCalled();
+      });
+
+      it("should be live again when disabled is false", () => {
+        const onClick = vi.fn();
+        render(
+          <Banner tone="error" action={{ label: "Try again", onClick, disabled: false }}>
+            Could not load your saved answers.
+          </Banner>,
+        );
+
+        const action = screen.getByRole("button", { name: "Try again" });
+        fireEvent.click(action);
+
+        expect(action.hasAttribute("aria-disabled")).toBe(false);
+        expect(onClick).toHaveBeenCalledTimes(1);
+      });
+    });
+
     it("should be a link when it goes to a page", () => {
       render(
         <Banner tone="review" action={{ label: "Edit the food", href: "/foods/1/edit" }}>

@@ -48,6 +48,10 @@ export const SETUP_SHELL = {
   setOwnTargetsLabel: "I'll set my own targets",
   /** The progress bar's name on the estimate, which stands one stop after the last question. */
   setupCompleteName: "Setup complete",
+  /** Spoken only: the name of the web's skeleton while the saved answers are first read. */
+  loadingName: "Loading your answers",
+  /** The web's banner on steps 1 to 8 when the saved answers could not be read, beside Try again. */
+  readFailed: "Couldn't load your saved answers. You can still answer here.",
 } as const;
 
 /** The header's title on each step: the group the step belongs to. The rate belongs to Goal. */
@@ -83,6 +87,17 @@ export function describeStepProgress(draft: SetupDraft, step: SetupStep): SetupS
   }
   const label = describeSetupStepLabel(number, countSetupSteps(draft));
   return { subtitle: label, progressName: label, percent };
+}
+
+/**
+ * The web shell's caption above the progress bar: the group and the step, "About you · Step 1 of 8". The
+ * estimate is not a question, so its caption is its title alone.
+ */
+export function describeSetupCaption(draft: SetupDraft, step: SetupStep): string {
+  const { subtitle } = describeStepProgress(draft, step);
+  return subtitle === undefined
+    ? SETUP_GROUP_TITLES[step]
+    : `${SETUP_GROUP_TITLES[step]} · ${subtitle}`;
 }
 
 type Question = Readonly<{ question: string; helper: string }>;
@@ -137,6 +152,29 @@ export const SETUP_QUESTIONS: SetupQuestions = {
     helper: "This splits the calories left after protein between fat and carbohydrate.",
   },
 };
+
+/**
+ * The question and helper a step asks, or undefined for the estimate, which is not a question, and for a
+ * rate no goal asks. The rate is only asked for a goal that moves the weight, and its question names the direction.
+ */
+export function setupQuestionFor(step: SetupStep, draft: SetupDraft): Question | undefined {
+  switch (step) {
+    case "sex":
+    case "birthDate":
+    case "body":
+    case "activity":
+    case "goal":
+    case "protein":
+    case "diet":
+      return SETUP_QUESTIONS[step];
+    case "rate":
+      return draft.goal === undefined || draft.goal === "maintain"
+        ? undefined
+        : SETUP_QUESTIONS.rate[draft.goal];
+    case "estimate":
+      return undefined;
+  }
+}
 
 /** An option card's title, and the line under it when there is one. */
 export type SetupOptionWords = Readonly<{ title: string; description?: string }>;

@@ -40,8 +40,10 @@ import {
   describeRateLine,
   describeRateOptionName,
   describeRateTitle,
+  describeSetupCaption,
   describeSetupStepLabel,
   describeSetupWeightProblem,
+  setupQuestionFor,
   describeWeighInSource,
   WEIGH_IN_SHEET,
 } from "../../src/copy";
@@ -996,6 +998,49 @@ describe("the steps", () => {
       diet: "Macros",
       estimate: "Your estimate",
     });
+  });
+});
+
+describe("the shell's caption", () => {
+  it("should join the group and the step, as the web boards draw it", () => {
+    expect(describeSetupCaption({}, "sex")).toBe("About you · Step 1 of 8");
+    expect(describeSetupCaption({}, "body")).toBe("About you · Step 3 of 8");
+    expect(describeSetupCaption({ goal: "gain" }, "protein")).toBe("Macros · Step 7 of 8");
+  });
+
+  it("should count seven steps once Maintain skips the rate", () => {
+    expect(describeSetupCaption({ goal: "maintain" }, "protein")).toBe("Macros · Step 6 of 7");
+  });
+
+  it("should give the estimate its title alone, since it is not a question", () => {
+    expect(describeSetupCaption({}, "estimate")).toBe("Your estimate");
+  });
+});
+
+describe("the question of a step", () => {
+  it("should be the question and helper of the step", () => {
+    expect(setupQuestionFor("birthDate", {})).toEqual(SETUP_QUESTIONS.birthDate);
+    expect(setupQuestionFor("diet", {})).toEqual(SETUP_QUESTIONS.diet);
+  });
+
+  it("should name the direction on the rate step", () => {
+    expect(setupQuestionFor("rate", { goal: "lose" })).toEqual(SETUP_QUESTIONS.rate.lose);
+    expect(setupQuestionFor("rate", { goal: "gain" })).toEqual(SETUP_QUESTIONS.rate.gain);
+  });
+
+  it("should have none for the estimate, or for a rate no goal asks", () => {
+    expect(setupQuestionFor("estimate", {})).toBeUndefined();
+    expect(setupQuestionFor("rate", { goal: "maintain" })).toBeUndefined();
+    expect(setupQuestionFor("rate", {})).toBeUndefined();
+  });
+});
+
+describe("the words for reading the saved answers", () => {
+  it("should name the skeleton and say the read failed", () => {
+    expect(SETUP_SHELL.loadingName).toBe("Loading your answers");
+    expect(SETUP_SHELL.readFailed).toBe(
+      "Couldn't load your saved answers. You can still answer here.",
+    );
   });
 });
 

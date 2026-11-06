@@ -4,15 +4,15 @@ import {
   describeWeighInSource,
   SETUP_FIELDS,
 } from "@keylow/core/copy";
-import { heightUnitFor } from "@keylow/core/setup";
+import { fieldTextsOf, heightUnitFor, readHeight, shouldShowProblem } from "@keylow/core/setup";
 import { parseWeightInputIn } from "@keylow/core/weight";
 import { useState } from "react";
 import { View } from "react-native";
 
-import { fieldTextsOf, readHeight, shouldShowProblem } from "./readBody";
 import { FieldError, Icon, NumericInput, SegmentedControl, Text } from "../../../ui";
 
-import type { BodyFieldTexts, BodyStepProps, FieldHistory } from "./types";
+import type { BodyStepProps } from "./types";
+import type { BodyFieldTexts, FieldHistory } from "@keylow/core/setup";
 import type { WeightDisplayUnit } from "@keylow/core/weight";
 import type { ReactNode } from "react";
 

@@ -1,13 +1,4 @@
-import type { HeightInputReason } from "@keylow/core/setup";
-import type { WeightDisplayUnit, WeightInputReason } from "@keylow/core/weight";
-
-/** What the four fields hold, as typed. Only the fields of the unit on show are read. */
-export type BodyFieldTexts = Readonly<{
-  centimetres: string;
-  feet: string;
-  inches: string;
-  weight: string;
-}>;
+import type { WeightDisplayUnit } from "@keylow/core/weight";
 
 /**
  * The height in centimetres and the weight in kilograms, whatever the unit they are typed in, with the
@@ -18,11 +9,6 @@ export type BodyAnswers = Readonly<{
   weightKg: number | undefined;
   weightUnit: WeightDisplayUnit;
 }>;
-
-export type ProblemReason = HeightInputReason | WeightInputReason;
-
-/** What the person has done to a field, which decides whether its problem is said yet. */
-export type FieldHistory = Readonly<{ hasLeft: boolean; hasTyped: boolean }>;
 
 export type BodyStepProps = {
   /** The height to start the fields from, in centimetres, or `undefined` for empty fields. */
