@@ -270,10 +270,12 @@ describe("useRoutineProgress", () => {
         }),
       );
 
-      const { result } = renderProgress();
+      const { result, queryClient } = renderProgress();
 
+      // Every read settles first, so a retry cannot join one that is still on its way to failing.
       await waitFor(() => {
         expect(result.current.state.status).toBe("error");
+        expect(queryClient.isFetching()).toBe(0);
       });
       isFailing = false;
       if (result.current.state.status !== "error") {
