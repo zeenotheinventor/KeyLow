@@ -687,8 +687,10 @@ describe("the add food dialog", () => {
         await screen.findByText("Not logged. Check your connection and try again.");
 
         const log = screen.getByRole("button", { name: /^Log foods/ });
-        expect(log.hasAttribute("disabled")).toBe(false);
-        expect(document.activeElement).toBe(log);
+        await waitFor(() => {
+          expect(log.hasAttribute("disabled")).toBe(false);
+          expect(document.activeElement).toBe(log);
+        });
         fireEvent.click(log);
 
         await waitFor(() => {
