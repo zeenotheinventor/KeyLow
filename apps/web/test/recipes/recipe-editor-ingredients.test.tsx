@@ -31,6 +31,8 @@ vi.mock("@keylow/api-client", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@keylow/api-client")>()),
   // The refresh of an old branded food is the off refresh tests' business.
   useRefreshOutdatedOffFood: () => undefined,
+  // Recent is the Recent tests' business: here the history is empty.
+  useRecentFoods: () => ({ data: [], isError: false, fetchStatus: "idle" }),
   useCreateRecipe: () => ({ mutateAsync: createRecipe }),
   useUpdateRecipe: () => ({ mutateAsync: updateRecipe }),
   useFoodSearch: (query: string) => ({

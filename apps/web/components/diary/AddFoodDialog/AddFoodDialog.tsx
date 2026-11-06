@@ -1,6 +1,14 @@
 "use client";
 
-import { ADDED_TOAST, ADD_FOOD_DIALOG, PORTION_PICKER } from "@keylow/core/copy";
+import { useProfileTimeZone } from "@keylow/api-client";
+import {
+  ADDED_TOAST,
+  ADD_FOOD_DIALOG,
+  PORTION_PICKER,
+  describeLastLogged,
+  describeLoggedAmount,
+} from "@keylow/core/copy";
+import { describeDay } from "@keylow/core/dates";
 import { Check } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
@@ -12,7 +20,7 @@ import { usePortionDraft } from "./usePortionDraft";
 import { useRecipePortionDraft } from "./useRecipePortionDraft";
 
 import type { AddFoodDialogProps } from "./types";
-import type { RecipeSummary } from "@keylow/api-client";
+import type { RecentFood, RecipeSummary } from "@keylow/api-client";
 
 import {
   DIARY_DIALOG_CLASSES,
@@ -28,7 +36,9 @@ import { useIsOnline } from "@/lib/useIsOnline";
  * The add food dialog. Food is logged at a time, not in a meal: the Time field starts at the hour an hour's
  * plus asked for, or at the moment the dialog opened ("Now"), on the day on view. The first step is the
  * search, where a row's plus logs its serving at once and the dialog stays open so several foods can be
- * added. A press on a row goes to the portion step, where Add logs the chosen amount and closes the dialog:
+ * added. Before anything is typed the search lists the Recent foods, whose plus logs the amount last logged
+ * and whose row opens the portion step at that amount, with a line saying when. A press on a row goes to the
+ * portion step, where Add logs the chosen amount and closes the dialog:
  * for a food its amount in a portion or grams, for a recipe servings or grams of cooked weight. Both adds
  * need a connection, so offline the plus and Add are off and what was typed stays.
  */
@@ -37,13 +47,22 @@ export function AddFoodDialog({ request, opener, onClose, onQuickAdd }: AddFoodD
   const isOnline = useIsOnline();
   const { time, isNow, chooseTime, resolve: resolveLoggedAt } = useLoggingTime(request);
   const [query, setQuery] = useState("");
-  const [foodId, setFoodId] = useState(request.foodId);
+  // The food the portion step is for. `recent` is set when it was chosen from Recent: its amount opens at
+  // the one last logged, and a line says when.
+  const [chosen, setChosen] = useState<{ foodId: string; recent?: RecentFood } | undefined>(
+    request.foodId === undefined ? undefined : { foodId: request.foodId },
+  );
+  const foodId = chosen?.foodId;
+  const recent = chosen?.recent;
+  const timeZone = useProfileTimeZone().data ?? "UTC";
+  // The moment the dialog opened, so "yesterday" does not move while it is open.
+  const [openedAt] = useState(() => new Date());
   const [recipe, setRecipe] = useState<RecipeSummary | undefined>(undefined);
   const searchField = useRef<HTMLInputElement>(null);
   const amountField = useRef<HTMLInputElement>(null);
 
-  const draft = usePortionDraft(foodId);
-  const { addHit, addRecipe } = useAddServing(resolveLoggedAt);
+  const draft = usePortionDraft(foodId, recent);
+  const { addHit, addRecent, addRecipe } = useAddServing(resolveLoggedAt);
   const recipeDraft = useRecipePortionDraft(recipe);
   const isAmountReady = draft.status === "ready" || recipeDraft !== undefined;
 
@@ -55,6 +74,19 @@ export function AddFoodDialog({ request, opener, onClose, onQuickAdd }: AddFoodD
       amountField.current?.focus();
     }
   }, [foodId, recipe, isAmountReady]);
+
+  function openRecent(food: RecentFood) {
+    setChosen({ foodId: food.foodId, recent: food });
+  }
+
+  const lastLoggedLine = (() => {
+    if (recent === undefined) {
+      return undefined;
+    }
+    const day = describeDay(new Date(recent.loggedAt), openedAt, timeZone);
+
+    return describeLastLogged(describeLoggedAmount(recent.snapshot), -day.daysFromToday, day.label);
+  })();
 
   async function handleAdd() {
     const wasSaved =
@@ -139,7 +171,15 @@ export function AddFoodDialog({ request, opener, onClose, onQuickAdd }: AddFoodD
             isNow={isNow}
             onTimeChange={chooseTime}
             searchRef={searchField}
-            onOpenFood={setFoodId}
+            onOpenFood={(id) => {
+              setChosen({ foodId: id });
+            }}
+            onOpenRecent={openRecent}
+            onAddRecent={(food) => {
+              addRecent(food, () => {
+                openRecent(food);
+              });
+            }}
             onOpenRecipe={setRecipe}
             onAddServing={addHit}
             onAddRecipeServing={addRecipe}
@@ -149,12 +189,13 @@ export function AddFoodDialog({ request, opener, onClose, onQuickAdd }: AddFoodD
           <PortionStep
             draft={draft}
             hasSaveError={draft.status === "ready" && draft.hasSaveError}
+            note={lastLoggedLine}
             time={time}
             isNow={isNow}
             onTimeChange={chooseTime}
             amountRef={amountField}
             onBack={() => {
-              setFoodId(undefined);
+              setChosen(undefined);
             }}
           />
         )}

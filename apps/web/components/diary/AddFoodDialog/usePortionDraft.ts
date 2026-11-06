@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useAmountDraft } from "./useAmountDraft";
 
 import type { AmountDraft, ReadyAmountDraft } from "./useAmountDraft";
+import type { LastLoggedFood } from "@keylow/core/diary";
 
 export type PortionDraft =
   | Exclude<AmountDraft, ReadyAmountDraft>
@@ -19,8 +20,11 @@ export type PortionDraft =
  * log. The failure of a save is not kept: it can quote the amount, which is health data, so the banner says
  * what to do and nothing more.
  */
-export function usePortionDraft(foodId: string | undefined): PortionDraft {
-  const amount = useAmountDraft(foodId);
+export function usePortionDraft(
+  foodId: string | undefined,
+  lastLogged?: LastLoggedFood,
+): PortionDraft {
+  const amount = useAmountDraft(foodId, lastLogged);
   const logFood = useLogFood();
   const [isSaving, setIsSaving] = useState(false);
   const [hasSaveError, setHasSaveError] = useState(false);

@@ -29,6 +29,7 @@ export function PortionStep({
   draft,
   hasSaveError = false,
   opensReviewInNewTab = false,
+  note,
   onBack,
   amountRef,
   ...timeProps
@@ -97,6 +98,7 @@ export function PortionStep({
               </Banner>
             )}
             {hasSaveError && <Banner tone="error">{SAVE_FAILED_BANNER}</Banner>}
+            {note !== undefined && <p className="text-caption text-text-muted">{note}</p>}
           </>
         }
       />

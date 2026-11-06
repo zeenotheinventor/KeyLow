@@ -5,6 +5,7 @@ import { newIngredient } from "@keylow/core/recipes";
 import { useEffect, useRef, useState } from "react";
 
 import type { AddIngredientDialogProps } from "./types";
+import type { RecentFood } from "@keylow/api-client";
 
 import { PortionStep, SearchStep, useAmountDraft } from "@/components/diary/AddFoodDialog";
 import { DIARY_DIALOG_CLASSES } from "@/components/diary/diaryDialogClasses";
@@ -14,16 +15,22 @@ import { Dialog } from "@/components/ui/Dialog";
 /**
  * The add food dialog in ingredient mode, for the recipe editor: a search of foods whose rows all open the
  * amount step (an ingredient's amount matters), then the amount, its unit and what it comes to, with no
- * Time field. "Add to recipe" hands the ingredient to the editor's draft. It saves nothing and needs no
+ * Time field. Before anything is typed the search lists the Recent foods, with no plus, and a row opens the
+ * amount step at the amount the food was last logged with, as on the phone. "Add to recipe" hands the ingredient to the editor's draft. It saves nothing and needs no
  * connection of its own, so it stays usable offline for a food already loaded.
  */
 export function AddIngredientDialog({ opener, onClose, onAdd }: AddIngredientDialogProps) {
   const [query, setQuery] = useState("");
-  const [foodId, setFoodId] = useState<string | undefined>(undefined);
+  // The food the amount step is for. `recent` is set when it was chosen from Recent: its amount opens at the
+  // one last logged.
+  const [chosen, setChosen] = useState<{ foodId: string; recent?: RecentFood } | undefined>(
+    undefined,
+  );
+  const foodId = chosen?.foodId;
   const searchField = useRef<HTMLInputElement>(null);
   const amountField = useRef<HTMLInputElement>(null);
 
-  const draft = useAmountDraft(foodId);
+  const draft = useAmountDraft(foodId, chosen?.recent);
   const isAmountReady = draft.status === "ready";
 
   // The cursor starts where the step's work is: in the search, and in the amount once a food is chosen.
@@ -85,7 +92,12 @@ export function AddIngredientDialog({ opener, onClose, onAdd }: AddIngredientDia
             query={query}
             onQueryChange={setQuery}
             searchRef={searchField}
-            onOpenFood={setFoodId}
+            onOpenFood={(id) => {
+              setChosen({ foodId: id });
+            }}
+            onOpenRecent={(food) => {
+              setChosen({ foodId: food.foodId, recent: food });
+            }}
           />
         ) : (
           <PortionStep
@@ -93,7 +105,7 @@ export function AddIngredientDialog({ opener, onClose, onAdd }: AddIngredientDia
             opensReviewInNewTab
             amountRef={amountField}
             onBack={() => {
-              setFoodId(undefined);
+              setChosen(undefined);
             }}
           />
         )}
