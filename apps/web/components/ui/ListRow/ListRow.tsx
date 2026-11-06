@@ -2,7 +2,7 @@ import { iconStroke } from "@keylow/tokens";
 import { Check, ChevronRight } from "lucide-react";
 import Link from "next/link";
 
-import type { ListRowProps } from "./types";
+import type { ListRowMacro, ListRowProps } from "./types";
 
 import { Badge } from "@/components/ui/Badge";
 import { cn } from "@/lib/utils";
@@ -24,10 +24,19 @@ const valueClasses = {
   },
 } as const;
 
+// Each class is written out whole so Tailwind can see it.
+const macroKeyClasses = {
+  calories: "bg-calories",
+  protein: "bg-protein",
+  carbs: "bg-carbs",
+  fat: "bg-fat",
+} as const satisfies Record<ListRowMacro, string>;
+
 /** A row of a settings or menu list: a title, an optional subtitle and a chevron when it navigates. Put it inside a `GroupedList`. */
 export function ListRow({
   icon: Icon,
   title,
+  macro,
   subtitle,
   badge,
   value,
@@ -52,7 +61,14 @@ export function ListRow({
   );
   const textLines = (
     <>
-      <span className="text-body-strong [overflow-wrap:anywhere]">{title}</span>
+      <span
+        className={cn(
+          macro === undefined ? "text-body-strong" : "text-body",
+          "[overflow-wrap:anywhere]",
+        )}
+      >
+        {title}
+      </span>
       {subtitle !== undefined && <span className="text-caption text-text-muted">{subtitle}</span>}
     </>
   );
@@ -63,6 +79,9 @@ export function ListRow({
         <span className="flex h-control-sm w-control-sm shrink-0 items-center justify-center rounded-small bg-surface-raised text-text-secondary">
           <Icon aria-hidden className="size-5" strokeWidth={iconStroke} />
         </span>
+      )}
+      {macro !== undefined && (
+        <span aria-hidden className={cn("size-2 shrink-0 rounded-[2px]", macroKeyClasses[macro])} />
       )}
       {badge === undefined ? (
         text
