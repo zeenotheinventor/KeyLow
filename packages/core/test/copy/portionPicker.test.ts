@@ -23,17 +23,15 @@ describe("portion picker wording", () => {
     expect(PORTION_PICKER.noValue).toBe("\u2013");
   });
 
-  it("should say Undo failed in its own words, and what Recent says when it cannot load", () => {
-    expect(LOG_SEARCH.undoFailed).toBe("Couldn't undo. Try again.");
+  it("should say what Recent says when it cannot load", () => {
     expect(LOG_SEARCH.recentFailed).toEqual({
       title: "Couldn't load recent foods",
       body: "Check your connection and try again.",
     });
   });
 
-  it("should title the search sheet for logging, with an Undo for the plus", () => {
+  it("should title the search sheet for logging", () => {
     expect(LOG_SEARCH.title).toBe("Log food");
-    expect(LOG_SEARCH.undo).toBe("Undo");
   });
 
   it("should head the list of the food's own values for its basis", () => {

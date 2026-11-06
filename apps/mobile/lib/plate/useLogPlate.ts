@@ -1,8 +1,7 @@
 import { useLogPlateEntries, useProfileTimeZone } from "@keylow/api-client";
 import { describeLoggedPlate } from "@keylow/core/copy";
 import { formatClockTime, parseClockTime } from "@keylow/core/dates";
-import { clockTimeOn, openingLoggedAt } from "@keylow/core/diary";
-import { plateItemName } from "@keylow/core/plate";
+import { plateItemName, plateLoggedAt } from "@keylow/core/plate";
 import { useRouter } from "expo-router";
 import { useCallback } from "react";
 
@@ -46,10 +45,7 @@ export function useLogPlate(context: LogContext | undefined): {
     // Writes the plate, and says when it was logged. Undefined means nothing was written.
     async function writePlate() {
       // "Now" is the moment Log foods is pressed. A past day takes the current clock time on that day.
-      const opening = openingLoggedAt(new Date(), day === undefined ? undefined : { day }, zone);
-      const { loggedAt, localDate } = time.isNow
-        ? opening
-        : clockTimeOn(opening.localDate, time.time, zone);
+      const { loggedAt, localDate } = plateLoggedAt({ now: new Date(), day, time, timeZone: zone });
       await mutateAsync({ items, loggedAt: loggedAt.toISOString(), localDate });
 
       return { loggedAt, localDate };

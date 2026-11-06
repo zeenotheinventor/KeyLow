@@ -5,7 +5,11 @@ import { http } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
-import { useLogPlateEntries } from "../../src/hooks/useLogPlateEntries";
+import {
+  PlateFoodGoneError,
+  PlateFoodNeedsReviewError,
+  useLogPlateEntries,
+} from "../../src/hooks/useLogPlateEntries";
 import { installDiaryFake } from "../support/diaryFake";
 import { REST_URL, foodRow, portionRow, postgrestError, postgrestRows } from "../support/postgrest";
 import { loggableRecipe } from "../support/recipeEntries";
@@ -181,6 +185,67 @@ describe("useLogPlateEntries", () => {
 
       expect(fake.requests.writes).toBe(0);
       expect(fake.rows).toEqual([]);
+    });
+
+    it("should write nothing when a food on the plate has been deleted since it was added", async () => {
+      installFoodReads({
+        foods: [FLAPJACK, { ...YOGHURT, deleted_at: "2026-10-15T09:00:00+00:00" }],
+      });
+      const fake = installDiaryFake(server);
+      const { result } = renderLogPlate();
+
+      await expect(
+        act(() =>
+          result.current.mutateAsync({ items: [flapjackInGrams, yoghurtInGrams], ...when }),
+        ),
+      ).rejects.toBeInstanceOf(PlateFoodGoneError);
+
+      expect(fake.requests.writes).toBe(0);
+      expect(fake.rows).toEqual([]);
+    });
+
+    it("should write nothing when a food on the plate is flagged suspect now", async () => {
+      installFoodReads({ foods: [FLAPJACK, { ...YOGHURT, quality: { suspect: true } }] });
+      const fake = installDiaryFake(server);
+      const { result } = renderLogPlate();
+
+      await expect(
+        act(() =>
+          result.current.mutateAsync({ items: [flapjackInGrams, yoghurtInGrams], ...when }),
+        ),
+      ).rejects.toBeInstanceOf(PlateFoodNeedsReviewError);
+
+      expect(fake.requests.writes).toBe(0);
+    });
+
+    it("should write nothing when a food on the plate has lost a macro since it was added", async () => {
+      installFoodReads({ foods: [FLAPJACK, { ...YOGHURT, fat_g: null }] });
+      const fake = installDiaryFake(server);
+      const { result } = renderLogPlate();
+
+      await expect(
+        act(() =>
+          result.current.mutateAsync({ items: [flapjackInGrams, yoghurtInGrams], ...when }),
+        ),
+      ).rejects.toBeInstanceOf(PlateFoodNeedsReviewError);
+
+      expect(fake.requests.writes).toBe(0);
+    });
+
+    it("should name no food and no amount in what it throws", async () => {
+      installFoodReads({ foods: [{ ...YOGHURT, deleted_at: "2026-10-15T09:00:00+00:00" }] });
+      installDiaryFake(server);
+      const { result } = renderLogPlate();
+
+      const failure = await act(async () => {
+        try {
+          await result.current.mutateAsync({ items: [yoghurtInGrams], ...when });
+        } catch (error) {
+          return error;
+        }
+      });
+
+      expect(String(failure)).not.toMatch(/yoghurt|100/i);
     });
 
     it("should write nothing when the food read fails", async () => {

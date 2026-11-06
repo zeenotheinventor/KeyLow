@@ -2,13 +2,12 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { makeFood, makePortion } from "./support";
-import { foodEntry } from "../diary/support";
+import { noPlateHooks } from "../diary/noPlateHooks";
 import { noFavouriteHooks } from "../favourites/noFavouriteHooks";
 import { reachOf } from "../ui/hitArea";
 
 import type {
-  LogFoodInput,
-  LogEntry,
+  LogPlateEntriesInput,
   UseFoodByBarcodeOptions,
   UseFoodByBarcodeReturn,
 } from "@keylow/api-client";
@@ -17,7 +16,7 @@ import { BarcodeLookup } from "@/components/foods/BarcodeLookup";
 import { ToastProvider } from "@/components/ui/Toast";
 import { FoodLogActionsProvider } from "@/lib/foodLogActions";
 
-const { useFoodByBarcode, push, router, logFood, foods } = vi.hoisted(() => {
+const { useFoodByBarcode, push, router, logPlate, foods } = vi.hoisted(() => {
   const push = vi.fn<(href: string) => void>();
   // One router object for every render, as the real router is, so only the attempt re-opens a food.
   return {
@@ -25,7 +24,7 @@ const { useFoodByBarcode, push, router, logFood, foods } = vi.hoisted(() => {
       vi.fn<(code: string, options?: UseFoodByBarcodeOptions) => UseFoodByBarcodeReturn>(),
     push,
     router: { push },
-    logFood: { mutateAsync: vi.fn<(input: LogFoodInput) => Promise<LogEntry>>() },
+    logPlate: { mutateAsync: vi.fn<(input: LogPlateEntriesInput) => Promise<unknown[]>>() },
     foods: new Map<string, unknown>(),
   };
 });
@@ -33,6 +32,7 @@ const { useFoodByBarcode, push, router, logFood, foods } = vi.hoisted(() => {
 vi.mock("@keylow/api-client", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@keylow/api-client")>()),
   ...noFavouriteHooks,
+  ...noPlateHooks,
   // The refresh of an old branded food is the off refresh tests' business.
   useRefreshOutdatedOffFood: () => undefined,
   useFoodByBarcode,
@@ -41,8 +41,18 @@ vi.mock("@keylow/api-client", async (importOriginal) => ({
     const found = foods.get(id);
     return found === undefined ? { status: "notFound" } : { status: "ready", ...found };
   },
-  useLogFood: () => logFood,
-  useDeleteEntry: () => ({ mutateAsync: vi.fn() }),
+  useLogPlateEntries: () => logPlate,
+  // Add to plate goes back to the search, whose reads are the Add food dialog tests' business.
+  useFoodSearch: () => ({
+    local: [],
+    off: [],
+    isLoadingLocal: false,
+    isLoadingOff: false,
+    isDebouncing: false,
+    offError: null,
+    localError: null,
+  }),
+  useRecentFoods: () => ({ data: [], isError: false, fetchStatus: "idle" }),
   // The recipes are the recipes tests' business: here the search finds nothing and nothing is logged.
   useRecipeSearch: () => ({ recipes: [], isLoading: false, isDebouncing: false, error: null }),
   useLogRecipeServing: () => ({ mutateAsync: () => Promise.reject(new Error("not used")) }),
@@ -90,21 +100,7 @@ describe("BarcodeLookup", () => {
     vi.setSystemTime(NOW);
     useFoodByBarcode.mockReturnValue(idle);
     foods.clear();
-    logFood.mutateAsync.mockImplementation((input) =>
-      Promise.resolve(
-        foodEntry({
-          date: input.localDate,
-          time: "12:40",
-          name: input.food.name,
-          quantity: input.quantity,
-          unit: "portion",
-          kcal: 1,
-          protein: 1,
-          fat: 1,
-          carbs: 1,
-        }),
-      ),
-    );
+    logPlate.mutateAsync.mockResolvedValue([]);
   });
 
   afterEach(() => {
@@ -284,50 +280,58 @@ describe("BarcodeLookup", () => {
 
         expect(screen.getByRole("dialog", { name: "Add food" })).toBeTruthy();
         expect(screen.getByRole("radio", { name: "1 handful", checked: true })).toBeTruthy();
-        expect(screen.getByText("Now")).toBeTruthy();
+        expect(screen.queryByRole("button", { name: /^Time/ })).toBeNull();
         expect(screen.queryByRole("searchbox")).toBeNull();
         expect(push).not.toHaveBeenCalled();
       });
 
-      it("should log the default portion now, today, with one press on Add after the lookup", async () => {
+      it("should put the default portion on the plate and log it now, today, after the lookup", async () => {
         renderPanel();
         lookUp(VALID_EAN_13);
 
-        fireEvent.click(screen.getByRole("button", { name: "Add" }));
+        fireEvent.click(screen.getByRole("button", { name: "Add to plate" }));
+        fireEvent.click(screen.getByRole("button", { name: "Log food, 1 food on your plate" }));
 
         await waitFor(() => {
           expect(screen.queryByRole("dialog")).toBeNull();
         });
-        expect(logFood.mutateAsync).toHaveBeenCalledExactlyOnceWith({
-          food: oatCakes,
-          quantity: 1,
-          unit: "portion",
-          portion: handful,
-          foodPortions: [handful],
+        expect(logPlate.mutateAsync).toHaveBeenCalledOnce();
+        expect(logPlate.mutateAsync.mock.calls[0]?.[0]).toMatchObject({
           loggedAt: "2026-10-15T12:40:30.000Z",
           localDate: "2026-10-15",
+          items: [
+            {
+              kind: "food",
+              foodId: "found-food",
+              quantity: 1,
+              unit: { kind: "portion", label: "1 handful" },
+            },
+          ],
         });
-        expect(await screen.findByText("Added")).toBeTruthy();
+        expect(await screen.findByText("Logged Oat cakes")).toBeTruthy();
       });
 
       it("should log on the day it was given, at the current clock time", async () => {
         renderPanel(undefined, "2026-10-12");
         lookUp(VALID_EAN_13);
 
-        fireEvent.click(screen.getByRole("button", { name: "Add" }));
+        fireEvent.click(screen.getByRole("button", { name: "Add to plate" }));
+        fireEvent.click(screen.getByRole("button", { name: "Log food, 1 food on your plate" }));
 
         await waitFor(() => {
-          expect(logFood.mutateAsync).toHaveBeenCalledOnce();
+          expect(logPlate.mutateAsync).toHaveBeenCalledOnce();
         });
-        expect(logFood.mutateAsync.mock.calls[0]?.[0].localDate).toBe("2026-10-12");
-        expect(logFood.mutateAsync.mock.calls[0]?.[0].loggedAt).toBe("2026-10-12T12:40:00.000Z");
+        expect(logPlate.mutateAsync.mock.calls[0]?.[0]).toMatchObject({
+          localDate: "2026-10-12",
+          loggedAt: "2026-10-12T12:40:00.000Z",
+        });
       });
 
       it("should leave the panel where it was when the dialog is closed", () => {
         renderPanel();
         lookUp(VALID_EAN_13);
 
-        fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+        fireEvent.click(screen.getByRole("button", { name: "Close" }));
 
         expect(screen.queryByRole("dialog")).toBeNull();
         expect(screen.getByRole("region", { name: "Barcode lookup" })).toBeTruthy();
@@ -343,7 +347,7 @@ describe("BarcodeLookup", () => {
       it("should open the dialog again when the same code is looked up a second time", () => {
         renderPanel();
         lookUp(VALID_EAN_13);
-        fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+        fireEvent.click(screen.getByRole("button", { name: "Close" }));
 
         lookUp(VALID_EAN_13);
 

@@ -1,10 +1,10 @@
-import { SAVE_FAILED_BANNER } from "@keylow/core/copy";
 import { buildRecipeLogEntry } from "@keylow/core/diary";
 import { formatCalories, formatGrams } from "@keylow/core/format";
 import { onlineManager } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { noPlateHooks } from "./noPlateHooks";
 import {
   RecipeLogProvider,
   holdInserts,
@@ -22,6 +22,9 @@ import { ToastProvider } from "@/components/ui/Toast";
 // The foods are the existing tests' business. The recipe search, the amount step and the log are real.
 vi.mock("@keylow/api-client", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@keylow/api-client")>()),
+  // The day's bars are not this file's business, but the plate is written by the real api-client.
+  useDiaryDay: noPlateHooks.useDiaryDay,
+  useTargets: noPlateHooks.useTargets,
   useProfileTimeZone: () => ({ data: "UTC" }),
   useFoodSearch: () => ({
     local: [],
@@ -76,7 +79,7 @@ function renderDialog(request: AddFoodRequest = { date: "2026-10-15", time: "18:
   render(
     <RecipeLogProvider>
       <ToastProvider>
-        <AddFoodDialog request={request} opener={null} onClose={onClose} onQuickAdd={vi.fn()} />
+        <AddFoodDialog request={request} opener={null} onClose={onClose} />
       </ToastProvider>
     </RecipeLogProvider>,
   );
@@ -97,7 +100,7 @@ async function openRecipe(recipe: RecipeSummary = withCookedWeight) {
 const hero = (caption: string) =>
   screen.getByRole("group", { name: `Energy and macros, ${caption}` });
 const amountField = () => screen.getByRole("textbox", { name: /^Amount/ });
-const addButton = () => screen.getByRole("button", { name: "Add" });
+const addButton = () => screen.getByRole("button", { name: "Add to plate" });
 const unitChip = (name: string) => screen.getByRole("radio", { name });
 
 function typeAmount(text: string) {
@@ -105,7 +108,7 @@ function typeAmount(text: string) {
 }
 
 function chooseTime(hour: string) {
-  fireEvent.click(screen.getByRole("button", { name: /^Time \d\d:\d\d$/ }));
+  fireEvent.click(screen.getByRole("button", { name: /^Time, .*change$/ }));
   fireEvent.click(
     within(screen.getByRole("listbox", { name: "Hours" })).getByRole("option", { name: hour }),
   );
@@ -195,7 +198,7 @@ describe("the add food dialog, the amount step of a recipe", () => {
       expect(rows).toEqual(["Energy136 kcal", "Protein12 g", "Carbohydrate15 g", "Fat3 g"]);
     });
 
-    it("should start on one serving, with the serving chip chosen and the Time field at the hour asked for", async () => {
+    it("should start on one serving, with the serving chip chosen and no Time field, as the time belongs to the plate", async () => {
       renderDialog();
       await openRecipe();
 
@@ -203,7 +206,7 @@ describe("the add food dialog, the amount step of a recipe", () => {
       expect(screen.getByText("serving")).toBeTruthy();
       expect(unitChip("1 serving").getAttribute("aria-checked")).toBe("true");
       expect(unitChip("g").getAttribute("aria-checked")).toBe("false");
-      expect(screen.getByRole("button", { name: "Time 18:00" })).toBeTruthy();
+      expect(screen.queryByRole("button", { name: /^Time/ })).toBeNull();
     });
 
     it("should come to 561 kcal for 1.5 servings (413 g), and write the unit as servings", async () => {
@@ -449,6 +452,7 @@ describe("the add food dialog, the amount step of a recipe", () => {
         ).toBeTruthy();
 
         fireEvent.click(addButton());
+        fireEvent.click(screen.getByRole("button", { name: "Log food, 1 food on your plate" }));
         await waitFor(() => {
           expect(recipeLogBackend.inserts).toHaveLength(1);
         });
@@ -460,12 +464,35 @@ describe("the add food dialog, the amount step of a recipe", () => {
     );
   });
 
-  describe("Add", () => {
-    it("should log one serving at the hour asked for, close the dialog and say Added", async () => {
+  describe("Add to plate", () => {
+    it("should put one serving on the plate and go back to the search, writing nothing", async () => {
       const { onClose } = renderDialog();
       await openRecipe();
 
       fireEvent.click(addButton());
+
+      expect(screen.getByRole("searchbox", { name: "Search foods" })).toHaveProperty("value", "");
+      expect(screen.getByRole("button", { name: "Your plate, 1 food" })).toBeTruthy();
+      expect(recipeLogBackend.inserts).toEqual([]);
+      expect(onClose).not.toHaveBeenCalled();
+    });
+
+    it("should have no Time field and no Log button on the amount step", async () => {
+      renderDialog();
+      await openRecipe();
+
+      expect(screen.queryByRole("button", { name: /^Time/ })).toBeNull();
+      expect(screen.queryByRole("button", { name: /^Log food/ })).toBeNull();
+    });
+  });
+
+  describe("logging the plate", () => {
+    it("should log one serving at the hour asked for, close the dialog and say what was logged", async () => {
+      const { onClose } = renderDialog();
+      await openRecipe();
+      fireEvent.click(addButton());
+
+      fireEvent.click(screen.getByRole("button", { name: "Log food, 1 food on your plate" }));
 
       await waitFor(() => {
         expect(onClose).toHaveBeenCalledOnce();
@@ -479,7 +506,7 @@ describe("the add food dialog, the amount step of a recipe", () => {
         local_date: "2026-10-15",
         logged_at: "2026-10-15T18:00:00.000Z",
       });
-      expect(await screen.findByText("Added")).toBeTruthy();
+      expect(await screen.findByText("Logged Chicken and rice")).toBeTruthy();
     });
 
     it("should log 300 g of cooked weight", async () => {
@@ -487,8 +514,9 @@ describe("the add food dialog, the amount step of a recipe", () => {
       await openRecipe();
       fireEvent.click(unitChip("g"));
       typeAmount("300");
-
       fireEvent.click(addButton());
+
+      fireEvent.click(screen.getByRole("button", { name: "Log food, 1 food on your plate" }));
 
       await waitFor(() => {
         expect(onClose).toHaveBeenCalledOnce();
@@ -497,12 +525,13 @@ describe("the add food dialog, the amount step of a recipe", () => {
       expect(recipeLogBackend.inserts[0]).toMatchObject({ quantity: 300, unit: "g" });
     });
 
-    it("should log at the time chosen in the Time field", async () => {
+    it("should log at the time chosen in the search's Time field", async () => {
       renderDialog();
       await openRecipe();
+      fireEvent.click(addButton());
       chooseTime("19");
 
-      fireEvent.click(addButton());
+      fireEvent.click(screen.getByRole("button", { name: "Log food, 1 food on your plate" }));
 
       await waitFor(() => {
         expect(recipeLogBackend.inserts).toHaveLength(1);
@@ -513,18 +542,19 @@ describe("the add food dialog, the amount step of a recipe", () => {
       });
     });
 
-    it("should log at the moment the dialog opened when no hour was asked for", async () => {
+    it("should log at the moment Log is pressed when no hour was asked for", async () => {
       renderDialog({ date: "2026-10-15" });
       await openRecipe();
-
-      expect(screen.getByText("Now")).toBeTruthy();
       fireEvent.click(addButton());
+      vi.setSystemTime(new Date("2026-10-15T12:52:00Z"));
+
+      fireEvent.click(screen.getByRole("button", { name: "Log food, 1 food on your plate" }));
 
       await waitFor(() => {
         expect(recipeLogBackend.inserts).toHaveLength(1);
       });
       expect(recipeLogBackend.inserts[0]).toMatchObject({
-        logged_at: "2026-10-15T12:40:30.000Z",
+        logged_at: "2026-10-15T12:52:00.000Z",
       });
     });
 
@@ -532,10 +562,11 @@ describe("the add food dialog, the amount step of a recipe", () => {
       const release = holdInserts();
       const { onClose } = renderDialog();
       await openRecipe();
+      fireEvent.click(addButton());
 
-      const add = addButton();
-      fireEvent.click(add);
-      fireEvent.click(add);
+      const log = screen.getByRole("button", { name: "Log food, 1 food on your plate" });
+      fireEvent.click(log);
+      fireEvent.click(log);
       release();
 
       await waitFor(() => {
@@ -544,34 +575,38 @@ describe("the add food dialog, the amount step of a recipe", () => {
       expect(recipeLogBackend.inserts).toHaveLength(1);
     });
 
-    it("should stay open with the banner, and keep what was typed, when the log fails", async () => {
+    it("should stay open with the plate, and say it was not logged, when the write fails", async () => {
       recipeLogBackend.failsInsert = true;
       const { onClose } = renderDialog();
       await openRecipe();
       fireEvent.click(unitChip("g"));
       typeAmount("300");
-
       fireEvent.click(addButton());
 
-      expect(await screen.findByText(SAVE_FAILED_BANNER)).toBeTruthy();
+      fireEvent.click(screen.getByRole("button", { name: "Log food, 1 food on your plate" }));
+
+      expect(
+        await screen.findByText("Not logged. Check your connection and try again."),
+      ).toBeTruthy();
       expect(onClose).not.toHaveBeenCalled();
-      expect(amountField()).toHaveProperty("value", "300");
+      expect(screen.getByRole("button", { name: "Your plate, 1 food" })).toBeTruthy();
       expect(screen.queryByText(/RAW/)).toBeNull();
-      expect(screen.queryByText("Added")).toBeNull();
+      expect(screen.queryByText(/^Logged/)).toBeNull();
     });
 
-    it("should be off when there is no connection, and log nothing for a press or the keyboard", async () => {
+    it("should still take the recipe onto the plate offline, and log nothing for a press on Log", async () => {
       const { onClose } = renderDialog();
       await openRecipe();
-
       await waitFor(() => {
         onlineManager.setOnline(false);
-        expect(addButton()).toHaveProperty("disabled", true);
+        expect(addButton().getAttribute("aria-disabled")).toBeNull();
       });
       fireEvent.click(addButton());
-      fireEvent.keyDown(addButton(), { key: "Enter" });
-      fireEvent.keyUp(addButton(), { key: " " });
 
+      const log = screen.getByRole("button", { name: "Log food, 1 food on your plate" });
+      fireEvent.click(log);
+
+      expect(log.getAttribute("aria-disabled")).toBe("true");
       expect(recipeLogBackend.inserts).toEqual([]);
       expect(onClose).not.toHaveBeenCalled();
     });

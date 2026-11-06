@@ -90,6 +90,8 @@ type FoodLogRowContent = {
   onAdd?: (() => void) | undefined;
   /** Dims the add button and stops it responding, such as while offline, and leaves the row alone. */
   addDisabled?: boolean | undefined;
+  /** The add button's name, when it does not log: `describeAddToPlateName` for the plus that puts a food on the plate. */
+  addLabel?: string | undefined;
 };
 
 /**

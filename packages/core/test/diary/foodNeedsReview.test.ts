@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { foodNeedsReview, missingFieldsOf } from "../../src/diary/foodNeedsReview";
+import {
+  foodNeedsReview,
+  missingFieldsOf,
+  snapshotNeedsReview,
+} from "../../src/diary/foodNeedsReview";
+
+import type { FoodSnapshot } from "../../src/diary/schemas";
 
 const complete = {
   kcal: 95,
@@ -55,5 +61,41 @@ describe("missingFieldsOf", () => {
         quality: { suspect: true, fields_missing: ["carbs_g", "fibre_g"] },
       }),
     ).toEqual(["carbs_g", "fibre_g"]);
+  });
+});
+
+describe("snapshotNeedsReview", () => {
+  const snapshot: FoodSnapshot = {
+    v: 1,
+    kind: "food",
+    ref: "00000000-0000-4000-8000-0000000000c1",
+    name: "Banana",
+    basis: "per_100g",
+    per100: { kcal: 95, protein_g: 1.2, fat_g: 0.1, carbs_g: 20.3, fibre_g: null },
+    quantity: 1,
+    unit: "g",
+    portion: null,
+    density: null,
+    resolvedGrams: 1,
+    engineVersion: 1,
+  };
+
+  it("should be false when the snapshot has all four values", () => {
+    expect(snapshotNeedsReview(snapshot)).toBe(false);
+  });
+
+  it.each(["kcal", "protein_g", "fat_g", "carbs_g"] as const)(
+    "should be true when the snapshot is missing %s",
+    (field) => {
+      expect(
+        snapshotNeedsReview({ ...snapshot, per100: { ...snapshot.per100, [field]: null } }),
+      ).toBe(true);
+    },
+  );
+
+  it("should be false when the snapshot is only missing fibre", () => {
+    expect(
+      snapshotNeedsReview({ ...snapshot, per100: { ...snapshot.per100, fibre_g: null } }),
+    ).toBe(false);
   });
 });

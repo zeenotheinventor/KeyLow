@@ -3,6 +3,7 @@ import { onlineManager } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { noPlateHooks } from "./noPlateHooks";
 import {
   MILK_DENSITY,
   OLIVE_OIL_DENSITY,
@@ -19,7 +20,7 @@ import { noFavouriteHooks } from "../favourites/noFavouriteHooks";
 import { makeSearchHit } from "../foods/support";
 
 import type { FoodWithPortions } from "./portionFoods";
-import type { FoodSearchHit, LogFoodInput } from "@keylow/api-client";
+import type { FoodSearchHit, LogFoodInput, LogPlateEntriesInput } from "@keylow/api-client";
 import type { Food, FoodPortion } from "@keylow/core/schemas";
 
 import { AddFoodDialog } from "@/components/diary/AddFoodDialog";
@@ -39,41 +40,58 @@ const api = vi.hoisted((): Api => ({
   logged: [],
 }));
 
-vi.mock("@keylow/api-client", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@keylow/api-client")>()),
-  ...noFavouriteHooks,
-  // The refresh of an old branded food is the off refresh tests' business.
-  useRefreshOutdatedOffFood: () => undefined,
-  // Recent is the Recent tests' business: here the history is empty.
-  useRecentFoods: () => ({ data: [], isError: false, fetchStatus: "idle" }),
-  useProfileTimeZone: () => ({ data: "UTC" }),
-  useFoodSearch: () => ({
-    local: api.hits,
-    off: [],
-    isLoadingLocal: false,
-    isLoadingOff: false,
-    isDebouncing: false,
-    offError: null,
-    localError: null,
-  }),
-  // The recipes are the recipes tests' business: here the search finds nothing and nothing is logged.
-  useRecipeSearch: () => ({ recipes: [], isLoading: false, isDebouncing: false, error: null }),
-  useLogRecipeServing: () => ({ mutateAsync: () => Promise.reject(new Error("not used")) }),
-  useFoodWithPortions: (id: string) => {
-    const food = api.foods.get(id);
-    return food === undefined
-      ? { status: "notFound" }
-      : { status: "ready", food, portions: api.portions.get(id) ?? [] };
-  },
-  useLogFood: () => ({
-    mutateAsync: (input: LogFoodInput) => {
-      api.logged.push(input);
-      return Promise.resolve();
+vi.mock("@keylow/api-client", async (importOriginal) => {
+  const original = await importOriginal<typeof import("@keylow/api-client")>();
+
+  return {
+    ...original,
+    ...noFavouriteHooks,
+    ...noPlateHooks,
+    // The refresh of an old branded food is the off refresh tests' business.
+    useRefreshOutdatedOffFood: () => undefined,
+    // Recent is the Recent tests' business: here the history is empty.
+    useRecentFoods: () => ({ data: [], isError: false, fetchStatus: "idle" }),
+    useProfileTimeZone: () => ({ data: "UTC" }),
+    useFoodSearch: () => ({
+      local: api.hits,
+      off: [],
+      isLoadingLocal: false,
+      isLoadingOff: false,
+      isDebouncing: false,
+      offError: null,
+      localError: null,
+    }),
+    // The recipes are the recipes tests' business: here the search finds nothing and nothing is logged.
+    useRecipeSearch: () => ({ recipes: [], isLoading: false, isDebouncing: false, error: null }),
+    useLogRecipeServing: () => ({ mutateAsync: () => Promise.reject(new Error("not used")) }),
+    useFoodWithPortions: (id: string) => {
+      const food = api.foods.get(id);
+      return food === undefined
+        ? { status: "notFound" }
+        : { status: "ready", food, portions: api.portions.get(id) ?? [] };
     },
-  }),
-  useDeleteEntry: () => ({ mutateAsync: () => Promise.resolve() }),
-  useSupabase: () => ({}),
-}));
+    // The plate is written by the api-client. Here its rows are turned into the food inputs it would write.
+    useLogPlateEntries: () => ({
+      mutateAsync: async (input: LogPlateEntriesInput) => {
+        const entries = await original.plateEntriesOf(
+          {
+            getFood: (id) => Promise.resolve(api.foods.get(id) ?? null),
+            listFoodPortions: (id) => Promise.resolve(api.portions.get(id) ?? []),
+          },
+          input,
+        );
+        for (const entry of entries) {
+          if (entry.kind === "food") {
+            api.logged.push(entry.input);
+          }
+        }
+
+        return [];
+      },
+    }),
+    useSupabase: () => ({}),
+  };
+});
 
 const NOW = new Date("2026-10-15T12:40:30Z");
 
@@ -99,12 +117,7 @@ function openFood({ food, portions }: FoodWithPortions) {
   api.hits = [hitOf(food)];
   render(
     <ToastProvider>
-      <AddFoodDialog
-        request={{ date: "2026-10-15" }}
-        opener={null}
-        onClose={vi.fn<() => void>()}
-        onQuickAdd={vi.fn<() => void>()}
-      />
+      <AddFoodDialog request={{ date: "2026-10-15" }} opener={null} onClose={vi.fn<() => void>()} />
     </ToastProvider>,
   );
   fireEvent.change(screen.getByRole("searchbox", { name: "Search foods" }), {
@@ -115,6 +128,12 @@ function openFood({ food, portions }: FoodWithPortions) {
       name: rowNamed(food.name),
     }),
   );
+}
+
+/** Puts the chosen amount on the plate and logs the plate, which writes the entry. */
+function logPlate() {
+  fireEvent.click(screen.getByRole("button", { name: "Add to plate" }));
+  fireEvent.click(screen.getByRole("button", { name: "Log food, 1 food on your plate" }));
 }
 
 const chipNames = () => screen.getAllByRole("radio").map((chip) => chip.textContent);
@@ -221,7 +240,7 @@ describe("the add dialog's chips", () => {
         name: "Energy and macros, For 2 tbsp (30 ml, 28 g)",
       });
       expect(within(hero).getByText("248")).toBeTruthy();
-      fireEvent.click(screen.getByRole("button", { name: "Add" }));
+      logPlate();
 
       const entry = await loggedEntry();
       expect(entry.unit).toBe("portion");
@@ -266,7 +285,7 @@ describe("the add dialog's chips", () => {
       expect(
         screen.getByRole("group", { name: "Energy and macros, For 250 ml (258 g)" }),
       ).toBeTruthy();
-      fireEvent.click(screen.getByRole("button", { name: "Add" }));
+      logPlate();
 
       const entry = await loggedEntry();
       expect(entry.unit).toBe("ml");
@@ -287,7 +306,7 @@ describe("the add dialog's chips", () => {
       expect(
         screen.getByRole("group", { name: "Energy and macros, For 2 tbsp (30 ml, 30 g)" }),
       ).toBeTruthy();
-      fireEvent.click(screen.getByRole("button", { name: "Add" }));
+      logPlate();
 
       const entry = await loggedEntry();
       expect(entry.snapshot.density).toBe(1);
@@ -313,7 +332,7 @@ describe("the add dialog's chips", () => {
       expect(
         screen.getByRole("group", { name: "Energy and macros, For this amount" }),
       ).toBeTruthy();
-      expect(screen.getByRole("button", { name: "Add" })).toHaveProperty("disabled", true);
+      expect(screen.getByRole("button", { name: "Add to plate" })).toHaveProperty("disabled", true);
     });
   });
 });

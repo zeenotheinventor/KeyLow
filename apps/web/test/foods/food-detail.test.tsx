@@ -3,6 +3,7 @@ import { act, cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { makeFood, makePortion } from "./support";
+import { noPlateHooks } from "../diary/noPlateHooks";
 import { noFavouriteHooks } from "../favourites/noFavouriteHooks";
 
 import type { FoodWithPortionsState } from "@keylow/api-client";
@@ -19,6 +20,7 @@ const { useFoodWithPortions, useRefreshOutdatedOffFood } = vi.hoisted(() => ({
 vi.mock("@keylow/api-client", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@keylow/api-client")>()),
   ...noFavouriteHooks,
+  ...noPlateHooks,
   useFoodWithPortions,
   useRefreshOutdatedOffFood,
 }));

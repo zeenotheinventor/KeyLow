@@ -18,10 +18,6 @@ export const PORTION_PICKER = {
 /** The words of the food search sheet while food is being logged to a day. */
 export const LOG_SEARCH = {
   title: "Log food",
-  /** The toast's action after a plus: it removes the entry that plus logged. */
-  undo: "Undo",
-  /** The toast when Undo could not remove the entry. */
-  undoFailed: "Couldn't undo. Try again.",
   /** What Recent says when it could not be loaded, in place of its rows. */
   recentFailed: {
     title: "Couldn't load recent foods",

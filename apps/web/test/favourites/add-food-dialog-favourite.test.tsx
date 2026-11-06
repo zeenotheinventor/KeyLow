@@ -33,8 +33,10 @@ const { useFoodWithPortions, useRecipeSearch } = vi.hoisted(() => ({
 }));
 
 // What the amount steps read is the other dialog tests' business. The favourites are real, over a fake database.
+// This file imports the api-client before its own helpers, so the helper is loaded inside the factory.
 vi.mock("@keylow/api-client", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@keylow/api-client")>()),
+  ...(await import("../diary/noPlateHooks")).noPlateHooks,
   useFoodWithPortions,
   useRecipeSearch,
   useRefreshOutdatedOffFood: () => undefined,
@@ -52,9 +54,7 @@ vi.mock("@keylow/api-client", async (importOriginal) => ({
 }));
 
 function renderDialog(request: { date: string; foodId?: string }) {
-  renderWithFavourites(
-    <AddFoodDialog request={request} opener={null} onClose={vi.fn()} onQuickAdd={vi.fn()} />,
-  );
+  renderWithFavourites(<AddFoodDialog request={request} opener={null} onClose={vi.fn()} />);
 }
 
 const addHeart = () => screen.getByRole("button", { name: "Add to favourites" });

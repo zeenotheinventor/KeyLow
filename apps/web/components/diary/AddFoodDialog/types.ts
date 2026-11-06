@@ -8,8 +8,11 @@ export type AddFoodDialogProps = {
    * diary's hour plus, Edit button or the top bar's search, and not whatever was focused inside a dialog before.
    */
   opener: Element | null;
-  /** Called to close the dialog: Cancel, Close, Escape, or after Add. */
+  /** Called to close the dialog: Discard, or after the plate was logged. */
   onClose: () => void;
-  /** Opens the quick add dialog for the same day and hour, from the search's Quick add row. */
-  onQuickAdd: () => void;
+  /**
+   * Called with whether the dialog holds food on its plate, so the page that owns it does not close it under the
+   * person when the page changes, such as with the browser's Back. It is called with false when the dialog goes.
+   */
+  onHoldsPlateChange?: ((holdsPlate: boolean) => void) | undefined;
 };

@@ -34,9 +34,6 @@ export const TARGETS_SAVED_TOAST = "Targets saved";
 
 export const ADDED_TOAST = "Added";
 
-/** The toast after a row's plus, such as "Added Banana". */
-export const describeAddedFood = (foodName: string): string => `Added ${foodName}`;
-
 export const describeCopiedFromYesterday = (count: number): string =>
   `Copied ${describeEntryCount(count)} from yesterday`;
 

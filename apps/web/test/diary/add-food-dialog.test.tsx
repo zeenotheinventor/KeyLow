@@ -2,12 +2,12 @@ import { onlineManager } from "@tanstack/react-query";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { foodEntry } from "./support";
+import { noPlateHooks } from "./noPlateHooks";
 import { noFavouriteHooks } from "../favourites/noFavouriteHooks";
 import { makeFood, makePortion, makeSearchHit } from "../foods/support";
 
 import type { AddFoodRequest } from "@/lib/foodLogActions";
-import type { LogFoodInput, FoodSearchHit, LogEntry } from "@keylow/api-client";
+import type { FoodSearchHit, LogPlateEntriesInput } from "@keylow/api-client";
 import type { Food, FoodPortion } from "@keylow/core/schemas";
 
 import { AddFoodDialog } from "@/components/diary/AddFoodDialog";
@@ -77,9 +77,12 @@ type Api = {
   searchQueries: string[];
   foods: Map<string, Food>;
   portions: Map<string, FoodPortion[]>;
-  stored: LogEntry[];
-  logFood: { mutateAsync: ReturnType<typeof vi.fn<(input: LogFoodInput) => Promise<LogEntry>>> };
-  deleteEntry: { mutateAsync: ReturnType<typeof vi.fn<(entry: LogEntry) => Promise<void>>> };
+  dayRead: unknown;
+  targetsRead: unknown;
+  logPlate: {
+    mutateAsync: ReturnType<typeof vi.fn<(input: LogPlateEntriesInput) => Promise<unknown[]>>>;
+  };
+  quickAdd: { mutateAsync: ReturnType<typeof vi.fn<(input: unknown) => Promise<unknown>>> };
 };
 
 const api = vi.hoisted((): Api => ({
@@ -89,14 +92,16 @@ const api = vi.hoisted((): Api => ({
   searchQueries: [],
   foods: new Map(),
   portions: new Map(),
-  stored: [],
-  logFood: { mutateAsync: undefined as never },
-  deleteEntry: { mutateAsync: undefined as never },
+  dayRead: undefined,
+  targetsRead: undefined,
+  logPlate: { mutateAsync: undefined as never },
+  quickAdd: { mutateAsync: undefined as never },
 }));
 
 vi.mock("@keylow/api-client", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@keylow/api-client")>()),
   ...noFavouriteHooks,
+  ...noPlateHooks,
   // The refresh of an old branded food is the off refresh tests' business.
   useRefreshOutdatedOffFood: () => undefined,
   // Recent is the Recent tests' business: here the history is empty.
@@ -114,52 +119,34 @@ vi.mock("@keylow/api-client", async (importOriginal) => ({
       localError: api.searchError ? { kind: "failed", debugMessage: "RAW SEARCH FAILURE" } : null,
     };
   },
-  // The recipes are the recipes tests' business: here the search finds nothing and nothing is logged.
+  // The recipes are the recipes tests' business: here the search finds nothing.
   useRecipeSearch: () => ({ recipes: [], isLoading: false, isDebouncing: false, error: null }),
-  useLogRecipeServing: () => ({ mutateAsync: () => Promise.reject(new Error("not used")) }),
   useFoodWithPortions: (id: string) => {
     const food = api.foods.get(id);
     return food === undefined
       ? { status: "notFound" }
       : { status: "ready", food, portions: api.portions.get(id) ?? [] };
   },
-  useLogFood: () => api.logFood,
-  useDeleteEntry: () => api.deleteEntry,
+  useDiaryDay: () => api.dayRead,
+  useTargets: () => api.targetsRead,
+  useLogPlateEntries: () => api.logPlate,
+  useQuickAdd: () => api.quickAdd,
   useSupabase: () => ({}),
-  getFood: (_client: unknown, id: string) => Promise.resolve(api.foods.get(id) ?? null),
-  listFoodPortions: (_client: unknown, id: string) => Promise.resolve(api.portions.get(id) ?? []),
 }));
 
 // 12:40 on Thursday 15 October 2026 in UTC, so "now" is 12:40.
 const NOW = new Date("2026-10-15T12:40:30Z");
 
-function entryFor(input: LogFoodInput): LogEntry {
-  const stored = foodEntry({
-    date: input.localDate,
-    time: "12:00",
-    name: input.food.name,
-    quantity: input.quantity,
-    unit: input.unit === "portion" ? "portion" : input.unit === "ml" ? "ml" : "g",
-    kcal: 1,
-    protein: 1,
-    fat: 1,
-    carbs: 1,
-  });
-  api.stored.push(stored);
-  return stored;
-}
-
 function renderDialog(request: AddFoodRequest = { date: "2026-10-15" }) {
   const onClose = vi.fn<() => void>();
-  const onQuickAdd = vi.fn<() => void>();
   render(
     <ToastProvider>
       <button type="button">Add food at 12:00</button>
-      <AddFoodDialog request={request} opener={null} onClose={onClose} onQuickAdd={onQuickAdd} />
+      <AddFoodDialog request={request} opener={null} onClose={onClose} />
     </ToastProvider>,
   );
 
-  return { onClose, onQuickAdd };
+  return { onClose };
 }
 
 function search(text: string) {
@@ -171,6 +158,8 @@ function search(text: string) {
 const dialog = () => screen.getByRole("dialog", { name: "Add food" });
 const results = () => within(screen.getByRole("group", { name: "Search results" }));
 const addButton = (name: string) => screen.getByRole("button", { name });
+const chickenPlus = () => addButton("Add Chicken breast, grilled, 1 breast (150 g), to your plate");
+const chickenRow = () => results().getByRole("button", { name: /^Chicken\s*breast,\s*grilled/ });
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["Date"] });
@@ -185,9 +174,34 @@ beforeEach(() => {
     [SOUP_ID, soup],
   ]);
   api.portions = new Map([[CHICKEN_ID, [breast]]]);
-  api.stored = [];
-  api.logFood.mutateAsync = vi.fn((input: LogFoodInput) => Promise.resolve(entryFor(input)));
-  api.deleteEntry.mutateAsync = vi.fn(() => Promise.resolve());
+  // The plate boards' day: 1,039 kcal, P 86, C 129, F 19 eaten against 2,200, 160, 220 and 70.
+  api.dayRead = {
+    data: {
+      entries: [
+        {
+          nutrients: {
+            kcal: 1039,
+            protein_g: 86,
+            carbs_g: 129,
+            fat_g: 19,
+            fibre_g: null,
+            sugar_g: null,
+            sat_fat_g: null,
+            salt_g: null,
+          },
+        },
+      ],
+    },
+    isError: false,
+    fetchStatus: "idle",
+  };
+  api.targetsRead = {
+    data: { kcal: 2200, protein_g: 160, carbs_g: 220, fat_g: 70 },
+    isError: false,
+    fetchStatus: "idle",
+  };
+  api.logPlate.mutateAsync = vi.fn(() => Promise.resolve([]));
+  api.quickAdd.mutateAsync = vi.fn(() => Promise.resolve({}));
 });
 
 afterEach(() => {
@@ -264,12 +278,13 @@ describe("the add food dialog", () => {
       );
     });
 
-    it("should open quick add on a press", () => {
-      const { onQuickAdd } = renderDialog({ date: "2026-10-15", time: "12:00" });
+    it("should open the quick add form over the search, as a sibling dialog", () => {
+      renderDialog();
 
       fireEvent.click(screen.getByRole("button", { name: /Quick add/ }));
 
-      expect(onQuickAdd).toHaveBeenCalledOnce();
+      expect(screen.getByRole("dialog", { name: "Quick add" })).toBeTruthy();
+      expect(dialog()).toBeTruthy();
     });
 
     it("should give way to the results once something is typed", () => {
@@ -314,8 +329,8 @@ describe("the add food dialog", () => {
           .getAllByRole("button", { name: /^Add / })
           .map((button) => button.getAttribute("aria-label")),
       ).toEqual([
-        "Add Basmati rice, boiled, 100 g",
-        "Add Chicken breast, grilled, 1 breast (150 g)",
+        "Add Basmati rice, boiled, 100 g, to your plate",
+        "Add Chicken breast, grilled, 1 breast (150 g), to your plate",
       ]);
     });
 
@@ -324,7 +339,7 @@ describe("the add food dialog", () => {
 
       search("chicken");
 
-      expect(addButton("Add Chicken breast, grilled, 1 breast (150 g)")).toBeTruthy();
+      expect(chickenPlus()).toBeTruthy();
     });
 
     it("should show Needs review and a chevron, and no plus, for a food missing a macro", () => {
@@ -358,234 +373,812 @@ describe("the add food dialog", () => {
   });
 
   describe("the plus on a row", () => {
-    it("should log that serving at once, at the hour an hour's plus asked for", async () => {
-      renderDialog({ date: "2026-10-15", time: "12:00" });
+    it("should put the serving on the plate, write nothing and clear the field", () => {
+      renderDialog();
       search("chicken");
 
-      fireEvent.click(addButton("Add Chicken breast, grilled, 1 breast (150 g)"));
+      fireEvent.click(chickenPlus());
 
-      await waitFor(() => {
-        expect(api.logFood.mutateAsync).toHaveBeenCalledOnce();
-      });
-      expect(api.logFood.mutateAsync).toHaveBeenCalledWith({
-        food: chicken,
-        quantity: 1,
-        unit: "portion",
-        portion: breast,
-        foodPortions: [breast],
-        loggedAt: "2026-10-15T12:00:00.000Z",
-        localDate: "2026-10-15",
-      });
+      expect(screen.getByRole("button", { name: "Your plate, 1 food" })).toBeTruthy();
+      expect(screen.getByRole("searchbox", { name: "Search foods" })).toHaveProperty("value", "");
+      expect(api.logPlate.mutateAsync).not.toHaveBeenCalled();
+      expect(screen.queryByText("Added")).toBeNull();
     });
 
-    it("should log 100 g of a food with no portion, at now when the dialog was opened from the top bar", async () => {
+    it("should tell a screen reader the food was added, and draw no toast", () => {
       renderDialog();
-      search("rice");
+      search("chicken");
 
-      fireEvent.click(addButton("Add Basmati rice, boiled, 100 g"));
+      fireEvent.click(chickenPlus());
+
+      expect(screen.getByText("Chicken breast, grilled added to your plate")).toBeTruthy();
+    });
+
+    it("should keep one live region in the page and change its text, so a second add is announced too", () => {
+      renderDialog();
+      const regionsBefore = screen.getAllByRole("status");
+      search("chicken");
+      fireEvent.click(chickenPlus());
+      const region = screen
+        .getAllByRole("status")
+        .find((candidate) => candidate.textContent.includes("added to your plate"));
+      expect(region).toBeDefined();
+      expect(regionsBefore).toContain(region);
+      const afterFirst = region?.textContent;
+
+      search("chicken");
+      fireEvent.click(chickenPlus());
+
+      expect(region?.isConnected).toBe(true);
+      expect(afterFirst?.trim()).toBe("Chicken breast, grilled added to your plate");
+      expect(region?.textContent).not.toBe(afterFirst);
+      expect(region?.textContent.trim()).toBe("Chicken breast, grilled added to your plate");
+    });
+
+    it("should let several foods be added in a row, and keep the cursor in the search", () => {
+      renderDialog();
+      search("chicken");
+      fireEvent.click(chickenPlus());
+      search("rice");
+      fireEvent.click(addButton("Add Basmati rice, boiled, 100 g, to your plate"));
+
+      expect(screen.getByRole("button", { name: "Your plate, 2 foods" })).toBeTruthy();
+      expect(document.activeElement).toBe(screen.getByRole("searchbox", { name: "Search foods" }));
+    });
+
+    it("should count one row when the same serving is added twice", () => {
+      renderDialog();
+      search("chicken");
+      fireEvent.click(chickenPlus());
+      search("chicken");
+      fireEvent.click(chickenPlus());
+
+      expect(screen.getByRole("button", { name: "Your plate, 1 food" })).toBeTruthy();
+    });
+
+    it("should draw no chip and no Log button at nothing, and leave Cancel alone in the footer", () => {
+      renderDialog();
+
+      expect(screen.queryByRole("button", { name: /^Your plate/ })).toBeNull();
+      expect(screen.queryByRole("button", { name: /^Log food/ })).toBeNull();
+      expect(screen.getByRole("button", { name: "Cancel" })).toBeTruthy();
+    });
+
+    it("should not stop at a food that needs review: its chevron opens the amount step", () => {
+      renderDialog();
+      search("soup");
+
+      expect(screen.queryByRole("button", { name: /^Add Chicken soup/ })).toBeNull();
+      expect(screen.queryByRole("button", { name: /^Your plate/ })).toBeNull();
+    });
+  });
+
+  describe("the bars", () => {
+    const strip = () => screen.getByRole("group", { name: /^Today/ });
+
+    it("should show the day alone at nothing", () => {
+      renderDialog();
+
+      expect(strip().getAttribute("aria-label")).toBe(
+        [
+          "Today",
+          "Calories: 1,039 of 2,200 kilocalories",
+          "Protein: 86 of 160 grams",
+          "Carbohydrate: 129 of 220 grams",
+          "Fat: 19 of 70 grams",
+        ].join(". "),
+      );
+    });
+
+    it("should carry the plate's share after what was eaten, and say there is a plate", () => {
+      renderDialog();
+      search("chicken");
+
+      fireEvent.click(chickenPlus());
+
+      expect(
+        screen.getByRole("group", {
+          name: /^Today with your plate\. Calories: 1,261 of 2,200 kilocalories, 222 on your plate/,
+        }),
+      ).toBeTruthy();
+    });
+
+    it("should mark a bar over target when the plate takes it past", () => {
+      api.dayRead = {
+        data: { entries: [{ nutrients: { kcal: 2100, protein_g: 0, carbs_g: 0, fat_g: 0 } }] },
+        isError: false,
+        fetchStatus: "idle",
+      };
+      renderDialog();
+      search("chicken");
+
+      fireEvent.click(chickenPlus());
+
+      expect(
+        screen.getByRole("group", {
+          name: /Calories: 2,322 of 2,200 kilocalories, 222 on your plate, over target/,
+        }),
+      ).toBeTruthy();
+    });
+
+    it("should hold the strip's place with a skeleton while the day is read", () => {
+      api.dayRead = { data: undefined, isError: false, fetchStatus: "fetching" };
+      renderDialog();
+
+      expect(screen.queryByRole("group", { name: /^Today/ })).toBeNull();
+      expect(within(dialog()).getByRole("status", { name: "Loading" })).toBeTruthy();
+    });
+
+    it.each([
+      ["failed", { data: undefined, isError: true, fetchStatus: "idle" }],
+      [
+        "paused offline with nothing cached",
+        { data: undefined, isError: false, fetchStatus: "paused" },
+      ],
+    ])("should leave the strip out, with no endless skeleton, when the read %s", (_name, read) => {
+      api.dayRead = read;
+      renderDialog();
+
+      expect(screen.queryByRole("group", { name: /^Today/ })).toBeNull();
+      expect(within(dialog()).queryByRole("status", { name: "Loading" })).toBeNull();
+      expect(screen.getByRole("searchbox", { name: "Search foods" })).toBeTruthy();
+    });
+  });
+
+  describe("logging the plate", () => {
+    function fillPlate(request?: AddFoodRequest) {
+      const rendered = renderDialog(request);
+      search("chicken");
+      fireEvent.click(chickenPlus());
+      search("rice");
+      fireEvent.click(addButton("Add Basmati rice, boiled, 100 g, to your plate"));
+
+      return rendered;
+    }
+
+    it("should say Log food for one food and Log foods for several", () => {
+      renderDialog();
+      search("chicken");
+      fireEvent.click(chickenPlus());
+
+      expect(screen.getByRole("button", { name: "Log food, 1 food on your plate" })).toBeTruthy();
+
+      search("rice");
+      fireEvent.click(addButton("Add Basmati rice, boiled, 100 g, to your plate"));
+
+      expect(screen.getByRole("button", { name: "Log foods, 2 foods on your plate" })).toBeTruthy();
+    });
+
+    it("should write the rows in plate order in one insert, close the dialog and say what was logged", async () => {
+      const { onClose } = fillPlate();
+
+      fireEvent.click(screen.getByRole("button", { name: "Log foods, 2 foods on your plate" }));
 
       await waitFor(() => {
-        expect(api.logFood.mutateAsync).toHaveBeenCalledOnce();
+        expect(onClose).toHaveBeenCalledOnce();
       });
-      expect(api.logFood.mutateAsync).toHaveBeenCalledWith({
-        food: rice,
-        quantity: 100,
-        unit: "g",
-        foodPortions: [],
+      expect(api.logPlate.mutateAsync).toHaveBeenCalledOnce();
+      const input = api.logPlate.mutateAsync.mock.calls[0]?.[0];
+      expect(input?.items.map((item) => (item.kind === "food" ? item.foodId : item.kind))).toEqual([
+        CHICKEN_ID,
+        RICE_ID,
+      ]);
+      expect(input).toMatchObject({
         loggedAt: "2026-10-15T12:40:30.000Z",
         localDate: "2026-10-15",
       });
+      expect(await screen.findByText("Logged 2 foods")).toBeTruthy();
     });
 
-    it("should log on the day the dialog was opened for, at the current clock time", async () => {
-      renderDialog({ date: "2026-10-14" });
-      search("rice");
+    it("should name a single food in the logged toast, and give it no Undo", async () => {
+      renderDialog();
+      search("chicken");
+      fireEvent.click(chickenPlus());
 
-      fireEvent.click(addButton("Add Basmati rice, boiled, 100 g"));
+      fireEvent.click(screen.getByRole("button", { name: "Log food, 1 food on your plate" }));
 
-      await waitFor(() => {
-        expect(api.logFood.mutateAsync).toHaveBeenCalledOnce();
-      });
-      expect(api.logFood.mutateAsync).toHaveBeenCalledWith(
-        expect.objectContaining({ loggedAt: "2026-10-14T12:40:00.000Z", localDate: "2026-10-14" }),
-      );
+      expect(await screen.findByText("Logged Chicken breast, grilled")).toBeTruthy();
+      expect(screen.queryByRole("button", { name: "Undo" })).toBeNull();
     });
 
-    it("should log now, today in the profile's zone, when the request names no day", async () => {
-      api.timeZone = "Pacific/Auckland";
-      renderDialog({});
-      search("rice");
+    it("should log at the hour an hour's plus asked for", async () => {
+      fillPlate({ date: "2026-10-15", time: "12:00" });
 
-      fireEvent.click(addButton("Add Basmati rice, boiled, 100 g"));
+      fireEvent.click(screen.getByRole("button", { name: /^Log foods/ }));
 
       await waitFor(() => {
-        expect(api.logFood.mutateAsync).toHaveBeenCalledOnce();
+        expect(api.logPlate.mutateAsync).toHaveBeenCalledOnce();
       });
-      expect(api.logFood.mutateAsync).toHaveBeenCalledWith(
-        expect.objectContaining({ loggedAt: "2026-10-15T12:40:30.000Z", localDate: "2026-10-16" }),
-      );
+      expect(api.logPlate.mutateAsync.mock.calls[0]?.[0]).toMatchObject({
+        loggedAt: "2026-10-15T12:00:00.000Z",
+      });
     });
 
     it("should log at the time chosen in the Time field", async () => {
-      renderDialog();
+      fillPlate();
       fireEvent.click(screen.getByRole("button", { name: "Time, now, 12:40, change" }));
       fireEvent.click(
-        within(screen.getByRole("listbox", { name: "Hours" })).getByRole("option", { name: "08" }),
-      );
-      fireEvent.click(
-        within(screen.getByRole("listbox", { name: "Minutes" })).getByRole("option", {
-          name: "30",
-        }),
+        within(screen.getByRole("listbox", { name: "Hours" })).getByRole("option", { name: "19" }),
       );
       fireEvent.click(screen.getByRole("button", { name: "Done" }));
-      search("rice");
 
-      fireEvent.click(addButton("Add Basmati rice, boiled, 100 g"));
+      fireEvent.click(screen.getByRole("button", { name: /^Log foods/ }));
 
       await waitFor(() => {
-        expect(api.logFood.mutateAsync).toHaveBeenCalledOnce();
+        expect(api.logPlate.mutateAsync).toHaveBeenCalledOnce();
       });
-      expect(api.logFood.mutateAsync).toHaveBeenCalledWith(
-        expect.objectContaining({ loggedAt: "2026-10-15T08:30:00.000Z", localDate: "2026-10-15" }),
+      expect(api.logPlate.mutateAsync.mock.calls[0]?.[0]).toMatchObject({
+        loggedAt: "2026-10-15T19:40:00.000Z",
+      });
+    });
+
+    it("should take Now as the moment Log is pressed, not the moment the dialog opened", async () => {
+      fillPlate();
+      vi.setSystemTime(new Date("2026-10-15T12:55:10Z"));
+
+      fireEvent.click(screen.getByRole("button", { name: /^Log foods/ }));
+
+      await waitFor(() => {
+        expect(api.logPlate.mutateAsync).toHaveBeenCalledOnce();
+      });
+      expect(api.logPlate.mutateAsync.mock.calls[0]?.[0]).toMatchObject({
+        loggedAt: "2026-10-15T12:55:10.000Z",
+      });
+    });
+
+    it("should log on a past day at the current clock time of that day", async () => {
+      fillPlate({ date: "2026-10-14" });
+
+      fireEvent.click(screen.getByRole("button", { name: /^Log foods/ }));
+
+      await waitFor(() => {
+        expect(api.logPlate.mutateAsync).toHaveBeenCalledOnce();
+      });
+      expect(api.logPlate.mutateAsync.mock.calls[0]?.[0]).toMatchObject({
+        loggedAt: "2026-10-14T12:40:00.000Z",
+        localDate: "2026-10-14",
+      });
+    });
+
+    it("should write once when Log is pressed twice before the first has finished", async () => {
+      let finish = () => {};
+      api.logPlate.mutateAsync = vi.fn(
+        () =>
+          new Promise<unknown[]>((resolve) => {
+            finish = () => {
+              resolve([]);
+            };
+          }),
       );
-      expect(screen.getByRole("button", { name: "Time, 08:30, change" })).toBeTruthy();
-    });
+      fillPlate();
+      const log = screen.getByRole("button", { name: /^Log foods/ });
 
-    it("should read the time in the profile's zone", async () => {
-      api.timeZone = "Europe/London";
-      renderDialog({ date: "2026-10-15", time: "12:00" });
-      search("rice");
-
-      fireEvent.click(addButton("Add Basmati rice, boiled, 100 g"));
-
-      await waitFor(() => {
-        expect(api.logFood.mutateAsync).toHaveBeenCalledOnce();
-      });
-      // 12:00 in London in October is 11:00 UTC, because the clocks are still on summer time.
-      expect(api.logFood.mutateAsync).toHaveBeenCalledWith(
-        expect.objectContaining({ loggedAt: "2026-10-15T11:00:00.000Z" }),
-      );
-    });
-
-    it("should give a keyboard press the route to Undo: focus goes to it, and comes back to the plus", async () => {
-      renderDialog({ date: "2026-10-15", time: "12:00" });
-      search("rice");
-      const plus = addButton("Add Basmati rice, boiled, 100 g");
-      fireEvent.keyDown(document, { key: "Enter" });
-      plus.focus();
-
-      fireEvent.click(plus);
-      await screen.findByText("Added Basmati rice, boiled");
-
-      // The toast commits first and moves focus to Undo in an effect, so focus is waited for.
-      await waitFor(() => {
-        expect(document.activeElement).toBe(screen.getByRole("button", { name: "Undo" }));
+      fireEvent.click(log);
+      fireEvent.click(log);
+      await act(async () => {
+        finish();
+        await Promise.resolve();
       });
 
-      fireEvent.keyDown(screen.getByRole("button", { name: "Undo" }), { key: "Escape" });
-
-      expect(document.activeElement).toBe(plus);
+      expect(api.logPlate.mutateAsync).toHaveBeenCalledOnce();
     });
 
-    it("should keep the dialog open when Escape dismisses the toast", async () => {
-      const { onClose } = renderDialog({ date: "2026-10-15", time: "12:00" });
-      search("rice");
-      const plus = addButton("Add Basmati rice, boiled, 100 g");
-      fireEvent.keyDown(document, { key: "Enter" });
-      plus.focus();
-      fireEvent.click(plus);
-      await screen.findByText("Added Basmati rice, boiled");
+    describe("when the write fails", () => {
+      beforeEach(() => {
+        api.logPlate.mutateAsync = vi.fn(() => Promise.reject(new Error("RAW 150 g failure")));
+      });
 
-      fireEvent.keyDown(screen.getByRole("button", { name: "Undo" }), { key: "Escape" });
+      it("should keep the plate, say it was not logged without the raw failure, and stay open", async () => {
+        const { onClose } = fillPlate();
 
+        fireEvent.click(screen.getByRole("button", { name: /^Log foods/ }));
+
+        expect(
+          await screen.findByText("Not logged. Check your connection and try again."),
+        ).toBeTruthy();
+        expect(screen.queryByText(/RAW/)).toBeNull();
+        expect(onClose).not.toHaveBeenCalled();
+        expect(screen.getByRole("button", { name: "Your plate, 2 foods" })).toBeTruthy();
+      });
+
+      it("should work again after the failure, with focus back on the button", async () => {
+        fillPlate();
+        fireEvent.click(screen.getByRole("button", { name: /^Log foods/ }));
+        await screen.findByText("Not logged. Check your connection and try again.");
+
+        const log = screen.getByRole("button", { name: /^Log foods/ });
+        expect(log.hasAttribute("disabled")).toBe(false);
+        expect(document.activeElement).toBe(log);
+        fireEvent.click(log);
+
+        await waitFor(() => {
+          expect(api.logPlate.mutateAsync).toHaveBeenCalledTimes(2);
+        });
+      });
+    });
+
+    describe("while it writes", () => {
+      let finish = () => {};
+      beforeEach(() => {
+        api.logPlate.mutateAsync = vi.fn(
+          () =>
+            new Promise<unknown[]>((resolve) => {
+              finish = () => {
+                resolve([]);
+              };
+            }),
+        );
+      });
+
+      afterEach(async () => {
+        await act(async () => {
+          finish();
+          await Promise.resolve();
+        });
+      });
+
+      it("should dim the pluses, the chip, Cancel and Close, and ignore Escape", () => {
+        const { onClose } = fillPlate();
+        search("chicken");
+        fireEvent.click(screen.getByRole("button", { name: /^Log foods/ }));
+
+        expect(screen.getByRole("button", { name: "Close" })).toHaveProperty("disabled", true);
+        expect(screen.getByRole("button", { name: "Cancel" })).toHaveProperty("disabled", true);
+        expect(
+          screen.getByRole("button", { name: "Your plate, 2 foods" }).getAttribute("aria-disabled"),
+        ).toBe("true");
+        expect(chickenPlus().getAttribute("aria-disabled")).toBe("true");
+        fireEvent.keyDown(document, { key: "Escape" });
+        fireEvent.mouseDown(dialog().parentElement ?? document.body);
+        expect(onClose).not.toHaveBeenCalled();
+        expect(screen.queryByRole("dialog", { name: "Discard your plate?" })).toBeNull();
+      });
+
+      it("should dim Quick add and take no press on it, so a form is not opened mid-log", () => {
+        fillPlate();
+
+        fireEvent.click(screen.getByRole("button", { name: /^Log foods/ }));
+
+        const row = screen.getByRole("button", { name: /Quick add/ });
+        expect(row).toHaveProperty("disabled", true);
+        fireEvent.click(row);
+        expect(screen.queryByRole("dialog", { name: "Quick add" })).toBeNull();
+      });
+
+      it("should show the spinner at full strength on the button", () => {
+        fillPlate();
+
+        fireEvent.click(screen.getByRole("button", { name: /^Log foods/ }));
+
+        const button = screen.getByRole("button", { name: /^Log foods/ });
+        expect(button.getAttribute("aria-busy")).toBe("true");
+        expect(button.className).not.toContain("opacity-40");
+        expect(within(button).getByRole("img", { name: "Logging" })).toBeTruthy();
+      });
+
+      it("should move focus off the button that goes inert, to the search field", () => {
+        fillPlate();
+        const log = screen.getByRole("button", { name: /^Log foods/ });
+        log.focus();
+
+        fireEvent.click(log);
+
+        expect(document.activeElement).toBe(
+          screen.getByRole("searchbox", { name: "Search foods" }),
+        );
+      });
+    });
+  });
+
+  describe("leaving with food on the plate", () => {
+    const question = () => screen.getByRole("dialog", { name: "Discard your plate?" });
+    // Close is named Keep adding too, so the footer's button is found by its text.
+    const keepAdding = () => {
+      const button = within(question()).getByText("Keep adding").closest("button");
+      if (button === null) {
+        throw new Error("Keep adding is not a button");
+      }
+
+      return button;
+    };
+
+    function plateOne() {
+      const rendered = renderDialog();
+      search("chicken");
+      fireEvent.click(chickenPlus());
+
+      return rendered;
+    }
+
+    it("should close at once, with no question, when the plate is empty", () => {
+      const { onClose } = renderDialog();
+
+      fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+      expect(onClose).toHaveBeenCalledOnce();
+      expect(screen.queryByRole("dialog", { name: "Discard your plate?" })).toBeNull();
+    });
+
+    it.each([
+      ["Cancel", () => fireEvent.click(screen.getByRole("button", { name: "Cancel" }))],
+      ["Close", () => fireEvent.click(screen.getByRole("button", { name: "Close" }))],
+      ["Escape", () => fireEvent.keyDown(document, { key: "Escape" })],
+      ["a press on the dim", () => fireEvent.mouseDown(dialog().parentElement ?? document.body)],
+    ])("should ask before %s throws the plate away", (_name, leave) => {
+      const { onClose } = plateOne();
+
+      leave();
+
+      expect(within(question()).getByText("The 1 food on it won't be logged.")).toBeTruthy();
       expect(onClose).not.toHaveBeenCalled();
     });
 
-    it("should leave focus where it is after a pointer press", async () => {
-      renderDialog({ date: "2026-10-15", time: "12:00" });
-      search("rice");
-      const plus = addButton("Add Basmati rice, boiled, 100 g");
-      fireEvent.pointerDown(plus);
-      plus.focus();
+    it("should put focus on Keep adding, and keep the plate when it is chosen", () => {
+      const { onClose } = plateOne();
+      fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+      expect(document.activeElement).toBe(keepAdding());
 
-      fireEvent.click(plus, { detail: 1 });
-      await screen.findByText("Added Basmati rice, boiled");
+      fireEvent.click(keepAdding());
 
-      expect(document.activeElement).toBe(plus);
+      expect(screen.queryByRole("dialog", { name: "Discard your plate?" })).toBeNull();
+      expect(onClose).not.toHaveBeenCalled();
+      expect(screen.getByRole("button", { name: "Your plate, 1 food" })).toBeTruthy();
     });
 
-    it("should say Added with the food's name and leave the dialog open", async () => {
-      const { onClose } = renderDialog({ date: "2026-10-15", time: "12:00" });
-      search("chicken");
+    it("should keep the plate on Escape inside the question, and leave the dialog open", () => {
+      const { onClose } = plateOne();
+      fireEvent.keyDown(document, { key: "Escape" });
 
-      fireEvent.click(addButton("Add Chicken breast, grilled, 1 breast (150 g)"));
+      fireEvent.keyDown(document, { key: "Escape" });
 
-      expect(await screen.findByText("Added Chicken breast, grilled")).toBeTruthy();
+      expect(screen.queryByRole("dialog", { name: "Discard your plate?" })).toBeNull();
       expect(onClose).not.toHaveBeenCalled();
       expect(dialog()).toBeTruthy();
     });
 
-    it("should let several foods be added in a row", async () => {
-      renderDialog({ date: "2026-10-15", time: "12:00" });
-      search("chicken");
+    it("should put focus back inside the dialog when the question is dismissed by a press on the dim", () => {
+      plateOne();
+      const cancel = screen.getByRole("button", { name: "Cancel" });
+      cancel.focus();
+      fireEvent.click(cancel);
 
-      fireEvent.click(addButton("Add Chicken breast, grilled, 1 breast (150 g)"));
-      await screen.findByText("Added Chicken breast, grilled");
-      fireEvent.click(addButton("Add Basmati rice, boiled, 100 g"));
+      fireEvent.mouseDown(question().parentElement ?? document.body);
 
-      expect(await screen.findByText("Added Basmati rice, boiled")).toBeTruthy();
-      expect(api.logFood.mutateAsync).toHaveBeenCalledTimes(2);
+      expect(screen.queryByRole("dialog", { name: "Discard your plate?" })).toBeNull();
+      expect(dialog().contains(document.activeElement)).toBe(true);
     });
 
-    it("should log a double press once", async () => {
-      renderDialog({ date: "2026-10-15", time: "12:00" });
+    it("should close the dialog on Discard and write nothing", () => {
+      const { onClose } = plateOne();
+      fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+      fireEvent.click(within(question()).getByRole("button", { name: "Discard" }));
+
+      expect(onClose).toHaveBeenCalledOnce();
+      expect(api.logPlate.mutateAsync).not.toHaveBeenCalled();
+    });
+
+    it("should ask from the amount step by Close, and not by Cancel, which steps back", () => {
+      const { onClose } = plateOne();
       search("rice");
-      const plus = addButton("Add Basmati rice, boiled, 100 g");
+      fireEvent.click(results().getByRole("button", { name: /^Basmati\s*rice,\s*boiled/ }));
 
-      fireEvent.click(plus);
-      fireEvent.click(plus);
+      fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
 
-      await screen.findByText("Added Basmati rice, boiled");
-      expect(api.logFood.mutateAsync).toHaveBeenCalledOnce();
+      expect(screen.queryByRole("dialog", { name: "Discard your plate?" })).toBeNull();
+      expect(screen.getByRole("searchbox", { name: "Search foods" })).toBeTruthy();
+      expect(onClose).not.toHaveBeenCalled();
+
+      fireEvent.click(results().getByRole("button", { name: /^Basmati\s*rice,\s*boiled/ }));
+      fireEvent.click(screen.getByRole("button", { name: "Close" }));
+
+      expect(question()).toBeTruthy();
     });
+  });
 
-    it("should undo only the entry that its own toast logged", async () => {
-      renderDialog({ date: "2026-10-15", time: "12:00" });
+  describe("Quick add with a plate", () => {
+    const quickAddDialog = () => screen.getByRole("dialog", { name: "Quick add" });
+
+    function plateOneThenQuickAdd() {
+      const rendered = renderDialog();
       search("chicken");
-      fireEvent.click(addButton("Add Chicken breast, grilled, 1 breast (150 g)"));
-      await screen.findByText("Added Chicken breast, grilled");
-      fireEvent.click(addButton("Add Basmati rice, boiled, 100 g"));
-      await screen.findByText("Added Basmati rice, boiled");
+      fireEvent.click(chickenPlus());
+      search("");
+      fireEvent.click(screen.getByRole("button", { name: /Quick add/ }));
 
-      fireEvent.click(screen.getByRole("button", { name: "Undo" }));
+      return rendered;
+    }
 
-      expect(api.deleteEntry.mutateAsync).toHaveBeenCalledExactlyOnceWith(api.stored[1]);
+    async function logQuickAdd() {
+      fireEvent.change(within(quickAddDialog()).getByRole("textbox", { name: /^Calories/ }), {
+        target: { value: "250" },
+      });
+      fireEvent.click(within(quickAddDialog()).getByRole("button", { name: "Add" }));
+      await waitFor(() => {
+        expect(api.quickAdd.mutateAsync).toHaveBeenCalledOnce();
+      });
+    }
+
+    it("should return to the search with the plate intact after a Quick add log", async () => {
+      const { onClose } = plateOneThenQuickAdd();
+
+      await logQuickAdd();
+
+      await waitFor(() => {
+        expect(screen.queryByRole("dialog", { name: "Quick add" })).toBeNull();
+      });
+      expect(onClose).not.toHaveBeenCalled();
+      expect(screen.getByRole("button", { name: "Your plate, 1 food" })).toBeTruthy();
+      expect(screen.getByRole("button", { name: /Quick add/ })).toBeTruthy();
+      expect(api.logPlate.mutateAsync).not.toHaveBeenCalled();
     });
 
-    it("should say that it could not undo, and not that the entry was kept", async () => {
-      api.deleteEntry.mutateAsync = vi.fn(() => Promise.reject(new Error("RAW")));
-      renderDialog({ date: "2026-10-15", time: "12:00" });
-      search("rice");
-      fireEvent.click(addButton("Add Basmati rice, boiled, 100 g"));
-      await screen.findByText("Added Basmati rice, boiled");
+    it("should close everything after a Quick add log when the plate is empty", async () => {
+      const { onClose } = renderDialog();
+      fireEvent.click(screen.getByRole("button", { name: /Quick add/ }));
 
-      fireEvent.click(screen.getByRole("button", { name: "Undo" }));
+      await logQuickAdd();
 
-      expect(await screen.findByText("Couldn't undo. Try again.")).toBeTruthy();
+      await waitFor(() => {
+        expect(onClose).toHaveBeenCalledOnce();
+      });
     });
 
-    it("should say it was not saved, without the raw failure or the amount, when the log fails", async () => {
-      api.logFood.mutateAsync = vi.fn(() => Promise.reject(new Error("RAW 150 g failure")));
-      renderDialog({ date: "2026-10-15", time: "12:00" });
+    it("should return to the search with the plate as it was when the form is closed without logging", () => {
+      const { onClose } = plateOneThenQuickAdd();
+
+      fireEvent.click(within(quickAddDialog()).getByRole("button", { name: "Cancel" }));
+
+      expect(screen.queryByRole("dialog", { name: "Quick add" })).toBeNull();
+      expect(onClose).not.toHaveBeenCalled();
+      expect(screen.getByRole("button", { name: "Your plate, 1 food" })).toBeTruthy();
+    });
+
+    it("should give focus back to the Quick add row when the form closes", () => {
+      plateOneThenQuickAdd();
+      const row = screen.getByRole("button", { name: /Quick add/ });
+      // Pressing the row focuses it, which the opener is read from.
+      row.focus();
+      fireEvent.click(row);
+
+      fireEvent.click(within(quickAddDialog()).getByRole("button", { name: "Cancel" }));
+
+      expect(document.activeElement).toBe(row);
+    });
+
+    it("should answer Escape in the form first, and leave the Add food dialog and its plate", () => {
+      const { onClose } = plateOneThenQuickAdd();
+
+      fireEvent.keyDown(document, { key: "Escape" });
+
+      expect(screen.queryByRole("dialog", { name: "Quick add" })).toBeNull();
+      expect(screen.queryByRole("dialog", { name: "Discard your plate?" })).toBeNull();
+      expect(onClose).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("offline", () => {
+    const setOnline = (isOnline: boolean) => {
+      act(() => {
+        onlineManager.setOnline(isOnline);
+      });
+    };
+    const logButton = () => screen.getByRole("button", { name: /^Log foods?/ });
+
+    function plateOneOffline() {
+      onlineManager.setOnline(false);
+      const rendered = renderDialog();
+      search("chicken");
+      fireEvent.click(chickenPlus());
+
+      return rendered;
+    }
+
+    it("should still put a food on the plate, because the plus writes nothing", () => {
+      onlineManager.setOnline(false);
+      renderDialog();
       search("chicken");
 
-      fireEvent.click(addButton("Add Chicken breast, grilled, 1 breast (150 g)"));
+      expect(chickenPlus().getAttribute("aria-disabled")).toBeNull();
+      fireEvent.click(chickenPlus());
+
+      expect(screen.getByRole("button", { name: "Your plate, 1 food" })).toBeTruthy();
+    });
+
+    it("should say why Log food is off", () => {
+      plateOneOffline();
 
       expect(
-        await screen.findByText("Not saved. Check your connection and try again."),
+        screen.getByText("You can fill your plate. Logging it needs a connection."),
       ).toBeTruthy();
-      expect(screen.queryByText(/RAW/)).toBeNull();
-      expect(screen.queryByText(/Added/)).toBeNull();
+    });
+
+    it("should make Log aria-disabled and not disabled, dimmed by class, and write nothing on a press", () => {
+      plateOneOffline();
+
+      fireEvent.click(logButton());
+
+      expect(logButton().getAttribute("aria-disabled")).toBe("true");
+      expect(logButton().hasAttribute("disabled")).toBe(false);
+      expect(logButton().className).toContain("opacity-40");
+      expect(api.logPlate.mutateAsync).not.toHaveBeenCalled();
+    });
+
+    it("should keep focus on the Log button when it is pressed offline", () => {
+      plateOneOffline();
+      logButton().focus();
+
+      fireEvent.click(logButton());
+
+      expect(document.activeElement).toBe(logButton());
+    });
+
+    it("should leave opening a row and Cancel alone", () => {
+      onlineManager.setOnline(false);
+      const { onClose } = renderDialog();
+      search("chicken");
+
+      fireEvent.click(chickenRow());
+      expect(screen.getByRole("button", { name: "Results" })).toBeTruthy();
+      fireEvent.click(screen.getByRole("button", { name: "Results" }));
+      fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+      expect(onClose).toHaveBeenCalledOnce();
+    });
+
+    it("should log again, and the banner go, when the connection returns", async () => {
+      const { onClose } = plateOneOffline();
+
+      setOnline(true);
+      fireEvent.click(logButton());
+
+      await waitFor(() => {
+        expect(onClose).toHaveBeenCalledOnce();
+      });
+      expect(
+        screen.queryByText("You can fill your plate. Logging it needs a connection."),
+      ).toBeNull();
+    });
+
+    it("should keep Quick add pressable offline", () => {
+      onlineManager.setOnline(false);
+      renderDialog();
+
+      fireEvent.click(screen.getByRole("button", { name: /Quick add/ }));
+
+      expect(screen.getByRole("dialog", { name: "Quick add" })).toBeTruthy();
+    });
+  });
+
+  describe("Add to plate on the amount step", () => {
+    function openChicken() {
+      renderDialog();
+      search("chicken");
+      fireEvent.click(chickenRow());
+    }
+
+    it("should have no Time field, as the time belongs to the plate", () => {
+      openChicken();
+
+      expect(screen.queryByRole("button", { name: /^Time/ })).toBeNull();
+      expect(screen.queryByText("Now")).toBeNull();
+    });
+
+    it("should put the chosen amount on the plate and go back to the search with the field cleared", () => {
+      openChicken();
+      fireEvent.click(screen.getByRole("radio", { name: "g" }));
+      fireEvent.change(screen.getByRole("textbox", { name: /^Amount/ }), {
+        target: { value: "200" },
+      });
+
+      fireEvent.click(screen.getByRole("button", { name: "Add to plate" }));
+
+      expect(screen.getByRole("searchbox", { name: "Search foods" })).toHaveProperty("value", "");
+      expect(document.activeElement).toBe(screen.getByRole("searchbox", { name: "Search foods" }));
+      expect(screen.getByRole("button", { name: "Your plate, 1 food" })).toBeTruthy();
+      expect(api.logPlate.mutateAsync).not.toHaveBeenCalled();
+      expect(screen.getByText("Chicken breast, grilled added to your plate")).toBeTruthy();
+    });
+
+    it("should put the 200 g on the plate that is logged", async () => {
+      openChicken();
+      fireEvent.click(screen.getByRole("radio", { name: "g" }));
+      fireEvent.change(screen.getByRole("textbox", { name: /^Amount/ }), {
+        target: { value: "200" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Add to plate" }));
+
+      fireEvent.click(screen.getByRole("button", { name: "Log food, 1 food on your plate" }));
+
+      await waitFor(() => {
+        expect(api.logPlate.mutateAsync).toHaveBeenCalledOnce();
+      });
+      expect(api.logPlate.mutateAsync.mock.calls[0]?.[0].items[0]).toMatchObject({
+        kind: "food",
+        foodId: CHICKEN_ID,
+        quantity: 200,
+        unit: { kind: "g" },
+      });
+    });
+
+    it("should leave the Log button out of the footer during the amount step", () => {
+      renderDialog();
+      search("chicken");
+      fireEvent.click(chickenPlus());
+      search("rice");
+      fireEvent.click(results().getByRole("button", { name: /^Basmati\s*rice,\s*boiled/ }));
+
+      expect(screen.queryByRole("button", { name: /^Log food/ })).toBeNull();
+      expect(screen.getByRole("button", { name: "Add to plate" })).toBeTruthy();
+    });
+
+    it("should draw the chip inert during the draft, so no draft is lost", () => {
+      renderDialog();
+      search("chicken");
+      fireEvent.click(chickenPlus());
+      search("rice");
+      fireEvent.click(results().getByRole("button", { name: /^Basmati\s*rice,\s*boiled/ }));
+
+      const chip = screen.getByRole("button", { name: "Your plate, 1 food" });
+
+      expect(chip.getAttribute("aria-disabled")).toBe("true");
+    });
+
+    it("should open Copy to your foods in a new tab when the plate has food, so the plate is not lost", () => {
+      renderDialog();
+      search("chicken");
+      fireEvent.click(chickenPlus());
+      search("soup");
+      fireEvent.click(results().getByRole("button", { name: /^Chicken\s*soup,\s*canned/ }));
+
+      const link = screen.getByRole("link", { name: /^Copy to your foods/ });
+
+      expect(link.getAttribute("target")).toBe("_blank");
+      expect(link.getAttribute("href")).toBe(`/foods/new?from=${SOUP_ID}`);
+    });
+
+    it("should keep Copy to your foods in the same tab when the plate is empty", () => {
+      renderDialog();
+      search("soup");
+      fireEvent.click(results().getByRole("button", { name: /^Chicken\s*soup,\s*canned/ }));
+
+      expect(
+        screen.getByRole("link", { name: "Copy to your foods" }).getAttribute("target"),
+      ).toBeNull();
+    });
+
+    it("should say the food is gone, not blame the connection, and keep the plate, when a food was deleted", async () => {
+      const { PlateFoodGoneError } =
+        await vi.importActual<typeof import("@keylow/api-client")>("@keylow/api-client");
+      api.logPlate.mutateAsync = vi.fn(() => Promise.reject(new PlateFoodGoneError()));
+      const { onClose } = renderDialog();
+      search("chicken");
+      fireEvent.click(chickenPlus());
+
+      fireEvent.click(screen.getByRole("button", { name: "Log food, 1 food on your plate" }));
+
+      expect(
+        await screen.findByText("This food does not exist, or you cannot see it."),
+      ).toBeTruthy();
+      expect(screen.queryByText(/Check your connection/)).toBeNull();
+      expect(onClose).not.toHaveBeenCalled();
+      expect(screen.getByRole("button", { name: "Your plate, 1 food" })).toBeTruthy();
+    });
+
+    it("should not add a food that needs review", () => {
+      renderDialog();
+      search("soup");
+      fireEvent.click(results().getByRole("button", { name: /^Chicken\s*soup,\s*canned/ }));
+
+      expect(screen.getByRole("button", { name: "Add to plate" })).toHaveProperty("disabled", true);
+    });
+
+    it("should step back to the results on Cancel and never ask, even with food on the plate", () => {
+      renderDialog({ foodId: CHICKEN_ID });
+
+      fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+      expect(screen.getByRole("searchbox", { name: "Search foods" })).toBeTruthy();
     });
   });
 
@@ -621,22 +1214,6 @@ describe("the add food dialog", () => {
       expect(within(hero).getByText("222")).toBeTruthy();
     });
 
-    it("should say Now under the Time field, which reads the time the dialog opened", () => {
-      openChicken();
-
-      expect(screen.getByRole("button", { name: "Time 12:40" })).toBeTruthy();
-      expect(screen.getByText("Now")).toBeTruthy();
-    });
-
-    it("should say nothing about Now when the dialog was opened from an hour's plus", () => {
-      renderDialog({ date: "2026-10-15", time: "12:00" });
-      search("chicken");
-      fireEvent.click(results().getByRole("button", { name: /^Chicken\s*breast,\s*grilled/ }));
-
-      expect(screen.getByRole("button", { name: "Time 12:00" })).toBeTruthy();
-      expect(screen.queryByText("Now")).toBeNull();
-    });
-
     it("should work out the hero again for a new amount in grams", () => {
       openChicken();
 
@@ -660,67 +1237,7 @@ describe("the add food dialog", () => {
       expect(
         screen.getByRole("group", { name: "Energy and macros, For this amount" }),
       ).toBeTruthy();
-      expect(screen.getByRole("button", { name: "Add" })).toHaveProperty("disabled", true);
-    });
-
-    it("should log the amount at the Time field's time on Add, close the dialog and say Added", async () => {
-      const { onClose } = renderDialog();
-      search("chicken");
-      fireEvent.click(results().getByRole("button", { name: /^Chicken\s*breast,\s*grilled/ }));
-      fireEvent.click(screen.getByRole("radio", { name: "g" }));
-      fireEvent.change(screen.getByRole("textbox", { name: /^Amount/ }), {
-        target: { value: "200" },
-      });
-
-      fireEvent.click(screen.getByRole("button", { name: "Add" }));
-
-      await waitFor(() => {
-        expect(onClose).toHaveBeenCalledOnce();
-      });
-      expect(api.logFood.mutateAsync).toHaveBeenCalledExactlyOnceWith({
-        food: chicken,
-        quantity: 200,
-        unit: "g",
-        foodPortions: [breast],
-        loggedAt: "2026-10-15T12:40:30.000Z",
-        localDate: "2026-10-15",
-      });
-      expect(await screen.findByText("Added")).toBeTruthy();
-    });
-
-    it("should log the time chosen in the Time field", async () => {
-      openChicken();
-      fireEvent.click(screen.getByRole("button", { name: "Time 12:40" }));
-      fireEvent.click(
-        within(screen.getByRole("listbox", { name: "Hours" })).getByRole("option", { name: "19" }),
-      );
-      fireEvent.click(screen.getByRole("button", { name: "Done" }));
-
-      fireEvent.click(screen.getByRole("button", { name: "Add" }));
-
-      await waitFor(() => {
-        expect(api.logFood.mutateAsync).toHaveBeenCalledOnce();
-      });
-      expect(api.logFood.mutateAsync).toHaveBeenCalledWith(
-        expect.objectContaining({ loggedAt: "2026-10-15T19:40:00.000Z" }),
-      );
-      expect(screen.queryByText("Now")).toBeNull();
-    });
-
-    it("should stay open with a banner when the log fails, and keep what was typed", async () => {
-      api.logFood.mutateAsync = vi.fn(() => Promise.reject(new Error("RAW 150 g failure")));
-      const { onClose } = renderDialog();
-      search("chicken");
-      fireEvent.click(results().getByRole("button", { name: /^Chicken\s*breast,\s*grilled/ }));
-
-      fireEvent.click(screen.getByRole("button", { name: "Add" }));
-
-      expect(
-        await screen.findByText("Not saved. Check your connection and try again."),
-      ).toBeTruthy();
-      expect(screen.queryByText(/RAW/)).toBeNull();
-      expect(onClose).not.toHaveBeenCalled();
-      expect(screen.getByRole("textbox", { name: /^Amount/ })).toHaveProperty("value", "1");
+      expect(screen.getByRole("button", { name: "Add to plate" })).toHaveProperty("disabled", true);
     });
 
     it("should go back to the results with what was typed, and the cursor in the search", () => {
@@ -731,21 +1248,7 @@ describe("the add food dialog", () => {
       const field = screen.getByRole("searchbox", { name: "Search foods" });
       expect(field).toHaveProperty("value", "chicken");
       expect(document.activeElement).toBe(field);
-      expect(addButton("Add Chicken breast, grilled, 1 breast (150 g)")).toBeTruthy();
-    });
-
-    it("should keep the time chosen in the search when a food is opened", () => {
-      renderDialog();
-      fireEvent.click(screen.getByRole("button", { name: "Time, now, 12:40, change" }));
-      fireEvent.click(
-        within(screen.getByRole("listbox", { name: "Hours" })).getByRole("option", { name: "09" }),
-      );
-      fireEvent.click(screen.getByRole("button", { name: "Done" }));
-      search("chicken");
-
-      fireEvent.click(results().getByRole("button", { name: /^Chicken\s*breast,\s*grilled/ }));
-
-      expect(screen.getByRole("button", { name: "Time 09:40" })).toBeTruthy();
+      expect(chickenPlus()).toBeTruthy();
     });
 
     it("should say a food that needs review has to be copied first, and not allow Add", () => {
@@ -757,7 +1260,7 @@ describe("the add food dialog", () => {
       expect(screen.getByRole("link", { name: "Copy to your foods" }).getAttribute("href")).toBe(
         `/foods/new?from=${SOUP_ID}`,
       );
-      expect(screen.getByRole("button", { name: "Add" })).toHaveProperty("disabled", true);
+      expect(screen.getByRole("button", { name: "Add to plate" })).toHaveProperty("disabled", true);
     });
 
     it("should say the food is not found when it cannot be read", () => {
@@ -802,60 +1305,12 @@ describe("the add food dialog", () => {
       expect(screen.getByRole("radio", { name: "1 tsp" })).toBeTruthy();
     });
 
-    it("should read now on today, with the Time field saying Now, when the request names no day", () => {
-      renderDialog({ foodId: CHICKEN_ID });
-
-      expect(screen.getByRole("button", { name: "Time 12:40" })).toBeTruthy();
-      expect(screen.getByText("Now")).toBeTruthy();
-    });
-
-    it("should log the default portion now on today with one press on Add", async () => {
-      const { onClose } = renderDialog({ foodId: CHICKEN_ID });
-
-      fireEvent.click(screen.getByRole("button", { name: "Add" }));
-
-      await waitFor(() => {
-        expect(onClose).toHaveBeenCalledOnce();
-      });
-      expect(api.logFood.mutateAsync).toHaveBeenCalledExactlyOnceWith({
-        food: chicken,
-        quantity: 1,
-        unit: "portion",
-        portion: breast,
-        foodPortions: [breast],
-        loggedAt: "2026-10-15T12:40:30.000Z",
-        localDate: "2026-10-15",
-      });
-      expect(await screen.findByText("Added")).toBeTruthy();
-    });
-
-    it("should log on the day of the request, at the current clock time", async () => {
-      renderDialog({ foodId: CHICKEN_ID, date: "2026-10-14" });
-
-      fireEvent.click(screen.getByRole("button", { name: "Add" }));
-
-      await waitFor(() => {
-        expect(api.logFood.mutateAsync).toHaveBeenCalledOnce();
-      });
-      expect(api.logFood.mutateAsync.mock.calls[0]?.[0].localDate).toBe("2026-10-14");
-      expect(api.logFood.mutateAsync.mock.calls[0]?.[0].loggedAt).toBe("2026-10-14T12:40:00.000Z");
-    });
-
     it("should go back to the search from the Results link, as on any portion step", () => {
       renderDialog({ foodId: CHICKEN_ID });
 
       fireEvent.click(screen.getByRole("button", { name: "Results" }));
 
       expect(screen.getByRole("searchbox", { name: "Search foods" })).toBeTruthy();
-    });
-
-    it("should close on Cancel and Escape", () => {
-      const { onClose } = renderDialog({ foodId: CHICKEN_ID });
-
-      fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
-      fireEvent.keyDown(document, { key: "Escape" });
-
-      expect(onClose).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -887,94 +1342,6 @@ describe("the add food dialog", () => {
       expect(onClose).not.toHaveBeenCalled();
 
       fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
-
-      expect(onClose).toHaveBeenCalledOnce();
-    });
-  });
-
-  describe("offline", () => {
-    const setOnline = (isOnline: boolean) => {
-      act(() => {
-        onlineManager.setOnline(isOnline);
-      });
-    };
-    const rowPlus = () => addButton("Add Chicken breast, grilled, 1 breast (150 g)");
-
-    it("should disable the plus on a row, and log nothing when it is pressed", () => {
-      onlineManager.setOnline(false);
-      renderDialog();
-      search("chicken");
-
-      fireEvent.click(rowPlus());
-
-      expect(rowPlus().getAttribute("aria-disabled")).toBe("true");
-      expect(api.logFood.mutateAsync).not.toHaveBeenCalled();
-    });
-
-    it("should leave opening a row alone", () => {
-      onlineManager.setOnline(false);
-      renderDialog();
-      search("chicken");
-
-      fireEvent.click(results().getByRole("button", { name: /^Chicken\s*breast,\s*grilled/ }));
-
-      expect(screen.getByRole("button", { name: "Results" })).toBeTruthy();
-    });
-
-    it("should enable the plus again, and log, when the connection returns", async () => {
-      onlineManager.setOnline(false);
-      renderDialog();
-      search("chicken");
-
-      setOnline(true);
-      fireEvent.click(rowPlus());
-
-      await waitFor(() => {
-        expect(api.logFood.mutateAsync).toHaveBeenCalledOnce();
-      });
-    });
-
-    it("should disable Add on the portion step, and keep the amount that was typed", () => {
-      renderDialog();
-      search("chicken");
-      fireEvent.click(results().getByRole("button", { name: /^Chicken\s*breast,\s*grilled/ }));
-      fireEvent.click(screen.getByRole("radio", { name: "g" }));
-      fireEvent.change(screen.getByRole("textbox", { name: /^Amount/ }), {
-        target: { value: "200" },
-      });
-
-      setOnline(false);
-      fireEvent.click(screen.getByRole("button", { name: "Add" }));
-
-      expect(screen.getByRole("button", { name: "Add" })).toHaveProperty("disabled", true);
-      expect(api.logFood.mutateAsync).not.toHaveBeenCalled();
-      expect(screen.getByRole("textbox", { name: /^Amount/ })).toHaveProperty("value", "200");
-    });
-
-    it("should add what was typed once the connection returns", async () => {
-      const { onClose } = renderDialog();
-      search("chicken");
-      fireEvent.click(results().getByRole("button", { name: /^Chicken\s*breast,\s*grilled/ }));
-      fireEvent.click(screen.getByRole("radio", { name: "g" }));
-      fireEvent.change(screen.getByRole("textbox", { name: /^Amount/ }), {
-        target: { value: "200" },
-      });
-      setOnline(false);
-      setOnline(true);
-
-      fireEvent.click(screen.getByRole("button", { name: "Add" }));
-
-      await waitFor(() => {
-        expect(onClose).toHaveBeenCalledOnce();
-      });
-      expect(api.logFood.mutateAsync.mock.calls[0]?.[0].quantity).toBe(200);
-    });
-
-    it("should leave Cancel alone", () => {
-      const { onClose } = renderDialog();
-      setOnline(false);
-
-      fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
 
       expect(onClose).toHaveBeenCalledOnce();
     });

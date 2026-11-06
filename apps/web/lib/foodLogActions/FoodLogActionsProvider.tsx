@@ -7,15 +7,13 @@ import type { AddFoodRequest, FoodLogActions, FoodLogActionsProviderProps } from
 
 import { AddFoodDialog } from "@/components/diary/AddFoodDialog";
 import { EditEntryDialog } from "@/components/diary/EditEntryDialog";
-import { QuickAddDialog } from "@/components/diary/QuickAddDialog";
 
 // Each request gets its own number, so a request made while a dialog is open starts a fresh dialog. The
 // opener is the control that was focused when the first dialog opened, and it is carried across a switch
 // from one dialog to another, so closing the last one gives focus back to the diary and not to a dialog
 // that is gone.
 type OpenDialog = { opener: Element | null; id: number } & (
-  | { kind: "add" | "quick"; request: AddFoodRequest }
-  | { kind: "edit"; entryId: string; date: string }
+  { kind: "add"; request: AddFoodRequest } | { kind: "edit"; entryId: string; date: string }
 );
 
 // A request that waits for the page it was made for, with the number its dialog will have.
@@ -35,6 +33,8 @@ export function FoodLogActionsProvider({ children }: FoodLogActionsProviderProps
   const [dialog, setDialog] = useState<OpenDialog | undefined>(undefined);
   const [dialogPathname, setDialogPathname] = useState(pathname);
   const [waitingRequest, setWaitingRequest] = useState<WaitingRequest | undefined>(undefined);
+  // The add dialog has food on its plate, which a page change must not drop.
+  const [isPlateHeld, setIsPlateHeld] = useState(false);
   const requestCount = useRef(0);
 
   // A dialog belongs to the page it was opened on, so going to another page closes it. The one exception
@@ -43,11 +43,15 @@ export function FoodLogActionsProvider({ children }: FoodLogActionsProviderProps
   if (dialogPathname !== pathname) {
     setDialogPathname(pathname);
     setWaitingRequest(undefined);
-    setDialog(
-      waitingRequest?.pathname === pathname
-        ? { kind: "add", request: waitingRequest.request, id: waitingRequest.id, opener: null }
-        : undefined,
-    );
+    // A plate is not lost to the page changing under it, such as the browser's Back: the person logs it or
+    // discards it, as Zee's ruling asks, and the dialog is left to ask.
+    if (dialog?.kind !== "add" || !isPlateHeld) {
+      setDialog(
+        waitingRequest?.pathname === pathname
+          ? { kind: "add", request: waitingRequest.request, id: waitingRequest.id, opener: null }
+          : undefined,
+      );
+    }
   }
 
   // These only set state, so they keep their identity, and an effect that depends on one does not run
@@ -67,16 +71,6 @@ export function FoodLogActionsProvider({ children }: FoodLogActionsProviderProps
       openAddFoodOnNextPage: (request: AddFoodRequest, targetPathname: string) => {
         requestCount.current += 1;
         setWaitingRequest({ request, id: requestCount.current, pathname: targetPathname });
-      },
-      openQuickAdd: (request: AddFoodRequest) => {
-        requestCount.current += 1;
-        const id = requestCount.current;
-        setDialog((current) => ({
-          kind: "quick",
-          request,
-          id,
-          opener: current?.opener ?? document.activeElement,
-        }));
       },
     }),
     [],
@@ -118,17 +112,7 @@ export function FoodLogActionsProvider({ children }: FoodLogActionsProviderProps
           request={dialog.request}
           opener={dialog.opener}
           onClose={closeDialog}
-          onQuickAdd={() => {
-            value.openQuickAdd(dialog.request);
-          }}
-        />
-      )}
-      {dialog?.kind === "quick" && (
-        <QuickAddDialog
-          key={dialog.id}
-          request={dialog.request}
-          opener={dialog.opener}
-          onClose={closeDialog}
+          onHoldsPlateChange={setIsPlateHeld}
         />
       )}
       {dialog?.kind === "edit" && (

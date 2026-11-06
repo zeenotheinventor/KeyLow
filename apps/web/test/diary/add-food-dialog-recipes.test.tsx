@@ -1,8 +1,9 @@
-import { SAVE_FAILED_BANNER, SEARCH_EMPTY, SEARCH_STATUS } from "@keylow/core/copy";
+import { SEARCH_EMPTY, SEARCH_STATUS } from "@keylow/core/copy";
 import { onlineManager } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { noPlateHooks } from "./noPlateHooks";
 import {
   RecipeLogProvider,
   holdInserts,
@@ -24,6 +25,9 @@ const api = vi.hoisted(() => ({ hits: [] as FoodSearchHit[] }));
 // The foods are the existing tests' business. The recipe search, the log and the Undo are the real hooks.
 vi.mock("@keylow/api-client", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@keylow/api-client")>()),
+  // The day's bars are not this file's business, but the plate is written by the real api-client.
+  useDiaryDay: noPlateHooks.useDiaryDay,
+  useTargets: noPlateHooks.useTargets,
   useProfileTimeZone: () => ({ data: "UTC" }),
   useFoodSearch: (query: string) => ({
     local: query.trim().length >= 2 ? api.hits : [],
@@ -48,7 +52,7 @@ const chickenAndRice = sampleRecipeNamed("Chicken and rice");
 
 const rowName =
   "Chicken and rice, recipe, 1 serving 275 grams, 374 kilocalories, protein 32 grams, carbohydrate 43 grams, fat 8.1 grams, choose amount";
-const plusName = "Add Chicken and rice, 1 serving (275 g)";
+const plusName = "Add Chicken and rice, 1 serving (275 g), to your plate";
 
 const breastFillets = makeSearchHit({
   id: "11111111-1111-4111-8111-111111111111",
@@ -77,7 +81,7 @@ function renderDialog(request: AddFoodRequest = { date: "2026-10-15", time: "18:
   render(
     <RecipeLogProvider>
       <ToastProvider>
-        <AddFoodDialog request={request} opener={null} onClose={onClose} onQuickAdd={vi.fn()} />
+        <AddFoodDialog request={request} opener={null} onClose={onClose} />
       </ToastProvider>
     </RecipeLogProvider>,
   );
@@ -320,7 +324,7 @@ describe("the add food dialog, recipes", () => {
       );
     });
 
-    it("should have the row to press, which opens the amount step, and the plus, which logs", async () => {
+    it("should have the row to press, which opens the amount step, and the plus, which puts a serving on the plate", async () => {
       renderDialog();
       search("chicken");
 
@@ -345,13 +349,29 @@ describe("the add food dialog, recipes", () => {
   });
 
   describe("the plus", () => {
-    it("should log one serving at the hour the dialog was opened for, in one request", async () => {
-      renderDialog({ date: "2026-10-15", time: "18:00" });
+    const logButton = () => screen.getByRole("button", { name: "Log food, 1 food on your plate" });
+
+    it("should put one serving on the plate and write nothing", async () => {
+      const { onClose } = renderDialog();
       search("chicken");
 
       fireEvent.click(await plus());
 
-      await screen.findByText("Added Chicken and rice");
+      expect(screen.getByRole("button", { name: "Your plate, 1 food" })).toBeTruthy();
+      expect(recipeLogBackend.inserts).toEqual([]);
+      expect(onClose).not.toHaveBeenCalled();
+      expect(screen.queryByText(/^Added/)).toBeNull();
+      expect(screen.getByRole("searchbox", { name: "Search foods" })).toHaveProperty("value", "");
+    });
+
+    it("should log one serving at the hour the dialog was opened for, in one request", async () => {
+      renderDialog({ date: "2026-10-15", time: "18:00" });
+      search("chicken");
+      fireEvent.click(await plus());
+
+      fireEvent.click(logButton());
+
+      await screen.findByText("Logged Chicken and rice");
       expect(recipeLogBackend.inserts).toHaveLength(1);
       expect(recipeLogBackend.inserts[0]).toMatchObject({
         item_type: "recipe",
@@ -363,82 +383,59 @@ describe("the add food dialog, recipes", () => {
       });
     });
 
-    it("should log at the moment the dialog opened when no hour was asked for", async () => {
+    it("should log at the moment Log is pressed when no hour was asked for", async () => {
       renderDialog({ date: "2026-10-15" });
       search("chicken");
-
       fireEvent.click(await plus());
 
-      await screen.findByText("Added Chicken and rice");
+      fireEvent.click(logButton());
+
+      await screen.findByText("Logged Chicken and rice");
       expect(recipeLogBackend.inserts[0]).toMatchObject({ logged_at: "2026-10-15T12:40:30.000Z" });
     });
 
-    it("should leave the dialog open, so more can be added", async () => {
-      const { onClose } = renderDialog();
-      search("chicken");
-
-      fireEvent.click(await plus());
-      await screen.findByText("Added Chicken and rice");
-
-      expect(onClose).not.toHaveBeenCalled();
-      expect(screen.getByRole("dialog", { name: "Add food" })).toBeTruthy();
-      expect(screen.getByRole("searchbox", { name: "Search foods" })).toHaveProperty(
-        "value",
-        "chicken",
-      );
-    });
-
-    it("should log a double press once", async () => {
+    it("should log a double press on Log once", async () => {
       const release = holdInserts();
       renderDialog();
       search("chicken");
-      const button = await plus();
+      fireEvent.click(await plus());
 
-      fireEvent.click(button);
-      fireEvent.click(button);
+      fireEvent.click(logButton());
+      fireEvent.click(logButton());
       release();
 
-      await screen.findByText("Added Chicken and rice");
+      await screen.findByText("Logged Chicken and rice");
       expect(recipeLogBackend.inserts).toHaveLength(1);
     });
 
-    it("should undo only the entry that its own toast logged", async () => {
-      renderDialog();
-      search("chicken");
-      fireEvent.click(await plus());
-      await screen.findByText("Added Chicken and rice");
-
-      fireEvent.click(screen.getByRole("button", { name: "Undo" }));
-
-      await waitFor(() => {
-        expect(recipeLogBackend.deletedIds).toEqual(["00000000-0000-4000-8000-000000000901"]);
-      });
-    });
-
-    it("should say it was not saved, and never the failure or the recipe, when the log fails", async () => {
+    it("should say it was not logged, and never the failure or the recipe, when the write fails", async () => {
       recipeLogBackend.failsInsert = true;
       renderDialog();
       search("chicken");
-
       fireEvent.click(await plus());
 
-      expect(await screen.findByText(SAVE_FAILED_BANNER)).toBeTruthy();
+      fireEvent.click(logButton());
+
+      expect(
+        await screen.findByText("Not logged. Check your connection and try again."),
+      ).toBeTruthy();
       expect(screen.queryByText(/RAW/)).toBeNull();
-      expect(screen.queryByText(/Added/)).toBeNull();
+      expect(screen.queryByText(/^Logged/)).toBeNull();
+      expect(screen.getByRole("button", { name: "Your plate, 1 food" })).toBeTruthy();
     });
 
-    it("should be off when there is no connection, and log nothing when pressed", async () => {
+    it("should stay pressable when there is no connection, because it writes nothing", async () => {
       renderDialog();
       search("chicken");
       const button = await plus();
 
       await waitFor(() => {
         onlineManager.setOnline(false);
-        expect(button.getAttribute("aria-disabled")).toBe("true");
+        expect(button.getAttribute("aria-disabled")).toBeNull();
       });
       fireEvent.click(button);
-      fireEvent.keyDown(button, { key: "Enter" });
 
+      expect(screen.getByRole("button", { name: "Your plate, 1 food" })).toBeTruthy();
       expect(recipeLogBackend.inserts).toEqual([]);
     });
   });

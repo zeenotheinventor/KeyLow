@@ -36,19 +36,18 @@ const UNIT_OPTIONS: readonly { value: RecipeEntryUnit; label: string }[] = [
 /**
  * What the add dialog's amount step and the edit dialog share for a recipe, as the web diary's recipe boards
  * draw them: the Recipe badge with what the recipe makes, what the chosen amount comes to in the hero, the
- * recipe's values per 100 g, the amount with its unit chips, and the Time field. Every figure and sentence is
+ * recipe's values per 100 g, the amount with its unit chips, and the Time field (the plate has one time of its own, so
+ * the add dialog leaves it out). Every figure and sentence is
  * core's, worked out from the recipe given, so the hero is what the entry stores. A recipe with no cooked
  * weight says so under the hero when grams are chosen, because those grams are of the raw ingredients.
  */
 export function RecipeAmountFields({
   recipe,
   draft,
-  time,
-  isNow,
-  onTimeChange,
   amountRef,
   notice,
   recipeNotice,
+  ...timeProps
 }: RecipeAmountFieldsProps) {
   const noteId = useId();
   const { amountFieldRef, onChipPress } = useSelectAmountOnChipPress(amountRef);
@@ -117,7 +116,13 @@ export function RecipeAmountFields({
           onChipPress={onChipPress}
         />
       </div>
-      <TimeField value={time} isNow={isNow} onChange={onTimeChange} />
+      {timeProps.time !== undefined && (
+        <TimeField
+          value={timeProps.time}
+          isNow={timeProps.isNow}
+          onChange={timeProps.onTimeChange}
+        />
+      )}
     </>
   );
 }

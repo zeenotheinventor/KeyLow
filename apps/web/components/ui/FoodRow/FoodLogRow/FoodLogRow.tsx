@@ -45,6 +45,7 @@ export function FoodLogRow({
   onClick,
   onAdd,
   addDisabled = false,
+  addLabel,
   actions,
 }: FoodLogRowProps) {
   const name = nameSegments.map((segment) => segment.text).join("");
@@ -164,7 +165,7 @@ export function FoodLogRow({
             addDisabled && !disabled && "opacity-50",
             isAddInert && "pointer-events-none",
           )}
-          aria-label={describeAddFood(name, caption)}
+          aria-label={addLabel ?? describeAddFood(name, caption)}
           aria-disabled={isAddInert || undefined}
           onClick={isAddInert ? undefined : onAdd}
         >
