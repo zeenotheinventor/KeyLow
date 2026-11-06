@@ -37,10 +37,16 @@ export const weightBackend: {
   bodyMeasurements: Row[];
   /** Fails the reads of the body measurements with a database error that carries a value, as a leak would. */
   bodyReadsFail: boolean;
+  /** Fails only the reads of these kinds, as a database error that carries a value does. */
+  bodyKindsFail: string[];
   /** Never answers the reads of the body measurements. */
   bodyReadsHang: boolean;
+  /** Holds the reads of these kinds until the promise settles, as a slow connection does. */
+  bodyKindGates: Record<string, Promise<void> | undefined>;
   /** The number of requests made for the body measurements. */
   bodyRequestCount: number;
+  /** The number of requests made for each kind of body measurement. */
+  bodyRequestCountByKind: Record<string, number>;
 } = {
   weighIns: [],
   timeZone: "UTC",
@@ -55,8 +61,11 @@ export const weightBackend: {
   deletedIds: [],
   bodyMeasurements: [],
   bodyReadsFail: false,
+  bodyKindsFail: [],
   bodyReadsHang: false,
+  bodyKindGates: {},
   bodyRequestCount: 0,
+  bodyRequestCountByKind: {},
 };
 
 export function resetWeightBackend(): void {
@@ -73,8 +82,11 @@ export function resetWeightBackend(): void {
   weightBackend.deletedIds = [];
   weightBackend.bodyMeasurements = [];
   weightBackend.bodyReadsFail = false;
+  weightBackend.bodyKindsFail = [];
   weightBackend.bodyReadsHang = false;
+  weightBackend.bodyKindGates = {};
   weightBackend.bodyRequestCount = 0;
+  weightBackend.bodyRequestCountByKind = {};
 }
 
 const USER_ID = "11111111-1111-4111-8111-111111111111";
@@ -196,12 +208,17 @@ function answerWeighInRead(searchParams: URLSearchParams): Promise<Response> {
   return Promise.resolve(jsonResponse(weightBackend.weighIns.slice(offset, offset + limit)));
 }
 
-function answerBodyMeasurementRead(searchParams: URLSearchParams): Promise<Response> {
+async function answerBodyMeasurementRead(searchParams: URLSearchParams): Promise<Response> {
   weightBackend.bodyRequestCount += 1;
+  const requestedKind = (searchParams.get("kind") ?? "").replace("eq.", "");
+  weightBackend.bodyRequestCountByKind[requestedKind] =
+    (weightBackend.bodyRequestCountByKind[requestedKind] ?? 0) + 1;
+  await weightBackend.bodyKindGates[requestedKind];
   if (weightBackend.bodyReadsHang) {
     return new Promise(() => undefined);
   }
-  if (weightBackend.bodyReadsFail) {
+  const kind = requestedKind;
+  if (weightBackend.bodyReadsFail || weightBackend.bodyKindsFail.includes(kind)) {
     return Promise.resolve(
       jsonResponse(
         { code: "XX000", message: LEAKY_DATABASE_MESSAGE, details: null, hint: null },
@@ -209,7 +226,6 @@ function answerBodyMeasurementRead(searchParams: URLSearchParams): Promise<Respo
       ),
     );
   }
-  const kind = (searchParams.get("kind") ?? "").replace("eq.", "");
   const rows = weightBackend.bodyMeasurements
     .filter((row) => row.kind === kind)
     .sort((first, second) => String(second.local_date).localeCompare(String(first.local_date)));

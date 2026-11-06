@@ -1,5 +1,6 @@
 import { useBodyCompositionKind } from "@keylow/api-client";
 import { BODY_COMPOSITION } from "@keylow/core/copy";
+import { bodyCompositionSectionStage } from "@keylow/core/weight";
 import { useRouter } from "expo-router";
 import { Text as NativeText, View } from "react-native";
 
@@ -104,7 +105,16 @@ export function BodyCompositionSection({
         />
       );
     }
-    if (readings.some((reading) => reading.status === "loading")) {
+    const cards = readings.flatMap((reading) =>
+      reading.status === "readings" ? [reading.card] : [],
+    );
+    // The phone has no paused reads, so it is always online here.
+    const stage = bodyCompositionSectionStage({
+      statuses: readings.map((reading) => reading.status),
+      hasCards: cards.length > 0,
+      isOnline: true,
+    });
+    if (stage === "loading") {
       return (
         <View
           accessible
@@ -116,7 +126,7 @@ export function BodyCompositionSection({
         </View>
       );
     }
-    if (readings.some((reading) => reading.status === "error")) {
+    if (stage === "error") {
       return (
         <BodyCompositionPrompt
           retry={BODY_COMPOSITION.error.retry}
@@ -133,9 +143,6 @@ export function BodyCompositionSection({
         />
       );
     }
-    const cards = readings.flatMap((reading) =>
-      reading.status === "readings" ? [reading.card] : [],
-    );
 
     return (
       <>

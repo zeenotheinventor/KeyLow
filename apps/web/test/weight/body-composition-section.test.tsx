@@ -289,6 +289,30 @@ describe("BodyCompositionSection", () => {
     });
   });
 
+  describe("when one kind failed and the other has readings", () => {
+    it("should be the error state in place of the card, and Try again reads only the failed kind", async () => {
+      weightBackend.bodyMeasurements = goldenBodyFat();
+      weightBackend.bodyKindsFail = ["lean_mass_kg"];
+      renderSection();
+
+      const alert = await screen.findByRole("alert");
+      await waitFor(() => {
+        expect(weightBackend.bodyRequestCountByKind.body_fat_pct).toBeGreaterThan(0);
+      });
+      expect(screen.queryByRole("region", { name: "Body fat" })).toBeNull();
+      const before = { ...weightBackend.bodyRequestCountByKind };
+
+      fireEvent.click(within(alert).getByRole("button", { name: BODY_COMPOSITION.error.retry }));
+
+      await waitFor(() => {
+        expect(weightBackend.bodyRequestCountByKind.lean_mass_kg).toBe(
+          (before.lean_mass_kg ?? 0) + 1,
+        );
+      });
+      expect(weightBackend.bodyRequestCountByKind.body_fat_pct).toBe(before.body_fat_pct);
+    });
+  });
+
   describe("offline", () => {
     it("should be the error state with no Try again and no loading shapes when nothing was read", async () => {
       onlineManager.setOnline(false);

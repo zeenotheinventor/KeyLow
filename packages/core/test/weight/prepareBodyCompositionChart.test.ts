@@ -1,17 +1,10 @@
-import { WEIGHT_SCREEN, describeChartDate } from "@keylow/core/copy";
-import { addCalendarDays } from "@keylow/core/dates";
-import { rangeWindow } from "@keylow/core/weight";
+import { describe, expect, it } from "vitest";
 
-import { prepareBodyCompositionChart } from "../../components/BodyCompositionChart";
+import { WEIGHT_SCREEN, describeChartDate } from "../../src/copy";
+import { addCalendarDays } from "../../src/dates";
+import { prepareBodyCompositionChart, rangeWindow } from "../../src/weight";
 
-import type { CompositionInputPoint } from "../../components/BodyCompositionChart";
-import type { WeightRange } from "@keylow/core/weight";
-
-// The folder's public surface also holds the figure, which reads the saved Appearance setting.
-jest.mock("@react-native-async-storage/async-storage", () => ({
-  __esModule: true,
-  default: { getItem: () => Promise.resolve(null), setItem: () => Promise.resolve() },
-}));
+import type { BodySplitPoint, WeightRange } from "../../src/weight";
 
 const today = "2026-10-23";
 
@@ -20,16 +13,16 @@ const dayOf = (daysAgo: number) => addCalendarDays(today, -daysAgo);
 const pointOf = (
   daysAgo: number,
   { fat = 20, lean = 60, segment = 0 }: { fat?: number; lean?: number; segment?: number } = {},
-): CompositionInputPoint => ({ date: dayOf(daysAgo), segment, fat, lean });
+): BodySplitPoint => ({ date: dayOf(daysAgo), segment, fat, lean });
 
 // One point a day for the last `days` days, the body fat falling a little and the lean mass staying about level.
-const everyDay = (days: number): CompositionInputPoint[] =>
+const everyDay = (days: number): BodySplitPoint[] =>
   Array.from({ length: days }, (_, index) => {
     const daysAgo = days - 1 - index;
     return pointOf(daysAgo, { fat: 22 - index * 0.02, lean: 63 + (index % 3) * 0.1 });
   });
 
-const prepare = (points: readonly CompositionInputPoint[], range: WeightRange = 90) =>
+const prepare = (points: readonly BodySplitPoint[], range: WeightRange = 90) =>
   prepareBodyCompositionChart({ points, range, today });
 
 describe("prepareBodyCompositionChart", () => {

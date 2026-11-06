@@ -1,6 +1,8 @@
+import type { WeightChartView } from "@/lib/weightChartView";
 import type { WeighIn } from "@keylow/api-client";
 import type { TrendPoint } from "@keylow/core/engine";
 import type { WeightRange } from "@keylow/core/weight";
+import type { ReactNode } from "react";
 
 export type WeightTrendCardProps = {
   /** Every weigh-in, as the hook returns them. */
@@ -18,4 +20,10 @@ export type WeightTrendCardProps = {
   range: WeightRange;
   /** The range control's choice. */
   onRangeChange: (range: WeightRange) => void;
+  /** Which figure the card draws under its range control: the weight chart with its legend, or `composition`. */
+  view: WeightChartView;
+  /** The Chart view switch's choice. */
+  onViewChange: (view: WeightChartView) => void;
+  /** What replaces the weight chart and its legend in the `composition` view. */
+  composition: ReactNode;
 };

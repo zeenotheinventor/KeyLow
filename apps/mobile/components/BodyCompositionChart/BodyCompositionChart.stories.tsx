@@ -1,8 +1,8 @@
 import { addCalendarDays } from "@keylow/core/dates";
+import { prepareBodyCompositionChart } from "@keylow/core/weight";
 import { View } from "react-native";
 
 import { BodyCompositionChart } from "./BodyCompositionChart";
-import { prepareBodyCompositionChart } from "./prepareBodyCompositionChart";
 
 import type { BodyCompositionChartProps, CompositionInputPoint } from "./types";
 import type { WeightRange } from "@keylow/core/weight";

@@ -2,6 +2,7 @@
 
 import { useBodyCompositionKind } from "@keylow/api-client";
 import { BODY_COMPOSITION } from "@keylow/core/copy";
+import { bodyCompositionSectionStage } from "@keylow/core/weight";
 import { useId } from "react";
 
 import { BodyCompositionCard } from "../BodyCompositionCard";
@@ -27,26 +28,42 @@ import { useIsOnline } from "@/lib/useIsOnline";
  * Offline there is no banner and no notice, since the page draws none: readings already read stay as they
  * are. A read pauses offline, so a kind with nothing read is neither failed nor finished, and the section
  * draws the error state with no Try again, since the read goes ahead by itself when the connection returns.
+ *
+ * Under the Composition view (`isUnderComposition`) the view above draws the loading shape, the error state,
+ * the quiet line and the lean mass caption, so none is drawn twice. The section draws its heading and the
+ * cards of the kinds that have readings, and nothing, not even its heading, when it has none.
  */
-export function BodyCompositionSection({ range, today }: BodyCompositionSectionProps) {
+export function BodyCompositionSection({
+  range,
+  today,
+  isUnderComposition = false,
+}: BodyCompositionSectionProps) {
   const headingId = useId();
   const isOnline = useIsOnline();
   const bodyFat = useBodyCompositionKind("body_fat_pct", { range, today });
   const leanMass = useBodyCompositionKind("lean_mass_kg", { range, today });
   const kinds = [bodyFat, leanMass];
+  const cards = kinds.flatMap((kind) => (kind.status === "readings" ? [kind.card] : []));
 
   function renderBody() {
-    if (kinds.some((kind) => kind.status === "loading")) {
-      if (!isOnline) {
-        return (
-          <ErrorState
-            title={BODY_COMPOSITION.error.title}
-            body={BODY_COMPOSITION.error.body}
-            size="list"
-          />
-        );
-      }
-
+    if (isUnderComposition) {
+      return renderCards();
+    }
+    const stage = bodyCompositionSectionStage({
+      statuses: kinds.map((kind) => kind.status),
+      hasCards: cards.length > 0,
+      isOnline,
+    });
+    if (stage === "paused") {
+      return (
+        <ErrorState
+          title={BODY_COMPOSITION.error.title}
+          body={BODY_COMPOSITION.error.body}
+          size="list"
+        />
+      );
+    }
+    if (stage === "loading") {
       return (
         <Skeleton label={BODY_COMPOSITION.loadingLabel} className="grid gap-2 lg:grid-cols-2">
           <SkeletonBone className="h-[106px] rounded-large" />
@@ -54,7 +71,7 @@ export function BodyCompositionSection({ range, today }: BodyCompositionSectionP
         </Skeleton>
       );
     }
-    if (kinds.some((kind) => kind.status === "error")) {
+    if (stage === "error") {
       return (
         <ErrorState
           title={BODY_COMPOSITION.error.title}
@@ -71,8 +88,7 @@ export function BodyCompositionSection({ range, today }: BodyCompositionSectionP
         />
       );
     }
-    const cards = kinds.flatMap((kind) => (kind.status === "readings" ? [kind.card] : []));
-    if (cards.length === 0) {
+    if (stage === "no-readings") {
       return (
         <Card>
           {/* The board draws the line in the label size at the regular weight, which no type class has. */}
@@ -83,6 +99,10 @@ export function BodyCompositionSection({ range, today }: BodyCompositionSectionP
       );
     }
 
+    return renderCards();
+  }
+
+  function renderCards() {
     return (
       <>
         <div className={cards.length === 2 ? "grid gap-2 lg:grid-cols-2" : "grid gap-2"}>
@@ -90,13 +110,17 @@ export function BodyCompositionSection({ range, today }: BodyCompositionSectionP
             <BodyCompositionCard key={card.kind} {...card} />
           ))}
         </div>
-        {cards.some((card) => card.kind === "lean_mass_kg") ? (
+        {!isUnderComposition && cards.some((card) => card.kind === "lean_mass_kg") ? (
           <p className="px-1 text-caption tabular-nums text-text-muted">
             {BODY_COMPOSITION.caption}
           </p>
         ) : null}
       </>
     );
+  }
+
+  if (isUnderComposition && cards.length === 0) {
+    return null;
   }
 
   return (
