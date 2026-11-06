@@ -263,10 +263,13 @@ const table: readonly [foodWord: string, wanted: RegExp][] = [
   ["tomato paste", /^Tomato puree/],
   ["curry paste", /^Curry paste/],
   ["coconut milk", /^Coconut milk/],
-  ["chickpea", /^Chick ?peas/],
+  ["chickpea", /chick peas/i],
   ["cheese", /^Cheese, Cheddar/],
   ["cream cheese", /^Cheese, (soft|cream)/],
   ["vanilla extract", /^Vanilla/],
+  ["yoghurt", /^Yogurt, /],
+  ["natural yoghurt", /^Yogurt, .*plain/],
+  ["greek yoghurt", /^Yogurt, Greek style, plain/],
 ];
 
 type SeedName = "full" | "subset";
