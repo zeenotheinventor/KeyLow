@@ -224,6 +224,7 @@ export {
   useMuscleList,
   useMuscleScaleList,
   useMuscleState,
+  useRoutineProgress,
   useRoutineTrendSets,
   useSession,
   useSessionBarView,
@@ -344,6 +345,10 @@ export type {
   ExerciseProgress,
   ExerciseProgressBody,
   ExerciseWeekItem,
+  RoutineProgress,
+  RoutineProgressDayItem,
+  RoutineProgressExercise,
+  RoutineProgressState,
 } from "./hooks";
 export { RoutineRuleError } from "./errors";
 export type { RoutineRule } from "./errors";

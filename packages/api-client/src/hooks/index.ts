@@ -120,6 +120,13 @@ export type {
 } from "./exerciseProgressTypes";
 export { useExerciseTrendSets } from "./useExerciseTrendSets";
 export type { UseTrendSetsOptions } from "./useExerciseTrendSets";
+export { useRoutineProgress } from "./useRoutineProgress";
+export type {
+  RoutineProgress,
+  RoutineProgressDayItem,
+  RoutineProgressExercise,
+  RoutineProgressState,
+} from "./routineProgressTypes";
 export { useRoutineTrendSets } from "./useRoutineTrendSets";
 export { useSession } from "./useSession";
 export { useWeightUnit } from "./useWeightUnit";
