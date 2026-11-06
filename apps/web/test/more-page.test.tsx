@@ -203,6 +203,25 @@ describe("More page", () => {
     expect(within(settings).getByRole("radio", { name: "Heat" })).toHaveProperty("checked", true);
   });
 
+  it("should put Export my data first in Account, above Sign out, as a row that opens the export page", async () => {
+    await renderPage();
+
+    const account = screen.getByRole("region", { name: "Account" });
+    const link = within(account).getByRole("link", { name: /Export my data/ });
+    expect(link.getAttribute("href")).toBe("/more/export");
+    expect(link.textContent).toBe("Export my dataA file with everything in your account");
+    expect(link.querySelector("svg")?.getAttribute("aria-hidden")).toBe("true");
+    expect(link.querySelectorAll("svg")).toHaveLength(1);
+    expect(
+      within(account)
+        .getAllByRole("listitem")
+        .map((row) => row.textContent),
+    ).toEqual([
+      "Export my dataA file with everything in your account",
+      expect.stringContaining("Sign out"),
+    ]);
+  });
+
   it("should show who is signed in under the Sign out button", async () => {
     await renderPage();
 

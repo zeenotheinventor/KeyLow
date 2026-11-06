@@ -1,4 +1,4 @@
-import { FileText, Heart, Pencil, Shield } from "lucide-react";
+import { FileJson, FileText, Heart, Pencil, Shield } from "lucide-react";
 import { userEvent } from "storybook/test";
 
 import { ListRow } from "./ListRow";
@@ -110,6 +110,27 @@ export const Loading: Story = {
         value="Thursday"
         onClick={() => undefined}
         disabled
+      />
+    </>
+  ),
+};
+
+// A row that is done has a tick at its end, named by its label, as the export's file row shows it. A long name
+// wraps inside the row.
+export const WithTick: Story = {
+  render: () => (
+    <>
+      <ListRow
+        icon={FileJson}
+        title="ki-lo-export-2026-10-25.json"
+        subtitle="1.8 MB · Ready to save"
+        trailing={{ kind: "tick", label: "Ready" }}
+      />
+      <ListRow
+        icon={FileJson}
+        title="ki-lo-export-2026-10-25-with-a-very-long-name-that-wraps-inside-the-row.json"
+        subtitle="1.8 MB · Downloaded"
+        trailing={{ kind: "tick", label: "Downloaded" }}
       />
     </>
   ),

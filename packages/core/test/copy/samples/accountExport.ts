@@ -7,6 +7,10 @@ export const samples: Record<string, () => string[]> = {
     copy.describeExportReady("1.8 MB"),
     copy.describeExportReady("640 KB"),
   ],
+  describeExportDownloaded: () => [
+    copy.describeExportDownloaded("1.8 MB"),
+    copy.describeExportDownloaded("640 KB"),
+  ],
   describeExportSaved: () => [
     copy.describeExportSaved("1.8 MB", "Downloads"),
     copy.describeExportSaved("1.8 MB", ""),

@@ -52,10 +52,11 @@ export type UseAccountExportFile = {
    */
   dispatch: (event: AccountExportScreenEvent) => void;
   /**
-   * Whether the connection was down at the moment the last preparing attempt failed. It is read when called,
-   * not in a render, and a retry clears it.
+   * Whether the connection was down at the moment the last preparing attempt failed. It is state, set in the same
+   * update as the failed status, so a screen can draw from it and never sees the one without the other. A retry
+   * and leaving the screen clear it.
    */
-  wasOfflineAtFailure: () => boolean;
+  failedOffline: boolean;
 };
 
 const deviceTimeZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -81,11 +82,15 @@ export function useAccountExportFile({
     (_previous: string | undefined, next: string | undefined) => next,
     undefined,
   );
+  // A reducer for the same reason as the name above: it is set from the catch that the starting effect reaches.
+  const [failedOffline, setFailedOffline] = useReducer(
+    (_previous: boolean, next: boolean) => next,
+    false,
+  );
   const fileRef = useRef<AccountExportFile | null>(null);
   const readExportRef = useRef(readExport);
   const isActiveRef = useRef(false);
   const isPreparingRef = useRef(false);
-  const wasOfflineAtFailureRef = useRef(false);
 
   // The latest reader is read when an attempt starts, so a caller need not keep its function stable.
   useEffect(() => {
@@ -108,7 +113,7 @@ export function useAccountExportFile({
       }
     } catch {
       if (isActiveRef.current) {
-        wasOfflineAtFailureRef.current = !onlineManager.isOnline();
+        setFailedOffline(!onlineManager.isOnline());
         dispatchToReducer({ type: "failedWhile", step: "preparing" });
       }
     } finally {
@@ -127,6 +132,7 @@ export function useAccountExportFile({
       isActiveRef.current = false;
       fileRef.current = null;
       setFileName(undefined);
+      setFailedOffline(false);
       dispatchToReducer({ type: "reset" });
     };
   }, [isActive, runExport]);
@@ -138,7 +144,7 @@ export function useAccountExportFile({
           return;
         }
         fileRef.current = null;
-        wasOfflineAtFailureRef.current = false;
+        setFailedOffline(false);
         setFileName(undefined);
         dispatchToReducer(event);
         void runExport();
@@ -153,7 +159,6 @@ export function useAccountExportFile({
   );
 
   const readFile = useCallback(() => fileRef.current, []);
-  const wasOfflineAtFailure = useCallback(() => wasOfflineAtFailureRef.current, []);
 
   return {
     state,
@@ -164,6 +169,6 @@ export function useAccountExportFile({
         : undefined,
     readFile,
     dispatch,
-    wasOfflineAtFailure,
+    failedOffline,
   };
 }

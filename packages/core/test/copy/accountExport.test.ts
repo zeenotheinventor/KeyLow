@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import { collectStrings } from "./collectStrings";
-import { ACCOUNT_EXPORT_COPY, describeExportReady, describeExportSaved } from "../../src/copy";
+import {
+  ACCOUNT_EXPORT_COPY,
+  ACCOUNT_EXPORT_WEB_COPY,
+  describeExportDownloaded,
+  describeExportReady,
+  describeExportSaved,
+} from "../../src/copy";
 
 describe("describeExportReady", () => {
   it("should word the file row as export · done prints it before it is saved", () => {
@@ -17,6 +23,38 @@ describe("describeExportSaved", () => {
   // A recommendation, awaiting Zee: the picked Directory can come back with an empty name.
   it("should say the folder you picked when the folder has no name", () => {
     expect(describeExportSaved("640 KB", "")).toBe("640 KB · Saved to the folder you picked");
+  });
+});
+
+describe("describeExportDownloaded", () => {
+  it("should word the file row as export · downloaded prints it once the browser has the file", () => {
+    expect(describeExportDownloaded("1.8 MB")).toBe("1.8 MB · Downloaded");
+  });
+});
+
+describe("ACCOUNT_EXPORT_WEB_COPY", () => {
+  it("should word the footers and the offline body as the web export boards print them", () => {
+    expect(ACCOUNT_EXPORT_WEB_COPY).toEqual({
+      ready: {
+        footer:
+          "Save file downloads it through your browser. It stays in your downloads until you move or delete it.",
+      },
+      saved: {
+        tickLabel: "Downloaded",
+        footer:
+          "Find it in your browser's downloads. If it is not there, open Export my data again.",
+      },
+      offline: {
+        body: "Preparing your file needs a connection. It starts when you're back online.",
+      },
+    });
+  });
+
+  it("should not name a phone or a Files app, which the web has none of", () => {
+    const text = collectStrings(ACCOUNT_EXPORT_WEB_COPY).join("\n");
+
+    expect(text).not.toMatch(/phone|Files app|folder/i);
+    expect(text).not.toContain("—");
   });
 });
 

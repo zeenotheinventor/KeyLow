@@ -316,7 +316,7 @@ describe("useAccountExportFile and the connection", () => {
     });
     onlineManager.setOnline(true);
 
-    expect(result.current.wasOfflineAtFailure()).toBe(true);
+    expect(result.current.failedOffline).toBe(true);
   });
 
   it("should say the failure happened online when the connection was up at that moment", async () => {
@@ -327,7 +327,7 @@ describe("useAccountExportFile and the connection", () => {
     });
     onlineManager.setOnline(false);
 
-    expect(result.current.wasOfflineAtFailure()).toBe(false);
+    expect(result.current.failedOffline).toBe(false);
   });
 
   it("should forget an offline failure once the export is retried", async () => {
@@ -343,6 +343,44 @@ describe("useAccountExportFile and the connection", () => {
       result.current.dispatch({ type: "retry" });
     });
 
-    expect(result.current.wasOfflineAtFailure()).toBe(false);
+    expect(result.current.failedOffline).toBe(false);
+  });
+
+  it("should be false before anything has failed", () => {
+    onlineManager.setOnline(false);
+    readExport.mockReturnValue(new Promise<AccountExport>(() => undefined));
+
+    const { result } = renderExportFile();
+
+    expect(result.current.failedOffline).toBe(false);
+  });
+
+  it("should be in the same render as the failed status, so a screen never sees one without the other", async () => {
+    onlineManager.setOnline(false);
+    readExport.mockRejectedValue(new Error("offline"));
+    const seen: Array<[string, boolean]> = [];
+    const { result } = renderHook(() => {
+      const hook = useAccountExportFile({ isActive: true, readExport });
+      seen.push([hook.state.status, hook.failedOffline]);
+      return hook;
+    });
+    await waitFor(() => {
+      expect(result.current.state.status).toBe("failed");
+    });
+
+    expect(seen).not.toContainEqual(["failed", false]);
+  });
+
+  it("should drop an offline failure when the screen goes", async () => {
+    onlineManager.setOnline(false);
+    readExport.mockRejectedValue(new Error("offline"));
+    const { result, rerender } = renderExportFile();
+    await waitFor(() => {
+      expect(result.current.failedOffline).toBe(true);
+    });
+
+    rerender({ isActive: false });
+
+    expect(result.current.failedOffline).toBe(false);
   });
 });

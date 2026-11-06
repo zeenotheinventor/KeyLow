@@ -171,6 +171,68 @@ describe("ListRow", () => {
     });
   });
 
+  describe("trailing tick", () => {
+    it("should draw a tick named by its label, in the success colour, at the end of the row", () => {
+      renderInList(
+        <ListRow
+          title="ki-lo-export-2026-10-25.json"
+          trailing={{ kind: "tick", label: "Ready" }}
+        />,
+      );
+
+      const tick = screen.getByRole("img", { name: "Ready" });
+
+      const icon = tick.querySelector("svg");
+      expect(icon?.getAttribute("class")).toContain("stroke-success");
+      expect(icon?.getAttribute("class")).toContain("size-5");
+      expect(tick.parentElement?.lastElementChild).toBe(tick);
+    });
+
+    it("should draw the spinner alone while the row is loading, not a done tick beside it", () => {
+      renderInList(
+        <ListRow
+          title="Pull"
+          onClick={() => undefined}
+          loading
+          trailing={{ kind: "tick", label: "Ready" }}
+        />,
+      );
+
+      expect(screen.getByRole("img", { name: "Loading" })).toBeTruthy();
+      expect(screen.queryByRole("img", { name: "Ready" })).toBeNull();
+    });
+
+    it("should keep the tick before the chevron on a row that goes somewhere", () => {
+      renderWithRouter(
+        <ul>
+          <ListRow title="Export" href="/more/export" trailing={{ kind: "tick", label: "Ready" }} />
+        </ul>,
+      );
+
+      const link = screen.getByRole("link", { name: /Export/ });
+      const tick = screen.getByRole("img", { name: "Ready" });
+
+      expect(tick.nextElementSibling?.tagName.toLowerCase()).toBe("svg");
+      expect(link.lastElementChild).toBe(tick.nextElementSibling);
+    });
+
+    it("should draw no tick on a row that has none", () => {
+      renderInList(<ListRow title="Expenditure" />);
+
+      expect(screen.queryByRole("img")).toBeNull();
+    });
+  });
+
+  describe("a long title", () => {
+    it("should break anywhere, so a long file name wraps inside the row", () => {
+      renderInList(<ListRow title="ki-lo-export-2026-10-25.json" />);
+
+      expect(screen.getByText("ki-lo-export-2026-10-25.json").className).toContain(
+        "[overflow-wrap:anywhere]",
+      );
+    });
+  });
+
   describe("chevron", () => {
     it("should show a decorative chevron on a row that goes somewhere", () => {
       renderInList(<ListRow title="Your foods" href="/foods" />);

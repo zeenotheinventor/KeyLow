@@ -30,6 +30,11 @@ type ListRowContent = {
   valueLook?: "quiet" | "numeral" | undefined;
   /** `muted` draws the value in the muted text colour, as the weigh-in the trend left out. */
   valueTone?: "muted" | undefined;
+  /**
+   * A tick at the end of the row for something that is done, such as the export's file row once it is ready. It is
+   * a picture with the label as its name, so the row's state is read out, and it is drawn after the value, before any chevron, and a row that is loading draws its spinner instead.
+   */
+  trailing?: { kind: "tick"; label: string } | undefined;
   /** The chevron marks a row that goes somewhere. Leave it off for an action such as signing out. */
   chevron?: boolean;
   disabled?: boolean;

@@ -1,5 +1,5 @@
 import { iconStroke } from "@keylow/tokens";
-import { ChevronRight } from "lucide-react";
+import { Check, ChevronRight } from "lucide-react";
 import Link from "next/link";
 
 import type { ListRowProps } from "./types";
@@ -34,6 +34,7 @@ export function ListRow({
   unit,
   valueLook = "quiet",
   valueTone,
+  trailing,
   href,
   onClick,
   submit,
@@ -51,7 +52,7 @@ export function ListRow({
   );
   const textLines = (
     <>
-      <span className="text-body-strong">{title}</span>
+      <span className="text-body-strong [overflow-wrap:anywhere]">{title}</span>
       {subtitle !== undefined && <span className="text-caption text-text-muted">{subtitle}</span>}
     </>
   );
@@ -93,6 +94,11 @@ export function ListRow({
           />
         </span>
       ) : null}
+      {!loading && trailing !== undefined && (
+        <span role="img" aria-label={trailing.label} className="flex shrink-0">
+          <Check aria-hidden className="size-5 stroke-success" strokeWidth={iconStroke} />
+        </span>
+      )}
       {!loading && interactive && chevron && (
         <ChevronRight
           aria-hidden
