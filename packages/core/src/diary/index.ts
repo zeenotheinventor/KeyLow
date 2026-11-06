@@ -82,6 +82,8 @@ export {
 export type { UnitOption } from "./startingAmount";
 export { foodNeedsReview, missingFieldsOf } from "./foodNeedsReview";
 export { isNumberBeingTyped } from "./isNumberBeingTyped";
+export { amountForPicker, amountLastLogged } from "./amountLastLogged";
+export type { LastLoggedFood, LoggableAmount } from "./amountLastLogged";
 export { amountInPickerUnits } from "./amountInPickerUnits";
 export type { MeasuredAmount } from "./amountInPickerUnits";
 export { changedQuickValues } from "./changedQuickValues";

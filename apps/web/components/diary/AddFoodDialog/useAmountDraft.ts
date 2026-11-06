@@ -1,5 +1,7 @@
 import { useFoodWithPortions, useRefreshOutdatedOffFood } from "@keylow/api-client";
 import {
+  amountForPicker,
+  amountLastLogged,
   amountOnUnitChange,
   foodNeedsReview,
   pickerChoices,
@@ -10,7 +12,7 @@ import {
 import { useState } from "react";
 
 import type { FoodWithPortionsState } from "@keylow/api-client";
-import type { AmountPortion, AmountPreview, UnitOption } from "@keylow/core/diary";
+import type { AmountPortion, AmountPreview, LastLoggedFood, UnitOption } from "@keylow/core/diary";
 import type { Food } from "@keylow/core/schemas";
 
 /** `unitLabel` is the words on the chip pressed, which finds it again when a refresh of the food gives its portions new ids. */
@@ -38,16 +40,25 @@ export type AmountDraft =
 /**
  * The amount step's state for the food chosen from the search: the food and its portions by id, and the
  * amount and the unit the person has typed. The amount and the unit start from core's default serving and
- * start again for another food. It writes nothing: the diary logs the amount and the recipe editor adds it
+ * start again for another food, unless the food was chosen from Recent: then they start at the amount it was
+ * last logged with, on the food as it is now. It writes nothing: the diary logs the amount and the recipe editor adds it
  * to its draft.
  */
-export function useAmountDraft(foodId: string | undefined): AmountDraft {
+export function useAmountDraft(
+  foodId: string | undefined,
+  lastLogged?: LastLoggedFood,
+): AmountDraft {
   const loaded = useFoodWithPortions(foodId ?? "");
   // An old branded food asks for its refresh, so the portions it has gained since appear as chips.
   useRefreshOutdatedOffFood(loaded.status === "ready" ? loaded.food : undefined);
   const [edits, setEdits] = useState<Edits | undefined>(undefined);
 
   if (foodId === undefined) {
+    // Back to the search forgets what was typed, so a food opened again starts where it opens: at the
+    // amount last logged for a Recent row.
+    if (edits !== undefined) {
+      setEdits(undefined);
+    }
     return { status: "idle" };
   }
   if (loaded.status !== "ready") {
@@ -57,7 +68,13 @@ export function useAmountDraft(foodId: string | undefined): AmountDraft {
   const { food } = loaded;
   // The chips and the amount are worked out from the one list, so a chip can never name a portion the preview lacks.
   const choices = pickerChoices(food, loaded.portions);
-  const start = startingAmount(food, choices.portions);
+  const start = startingAmount(
+    food,
+    choices.portions,
+    lastLogged === undefined
+      ? undefined
+      : amountForPicker(amountLastLogged(lastLogged, loaded.portions)),
+  );
   const ownEdits = edits?.foodId === foodId ? edits : undefined;
   // A chip pressed before a refresh of the food landed is found again by its label, with the amount kept.
   const picked = reselectPickedUnit(

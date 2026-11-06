@@ -1,5 +1,6 @@
 import { EntryNotFoundError, weekStartOf } from "@keylow/api-client";
 import { toLocalDate } from "@keylow/core/dates";
+import { amountLastLogged } from "@keylow/core/diary";
 import {
   planProgress,
   prefillNextSet,
@@ -9,7 +10,6 @@ import {
 } from "@keylow/core/training";
 import { isUndoWindowOpen } from "@keylow/core/widgets";
 
-import { amountLastLogged } from "../amountLastLogged";
 import { runOnce } from "./inFlight";
 import { WidgetActionError } from "./widgetActionError";
 import { emitWidgetActionDone } from "./widgetActionEvents";
@@ -158,13 +158,7 @@ export function logAgain(
       repositories.getMyTimeZone(),
     ]);
     const amount = amountLastLogged(
-      {
-        foodId: food.id,
-        entryId: entry.id,
-        loggedAt: entry.logged_at,
-        portionId: entry.portion_id,
-        snapshot: entry.snapshot,
-      },
+      { portionId: entry.portion_id, snapshot: entry.snapshot },
       portions,
     );
     const tapped = now();

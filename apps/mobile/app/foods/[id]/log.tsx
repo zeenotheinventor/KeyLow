@@ -14,6 +14,8 @@ import {
 } from "@keylow/core/copy";
 import { describeDay } from "@keylow/core/dates";
 import {
+  amountForPicker,
+  amountLastLogged,
   clockTimeOn,
   openingLoggedAt,
   pickerChoices,
@@ -28,7 +30,6 @@ import { AccessibilityInfo } from "react-native";
 import { FoodLoadState } from "../../../components/FoodLoadState";
 import { FavouriteFoodPortionPicker } from "../../../components/PortionPicker";
 import { useToast } from "../../../components/ui";
-import { amountForPicker, amountLastLogged } from "../../../lib/amountLastLogged";
 import { useIsOnline } from "../../../lib/connectivity";
 import {
   readLogContext,

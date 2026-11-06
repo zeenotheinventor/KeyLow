@@ -1,4 +1,4 @@
-import type { FoodSearchHit, RecipeSummary } from "@keylow/api-client";
+import type { FoodSearchHit, RecentFood, RecipeSummary } from "@keylow/api-client";
 import type { Ref } from "react";
 
 type CommonSearchStepProps = {
@@ -9,6 +9,8 @@ type CommonSearchStepProps = {
   searchRef?: Ref<HTMLInputElement> | undefined;
   /** A press on a row: go to the portion step for that food. */
   onOpenFood: (foodId: string) => void;
+  /** A press on a Recent row: go to the amount step at the amount it was last logged with. */
+  onOpenRecent: (food: RecentFood) => void;
 };
 
 /** The diary's search: foods found are logged at a time, and each row has a plus that logs its serving at once. */
@@ -25,13 +27,16 @@ export type LogSearchStepProps = CommonSearchStepProps & {
   onOpenRecipe: (recipe: RecipeSummary) => void;
   /** A press on a recipe row's plus: log one serving of it at once. */
   onAddRecipeServing: (recipe: RecipeSummary) => void;
+  /** A press on a Recent row's plus: log the amount it was last logged with at once. */
+  onAddRecent: (food: RecentFood) => void;
   /** A press on the Quick add row, which the idle search offers: calories and macros by hand. */
   onQuickAdd: () => void;
 };
 
 /**
  * A recipe's ingredient search: no Time field, no plus and no Quick add row, because an ingredient is
- * not logged and its amount matters, so every row ends in a chevron and opens the amount step.
+ * not logged and its amount matters, so every row ends in a chevron and opens the amount step. Its idle
+ * search is Recent alone, as the phone's is.
  */
 type IngredientSearchStepProps = CommonSearchStepProps & { mode: "ingredient" };
 

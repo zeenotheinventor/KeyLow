@@ -277,6 +277,7 @@ describe("the add food dialog, recipes", () => {
             query="chicken"
             onQueryChange={vi.fn()}
             onOpenFood={vi.fn()}
+            onOpenRecent={vi.fn()}
           />
         </RecipeLogProvider>,
       );

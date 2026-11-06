@@ -1,10 +1,11 @@
-import { SNAPSHOT_VERSION } from "@keylow/core/diary";
-import { buildFoodPortion } from "@keylow/core/testing";
+import { describe, expect, it } from "vitest";
 
-import { amountLastLogged, amountForPicker } from "./amountLastLogged";
+import { amountForPicker, amountLastLogged } from "../../src/diary/amountLastLogged";
+import { SNAPSHOT_VERSION } from "../../src/diary/versions";
+import { buildFoodPortion } from "../../src/testing";
 
-import type { RecentFood } from "@keylow/api-client";
-import type { FoodSnapshot } from "@keylow/core/diary";
+import type { LastLoggedFood } from "../../src/diary/amountLastLogged";
+import type { FoodSnapshot } from "../../src/diary/schemas";
 
 const foodId = "00000000-0000-4000-8000-000000000001";
 const medium = buildFoodPortion({ id: "portion-medium", label: "1 medium", grams: 100 });
@@ -12,11 +13,8 @@ const medium = buildFoodPortion({ id: "portion-medium", label: "1 medium", grams
 function recentOf(
   snapshot: Partial<FoodSnapshot> & Pick<FoodSnapshot, "quantity" | "unit">,
   portionId: string | null = null,
-): RecentFood {
+): LastLoggedFood {
   return {
-    foodId,
-    entryId: "entry-1",
-    loggedAt: "2026-10-14T11:00:00Z",
     portionId,
     snapshot: {
       v: SNAPSHOT_VERSION,

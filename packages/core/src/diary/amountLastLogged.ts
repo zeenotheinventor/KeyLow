@@ -1,9 +1,18 @@
-import { amountInPickerUnits, matchPortionOnFood } from "@keylow/core/diary";
+import { amountInPickerUnits } from "./amountInPickerUnits";
+import { matchPortionOnFood } from "./matchPortionOnFood";
 
-import type { PortionAmount } from "../components/PortionPicker";
-import type { RecentFood } from "@keylow/api-client";
-import type { QuantityUnit, SpoonPortion } from "@keylow/core/nutrition";
-import type { FoodPortion } from "@keylow/core/schemas";
+import type { ChosenAmount } from "./previewAmount";
+import type { FoodSnapshot } from "./schemas";
+import type { QuantityUnit } from "../nutrition/units";
+import type { SpoonPortion } from "../nutrition/volume";
+import type { FoodPortion } from "../schemas/food";
+
+/** What a food's last entry remembers of its amount: the snapshot, and the portion the entry pointed to. */
+export type LastLoggedFood = {
+  /** The portion that entry used, null once the portion was replaced or when the unit was not `portion`. */
+  portionId: string | null;
+  snapshot: FoodSnapshot;
+};
 
 /** An amount of a food to log: a count of one of its portions, or a measured amount. */
 export type LoggableAmount =
@@ -12,11 +21,11 @@ export type LoggableAmount =
 
 /**
  * The amount a Recent food was last logged with, to log it again against the food as it is now. A portion
- * is looked up by core's `matchPortionOnFood`, which falls back to the grams or millilitres it came to when
+ * is looked up by `matchPortionOnFood`, which falls back to the grams or millilitres it came to when
  * the portion has been replaced, so the amount eaten is kept exactly.
  */
 export function amountLastLogged(
-  recent: RecentFood,
+  recent: LastLoggedFood,
   portions: readonly FoodPortion[],
 ): LoggableAmount {
   const { snapshot } = recent;
@@ -34,6 +43,6 @@ export function amountLastLogged(
 }
 
 /** The same amount in the units the portion picker offers, which are portions, grams and millilitres. */
-export function amountForPicker(amount: LoggableAmount): PortionAmount {
+export function amountForPicker(amount: LoggableAmount): ChosenAmount<FoodPortion | SpoonPortion> {
   return amount.unit === "portion" ? amount : amountInPickerUnits(amount);
 }
