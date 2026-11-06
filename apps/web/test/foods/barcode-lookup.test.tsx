@@ -351,6 +351,88 @@ describe("BarcodeLookup", () => {
       });
     });
 
+    describe("given onFound", () => {
+      const found = makeFood({ id: "found-food", name: "Oat cakes" });
+
+      function renderHanded() {
+        const onFound = vi.fn<(food: typeof found) => void>();
+        render(
+          <ToastProvider>
+            <FoodLogActionsProvider>
+              <BarcodeLookup onClose={vi.fn()} onFound={onFound} />
+            </FoodLogActionsProvider>
+          </ToastProvider>,
+        );
+        return onFound;
+      }
+
+      it("should hand the food back once and open no Add food dialog", () => {
+        useFoodByBarcode.mockReturnValue({
+          result: { status: "found", food: found },
+          isLoading: false,
+          error: null,
+        });
+        const onFound = renderHanded();
+
+        lookUp(VALID_EAN_13);
+
+        expect(onFound).toHaveBeenCalledExactlyOnceWith(found);
+        expect(screen.queryByRole("dialog")).toBeNull();
+      });
+
+      it("should not hand a food back again when a refetch changes its data but not which food it is", () => {
+        useFoodByBarcode.mockReturnValue({
+          result: { status: "found", food: found },
+          isLoading: false,
+          error: null,
+        });
+        const onFound = renderHanded();
+        lookUp(VALID_EAN_13);
+
+        useFoodByBarcode.mockReturnValue({
+          result: { status: "found", food: { ...found, kcal: 999 } },
+          isLoading: false,
+          error: null,
+        });
+        fireEvent.change(screen.getByRole("textbox", { name: "Barcode number" }), {
+          target: { value: "5000159484695 " },
+        });
+
+        expect(onFound).toHaveBeenCalledTimes(1);
+      });
+
+      it("should hand the same food back again when the same code is looked up again", () => {
+        useFoodByBarcode.mockReturnValue({
+          result: { status: "found", food: found },
+          isLoading: false,
+          error: null,
+        });
+        const onFound = renderHanded();
+        lookUp(VALID_EAN_13);
+
+        lookUp(VALID_EAN_13);
+
+        expect(onFound).toHaveBeenCalledTimes(2);
+      });
+
+      it("should keep the page: the link to create the food opens in a new tab, without the day", () => {
+        useFoodByBarcode.mockReturnValue({
+          result: { status: "not_found", code: VALID_EAN_13 },
+          isLoading: false,
+          error: null,
+        });
+        renderHanded();
+
+        lookUp(VALID_EAN_13);
+
+        const link = screen.getByRole("link", {
+          name: "Create food with this barcode (opens in a new tab)",
+        });
+        expect(link.getAttribute("href")).toBe(`/foods/new?barcode=${VALID_EAN_13}&for=recipe`);
+        expect(link.getAttribute("target")).toBe("_blank");
+      });
+    });
+
     it("should say the code is not in Ki-Lo or Open Food Facts and offer to create a food with it", () => {
       useFoodByBarcode.mockReturnValue({
         result: { status: "not_found", code: UPC_A_AS_STORED },

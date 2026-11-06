@@ -10,6 +10,8 @@ export type BarcodeButton = {
   label: string;
   /** Set it when the button opens a panel, so assistive technology knows whether it is open. */
   expanded?: boolean;
+  /** Switches the button off, such as a lookup that needs a connection. It stays focusable and says it is disabled. */
+  disabled?: boolean;
   onClick: () => void;
 };
 

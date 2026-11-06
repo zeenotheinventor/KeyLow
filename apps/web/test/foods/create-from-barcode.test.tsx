@@ -108,6 +108,27 @@ describe("creating a food from a scanned barcode, end to end", () => {
     expect(navigation.pathname).toBe(`/foods/${CREATED_FOOD_ID}`);
   });
 
+  it("should open no dialog when the barcode came from a recipe's Add ingredient dialog", async () => {
+    navigation.search = new URLSearchParams({ barcode: "5000159484695", for: "recipe" });
+    render(<Host />);
+
+    act(() => {
+      createTheFood();
+    });
+
+    await waitFor(() => {
+      expect(navigation.pathname).toBe(`/foods/${CREATED_FOOD_ID}`);
+    });
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("should still lock the barcode when it came from a recipe", () => {
+    navigation.search = new URLSearchParams({ barcode: "5000159484695", for: "recipe" });
+    render(<Host />);
+
+    expect(screen.getByRole("textbox", { name: "Barcode" })).toHaveProperty("readOnly", true);
+  });
+
   it("should open no dialog when the food was made without a scanned barcode", async () => {
     navigation.search = new URLSearchParams();
     render(<Host />);
