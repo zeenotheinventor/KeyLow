@@ -12,6 +12,7 @@ export { expenditureChartWeeks } from "./chartWeeks";
 export type { ExpenditureChartWeek } from "./chartWeeks";
 export { expenditureBand } from "./expenditureBand";
 export type { ExpenditureBand } from "./expenditureBand";
+export { programCheckInDate } from "./programCheckInDate";
 export { settlingProgress } from "./settlingProgress";
 export type { SettlingProgram, SettlingProgress } from "./settlingProgress";
 export type { ProgramSnapshot, ProgramTargets } from "./types";

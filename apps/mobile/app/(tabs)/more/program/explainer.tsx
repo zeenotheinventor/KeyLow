@@ -1,4 +1,5 @@
 import { useProgramSummary } from "@keylow/api-client";
+import { programCheckInDate } from "@keylow/core/program";
 import { Redirect, Stack, useRouter } from "expo-router";
 
 import { ProgramExplainerSheet } from "../../../../components/ProgramExplainerSheet";
@@ -48,11 +49,7 @@ export default function ProgramExplainerRoute() {
       {isLeaving ? <Redirect href="/more/program" /> : null}
       {/* The check-in day is the weekday the programme set up on, which its schedule keeps: the next check-in's, or the start's before one is set. */}
       {program === undefined || program === null ? null : (
-        <ProgramExplainerSheet
-          open
-          checkInDate={program.nextCheckinDate ?? program.startedOn}
-          onClose={close}
-        />
+        <ProgramExplainerSheet open checkInDate={programCheckInDate(program)} onClose={close} />
       )}
     </>
   );

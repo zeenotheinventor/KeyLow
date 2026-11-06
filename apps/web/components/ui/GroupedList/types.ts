@@ -3,6 +3,12 @@ import type * as React from "react";
 export type GroupedListProps = {
   /** The group's name. It heads the section and names it. */
   title: string;
+  /**
+   * Names the section without a heading above it, for a group that has no title of its own, such as a card of
+   * actions. The section keeps its name (the `label`, or the title), and there is no header row, so no source
+   * and no See more are drawn.
+   */
+  hidesTitle?: boolean;
   /** Where the group comes from, written after the title, such as "UK CoFID". */
   source?: string;
   /**

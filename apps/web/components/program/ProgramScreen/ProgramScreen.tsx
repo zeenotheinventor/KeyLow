@@ -5,7 +5,9 @@ import { OFFLINE_BANNER, PROGRAM_ERROR, PROGRAM_SCREEN } from "@keylow/core/copy
 import { WifiOff } from "lucide-react";
 
 import { COLUMNS_CLASS_NAME } from "./columns";
+import { ProgramActionsCard } from "./ProgramActionsCard";
 import { CheckinSummaryCard } from "../CheckinSummaryCard";
+import { ExpenditureChartCard } from "../ExpenditureChartCard";
 import { ExpenditureHeroCard } from "../ExpenditureHeroCard";
 import { NoProgramView } from "../NoProgramView";
 import { ProgramLoading } from "../ProgramLoading";
@@ -24,15 +26,14 @@ const MORE_HREF = "/more";
 
 /**
  * The Programme page, as the `program-*` boards draw it: the estimate, what the first check-in needs while
- * settling, this week's targets and what the last check-in changed in the first column, and Your programme with
- * the not-medical-advice line in the second, or the no-programme, loading and error boards. The estimate says it
- * is an estimate, and the page ends with the legal line. The chart, How it works and Edit programme come with
- * their own tickets.
+ * settling, this week's targets, what the last check-in changed and the expenditure chart in the first column, and
+ * Your programme with its actions card and the not-medical-advice line in the second, or the no-programme,
+ * loading and error boards. The estimate says it is an estimate, and the page ends with the legal line.
  *
  * The web has no persisted cache and a read pauses offline, so `useProgramScreen` stays loading with nothing read.
  * Offline with nothing read is the error board with no Try again, which would do nothing: the read goes ahead by
  * itself when the connection returns. The connection going while the page is open keeps the figures read in this
- * session under an offline banner over both columns.
+ * session under an offline banner over both columns. Edit programme comes with its own ticket.
  */
 export function ProgramScreen() {
   const state = useProgramScreen({ enabled: true, now: useNow() });
@@ -74,9 +75,11 @@ export function ProgramScreen() {
                 {settlingChecklist === null ? null : <SettlingChecklist {...settlingChecklist} />}
                 {targets === null ? null : <WeekTargetsCard view={targets} />}
                 {checkin === null ? null : <CheckinSummaryCard {...checkin.card} />}
+                <ExpenditureChartCard />
               </div>
               <div className="flex flex-col gap-4">
                 <YourProgramme rows={details} />
+                <ProgramActionsCard />
                 <p className="px-1 text-caption text-text-muted">
                   {PROGRAM_SCREEN.notMedicalAdvice}
                 </p>

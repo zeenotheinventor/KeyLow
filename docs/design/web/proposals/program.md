@@ -105,7 +105,7 @@ Everything else already exists. `MORE_SCREEN.nutrition.program`, `describeNextCh
 
 - **Macro tiles.** The canvas draws the grams over the label and says "Carbohydrate". The phone's merged tile puts the label first, says "Carbs" (`SETUP_ESTIMATE.tileLabels`) and mutes the "g". The web's existing `MacroTile` also puts the label first, and draws the amount as one run, "126 g". The web tile is drawn, so these boards agree with KEY-844's `setup.md`.
 - **Toast place.** The canvas's `diary · targets-updated` has it at the bottom. Zee's ruling of 2026-10-27 and the web kit put every toast at the top. The top is drawn.
-- **The likely range on the chart.** `train-chart-states` of KEY-841 writes "likely 2,431 to 2,728" in its band specimen. The merged phone goes through `expenditureBand`, which rounds to 10, so the summary reads "likely 2,430 to 2,730", as the canvas does. The chart's drawing is not affected. The band's shape uses the unrounded ends on both.
+- **The likely range on the chart.** `train-chart-states` of KEY-841 writes "likely 2,431 to 2,728" in its band specimen. The merged phone goes through `expenditureBand`, which rounds to 10, so the summary reads "likely 2,430 to 2,730", as the canvas does. The chart's drawing is not affected. The band's shape uses the same ends the summary reads, which `expenditureBand` has already rounded to 10, on the web and on the phone.
 - **Guardrail hero.** The canvas's guardrail boards are scrolled past the estimate, so its figure there (3,158 kcal, likely 2,870 to 3,440) comes from the fixture's own working in `ProgramScreen.dc.html`.
 
 ## Not drawn
