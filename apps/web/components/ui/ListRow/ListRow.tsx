@@ -39,6 +39,7 @@ export function ListRow({
   submit,
   chevron = true,
   disabled = false,
+  loading = false,
   className,
 }: ListRowProps) {
   const interactive = href !== undefined || onClick !== undefined || submit === true;
@@ -82,7 +83,17 @@ export function ListRow({
           {unit !== undefined && <span className="text-caption text-text-muted">{unit}</span>}
         </span>
       )}
-      {interactive && chevron && (
+      {loading ? (
+        // The ring is the size of the button spinner's, in a box of its own so the row keeps its height.
+        <span className="relative size-[18px] shrink-0">
+          <span
+            role="img"
+            aria-label="Loading"
+            className="absolute inset-0 animate-spin rounded-pill border-2 border-text-muted border-r-transparent motion-reduce:animate-pulse"
+          />
+        </span>
+      ) : null}
+      {!loading && interactive && chevron && (
         <ChevronRight
           aria-hidden
           className="size-4 shrink-0 text-text-muted"
@@ -117,8 +128,10 @@ export function ListRow({
         <button
           type={submit === true ? "submit" : "button"}
           className={classes}
-          onClick={onClick}
+          // A busy row stays enabled so focus is kept, and ignores a press until it clears.
+          onClick={loading ? undefined : onClick}
           disabled={disabled}
+          aria-busy={loading || undefined}
         >
           {content}
         </button>

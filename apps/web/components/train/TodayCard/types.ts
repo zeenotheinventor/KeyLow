@@ -1,4 +1,5 @@
 import type { TodayCardContext, TodayCardWithSession } from "@keylow/core/copy";
+import type { Ref } from "react";
 
 /** One exercise of the planned day, as its row on the card draws it. */
 export type TodayExercise = {
@@ -17,18 +18,26 @@ export type TodayCardProps = {
   exercises?: readonly TodayExercise[];
   /** Holds the list's space with skeleton rows, as many as the plan's exercises, while the exercises load. */
   isLoadingExercises?: boolean;
-  /** Dims Start, Resume, Log another session and Log a session, since starting or reopening a session needs a connection. */
+  /** Dims Start, Resume, Log another session, Log a session and Pick day, since starting or reopening a session needs a connection. */
   isStartAndResumeDisabled: boolean;
-  /** Shows a spinner on Start, Log another session and Log a session, and stops them responding, while the session is being started. */
+  /** Shows a spinner on Start, Log another session, Log a session and Pick day, and stops them responding, while the session is being started. */
   isStarting?: boolean | undefined;
   /** Starts the day's session: "Start Legs". Drawn only when it is given. */
   onStart?: (() => void) | undefined;
   /** Reopens the session in progress: "Resume Legs". Drawn only when it is given. */
   onResume?: (() => void) | undefined;
+  /** Held by Resume's button, so the screen can move focus to it when Pick day is gone. */
+  resumeButtonRef?: Ref<HTMLButtonElement> | undefined;
   /** Opens the finished session: "View session". Drawn only when it is given. */
   onViewSession?: (() => void) | undefined;
   /** Starts another session the same day, on the Done card: "Log another session". Drawn only when it is given. */
   onLogAnother?: (() => void) | undefined;
   /** Starts a free session on a rest day: "Log a session". Drawn only when it is given. */
   onLogSession?: (() => void) | undefined;
+  /**
+   * Opens the choice of the routine's days, beside Start on the planned card and beside Log another session
+   * and Log a session on the done and rest cards: "Pick day". Drawn only when it is given, so the screen
+   * leaves it out of the card of a session in progress.
+   */
+  onPickDay?: (() => void) | undefined;
 };

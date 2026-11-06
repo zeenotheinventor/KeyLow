@@ -92,6 +92,29 @@ export const WeighIns: Story = {
   ),
 };
 
+// A button row whose press is being worked on, such as a routine day picked to start: a spinner in place of the
+// chevron, busy and enabled so focus stays, and a press does nothing until it clears.
+export const Loading: Story = {
+  render: () => (
+    <>
+      <ListRow
+        title="Pull"
+        subtitle="1 exercise · 3 sets"
+        value="Tuesday"
+        onClick={() => undefined}
+        loading
+      />
+      <ListRow
+        title="Legs"
+        subtitle="5 exercises · 16 sets"
+        value="Thursday"
+        onClick={() => undefined}
+        disabled
+      />
+    </>
+  ),
+};
+
 export const Plain: Story = {
   render: () => <ListRow title="Expenditure" subtitle="Estimate" />,
 };

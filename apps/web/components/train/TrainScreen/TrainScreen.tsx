@@ -11,7 +11,9 @@ import {
 import { formatClockTime } from "@keylow/core/dates";
 import { WifiOff } from "lucide-react";
 import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
 
+import { PickDayDialog } from "../PickDayDialog";
 import { PlanWeek } from "../PlanWeek";
 import { SuggestionCard } from "../SuggestionCard";
 import { SuggestionDetailDialog } from "../SuggestionDetailDialog";
@@ -64,7 +66,9 @@ function bindViewSession(handler: (sessionId: string) => void, sessionId: string
  * stacks under them below it. The body map is left out on the first visit. The suggestion card sits under the
  * Today card and above the week, so above the body map in either layout, and is drawn only when it is given
  * the notices that show its toast. Its heading opens the suggestion detail, a dialog mounted here that shows
- * the offer the card holds.
+ * the offer the card holds. Pick day sits beside Start on the Today card (and beside Log a session on the rest
+ * and done cards) when `onStart` is given, there is a routine and no session is open. It opens a dialog of the
+ * routine's days, mounted here, and a day pressed is started through `onStart`.
  */
 export function TrainScreen({
   isStarting = false,
@@ -101,6 +105,35 @@ export function TrainScreen({
       ? (home.routineId ?? undefined)
       : undefined;
   const routine = useRoutine(plannedRoutineId);
+
+  const [isPickDayOpen, setIsPickDayOpen] = useState(false);
+  const [pickedDayId, setPickedDayId] = useState<string | null>(null);
+  // The day pressed first in this tick. Neither `isStarting` nor the state is new to a second press in the same
+  // moment, so this is what keeps that press from moving the spinner. A press after the tick sees `isStarting`.
+  const pickedDayRef = useRef<string | null>(null);
+  // Pick day is on every Today card but the one of a session in progress, which keeps Resume, and needs a
+  // routine to pick a day of. Once the card stops offering it the dialog is closed, so it does not come back
+  // open when the session is discarded.
+  const canPickDay =
+    onStart !== undefined &&
+    home.status === "ready" &&
+    home.today !== null &&
+    home.today.card.kind !== "in_progress" &&
+    home.routineDays.length > 0;
+  if (!canPickDay && isPickDayOpen) {
+    setIsPickDayOpen(false);
+  }
+  // When the card stops offering Pick day while the dialog is open (a session was started here or elsewhere),
+  // the button focus would return to is gone, so focus goes to the card's Resume. Resume is drawn only then, so
+  // closing the dialog from its own controls leaves this alone. It runs after the dialog's own focus return.
+  const resumeButtonRef = useRef<HTMLButtonElement>(null);
+  const wasPickDayOpen = useRef(false);
+  useEffect(() => {
+    if (wasPickDayOpen.current && !isPickDayOpen) {
+      resumeButtonRef.current?.focus();
+    }
+    wasPickDayOpen.current = isPickDayOpen;
+  }, [isPickDayOpen]);
 
   const title = (
     <div className="flex items-center justify-between gap-3">
@@ -158,6 +191,7 @@ export function TrainScreen({
               isStarting={isStarting}
               isStartAndResumeDisabled={!isOnline}
               onResume={onResume}
+              resumeButtonRef={resumeButtonRef}
               onStart={
                 home.today.plannedDayId === null
                   ? undefined
@@ -165,6 +199,13 @@ export function TrainScreen({
                       routineDayId: home.today.plannedDayId,
                       timeZone: home.timeZone,
                     })
+              }
+              onPickDay={
+                canPickDay
+                  ? () => {
+                      setIsPickDayOpen(true);
+                    }
+                  : undefined
               }
               onLogAnother={bindStart(onLogSession, freeStart)}
               onLogSession={bindStart(onLogSession, freeStart)}
@@ -215,6 +256,28 @@ export function TrainScreen({
           </div>
         ) : null}
       </div>
+      {home.status === "ready" ? (
+        <PickDayDialog
+          days={home.routineDays}
+          isDisabled={!isOnline || isStarting}
+          open={isPickDayOpen}
+          startingDayId={isStarting ? pickedDayId : null}
+          onClose={() => {
+            setIsPickDayOpen(false);
+          }}
+          onPick={(routineDayId) => {
+            if (isStarting || pickedDayRef.current !== null) {
+              return;
+            }
+            pickedDayRef.current = routineDayId;
+            queueMicrotask(() => {
+              pickedDayRef.current = null;
+            });
+            setPickedDayId(routineDayId);
+            bindStart(onStart, { routineDayId, timeZone: home.timeZone })?.();
+          }}
+        />
+      ) : null}
       <SuggestionDetailDialog
         isOnline={isOnline}
         isStarting={isStarting}

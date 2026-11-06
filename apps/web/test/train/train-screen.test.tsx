@@ -451,14 +451,17 @@ describe("the Train page", () => {
   });
 
   describe("while a start is under way", () => {
-    it("should show Start as busy and stop it responding", async () => {
+    it("should show Start and Pick day as busy and stop them responding", async () => {
       goldenWeekThrough("planned");
       const onStart = vi.fn();
       renderWithTrain(<TrainScreen isStarting onStart={onStart} />);
 
-      const button = within(await today()).getByRole("button");
-      expect(button.getAttribute("aria-busy")).toBe("true");
-      expect(button).toHaveProperty("disabled", true);
+      const buttons = await within(await today()).findAllByRole("button");
+      expect(buttons).toHaveLength(2);
+      for (const button of buttons) {
+        expect(button.getAttribute("aria-busy")).toBe("true");
+        expect(button).toHaveProperty("disabled", true);
+      }
     });
   });
 

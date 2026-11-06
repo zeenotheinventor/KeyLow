@@ -448,11 +448,18 @@ async function respond(input: string | URL | Request, init?: RequestInit): Promi
     }
     const body: unknown = await request.json();
     trainBackend.startedSessions.push(isRow(body) ? body : {});
+    const routineDayId = isRow(body) ? body["routine_day_id"] : null;
+    const startedDay = rowsOf(trainBackend.routine?.["routine_days"]).find(
+      (day) => day["id"] === routineDayId,
+    );
+    if (routineDayId !== null && startedDay === undefined) {
+      throw new Error(`The fake routine has no day ${JSON.stringify(routineDayId)} to start.`);
+    }
     trainBackend.activeSession = {
       ...thursdayLegsOpen,
       id: idWith("4", 9),
-      routine_day_id: isRow(body) ? body["routine_day_id"] : null,
-      routine_days: isRow(body) && body["routine_day_id"] !== null ? { name: "Legs" } : null,
+      routine_day_id: routineDayId,
+      routine_days: startedDay === undefined ? null : { name: startedDay["name"] },
     };
     return answer(request, [{ id: idWith("4", 9) }]);
   }

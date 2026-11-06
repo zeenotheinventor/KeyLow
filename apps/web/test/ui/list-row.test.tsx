@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { Shield } from "lucide-react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -125,6 +125,49 @@ describe("ListRow", () => {
       renderInList(<ListRow title="Weight" onClick={() => undefined} disabled />);
 
       expect(screen.getByRole("button", { name: "Weight" }).className).toContain("opacity-50");
+    });
+  });
+
+  describe("loading", () => {
+    it("should be busy and draw a spinner in place of the chevron", () => {
+      renderInList(<ListRow title="Pull" onClick={() => undefined} loading />);
+
+      const button = screen.getByRole("button", { name: /^Pull/ });
+
+      expect(button.getAttribute("aria-busy")).toBe("true");
+      expect(button.querySelector("svg")).toBeNull();
+      expect(within(button).getByRole("img", { name: "Loading" })).toBeTruthy();
+    });
+
+    it("should ignore a press while it works, and report one again once it clears", () => {
+      const onClick = vi.fn();
+      const { rerender } = renderInList(<ListRow title="Pull" onClick={onClick} loading />);
+
+      fireEvent.click(screen.getByRole("button", { name: /^Pull/ }));
+      expect(onClick).not.toHaveBeenCalled();
+
+      rerender(
+        <ul>
+          <ListRow title="Pull" onClick={onClick} />
+        </ul>,
+      );
+      fireEvent.click(screen.getByRole("button", { name: "Pull" }));
+      expect(onClick).toHaveBeenCalledTimes(1);
+    });
+
+    it("should stay enabled, so focus is not lost while it works", () => {
+      renderInList(<ListRow title="Pull" onClick={() => undefined} loading />);
+
+      expect(screen.getByRole("button", { name: /^Pull/ })).toHaveProperty("disabled", false);
+    });
+
+    it("should not be busy and keep its chevron when not loading", () => {
+      renderInList(<ListRow title="Pull" onClick={() => undefined} />);
+
+      const button = screen.getByRole("button", { name: "Pull" });
+
+      expect(button.getAttribute("aria-busy")).toBeNull();
+      expect(button.querySelector("svg")).not.toBeNull();
     });
   });
 
