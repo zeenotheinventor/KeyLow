@@ -1,3 +1,4 @@
+import { mockUseLogPlateEntries } from "./logPlateEntriesMock";
 import { mockApiClient } from "../../foods/support/apiClientMock";
 
 import type { LogEntriesItem } from "@keylow/api-client";
@@ -8,7 +9,7 @@ export const mockLogEntries = jest.fn<Promise<unknown[]>, [readonly LogEntriesIt
 // The api client the foods tests use, with the one write the plate makes.
 export const mockPlateApiClient = {
   ...mockApiClient,
-  useLogEntries: () => ({ mutateAsync: mockLogEntries }),
+  useLogPlateEntries: mockUseLogPlateEntries((rows) => mockLogEntries(rows)),
 };
 
 export function resetPlateApiClientMock(): void {

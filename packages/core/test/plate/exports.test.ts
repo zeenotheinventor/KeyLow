@@ -23,6 +23,7 @@ describe("the plate module", () => {
       "plateItemOfRecent",
       "plateItemOfRecipe",
       "plateItemValues",
+      "plateReducer",
       "plateTotals",
       "plateUnitWord",
       "plateUnitWords",
@@ -30,6 +31,7 @@ describe("the plate module", () => {
       "replacePlateItem",
       "restorePlate",
       "setPlateQuantity",
+      "startingPlate",
     ]);
   });
 });

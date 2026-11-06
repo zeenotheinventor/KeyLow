@@ -1,7 +1,4 @@
-import type { PlateItem, PlateTotals } from "@keylow/core/plate";
-
-/** When the plate is logged: the moment Log foods is pressed, or a clock time (`HH:mm`) on the plate's day. */
-export type PlateTime = { isNow: true } | { isNow: false; time: string };
+import type { PlateItem, PlateTime, PlateTotals } from "@keylow/core/plate";
 
 /** Builds the item a screen adds, given the key the plate has minted for its row. */
 export type PlateItemBuilder = (key: string) => PlateItem;

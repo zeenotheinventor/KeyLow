@@ -5,10 +5,9 @@ import {
   replacePlateItem,
   restorePlate,
   setPlateQuantity,
-} from "@keylow/core/plate";
+} from "./plateItems";
 
-import type { PlateTime } from "./types";
-import type { PlateItem } from "@keylow/core/plate";
+import type { PlateItem, PlateTime } from "./types";
 
 export type PlateState = {
   items: readonly PlateItem[];

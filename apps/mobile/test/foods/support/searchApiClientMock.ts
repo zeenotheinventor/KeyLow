@@ -1,6 +1,7 @@
 import { buildOffCandidate } from "@keylow/core/testing";
 
 import { mockApiClient } from "./apiClientMock";
+import { mockUseLogPlateEntries } from "../../plate/support/logPlateEntriesMock";
 
 import type {
   FoodSearchResult,
@@ -139,7 +140,7 @@ export const mockSearchApiClient = {
   useFoodSearch: mockUseFoodSearch,
   useOwnFoods: mockUseOwnFoods,
   useRecipeSearch: mockUseRecipeSearch,
-  useLogEntries: () => ({ mutateAsync: mockLogEntries }),
+  useLogPlateEntries: mockUseLogPlateEntries((rows) => mockLogEntries(rows)),
   useQuickAdd: () => ({ mutateAsync: mockQuickAdd }),
   useDiaryDay: mockUseDiaryDay,
   useTargets: mockUseTargets,

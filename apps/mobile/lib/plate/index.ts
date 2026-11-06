@@ -9,5 +9,5 @@ export type {
   PlateExit,
   PlateItemBuilder,
   PlateLoggingGuard,
-  PlateTime,
 } from "./types";
+export type { PlateTime } from "@keylow/core/plate";

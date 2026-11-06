@@ -1,20 +1,14 @@
 import { useProfileTimeZone } from "@keylow/api-client";
-import { canLogPlate, plateTotals } from "@keylow/core/plate";
+import { canLogPlate, plateReducer, plateTotals, startingPlate } from "@keylow/core/plate";
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 
 import { useIsOnline } from "../../connectivity";
 import { useReadsEnabled } from "../../useReadsEnabled";
 import { PlateContext } from "../plateContext";
-import { plateReducer, startingPlate } from "../plateReducer";
 
 import type { PlateProviderProps } from "./types";
-import type {
-  PlateContextValue,
-  PlateExit,
-  PlateItemBuilder,
-  PlateLoggingGuard,
-  PlateTime,
-} from "../types";
+import type { PlateContextValue, PlateExit, PlateItemBuilder, PlateLoggingGuard } from "../types";
+import type { PlateTime } from "@keylow/core/plate";
 
 const startingTime = (initialTime: string | undefined): PlateTime =>
   initialTime === undefined ? { isNow: true } : { isNow: false, time: initialTime };

@@ -498,3 +498,6 @@ export type {
   UseAccountExportFile,
   UseAccountExportFileInput,
 } from "./hooks";
+
+export { plateEntriesOf, useLogPlateEntries } from "./hooks";
+export type { LogPlateEntriesInput, PlateFoodReaders, PlateLoggedWhen } from "./hooks";
