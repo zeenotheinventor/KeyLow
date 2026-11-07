@@ -82,6 +82,17 @@ export const ASSISTANT_TOOLS_NEEDING_STORED_UNDO: ReadonlySet<string> = new Set(
   "save_custom_exercise",
 ]);
 
+/**
+ * The other training writes, which undo from the row alone and so keep Undo once the conversation is
+ * deleted. Every training write is in one of the two sets, which a test pins, so a new tool has to say.
+ */
+export const ASSISTANT_TOOLS_WITHOUT_STORED_UNDO: ReadonlySet<string> = new Set([
+  "archive_routine",
+  "archive_custom_exercise",
+  "update_training_goals",
+  "delete_workout",
+]);
+
 /** The kinds of card those tools build. */
 export const ASSISTANT_CARD_KINDS_WITHOUT_UNDO: ReadonlySet<AssistantCardKind> = new Set(
   [...ASSISTANT_TOOLS_WITHOUT_UNDO].flatMap((tool) =>

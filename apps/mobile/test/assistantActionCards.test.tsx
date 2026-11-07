@@ -350,7 +350,10 @@ describe("the action cards in the assistant sheet", () => {
     });
 
     it("should draw Can't undo with the card's note when the entries changed since", async () => {
-      undoBackend.codes = { [FIRST_ACTION_ID]: "undo_unavailable", [SECOND_ACTION_ID]: "undone" };
+      undoBackend.codes = {
+        [FIRST_ACTION_ID]: "undo_unavailable",
+        [SECOND_ACTION_ID]: "undo_unavailable",
+      };
       await showCard({ ...loggedCard, note: "Kept as sent" });
 
       await userSetup().press(undoButton());
@@ -358,6 +361,32 @@ describe("the action cards in the assistant sheet", () => {
       expect(await screen.findByText("Can't undo")).toBeOnTheScreen();
       expect(screen.getByText("Kept as sent")).toBeOnTheScreen();
       expect(screen.queryByRole("button", { name: "Undo" })).not.toBeOnTheScreen();
+    });
+
+    it("should draw what was put back, with Can't undo and no button, when only one of two was", async () => {
+      undoBackend.codes = { [FIRST_ACTION_ID]: "undone", [SECOND_ACTION_ID]: "undo_unavailable" };
+      await showCard({ ...loggedCard, note: "Kept as sent" });
+
+      await userSetup().press(undoButton());
+
+      expect(await screen.findByText("Can't undo")).toBeOnTheScreen();
+      expect(screen.getByText("Undid 1 of 2 changes. The rest can't be undone.")).toBeOnTheScreen();
+      expect(screen.queryByText("Kept as sent")).not.toBeOnTheScreen();
+      expect(screen.queryByRole("button", { name: "Undo" })).not.toBeOnTheScreen();
+    });
+
+    it("should say the rest changed since when the refusal says it changed", async () => {
+      undoBackend.codes = { [FIRST_ACTION_ID]: "undone", [SECOND_ACTION_ID]: "undo_unavailable" };
+      undoBackend.reasons = { [SECOND_ACTION_ID]: "changed" };
+      await showCard(loggedCard);
+
+      await userSetup().press(undoButton());
+
+      expect(
+        await screen.findByText(
+          "Undid 1 of 2 changes. The rest changed since, so Undo is off for them.",
+        ),
+      ).toBeOnTheScreen();
     });
 
     it("should draw Can't undo when the action is not found", async () => {

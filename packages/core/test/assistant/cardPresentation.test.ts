@@ -247,6 +247,24 @@ describe("undoOutcomeOfResults", () => {
     });
   });
 
+  it("should carry the reason of the first refused answer into a partial outcome", () => {
+    expect(
+      undoOutcomeOfResults([
+        { result: "undone" },
+        { result: "undo_unavailable", reason: "workout_in_progress" },
+        { result: "undo_unavailable", reason: "changed" },
+      ]),
+    ).toEqual({ state: "partial", undone: 1, total: 3, reason: "workout_in_progress" });
+  });
+
+  it("should leave the reason out of a partial outcome whose refusal gave none", () => {
+    expect(undoOutcomeOfResults(["undone", "undo_unavailable"])).toEqual({
+      state: "partial",
+      undone: 1,
+      total: 2,
+    });
+  });
+
   it("should count an action that was already undone as put back", () => {
     expect(undoOutcomeOfResults(["already_undone", "not_found"])).toEqual({
       state: "partial",
@@ -273,17 +291,50 @@ describe("describeAssistantCard, an Undo that put some of a merged card back", (
     title: "Changed 3 sets in Legs",
   };
 
-  it("should draw Can't undo with a plural note that says what was put back, on three sets", () => {
+  it.each(["changed", "active", "logged", "used"] as const)(
+    "should draw Can't undo with a plural note that says the rest changed, for reason %s, on three sets",
+    (reason) => {
+      const look = describeAssistantCard(threeSets, { ...partial, reason });
+
+      expect(look.undo).toEqual({ state: "unavailable", label: "Can't undo" });
+      expect(look.note).toBe(
+        "Put back 2 of 3 sets. The rest changed since, so Undo is off for them.",
+      );
+    },
+  );
+
+  it("should say neutrally that the rest can't be undone when the refusal gave no reason", () => {
     const look = describeAssistantCard(threeSets, partial);
 
     expect(look.undo).toEqual({ state: "unavailable", label: "Can't undo" });
-    expect(look.note).toBe(
-      "Put back 2 of 3 sets. The rest changed since, so Undo is off for them.",
-    );
+    expect(look.note).toBe("Put back 2 of 3 sets. The rest can't be undone.");
+  });
+
+  describe("when a workout refused the rest", () => {
+    const waiting = { ...partial, reason: "workout_in_progress" } as const;
+
+    it("should wait, with Can't undo yet, and say what was put back and that the rest waits", () => {
+      const look = describeAssistantCard(threeSets, waiting, { workoutInProgress: true });
+
+      expect(look.undo).toEqual({ state: "unavailable", label: "Can't undo yet" });
+      expect(look.note).toBe(
+        "Put back 2 of 3 sets. Your workout is in progress, so Undo waits until it ends. Finish it, then press Undo.",
+      );
+    });
+
+    it("should let go and offer Undo again once the workout has ended, which a second press makes safe", () => {
+      const look = describeAssistantCard(threeSets, waiting, { workoutInProgress: false });
+
+      expect(look.undo).toEqual({ state: "available", label: "Undo" });
+      expect(look.note).toBeNull();
+    });
   });
 
   it("should word any other merged card as changes", () => {
-    const look = describeAssistantCard({ ...loggedCard, actionIds: ["a1", "a2", "a3"] }, partial);
+    const look = describeAssistantCard(
+      { ...loggedCard, actionIds: ["a1", "a2", "a3"] },
+      { ...partial, reason: "changed" },
+    );
 
     expect(look.undo.state).toBe("unavailable");
     expect(look.note).toBe(

@@ -2,6 +2,7 @@ import { ASSISTANT_CARD_WORDS } from "../copy/assistantNotices";
 import { ASSISTANT_CARD_NOTES } from "../copy/assistantSheet";
 import {
   PARTLY_UNDONE_NOTE,
+  PARTLY_UNDONE_UNKNOWN_NOTE,
   describeChangesPartlyUndone,
   describeSetsPartlyPutBack,
 } from "../copy/assistantTrainingCards";
@@ -114,7 +115,7 @@ export type AssistantCardUndoOutcome =
   | "undone"
   | "unavailable"
   | { state: "unavailable"; reason: AssistantUndoReason }
-  | { state: "partial"; undone: number; total: number };
+  | { state: "partial"; undone: number; total: number; reason?: AssistantUndoReason };
 
 /** One code of the undo route's answer for each action id. */
 export type AssistantUndoCode = "undone" | "already_undone" | "undo_unavailable" | "not_found";
@@ -137,7 +138,7 @@ const isPutBack = ({ result }: AssistantUndoAnswer): boolean =>
 /**
  * What a card's Undo came to: undone once every action is (already undone counts, someone got there
  * first). When only some were put back it is partial, with how many, because the card would otherwise say
- * nothing was. Otherwise unavailable, whether an action's entries changed or were not found, and the first
+ * nothing was, and it keeps the first refusal's reason. Otherwise unavailable, whether an action's entries changed or were not found, and the first
  * action that was not undone gives the reason, when it sent one. Codes alone are read as they always were.
  */
 export function undoOutcomeOfResults(
@@ -150,7 +151,12 @@ export function undoOutcomeOfResults(
   }
   const undone = answers.filter(isPutBack).length;
   if (undone > 0) {
-    return { state: "partial", undone, total: answers.length };
+    return {
+      state: "partial",
+      undone,
+      total: answers.length,
+      ...(refused?.reason === undefined ? {} : { reason: refused.reason }),
+    };
   }
   return refused?.reason === undefined
     ? "unavailable"
@@ -183,7 +189,7 @@ function describeRow(row: AssistantCardRow): AssistantCardRowLook {
   }
 }
 
-/** The words of a partial outcome: what was put back and why the rest was not. */
+/** The words of a partial outcome: what was put back. */
 export function describePartialUndo(
   kind: AssistantCardKind | null,
   { undone, total }: { undone: number; total: number },
@@ -193,10 +199,24 @@ export function describePartialUndo(
     : describeChangesPartlyUndone(undone, total);
 }
 
-const reasonOfOutcome = (outcome: AssistantCardUndoOutcome | null): AssistantUndoReason | null =>
-  typeof outcome === "object" && outcome !== null && outcome.state === "unavailable"
-    ? outcome.reason
-    : null;
+/** The reason a press was refused for, from an unavailable or a partial outcome, or null when there is none. */
+export const reasonOfOutcome = (
+  outcome: AssistantCardUndoOutcome | null,
+): AssistantUndoReason | null =>
+  typeof outcome === "object" && outcome !== null ? (outcome.reason ?? null) : null;
+
+// Why the rest of a partial outcome was not put back. A refusal that gave no reason says nothing about why,
+// since a failed write can be tried again.
+const partialNoteOf = (
+  kind: AssistantCardKind,
+  outcome: { undone: number; total: number },
+  reason: AssistantUndoReason | null,
+): string =>
+  `${describePartialUndo(kind, outcome)}. ${
+    reason === null || reason === "workout_in_progress"
+      ? PARTLY_UNDONE_UNKNOWN_NOTE
+      : PARTLY_UNDONE_NOTE
+  }`;
 
 /** The Undo state a press leaves a card in. A partial outcome is unavailable, because what is left cannot be undone. */
 export const stateOfOutcome = (outcome: AssistantCardUndoOutcome): "undone" | "unavailable" =>
@@ -303,7 +323,11 @@ export function describeAssistantCard(
   if (isWaiting || (isUnavailable && pressedReason === "workout_in_progress" && isTraining)) {
     return {
       ...looksSame,
-      note: ASSISTANT_CARD_NOTES.waitForWorkout,
+      // What an Undo put back stays true while the rest waits.
+      note:
+        typeof pressed === "object" && pressed?.state === "partial"
+          ? `${describePartialUndo(card.kind, pressed)}. ${ASSISTANT_CARD_NOTES.waitForWorkout}`
+          : ASSISTANT_CARD_NOTES.waitForWorkout,
       undo: { state: "unavailable", label: ASSISTANT_CARD_WORDS.waitUndoLabel },
     };
   }
@@ -312,7 +336,7 @@ export function describeAssistantCard(
     isUnavailable && isTraining ? trainingNoteOfRefusal(card.kind, pressedReason) : null;
   const partialNote =
     isUnavailable && typeof pressed === "object" && pressed?.state === "partial"
-      ? `${describePartialUndo(card.kind, pressed)}. ${PARTLY_UNDONE_NOTE}`
+      ? partialNoteOf(card.kind, pressed, pressedReason)
       : null;
 
   return {

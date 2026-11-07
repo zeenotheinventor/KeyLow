@@ -275,6 +275,28 @@ describe("describeAssistantChangeRow, an Undo that put some back", () => {
     expect(look.subtitle).toBe("09:02 · Put back 2 of 3 sets");
   });
 
+  it("should wait, as Can't undo yet, while a workout refused the rest, and keep what was put back", () => {
+    const look = describeAssistantChangeRow(
+      trainingRow("set_updated"),
+      { ...partial, reason: "workout_in_progress" },
+      { workoutInProgress: true },
+    );
+
+    expect(look.trailing).toEqual({ kind: "label", label: "Can't undo yet" });
+    expect(look.subtitle).toBe("08:12 · Put back 2 of 3 sets");
+  });
+
+  it("should offer Undo again once the workout that refused the rest has ended", () => {
+    const look = describeAssistantChangeRow(
+      trainingRow("set_updated"),
+      { ...partial, reason: "workout_in_progress" },
+      { workoutInProgress: false },
+    );
+
+    expect(look.trailing).toEqual({ kind: "action", label: "Undo" });
+    expect(look.subtitle).toBe("08:12 · 4 changes");
+  });
+
   it("should say changes on a row that is not of sets, food rows included", () => {
     expect(describeAssistantChangeRow(row("undo", "08:11 · 2 entries"), partial).subtitle).toBe(
       "08:11 · Undid 2 of 3 changes",

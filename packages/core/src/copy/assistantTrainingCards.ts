@@ -484,5 +484,8 @@ export const describeSetsPartlyPutBack = (undone: number, total: number): string
 export const describeChangesPartlyUndone = (undone: number, total: number): string =>
   `Undid ${undone} of ${total} changes`;
 
-/** NOT ON THE CANVAS: the note under a card whose Undo put some of it back, after the words above. */
+/** NOT ON THE CANVAS: the note under a card whose Undo put some of it back, after the words above, when the rest changed. */
 export const PARTLY_UNDONE_NOTE = "The rest changed since, so Undo is off for them.";
+
+/** NOT ON THE CANVAS: the same when the refusal gave no reason, which says nothing about why. */
+export const PARTLY_UNDONE_UNKNOWN_NOTE = "The rest can't be undone.";

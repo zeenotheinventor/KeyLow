@@ -4,6 +4,7 @@ import { loggedCard } from "./cardFixtures";
 import { routineCreatedCard, routineUpdatedCard } from "./trainingCardFixtures";
 import {
   ASSISTANT_TOOLS_NEEDING_STORED_UNDO,
+  ASSISTANT_TOOLS_WITHOUT_STORED_UNDO,
   ASSISTANT_WRITE_TOOL_CARD_KINDS,
   buildLoggedCard,
   buildRecipeArchivedCard,
@@ -12,6 +13,7 @@ import {
   cardEntryOfRow,
   describeAssistantChange,
   isAssistantWriteTool,
+  isTrainingCardKind,
   mergeAssistantCards,
   withActionIds,
 } from "../../src/assistant";
@@ -398,14 +400,32 @@ describe("ASSISTANT_TOOLS_NEEDING_STORED_UNDO", () => {
     expect([...ASSISTANT_TOOLS_NEEDING_STORED_UNDO].every(isAssistantWriteTool)).toBe(true);
   });
 
-  it("should leave out the writes that undo from the row alone", () => {
-    for (const tool of [
-      "archive_routine",
+  it("should leave out the writes that undo from the row alone, which are listed on their own", () => {
+    expect([...ASSISTANT_TOOLS_WITHOUT_STORED_UNDO].sort()).toEqual([
       "archive_custom_exercise",
-      "update_training_goals",
+      "archive_routine",
       "delete_workout",
-    ]) {
+      "update_training_goals",
+    ]);
+    for (const tool of ASSISTANT_TOOLS_WITHOUT_STORED_UNDO) {
       expect(ASSISTANT_TOOLS_NEEDING_STORED_UNDO.has(tool)).toBe(false);
+    }
+  });
+
+  // A tool in neither list would offer Undo after its conversation is deleted, and every press would answer
+  // unavailable. A new training write must say which kind of Undo it has.
+  it("should place every training write tool in exactly one of the two lists", () => {
+    const trainingTools = Object.entries(ASSISTANT_WRITE_TOOL_CARD_KINDS)
+      .filter(([, kind]) => isTrainingCardKind(kind))
+      .map(([tool]) => tool);
+
+    expect(trainingTools.length).toBeGreaterThan(0);
+    for (const tool of trainingTools) {
+      const lists = [
+        ASSISTANT_TOOLS_NEEDING_STORED_UNDO.has(tool),
+        ASSISTANT_TOOLS_WITHOUT_STORED_UNDO.has(tool),
+      ];
+      expect([tool, lists.filter(Boolean).length]).toEqual([tool, 1]);
     }
   });
 });

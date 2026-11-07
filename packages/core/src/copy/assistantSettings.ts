@@ -1,5 +1,9 @@
 import { ASSISTANT_CARD_WORDS } from "./assistantNotices";
-import { describePartialUndo, stateOfOutcome } from "../assistant/cardPresentation";
+import {
+  describePartialUndo,
+  reasonOfOutcome,
+  stateOfOutcome,
+} from "../assistant/cardPresentation";
 import { describeChangeSub, timeOfChangeSub } from "../assistant/changes";
 
 import type { AssistantCardUndoOutcome, AssistantChangeRow } from "../assistant";
@@ -73,11 +77,6 @@ export type AssistantChangeRowLook = {
 
 const CHANGED_REASONS: ReadonlySet<string> = new Set(["changed", "active", "logged", "used"]);
 
-const reasonOfPress = (outcome: AssistantCardUndoOutcome | null): string | null =>
-  typeof outcome === "object" && outcome !== null && outcome.state === "unavailable"
-    ? outcome.reason
-    : null;
-
 /**
  * One row of the changes list as the board draws it. The title and sub line are as the server sent them. A
  * row sent with Undo available takes `outcome`, what a press of its Undo came to, until the list is read
@@ -96,8 +95,8 @@ export function describeAssistantChangeRow(
 ): AssistantChangeRowLook {
   // A refusal for a workout holds only while the workout does.
   const pressed =
-    reasonOfPress(outcome) === "workout_in_progress" && !workoutInProgress ? null : outcome;
-  const pressedReason = reasonOfPress(pressed);
+    reasonOfOutcome(outcome) === "workout_in_progress" && !workoutInProgress ? null : outcome;
+  const pressedReason = reasonOfOutcome(pressed);
   const isOffered = row.state === "undo";
   const state =
     isOffered && pressed !== null
