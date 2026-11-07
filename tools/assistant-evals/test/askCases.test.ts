@@ -572,6 +572,8 @@ describe("READ_TOOLS", () => {
       "search_exercises",
       "get_routines",
       "get_training_goals",
+      "get_muscle_state",
+      "suggest_next_session",
       "get_workouts",
       "get_exercise_progress",
     ];
