@@ -239,13 +239,17 @@ export function AssistantSheet({
   // The streaming message is not a live region (Android would read all of it again for each chunk, and iOS
   // ignores a live region), so a screen reader hears the finished answer once, on both, when it is complete.
   // The working line before it announces itself, once, and is not a live region either.
-  // An answer that was stopped by closing the sheet is not read, because the person closed it.
+  // An answer that was stopped by closing the sheet is not read, because the person closed it. A stop has no
+  // outcome, and a turn stopped after a card ends in the saved-change words and is not marked stopped
+  // (`stoppedTurn`), so a turn with no outcome is not read either.
   const wasStreaming = useRef(false);
   useEffect(() => {
     if (wasStreaming.current && !isStreaming) {
       // It is read as the words without the markers the model wrote, as the message's own name is.
       const answer =
-        live === null || live.stopped ? "" : replyWords(live.text.trim(), { isPartial: false });
+        live === null || live.stopped || live.outcome === null
+          ? ""
+          : replyWords(live.text.trim(), { isPartial: false });
       if (answer !== "") {
         AccessibilityInfo.announceForAccessibility(answer);
       }

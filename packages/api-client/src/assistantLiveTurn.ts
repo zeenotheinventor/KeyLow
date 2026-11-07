@@ -1,3 +1,5 @@
+import { describeTurnEndedAfterWrite } from "@keylow/core";
+
 import type {
   AssistantCard,
   AssistantCardLink,
@@ -117,20 +119,48 @@ export function applyAssistantEvent(
   }
 }
 
-/** The turn after the person stopped it: what arrived stays, marked stopped. */
+/**
+ * The turn with the words for a saved change at the end of its reply, when it has drawn a card. A write has
+ * landed by then, and "Nothing was changed", Try again and Ask again would all send the message again and could
+ * repeat it (KEY-926). Null when no card was drawn. The reply is left as it is when it already ends in those words,
+ * which the server sends itself before a stream that breaks just before `done`. The writes are the action ids of
+ * the cards, because a card groups the writes of one kind that came together.
+ */
+function endedInSavedWords(live: AssistantLiveTurn): AssistantLiveTurn | null {
+  if (live.cards.length === 0) {
+    return null;
+  }
+  const writes = live.cards.reduce((count, card) => count + card.actionIds.length, 0);
+  const words = describeTurnEndedAfterWrite(writes);
+  const text = live.text.trimEnd();
+  const alreadyEnds = [1, 2].some((count) => text.endsWith(describeTurnEndedAfterWrite(count)));
+  return {
+    ...live,
+    status: null,
+    text: alreadyEnds ? live.text : text === "" ? words : `${live.text}\n\n${words}`,
+  };
+}
+
+/**
+ * The turn after the person stopped it: what arrived stays, marked stopped. A turn that has drawn a card is
+ * not marked stopped but ends in the words for a saved change, with no outcome (a stop has none), so Ask again
+ * is not offered. Nobody is waiting for those words, so the sheet does not read them aloud.
+ */
 export function stoppedTurn(live: AssistantLiveTurn): AssistantLiveTurn {
-  return { ...live, status: null, stopped: true };
+  const saved = endedInSavedWords(live);
+  return saved === null ? { ...live, status: null, stopped: true } : saved;
 }
 
 /**
  * The turn after it broke off (a network failure, an event the app cannot read): what arrived stays,
- * including a notice, so a day limit followed by a dropped connection still shows the day limit.
+ * including a notice, so a day limit followed by a dropped connection still shows the day limit. A turn
+ * that has drawn a card ends in the words for a saved change instead of the failed-turn notice, as the
+ * server's own ending does. It is best effort: a write whose card never arrived still shows the notice
+ * until the conversation is read again.
  */
 export function failedTurn(live: AssistantLiveTurn): AssistantLiveTurn {
-  return {
-    ...live,
-    status: null,
-    notice: live.notice ?? { code: "turn_failed" },
-    outcome: "failed",
-  };
+  const saved = endedInSavedWords(live);
+  return saved === null
+    ? { ...live, status: null, notice: live.notice ?? { code: "turn_failed" }, outcome: "failed" }
+    : { ...saved, outcome: "failed" };
 }
