@@ -3,21 +3,17 @@
 // entry's frozen nutrients, and builds the citation line, so the model only phrases the answer.
 import { z } from "zod";
 
-import {
-  addCalendarDays,
-  daysSinceMonday,
-  describeRangeCitation,
-  roundCalories,
-  roundGrams,
-} from "../../core.ts";
+import { describeRangeCitation, roundCalories, roundGrams } from "../../core.ts";
 import { getDiaryWeek, getMyTargets } from "../../repos.ts";
 import { citedResult, noNutrientsEaten, nutrientsView, targetsOfDay } from "./diaryView.ts";
 import {
   dataNotice,
+  hasNoFieldProblem,
   isRangeOfAtMost,
   localDateSchema,
   maxRangeDays,
   unknownNotice,
+  weekStartsOf,
 } from "./shared.ts";
 
 import type { ReadToolDefinition } from "../tool.ts";
@@ -32,22 +28,9 @@ const getRangeTotalsInput = z
       `The last day of the range, YYYY-MM-DD, in the user's own time zone, at most ${maxRangeDays} days from the first.`,
     ),
   })
-  .refine(isRangeOfAtMost(maxRangeDays), { path: ["to"] });
+  .refine(isRangeOfAtMost(maxRangeDays), { path: ["to"], when: hasNoFieldProblem });
 
 type LoggedDay = { localDate: string; entryCount: number; totals: NutrientValues };
-
-// The Mondays of the weeks the range touches, because the repo reads a week at a time.
-function weekStartsOf(from: string, to: string): string[] {
-  const starts: string[] = [];
-  for (
-    let start = addCalendarDays(from, -daysSinceMonday(from));
-    start <= to;
-    start = addCalendarDays(start, 7)
-  ) {
-    starts.push(start);
-  }
-  return starts;
-}
 
 // A logged day with no value for a nutrient counts as 0 once another logged day has one, as the weekly
 // averages page does. The sum is null when no logged day had a value, which is unknown and not 0.

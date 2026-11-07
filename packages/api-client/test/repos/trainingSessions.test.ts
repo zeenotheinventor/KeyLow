@@ -1,7 +1,12 @@
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
-import { getActiveSession, getLastPerformance, getSession } from "../../src/repos/trainingSessions";
+import {
+  getActiveSession,
+  getLastPerformance,
+  getSession,
+  getSessionsByIds,
+} from "../../src/repos/trainingSessions";
 import { createTestClient } from "../createTestClient";
 import {
   EXERCISE_ID,
@@ -199,6 +204,89 @@ describe("getSession", () => {
     const error = await rejectionOf(getSession(createTestClient(), SESSION_ID));
 
     expect(error?.message).toContain("unexpected shape at workout_sets");
+  });
+});
+
+describe("getSessionsByIds", () => {
+  it("should ask for the live sessions of the ids in one request, with their routine days' names and live sets in order", async () => {
+    const first = openSessionRow();
+    const second = openSessionRow();
+    const fake = installTrainingFake(server, { sessions: [first, second] });
+
+    await getSessionsByIds(createTestClient(), [first.id, second.id]);
+
+    const requests = fake.requestsTo("workout_sessions");
+    expect(requests).toHaveLength(1);
+    const url = firstRequest(requests);
+    expect(url.searchParams.get("select")).toBe(
+      `${SESSION_COLUMNS},routine_days(name),workout_sets(${SET_COLUMNS})`,
+    );
+    expect(url.searchParams.get("id")).toBe(`in.(${first.id},${second.id})`);
+    expect(url.searchParams.get("deleted_at")).toBe("is.null");
+    expect(url.searchParams.get("workout_sets.deleted_at")).toBe("is.null");
+    expect(url.searchParams.get("workout_sets.order")).toBe("position.asc,performed_at.asc,id.asc");
+  });
+
+  it("should return each session as getSession does, with its routine day's name and its sets", async () => {
+    const row = openSessionRow({ note: "Felt strong" });
+    installTrainingFake(server, { sessions: [row] });
+
+    const sessions = await getSessionsByIds(createTestClient(), [row.id]);
+
+    expect(sessions).toHaveLength(1);
+    expect(sessions[0]).toMatchObject({
+      id: row.id,
+      note: "Felt strong",
+      routine_day_name: RECOGNISABLE_DAY_NAME,
+    });
+    expect(sessions[0]?.sets[0]?.snapshot).toEqual(snapshotOf());
+  });
+
+  it("should leave out an id that is not visible: another user's, missing or deleted", async () => {
+    const visible = openSessionRow();
+    installTrainingFake(server, { sessions: [visible] });
+
+    const sessions = await getSessionsByIds(createTestClient(), [visible.id, SESSION_ID]);
+
+    expect(sessions.map(({ id }) => id)).toEqual([visible.id]);
+  });
+
+  it("should make no request for no ids", async () => {
+    const fake = installTrainingFake(server, { sessions: [openSessionRow()] });
+
+    expect(await getSessionsByIds(createTestClient(), [])).toEqual([]);
+    expect(fake.requests).toEqual([]);
+  });
+
+  it("should refuse an id that is not a UUID before any request", async () => {
+    const fake = installTrainingFake(server, { sessions: [openSessionRow()] });
+
+    await expect(getSessionsByIds(createTestClient(), [SESSION_ID, "not-an-id"])).rejects.toThrow(
+      RangeError,
+    );
+    expect(fake.requests).toEqual([]);
+  });
+
+  it("should name the action and the error code only when the database fails", async () => {
+    const fake = installTrainingFake(server, { sessions: [openSessionRow()] });
+    fake.failWith("42501");
+
+    const error = await rejectionOf(getSessionsByIds(createTestClient(), [SESSION_ID]));
+
+    expect(error?.message).toBe("Could not load your session (42501)");
+    expect(error?.cause).toEqual({ code: "42501" });
+    expect(textOf(error)).not.toContain(RECOGNISABLE_EXERCISE_NAME);
+  });
+
+  it("should refuse a row of the wrong shape, naming the row and the field only", async () => {
+    const row = openSessionRow({ started_at: "yesterday" });
+    installTrainingFake(server, { sessions: [row] });
+
+    const error = await rejectionOf(getSessionsByIds(createTestClient(), [row.id]));
+
+    expect(error?.message).toBe(
+      `Could not read the session: row ${row.id} has an unexpected shape at started_at`,
+    );
   });
 });
 

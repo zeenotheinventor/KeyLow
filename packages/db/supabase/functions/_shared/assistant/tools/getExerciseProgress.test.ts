@@ -115,6 +115,7 @@ Deno.test(
     assertStringIncludes(description, "trained is false");
     assertStringIncludes(description, "stall_may_be_longer");
     assertStringIncludes(description, "since it last rose");
+    assertStringIncludes(description, "change against the trained week before it");
   },
 );
 

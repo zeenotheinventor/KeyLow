@@ -37,8 +37,8 @@ export const getExerciseProgressTool: ReadToolDefinition<z.infer<typeof getExerc
     description:
       'Reads how one exercise\'s best set moved week by week, for "why has my bench stalled?". ' +
       "Answers trained weeks only for the range asked, oldest first, at most 52. Each has week_start " +
-      "(a Monday), best (the heaviest working set, in the user's unit) and change on the last trained " +
-      "week. The last is the newest and may not be this week. weeks_without_progress is how many " +
+      "(a Monday), best (the heaviest working set, in the user's unit) and change against the " +
+      "trained week before it. The last is the newest and may not be this week. weeks_without_progress is how many " +
       "trained weeks, back from the newest, the best has stood still or fallen since it last rose, " +
       "read over the last year whatever the range: say it as given, never count or work anything out. " +
       "stall_may_be_longer true means it runs back past that year, so say at least. trained is false " +

@@ -572,6 +572,7 @@ describe("READ_TOOLS", () => {
       "search_exercises",
       "get_routines",
       "get_training_goals",
+      "get_workouts",
       "get_exercise_progress",
     ];
 

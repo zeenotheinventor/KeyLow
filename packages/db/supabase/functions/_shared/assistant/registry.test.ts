@@ -102,6 +102,7 @@ Deno.test(
         ["search_exercises", "read"],
         ["get_routines", "read"],
         ["get_training_goals", "read"],
+        ["get_workouts", "read"],
         ["get_exercise_progress", "read"],
         ["ask_user", "read"],
       ],
@@ -189,6 +190,7 @@ Deno.test(
       "search_exercises",
       "get_routines",
       "get_training_goals",
+      "get_workouts",
       "get_exercise_progress",
     ]) {
       assertEquals(toolRegistry.get(name)?.strict, false, name);

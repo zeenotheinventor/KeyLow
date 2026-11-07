@@ -3,7 +3,7 @@
 // model sees (a strict schema refuses them), and zod still enforces them when the executor validates.
 import { z } from "zod";
 
-import { addCalendarDays } from "../../core.ts";
+import { addCalendarDays, daysSinceMonday } from "../../core.ts";
 
 // Trimmed first, so "  a " is one character and is refused, as the repos would answer it with nothing.
 export const searchTextSchema = z
@@ -34,6 +34,11 @@ export const clockTimeSchema = z
   .regex(/^([01]\d|2[0-3]):[0-5]\d$/)
   .describe("A 24-hour clock time, HH:MM, in the user's own time zone.");
 
+// For a `refine` that reads several fields: zod runs a refine even when a field already failed, and a date that
+// is not a date would make a range check throw, which reads as a broken tool and not as a call to correct.
+export const hasNoFieldProblem = ({ issues }: { issues: readonly unknown[] }): boolean =>
+  issues.length === 0;
+
 // The most days one range tool reads at once, so a question about "this year" is answered in pieces.
 export const maxRangeDays = 92;
 
@@ -42,3 +47,16 @@ export const isRangeOfAtMost =
   (days: number) =>
   ({ from, to }: { from: string; to: string }): boolean =>
     from <= to && addCalendarDays(from, days - 1) >= to;
+
+// The Mondays of the weeks a range touches, oldest first, because the repos read a week at a time.
+export function weekStartsOf(from: string, to: string): string[] {
+  const starts: string[] = [];
+  for (
+    let start = addCalendarDays(from, -daysSinceMonday(from));
+    start <= to;
+    start = addCalendarDays(start, 7)
+  ) {
+    starts.push(start);
+  }
+  return starts;
+}

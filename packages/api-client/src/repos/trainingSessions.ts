@@ -92,6 +92,40 @@ export async function getSession(
 }
 
 /**
+ * The live sessions of the signed in user among `ids`, each as `getSession` gives it, read in one request.
+ * An id that does not exist, is not the caller's or is soft deleted is left out, the same in all three
+ * cases, so the result can be shorter than `ids`. The order is the database's, not that of `ids`. No ids
+ * make no request. Throws a `RangeError` before any request when an id is not a UUID.
+ */
+export async function getSessionsByIds(
+  client: SupabaseClient<Database>,
+  ids: readonly string[],
+): Promise<SessionWithSets[]> {
+  if (!ids.every((id) => ROW_ID.safeParse(id).success)) {
+    throw new RangeError("A session id must be a UUID");
+  }
+  if (ids.length === 0) {
+    return [];
+  }
+
+  const { data, error } = await client
+    .from("workout_sessions")
+    .select(SESSION_SELECT)
+    .in("id", [...ids])
+    .is("deleted_at", null)
+    .is("workout_sets.deleted_at", null)
+    .order("position", { ascending: true, referencedTable: "workout_sets" })
+    .order("performed_at", { ascending: true, referencedTable: "workout_sets" })
+    .order("id", { ascending: true, referencedTable: "workout_sets" });
+
+  if (error) {
+    throw repoError("load your session", error);
+  }
+
+  return data.map((row) => parseSessionRow(row, "read the session"));
+}
+
+/**
  * The signed in user's newest live session that has not ended, with its sets as `getSession` gives them,
  * or null when there is none. The session bar and the Resume button read it.
  */
