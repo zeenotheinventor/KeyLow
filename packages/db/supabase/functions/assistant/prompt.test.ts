@@ -202,10 +202,10 @@ Deno.test(
 );
 
 Deno.test(
-  "an injury or pain gets one rule: no diagnosis, no rehab, no word on training through it",
+  "an injury or pain gets one rule that ends at the referral, with no advice to add",
   () => {
     for (const rule of [
-      "For an injury or pain, give no diagnosis, no rehab plan, no word on whether it is safe to train through it and no advice on how much to lift. Say it is outside what this assistant does and suggest a doctor or a physio.",
+      "For an injury or pain, give no diagnosis, no rehab plan, no word on whether it is safe to train through it and nothing about what to do, avoid or watch for. Say it is outside what Ki-Lo does and suggest a doctor or a physio. When the pain is sudden or severe, or there is chest pain, numbness or trouble breathing, say instead to stop and get urgent medical help now, with no number and no word on what it means. Add nothing else about the injury.",
       "suggest asking a doctor or a dietitian",
     ]) {
       assert(SYSTEM_PROMPT.includes(rule), `the system prompt does not hold: ${rule}`);
@@ -214,6 +214,16 @@ Deno.test(
     assert(SYSTEM_PROMPT.includes("diagnos"));
   },
 );
+
+Deno.test("the injury rule ends at the referral and still allows naming another exercise", () => {
+  const rule = SYSTEM_PROMPT.slice(SYSTEM_PROMPT.indexOf("For an injury or pain"));
+
+  assert(rule.includes("Add nothing else about the injury."));
+  assert(
+    rule.indexOf("Add nothing else about the injury.") < rule.indexOf("Naming another exercise"),
+  );
+  assertEquals(rule.includes("then stop"), false);
+});
 
 Deno.test(
   "naming another exercise is a suggestion only, and a workout is not a diary entry",
