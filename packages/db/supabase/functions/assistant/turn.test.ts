@@ -10,6 +10,7 @@ import {
   describeTurnEndedAfterWrite,
   threadFromMessages,
 } from "../_shared/core.ts";
+import { DEFAULT_COMPACT_AT_TOKENS } from "./compact.ts";
 import { contextBlock, MODEL } from "./prompt.ts";
 import {
   MAX_EXERCISE_MUSCLES_CARDS,
@@ -4529,7 +4530,8 @@ for (const kind of writeKinds) {
   Deno.test(
     `${kind.label} then a model error plans no compaction, and a complete turn of the same size does`,
     async () => {
-      const big = { input: 30_000 };
+      // Well over the compaction threshold whatever it is set to.
+      const big = { input: DEFAULT_COMPACT_AT_TOKENS + 10_000 };
       await withHarness(
         withKind(kind, {
           responses: [

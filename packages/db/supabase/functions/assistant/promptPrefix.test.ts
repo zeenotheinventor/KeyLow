@@ -13,9 +13,12 @@ import { SYSTEM_PROMPT } from "./prompt.ts";
 // made in the pull request that grows the prefix.
 const LARGEST_SHARE_OF_THRESHOLD = 0.6;
 
-// Calibrated on a real first call (KEY-927): 21,666 prompt tokens for 11,313 + 52,432 characters of system
-// prompt and tool definitions, which is 2.94 characters a token. Tool schemas are JSON, which tokenises worse
-// than prose (about 4 characters a token), so this ratio is only good for the prefix. Recalibrate it when a
+// Calibrated on the figures the ticket gave (KEY-927): 21,666 prompt tokens for 11,313 + 52,432 characters,
+// which is 2.94 characters a token. The ticket did not say how the characters were counted, and this test
+// counts 9,554 + 57,777 (system prompt plus the tools as sent) on the same tree, so the ratio is a rough one.
+// A later real first call measured 22,396 prompt tokens for a one-turn conversation, against the 22,901 this
+// test estimates for the prefix alone, so it errs a little high. Tool schemas are JSON, which tokenises worse
+// than prose (about 4 characters a token), so the ratio is only good for the prefix. Recalibrate it when a
 // real first call disagrees.
 const PREFIX_CHARACTERS_PER_TOKEN = 2.94;
 

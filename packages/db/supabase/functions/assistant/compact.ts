@@ -34,7 +34,7 @@ import type { UsageToRecord } from "./usage.ts";
 export const DEFAULT_COMPACT_AT_TOKENS = 40_000;
 
 // The background call has no turn deadline around it. Its input is the conversation since the last note and
-// not the tools or the system prompt, so at most about 17,000 tokens for a prompt at the threshold, and its
+// not the tools or the system prompt, so normally about 17,000 tokens for a prompt at the threshold, and its
 // output stops at COMPACTION_MAX_TOKENS (2,000), so a note takes several seconds on Haiku. 30 s is several
 // times what it needs and short enough that the worker (150 s on the free plan) is not held for long. The
 // call is made once: a failed one is tried again by the next complete turn, which is cheaper than a retry
