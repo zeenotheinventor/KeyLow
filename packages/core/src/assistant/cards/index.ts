@@ -22,6 +22,8 @@ export type { RecipeCardRecipe } from "./recipeCreated";
 export { buildRecipeImportedCard } from "./recipeImported";
 export type { RecipeImportedCardInput, RecipeImportedLine } from "./recipeImported";
 export { buildRecipeUpdatedCard } from "./recipeUpdated";
+export { buildRoutineCreatedCard } from "./routineCreated";
+export type { RoutineCreatedCardInput } from "./routineCreated";
 export { buildTargetsChangedCard } from "./targetsChanged";
 export type { TargetsChangedCardChange } from "./targetsChanged";
 export { buildUpdatedCard } from "./updated";
@@ -32,8 +34,16 @@ export {
 export { buildRoutineActiveCard, buildRoutineClearedCard } from "./routineActive";
 export type { RoutineActiveCardChange } from "./routineActive";
 export { buildRoutineArchivedCard } from "./routineArchived";
+export {
+  confirmRemoveExercisesButtons,
+  confirmRemoveExercisesQuestion,
+} from "./confirmRemoveExercises";
+export { buildRoutineUpdatedCard } from "./routineUpdated";
+export type { RoutineUpdatedChange } from "./routineUpdated";
 export { buildSetUpdatedCard } from "./setUpdated";
 export type { SetUpdatedCardInput } from "./setUpdated";
+export { buildGoalsUpdatedCard } from "./goalsUpdated";
+export type { GoalAnswerGiven, GoalsUpdatedCardChange } from "./goalsUpdated";
 export {
   confirmArchiveExerciseButtons,
   confirmArchiveExerciseQuestion,

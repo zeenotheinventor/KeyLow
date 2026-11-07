@@ -318,7 +318,13 @@ function finishTurn(
   if (status === "failed" || status === "refused") {
     items.push({ kind: "notice", id: `${turn[0]?.turnId}:notice`, notice: failedTurnNotice });
   }
-  items.push(...trailing.askAgains);
+  // Ask again is a convenience for a turn that ended complete with nothing written: the live turn sends it
+  // only then, so a reopened turn draws it only then too. Sending the message again after a write landed
+  // would repeat that write, and a question or a failed turn has its own way on.
+  const wroteSomething = drafts.some((item) => item.kind === "draft_card");
+  if (status === "complete" && !wroteSomething) {
+    items.push(...trailing.askAgains);
+  }
   return items;
 }
 
