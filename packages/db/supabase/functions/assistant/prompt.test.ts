@@ -95,7 +95,7 @@ Deno.test("the system prompt holds no date, no id and no per-person value", () =
 });
 
 // The one sentence that has to name the forbidden words, so the check for a first-person "I" skips it.
-const FIRST_PERSON_RULE = "Never write I, I'll, I can, I can't, me or my.";
+const FIRST_PERSON_RULE = "Never write I, I'll, I can, I can't, me or my";
 
 Deno.test(
   "the system prompt follows the prose rules and never says I outside the rule against it",
@@ -113,7 +113,7 @@ Deno.test(
   "the replies rule is positive, first in Replies, with the shapes to write instead",
   () => {
     for (const rule of [
-      `Replies\n${FIRST_PERSON_RULE} Start with the thing itself, as in "Your bench has stayed at the same weight."`,
+      `Replies\nStart with the thing itself, as in "Your bench has stayed at the same weight."`,
       'For a limit, write "Starting a workout is done on the Train tab." For a search that finds nothing, write "No exercise called glorp curl is in the library."',
       'For an offer to look at something else, ask a question or name the next step, as in "Ask about shoulder press to see that one." A question about a clear change never stands in for the change.',
       "Answer only the question asked, and add no offer the person did not ask for, such as logging food, except the offer to make a built routine active.",
@@ -123,6 +123,25 @@ Deno.test(
     assertEquals(SYSTEM_PROMPT.includes("This assistant cannot"), false);
   },
 );
+
+Deno.test("the first person rule is the last section, with the two shapes it slips in", () => {
+  const lastSection = SYSTEM_PROMPT.split("\n\n").at(-1) ?? "";
+
+  assert(
+    lastSection.startsWith(
+      `Voice\n${FIRST_PERSON_RULE}, even after so or when naming a next step, as in "so Ki-Lo can't suggest one" and "Name the exercise to read its progress."`,
+    ),
+  );
+  assert(SYSTEM_PROMPT.endsWith('"Name the exercise to read its progress."'));
+});
+
+Deno.test("a suggestion with no goal says a goal is needed and asks nothing", () => {
+  assert(
+    SYSTEM_PROMPT.includes(
+      'When a suggestion answers needs_goal, ask nothing and write "To suggest a session, Ki-Lo needs your training goal. It is set on the Train tab."',
+    ),
+  );
+});
 
 Deno.test("overworked and undertrained muscles come from get_muscle_state", () => {
   assert(
@@ -323,7 +342,7 @@ Deno.test("a workout in progress refuses every training write with the same word
 
 Deno.test("building a routine reads the goal, searches once, and takes no numbers", () => {
   for (const rule of [
-    'Building a routine\nRead get_training_goals first. With no goal, ask goal and experience together in one ask_user, with 3 quick replies that each give both, such as "Look better, intermediate", and say nothing is saved yet. Their answer is the request to save it with update_training_goals, then build.',
+    'Building a routine\nRead get_training_goals first. With no goal, ask in one ask_user, as in "To build a routine, Ki-Lo needs your training goal and your experience. What are they? Nothing is saved yet.", with 3 quick replies that each give both, such as "Look better, intermediate". Their answer is the request to save it with update_training_goals, then build.',
     "Use the goal's days a week unless the person said otherwise.",
     "create_routine takes no sets, reps or RIR, and numbers the person said go through edit_routine afterwards and no other numbers do.",
     "Say the routine is not active and offer to make it so, calling set_active_routine only when asked.",
@@ -401,6 +420,7 @@ const SNAKE_CASE_WORDS_THAT_ARE_NOT_TOOLS: ReadonlySet<string> = new Set([
   "tool_not_allowed",
   "invalid_input",
   "first_visit",
+  "needs_goal",
   "untrusted_data",
   "primary_muscles",
   "conversation_summary",
