@@ -222,6 +222,19 @@ Deno.test("get_weigh_ins reads a range of 92 days and refuses one of 93", async 
 });
 
 Deno.test(
+  "get_weigh_ins answers invalid_input, not a failure, for a start that is not a date",
+  async () => {
+    const { result, calls } = await fetchWeighIns(boardData(), {
+      from: "12 October",
+      to: "2026-10-13",
+    });
+
+    assertEquals(result.status === "error" ? result.code : null, "invalid_input");
+    assertEquals(calls, []);
+  },
+);
+
+Deno.test(
   "get_weigh_ins refuses an end before the start, a bad date and a key it does not know",
   async () => {
     const badInputs = [

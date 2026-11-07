@@ -143,13 +143,13 @@ describe("describeRoutineCitation", () => {
 describe("describeWorkoutsCitation", () => {
   // The words are the board `assistant · answer-training`: "Based on 2 workouts, 12 to 13 Oct" and "Based on
   // 1 workout, 8 Oct". The line for a range with nothing in it is the ticket's, KEY-891: no board draws it.
-  it("should write the answer-workouts board's line for a range inside one month", () => {
+  it("should write the answer-training board's line for a range inside one month", () => {
     expect(
       describeWorkoutsCitation({ from: "2026-10-12", to: "2026-10-13", workoutCount: 2 }),
     ).toBe("Based on 2 workouts, 12 to 13 Oct");
   });
 
-  it("should write the workout-advice board's line for one workout on one day", () => {
+  it("should write the answer-training board's line for one workout on one day", () => {
     expect(
       describeWorkoutsCitation({ from: "2026-10-08", to: "2026-10-08", workoutCount: 1 }),
     ).toBe("Based on 1 workout, 8 Oct");

@@ -89,7 +89,6 @@ export const DIARY_READ_TOOLS: ReadonlySet<string> = new Set([
   "get_food",
   "get_recipes",
   "search_foods",
-  "get_workouts",
 ]);
 
 // Every read tool of the registry. A case about the diary does not accept the training reads, because a
@@ -100,6 +99,7 @@ export const READ_TOOLS: ReadonlySet<string> = new Set([
   "search_exercises",
   "get_routines",
   "get_training_goals",
+  "get_workouts",
 ]);
 
 /** Passes when every tool called is a read tool of the diary. */

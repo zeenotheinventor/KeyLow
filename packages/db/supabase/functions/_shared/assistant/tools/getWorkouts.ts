@@ -14,19 +14,22 @@ import {
   displayLoad,
   summariseSession,
 } from "../../core.ts";
-import { getMyWeightUnit, getSession, listSessionsInWeek } from "../../repos.ts";
+import { getMyWeightUnit, getSession, getSessionsByIds, listSessionsInWeek } from "../../repos.ts";
 import { citedResult } from "./diaryView.ts";
-import { dataNotice, isRangeOfAtMost, localDateSchema, weekStartsOf } from "./shared.ts";
+import {
+  dataNotice,
+  hasNoFieldProblem,
+  isRangeOfAtMost,
+  localDateSchema,
+  weekStartsOf,
+} from "./shared.ts";
 
 import type { HistorySessionRow, SessionWithSets } from "../../repos.ts";
 import type { ReadToolDefinition, ToolContext, ToolRunOutput } from "../tool.ts";
 
-const maxRangeDays = 42;
+const maxWorkoutRangeDays = 42;
 const maxListedWorkouts = 20;
 const maxListedSets = 60;
-
-// A date that failed its own check would make the range check throw, so the range is only checked once the fields passed.
-const hasNoFieldProblem = ({ issues }: { issues: readonly unknown[] }) => issues.length === 0;
 
 const getWorkoutsInput = z
   .strictObject({
@@ -38,7 +41,7 @@ const getWorkoutsInput = z
       .nullable()
       .default(null)
       .describe(
-        `The last day of the range, YYYY-MM-DD, at most ${maxRangeDays} days from the first, or null when reading one workout.`,
+        `The last day of the range, YYYY-MM-DD, at most ${maxWorkoutRangeDays} days from the first, or null when reading one workout.`,
       ),
     session_id: z
       .guid()
@@ -46,16 +49,15 @@ const getWorkoutsInput = z
       .default(null)
       .describe("The id of a workout from this tool's list, or null to list a range."),
   })
-  .refine(({ session_id, from, to }) => session_id !== null || (from !== null && to !== null), {
-    path: ["from"],
-    when: hasNoFieldProblem,
-  })
+  // Each end that is missing is named, so the model knows which one to add.
+  .refine(({ session_id, from }) => session_id !== null || from !== null, { path: ["from"] })
+  .refine(({ session_id, to }) => session_id !== null || to !== null, { path: ["to"] })
   .refine(
     ({ session_id, from, to }) =>
       session_id !== null ||
       from === null ||
       to === null ||
-      isRangeOfAtMost(maxRangeDays)({ from, to }),
+      isRangeOfAtMost(maxWorkoutRangeDays)({ from, to }),
     { path: ["to"], when: hasNoFieldProblem },
   );
 
@@ -123,19 +125,28 @@ async function readRange(
     .flat()
     .filter(({ local_date }) => local_date >= from && local_date <= to);
   const listed = inRange.slice(0, maxListedWorkouts);
-  const workouts = await Promise.all(
-    listed.map(async (summary) => {
-      // The list holds no reps or loads, so each workout is read whole for its exercise lines.
-      const detail = await getSession(caller, summary.id);
-      return {
-        ...sessionView(summary),
-        exercises: detail === null ? [] : exerciseLines(detail, unit),
-      };
-    }),
+  // The list holds no reps or loads, so the listed workouts are read whole, in one request.
+  const details = new Map(
+    (
+      await getSessionsByIds(
+        caller,
+        listed.map(({ id }) => id),
+      )
+    ).map((detail) => [detail.id, detail]),
   );
+  // A workout deleted since the list was read has no detail, and is left out and not shown empty.
+  const workouts = listed.flatMap(({ id }) => {
+    const detail = details.get(id);
+    return detail === undefined
+      ? []
+      : [{ ...sessionView(detail), exercises: exerciseLines(detail, unit) }];
+  });
+  const truncated = inRange.length > maxListedWorkouts;
+  // A cut list is the newest workouts, so its line starts at the oldest shown and claims no earlier day.
+  const citedFrom = truncated ? (workouts.at(-1)?.local_date ?? from) : from;
   return citedResult(
-    { workouts, truncated: inRange.length > maxListedWorkouts },
-    describeWorkoutsCitation({ from, to, workoutCount: workouts.length }),
+    { workouts, truncated },
+    describeWorkoutsCitation({ from: citedFrom, to, workoutCount: workouts.length }),
   );
 }
 
@@ -172,14 +183,14 @@ async function readWorkout(
 export const getWorkoutsTool: ReadToolDefinition<z.infer<typeof getWorkoutsInput>> = {
   name: "get_workouts",
   description:
-    `Reads the user's logged workouts. With session_id null, from and to are needed, at most ${maxRangeDays} ` +
+    `Reads the user's logged workouts. With session_id null, from and to are needed, at most ${maxWorkoutRangeDays} ` +
     `days apart, and it lists the workouts in them, newest first, at most ${maxListedWorkouts}: id, ` +
     "local_date, name (the routine day), minutes (null while in_progress) and one line per exercise " +
     "with its working sets and best set. With a session_id it reads that workout: its note and its " +
     `sets in order, at most ${maxListedSets}, each with id, exercise, set_type (warmup, working, drop ` +
-    "or failure), reps, load in the user's unit (null none), rir and rpe (null none). truncated is true " +
-    "when more exist, so ask for a shorter range. The citation is printed under your answer. Ids come " +
-    "from here, never invent one. " +
+    "or failure), reps, load in the user's unit (null none), rir and rpe (null none). from and to are " +
+    "ignored when a session_id is given. truncated is true when more exist, so ask for a shorter " +
+    "range. The citation is printed under your answer. Ids come from here, never invent one. " +
     dataNotice,
   kind: "read",
   input: getWorkoutsInput,

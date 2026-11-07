@@ -8,6 +8,7 @@ import { getDiaryWeek, getMyTargets } from "../../repos.ts";
 import { citedResult, noNutrientsEaten, nutrientsView, targetsOfDay } from "./diaryView.ts";
 import {
   dataNotice,
+  hasNoFieldProblem,
   isRangeOfAtMost,
   localDateSchema,
   maxRangeDays,
@@ -27,7 +28,7 @@ const getRangeTotalsInput = z
       `The last day of the range, YYYY-MM-DD, in the user's own time zone, at most ${maxRangeDays} days from the first.`,
     ),
   })
-  .refine(isRangeOfAtMost(maxRangeDays), { path: ["to"] });
+  .refine(isRangeOfAtMost(maxRangeDays), { path: ["to"], when: hasNoFieldProblem });
 
 type LoggedDay = { localDate: string; entryCount: number; totals: NutrientValues };
 

@@ -5,7 +5,7 @@ import { finishSession, startSession } from "../../../../api-client/src/repos/se
 import { addSet } from "../../../../api-client/src/repos/setWrites";
 import { getMyWeightUnit } from "../../../../api-client/src/repos/targets";
 import { listSessionsInWeek } from "../../../../api-client/src/repos/trainingHistory";
-import { getSession } from "../../../../api-client/src/repos/trainingSessions";
+import { getSession, getSessionsByIds } from "../../../../api-client/src/repos/trainingSessions";
 import { createTestUser, deleteCreatedTestUsers } from "../support/users";
 
 import type { TestUser } from "../support/users";
@@ -84,6 +84,16 @@ describe("get_workouts", () => {
     expect(await getSession(alice.user.client, bob.sessionId)).toBeNull();
     expect(await getSession(bob.user.client, alice.sessionId)).toBeNull();
     expect(await getSession(alice.user.client, crypto.randomUUID())).toBeNull();
+  });
+
+  it("reads the details of the caller's sessions among the ids asked for, never the other user's", async () => {
+    const aliceSessions = await getSessionsByIds(alice.user.client, [
+      alice.sessionId,
+      bob.sessionId,
+    ]);
+
+    expect(aliceSessions.map(({ id }) => id)).toEqual([alice.sessionId]);
+    expect(aliceSessions[0]?.sets.map(({ reps }) => reps)).toEqual([alice.reps]);
   });
 
   it("reads the caller's own weight unit", async () => {

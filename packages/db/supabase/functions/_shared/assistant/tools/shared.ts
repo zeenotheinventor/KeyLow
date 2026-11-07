@@ -34,6 +34,11 @@ export const clockTimeSchema = z
   .regex(/^([01]\d|2[0-3]):[0-5]\d$/)
   .describe("A 24-hour clock time, HH:MM, in the user's own time zone.");
 
+// For a `refine` that reads several fields: zod runs a refine even when a field already failed, and a date that
+// is not a date would make a range check throw, which reads as a broken tool and not as a call to correct.
+export const hasNoFieldProblem = ({ issues }: { issues: readonly unknown[] }): boolean =>
+  issues.length === 0;
+
 // The most days one range tool reads at once, so a question about "this year" is answered in pieces.
 export const maxRangeDays = 92;
 

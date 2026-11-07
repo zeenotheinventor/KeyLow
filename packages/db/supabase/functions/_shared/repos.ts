@@ -39,6 +39,7 @@ export {
   getRecipe,
   getRoutine,
   getSession,
+  getSessionsByIds,
   listFoodPortions,
   listSuggestionLibrary,
   listRecipes,

@@ -263,7 +263,8 @@ Deno.test(
     assertEquals(workouts[0]?.["id"], sessionId(1));
     assertEquals(workouts[19]?.["id"], sessionId(20));
     assertEquals(fieldOf(result, "truncated"), true);
-    assertEquals(fieldOf(result, "citation"), "Based on 20 workouts, 19 Sep to 13 Oct");
+    // The 20 shown run from 24 September, so the line does not claim the days before.
+    assertEquals(fieldOf(result, "citation"), "Based on 20 workouts, 24 Sep to 13 Oct");
   },
 );
 
@@ -304,6 +305,52 @@ Deno.test(
   },
 );
 
+Deno.test(
+  "get_workouts reads the details of the listed workouts in one request, not one each",
+  async () => {
+    const sessions = Array.from({ length: 20 }, (_, index) => {
+      const localDate = addCalendarDays("2026-10-13", -index);
+      return sessionRow(index + 1, {
+        local_date: localDate,
+        started_at: `${localDate}T18:00:00+00:00`,
+        workout_sets: [setRow(index + 1, benchPress, { session_id: sessionId(index + 1) })],
+      });
+    });
+    const { calls } = await fetchWorkouts(
+      { tables: { workout_sessions: sessions } },
+      range("2026-09-24", "2026-10-13"),
+    );
+
+    const detailReads = calls.filter(
+      (call) => call.table === "workout_sessions" && call.method === "in" && call.args[0] === "id",
+    );
+    assertEquals(detailReads.length, 1);
+    assertEquals(
+      calls.some((call) => call.method === "eq" && call.args[0] === "id"),
+      false,
+    );
+  },
+);
+
+Deno.test(
+  "get_workouts leaves out a workout deleted between the list and its details",
+  async () => {
+    const { result } = await fetchWorkouts(
+      {
+        tables: { workout_sessions: [pullSession, pushSession] },
+        laterTables: { workout_sessions: [pullSession] },
+      },
+      range("2026-10-12", "2026-10-13"),
+    );
+
+    assertEquals(
+      listOf(result, "workouts").map((workout) => workout["id"]),
+      [sessionId(2)],
+    );
+    assertEquals(fieldOf(result, "citation"), "Based on 1 workout, 12 to 13 Oct");
+  },
+);
+
 Deno.test("get_workouts refuses a range of more than 42 days before any read", async () => {
   const { result, calls } = await fetchWorkouts({}, range("2026-09-01", "2026-10-13"));
 
@@ -338,6 +385,28 @@ Deno.test("get_workouts refuses input it does not accept, before any read", asyn
     );
     assertEquals(calls, []);
   }
+});
+
+Deno.test("get_workouts names the end that is missing when the other is given", async () => {
+  const noEnd = await fetchWorkouts({}, { from: "2026-10-12", to: null, session_id: null });
+  const noStart = await fetchWorkouts({}, { from: null, to: "2026-10-13", session_id: null });
+
+  assertStringIncludes(noEnd.result.text, '"to"');
+  assertFalse(noEnd.result.text.includes('"from"'));
+  assertStringIncludes(noStart.result.text, '"from"');
+  assertFalse(noStart.result.text.includes('"to"'));
+});
+
+Deno.test("get_workouts ignores from and to when a session_id is given, and says so", async () => {
+  assertStringIncludes(getWorkoutsTool.description, "ignored");
+
+  const { result } = await fetchWorkouts(boardWeek(), {
+    from: "2026-01-01",
+    to: "2026-12-31",
+    session_id: sessionId(1),
+  });
+
+  assertEquals(fieldOf(result, "id"), sessionId(1));
 });
 
 Deno.test("get_workouts reads a range when the model leaves session_id out", async () => {
