@@ -4,6 +4,8 @@ import { describeCount } from "../copy/counts";
 import { MONTH_NAMES_SHORT, WEEKDAY_NAMES_SHORT } from "../copy/diaryDay";
 import { addCalendarDays, parseCalendarDay } from "../dates/calendarDay";
 
+import type { ExerciseTrend } from "../training/exerciseTrend";
+
 /*
  * The one line under an answer that comes from the person's data, and the badge under an answer about
  * the weight trend, as the approved mobile boards print them (canvas "Ki-Lo assistant screens":
@@ -158,3 +160,26 @@ export const describeSuggestionCitation = ({
   today: string;
 }): string =>
   `Based on Ki-Lo's suggestion for ${localDate === today ? "today" : describeWeekdayName(localDate)}`;
+
+const DAYS_FROM_MONDAY_TO_SUNDAY = 6;
+
+/**
+ * The line under an answer about one exercise's weeks: "Based on 6 weeks of bench press, 7 Sep to 11 Oct",
+ * from the Monday of the first trained week to the Sunday that ends the latest. Only trained weeks are
+ * counted, so a skipped week is not one. The name is the exercise's, which a person wrote for their own,
+ * so it is cleaned and cut like any words shown from outside and put in lower case, and a name with
+ * nothing left reads "this exercise".
+ */
+export const describeProgressCitation = (exerciseName: string, trend: ExerciseTrend): string => {
+  const name = safeWordsToShow(exerciseName)?.toLowerCase() ?? "this exercise";
+  const trained = trend.weeks.filter((entry) => entry.value !== null);
+  const first = trained.at(0);
+  const last = trained.at(-1);
+
+  return first === undefined || last === undefined
+    ? `No weeks of ${name}`
+    : `Based on ${describeCount(trained.length, "week", "weeks")} of ${name}, ${describeDateRange(
+        first.weekStart,
+        addCalendarDays(last.weekStart, DAYS_FROM_MONDAY_TO_SUNDAY),
+      )}`;
+};

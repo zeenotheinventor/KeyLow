@@ -44,7 +44,7 @@ const muscleEntry = (muscle: string, role: "primary" | "secondary", weight: numb
   weight,
 });
 
-// A `workout_sets` row as the sets read selects it. The dotted key is the session's local date, which the
+// A `workout_sets` row as the sets read selects it. The embedded session holds its local date, which the
 // stub filters on as the database filters the joined session.
 export const loggedSetRow = (
   number: number,
@@ -72,7 +72,7 @@ export const loggedSetRow = (
       muscleListVersion: 1,
       muscles,
     },
-    "workout_sessions.local_date": toLocalDate(new Date(performedAt), "Europe/London"),
+    workout_sessions: { local_date: toLocalDate(new Date(performedAt), "Europe/London") },
     ...overrides,
   };
 };

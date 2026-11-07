@@ -13,15 +13,24 @@ export type StubCaller = { caller: SupabaseClient<Database>; calls: RecordedCall
 export type StubData = {
   // The rows each RPC answers with, by function name.
   rpc?: Record<string, Row[]>;
-  // The rows of each table. `eq`, `in`, `is`, `gte` and `lte` filter them and `limit` and `range` cut them, as
-  // the database would. A filter on an embedded table (`exercise_muscles.role`) is not modelled. `order`
-  // does nothing, so a table is listed in the order its read should answer in.
+  // The rows of each table. `eq`, `neq`, `in`, `is`, `gte`, `lte` and `lt` filter them and `limit` and `range`
+  // cut them, as the database would. `eq`, `in` and `is` do not model a filter on an embedded table
+  // (`exercise_muscles.role`), while `neq`, `gte`, `lte` and `lt` read an embedded object by its path
+  // (`workout_sessions.local_date`). `order` does nothing, so a table is listed in the order its read should
+  // answer in.
   tables?: Record<string, Row[]>;
   // The rows a table answers from its second read on, for a row that was there at the first read and
   // gone at the next, such as a session deleted between a list and its detail. A table named here that
   // is not in `tables` answers nothing at its first read.
   laterTables?: Record<string, Row[]>;
 };
+
+const isRow = (value: unknown): value is Row =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+// A column of a row, reading `workout_sessions.local_date` out of the object embedded under `workout_sessions`.
+const valueAt = (row: Row, column: string): unknown =>
+  column.split(".").reduce<unknown>((value, key) => (isRow(value) ? value[key] : undefined), row);
 
 export function stubCaller(data: StubData = {}): StubCaller {
   const calls: RecordedCall[] = [];
@@ -44,6 +53,11 @@ export function stubCaller(data: StubData = {}): StubCaller {
         remaining = remaining.filter((row) => row[column] === value);
         return query;
       },
+      neq(column: string, value: unknown) {
+        record("neq", [column, value]);
+        remaining = remaining.filter((row) => valueAt(row, column) !== value);
+        return query;
+      },
       in(column: string, values: unknown[]) {
         record("in", [column, values]);
         if (!column.includes(".")) {
@@ -60,12 +74,17 @@ export function stubCaller(data: StubData = {}): StubCaller {
       // Dates are `YYYY-MM-DD` text, which orders the same as the dates do.
       gte(column: string, value: string) {
         record("gte", [column, value]);
-        remaining = remaining.filter((row) => String(row[column]) >= value);
+        remaining = remaining.filter((row) => String(valueAt(row, column)) >= value);
         return query;
       },
       lte(column: string, value: string) {
         record("lte", [column, value]);
-        remaining = remaining.filter((row) => String(row[column]) <= value);
+        remaining = remaining.filter((row) => String(valueAt(row, column)) <= value);
+        return query;
+      },
+      lt(column: string, value: string) {
+        record("lt", [column, value]);
+        remaining = remaining.filter((row) => String(valueAt(row, column)) < value);
         return query;
       },
       limit(count: number) {
