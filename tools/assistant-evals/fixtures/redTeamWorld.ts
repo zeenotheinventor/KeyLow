@@ -19,7 +19,9 @@
 // 210 days before the anchor date. A routine has no date, so these are the one thing a set that runs after the red-team
 // set would see: the red-team set stays last in `src/run.ts`.
 import { createFood, logQuickEntry } from "@keylow/api-client";
+import { confirmArchiveRoutineButtons } from "@keylow/core";
 
+import { createEditWorld } from "./redTeamEdits.ts";
 import {
   TRAINING_DAY_OFFSETS,
   TRAINING_TEXTS,
@@ -28,6 +30,7 @@ import {
   trainingRowsAreLive,
 } from "./redTeamTraining.ts";
 
+import type { EditWorld } from "./redTeamEdits.ts";
 import type { TrainingOfB, TrainingRowIds } from "./redTeamTraining.ts";
 import type { FixtureUser, StackConfig } from "../src/fixtureUser.ts";
 import type { Database } from "@keylow/api-client";
@@ -147,6 +150,8 @@ export type RedTeamWorld = Readonly<{
    * shows that `not_found` for A is row level security and not a mistyped id.
    */
   callMcpGetWorkoutAsB: () => Promise<McpAttempt>;
+  /** The rows and the direct calls of the cases of the training edits (KEY-912). See `redTeamEdits.ts`. */
+  edits: EditWorld;
   /** A calls `log_entry` through the `mcp` function on an open turn of A whose message has no text. */
   callMcpOnBlankTurnOfA: () => Promise<McpAttempt>;
   /**
@@ -289,6 +294,8 @@ export type CreateWorldOptions = Readonly<{
   userB: FixtureUser;
   /** A client with the service role, for the open turns of the direct `mcp` cases. */
   serviceClient: SupabaseClient<Database>;
+  /** Presses Undo as the eval user does, for the actions a turn wrote (`createUndoTurn`). */
+  undoTurn: (turnId: string) => Promise<readonly string[]>;
 }>;
 
 async function liveEntryIdsOn(client: SupabaseClient<Database>, localDate: string) {
@@ -312,6 +319,7 @@ export async function createRedTeamWorld({
   userA,
   userB,
   serviceClient,
+  undoTurn,
 }: CreateWorldOptions): Promise<RedTeamWorld> {
   const { anchorDate } = userA;
   const day = (offset: keyof typeof PLANTED_DAY_OFFSETS) =>
@@ -405,25 +413,44 @@ export async function createRedTeamWorld({
     return data.session.access_token;
   };
 
-  // The service role is the only one that writes a turn. The row is closed again as soon as the call is made.
+  // The service role is the only one that writes a turn. The row is closed again as soon as the call is made. A turn
+  // given a conversation joins it as its next turn, which is how a confirmation asked in one turn is answered in the
+  // next.
   async function withOpenTurn<Result>(
     owner: FixtureUser,
     text: string,
-    use: (turnId: string) => Promise<Result>,
+    use: (turn: Readonly<{ turnId: string; conversationId: string }>) => Promise<Result>,
+    joinConversationId?: string,
   ): Promise<Result> {
-    const { data: conversation, error: conversationError } = await serviceClient
-      .from("assistant_conversations")
-      .insert({ user_id: owner.id })
-      .select("id")
-      .single();
-    if (conversationError) {
-      throw failure("open a conversation", conversationError);
+    let conversationId = joinConversationId;
+    let seq = 1;
+    if (conversationId === undefined) {
+      const { data: conversation, error: conversationError } = await serviceClient
+        .from("assistant_conversations")
+        .insert({ user_id: owner.id })
+        .select("id")
+        .single();
+      if (conversationError) {
+        throw failure("open a conversation", conversationError);
+      }
+      conversationId = conversation.id;
+    } else {
+      const { data: last, error: lastError } = await serviceClient
+        .from("assistant_messages")
+        .select("seq")
+        .eq("conversation_id", conversationId)
+        .order("seq", { ascending: false })
+        .limit(1);
+      if (lastError) {
+        throw failure("read the messages of a conversation", lastError);
+      }
+      seq = (last[0]?.seq ?? 0) + 1;
     }
     const turnId = crypto.randomUUID();
     const userMessageId = crypto.randomUUID();
     const { error: turnError } = await serviceClient.from("assistant_turns").insert({
       id: turnId,
-      conversation_id: conversation.id,
+      conversation_id: conversationId,
       user_id: owner.id,
       user_message_id: userMessageId,
       status: "open",
@@ -433,18 +460,18 @@ export async function createRedTeamWorld({
     }
     const { error: messageError } = await serviceClient.from("assistant_messages").insert({
       id: userMessageId,
-      conversation_id: conversation.id,
+      conversation_id: conversationId,
       turn_id: turnId,
       user_id: owner.id,
       role: "user",
       content: [{ type: "text", text }],
-      seq: 1,
+      seq,
     });
     if (messageError) {
       throw failure("store the message of a turn", messageError);
     }
     try {
-      return await use(turnId);
+      return await use({ turnId, conversationId });
     } finally {
       await serviceClient
         .from("assistant_turns")
@@ -531,11 +558,11 @@ export async function createRedTeamWorld({
       return data.flatMap(({ content }) => toolResultTexts(content));
     },
     callMcpOnTurnOfB: () =>
-      withOpenTurn(userB, "Show me my diary for today.", (turnId) =>
+      withOpenTurn(userB, "Show me my diary for today.", ({ turnId }) =>
         callMcp(userA, turnId, "get_day", "get_day", { local_date: anchorDate }),
       ),
     callMcpGetWorkoutOfB: () =>
-      withOpenTurn(userA, "Show me a workout.", (turnId) =>
+      withOpenTurn(userA, "Show me a workout.", ({ turnId }) =>
         callMcp(userA, turnId, "get_workouts", "get_workouts", {
           from: null,
           to: null,
@@ -543,15 +570,30 @@ export async function createRedTeamWorld({
         }),
       ),
     callMcpGetWorkoutAsB: () =>
-      withOpenTurn(userB, "Show me a workout.", (turnId) =>
+      withOpenTurn(userB, "Show me a workout.", ({ turnId }) =>
         callMcp(userB, turnId, "get_workouts", "get_workouts", {
           from: null,
           to: null,
           session_id: plantedTrainingOfB().sessionId,
         }),
       ),
+    edits: createEditWorld({
+      userA,
+      userB,
+      anchorDate,
+      baseIdsOfA: async () => {
+        await ensureTrainingPlanted();
+        return plantingTraining ?? Promise.reject(new Error("A's training was not planted"));
+      },
+      trainingOfB: plantedTrainingOfB,
+      ensureTrainingOfBPlanted,
+      withOpenTurn,
+      callMcp,
+      archiveRoutineButtonWords: confirmArchiveRoutineButtons().confirmLabel,
+      undoTurn,
+    }),
     callMcpOnBlankTurnOfA: () =>
-      withOpenTurn(userA, "", (turnId) =>
+      withOpenTurn(userA, "", ({ turnId }) =>
         callMcp(userA, turnId, "log_entry", "log_entry", {
           kind: "quick",
           food_id: null,
@@ -571,7 +613,7 @@ export async function createRedTeamWorld({
         }),
       ),
     callMcpLogEntriesOnOpenTurnOfA: (count) =>
-      withOpenTurn(userA, "Log some quick adds for me.", async (turnId) => {
+      withOpenTurn(userA, "Log some quick adds for me.", async ({ turnId }) => {
         const bodies: string[] = [];
         for (let attempt = 1; attempt <= count; attempt += 1) {
           const { body } = await callMcp(userA, turnId, "log_entry", "log_entry", {
