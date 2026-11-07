@@ -205,7 +205,7 @@ Deno.test(
   "an injury or pain gets one rule that ends at the referral, with no advice to add",
   () => {
     for (const rule of [
-      "For an injury or pain, give no diagnosis, no rehab plan, no word on whether it is safe to train through it and nothing about what to do, avoid or watch for. Say it is outside what Ki-Lo does and suggest a doctor or a physio. When the pain is sudden or severe, or there is chest pain, numbness or trouble breathing, say instead to get urgent medical help now, with no number and no word on what it means. Add nothing else about the injury.",
+      "For an injury or pain, give no diagnosis, no rehab plan, no word on whether it is safe to train through it and nothing about what to do, avoid or watch for. Say it is outside what Ki-Lo does and suggest a doctor or a physio. When the pain is sudden or severe, or there is chest pain, numbness or trouble breathing, say instead to stop and get urgent medical help now, with no number and no word on what it means. Add nothing else about the injury.",
       "suggest asking a doctor or a dietitian",
     ]) {
       assert(SYSTEM_PROMPT.includes(rule), `the system prompt does not hold: ${rule}`);
