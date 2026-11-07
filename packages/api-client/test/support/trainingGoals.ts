@@ -52,6 +52,8 @@ type StoredRow = Omit<ReturnType<typeof trainingGoalsRow>, "effective_to"> & {
   effective_to: string | null;
 };
 
+const closeRequestSchema = z.object({ effective_to: z.string() });
+
 const saveRequestSchema = z.object({ p_goals: z.record(z.string(), z.unknown()) });
 
 export type TrainingGoalsFake = ReturnType<typeof installTrainingGoalsFake>;
@@ -69,13 +71,15 @@ export function installTrainingGoalsFake(server: SetupServer, data: { rows?: Sto
   const rows: StoredRow[] = [...(data.rows ?? [])];
   const reads: URL[] = [];
   const saves: unknown[] = [];
+  const closes: { query: string; body: { effective_to: string } }[] = [];
   let savedCount = 0;
   const control: {
     failures: string[];
     readFailure: string | null;
+    closeFailure: string | null;
     offline: boolean;
     gate: Promise<void> | null;
-  } = { failures: [], readFailure: null, offline: false, gate: null };
+  } = { failures: [], readFailure: null, closeFailure: null, offline: false, gate: null };
 
   server.use(
     http.get(`${REST_URL}/training_goals`, ({ request }) => {
@@ -100,6 +104,37 @@ export function installTrainingGoalsFake(server: SetupServer, data: { rows?: Sto
             ? rows.filter((row) => row.id === id.slice(3))
             : rows;
       return postgrestRows(request, matching);
+    }),
+    http.patch(`${REST_URL}/training_goals`, async ({ request }) => {
+      const url = new URL(request.url);
+      const body = closeRequestSchema.parse(await request.clone().json());
+      closes.push({ query: url.search, body });
+      if (control.offline) {
+        return HttpResponse.error();
+      }
+      if (control.closeFailure !== null) {
+        return postgrestError(
+          400,
+          control.closeFailure,
+          `failing row contains ${RECOGNISABLE_GOAL_TEXT}`,
+          { details: `Failing row contains ${RECOGNISABLE_GOAL_TEXT}` },
+        );
+      }
+      const id = url.searchParams.get("id");
+      // The update only reaches a row that is still current, as the request's own filter says.
+      const matching = rows.filter(
+        (row) =>
+          id === `eq.${row.id}` &&
+          url.searchParams.get("effective_to") === "is.null" &&
+          row.effective_to === null,
+      );
+      for (const row of matching) {
+        row.effective_to = body.effective_to;
+      }
+      return postgrestRows(
+        request,
+        matching.map(({ id: closedId }) => ({ id: closedId })),
+      );
     }),
     http.post(`${REST_URL}/rpc/save_training_goals`, async ({ request }) => {
       const body = saveRequestSchema.parse(await request.clone().json());
@@ -142,6 +177,8 @@ export function installTrainingGoalsFake(server: SetupServer, data: { rows?: Sto
     rows,
     reads,
     saves,
+    /** The updates that ended a goal, with the query that chose the row and the body. */
+    closes,
     /** Makes the next saves fail with these database error codes, one each, and then succeed. */
     failNextSaves: (...codes: string[]) => {
       control.failures = codes;
@@ -149,6 +186,10 @@ export function installTrainingGoalsFake(server: SetupServer, data: { rows?: Sto
     /** Makes every read fail with this database error code, or stops it with null. */
     failReadsWith: (code: string | null) => {
       control.readFailure = code;
+    },
+    /** Makes every update that ends a goal fail with this database error code, or stops it with null. */
+    failClosesWith: (code: string | null) => {
+      control.closeFailure = code;
     },
     goOffline: (offline = true) => {
       control.offline = offline;

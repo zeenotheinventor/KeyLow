@@ -6,6 +6,7 @@ import { createCustomFoodTool } from "./tools/createCustomFood.ts";
 import { createRecipeTool } from "./tools/createRecipe.ts";
 import { createRoutineTool } from "./tools/createRoutine.ts";
 import { deleteEntryTool } from "./tools/deleteEntry.ts";
+import { editRoutineTool } from "./tools/editRoutine.ts";
 import { askUserTool } from "./tools/askUser.ts";
 import { getDayTool } from "./tools/getDay.ts";
 import { getEntriesTool } from "./tools/getEntries.ts";
@@ -30,6 +31,7 @@ import { updateTargetsTool } from "./tools/updateTargets.ts";
 import { setActiveRoutineTool } from "./tools/setActiveRoutine.ts";
 import { archiveRoutineTool } from "./tools/archiveRoutine.ts";
 import { updatePastSetTool } from "./tools/updatePastSet.ts";
+import { updateTrainingGoalsTool } from "./tools/updateTrainingGoals.ts";
 import { strictSchemaProblem } from "./tool.ts";
 
 import type { ToolDefinition, ToolRegistry } from "./tool.ts";
@@ -89,7 +91,9 @@ const toolDefinitions: readonly ToolDefinition[] = [
   suggestNextSessionTool,
   setActiveRoutineTool,
   archiveRoutineTool,
+  editRoutineTool,
   updatePastSetTool,
+  updateTrainingGoalsTool,
   createRoutineTool,
   askUserTool,
 ];

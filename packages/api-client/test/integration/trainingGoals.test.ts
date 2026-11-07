@@ -3,9 +3,11 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { createTestUser, deleteCreatedTestUsers } from "./support/users";
 import {
+  closeTrainingGoals,
   getCurrentTrainingGoals,
   listTrainingGoalsHistory,
   saveTrainingGoals,
+  saveTrainingGoalsReturningId,
 } from "../../src/repos/trainingGoals";
 import { strengthAnswers, vTaperAnswers } from "../support/trainingGoals";
 
@@ -76,5 +78,54 @@ describe("saveTrainingGoals", () => {
     expect(history).toHaveLength(3);
     expect(history.filter(({ effective_to }) => effective_to === null)).toHaveLength(1);
     expect(history.map(({ id }) => id)).toEqual(expect.arrayContaining([one.id, other.id]));
+  });
+});
+
+describe("the assistant's Undo of a goal", () => {
+  let owner: TestUser;
+  let stranger: TestUser;
+
+  beforeAll(async () => {
+    [owner, stranger] = await Promise.all([createTestUser("key404"), createTestUser("key404")]);
+  });
+
+  it("should end the person's only goal at once, so they have no goal, through the granted update", async () => {
+    const id = await saveTrainingGoalsReturningId(owner.client, vTaperAnswers);
+    const saved = (await listTrainingGoalsHistory(owner.client)).find((row) => row.id === id);
+
+    const closed = saved === undefined ? false : await closeTrainingGoals(owner.client, saved);
+
+    expect(closed).toBe(true);
+    expect(await getCurrentTrainingGoals(owner.client)).toBeNull();
+    expect(await listTrainingGoalsHistory(owner.client)).toHaveLength(1);
+  });
+
+  it("should leave a goal that already ended as it is and say so", async () => {
+    const [ended] = await listTrainingGoalsHistory(owner.client);
+
+    const closed = ended === undefined ? true : await closeTrainingGoals(owner.client, ended);
+
+    expect(closed).toBe(false);
+  });
+
+  it("should save the answers again as a new row that begins the instant the row before it ended", async () => {
+    const firstId = await saveTrainingGoalsReturningId(owner.client, vTaperAnswers);
+    const secondId = await saveTrainingGoalsReturningId(owner.client, strengthAnswers);
+
+    const history = await listTrainingGoalsHistory(owner.client);
+    const first = history.find((row) => row.id === firstId);
+    const second = history.find((row) => row.id === secondId);
+
+    expect(second?.effective_to).toBeNull();
+    expect(Date.parse(first?.effective_to ?? "")).toBe(Date.parse(second?.effective_from ?? "x"));
+  });
+
+  it("should not end another person's goal", async () => {
+    const theirs = await saveTrainingGoals(stranger.client, strengthAnswers);
+
+    const closed = await closeTrainingGoals(owner.client, theirs);
+
+    expect(closed).toBe(false);
+    expect((await getCurrentTrainingGoals(stranger.client))?.id).toBe(theirs.id);
   });
 });

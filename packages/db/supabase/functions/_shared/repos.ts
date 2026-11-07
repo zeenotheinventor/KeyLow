@@ -84,4 +84,7 @@ export {
   setActiveRoutine,
   getSet,
   updateSet,
+  closeTrainingGoals,
+  listTrainingGoalsHistory,
+  saveTrainingGoalsReturningId,
 } from "./repos/index.js";

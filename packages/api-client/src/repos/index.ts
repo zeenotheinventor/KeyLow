@@ -136,9 +136,11 @@ export type { SetAdd, SetPatch } from "./setWrites";
 export { findPreviousSessionWeek, listSessionsInWeek } from "./trainingHistory";
 export type { HistorySessionRow, HistorySetRow } from "./trainingSchemas";
 export {
+  closeTrainingGoals,
   getCurrentTrainingGoals,
   listTrainingGoalsHistory,
   saveTrainingGoals,
+  saveTrainingGoalsReturningId,
 } from "./trainingGoals";
 export { exerciseHitOf, getExercise, readExercisesById, searchExercises } from "./exercises";
 export type {
