@@ -16,12 +16,15 @@ export const routineDetailBackend: {
   fails: boolean;
   /** The ids asked for, in order. */
   reads: string[];
-} = { routines: new Map(), fails: false, reads: [] };
+  /** Holds the answer until the test calls it, so a test can look at the screen while the routine loads. */
+  hold: Promise<void> | null;
+} = { routines: new Map(), fails: false, reads: [], hold: null };
 
 export function resetRoutineDetailBackend(): void {
   routineDetailBackend.routines = new Map();
   routineDetailBackend.fails = false;
   routineDetailBackend.reads = [];
+  routineDetailBackend.hold = null;
 }
 
 const respond = (body: unknown, status = 200) =>
@@ -63,6 +66,9 @@ async function detailFetch(input: string | URL | Request, init?: RequestInit): P
   }
   const id = url.searchParams.get("id")?.replace("eq.", "") ?? "";
   routineDetailBackend.reads.push(id);
+  if (routineDetailBackend.hold !== null) {
+    await routineDetailBackend.hold;
+  }
   if (routineDetailBackend.fails) {
     return respond({ code: "XX000", message: "raw database text", details: null, hint: null }, 500);
   }
