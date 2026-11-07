@@ -36,7 +36,7 @@ Deno.test(
 
     assertEquals(payloadOf(result), {
       goals: {
-        goal: "Both",
+        goal: "Both: Strength on the big lifts, size everywhere else",
         focus: ["V-taper", "Arms"],
         days_per_week: 4,
         session_minutes: 60,

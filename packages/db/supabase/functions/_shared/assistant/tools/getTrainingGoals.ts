@@ -1,7 +1,8 @@
 // The user's current training goals, for "what am I training for?" and as the numbers a routine is built
 // from. Only the current answers are read, with no history, and the row's user id never leaves the repo.
-// The answers are given in the words the app shows, except the equipment, whose codes feed
-// `search_exercises`. Nothing in the result is text a person wrote, so the description has no data notice.
+// The answers are given in the words the app shows, the goal with its description because "Both" alone
+// means nothing, except the equipment, whose codes feed `search_exercises`. Nothing in the result is text
+// a person wrote, so the description has no data notice.
 import { z } from "zod";
 
 import {
@@ -37,7 +38,7 @@ export const getTrainingGoalsTool: ReadToolDefinition<z.infer<typeof getTraining
     return {
       data: {
         goals: {
-          goal: GOAL_OPTIONS[goals.goal].label,
+          goal: `${GOAL_OPTIONS[goals.goal].label}: ${GOAL_OPTIONS[goals.goal].description}`,
           focus: goals.focus.map((focus) => FOCUS_OPTIONS[focus].label),
           days_per_week: goals.days_per_week,
           session_minutes: goals.session_minutes,

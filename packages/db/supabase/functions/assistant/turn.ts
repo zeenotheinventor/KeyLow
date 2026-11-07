@@ -22,6 +22,7 @@ import {
   assistantCardSchema,
   isConfirmAnswer,
   mergeAssistantCards,
+  safeWordsToShow,
   withActionIds,
 } from "../_shared/core.ts";
 import { allowedToolsFor } from "./allowlist.ts";
@@ -124,6 +125,7 @@ const CLARIFY_FIELD_HINT = "Or say it your way";
 
 const ASK_USER_TOOL = "ask_user";
 const IMPORT_RECIPE_TOOL = "import_recipe_from_url";
+const SEARCH_FOODS_TOOL = "search_foods";
 
 // Made per turn, so a missing key ends that turn and never stops the function booting.
 export function createModelClient(read: (name: string) => string | undefined): Anthropic | null {
@@ -560,12 +562,14 @@ function hostOf(input: Record<string, unknown>): string | null {
   }
 }
 
-// One call of a response. Answers the ending when this call ends the turn, or null to go on.
+// One call of a response. Answers the ending when this call ends the turn, or null to go on. `isConfirmed` is
+// true only for the call a button press makes, so the working line says "Removing" and not "Looking at".
 async function runToolUse(
   run: Run,
   session: Session,
   toolUse: CalledTool,
   responseText: string,
+  isConfirmed = false,
 ): Promise<Ending | null> {
   const { id, name, input } = toolUse;
   const interrupted = interruption(run);
@@ -608,12 +612,21 @@ async function runToolUse(
     );
     return null;
   }
+  // Before the call, because a hint that came back with the result would arrive after the fetch. Only the
+  // tool's name and the cleaned words of a search go out: the stream is not stored and the model never reads it.
   if (name === IMPORT_RECIPE_TOOL) {
-    // Before the call, because a hint that came back with the result would arrive after the fetch.
     const host = hostOf(input);
     if (host !== null) {
       emit(run, { type: "status", code: "reading_recipe", host });
     }
+  } else {
+    emit(run, {
+      type: "status",
+      code: "tool",
+      tool: name,
+      food: name === SEARCH_FOODS_TOOL ? safeWordsToShow(input["q"]) : null,
+      isConfirmed,
+    });
   }
   run.counts.toolCalls += 1;
   // Once. A throw is a `McpClientError`, the turn ends, and the call is not made again.
@@ -633,6 +646,11 @@ async function runModelCalls(run: Run, session: Session): Promise<Ending> {
     const interrupted = interruption(run);
     if (interrupted !== null) {
       return interrupted;
+    }
+    // After a tool the app cannot tell the model has started again, and the first call is covered by the
+    // app's own "Thinking" from the press. A retry draws the same words again.
+    if (run.counts.modelCalls > 0) {
+      emit(run, { type: "status", code: "thinking" });
     }
     const { messages, compaction } = await turns.readConversation(userId, conversationId, {
       excludeMessageId: NO_MESSAGE_ID,
@@ -709,7 +727,7 @@ async function runConfirmedCall(
   }
   // Stored as an assistant row before it runs, so the history reads as a call the model made.
   await storeAssistantContent(run, [toJson(call)]);
-  const finished = await runToolUse(run, session, call, "");
+  const finished = await runToolUse(run, session, call, "", true);
   if (finished !== null) {
     return finished;
   }
