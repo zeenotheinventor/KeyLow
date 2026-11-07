@@ -80,7 +80,7 @@ describe("useAssistantConsent", () => {
 
   it("should read the assistant as on, with when and which version, once consented", async () => {
     stored = {
-      assistant_consent_at: "2026-11-08T09:00:00+00:00",
+      assistant_consent_at: `${ASSISTANT_CONSENT_VERSION}T09:00:00+00:00`,
       assistant_consent_version: ASSISTANT_CONSENT_VERSION,
     };
     const { wrapper } = await renderSignedIn();
@@ -92,7 +92,7 @@ describe("useAssistantConsent", () => {
     });
     expect(result.current.data).toEqual({
       isOn: true,
-      consentedAt: "2026-11-08T09:00:00+00:00",
+      consentedAt: `${ASSISTANT_CONSENT_VERSION}T09:00:00+00:00`,
       version: ASSISTANT_CONSENT_VERSION,
     });
   });

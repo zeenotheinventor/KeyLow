@@ -708,7 +708,7 @@ describe("the More screen", () => {
 
     it("should say On, with what the assistant does, once the person has turned it on", async () => {
       Object.assign(diaryBackend.terms, {
-        assistant_consent_at: "2026-11-08T10:00:00Z",
+        assistant_consent_at: `${ASSISTANT_CONSENT_VERSION}T10:00:00Z`,
         assistant_consent_version: ASSISTANT_CONSENT_VERSION,
       });
       await renderMore();

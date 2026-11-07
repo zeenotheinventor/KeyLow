@@ -297,7 +297,8 @@ const consentRow = (version: string | null) =>
   ok({ assistant_consent_at: "2026-11-08T00:00:00Z", assistant_consent_version: version });
 
 Deno.test("the current consent version is consent, and so is a later one", async () => {
-  for (const version of [ASSISTANT_CONSENT_VERSION, "2027-01-01"]) {
+  const nextYear = `${Number(ASSISTANT_CONSENT_VERSION.slice(0, 4)) + 1}-01-01`;
+  for (const version of [ASSISTANT_CONSENT_VERSION, nextYear]) {
     const { store } = scriptedClient({ "from:profiles": [consentRow(version)] });
 
     assertEquals(await store.hasConsented(userId), true, version);
