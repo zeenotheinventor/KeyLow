@@ -28,6 +28,8 @@ export const ASSISTANT_SHEET = {
   /** Who said a message, as a screen reader hears it first. The boards draw neither word. */
   speakerYou: "You",
   speakerAssistant: "Assistant",
+  /** Names the loading placeholder a sheet opens on while its conversation is read (`assistant · opening`), for a screen reader. */
+  openingLabel: "Loading your conversation",
 } as const;
 
 /**

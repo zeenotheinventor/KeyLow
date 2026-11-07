@@ -424,6 +424,61 @@ describe("Skeleton", () => {
     });
   });
 
+  describe("shaped like the assistant thread", () => {
+    it("should be two bubbles and the five lines of the replies that follow them", async () => {
+      await renderSkeleton({ variant: "assistantThread" });
+
+      expect(bones()).toHaveLength(2 + 3 + 2);
+    });
+
+    it("should draw each of your messages as a 46 point bubble on the right, 62 and 44 percent wide", async () => {
+      await renderSkeleton({ variant: "assistantThread" });
+
+      const [firstBubble, , , , secondBubble] = bones();
+      expect(firstBubble).toHaveStyle({ width: "62%", height: 46, alignSelf: "flex-end" });
+      expect(secondBubble).toHaveStyle({ width: "44%", height: 46, alignSelf: "flex-end" });
+    });
+
+    it("should give the bubbles the chat bubble's corners, small at the bottom right", async () => {
+      await renderSkeleton({ variant: "assistantThread" });
+
+      const [firstBubble] = bones();
+      expect(firstBubble).toHaveStyle({ borderRadius: 12, borderBottomRightRadius: 6 });
+    });
+
+    it("should draw the replies as lines 14 tall, 92, 84 and 58 percent wide and then 88 and 46", async () => {
+      await renderSkeleton({ variant: "assistantThread" });
+
+      const [, ...firstReply] = bones().slice(0, 4);
+      const secondReply = bones().slice(5);
+      (["92%", "84%", "58%"] as const).forEach((width, line) => {
+        expect(firstReply[line]).toHaveStyle({ width, height: 14 });
+      });
+      (["88%", "46%"] as const).forEach((width, line) => {
+        expect(secondReply[line]).toHaveStyle({ width, height: 14 });
+      });
+    });
+
+    it("should keep 12 points between the messages and 8 between the lines of a reply", async () => {
+      await renderSkeleton({ variant: "assistantThread" });
+
+      expect(screen.getByTestId("skeleton-assistant-thread", hidden)).toHaveStyle({ rowGap: 12 });
+      expect(screen.getAllByTestId("skeleton-assistant-reply", hidden)).toHaveLength(2);
+      for (const reply of screen.getAllByTestId("skeleton-assistant-reply", hidden)) {
+        expect(reply).toHaveStyle({ rowGap: 8, paddingRight: 16 });
+      }
+    });
+
+    it("should draw no shine under reduced motion, and keep the bones", async () => {
+      setReduceMotion(true);
+      await renderSkeleton({ variant: "assistantThread" });
+      await advance(skeletonDelay + 500);
+
+      expect(shines()).toHaveLength(0);
+      expect(bones()).toHaveLength(7);
+    });
+  });
+
   describe("shaped like the body map screen", () => {
     it("should be the view label and its line, two figures, the legend bar and its caption", async () => {
       await renderSkeleton({ variant: "bodyMap" });

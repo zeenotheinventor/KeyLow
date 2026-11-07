@@ -574,6 +574,24 @@ export function resolveAssistantSheetAccess({
   return accessOfNotice(statusNotice) ?? { kind: "open" };
 }
 
+/**
+ * Whether the sheet draws its loading placeholder (`assistant · opening`) in place of a thread: while the
+ * status is read, and when the assistant is open but the stored conversation has not been read yet and
+ * there is nothing to draw. The consent card and a limit are never behind it, and neither is a conversation
+ * that is known, whose starters are drawn once the read settles.
+ */
+export function isAssistantSheetOpening({
+  access,
+  isEmpty,
+  isThreadKnown,
+}: {
+  access: AssistantSheetAccess;
+  isEmpty: boolean;
+  isThreadKnown: boolean;
+}): boolean {
+  return access.kind === "checking" || (access.kind === "open" && isEmpty && !isThreadKnown);
+}
+
 export type AssistantComposerLook =
   | { isShown: false }
   | {
@@ -585,10 +603,12 @@ export type AssistantComposerLook =
     };
 
 /**
- * The composer under the thread: gone for the consent card and while the status is read, off with the
- * notice's own words when the assistant is limited (in the person's time zone), off with the offline
- * words while offline, else on with the sheet's placeholder. Opened from Describe (`describeAt` is the
- * time it logs at) it asks for a meal instead, and says when the meal is logged while the field is on.
+ * The composer under the thread: gone for the consent card only, off with the notice's own words when the
+ * assistant is limited (in the person's time zone), off with the offline words while offline, else on with
+ * the sheet's placeholder. It is on while the status is read, as when open, so the sheet that opens on its
+ * loading placeholder (`assistant · opening`) shows the field at once, and Send stays off until the
+ * conversation is known. Opened from Describe (`describeAt` is the time it logs at) it asks for a meal
+ * instead, and says when the meal is logged while the field is on.
  */
 export function describeAssistantComposer({
   access,
@@ -610,7 +630,6 @@ export function describeAssistantComposer({
       ? ASSISTANT_SHEET.composerPlaceholder
       : ASSISTANT_DESCRIBE.composerPlaceholder);
   switch (access.kind) {
-    case "checking":
     case "consent":
       return { isShown: false };
     case "limited":
@@ -619,6 +638,7 @@ export function describeAssistantComposer({
         isFieldDisabled: true,
         placeholder: describeAssistantNotice(access.notice, timeZone).fieldText ?? placeholder,
       };
+    case "checking":
     case "open":
       if (!isOnline) {
         return { isShown: true, isFieldDisabled: true, placeholder: ASSISTANT_OFFLINE.fieldText };

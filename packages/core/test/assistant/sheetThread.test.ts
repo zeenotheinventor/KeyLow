@@ -6,6 +6,7 @@ import {
   canAnswerAssistantQuestion,
   canSendAssistantMessage,
   describeAssistantComposer,
+  isAssistantSheetOpening,
   isAssistantStatusKnown,
   isSentTurnStored,
   isStaleStreamGateNotice,
@@ -1248,12 +1249,84 @@ describe("describeAssistantComposer", () => {
     ).toMatchObject({ placeholder: "Needs a connection" });
   });
 
-  it.each([{ kind: "consent" }, { kind: "checking" }] as const)(
-    "should not be shown for $kind",
-    (access) => {
-      expect(describeComposer(access)).toEqual({ isShown: false });
+  it("should not be shown for the consent card", () => {
+    expect(describeComposer({ kind: "consent" })).toEqual({ isShown: false });
+  });
+
+  it("should look as it does when open while the status is read", () => {
+    expect(describeComposer({ kind: "checking" })).toEqual(describeComposer({ kind: "open" }));
+  });
+
+  it("should look as it does when open while the status is read and the app is offline", () => {
+    expect(describeComposer({ kind: "checking" }, false)).toEqual(
+      describeComposer({ kind: "open" }, false),
+    );
+  });
+
+  it("should look as it does when open from Describe while the status is read", () => {
+    const fromDescribe = (access: AssistantSheetAccess) =>
+      describeAssistantComposer({
+        access,
+        isOnline: true,
+        timeZone: "Europe/London",
+        describeAt: "2026-07-01T12:30:00Z",
+      });
+
+    expect(fromDescribe({ kind: "checking" })).toEqual(fromDescribe({ kind: "open" }));
+    expect(fromDescribe({ kind: "checking" })).toHaveProperty("hint");
+  });
+});
+
+describe("isAssistantSheetOpening", () => {
+  const opening = {
+    access: { kind: "open" } satisfies AssistantSheetAccess,
+    isEmpty: true,
+    isThreadKnown: false,
+  };
+
+  it.each([true, false])(
+    "should be true while the status is read, whether the thread is known (%s) or not",
+    (isThreadKnown) => {
+      expect(
+        isAssistantSheetOpening({
+          access: { kind: "checking" },
+          isEmpty: true,
+          isThreadKnown,
+        }),
+      ).toBe(true);
     },
   );
+
+  it("should be true while the status is read over a thread with entries", () => {
+    expect(
+      isAssistantSheetOpening({ ...opening, access: { kind: "checking" }, isEmpty: false }),
+    ).toBe(true);
+  });
+
+  it("should be true when open with an empty thread that is not known", () => {
+    expect(isAssistantSheetOpening(opening)).toBe(true);
+  });
+
+  it("should be false under the consent card", () => {
+    expect(isAssistantSheetOpening({ ...opening, access: { kind: "consent" } })).toBe(false);
+  });
+
+  it("should be false under a limit", () => {
+    expect(
+      isAssistantSheetOpening({
+        ...opening,
+        access: { kind: "limited", notice: { code: "plus" } },
+      }),
+    ).toBe(false);
+  });
+
+  it("should be false when open with a known thread, which is the starters", () => {
+    expect(isAssistantSheetOpening({ ...opening, isThreadKnown: true })).toBe(false);
+  });
+
+  it("should be false when open with entries", () => {
+    expect(isAssistantSheetOpening({ ...opening, isEmpty: false })).toBe(false);
+  });
 });
 
 describe("resolveAssistantTimeZone", () => {
