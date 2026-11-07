@@ -115,7 +115,7 @@ Deno.test(
     for (const rule of [
       `Replies\n${FIRST_PERSON_RULE} Start with the thing itself, as in "Your bench has stayed at the same weight."`,
       'For a limit, write "Ki-Lo can\'t change a routine yet, that is done in the app." or "Changing a routine is done in the app."',
-      'For an offer, ask a question or name the next step, as in "Ask about shoulder press to see that one."',
+      'For an offer to look at something else, ask a question or name the next step, as in "Ask about shoulder press to see that one." A question never stands in for a change the person asked for.',
       "Answer only the question asked, and add no offer the person did not ask for, such as logging food.",
     ]) {
       assert(SYSTEM_PROMPT.includes(rule), `the system prompt does not hold: ${rule}`);
@@ -158,6 +158,14 @@ Deno.test("the system prompt holds the product rules the boards print", () => {
   ]) {
     assert(SYSTEM_PROMPT.includes(rule), `the system prompt does not hold: ${rule}`);
   }
+});
+
+Deno.test("a question without the call is said to do nothing, so the call is made with it", () => {
+  assert(
+    SYSTEM_PROMPT.includes(
+      "The question and the call belong in the same response. A question without the call shows no buttons and does nothing, so always make the call, because the person's request is the reason for it.",
+    ),
+  );
 });
 
 Deno.test("the system prompt names training in what the assistant is and what it can read", () => {
