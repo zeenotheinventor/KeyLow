@@ -52,3 +52,6 @@ export { buildExerciseArchivedCard } from "./exerciseArchived";
 export { buildExerciseCreatedCard } from "./exerciseCreated";
 export type { CardExercise } from "./exerciseCreated";
 export { buildExerciseUpdatedCard } from "./exerciseUpdated";
+export { confirmDeleteWorkoutButtons, confirmDeleteWorkoutQuestion } from "./confirmDeleteWorkout";
+export type { DeleteWorkoutQuestionInput } from "./confirmDeleteWorkout";
+export { buildWorkoutDeletedCard } from "./workoutDeleted";

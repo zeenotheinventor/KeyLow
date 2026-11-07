@@ -89,4 +89,6 @@ export {
   saveTrainingGoalsReturningId,
   archiveExercise,
   restoreExercise,
+  deleteSession,
+  restoreSession,
 } from "./repos/index.js";

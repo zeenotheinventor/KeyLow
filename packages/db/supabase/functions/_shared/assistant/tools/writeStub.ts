@@ -113,8 +113,12 @@ export function writeStub(
             if (Array.isArray(inner)) {
               return [[embedded[1], inner.map((item: Row) => project(item, embedded[2] ?? "*"))]];
             }
-            // A row that belongs to one other row (a session's routine day) is embedded as an object.
-            return typeof inner === "object" && inner !== null
+            // A row that belongs to one other row (a session's routine day) is embedded as an object, or as null
+            // when the row has none (a free session), as PostgREST answers.
+            if (inner === null) {
+              return [[embedded[1], null]];
+            }
+            return typeof inner === "object"
               ? [[embedded[1], project(inner as Row, embedded[2] ?? "*")]]
               : [];
           }),

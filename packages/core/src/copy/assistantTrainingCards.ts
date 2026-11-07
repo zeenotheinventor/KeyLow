@@ -1,5 +1,5 @@
 import { describeLongDate } from "./assistantDayCards";
-import { describeSets, describeWeekdayName, joinInWords } from "./bodyMap";
+import { describeSets, describeShortDate, describeWeekdayName, joinInWords } from "./bodyMap";
 import { describeCount } from "./counts";
 import { EQUIPMENT_OPTIONS, EXPERIENCE_OPTIONS, GOAL_OPTIONS } from "./goals";
 import { MUSCLE_NAMES } from "./muscleNames";
@@ -612,3 +612,39 @@ export const EXERCISE_IN_ROUTINE_REFUSAL = "Take it out of your routines first."
 /** NOT ON THE CANVAS: the words when a live accepted suggestion names the exercise. */
 export const EXERCISE_IN_SUGGESTION_REFUSAL =
   "It is in a workout you accepted on Train. Try again after that day.";
+
+// delete_workout (KEY-907), `assistant-card · workout-deleted` and `assistant · confirm-training`.
+
+/** The delete confirmation: the question is the tool's own, built from its read, and these are its two buttons. */
+export const CONFIRM_DELETE_WORKOUT_BUTTONS = {
+  confirm: "Delete workout",
+  cancel: "Keep it",
+};
+
+/**
+ * "Delete your Legs workout from Thursday 8 October? It has 16 sets. They leave your history and your weekly
+ * numbers." A workout with no routine day is "your workout" (NOT ON THE CANVAS), and one set is "It leaves"
+ * (NOT ON THE CANVAS), so the sentence never says "1 set ... They".
+ */
+export const describeConfirmDeleteWorkoutQuestion = (
+  dayName: string | null,
+  localDate: string,
+  setCount: number,
+): string =>
+  `Delete your ${dayName === null ? "" : `${dayName} `}workout from ${describeLongDate(localDate)}? It has ${describeSets(setCount)}. ${setCount > 1 ? "They leave" : "It leaves"} your history and your weekly numbers.`;
+
+/** "Deleted workout Legs", and "Deleted workout" for a session that follows no routine day (NOT ON THE CANVAS). */
+export const describeWorkoutDeletedTitle = (dayName: string | null): string =>
+  dayName === null ? "Deleted workout" : `Deleted workout ${dayName}`;
+
+/** "Thursday 8 October · 16 sets". */
+export const describeWorkoutDeletedSub = (localDate: string, setCount: number): string =>
+  `${describeLongDate(localDate)}${SEPARATOR}${describeSets(setCount)}`;
+
+/** "Thu 8 Oct · 16 sets", the fact the changes list shows. */
+export const describeWorkoutDeletedChangeDetail = (localDate: string, setCount: number): string =>
+  `${describeShortDate(localDate)}${SEPARATOR}${describeSets(setCount)}`;
+
+/** "Legs on Thursday 8 October is back in your history", and "Your workout on ..." with no routine day (NOT ON THE CANVAS). */
+export const describeWorkoutDeletedUndone = (dayName: string | null, localDate: string): string =>
+  `${dayName ?? "Your workout"} on ${describeLongDate(localDate)} is back in your history`;

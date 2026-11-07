@@ -14,6 +14,7 @@ import {
   confirmArchiveRoutineButtons,
   confirmRemoveExercisesButtons,
   confirmArchiveExerciseButtons,
+  confirmDeleteWorkoutButtons,
 } from "../_shared/core.ts";
 
 export type ConfirmWords = {
@@ -29,6 +30,7 @@ const copyDayInput = z.object({ entry_count: z.number().int().min(1) });
 const archiveRecipeInput = z.object({ id: z.string() });
 const updateTargetsInput = z.object({ current_kcal: z.number().int().nullable() });
 const archiveRoutineInput = z.object({ routine_id: z.string() });
+const deleteWorkoutInput = z.object({ session_id: z.string() });
 const editRoutineInput = z.object({ changes: z.array(z.object({ op: z.string() })) });
 const archiveCustomExerciseInput = z.object({ id: z.string() });
 
@@ -93,6 +95,13 @@ const wordsByTool: ReadonlyMap<string, WordsFor> = new Map<string, WordsFor>([
     (input) =>
       archiveCustomExerciseInput.safeParse(input).success
         ? { ...confirmArchiveExerciseButtons(), tone: "primary" }
+        : null,
+  ],
+  [
+    "delete_workout",
+    (input) =>
+      deleteWorkoutInput.safeParse(input).success
+        ? { ...confirmDeleteWorkoutButtons(), tone: "danger" }
         : null,
   ],
 ]);

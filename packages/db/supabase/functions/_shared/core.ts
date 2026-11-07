@@ -249,4 +249,8 @@ export {
   EXERCISE_IN_ROUTINE_REFUSAL,
   EXERCISE_IN_SUGGESTION_REFUSAL,
   validateCustomExerciseDraft,
+  buildWorkoutDeletedCard,
+  confirmDeleteWorkoutButtons,
+  confirmDeleteWorkoutQuestion,
+  planProgress,
 } from "./core/index.js";
