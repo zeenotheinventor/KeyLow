@@ -1,4 +1,4 @@
-import { ASSISTANT_DESCRIBE, ASSISTANT_SHEET } from "../copy/assistantSheet";
+import { ASSISTANT_DESCRIBE, ASSISTANT_SHEET, ASSISTANT_TRAIN_SHEET } from "../copy/assistantSheet";
 import { openingLoggedAt } from "../diary/openingLoggedAt";
 
 import type { LogContext } from "../diary/openingLoggedAt";
@@ -25,6 +25,9 @@ export function describeInLogOpening(
   };
 }
 
+/** The screen whose header opened the sheet, when it was not the Diary's. */
+export type AssistantOpenedFrom = "train";
+
 /** What an empty sheet says: the starters' words, or the Describe intro, which has no starters and no not-medical line. */
 export type AssistantEmptyWords = {
   heading: string;
@@ -33,19 +36,26 @@ export type AssistantEmptyWords = {
   isNotMedicalLineShown: boolean;
 };
 
-/** The empty sheet's words for the way it was opened: `describeAt` is the time Describe logs at, given only by Describe. */
-export function describeAssistantEmpty(describeAt: string | undefined): AssistantEmptyWords {
-  return describeAt === undefined
-    ? {
-        heading: ASSISTANT_SHEET.emptyHeading,
-        lede: ASSISTANT_SHEET.emptyLede,
-        starters: ASSISTANT_SHEET.starters,
-        isNotMedicalLineShown: true,
-      }
-    : {
-        heading: ASSISTANT_DESCRIBE.emptyHeading,
-        lede: ASSISTANT_DESCRIBE.emptyLede,
-        starters: [],
-        isNotMedicalLineShown: false,
-      };
+/**
+ * The empty sheet's words for the way it was opened: `describeAt` is the time Describe logs at, given only
+ * by Describe, and `from` is the Train header, which has its own heading and starters.
+ */
+export function describeAssistantEmpty(
+  describeAt: string | undefined,
+  from?: AssistantOpenedFrom,
+): AssistantEmptyWords {
+  if (describeAt !== undefined) {
+    return {
+      heading: ASSISTANT_DESCRIBE.emptyHeading,
+      lede: ASSISTANT_DESCRIBE.emptyLede,
+      starters: [],
+      isNotMedicalLineShown: false,
+    };
+  }
+  return {
+    heading: from === "train" ? ASSISTANT_TRAIN_SHEET.emptyHeading : ASSISTANT_SHEET.emptyHeading,
+    lede: ASSISTANT_SHEET.emptyLede,
+    starters: from === "train" ? ASSISTANT_TRAIN_SHEET.starters : ASSISTANT_SHEET.starters,
+    isNotMedicalLineShown: true,
+  };
 }

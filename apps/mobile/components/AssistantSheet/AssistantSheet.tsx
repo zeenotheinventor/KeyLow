@@ -73,7 +73,13 @@ const threadClassNames = {
  * card, a disabled composer under a limit) is `resolveAssistantSheetAccess`. The status is read again each
  * time the sheet opens.
  */
-export function AssistantSheet({ open, onClose, localDate, describeAt }: AssistantSheetProps) {
+export function AssistantSheet({
+  open,
+  onClose,
+  localDate,
+  describeAt,
+  from,
+}: AssistantSheetProps) {
   const isOnline = useIsOnline();
   const router = useRouter();
   const conversation = useAssistantConversation({ enabled: open });
@@ -113,6 +119,7 @@ export function AssistantSheet({ open, onClose, localDate, describeAt }: Assista
     isOnline,
     timeZone,
     describeAt,
+    from,
     fieldHint: thread.fieldHint,
   });
 
@@ -295,6 +302,7 @@ export function AssistantSheet({ open, onClose, localDate, describeAt }: Assista
       return (
         <AssistantEmpty
           describeAt={describeAt}
+          from={from}
           isDisabled={!isOnline || conversation.isFetching}
           onStarterPress={sendMessage}
         />

@@ -3,6 +3,8 @@ import { buildRecipeIngredient } from "@keylow/core/recipes";
 import { buildManualWeighIn } from "@keylow/core/weight";
 import { createClient } from "@supabase/supabase-js";
 
+import { repoError } from "../../../packages/api-client/src/repos/repoError.ts";
+import { retryOnStaleConnection } from "../../../packages/db/test/support/retryOnStaleConnection.ts";
 import {
   DIARY_DAY_COUNT,
   FIXTURE_FOODS,
@@ -39,8 +41,12 @@ export type FixtureUser = Readonly<{
   remove: () => Promise<void>;
 }>;
 
-// Sessions are never persisted or refreshed, so each client is a self-contained caller.
-const stateless = { auth: { persistSession: false, autoRefreshToken: false } };
+// Sessions are never persisted or refreshed, so each client is a self-contained caller. Every request goes
+// through the retry for the local gateway's stale keepalive connection (KEY-796), as the db suites' clients do.
+const stateless = {
+  auth: { persistSession: false, autoRefreshToken: false },
+  global: { fetch: retryOnStaleConnection() },
+};
 
 const DEFAULT_NAME_PREFIX = "assistant-eval";
 const WEIGH_IN_TIME = "07:00";
@@ -153,7 +159,7 @@ async function writeDiaryDay(
     // No repo writes a day's note yet, so this is the one plain update, through the user's own client.
     const { error } = await client.from("day_logs").update({ note }).eq("local_date", localDate);
     if (error) {
-      throw new Error(`Could not write the day note (${error.code})`);
+      throw repoError("write the day note", error);
     }
   }
 }

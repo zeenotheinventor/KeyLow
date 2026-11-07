@@ -1,3 +1,5 @@
+import type { AssistantOpenedFrom } from "@keylow/core";
+
 export type AssistantSheetProps = {
   open: boolean;
   /** Called after a close of any kind (the Close button, a drag down, the dim, the back button), once a streaming answer was stopped. */
@@ -13,4 +15,9 @@ export type AssistantSheetProps = {
    * and sends it with each message. Leave it out when the sheet is opened from the diary.
    */
   describeAt?: string | undefined;
+  /**
+   * The screen whose header opened the sheet, when it was not the diary's. The Train header's sheet asks about
+   * training in its empty words and its field (`assistant · empty-train`).
+   */
+  from?: AssistantOpenedFrom | undefined;
 };
