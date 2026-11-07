@@ -563,7 +563,12 @@ describe("READ_TOOLS", () => {
   });
 
   it("should give the diary cases every read tool but the training reads", () => {
-    const trainingReads = ["search_exercises", "get_routines", "get_training_goals"];
+    const trainingReads = [
+      "search_exercises",
+      "get_routines",
+      "get_training_goals",
+      "get_workouts",
+    ];
 
     expect([...DIARY_READ_TOOLS].sort()).toEqual(
       [...READ_TOOLS].filter((tool) => !trainingReads.includes(tool)).sort(),

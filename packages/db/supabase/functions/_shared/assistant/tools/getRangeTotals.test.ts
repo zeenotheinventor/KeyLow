@@ -248,6 +248,19 @@ Deno.test("get_range_totals reads a range of 92 days and refuses one of 93", asy
 });
 
 Deno.test(
+  "get_range_totals answers invalid_input, not a failure, for a start that is not a date",
+  async () => {
+    const { result, calls } = await fetchTotals(boardData(), {
+      from: "12 October",
+      to: "2026-10-13",
+    });
+
+    assertEquals(result.status === "error" ? result.code : null, "invalid_input");
+    assertEquals(calls, []);
+  },
+);
+
+Deno.test(
   "get_range_totals refuses an end before the start, a bad date and a key it does not know",
   async () => {
     const badInputs = [

@@ -17,6 +17,10 @@ export type StubData = {
   // the database would. A filter on an embedded table (`exercise_muscles.role`) is not modelled. `order`
   // does nothing, so a table is listed in the order its read should answer in.
   tables?: Record<string, Row[]>;
+  // The rows a table answers from its second read on, for a row that was there at the first read and
+  // gone at the next, such as a session deleted between a list and its detail. A table named here that
+  // is not in `tables` answers nothing at its first read.
+  laterTables?: Record<string, Row[]>;
 };
 
 export function stubCaller(data: StubData = {}): StubCaller {
@@ -86,8 +90,16 @@ export function stubCaller(data: StubData = {}): StubCaller {
     return query;
   }
 
+  const readsOfTable = new Map<string, number>();
+  const rowsToRead = (table: string): Row[] => {
+    const reads = (readsOfTable.get(table) ?? 0) + 1;
+    readsOfTable.set(table, reads);
+    const later = data.laterTables?.[table];
+    return (reads > 1 && later !== undefined ? later : data.tables?.[table]) ?? [];
+  };
+
   const client = {
-    from: (table: string) => queryOver(table, data.tables?.[table] ?? []),
+    from: (table: string) => queryOver(table, rowsToRead(table)),
     rpc(name: string, args: unknown) {
       calls.push({ table: null, method: `rpc:${name}`, args: [args] });
       return Promise.resolve({ data: data.rpc?.[name] ?? [], error: null });
