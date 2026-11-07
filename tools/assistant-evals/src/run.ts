@@ -11,6 +11,7 @@ import { exerciseMusclesCases } from "../cases/exerciseMuscles.ts";
 import { recipeCases } from "../cases/recipes.ts";
 import { redTeamCases } from "../cases/redteam.ts";
 import { trainingAdviceCases } from "../cases/trainingAdvice.ts";
+import { trainingEditsCases } from "../cases/trainingEdits.ts";
 import { writeCases } from "../cases/writes.ts";
 
 // The red-team set stays last. Its rows are planted in the run's eval user when its first case is played, and the
@@ -25,6 +26,7 @@ const output = await runCli(process.argv.slice(2), process.env, {
     ...recipeCases,
     ...trainingAdviceCases,
     ...exerciseMusclesCases,
+    ...trainingEditsCases,
     ...redTeamCases,
   ],
   openSession: openLocalHttpSession,

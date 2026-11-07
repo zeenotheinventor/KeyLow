@@ -7,6 +7,7 @@ import { createFixtureUser } from "./fixtureUser.ts";
 import { createHttpDriver } from "./httpDriver.ts";
 import { stopPageServer } from "./pageServerHolder.ts";
 import { attachRedTeamWorld } from "./redTeamSession.ts";
+import { createTrainingEditsWorld, trainingEditsWorldHolder } from "./trainingEditsWorld.ts";
 import { createTrainingWorld } from "./trainingWorld.ts";
 import { trainingWorldHolder } from "./trainingWorldHolder.ts";
 import { createUndoTurn } from "./undoTurn.ts";
@@ -110,6 +111,7 @@ const closeEverything = (user: FixtureUser) => async (): Promise<void> => {
   const failures: unknown[] = [];
   for (const step of [
     () => trainingWorldHolder.detach(),
+    () => trainingEditsWorldHolder.detach(),
     () => redTeamWorldHolder.detach(),
     () => stopPageServer(),
     () => user.remove(),
@@ -140,6 +142,8 @@ export async function openLocalHttpSession(): Promise<EvalSession> {
     await writeAskExtras(user);
     // The training advice cases write the user's history when the first of them is played (KEY-895).
     trainingWorldHolder.attach(createTrainingWorld(user));
+    // The training edits cases make their own routines, goals and workouts (KEY-911).
+    trainingEditsWorldHolder.attach(createTrainingEditsWorld(user));
     const timeZone = await timeZoneOf(user);
     const getAccessToken = async () => {
       const { data } = await user.client.auth.getSession();
