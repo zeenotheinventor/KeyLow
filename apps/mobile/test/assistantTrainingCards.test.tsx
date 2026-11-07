@@ -1,6 +1,14 @@
 import { KeyLowProvider, keys } from "@keylow/api-client";
 import { QueryClient, onlineManager } from "@tanstack/react-query";
-import { act, cleanup, render, screen, userEvent, waitFor } from "@testing-library/react-native";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  userEvent,
+  waitFor,
+} from "@testing-library/react-native";
 import { setUpTests } from "react-native-reanimated";
 
 import { AssistantSheet } from "../components/AssistantSheet";
@@ -26,10 +34,15 @@ jest.mock(
   () =>
     jest.requireActual<{ default: unknown }>("react-native-safe-area-context/jest/mock").default,
 );
+const mockScrollToEnd = jest.fn();
 jest.mock("@gorhom/bottom-sheet", () =>
   jest
-    .requireActual<{ mockBottomSheet: () => unknown }>("./support/sheetScrollViewMock")
-    .mockBottomSheet(),
+    .requireActual<{ mockBottomSheet: (onScrollToEnd: () => void) => unknown }>(
+      "./support/sheetScrollViewMock",
+    )
+    .mockBottomSheet(() => {
+      mockScrollToEnd();
+    }),
 );
 jest.mock("expo/fetch", () => ({ fetch: jest.fn() }));
 
@@ -148,6 +161,7 @@ describe("the training cards in the assistant sheet", () => {
     onClose = jest.fn();
     resetRouterMock();
     resetUndoBackend();
+    mockScrollToEnd.mockClear();
     mockAssistant.items = [];
     mockAssistant.send = jest.fn();
     mockAssistant.activeSession = null;
@@ -186,6 +200,38 @@ describe("the training cards in the assistant sheet", () => {
 
       await userSetup().press(monday());
       expect(screen.queryByText("Bench press")).not.toBeOnTheScreen();
+    });
+
+    // The thread follows a growing reply to its end, but a day opening grows the card above the reply, and
+    // going to the end would push the opened exercises above the fold.
+    it("should not scroll the thread to its end when a day opens or closes, and still follow other growth", async () => {
+      const scrollToEnd = mockScrollToEnd;
+      await showItems(
+        { kind: "card", id: "c1", card: routineCreatedCard },
+        {
+          kind: "reply",
+          id: "r1",
+          text: "Here is your routine.",
+          answerMeta: null,
+          stopped: false,
+        },
+      );
+      const growThread = async () => {
+        await fireEvent(monday(), "contentSizeChange", 390, 1200);
+      };
+
+      await growThread();
+      expect(scrollToEnd).toHaveBeenCalledTimes(1);
+      scrollToEnd.mockClear();
+
+      await userSetup().press(monday());
+      await growThread();
+      await userSetup().press(monday());
+      await growThread();
+      expect(scrollToEnd).not.toHaveBeenCalled();
+
+      await growThread();
+      expect(scrollToEnd).toHaveBeenCalledTimes(1);
     });
 
     it("should keep one day open at a time", async () => {
@@ -235,6 +281,22 @@ describe("the training cards in the assistant sheet", () => {
   });
 
   describe("Ask again", () => {
+    it("should draw the chip under the reply with no Try again, when the turn ended as normal", async () => {
+      await showItems(
+        {
+          kind: "reply",
+          id: "r1",
+          text: "Your Legs workout is in progress.",
+          answerMeta: null,
+          stopped: false,
+        },
+        { kind: "ask_again", id: "a1", answered: false },
+      );
+
+      expect(screen.getByRole("button", { name: "Ask again" })).toBeOnTheScreen();
+      expect(screen.queryByRole("button", { name: "Try again" })).not.toBeOnTheScreen();
+    });
+
     const refused = (isAnswered: boolean): AssistantThreadItem[] => [
       {
         kind: "reply",

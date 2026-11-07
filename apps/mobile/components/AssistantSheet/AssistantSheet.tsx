@@ -92,6 +92,9 @@ export function AssistantSheet({
   const [draft, setDraft] = useState("");
   const [sent, setSent] = useState<AssistantSheetSent | null>(null);
   const scrollRef = useRef<ComponentRef<typeof SheetScrollView>>(null);
+  // A day of a routine card opening or closing grows the thread from the middle, so the person's place is kept
+  // for that one change in height. Everything else that grows it (a streaming reply) is followed to the end.
+  const isDayToggling = useRef(false);
 
   const items = conversation.data?.items;
   const timeZone = resolveAssistantTimeZone(profileTimeZone.data, deviceTimeZone());
@@ -315,6 +318,9 @@ export function AssistantSheet({
         onAskAgain={sendLastMessageAgain}
         onTryAgain={sendLastMessageAgain}
         onOpenCardLink={openCardLink}
+        onCardDayToggle={() => {
+          isDayToggling.current = true;
+        }}
         canAnswer={canAnswerAssistantQuestion(sendState)}
         onAnswer={sendMessage}
       />
@@ -361,6 +367,10 @@ export function AssistantSheet({
           keyboardShouldPersistTaps="handled"
           ref={scrollRef}
           onContentSizeChange={() => {
+            if (isDayToggling.current) {
+              isDayToggling.current = false;
+              return;
+            }
             scrollRef.current?.scrollToEnd({ animated: false });
           }}
         >

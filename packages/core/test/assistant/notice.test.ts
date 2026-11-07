@@ -10,13 +10,17 @@ describe("assistantNoticeSchema", () => {
     { code: "resting", resumesOn: "2026-11-01" },
     { code: "switched_off" },
     { code: "turn_failed" },
-    { code: "workout_in_progress" },
   ])("should parse the $code notice", (notice) => {
     expect(assistantNoticeSchema.parse(notice)).toEqual(notice);
   });
 
   it("should reject a code the plan does not list", () => {
     expect(assistantNoticeSchema.safeParse({ code: "busy" }).success).toBe(false);
+  });
+
+  // A change refused for a workout is a plain reply and Ask again, never a notice, so a phone on an older update never sees this code.
+  it("should reject workout_in_progress, which the board draws as a reply", () => {
+    expect(assistantNoticeSchema.safeParse({ code: "workout_in_progress" }).success).toBe(false);
   });
 
   it("should reject a day limit without the instant it resets at", () => {

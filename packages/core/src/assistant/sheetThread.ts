@@ -568,14 +568,8 @@ export function canAnswerAssistantQuestion({
   );
 }
 
-/**
- * A notice that stops the assistant taking a turn. A failed turn is not one, because the composer stays on,
- * and neither is a change refused for a workout in progress, because questions still work.
- */
-export type LimitingAssistantNotice = Exclude<
-  DescribableAssistantNotice,
-  { code: "turn_failed" | "workout_in_progress" }
->;
+/** A notice that stops the assistant taking a turn. A failed turn is not one, because the composer stays on. */
+export type LimitingAssistantNotice = Exclude<DescribableAssistantNotice, { code: "turn_failed" }>;
 
 /**
  * What the sheet lets the person do: `checking` until the status is read, `consent` for the consent card
@@ -589,7 +583,7 @@ export type AssistantSheetAccess =
   | { kind: "limited"; notice: LimitingAssistantNotice };
 
 const accessOfNotice = (notice: AssistantNotice | null): AssistantSheetAccess | null => {
-  if (notice === null || notice.code === "turn_failed" || notice.code === "workout_in_progress") {
+  if (notice === null || notice.code === "turn_failed") {
     return null;
   }
   return notice.code === "consent_needed" ? { kind: "consent" } : { kind: "limited", notice };
@@ -600,7 +594,7 @@ const accessOfNotice = (notice: AssistantNotice | null): AssistantSheetAccess | 
  * gate notices (consent, the day limit, Ki-Lo Plus, resting, switched off) store no turn, so the stored
  * conversation never moves past them and nothing else lets them go: a day limit would lock the composer
  * the next day, and the consent card would stay after consent was given in Settings. A failed turn is
- * not a gate. It stays, with its Try again, and so does a refusal for a workout in progress.
+ * not a gate. It stays, with its Try again.
  */
 export function isStaleStreamGateNotice({
   streamNotice,

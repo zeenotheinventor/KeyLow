@@ -246,10 +246,10 @@ function itemsOfTurn(
           items.push({ kind: "confirm", id, ...outcome.confirm, answered: context.answered });
         }
         if (outcome.link !== undefined) {
-          links.push({ kind: "link", id, link: outcome.link });
+          links.push({ kind: "link", id: `${id}:link`, link: outcome.link });
         }
         if (outcome.askAgain === true) {
-          askAgains.push({ kind: "ask_again", id, answered: context.answered });
+          askAgains.push({ kind: "ask_again", id: `${id}:askAgain`, answered: context.answered });
         }
       }
     }

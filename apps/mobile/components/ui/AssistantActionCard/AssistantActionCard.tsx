@@ -27,6 +27,7 @@ export function AssistantActionCard({
   subtitle,
   rows = [],
   days = [],
+  onDayToggle,
   initiallyOpenDay,
   total,
   note,
@@ -63,6 +64,7 @@ export function AssistantActionCard({
           day={day}
           isOpen={openDayIndex === index}
           onPress={() => {
+            onDayToggle?.();
             setOpenDayIndex(openDayIndex === index ? undefined : index);
           }}
         />

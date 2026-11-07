@@ -19,8 +19,6 @@ const noticeLooks: Record<
   resting: { icon: "Moon", tone: "neutral" },
   switched_off: { icon: "PowerOff", tone: "neutral" },
   turn_failed: { icon: "CircleAlert", tone: "danger" },
-  // NOT ON THE CANVAS as a notice: the board draws the words as a reply, so the glyph and tone are the neutral ones the other holds use.
-  workout_in_progress: { icon: "Dumbbell", tone: "neutral" },
 };
 
 const askAgainOptions = [{ value: "ask-again", label: ASSISTANT_STOPPED.askAgain }];
@@ -39,6 +37,7 @@ export function AssistantThread({
   onTryAgain,
   onAskAgain,
   onOpenCardLink,
+  onCardDayToggle,
   canAnswer,
   onAnswer,
 }: AssistantThreadProps) {
@@ -54,7 +53,14 @@ export function AssistantThread({
           />
         );
       case "card":
-        return <AssistantCardEntry card={entry.card} key={entry.key} onOpenLink={onOpenCardLink} />;
+        return (
+          <AssistantCardEntry
+            card={entry.card}
+            key={entry.key}
+            onDayToggle={onCardDayToggle}
+            onOpenLink={onOpenCardLink}
+          />
+        );
       case "link":
         return (
           <AssistantLinkRow

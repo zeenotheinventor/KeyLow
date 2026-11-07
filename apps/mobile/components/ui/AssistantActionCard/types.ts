@@ -62,6 +62,8 @@ export type AssistantActionCardProps = {
   rows?: readonly AssistantActionCardRow[] | undefined;
   /** One row per day of a routine, after the rows and before the total. All are closed on arrival and one is open at a time. */
   days?: readonly AssistantActionCardDay[] | undefined;
+  /** Called when a day is pressed, before it opens or closes, so the screen holding the card can leave its scroll position alone for the change in height. */
+  onDayToggle?: (() => void) | undefined;
   /** The index of the day that is open on arrival, for a story. A card in the thread leaves it out, so every day is closed. */
   initiallyOpenDay?: number | undefined;
   /** The line under the rows, such as "232 kcal · P 15 g · C 17 g · F 10 g". */

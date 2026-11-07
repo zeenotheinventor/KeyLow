@@ -1,4 +1,4 @@
-import { forwardRef } from "react";
+import { forwardRef, useImperativeHandle } from "react";
 import { ScrollView } from "react-native";
 
 /**
@@ -6,8 +6,9 @@ import { ScrollView } from "react-native";
  * scroll handlers into worklets, so its own scroll view cannot render here. How the library drags a sheet with
  * it is on the device. A test mocks the module with
  * `jest.mock("@gorhom/bottom-sheet", () => jest.requireActual("../support/sheetScrollViewMock").mockBottomSheet())`.
+ * A test that checks where the thread scrolls passes `onScrollToEnd`, which the scroll view's ref then calls for `scrollToEnd`.
  */
-export function mockBottomSheet() {
+export function mockBottomSheet(onScrollToEnd?: () => void) {
   const actual = jest.requireActual<typeof import("@gorhom/bottom-sheet")>("@gorhom/bottom-sheet");
 
   return {
@@ -16,8 +17,16 @@ export function mockBottomSheet() {
     BottomSheetView: actual.BottomSheetView,
     BottomSheetTextInput: actual.BottomSheetTextInput,
     BottomSheetBackdrop: actual.BottomSheetBackdrop,
-    BottomSheetScrollView: forwardRef<never, object>(function PlainSheetScrollView(props, ref) {
-      return <ScrollView ref={ref} {...props} />;
-    }),
+    BottomSheetScrollView:
+      onScrollToEnd === undefined
+        ? forwardRef<never, object>(function PlainSheetScrollView(props, ref) {
+            return <ScrollView ref={ref} {...props} />;
+          })
+        : forwardRef<{ scrollToEnd: () => void }, object>(
+            function WatchedSheetScrollView(props, ref) {
+              useImperativeHandle(ref, () => ({ scrollToEnd: onScrollToEnd }), []);
+              return <ScrollView {...props} />;
+            },
+          ),
   };
 }

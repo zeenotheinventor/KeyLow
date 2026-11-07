@@ -107,13 +107,6 @@ export function describeAssistantNotice(
         fieldText: null,
         button: "Try again",
       };
-    case "workout_in_progress":
-      return {
-        title: "Your workout is in progress",
-        body: "Nothing in your training can change yet. Questions are still fine. Finish it or discard it on the Train tab, then ask again.",
-        fieldText: null,
-        button: null,
-      };
   }
 }
 

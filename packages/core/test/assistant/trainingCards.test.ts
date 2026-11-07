@@ -12,13 +12,12 @@ import {
 } from "./trainingCardFixtures";
 import {
   assistantCardSchema,
-  assistantNoticeSchema,
   assistantStreamEventSchema,
   describeAssistantCard,
   parseAssistantEvent,
   undoOutcomeOfResults,
 } from "../../src/assistant";
-import { ASSISTANT_CARD_WORDS, describeAssistantNotice } from "../../src/copy";
+import { ASSISTANT_CARD_WORDS } from "../../src/copy";
 
 import type { AssistantCardKind } from "../../src/assistant";
 
@@ -122,29 +121,6 @@ describe("the link and ask_again events", () => {
     expect(parseAssistantEvent(JSON.stringify({ type: "ask_again" }))).toEqual({
       ok: true,
       event: { type: "ask_again" },
-    });
-  });
-});
-
-describe("the workout_in_progress notice", () => {
-  it("should parse", () => {
-    expect(assistantNoticeSchema.parse({ code: "workout_in_progress" })).toEqual({
-      code: "workout_in_progress",
-    });
-  });
-
-  it("should reject a key on it", () => {
-    expect(
-      assistantNoticeSchema.safeParse({ code: "workout_in_progress", day: "Legs" }).success,
-    ).toBe(false);
-  });
-
-  it("should be worded as assistant · workout-in-progress words it, with no button and the field left on", () => {
-    expect(describeAssistantNotice({ code: "workout_in_progress" }, "Europe/London")).toEqual({
-      title: "Your workout is in progress",
-      body: "Nothing in your training can change yet. Questions are still fine. Finish it or discard it on the Train tab, then ask again.",
-      fieldText: null,
-      button: null,
     });
   });
 });

@@ -22,12 +22,6 @@ export const assistantNoticeSchema = z.discriminatedUnion("code", [
   z.strictObject({ code: z.literal("switched_off") }),
   /** The turn failed and nothing was changed (`assistant · unavailable`, middle). */
   z.strictObject({ code: z.literal("turn_failed") }),
-  /**
-   * A button the person pressed to confirm a change was refused because a workout is in progress
-   * (`assistant · workout-in-progress`). Nothing was changed, and the confirmation is not spent. Questions
-   * still work, so the composer stays on.
-   */
-  z.strictObject({ code: z.literal("workout_in_progress") }),
 ]);
 
 export type AssistantNotice = z.infer<typeof assistantNoticeSchema>;

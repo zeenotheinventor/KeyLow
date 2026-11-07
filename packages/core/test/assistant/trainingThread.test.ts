@@ -12,8 +12,6 @@ import { routineCreatedCard, routineId, routineUpdatedCard } from "./trainingCar
 import {
   buildAssistantSheetThread,
   isSentTurnStored,
-  isStaleStreamGateNotice,
-  resolveAssistantSheetAccess,
   threadFromMessages,
 } from "../../src/assistant";
 
@@ -49,7 +47,7 @@ describe("threadFromMessages, a link and Ask again", () => {
     const thread = threadFromMessages(storedTurn({ link }, removedDayWords), []);
 
     expect(thread.map((item) => item.kind)).toEqual(["user", "reply", "link"]);
-    expect(thread[2]).toEqual({ kind: "link", id: "m3:0", link });
+    expect(thread[2]).toEqual({ kind: "link", id: "m3:0:link", link });
   });
 
   it("should draw a link when the turn has no words", () => {
@@ -72,7 +70,7 @@ describe("threadFromMessages, a link and Ask again", () => {
     );
 
     expect(thread.map((item) => item.kind)).toEqual(["user", "reply", "ask_again"]);
-    expect(thread[2]).toEqual({ kind: "ask_again", id: "m3:0", answered: false });
+    expect(thread[2]).toEqual({ kind: "ask_again", id: "m3:0:askAgain", answered: false });
   });
 
   it("should mark Ask again answered once a later turn exists, so the chip goes", () => {
@@ -85,6 +83,20 @@ describe("threadFromMessages, a link and Ask again", () => {
     );
 
     expect(thread.find((item) => item.kind === "ask_again")).toMatchObject({ answered: true });
+  });
+
+  it("should give every item of one tool result its own id, so no two entries share a React key", () => {
+    const thread = threadFromMessages(
+      storedTurn({ card: routineUpdatedCard, link, askAgain: true }, "Done."),
+      [],
+    );
+
+    const ids = thread.map((item) => item.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(thread.find((item) => item.kind === "link")?.id).toBe("m3:0:link");
+    expect(thread.find((item) => item.kind === "ask_again")?.id).toBe("m3:0:askAgain");
+    const keys = build({ items: thread }).entries.map((entry) => entry.key);
+    expect(new Set(keys).size).toBe(keys.length);
   });
 
   it("should draw neither when the display says there is none", () => {
@@ -239,31 +251,26 @@ describe("buildAssistantSheetThread, the full height of a routine", () => {
   });
 });
 
-describe("the workout_in_progress notice in the sheet", () => {
-  const notice = { code: "workout_in_progress" } as const;
+describe("a change refused for a workout, assistant · workout-in-progress", () => {
+  const refusedWords =
+    "Your Legs workout is in progress, so nothing in your training can change yet.";
 
-  it("should leave the assistant open, because questions still work", () => {
-    expect(
-      resolveAssistantSheetAccess({
-        statusNotice: null,
-        isStatusKnown: true,
-        streamNotice: notice,
-      }),
-    ).toEqual({ kind: "open" });
+  it("should read back as the reply and the chip, with no notice and no Try again", () => {
+    const thread = threadFromMessages(storedTurn({ askAgain: true }, refusedWords), []);
+
+    expect(thread.map((item) => item.kind)).toEqual(["user", "reply", "ask_again"]);
+    const sheet = build({ items: thread });
+    expect(sheet.entries.map((entry) => entry.kind)).toEqual(["you", "assistant", "askAgain"]);
+    expect(sheet.canAskAgain).toBe(true);
   });
 
-  it("should not count as a gate that goes stale when the status is read again", () => {
-    expect(isStaleStreamGateNotice({ streamNotice: notice, isStreaming: false })).toBe(false);
-  });
+  it("should draw the reply and the chip of the turn on screen, with no notice", () => {
+    const sent = { text: "Swap leg press for hack squat", afterItemId: null };
+    const live = liveTurn({ text: refusedWords, askAgain: true, outcome: "complete" });
 
-  it("should be drawn in the thread under your message, with its Ask again after it", () => {
-    const sent = { text: "Yes, remove it", afterItemId: null };
-    const live = liveTurn({ notice, askAgain: true, outcome: "failed" });
+    const sheet = build({ sent, live });
 
-    expect(build({ sent, live }).entries.map((entry) => entry.kind)).toEqual([
-      "you",
-      "notice",
-      "askAgain",
-    ]);
+    expect(sheet.entries.map((entry) => entry.kind)).toEqual(["you", "assistant", "askAgain"]);
+    expect(sheet.canAskAgain).toBe(true);
   });
 });
