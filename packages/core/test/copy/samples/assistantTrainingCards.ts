@@ -155,4 +155,20 @@ export const samples: Record<string, () => string[]> = {
   describeRoutineCreatedUndone: () => [copy.describeRoutineCreatedUndone("Push Pull Legs")],
   describeSetsPartlyPutBack: () => [copy.describeSetsPartlyPutBack(2, 3)],
   describeChangesPartlyUndone: () => [copy.describeChangesPartlyUndone(2, 3)],
+  describeConfirmDeleteWorkoutQuestion: () => [
+    copy.describeConfirmDeleteWorkoutQuestion("Legs", "2026-10-08", 16),
+    copy.describeConfirmDeleteWorkoutQuestion(null, "2026-10-08", 1),
+  ],
+  describeWorkoutDeletedTitle: () => [
+    copy.describeWorkoutDeletedTitle("Legs"),
+    copy.describeWorkoutDeletedTitle(null),
+  ],
+  describeWorkoutDeletedSub: () => [copy.describeWorkoutDeletedSub("2026-10-08", 16)],
+  describeWorkoutDeletedChangeDetail: () => [
+    copy.describeWorkoutDeletedChangeDetail("2026-10-08", 16),
+  ],
+  describeWorkoutDeletedUndone: () => [
+    copy.describeWorkoutDeletedUndone("Legs", "2026-10-08"),
+    copy.describeWorkoutDeletedUndone(null, "2026-10-08"),
+  ],
 };

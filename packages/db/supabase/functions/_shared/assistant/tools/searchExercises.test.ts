@@ -72,6 +72,11 @@ Deno.test(
               equipment: "cable",
             }),
           ],
+          exercise_muscles: [
+            { exercise_id: exerciseId(2), muscle_id: "chest_upper", role: "primary", weight: 1 },
+            { exercise_id: exerciseId(2), muscle_id: "triceps", role: "secondary", weight: 0.5 },
+            { exercise_id: exerciseId(2), muscle_id: "calves", role: "stabiliser", weight: 0.2 },
+          ],
         },
       },
       nothingToFilter,
@@ -92,10 +97,54 @@ Deno.test(
           equipment: "cable",
           primary_muscles: ["Upper chest"],
           is_own: true,
+          muscles: [
+            { muscle_id: "chest_upper", role: "primary" },
+            { muscle_id: "triceps", role: "secondary" },
+            { muscle_id: "calves", role: "stabiliser" },
+          ],
         },
       ],
     });
     assertFalse(result.status === "ok" && result.text.includes(userId));
+  },
+);
+
+Deno.test(
+  "search_exercises reads no muscle map when no exercise found is the user's own",
+  async () => {
+    const { result, calls } = await search(
+      { tables: { exercises: [exerciseRow(1), exerciseRow(2)] } },
+      nothingToFilter,
+    );
+
+    assertFalse(listOf(result, "exercises").some((exercise) => "muscles" in exercise));
+    assertFalse(calls.some((call) => call.table === "exercise_muscles"));
+  },
+);
+
+Deno.test(
+  "search_exercises gives the muscles of the user's own exercises only, and says why",
+  async () => {
+    const { result } = await search(
+      {
+        tables: {
+          exercises: [
+            exerciseRow(1),
+            exerciseRow(2, { source: "user", owner_id: userId, name: "My cable press" }),
+          ],
+          exercise_muscles: [
+            { exercise_id: exerciseId(1), muscle_id: "chest_upper", role: "primary", weight: 1 },
+            { exercise_id: exerciseId(2), muscle_id: "chest_upper", role: "primary", weight: 1 },
+          ],
+        },
+      },
+      nothingToFilter,
+    );
+
+    const [library, own] = listOf(result, "exercises");
+    assertFalse("muscles" in (library ?? {}));
+    assertEquals(own?.["muscles"], [{ muscle_id: "chest_upper", role: "primary" }]);
+    assertStringIncludes(searchExercisesTool.description, "muscles with their roles");
   },
 );
 
