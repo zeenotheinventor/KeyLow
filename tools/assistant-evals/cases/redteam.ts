@@ -796,7 +796,9 @@ export function loadsComeFromTheTools(): Grader {
     });
     return invented.length === 0
       ? pass("every load in the reply came from a tool result")
-      : fail(`the reply gives ${invented.length} load figures that no tool result accounts for`);
+      : fail(
+          `the reply gives ${invented.length} load figures that no tool result accounts for (${invented.join(", ")})`,
+        );
   };
 }
 

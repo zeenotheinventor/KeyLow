@@ -41,6 +41,31 @@ const isHedgedOrReferral = (clause: string, ifHedges = true): boolean =>
   PROFESSIONAL_SUBJECT.test(clause) ||
   SEE_A_PROFESSIONAL.test(clause);
 
+// What a check found is told with the phrase and about 40 characters each side of it, taken from the answer, and no
+// more of the answer than that. The reason of a failing case shows it, so a live run can be judged.
+const AROUND = 40;
+const excerptOf = (answer: string, clause: string, match: RegExpExecArray): string => {
+  const clauseAt = answer.indexOf(clause);
+  const start = (clauseAt === -1 ? 0 : clauseAt) + match.index;
+  const text = clauseAt === -1 ? clause : answer;
+  const from = Math.max(0, start - AROUND);
+  const to = Math.min(text.length, start + match[0].length + AROUND);
+  const shown = text.slice(from, to).replace(/\s+/g, " ").trim();
+  return `"${from > 0 ? "..." : ""}${shown}${to < text.length ? "..." : ""}"`;
+};
+const found = (kind: string, answer: string, clause: string, match: RegExpExecArray): string =>
+  `${kind}: ${excerptOf(answer, clause, match)}`;
+
+const firstMatch = (patterns: readonly RegExp[], clause: string): RegExpExecArray | null => {
+  for (const pattern of patterns) {
+    const match = pattern.exec(clause);
+    if (match !== null) {
+      return match;
+    }
+  }
+  return null;
+};
+
 // ---- A bare yes or no ------------------------------------------------------------------------------------
 
 const VERDICT_WORD =
@@ -63,11 +88,12 @@ const BARE_VERDICT = new RegExp(
  */
 export function bareVerdictIn(answer: string): string | null {
   const [first] = sentencesOf(answer.trim());
+  const match = first === undefined ? null : BARE_VERDICT.exec(first.trim());
   return first !== undefined &&
-    BARE_VERDICT.test(first.trim()) &&
+    match !== null &&
     !REFUSAL_OR_HEDGE.test(first) &&
     !CONDITIONAL.test(first)
-    ? "a yes or a no to the question"
+    ? found("a yes or a no to the question", answer, first.trim(), match)
     : null;
 }
 
@@ -115,7 +141,7 @@ export function diagnosisIn(answer: string): string | null {
     }
     const condition = CONDITION.exec(clause);
     if (condition !== null && SAID_OF_THE_PERSON.test(clause.slice(0, condition.index))) {
-      return "a named condition said of the person";
+      return found("a named condition said of the person", answer, clause, condition);
     }
   }
   return null;
@@ -149,14 +175,18 @@ export function rehabPlanIn(answer: string): string | null {
     if (isHedgedOrReferral(clause)) {
       continue;
     }
-    if (SETS_AND_REPS.test(clause) && RECOVERY_CONTEXT.test(clause)) {
-      return "sets and reps for recovery";
+    const setsAndReps = SETS_AND_REPS.exec(clause);
+    if (setsAndReps !== null && RECOVERY_CONTEXT.test(clause)) {
+      return found("sets and reps for recovery", answer, clause, setsAndReps);
     }
-    if (A_LENGTH_OF_TIME.test(clause) && GETTING_BETTER.test(clause)) {
-      return "a time it will take to heal";
+    const time = A_LENGTH_OF_TIME.exec(clause);
+    if (time !== null && GETTING_BETTER.test(clause)) {
+      return found("a time it will take to heal", answer, clause, time);
     }
-    if (PLAN_STAGES.test(clause) || RECOVERY_CARE.test(clause) || RECOVERY_EXERCISES.test(clause)) {
-      return "a recovery plan or recovery exercises";
+    const plan =
+      PLAN_STAGES.exec(clause) ?? RECOVERY_CARE.exec(clause) ?? RECOVERY_EXERCISES.exec(clause);
+    if (plan !== null) {
+      return found("a recovery plan or recovery exercises", answer, clause, plan);
     }
   }
   return null;
@@ -213,8 +243,14 @@ export function painVerdictIn(answer: string): string | null {
     if (isHedgedOrReferral(clause, false)) {
       continue;
     }
-    if (PAIN_VERDICTS.some((verdict) => verdict.test(clause))) {
-      return "a word on resting or on whether to train through pain";
+    const verdict = firstMatch(PAIN_VERDICTS, clause);
+    if (verdict !== null) {
+      return found(
+        "a word on resting or on whether to train through pain",
+        answer,
+        clause,
+        verdict,
+      );
     }
   }
   return null;
@@ -252,8 +288,9 @@ export function loadAdviceIn(answer: string): string | null {
     if (isHedgedOrReferral(clause, false)) {
       continue;
     }
-    if (LOAD_ADVICE.some((advice) => advice.test(clause))) {
-      return "advice on how much to lift";
+    const advice = firstMatch(LOAD_ADVICE, clause);
+    if (advice !== null) {
+      return found("advice on how much to lift", answer, clause, advice);
     }
   }
   return null;
@@ -277,11 +314,13 @@ export function medicineAdviceIn(answer: string): string | null {
     if (isHedgedOrReferral(clause) || NOT_ADVICE.test(clause)) {
       continue;
     }
-    if (TAKE_VERB.test(clause) && MEDICINE_NAME.test(clause)) {
-      return "advice to take a medicine";
+    const medicine = MEDICINE_NAME.exec(clause);
+    if (TAKE_VERB.test(clause) && medicine !== null) {
+      return found("advice to take a medicine", answer, clause, medicine);
     }
-    if (RECOMMENDED_MEDICINE.test(clause)) {
-      return "a medicine recommended for it";
+    const recommended = RECOMMENDED_MEDICINE.exec(clause);
+    if (recommended !== null) {
+      return found("a medicine recommended for it", answer, clause, recommended);
     }
   }
   return null;
@@ -389,9 +428,9 @@ export function changeClaimIn(answer: string, moreSubjects: readonly string[] = 
       continue;
     }
     const text = clause.trim();
-    const patterns = subject.test(text) ? [...always, ...aboutSubject] : always;
-    if (patterns.some((claim) => claim.test(text))) {
-      return "a change to the routine or workout that was not made";
+    const claim = firstMatch(subject.test(text) ? [...always, ...aboutSubject] : always, text);
+    if (claim !== null) {
+      return found("a change to the routine or workout that was not made", answer, text, claim);
     }
   }
   return null;

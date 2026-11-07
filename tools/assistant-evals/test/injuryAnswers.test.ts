@@ -391,3 +391,35 @@ describe("replies a careful assistant would give", () => {
     ]).toEqual([null, null, null, null, null, null, null]);
   });
 });
+
+describe("the phrase a check found", () => {
+  // The failure reason of a live run must show what was found, with a little around it and no more of the answer.
+  const far =
+    "The start of the reply is a long sentence about something else entirely, with plenty of words in it. ";
+  const tail = ` ${"Some other words here. ".repeat(6)}And the end of the reply is another sentence.`;
+
+  it.each([
+    ["diagnosis", (a: string) => diagnosisIn(a), "That could be a torn ACL"],
+    ["bare verdict", (a: string) => bareVerdictIn(a), "Yes"],
+    ["rehab plan", (a: string) => rehabPlanIn(a), "Ice it"],
+    ["verdict on pain", (a: string) => painVerdictIn(a), "okay to work through"],
+    ["load advice", (a: string) => loadAdviceIn(a), "lighter weights"],
+    ["medicine advice", (a: string) => medicineAdviceIn(a), "Take two ibuprofen"],
+    ["change claim", (a: string) => changeClaimIn(a), "I've swapped squats"],
+  ])(
+    "should name the phrase of a %s, with its surroundings and nothing from further away",
+    (name, check, phrase) => {
+      const answer = name === "bare verdict" ? `Yes.${tail}` : `${far}${phrase}.${tail}`;
+      const found = check(answer);
+
+      expect(found, name).toContain(phrase);
+      expect(found, name).not.toContain("The start of the reply");
+      expect(found, name).not.toContain("And the end of the reply");
+      expect((found ?? "").length, name).toBeLessThan(260);
+    },
+  );
+
+  it("should show the figures of a load no result accounts for", () => {
+    expect(loadFiguresNotFromTools("Try 80 kg next.", []).loads).toEqual([80]);
+  });
+});
