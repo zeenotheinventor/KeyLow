@@ -5,6 +5,22 @@ import * as copy from "../../../src/copy";
 const squat = { setType: "working", loadKg: 100, reps: 8, rir: 2, rpe: null } as const;
 
 export const samples: Record<string, () => string[]> = {
+  describeRoutineActiveTitle: () => [copy.describeRoutineActiveTitle("Push Pull Legs")],
+  describeRoutineActiveSub: () => [
+    copy.describeRoutineActiveSub("Upper Lower"),
+    copy.describeRoutineActiveSub(null),
+  ],
+  describeRoutineActiveChangeDetail: () => [copy.describeRoutineActiveChangeDetail("Upper Lower")],
+  describeRoutineActiveUndone: () => [
+    copy.describeRoutineActiveUndone("Upper Lower"),
+    copy.describeRoutineActiveUndone(null),
+  ],
+  describeRoutineClearedSub: () => [copy.describeRoutineClearedSub("Upper Lower")],
+  describeRoutineArchivedTitle: () => [copy.describeRoutineArchivedTitle("Upper Lower")],
+  describeRoutineArchivedUndone: () => [copy.describeRoutineArchivedUndone("Upper Lower")],
+  describeConfirmArchiveRoutineQuestion: () => [
+    copy.describeConfirmArchiveRoutineQuestion("Upper Lower"),
+  ],
   describeSetUpdatedPlace: () => [
     copy.describeSetUpdatedPlace("Legs"),
     copy.describeSetUpdatedPlace(null),

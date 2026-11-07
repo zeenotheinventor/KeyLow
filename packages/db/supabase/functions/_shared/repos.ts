@@ -79,6 +79,7 @@ export {
   updateLogEntry,
   updateMyTargets,
   updateRecipe,
+  setActiveRoutine,
   getSet,
   updateSet,
 } from "./repos/index.js";
