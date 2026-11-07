@@ -119,6 +119,14 @@ export function fakeRedTeamWorld(
   edits: EditWorld,
   results: Readonly<Record<string, readonly string[]>> = {},
 ): RedTeamWorld {
+  // As the real world: B's training can be read only once a case has asked for it to be written.
+  let trainingOfBWritten = false;
+  const trainingOfB = () => {
+    if (!trainingOfBWritten) {
+      throw new Error("B's training is not written yet");
+    }
+    return B_TRAINING_FAKE;
+  };
   return {
     anchorDate: "2026-11-05",
     userB: {
@@ -131,9 +139,12 @@ export function fakeRedTeamWorld(
       kcalFigures: [],
       markers: [],
       liveEntryIds: () => Promise.resolve([]),
-      ensureTrainingPlanted: () => Promise.resolve(),
-      trainingIfPlanted: () => B_TRAINING_FAKE,
-      training: () => B_TRAINING_FAKE,
+      ensureTrainingPlanted: () => {
+        trainingOfBWritten = true;
+        return Promise.resolve();
+      },
+      trainingIfPlanted: () => (trainingOfBWritten ? B_TRAINING_FAKE : null),
+      training: trainingOfB,
     },
     planted: {
       foodNames: { deleteEntries: "", logChocolate: "", changeTarget: "" },

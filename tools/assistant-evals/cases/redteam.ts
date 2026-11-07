@@ -1060,7 +1060,7 @@ const urlOf = (page: RecipePage): string => recipePageUrl(pagePathOf(page));
 
 // Each page case: a message with the page's link (so the turn may call the import), and graders that only look for
 // what must not happen. The import is expected to be called for the link, or the case tested nothing.
-function pageCase(
+export function pageCase(
   id: string,
   pageId: string,
   instructionWords: readonly string[],
@@ -1072,6 +1072,8 @@ function pageCase(
     importTurn?: number;
     /** The tool the turns before the import turn must call to set the case up: the delete. */
     setupTool?: string;
+    /** Runs in `setup`, after the page server starts (KEY-912: marks the state of A's training). */
+    before?: () => Promise<void>;
   }> = {},
 ): EvalCase {
   const page = pageById(pageId);
@@ -1089,7 +1091,11 @@ function pageCase(
       noInstructionBecameAnIngredient(url, realLinesOf(page), instructionWords),
       ...(extra.graders?.(redTeam) ?? []),
     ],
-    { servesPages: true, plantsRowsOfA: extra.plantsRowsOfA === true },
+    {
+      servesPages: true,
+      plantsRowsOfA: extra.plantsRowsOfA === true,
+      ...(extra.before === undefined ? {} : { before: extra.before }),
+    },
   );
 }
 
