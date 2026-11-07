@@ -99,6 +99,7 @@ export const READ_TOOLS: ReadonlySet<string> = new Set([
   "search_exercises",
   "get_routines",
   "get_training_goals",
+  "get_exercise_progress",
 ]);
 
 /** Passes when every tool called is a read tool of the diary. */
