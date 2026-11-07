@@ -469,6 +469,30 @@ describe("runEvals", () => {
       expect(report.cases.map(({ status }) => status)).toEqual(["passed"]);
     });
 
+    it("should end a case in error when its prepare hangs, and not wait for it again for the next case", async () => {
+      const stack = scriptedStack([costing(5), costing(5)]);
+      let attempts = 0;
+      const prepare = () => {
+        attempts += 1;
+        return new Promise<void>(() => undefined);
+      };
+
+      const report = await runEvals({
+        cases: [simpleCase("first", { prepare }), simpleCase("second", { prepare })],
+        ...stack,
+        budgetTokens: 1_000,
+        prepareTimeoutMs: 20,
+      });
+
+      expect(report.cases.map(({ status }) => status)).toEqual(["error", "error"]);
+      expect(report.cases[0]?.failures).toEqual([
+        "the case could not be prepared: took longer than 20 ms",
+      ]);
+      expect(report.cases[1]?.failures[0]).toContain("an earlier case's prepare hung");
+      expect(attempts).toBe(1);
+      expect(stack.driver.sent).toEqual([]);
+    });
+
     it("should end a case in error when its prepare fails, and send nothing", async () => {
       const stack = scriptedStack([costing(5)]);
 

@@ -8,7 +8,7 @@ import {
   describeSuggestionCitation,
 } from "@keylow/core";
 import { toLocalDate } from "@keylow/core/dates";
-import { displayLoad, weeksWithoutProgress } from "@keylow/core/training";
+import { EQUIPMENT, MUSCLE_GROUPS, displayLoad, weeksWithoutProgress } from "@keylow/core/training";
 
 import { isRecord } from "./trainingAdviceGraders.ts";
 import { ACTIVE_ROUTINE, CUSTOM_EXERCISE, trainingDateOf } from "../fixtures/training.ts";
@@ -21,7 +21,7 @@ import { LIVE_WORKOUT } from "../src/trainingWorld.ts";
 
 import type { AllowedFigures, Evidence, Route } from "./trainingAdviceGraders.ts";
 import type { TrainingExercise } from "../fixtures/training.ts";
-import type { MuscleFacts, TrainingWorld } from "../src/trainingWorld.ts";
+import type { MuscleFacts, SuggestionAnswer, TrainingWorld } from "../src/trainingWorld.ts";
 import type { ToolCall } from "../src/types.ts";
 import type { Equipment, MuscleGroup, TrendRange } from "@keylow/core/training";
 
@@ -94,7 +94,14 @@ export type AdviceFacts = Readonly<{
   mentions: readonly (readonly string[])[];
   /** The lines the tools build for the case. One has to be under the answer. Empty when no line is expected. */
   citations: readonly (string | RegExp)[];
+  /**
+   * Most of these exercises have to be named by the answer, each by any of its spellings. For a suggestion, whose
+   * exercises are the answer.
+   */
+  mostOf: Readonly<{ names: readonly string[]; atLeast: number }> | null;
   allowed: AllowedFigures;
+  /** Numbers the answer may quote though it need not, so a bare one is not taken for a made up load. */
+  alsoGiven: readonly number[];
   /** True when the tool could not count a stall to its start, so the answer says "at least". */
   stallIsAtLeast: boolean;
 }>;
@@ -113,8 +120,10 @@ const NEAR_THE_TOP_HEAT_POINTS = 1;
 const figure = (value: number, tolerance: number): Evidence => ({
   numbers: [{ value, tolerance }],
 });
+// A load in pounds is shown to one decimal and said to the whole pound, so 165.3 is also 165.
+const LOAD_TOLERANCE_BY_UNIT = { kg: LOAD_TOLERANCE, lb: 0.5 } as const;
 const loadIn = (loadKg: number, unit: (typeof LOAD_UNITS)[number]): Evidence =>
-  figure(Number(displayLoad(loadKg, unit)), LOAD_TOLERANCE);
+  figure(Number(displayLoad(loadKg, unit)), LOAD_TOLERANCE_BY_UNIT[unit]);
 
 export const exerciseNameOf = (exercise: TrainingExercise): string =>
   exercise === "facePull" ? CUSTOM_EXERCISE.name : LIBRARY_EXERCISE_VALUES[exercise].name;
@@ -236,6 +245,27 @@ export async function progressRead(
   return { matched: false, exercise: null };
 }
 
+/** The loads of one exercise's sets, and the weekly bests and the changes between them that the tool gives. */
+function exerciseLoadFigures(
+  anchorDate: string,
+  now: string,
+  exercise: TrainingExercise,
+  onlyWeeklyBests: boolean,
+): AllowedFigures {
+  const year = expectedTrend(anchorDate, exercise, { range: "1y", now });
+  const trainedLoads = year.weeks.flatMap((week) =>
+    week.value === null || week.value.loadKg === null ? [] : [week.value.loadKg],
+  );
+  // The change beside each week is the difference of the best loads of two trained weeks, as "+2.5 kg".
+  const changes = trainedLoads
+    .slice(1)
+    .map((loadKg, index) => Math.abs(loadKg - (trainedLoads[index] ?? loadKg)));
+  const loads = onlyWeeklyBests
+    ? trainedLoads.flatMap(bothUnits)
+    : loadsFromSets(anchorDate, (set) => set.exercise === exercise);
+  return { loads: [...loads, ...changes.flatMap(bothUnits)], setCounts: [], repRanges: [] };
+}
+
 function progressFacts(
   anchorDate: string,
   now: string,
@@ -247,29 +277,21 @@ function progressFacts(
   const year = trendOf("1y");
   const stall = weeksWithoutProgress(year, "kg");
   const latestLoadKg = year.latest?.value.loadKg ?? null;
-  const trainedLoads = year.weeks.flatMap((week) =>
-    week.value === null || week.value.loadKg === null ? [] : [week.value.loadKg],
-  );
-  // The change beside each week is the difference of the best loads of two trained weeks, as "+2.5 kg".
-  const changes = trainedLoads
-    .slice(1)
-    .map((loadKg, index) => Math.abs(loadKg - (trainedLoads[index] ?? loadKg)));
-  const loads = noNextLoad
-    ? latestLoadKg === null
-      ? []
-      : bothUnits(latestLoadKg)
-    : loadsFromSets(anchorDate, (set) => set.exercise === exercise);
+  const latestLoads: Route[] =
+    latestLoadKg === null ? [] : LOAD_UNITS.map((unit) => [loadIn(latestLoadKg, unit)]);
   return {
-    // A stall is given by its weeks. Without one, the answer holds the load of the latest week.
-    routes:
-      stall.weeks > 0 || latestLoadKg === null
+    // A stall is given by its weeks. Without one, the answer holds the load of the latest week. The question of
+    // what to lift next has no load for an answer, so it takes either: the weeks, or the last best.
+    routes: noNextLoad
+      ? [[figure(stall.weeks, 0)], ...latestLoads]
+      : stall.weeks > 0 || latestLoadKg === null
         ? [[figure(stall.weeks, 0)]]
-        : LOAD_UNITS.map((unit) => [loadIn(latestLoadKg, unit)]),
+        : latestLoads,
     citations: TREND_RANGES_ASKED.map((range) =>
       describeProgressCitation(exerciseNameOf(exercise), trendOf(range)),
     ),
     stallIsAtLeast: stall.isAtLeast,
-    allowed: { loads: [...loads, ...changes.flatMap(bothUnits)], setCounts: [], repRanges: [] },
+    allowed: exerciseLoadFigures(anchorDate, now, exercise, noNextLoad),
   };
 }
 
@@ -299,7 +321,7 @@ function workoutFacts(anchorDate: string, daysBefore: number) {
  * Works out what a case expects at `now`, from the rows the world reads, the clock and the calls the model made.
  * The calls matter for the progress cases only: they say which exercise was read.
  */
-export async function resolveFacts(
+async function resolveOwnFacts(
   spec: AdviceSpec,
   world: TrainingWorld,
   now: string,
@@ -308,7 +330,13 @@ export async function resolveFacts(
   const { anchorDate } = world;
   const today = toLocalDate(new Date(now), "UTC");
   const { expects } = spec;
-  const none = { mentions: [], citations: [], stallIsAtLeast: false } as const;
+  const none = {
+    mentions: [],
+    citations: [],
+    stallIsAtLeast: false,
+    mostOf: null,
+    alsoGiven: [],
+  } as const;
 
   switch (expects.kind) {
     case "suggestion": {
@@ -331,19 +359,16 @@ export async function resolveFacts(
       }
       return {
         ...none,
-        // The Today card picks the day, and the tool answers for it, so the sets and the minutes are that day's.
-        routes: [[figure(answer.sets, 0), figure(answer.minutes, 0)]],
+        // The Today card picks the day, and the tool answers for it. The headline holds neither the total sets nor
+        // the minutes, so the answer is the exercises, most of them, and any figure it quotes is the tool's.
+        routes: [[]],
+        mostOf: {
+          names: answer.exerciseNames,
+          atLeast: Math.ceil(answer.exerciseNames.length / 2),
+        },
+        alsoGiven: [answer.sets, answer.minutes],
         citations,
-        // The reasons of a pick quote the sets of the muscles, so those are the tool's too.
-        allowed: merge(
-          {
-            loads: [],
-            setCounts: [answer.sets, ...answer.exerciseSets],
-            repRanges: answer.repRanges,
-          },
-          routineFigures,
-          muscleFigures(await world.muscleFacts(null, now)),
-        ),
+        allowed: await suggestionFigures(world, answer, now),
       };
     }
     case "noGoal":
@@ -485,10 +510,96 @@ export async function resolveFacts(
   }
 }
 
+// ---------------------------------------------------------------------------------------------------------
+
+async function suggestionFigures(
+  world: TrainingWorld,
+  answer: Extract<SuggestionAnswer, { kind: "session" }>,
+  now: string,
+): Promise<AllowedFigures> {
+  // The reasons of a pick quote the sets of the muscles, so those are the tool's too.
+  return merge(
+    { loads: [], setCounts: [answer.sets, ...answer.exerciseSets], repRanges: answer.repRanges },
+    routineFigures,
+    muscleFigures(await world.muscleFacts(null, now)),
+  );
+}
+
+const asMuscleGroup = (value: unknown): MuscleGroup | null =>
+  MUSCLE_GROUPS.find((group) => group === value) ?? null;
+
+const asEquipment = (value: unknown): Equipment[] | null =>
+  Array.isArray(value) ? EQUIPMENT.filter((kind) => value.includes(kind)) : null;
+
+/**
+ * The figures of the tools the model actually called, whichever the case is about. A progress question answered
+ * after a read of the workouts may quote a set count of those workouts, and that is the tool's.
+ */
+async function calledFigures(
+  world: TrainingWorld,
+  now: string,
+  calls: readonly ToolCall[],
+): Promise<AllowedFigures> {
+  const { anchorDate } = world;
+  const ids = await world.exerciseIds();
+  const parts = await Promise.all(
+    calls.map(async ({ name, input }): Promise<AllowedFigures> => {
+      const args = isRecord(input) ? input : {};
+      switch (name) {
+        case "get_workouts": {
+          const { from, to } = args;
+          const isRead = (day: string) =>
+            typeof from !== "string" || typeof to !== "string" || (from <= day && day <= to);
+          return {
+            loads: loadsFromSets(anchorDate, ({ local_date }) => isRead(local_date)),
+            setCounts: workingSetCounts(anchorDate, isRead),
+            repRanges: [],
+          };
+        }
+        case "get_routines":
+          return routineFigures;
+        case "get_muscle_state":
+          return muscleFigures(await world.muscleFacts(asMuscleGroup(args["area"]), now));
+        case "suggest_next_session": {
+          const minutes = typeof args["minutes"] === "number" ? args["minutes"] : null;
+          const answer = await world.suggestion(
+            { minutes, equipment: asEquipment(args["equipment"]) },
+            now,
+          );
+          return answer.kind === "session" ? suggestionFigures(world, answer, now) : noFigures;
+        }
+        case "get_exercise_progress": {
+          const read = [...ids].find(([, id]) => id === args["exercise_id"])?.[0];
+          return read === undefined ? noFigures : exerciseLoadFigures(anchorDate, now, read, false);
+        }
+        default:
+          return noFigures;
+      }
+    }),
+  );
+  return merge(...parts);
+}
+
+/**
+ * Works out what a case expects at `now`, from the rows the world reads, the clock and the calls the model made.
+ * The calls say which exercise a progress question was answered for, and which tools' figures an answer may quote.
+ */
+export async function resolveFacts(
+  spec: AdviceSpec,
+  world: TrainingWorld,
+  now: string,
+  calls: readonly ToolCall[] = [],
+): Promise<AdviceFacts> {
+  const own = await resolveOwnFacts(spec, world, now, calls);
+  return { ...own, allowed: merge(own.allowed, await calledFigures(world, now, calls)) };
+}
+
 /** The facts of two moments, for a case that crossed midnight between its start and its grading. */
 export const mergeFacts = (first: AdviceFacts, second: AdviceFacts): AdviceFacts => ({
   routes: [...first.routes, ...second.routes],
   mentions: first.mentions,
+  mostOf: first.mostOf,
+  alsoGiven: [...first.alsoGiven, ...second.alsoGiven],
   citations: [...first.citations, ...second.citations],
   allowed: merge(first.allowed, second.allowed),
   stallIsAtLeast: first.stallIsAtLeast,

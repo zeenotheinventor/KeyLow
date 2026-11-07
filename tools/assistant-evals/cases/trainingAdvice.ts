@@ -25,6 +25,7 @@ import {
 } from "./trainingAdviceFacts.ts";
 import {
   answerHoldsARoute,
+  answerNamesMostOf,
   answerSaysOneOfEach,
   callsOf,
   citationIsTheTools,
@@ -198,9 +199,18 @@ function gradersOf(spec: AdviceSpec, world: () => TrainingWorld, clock: Clock): 
     ...spec.calls.map((rule) => callRuleGrader(rule, world, spec.mayClarify)),
     unlessAsked(lazily(({ routes }) => answerHoldsARoute(routes))),
     unlessAsked(lazily(({ mentions }) => answerSaysOneOfEach(mentions))),
+    unlessAsked(
+      lazily(({ mostOf }) =>
+        mostOf === null
+          ? () => Promise.resolve(pass("no exercises to name"))
+          : answerNamesMostOf(mostOf.names, mostOf.atLeast),
+      ),
+    ),
     unlessAsked(lazily(({ citations }) => citationIsTheTools(citations))),
     unlessAsked(
-      lazily(({ allowed, routes }) => noInventedLoad(allowed, expectedNumbersOf(routes))),
+      lazily(({ allowed, routes, alsoGiven }) =>
+        noInventedLoad(allowed, [...expectedNumbersOf(routes), ...alsoGiven]),
+      ),
     ),
     unlessAsked(
       lazily(({ stallIsAtLeast }) =>

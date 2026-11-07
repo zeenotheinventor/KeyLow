@@ -50,6 +50,10 @@ export type RunReport = Readonly<{
 
 export const DEFAULT_CASE_TIMEOUT_MS = 120_000;
 
+// How long the prepare of a case may take. It is slow work shared by later cases, such as a history written one
+// request at a time, so the ceiling is generous, but a request that hangs must not stall the run.
+export const DEFAULT_PREPARE_TIMEOUT_MS = 600_000;
+
 // How long a case that hit its ceiling is given to finish its cleanUp before the next case starts. The turn in
 // flight cannot be cancelled, so it may never come back, and the run must not wait for ever.
 export const DEFAULT_CLEAN_UP_GRACE_MS = 60_000;
@@ -65,6 +69,8 @@ type RunInput = Readonly<{
   caseTimeoutMs?: number;
   /** How long a case that hit its ceiling may take to clean up before the next case starts. */
   cleanUpGraceMs?: number;
+  /** The ceiling of a case's `prepare`. A case whose prepare took longer is reported as not prepared. */
+  prepareTimeoutMs?: number;
 }>;
 
 /**
@@ -172,7 +178,10 @@ export async function runEvals(input: RunInput): Promise<RunReport> {
     budgetTokens,
     caseTimeoutMs = DEFAULT_CASE_TIMEOUT_MS,
     cleanUpGraceMs = DEFAULT_CLEAN_UP_GRACE_MS,
+    prepareTimeoutMs = DEFAULT_PREPARE_TIMEOUT_MS,
   } = input;
+  // The prepares that hung. Cases that share one are not tried again, so a hung request is waited for once.
+  const hungPrepares = new Set<() => Promise<void>>();
   const reports: CaseReport[] = [];
   // What the eval user has used so far, as the last read of `assistant_usage` saw it. Null before the first read.
   const spend: { latest: TurnUsage | null } = { latest: null };
@@ -287,11 +296,29 @@ export async function runEvals(input: RunInput): Promise<RunReport> {
 
   async function runCase(evalCase: EvalCase): Promise<Outcome> {
     try {
-      // Slow shared work runs first and outside the ceiling, so a long history write is not a timed out case.
-      try {
-        await evalCase.prepare?.();
-      } catch (error) {
-        throw new CaseError(`the case could not be prepared: ${messageOf(error)}`);
+      // Slow shared work runs first and outside the ceiling, so a long history write is not a timed out case. It
+      // has a ceiling of its own, so a request that hangs is a case that was not prepared.
+      const { prepare } = evalCase;
+      if (prepare !== undefined) {
+        if (hungPrepares.has(prepare)) {
+          throw new CaseError("the case could not be prepared: an earlier case's prepare hung");
+        }
+        let timer: NodeJS.Timeout | undefined;
+        try {
+          await Promise.race([
+            prepare(),
+            new Promise<never>((_resolve, reject) => {
+              timer = setTimeout(() => {
+                hungPrepares.add(prepare);
+                reject(new Error(`took longer than ${prepareTimeoutMs} ms`));
+              }, prepareTimeoutMs);
+            }),
+          ]);
+        } catch (error) {
+          throw new CaseError(`the case could not be prepared: ${messageOf(error)}`);
+        } finally {
+          clearTimeout(timer);
+        }
       }
       const abandoned = { value: false };
       const work = playCase(evalCase, () => abandoned.value);

@@ -237,25 +237,84 @@ export function answerSaysOneOfEach(groups: readonly (readonly string[])[]): Gra
   };
 }
 
+// What an exercise may be called in a reply: its name, the part before a dash or a bracket, and the name without
+// the kind of equipment, so "Barbell Curl" is also "curl". Hyphens and runs of spaces count as one space.
+const EQUIPMENT_WORDS = new Set([
+  "barbell",
+  "dumbbell",
+  "kettlebell",
+  "cable",
+  "machine",
+  "smith",
+  "ez",
+  "ez-bar",
+  "bar",
+  "band",
+  "lever",
+  "seated",
+  "standing",
+  "full",
+  "medium",
+  "grip",
+]);
+const plain = (text: string): string =>
+  text
+    .toLowerCase()
+    .replaceAll(/[-\u2013]/g, " ")
+    .replaceAll(/\s+/g, " ")
+    .trim();
+const SHORTEST_SPELLING = 4;
+
+function spellingsOf(name: string): string[] {
+  const lower = name.toLowerCase();
+  const withoutEquipment = plain(lower)
+    .split(" ")
+    .filter((word) => !EQUIPMENT_WORDS.has(word))
+    .join(" ");
+  return [
+    plain(lower),
+    plain(lower.split(" - ")[0] ?? lower),
+    plain(lower.split("(")[0] ?? lower),
+    withoutEquipment,
+  ].filter((spelling) => spelling.length >= SHORTEST_SPELLING);
+}
+
+/** Passes when the answer names at least `atLeast` of these exercises, each by any of its spellings. */
+export function answerNamesMostOf(names: readonly string[], atLeast: number): Grader {
+  return (context) => {
+    const answer = plain(answerOf(context).replaceAll("\u2019", "'"));
+    const named = names.filter((name) =>
+      spellingsOf(name).some((spelling) => answer.includes(spelling)),
+    );
+    return Promise.resolve(
+      named.length >= atLeast
+        ? pass("the answer names the exercises")
+        : fail(
+            `the answer names ${named.length} of the ${names.length} exercises and ${atLeast} were wanted (${names.join(", ")})`,
+          ),
+    );
+  };
+}
+
 const MONTH =
   "(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sept?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)";
 // Dates and clock times are removed before figures are read, so the day of a date is not taken for a count.
 const DATES_AND_TIMES = new RegExp(
-  `\\d{4}-\\d{2}-\\d{2}|\\b\\d{1,2}:\\d{2}\\b|\\b\\d{1,2}(?:st|nd|rd|th)?\\s+(?:of\\s+)?${MONTH}\\b|\\b${MONTH}\\.?\\s+\\d{1,2}(?:st|nd|rd|th)?\\b|\\b\\d+(?:st|nd|rd|th)\\b`,
+  `\\d{4}-\\d{2}-\\d{2}|\\b\\d{1,2}:\\d{2}\\b|\\b\\d{1,2}(?:st|nd|rd|th)?\\s+(?:of\\s+)?${MONTH}\\b|\\b${MONTH}\\.?\\s+\\d{1,2}(?:st|nd|rd|th)?\\b|\\b\\d+(?:st|nd|rd|th)\\b|\\b(?:19|20)\\d{2}\\b`,
   "gi",
 );
 
 const WEIGHT_UNIT = "(?:kg|kgs|kilos?|kilograms?|lb|lbs|pounds?)";
 // A unit that makes a number something other than a load, which a bare number is checked against.
 const OTHER_UNIT =
-  "(?:sets?|reps?|minutes?|mins?|min|hours?|hrs?|weeks?|days?|%|percent|x|times|exercises?|workouts?|sessions?|muscles?)";
+  "(?:sets?|reps?|minutes?|mins?|min|seconds?|secs?|hours?|hrs?|weeks?|days?|%|percent|x|times|exercises?|workouts?|sessions?|muscles?|a week|per week)";
 const LOAD_WITH_UNIT = new RegExp(`(\\d[\\d,]*(?:\\.\\d+)?)\\s*${WEIGHT_UNIT}\\b`, "gi");
 const SETS = /(\d+(?:\.\d+)?)\s*(?:working |warm-up |warm up |hard |total |extra )?sets?\b/gi;
 const SET_RANGE = /(\d+)\s*(?:-|–|to)\s*(\d+)\s*(?:working )?sets?\b/gi;
 // Two numbers joined by a dash or "to" and not followed by a unit of anything else are a rep range, with or
 // without the word "reps": "8 to 10", "sets of 8-10", "3 x 8-12".
 const REP_RANGE = new RegExp(
-  `(\\d+)\\s*(?:-|\\u2013|to)\\s*(\\d+)(?!\\d|\\.\\d)(?!\\s*(?:${WEIGHT_UNIT}|sets?|minutes?|mins?|hours?|weeks?|days?|%|percent))`,
+  `(\\d+)\\s*(?:-|\\u2013|to)\\s*(\\d+)(?!\\d|\\.\\d)(?!\\s*(?:${WEIGHT_UNIT}|(?!reps?\\b)${OTHER_UNIT}))`,
   "gi",
 );
 // A number the answer states with no unit at all, at a size a load would be.
@@ -285,7 +344,10 @@ export function noInventedLoad(
   return (context) => {
     const answer = answerOf(context).replace(DATES_AND_TIMES, " ");
     const invented: string[] = [];
-    const isLoad = (value: number) => near(allowed.loads, value, LOAD_TOLERANCE);
+    // A load is said to the whole unit as well as to the decimal it is shown with: 165.3 lb is also 165.
+    const isLoad = (value: number) =>
+      near(allowed.loads, value, LOAD_TOLERANCE) ||
+      (Number.isInteger(value) && allowed.loads.some((load) => Math.round(load) === value));
     const isSetCount = (value: number) => near([0, ...allowed.setCounts], value, SET_TOLERANCE);
     for (const [, digits] of answer.matchAll(LOAD_WITH_UNIT)) {
       const value = Number((digits ?? "").replaceAll(",", ""));

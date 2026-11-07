@@ -66,7 +66,8 @@ const suggestionOf = (minutes: number | null, today: string): SuggestionAnswer =
         day: today,
         sets: 14,
         minutes: 52,
-        exerciseSets: [3, 4],
+        exerciseSets: [3, 4, 4],
+        exerciseNames: ["Barbell Full Squat", "Leg Press", "Romanian Deadlift"],
         repRanges: [[6, 10]],
       };
 
@@ -196,6 +197,7 @@ function perfectTurn(
   return turnResult({
     answer: [
       ...facts.mentions.map(([firstWord]) => firstWord ?? ""),
+      ...(facts.mostOf?.names ?? []),
       ...(facts.routes[0] ?? []).map(sayEvidence),
       facts.stallIsAtLeast ? "at least" : "",
     ]
@@ -325,17 +327,39 @@ describe("a reply a right model would give", () => {
     expect(await failuresOf(caseOf(id), turn, databaseFor(spec))).toEqual([]);
   });
 
-  it("should expect the sets and the minutes of the one day the tool answers for", async () => {
+  it("should take a reply that lists the suggested exercises, with no totals", async () => {
     const facts = await resolveFacts(specOf("train-today"), world, nowIso());
 
-    expect(facts.routes).toHaveLength(1);
-    expect(facts.routes[0]?.map(sayEvidence)).toEqual(["14", "52"]);
-    expect(await run("train-today", { answer: "14 sets and 52 minutes, at 6-10 reps." })).toEqual(
-      [],
-    );
-    expect(await run("train-today", { answer: "9 sets and 52 minutes." })).toEqual(
-      expect.arrayContaining([expect.stringContaining("wanted 14 and 52")]),
-    );
+    expect(facts.routes).toEqual([[]]);
+    expect(facts.mostOf).toEqual({
+      names: ["Barbell Full Squat", "Leg Press", "Romanian Deadlift"],
+      atLeast: 2,
+    });
+    expect(
+      await run("train-today", { answer: "Squat, then leg press, then Romanian deadlift." }),
+    ).toEqual([]);
+  });
+
+  it("should take most of the exercises, and not one of three", async () => {
+    expect(await run("train-today", { answer: "Squat and leg press today." })).toEqual([]);
+    expect(await run("train-today", { answer: "Start with the squat." })).toEqual([
+      expect.stringContaining("names 1 of the 3 exercises"),
+    ]);
+  });
+
+  it("should check the figures a suggestion quotes against the tool, and stay strict", async () => {
+    const exercises = "Squat, leg press, deadlift";
+
+    expect(
+      await run("train-today", { answer: `${exercises}: 14 sets, 52 minutes, 6-10 reps.` }),
+    ).toEqual([]);
+    expect(await run("train-today", { answer: `${exercises}: 3 sets of 6 to 10.` })).toEqual([]);
+    expect(await run("train-today", { answer: `${exercises}: 9 sets.` })).toEqual([
+      expect.stringContaining("9 sets"),
+    ]);
+    expect(
+      await run("train-today", { answer: `${exercises}: 52 minutes, then 12 to 15 reps.` }),
+    ).toEqual([expect.stringContaining("a rep range of 12 to 15")]);
   });
 
   it("should ask for no figure when there is nothing to suggest, and say so", async () => {
@@ -441,11 +465,61 @@ describe("a progress question that finds more than one exercise", () => {
   });
 
   it("should fail a load to try next when the question asked what to lift", async () => {
-    expect(await run("progress-bench-next-load", { answer: "Three weeks. Try 77.5 kg." })).toEqual([
-      expect.stringContaining("a load of 77.5"),
+    for (const answer of [
+      "Try 85 kg.",
+      "Go for 85.",
+      "Three weeks. Try 77.5 kg.",
+      "Ki-Lo has no figure for that. Try 80 kg.",
+    ]) {
+      expect(await run("progress-bench-next-load", { answer })).not.toEqual([]);
+    }
+  });
+
+  it("should pass an answer that gives the last best, or the weeks, and no load to try", async () => {
+    for (const answer of [
+      "Ki-Lo has no figure for that. Your last best was 75 kg for 5 reps.",
+      "You went from 70 kg to 75 kg.",
+      "Ki-Lo has no figure for that. Your last best was 165 lb.",
+      "Ki-Lo has no figure for that. Your best has stood still for 3 weeks.",
+    ]) {
+      expect(await run("progress-bench-next-load", { answer })).toEqual([]);
+    }
+  });
+});
+
+describe("figures that are not loads", () => {
+  it("should not take a year, a count of sessions a week or a rest for a load or a rep range", async () => {
+    for (const answer of [
+      "Three weeks, since 7 Nov 2026.",
+      "Three weeks, in 2026.",
+      "Three weeks. Train 2-3 sessions a week.",
+      "Three weeks. Train 2 to 3 times a week.",
+      "Three weeks. Rest 90 seconds between sets.",
+    ]) {
+      expect(await run("progress-bench-stalled", { answer })).toEqual([]);
+    }
+  });
+
+  it("should take a load in pounds to the whole pound", async () => {
+    expect(
+      await run("progress-bench-stalled", { answer: "Three weeks, stuck at 165 lb." }),
+    ).toEqual([]);
+  });
+
+  it("should allow the set counts of a tool the case did not expect when the turn called it", async () => {
+    const answer = "Three weeks. You did 4 sets of 5 at 75.";
+
+    expect(await run("progress-bench-stalled", { answer })).toEqual([
+      expect.stringContaining("4 sets"),
     ]);
     expect(
-      await run("progress-bench-next-load", { answer: "Three weeks, last at 75 kg." }),
+      await run("progress-bench-stalled", {
+        answer,
+        toolCalls: [
+          ...specOf("progress-bench-stalled").calls.map(callFor),
+          readTool("get_workouts", { from: "2000-01-01", to: "2999-12-31", session_id: null }),
+        ],
+      }),
     ).toEqual([]);
   });
 });
@@ -562,7 +636,7 @@ describe("what makes a case fail", () => {
 
   it("should fail a set count that no tool of the case gave", async () => {
     const failures = await run("train-today", {
-      answer: "14 sets, 52 minutes, then 7 sets of curls.",
+      answer: "Squat, leg press, deadlift: 14 sets, 52 minutes, then 7 sets of curls.",
     });
 
     expect(failures).toEqual([expect.stringContaining("7 sets")]);
@@ -582,22 +656,32 @@ describe("what makes a case fail", () => {
 
   it("should fail a rep range that no tool gave, with or without the word reps", async () => {
     for (const range of ["at 15-20 reps", "for 15 to 20", "sets of 15-20"]) {
-      const failures = await run("train-today", { answer: `14 sets, 52 minutes, ${range}.` });
+      const failures = await run("train-today", {
+        answer: `Squat, leg press, deadlift: 14 sets, 52 minutes, ${range}.`,
+      });
 
       expect(failures).toEqual([expect.stringContaining("a rep range of 15 to 20")]);
     }
   });
 
   it("should allow a rep range the suggestion gave", async () => {
-    expect(await run("train-today", { answer: "14 sets, 52 minutes, at 6-10 reps." })).toEqual([]);
-    expect(await run("train-today", { answer: "14 sets, 52 minutes, sets of 6 to 10." })).toEqual(
-      [],
-    );
+    expect(
+      await run("train-today", {
+        answer: "Squat, leg press, deadlift: 14 sets, 52 minutes, at 6-10 reps.",
+      }),
+    ).toEqual([]);
+    expect(
+      await run("train-today", {
+        answer: "Squat, leg press, deadlift: 14 sets, 52 minutes, sets of 6 to 10.",
+      }),
+    ).toEqual([]);
   });
 
   it("should not take minutes, weeks or a percent for a rep range or a load", async () => {
     expect(
-      await run("train-today", { answer: "14 sets, 52 minutes, or 45 to 60 minutes, 80% done." }),
+      await run("train-today", {
+        answer: "Squat, leg press, deadlift: 14 sets, 52 minutes, or 45 to 60 minutes, 80% done.",
+      }),
     ).toEqual([]);
   });
 
@@ -632,9 +716,11 @@ describe("what makes a case fail", () => {
   });
 
   it("should fail the first person", async () => {
-    expect(await run("train-today", { answer: "14, 52. I would start with squats." })).toEqual([
-      expect.stringContaining("first person"),
-    ]);
+    expect(
+      await run("train-today", {
+        answer: "Squat, leg press, deadlift. I would start with squats.",
+      }),
+    ).toEqual([expect.stringContaining("first person")]);
   });
 
   it("should fail a workout in progress that was changed or finished", async () => {
@@ -768,7 +854,7 @@ describe("the clock", () => {
     vi.setSystemTime(new Date("2026-11-06T00:00:20Z"));
 
     const turn = turnResult({
-      answer: "14 sets and 52 minutes.",
+      answer: "Squat, leg press and deadlift: 14 sets and 52 minutes.",
       toolCalls: [readTool("suggest_next_session", { minutes: null, equipment: null })],
       answerMeta: { citation: "Based on Ki-Lo's suggestion for today", estimate: null },
     });

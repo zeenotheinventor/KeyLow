@@ -41,6 +41,7 @@ const LIVE_WORKOUT_SETS = 2;
 const LIVE_WORKOUT_LOAD = "75";
 const LIVE_WORKOUT_REPS = "5";
 const LIVE_WORKOUT_RIR = "2";
+const LIVE_WORKOUT_AGE_MILLISECONDS = 60_000;
 
 /**
  * What `suggest_next_session` answers, as numbers. `none` is no session to give: a workout is open, or nothing
@@ -55,6 +56,8 @@ export type SuggestionAnswer =
       minutes: number;
       /** The sets of each exercise, as its row prints them. */
       exerciseSets: readonly number[];
+      /** The name of each exercise, in order, as the tool words them. */
+      exerciseNames: readonly string[];
       repRanges: readonly (readonly [number, number])[];
     }>
   | Readonly<{ kind: "nothing"; day: string }>
@@ -204,9 +207,22 @@ export function createTrainingWorld({
       if (suggestion === null || suggestion.kind === "nothing") {
         return { kind: "nothing", day: target.day };
       }
+      const names = new Map([
+        ...library.map(({ id, name }): [string, string] => [id, name]),
+        ...(activeRoutine?.days ?? []).flatMap((routineDay) =>
+          routineDay.exercises.map(({ exercise }): [string, string] => [
+            exercise.id,
+            exercise.name,
+          ]),
+        ),
+      ]);
       return {
         kind: "session",
         day: target.day,
+        exerciseNames: suggestion.exercises.flatMap(({ exercise_id }) => {
+          const name = names.get(exercise_id);
+          return name === undefined ? [] : [name];
+        }),
         sets: suggestion.sets,
         minutes: suggestion.minutes,
         exerciseSets: suggestion.exercises.map(({ sets: exerciseSets }) => exerciseSets),
@@ -261,8 +277,10 @@ export function createTrainingWorld({
       if (bench === undefined) {
         throw new Error("The training history has no bench press");
       }
-      const now = new Date();
-      const started = await startSession(client, { now, tz: EVAL_TIME_ZONE });
+      // The workout began a minute ago and its sets are in the past, because the muscle state ignores a set after
+      // the moment it is worked out at.
+      const startedAt = new Date(Date.now() - LIVE_WORKOUT_AGE_MILLISECONDS);
+      const started = await startSession(client, { now: startedAt, tz: EVAL_TIME_ZONE });
       for (let index = 0; index < LIVE_WORKOUT_SETS; index += 1) {
         await addSet(client, {
           sessionId: started.id,
@@ -276,7 +294,7 @@ export function createTrainingWorld({
           },
           unit: "kg",
           effortMode: "rir",
-          now: new Date(now.getTime() + (index + 1) * 1000),
+          now: new Date(startedAt.getTime() + (index + 1) * 1000),
         });
       }
     },
