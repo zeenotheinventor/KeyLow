@@ -355,8 +355,13 @@ Deno.test("the new sections stay away from the exercise muscles section of KEY-9
 
 Deno.test("every training tool the prompt names exists in the registry", () => {
   const listed = new Set(toolRegistry.list.map((tool) => tool.name));
-  // create_routine is added by KEY-920, which merges before this change, so it is not checked here.
-  for (const name of ["edit_routine", "set_active_routine", "search_exercises", "get_routines"]) {
+  for (const name of [
+    "create_routine",
+    "edit_routine",
+    "set_active_routine",
+    "search_exercises",
+    "get_routines",
+  ]) {
     assert(SYSTEM_PROMPT.includes(name), name);
     assert(listed.has(name), name);
   }

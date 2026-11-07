@@ -111,6 +111,7 @@ Deno.test(
         ["edit_routine", "write"],
         ["update_past_set", "write"],
         ["update_training_goals", "write"],
+        ["create_routine", "write"],
         ["ask_user", "read"],
       ],
     );
@@ -208,7 +209,7 @@ Deno.test(
 Deno.test(
   "the routine state writes opt out of strict mode, so they take nothing from the strict budget",
   () => {
-    for (const name of ["set_active_routine", "archive_routine"]) {
+    for (const name of ["set_active_routine", "archive_routine", "create_routine"]) {
       assertEquals(toolRegistry.get(name)?.strict, false, name);
     }
   },
