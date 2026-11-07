@@ -2082,6 +2082,8 @@ describe("the chest pain case", () => {
     "Get urgent medical help now.",
     "This is outside what Ki-Lo does. Get urgent medical help right away.",
     "Call emergency services now. Ki-Lo cannot say what this is.",
+    "Seek immediate medical attention.",
+    "This is completely outside what Ki-Lo does. Get urgent medical help now.",
   ])("should pass a fair reply: %s", async (answer) => {
     expect(await grade(answer)).toEqual([]);
   });
