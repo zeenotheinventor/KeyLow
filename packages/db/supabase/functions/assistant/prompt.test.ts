@@ -94,12 +94,42 @@ Deno.test("the system prompt holds no date, no id and no per-person value", () =
   assertEquals(/user[_ ]?id|@|\$\{/i.test(SYSTEM_PROMPT), false);
 });
 
-Deno.test("the system prompt follows the prose rules and never says I", () => {
-  assertEquals(SYSTEM_PROMPT.includes("—"), false);
-  assertEquals(SYSTEM_PROMPT.includes("--"), false);
-  assertEquals(SYSTEM_PROMPT.includes(";"), false);
-  assertEquals(/\bI(?:'[a-z]+)?\b/.test(SYSTEM_PROMPT), false);
-  assertEquals(SYSTEM_PROMPT.includes("Ki-Lo"), true);
+// The one sentence that has to name the forbidden words, so the check for a first-person "I" skips it.
+const FIRST_PERSON_RULE = "Never write I, I'll, I can, I can't, me or my.";
+
+Deno.test(
+  "the system prompt follows the prose rules and never says I outside the rule against it",
+  () => {
+    assertEquals(SYSTEM_PROMPT.includes("—"), false);
+    assertEquals(SYSTEM_PROMPT.includes("--"), false);
+    assertEquals(SYSTEM_PROMPT.includes(";"), false);
+    assertEquals(SYSTEM_PROMPT.split(FIRST_PERSON_RULE).length, 2);
+    assertEquals(/\bI(?:'[a-z]+)?\b/.test(SYSTEM_PROMPT.replace(FIRST_PERSON_RULE, "")), false);
+    assertEquals(SYSTEM_PROMPT.includes("Ki-Lo"), true);
+  },
+);
+
+Deno.test(
+  "the replies rule is positive, first in Replies, with the shapes to write instead",
+  () => {
+    for (const rule of [
+      `Replies\n${FIRST_PERSON_RULE} Start with the thing itself, as in "Your bench has stayed at 75 kg for 3 weeks."`,
+      'For a limit, write "Ki-Lo can\'t change a routine yet, that is done in the app." or "Changing a routine is done in the app."',
+      'For an offer, ask a question or name the next step, as in "Ask about shoulder press to see that one."',
+      "Answer only the question asked, and offer nothing else.",
+    ]) {
+      assert(SYSTEM_PROMPT.includes(rule), `the system prompt does not hold: ${rule}`);
+    }
+    assertEquals(SYSTEM_PROMPT.includes("This assistant cannot"), false);
+  },
+);
+
+Deno.test("overworked and undertrained muscles come from get_muscle_state", () => {
+  assert(
+    SYSTEM_PROMPT.includes(
+      "volume and recovery, and anything overworked or undertrained, only from get_muscle_state",
+    ),
+  );
 });
 
 Deno.test("the system prompt holds the product rules the boards print", () => {
@@ -150,7 +180,7 @@ Deno.test("training numbers follow the same rule as food numbers", () => {
 
 Deno.test("training advice comes from the three tools and never from the model", () => {
   for (const rule of [
-    "Training advice\nWhat to train next comes only from suggest_next_session, volume and recovery only from get_muscle_state, and progress only from get_exercise_progress.",
+    "Training advice\nWhat to train next comes only from suggest_next_session, volume and recovery, and anything overworked or undertrained, only from get_muscle_state, and progress only from get_exercise_progress.",
     "Never invent a weight, a set count, a rep range or a programme.",
     "When the tools have no number for the question, say so and give what they do have, such as the last performance and the trend.",
     "A suggestion can carry a marker such as first_visit (nothing logged yet, so nothing to suggest). Say what a marker means in plain words and never print its name.",
@@ -163,7 +193,7 @@ Deno.test(
   "the prompt says where the button is: Start today, otherwise Add to and the weekday",
   () => {
     for (const rule of [
-      "This assistant cannot start a workout or accept a suggestion.",
+      "Ki-Lo can't start a workout or accept a suggestion.",
       'Say where the button is: Start when the day is today, otherwise Add to and the weekday, as in "To add it, press Add to Thursday on the Train tab."',
     ]) {
       assert(SYSTEM_PROMPT.includes(rule), `the system prompt does not hold: ${rule}`);
@@ -189,7 +219,7 @@ Deno.test(
   "naming another exercise is a suggestion only, and a workout is not a diary entry",
   () => {
     for (const rule of [
-      "Naming another exercise when the person asks for one is fine, as a suggestion only. This assistant cannot change a routine or a workout, so say so in one short sentence and say it is done in the app.",
+      "Naming another exercise when the person asks for one is fine, as a suggestion only. Ki-Lo can't change a routine or a workout yet, so say so in one short sentence and say it is done in the app.",
       "A workout is not a diary entry, so no diary tool changes one.",
     ]) {
       assert(SYSTEM_PROMPT.includes(rule), `the system prompt does not hold: ${rule}`);
