@@ -17,7 +17,7 @@ import { spoonPortionWithLabel } from "@keylow/core/nutrition";
 import { buildRecipeIngredient, computeRecipe, recipeComputedSchema } from "@keylow/core/recipes";
 import { foodPortionSchema, foodRowSchema } from "@keylow/core/schemas";
 
-import { READ_TOOLS } from "./ask.ts";
+import { DIARY_READ_TOOLS } from "./ask.ts";
 import { pagePathOf, recipePages } from "../fixtures/pages/recipeImportPages.ts";
 import { recipePageUrl } from "../src/pageServer.ts";
 import { ensurePageServer } from "../src/pageServerHolder.ts";
@@ -33,8 +33,8 @@ const fail = (reason: string): GradeOutcome => ({ passed: false, reason });
 
 const IMPORT_TOOL = "import_recipe_from_url";
 
-/** The tools a recipe import turn may call: the read tools (looking something up) and the import itself. */
-export const IMPORT_TURN_TOOLS: ReadonlySet<string> = new Set([...READ_TOOLS, IMPORT_TOOL]);
+/** The tools a recipe import turn may call: the read tools of the diary (looking something up) and the import itself. */
+export const IMPORT_TURN_TOOLS: ReadonlySet<string> = new Set([...DIARY_READ_TOOLS, IMPORT_TOOL]);
 
 /** How close a stored number must be to the worked-out one. The stored numbers are core's, unrounded. */
 const NUMBER_TOLERANCE = 0.01;
