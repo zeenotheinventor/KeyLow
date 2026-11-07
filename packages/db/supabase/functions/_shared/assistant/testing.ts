@@ -284,6 +284,7 @@ export type FakeToolOptions = {
   run?: (input: NoteInput) => Promise<{ target: ActionTarget | null }>;
   needsConfirmation?: (input: NoteInput) => ConfirmationNeed;
   inverse?: WriteToolDefinition<NoteInput>["inverse"];
+  refusesDuringWorkout?: true;
 };
 
 // A write tool that counts its runs. By default it lands one row.
@@ -299,6 +300,7 @@ export function fakeWriteTool(options: FakeToolOptions = {}) {
     ...(options.needsConfirmation === undefined
       ? {}
       : { needsConfirmation: options.needsConfirmation }),
+    ...(options.refusesDuringWorkout === undefined ? {} : { refusesDuringWorkout: true as const }),
     inverse: "inverse" in options ? (options.inverse ?? null) : () => Promise.resolve("undone"),
     async run(_ctx, input) {
       runs.push(input);

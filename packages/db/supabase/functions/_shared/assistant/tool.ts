@@ -62,7 +62,11 @@ export type WriteRunOutput = ToolRunOutput & {
 // `confirmLabel` of the button that confirms, and a `note` line the turn loop adds after the question.
 export type ConfirmationNeed = false | { question: string; confirmLabel: string; note?: string };
 
-export type InverseOutcome = "undone" | "unavailable";
+// Why an Undo is unavailable, for the boards' notes. An inverse that gives none answers a bare "unavailable".
+export type UndoReason = "changed" | "active" | "logged" | "used" | "workout_in_progress";
+
+export type InverseOutcome =
+  "undone" | "unavailable" | { status: "unavailable"; reason: UndoReason };
 
 type ToolBase<Input> = {
   name: string;
@@ -86,6 +90,9 @@ export type WriteToolDefinition<Input = unknown> = ToolBase<Input> & {
   kind: "write";
   // The table the write changes, recorded on its action.
   targetTable: string;
+  // Set on every write to a training table. The executor then refuses the call, and Undo refuses its
+  // inverse, while the person has a workout in progress, whatever the model was told (ADR 0006).
+  refusesDuringWorkout?: true;
   // Present when the call can be destructive or bulk. An answer other than false asks for a confirmation
   // first, and carries the tool's own question. The turn loop shows the model's question when it wrote one
   // and this one when it did not. A `note` is one line the tool wrote from the person's own rows. The turn
