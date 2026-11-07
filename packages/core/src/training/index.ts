@@ -378,7 +378,13 @@ export type {
   SessionRowEntry,
   SetRowState,
 } from "./exerciseRows";
-export { TREND_RANGES, TREND_RANGE_WEEKS, exerciseWeeklyTrend } from "./exerciseTrend";
+export {
+  TREND_RANGES,
+  TREND_RANGE_WEEKS,
+  exerciseWeeklyTrend,
+  trendReadWindow,
+  weeksWithoutProgress,
+} from "./exerciseTrend";
 export type {
   ExerciseTrend,
   TrendChange,
