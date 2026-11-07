@@ -240,6 +240,231 @@ describe("ChatMessage", () => {
     });
   });
 
+  describe("an answer with markdown", () => {
+    const formatted: ChatMessageProps = {
+      role: "assistant",
+      speakerLabel: "Assistant",
+      paragraphs: ["**Log food:**\n- Two eggs\n- Toast"],
+    };
+    const caretIn = (words: string) => {
+      const [caret] = viewsDrawn(caretStyle);
+      return screen.getByText(words).queryAll((node) => node === caret);
+    };
+
+    it("should be one group named by the words alone, with no marker in the name", async () => {
+      await renderMessage(formatted);
+
+      expect(
+        screen.getByRole("group", { name: "Assistant: Log food: Two eggs Toast" }),
+      ).toBeOnTheScreen();
+    });
+
+    it("should draw the bold line in the body-strong look", async () => {
+      await renderMessage(formatted);
+      await screen.findByText("Log food:");
+
+      expect(screen.getByText("Log food:")).toHaveStyle({
+        fontFamily: "Geist-SemiBold",
+        fontSize: 16,
+      });
+    });
+
+    it("should show the item words with a bullet and no dash", async () => {
+      await renderMessage(formatted);
+
+      expect(screen.getByText("Two eggs")).toBeOnTheScreen();
+      expect(screen.getByText("Toast")).toBeOnTheScreen();
+      expect(screen.getAllByText("•")).toHaveLength(2);
+      expect(screen.queryByText(/-/)).not.toBeOnTheScreen();
+      expect(screen.queryByText(/\*/)).not.toBeOnTheScreen();
+    });
+
+    it("should draw the bullet in the secondary tone in a column that is at least 20 points", async () => {
+      await renderMessage(formatted, "dark");
+      await screen.findAllByText("•");
+
+      expect(screen.getAllByText("•")[0]).toHaveStyle({
+        color: resolvedColor("dark", "text-secondary"),
+        minWidth: 20,
+      });
+    });
+
+    it("should show the number of a numbered item as written, followed by a full stop", async () => {
+      await renderMessage({ ...answer, paragraphs: ["Order:\n1. Flat white\n2) Eggs"] });
+
+      expect(screen.getByText("1.")).toBeOnTheScreen();
+      expect(screen.getByText("2.")).toBeOnTheScreen();
+      expect(screen.getByText("Flat white")).toBeOnTheScreen();
+    });
+
+    it("should let the marker column grow for a number of two digits", async () => {
+      await renderMessage({ ...answer, paragraphs: ["10. Tenth"] });
+      await screen.findByText("10.");
+
+      expect(screen.getByText("10.")).toHaveStyle({ minWidth: 20, flexShrink: 0 });
+      expect(screen.getByText("10.")).not.toHaveStyle({ width: 20 });
+    });
+
+    it("should keep the weight of the heading on emphasis inside it", async () => {
+      await renderMessage({ ...answer, paragraphs: ["## A *b* c"] });
+      await screen.findByText("b");
+
+      expect(screen.getByText("b")).toHaveStyle({
+        fontFamily: "Geist-SemiBold",
+        fontStyle: "italic",
+      });
+    });
+
+    it("should draw the heading in the body-strong look, never larger", async () => {
+      await renderMessage({ ...answer, paragraphs: ["### Today so far"] });
+      await screen.findByText("Today so far");
+
+      expect(screen.getByText("Today so far")).toHaveStyle({
+        fontFamily: "Geist-SemiBold",
+        fontSize: 16,
+      });
+    });
+
+    it("should draw italic words slanted and code without its backticks", async () => {
+      await renderMessage({ ...answer, paragraphs: ["Some *slanted* and `code` words"] });
+      await screen.findByText("slanted");
+
+      expect(screen.getByText("slanted")).toHaveStyle({ fontStyle: "italic" });
+      expect(screen.queryByText(/`/)).not.toBeOnTheScreen();
+      expect(
+        screen.getByRole("group", { name: "Assistant: Some slanted and code words" }),
+      ).toBeOnTheScreen();
+    });
+
+    it("should show the words of a link and nothing tappable", async () => {
+      await renderMessage({
+        ...answer,
+        paragraphs: ["See [the guide](https://example.com/guide) now"],
+      });
+
+      expect(screen.getByText("See the guide now")).toBeOnTheScreen();
+      expect(screen.queryByText(/example\.com/)).not.toBeOnTheScreen();
+      expect(screen.queryByRole("link")).not.toBeOnTheScreen();
+      expect(screen.queryByRole("button")).not.toBeOnTheScreen();
+    });
+
+    it("should leave 2*3 and 5 * 6 as typed", async () => {
+      await renderMessage({ ...answer, paragraphs: ["It is 2*3 and 5 * 6"] });
+
+      expect(screen.getByText("It is 2*3 and 5 * 6")).toBeOnTheScreen();
+    });
+
+    it("should draw no paragraph that holds only a rule", async () => {
+      await renderMessage({ ...answer, paragraphs: ["Before", "---", "After"] });
+
+      expect(screen.getByText("Before")).toBeOnTheScreen();
+      expect(screen.getByText("After")).toBeOnTheScreen();
+      expect(screen.queryByText("---")).not.toBeOnTheScreen();
+    });
+
+    it("should indent an item one step when it is nested", async () => {
+      await renderMessage({ ...answer, paragraphs: ["- Top\n  - Inner"] });
+      await screen.findByText("Inner");
+
+      expect(viewsDrawn({ paddingLeft: 20 })).toHaveLength(1);
+    });
+
+    it("should show a streaming **Log fo as bold words with no asterisks, and the caret once", async () => {
+      await renderMessage({ ...answer, paragraphs: ["**Log fo"], isStreaming: true });
+      await screen.findByText("Log fo");
+
+      expect(screen.getByText("Log fo")).toHaveStyle({ fontFamily: "Geist-SemiBold" });
+      expect(screen.queryByText(/\*/)).not.toBeOnTheScreen();
+      expect(viewsDrawn(caretStyle)).toHaveLength(1);
+      // The bold words are a nested Text, and the caret follows them inside the line's own Text.
+      const [caret] = viewsDrawn(caretStyle);
+      expect(screen.getByText("Log fo").parent?.queryAll((node) => node === caret)).toHaveLength(1);
+    });
+
+    it("should hold back a streaming last line of - and keep the caret after the last word", async () => {
+      await renderMessage({
+        ...answer,
+        paragraphs: ["Two things:\n- Two eggs\n-"],
+        isStreaming: true,
+      });
+
+      expect(screen.queryByText("-")).not.toBeOnTheScreen();
+      expect(viewsDrawn(caretStyle)).toHaveLength(1);
+      expect(caretIn("Two eggs")).toHaveLength(1);
+    });
+
+    it("should put the caret in the last paragraph that draws while the newest one draws nothing yet", async () => {
+      await renderMessage({
+        ...answer,
+        paragraphs: ["First words.", "-"],
+        isStreaming: true,
+      });
+
+      expect(viewsDrawn(caretStyle)).toHaveLength(1);
+      expect(caretIn("First words.")).toHaveLength(1);
+    });
+
+    it("should keep the same nodes while chunks arrive, so nothing mounts again", async () => {
+      const arriving = (words: string): ChatMessageProps => ({
+        ...answer,
+        paragraphs: [words],
+        isStreaming: true,
+      });
+      const tree = (props: ChatMessageProps) => (
+        <ThemeProvider fixedPreference="dark">
+          <ChatMessage {...props} />
+        </ThemeProvider>
+      );
+      const rendered = await render(tree(arriving("Two things:\n- **Log fo")));
+      const bold = screen.getByText("Log fo");
+      const item = screen.getByText("Log fo").parent;
+
+      await rendered.rerender(tree(arriving("Two things:\n- **Log food:** add foods")));
+
+      expect(screen.getByText("Log food:")).toBe(bold);
+      expect(screen.getByText("Log food:").parent).toBe(item);
+    });
+
+    it("should draw the caret alone when nothing draws yet", async () => {
+      await renderMessage({ ...answer, paragraphs: [""], isStreaming: true });
+
+      expect(viewsDrawn(caretStyle)).toHaveLength(1);
+    });
+
+    it("should keep the caret out of the name of a streaming message", async () => {
+      await renderMessage({ ...answer, paragraphs: ["**Log fo"], isStreaming: true });
+
+      expect(screen.getByRole("group", { name: "Assistant: Log fo" })).toBeOnTheScreen();
+    });
+
+    it("should show no asterisks on a stopped reply that ends in **Log fo, and still show the stopped line", async () => {
+      await renderMessage({
+        ...answer,
+        paragraphs: ["**Log fo"],
+        stoppedLabel: "Stopped when you closed the assistant",
+      });
+
+      expect(screen.getByText("Log fo")).toBeOnTheScreen();
+      expect(screen.queryByText(/\*/)).not.toBeOnTheScreen();
+      expect(screen.getByText("Stopped when you closed the assistant")).toBeOnTheScreen();
+    });
+
+    it("should leave an unclosed marker as typed in a finished reply", async () => {
+      await renderMessage({ ...answer, paragraphs: ["**note"] });
+
+      expect(screen.getByText("**note")).toBeOnTheScreen();
+    });
+  });
+
+  describe("your message with markdown characters", () => {
+    it("should show **2** * 3 exactly as typed", async () => {
+      await renderMessage({ ...yourMessage, paragraphs: ["**2** * 3"] });
+
+      expect(screen.getByText("**2** * 3")).toBeOnTheScreen();
+      expect(screen.getByRole("group", { name: "You: **2** * 3" })).toBeOnTheScreen();
+    });
+  });
+
   describe("in the dark scheme", () => {
     const colorOf = (name: Parameters<typeof resolvedColor>[1]) => resolvedColor("dark", name);
 

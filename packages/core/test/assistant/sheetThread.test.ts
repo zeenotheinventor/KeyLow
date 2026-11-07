@@ -652,6 +652,25 @@ describe("buildAssistantSheetThread with a question", () => {
     });
   });
 
+  describe("a reply and a question that hold the same markdown", () => {
+    const MARKED_QUESTION = "**Delete both entries?**\n- Two eggs\n- Toast";
+    const buttons = { confirmLabel: "Delete", cancelLabel: "Keep", tone: "danger" } as const;
+
+    it("should draw the question once, with the raw paragraphs on the entry", () => {
+      const thread = build({
+        sent: { text: "Delete both of today's entries", afterItemId: null },
+        live: liveTurn({
+          text: MARKED_QUESTION,
+          confirm: { question: MARKED_QUESTION, ...buttons },
+        }),
+      });
+
+      const drawn = thread.entries.filter((entry) => entry.kind === "assistant");
+      expect(drawn).toHaveLength(1);
+      expect(drawn[0]).toMatchObject({ paragraphs: [MARKED_QUESTION] });
+    });
+  });
+
   describe("a confirmation whose question ends with a line the code added", () => {
     const MODEL_QUESTION = "Change your calorie target from 2,140 to 2,000 kcal?";
     const NOTE =

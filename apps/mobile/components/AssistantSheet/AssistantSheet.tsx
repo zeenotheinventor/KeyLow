@@ -15,6 +15,7 @@ import {
   isAssistantStatusKnown,
   isSentTurnStored,
   isStaleStreamGateNotice,
+  replyWords,
   resolveAssistantSheetAccess,
   resolveAssistantTimeZone,
 } from "@keylow/core";
@@ -182,7 +183,9 @@ export function AssistantSheet({ open, onClose, localDate, describeAt }: Assista
   const wasStreaming = useRef(false);
   useEffect(() => {
     if (wasStreaming.current && !isStreaming) {
-      const answer = live === null || live.stopped ? "" : live.text.trim();
+      // It is read as the words without the markers the model wrote, as the message's own name is.
+      const answer =
+        live === null || live.stopped ? "" : replyWords(live.text.trim(), { isPartial: false });
       if (answer !== "") {
         AccessibilityInfo.announceForAccessibility(answer);
       }

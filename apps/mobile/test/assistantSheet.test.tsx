@@ -512,6 +512,21 @@ describe("the assistant sheet", () => {
       expect(announce).toHaveBeenCalledWith(arrived);
     });
 
+    it("should read a finished answer without the markdown the model wrote", async () => {
+      const announce = jest.spyOn(AccessibilityInfo, "announceForAccessibility");
+      announce.mockClear();
+      const rendered = await renderStreaming();
+      mockAssistant.turn = {
+        ...mockAssistant.turn,
+        live: liveTurn({ text: "**Log food:**\n- Two eggs\n- Toast", outcome: "complete" }),
+        isStreaming: false,
+      };
+      await rendered.rerender(sheetTree());
+
+      expect(announce).toHaveBeenCalledTimes(1);
+      expect(announce).toHaveBeenCalledWith("Log food: Two eggs Toast");
+    });
+
     it("should read the finished answer on Android too, where the streaming message is not a live region", async () => {
       const originalOs = Platform.OS;
       Platform.OS = "android";
