@@ -140,6 +140,8 @@ export type AssistantFakeState = {
   timeZone: string | null;
   /** What the undo route answers for each action id. */
   undoResults: Record<string, string>;
+  /** The reason the undo route gives for an action id it refused, for the ids listed. */
+  undoReasons: Record<string, string>;
   /** The bodies the undo route was sent. */
   undoBodies: unknown[];
   conversationRequests: number;
@@ -161,6 +163,7 @@ export const createAssistantFakeState = (
   ),
   timeZone: "Europe/London",
   undoResults: {},
+  undoReasons: {},
   undoBodies: [],
   conversationRequests: 0,
   deletedAllConversations: 0,
@@ -226,6 +229,9 @@ export function installAssistantFake(server: SetupServer, state: AssistantFakeSt
           actionId,
           result:
             typeof actionId === "string" ? (state.undoResults[actionId] ?? "undone") : "not_found",
+          ...(typeof actionId === "string" && state.undoReasons[actionId] !== undefined
+            ? { reason: state.undoReasons[actionId] }
+            : {}),
         })),
       });
     }),

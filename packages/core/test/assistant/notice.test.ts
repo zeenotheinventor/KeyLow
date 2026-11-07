@@ -10,6 +10,7 @@ describe("assistantNoticeSchema", () => {
     { code: "resting", resumesOn: "2026-11-01" },
     { code: "switched_off" },
     { code: "turn_failed" },
+    { code: "workout_in_progress" },
   ])("should parse the $code notice", (notice) => {
     expect(assistantNoticeSchema.parse(notice)).toEqual(notice);
   });

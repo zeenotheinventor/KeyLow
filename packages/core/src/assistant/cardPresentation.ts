@@ -1,7 +1,13 @@
 import { ASSISTANT_CARD_WORDS } from "../copy/assistantNotices";
 import { ASSISTANT_CARD_NOTES } from "../copy/assistantSheet";
 
-import type { AssistantCard, AssistantCardKind, AssistantCardLink, AssistantCardRow } from "./card";
+import type {
+  AssistantCard,
+  AssistantCardDay,
+  AssistantCardKind,
+  AssistantCardLink,
+  AssistantCardRow,
+} from "./card";
 
 /*
  * What the action card draws for a card the assistant sent: the icon of its kind, its words as sent and
@@ -12,7 +18,7 @@ import type { AssistantCard, AssistantCardKind, AssistantCardLink, AssistantCard
 
 /** The icons the boards draw on a card, by their names in the app's icon set. */
 export type AssistantCardIconName =
-  "Check" | "Copy" | "ChefHat" | "Trash2" | "Apple" | "Target" | "RotateCcw";
+  "Check" | "Copy" | "ChefHat" | "Trash2" | "Apple" | "Target" | "RotateCcw" | "Archive";
 
 export type AssistantCardIconTone = "success" | "secondary" | "muted";
 
@@ -30,10 +36,38 @@ const kindLooks: Record<
   recipe_archived: { icon: "ChefHat", tone: "secondary" },
   food_created: { icon: "Apple", tone: "success" },
   targets_changed: { icon: "Target", tone: "secondary" },
+  routine_updated: { icon: "Check", tone: "success" },
+  routine_active: { icon: "Check", tone: "success" },
+  routine_archived: { icon: "Archive", tone: "secondary" },
+  routine_created: { icon: "Check", tone: "success" },
+  goals_updated: { icon: "Target", tone: "secondary" },
+  exercise_created: { icon: "Check", tone: "success" },
+  exercise_updated: { icon: "Check", tone: "success" },
+  exercise_archived: { icon: "Archive", tone: "secondary" },
+  set_updated: { icon: "Check", tone: "success" },
+  workout_deleted: { icon: "Trash2", tone: "secondary" },
 };
 
+const TRAINING_CARD_KINDS: ReadonlySet<AssistantCardKind> = new Set([
+  "routine_updated",
+  "routine_active",
+  "routine_archived",
+  "routine_created",
+  "goals_updated",
+  "exercise_created",
+  "exercise_updated",
+  "exercise_archived",
+  "set_updated",
+  "workout_deleted",
+]);
+
+/** The kinds of card a training write builds, whose Undo waits while a workout is in progress. */
+export const isTrainingCardKind = (kind: AssistantCardKind): boolean =>
+  TRAINING_CARD_KINDS.has(kind);
+
 /**
- * `available` is the Undo button, `unavailable` the plain words Can't undo, and `done` draws no action.
+ * `available` is the Undo button, `unavailable` the plain words Can't undo (or Can't undo yet, while a
+ * workout is in progress), and `done` draws no action.
  * A `done` card has no label to draw, so its label is the title it takes.
  */
 export type AssistantCardUndoLook = {
@@ -57,29 +91,52 @@ export type AssistantCardLook = {
   title: string;
   subtitle: string | null;
   rows: AssistantCardRowLook[];
+  /** The days of a routine, each opening to its exercises. Empty on every card but a routine's, and on an undone card. */
+  days: AssistantCardDay[];
   total: string | null;
   note: string | null;
   link: AssistantCardLink | null;
   undo: AssistantCardUndoLook;
 };
 
-/** What the person's own Undo came to, for a card that was sent as available. */
-export type AssistantCardUndoOutcome = "undone" | "unavailable";
+/**
+ * What the person's own Undo came to, for a card that was sent as available. An unavailable answer that
+ * said why keeps its reason, and `workout_in_progress` is the one that clears by itself.
+ */
+export type AssistantCardUndoOutcome =
+  "undone" | "unavailable" | { state: "unavailable"; reason: AssistantUndoReason };
 
 /** One code of the undo route's answer for each action id. */
 export type AssistantUndoCode = "undone" | "already_undone" | "undo_unavailable" | "not_found";
 
+/** Why the undo route refused: the target changed, the routine is active or was logged from, the exercise was used, or a workout is in progress. */
+export type AssistantUndoReason = "changed" | "active" | "logged" | "used" | "workout_in_progress";
+
+/** The undo route's answer for one action id: its code, and the reason when it refused with one. */
+export type AssistantUndoAnswer = {
+  result: AssistantUndoCode;
+  reason?: AssistantUndoReason | undefined;
+};
+
+const answerOf = (answer: AssistantUndoCode | AssistantUndoAnswer): AssistantUndoAnswer =>
+  typeof answer === "string" ? { result: answer } : answer;
+
 /**
  * What a card's Undo came to: undone once every action is (already undone counts, someone got there
- * first), otherwise unavailable, whether an action's entries changed or were not found.
+ * first), otherwise unavailable, whether an action's entries changed or were not found. The first
+ * action that was not undone gives the reason, when it sent one. Codes alone are read as they always were.
  */
 export function undoOutcomeOfResults(
-  results: readonly AssistantUndoCode[],
+  results: readonly (AssistantUndoCode | AssistantUndoAnswer)[],
 ): AssistantCardUndoOutcome {
-  return results.length > 0 &&
-    results.every((result) => result === "undone" || result === "already_undone")
-    ? "undone"
-    : "unavailable";
+  const answers = results.map(answerOf);
+  const refused = answers.find(({ result }) => result !== "undone" && result !== "already_undone");
+  if (answers.length > 0 && refused === undefined) {
+    return "undone";
+  }
+  return refused?.reason === undefined
+    ? "unavailable"
+    : { state: "unavailable", reason: refused.reason };
 }
 
 // Undo archives a recipe and deletes a food, so once a card is undone only a link to the diary still leads somewhere.
@@ -108,15 +165,75 @@ function describeRow(row: AssistantCardRow): AssistantCardRowLook {
   }
 }
 
+const reasonOfOutcome = (outcome: AssistantCardUndoOutcome | null): AssistantUndoReason | null =>
+  typeof outcome === "object" && outcome !== null ? outcome.reason : null;
+
+const stateOfOutcome = (outcome: AssistantCardUndoOutcome): "undone" | "unavailable" =>
+  outcome === "undone" ? "undone" : "unavailable";
+
+// Why a training card's Undo is off, from the kind and the reason the undo route gave, or null when the
+// reason has no line for the kind. A kind with one way to lose its Undo needs no reason.
+function trainingNoteOfRefusal(
+  kind: AssistantCardKind,
+  reason: AssistantUndoReason | null,
+): string | null {
+  switch (kind) {
+    case "routine_updated":
+      return reason === "changed"
+        ? ASSISTANT_CARD_NOTES.routineChanged
+        : reason === "logged"
+          ? ASSISTANT_CARD_NOTES.routineDayWasLogged
+          : null;
+    case "routine_created":
+      return reason === "changed"
+        ? ASSISTANT_CARD_NOTES.routineChanged
+        : reason === "active"
+          ? ASSISTANT_CARD_NOTES.routineIsActive
+          : reason === "logged"
+            ? ASSISTANT_CARD_NOTES.routineWasLogged
+            : null;
+    case "routine_active":
+      return ASSISTANT_CARD_NOTES.anotherRoutineIsActive;
+    case "routine_archived":
+      return ASSISTANT_CARD_NOTES.routineRestored;
+    case "goals_updated":
+      return ASSISTANT_CARD_NOTES.goalsChanged;
+    case "exercise_created":
+      return reason === "changed"
+        ? ASSISTANT_CARD_NOTES.exerciseChanged
+        : reason === "used"
+          ? ASSISTANT_CARD_NOTES.exerciseWasUsed
+          : null;
+    case "exercise_updated":
+      return reason === "changed" ? ASSISTANT_CARD_NOTES.exerciseChanged : null;
+    case "exercise_archived":
+      return ASSISTANT_CARD_NOTES.exerciseRestored;
+    case "set_updated":
+      return ASSISTANT_CARD_NOTES.setChanged;
+    case "workout_deleted":
+      return ASSISTANT_CARD_NOTES.workoutRestored;
+    default:
+      return null;
+  }
+}
+
 /**
  * The card as the sheet draws it. `outcome` is what an Undo pressed on this card came to, which is
  * the card's state until the thread is read again, and only for a card that was sent as available.
+ * `workoutInProgress` is worked out in the app, never sent: a training card whose Undo is still available
+ * draws Can't undo yet while a workout is in progress, and Undo comes back when it ends. A press refused
+ * for a workout that has ended since is let go the same way.
  */
 export function describeAssistantCard(
   card: AssistantCard,
   outcome: AssistantCardUndoOutcome | null = null,
+  { workoutInProgress = false }: { workoutInProgress?: boolean } = {},
 ): AssistantCardLook {
-  const undo = card.undo === "available" && outcome !== null ? outcome : card.undo;
+  // A refusal for a workout holds only while the workout does.
+  const pressed =
+    reasonOfOutcome(outcome) === "workout_in_progress" && !workoutInProgress ? null : outcome;
+  const pressedReason = reasonOfOutcome(pressed);
+  const undo = card.undo === "available" && pressed !== null ? stateOfOutcome(pressed) : card.undo;
 
   if (undo === "undone") {
     return {
@@ -125,6 +242,7 @@ export function describeAssistantCard(
       title: ASSISTANT_CARD_WORDS.undoneTitle,
       subtitle: card.undoneSub,
       rows: [],
+      days: [],
       total: null,
       note: null,
       link: card.link !== null && isLinkToDiary(card.link) ? card.link : null,
@@ -133,21 +251,43 @@ export function describeAssistantCard(
   }
 
   const { icon, tone } = kindLooks[card.kind];
+  const isTraining = isTrainingCardKind(card.kind);
+  const isWaiting =
+    isTraining &&
+    card.undo === "available" &&
+    undo === "available" &&
+    (workoutInProgress || pressedReason === "workout_in_progress");
   const isUnavailable = undo === "unavailable";
-
-  return {
+  const looksSame = {
     icon,
     iconTone: tone,
     title: card.title,
     subtitle: card.sub,
     rows: card.rows.map(describeRow),
+    days: card.days ?? [],
     total: card.totalText,
+    link: card.link,
+  };
+
+  if (isWaiting || (isUnavailable && pressedReason === "workout_in_progress" && isTraining)) {
+    return {
+      ...looksSame,
+      note: ASSISTANT_CARD_NOTES.waitForWorkout,
+      undo: { state: "unavailable", label: ASSISTANT_CARD_WORDS.waitUndoLabel },
+    };
+  }
+
+  const refusalNote =
+    isUnavailable && isTraining ? trainingNoteOfRefusal(card.kind, pressedReason) : null;
+
+  return {
+    ...looksSame,
     note:
+      refusalNote ??
       card.note ??
       (isUnavailable && KINDS_OF_DIARY_ENTRIES.has(card.kind)
         ? ASSISTANT_CARD_NOTES.entriesChanged
         : null),
-    link: card.link,
     undo: isUnavailable
       ? { state: "unavailable", label: ASSISTANT_CARD_WORDS.cannotUndoLabel }
       : { state: "available", label: ASSISTANT_CARD_WORDS.undoLabel },

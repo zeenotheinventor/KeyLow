@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { assistantCardSchema } from "./card";
+import { assistantCardLinkSchema, assistantCardSchema } from "./card";
 import { assistantIdSchema } from "./ids";
 import { assistantNoticeSchema } from "./notice";
 
@@ -55,6 +55,21 @@ const cardEventSchema = z.strictObject({
 });
 
 /**
+ * A link on its own, with no card (`assistant-card · routine-updated`, Removing a day): the way into the
+ * routine editor under an answer that changed nothing.
+ */
+const linkEventSchema = z.strictObject({
+  type: z.literal("link"),
+  link: assistantCardLinkSchema,
+});
+
+/**
+ * The Ask again quick reply under the reply (`assistant · workout-in-progress`, A change refused): a press
+ * sends the person's last message again. A later turn takes it away.
+ */
+const askAgainEventSchema = z.strictObject({ type: z.literal("ask_again") });
+
+/**
  * One question instead of a guess (`assistant · clarify`). The quick replies are the food's own
  * portions or grams, at most 3, and a tap sends the reply's words as the next message.
  */
@@ -105,6 +120,8 @@ export const assistantStreamEventSchema = z.discriminatedUnion("type", [
   textEventSchema,
   statusEventSchema,
   cardEventSchema,
+  linkEventSchema,
+  askAgainEventSchema,
   clarifyEventSchema,
   confirmEventSchema,
   answerMetaEventSchema,

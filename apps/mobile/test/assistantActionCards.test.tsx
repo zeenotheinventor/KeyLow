@@ -128,6 +128,8 @@ const liveTurn = (overrides: Partial<AssistantLiveTurn> = {}): AssistantLiveTurn
   clarify: null,
   confirm: null,
   answerMeta: null,
+  link: null,
+  askAgain: false,
   status: null,
   notice: null,
   stopped: false,

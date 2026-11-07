@@ -1,11 +1,11 @@
 import { z } from "zod";
 
-import { assistantCardSchema } from "./card";
+import { assistantCardLinkSchema, assistantCardSchema } from "./card";
 import { assistantNoticeSchema } from "./notice";
 import { undoStateOfActions } from "./undoState";
 import { ASSISTANT_CARD_KINDS_WITHOUT_UNDO, mergeAssistantCards } from "./writeToolWords";
 
-import type { AssistantCard } from "./card";
+import type { AssistantCard, AssistantCardLink } from "./card";
 import type { AssistantNotice } from "./notice";
 import type { AssistantActionState } from "./undoState";
 
@@ -69,7 +69,11 @@ export type AssistantThreadItem =
       tone: "danger" | "primary";
       answered: boolean;
     }
-  | { kind: "notice"; id: string; notice: AssistantNotice };
+  | { kind: "notice"; id: string; notice: AssistantNotice }
+  /** A link on its own, under the words of an answer that changed nothing (`assistant-card · routine-updated`, Removing a day). */
+  | { kind: "link"; id: string; link: AssistantCardLink }
+  /** The Ask again quick reply at the end of a turn (`assistant · workout-in-progress`). `answered` once a later turn exists, and then the chip is gone. */
+  | { kind: "ask_again"; id: string; answered: boolean };
 
 /** The words under the field when the assistant asks a question (`assistant · clarify`). */
 const CLARIFY_FIELD_HINT = "Or say it your way";
@@ -113,6 +117,8 @@ const displayEntrySchema = z.object({
       tone: z.enum(["danger", "primary"]),
     })
     .optional(),
+  link: assistantCardLinkSchema.optional(),
+  askAgain: z.boolean().optional(),
   citation: z.string().min(1).nullish(),
   estimate: z.string().min(1).nullish(),
 });
@@ -178,6 +184,9 @@ function itemsOfTurn(
   context: TurnContext,
 ): AssistantThreadItem[] {
   const items: DraftItem[] = [];
+  // A link and Ask again are drawn at the end of the turn, under its words, as the boards show them.
+  const links: AssistantThreadItem[] = [];
+  const askAgains: AssistantThreadItem[] = [];
   const citations: (string | null | undefined)[] = [];
   const estimates: (string | null | undefined)[] = [];
 
@@ -236,14 +245,23 @@ function itemsOfTurn(
         if (outcome.confirm !== undefined) {
           items.push({ kind: "confirm", id, ...outcome.confirm, answered: context.answered });
         }
+        if (outcome.link !== undefined) {
+          links.push({ kind: "link", id, link: outcome.link });
+        }
+        if (outcome.askAgain === true) {
+          askAgains.push({ kind: "ask_again", id, answered: context.answered });
+        }
       }
     }
   }
 
-  return finishTurn(items, turn, context, {
-    citation: distinct(citations),
-    estimate: distinct(estimates),
-  });
+  return finishTurn(
+    items,
+    turn,
+    context,
+    { citation: distinct(citations), estimate: distinct(estimates) },
+    { links, askAgains },
+  );
 }
 
 function finishTurn(
@@ -251,6 +269,7 @@ function finishTurn(
   turn: readonly AssistantStoredMessage[],
   context: TurnContext,
   meta: AssistantAnswerMeta,
+  trailing: { links: AssistantThreadItem[]; askAgains: AssistantThreadItem[] },
 ): AssistantThreadItem[] {
   const status = turn[0]?.turnStatus;
   const items = drafts.map((item): AssistantThreadItem => {
@@ -276,9 +295,11 @@ function finishTurn(
       stopped: status === "stopped",
     };
   }
+  items.push(...trailing.links);
   if (status === "failed" || status === "refused") {
     items.push({ kind: "notice", id: `${turn[0]?.turnId}:notice`, notice: failedTurnNotice });
   }
+  items.push(...trailing.askAgains);
   return items;
 }
 

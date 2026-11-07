@@ -1,9 +1,11 @@
+import { sessionDetailPath } from "./historyRoutes";
 import { diaryHref } from "./navigation";
 import { editRecipeAddIngredientPath, editRecipePath } from "./recipeRoutes";
+import { editRoutinePath } from "./routineRoutes";
 
 import type { AssistantCardLink } from "@keylow/core";
 
-/** The address a card's link opens: the recipe editor, the editor's add-ingredient search, one of your foods or a day of the diary. */
+/** The address a card's link opens: the recipe editor, the editor's add-ingredient search, one of your foods, a day of the diary, a routine in its editor or a logged session. */
 export function assistantCardHref(target: AssistantCardLink["target"]): string {
   switch (target.screen) {
     case "recipe_editor":
@@ -14,5 +16,9 @@ export function assistantCardHref(target: AssistantCardLink["target"]): string {
       return `/foods/${target.foodId}`;
     case "diary_day":
       return diaryHref(target.localDate);
+    case "routine_editor":
+      return editRoutinePath(target.routineId);
+    case "session_detail":
+      return sessionDetailPath(target.sessionId);
   }
 }

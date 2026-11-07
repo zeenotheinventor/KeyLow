@@ -387,6 +387,11 @@ const undoAnswerSchema = z.object({
     z.object({
       actionId: z.guid(),
       result: z.enum(["undone", "already_undone", "undo_unavailable", "not_found"]),
+      // Why an Undo was refused. A reason this app does not know is read as none, so a server that is ahead never fails an Undo.
+      reason: z
+        .enum(["changed", "active", "logged", "used", "workout_in_progress"])
+        .optional()
+        .catch(undefined),
     }),
   ),
 });

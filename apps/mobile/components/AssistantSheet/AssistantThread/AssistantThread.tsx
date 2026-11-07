@@ -1,6 +1,6 @@
 import { ASSISTANT_SHEET, ASSISTANT_STOPPED, describeAssistantNotice } from "@keylow/core/copy";
 
-import { AssistantNotice, ChatMessage, ChipGroup } from "../../ui";
+import { AssistantLinkRow, AssistantNotice, ChatMessage, ChipGroup } from "../../ui";
 import { AssistantCardEntry } from "../AssistantCardEntry";
 import { ConfirmButtons } from "../ConfirmButtons";
 import { WorkingLine } from "../WorkingLine";
@@ -19,15 +19,17 @@ const noticeLooks: Record<
   resting: { icon: "Moon", tone: "neutral" },
   switched_off: { icon: "PowerOff", tone: "neutral" },
   turn_failed: { icon: "CircleAlert", tone: "danger" },
+  // NOT ON THE CANVAS as a notice: the board draws the words as a reply, so the glyph and tone are the neutral ones the other holds use.
+  workout_in_progress: { icon: "Dumbbell", tone: "neutral" },
 };
 
 const askAgainOptions = [{ value: "ask-again", label: ASSISTANT_STOPPED.askAgain }];
 
 /**
  * The messages and action cards of the conversation, oldest first, with the quick reply under an answer
- * that was cut short, the quick replies under a clarifying question, the two buttons under a
- * confirmation, the citation and Estimate lines under an answer from the person's data, and the working
- * line while the assistant works with no words to show.
+ * that was cut short or that asked for it, the quick replies under a clarifying question, the two buttons under a
+ * confirmation, the citation and Estimate lines under an answer from the person's data, a link on its own
+ * under an answer that made no card, and the working line while the assistant works with no words to show.
  * Every word comes from the thread the screen was given or from core's copy, so nothing here words a
  * message, and nothing in it decides what to show.
  */
@@ -53,6 +55,20 @@ export function AssistantThread({
         );
       case "card":
         return <AssistantCardEntry card={entry.card} key={entry.key} onOpenLink={onOpenCardLink} />;
+      case "link":
+        return (
+          <AssistantLinkRow
+            isStandalone
+            key={entry.key}
+            label={entry.link.label}
+            onPress={() => {
+              onOpenCardLink(entry.link.target);
+            }}
+          />
+        );
+      // Ask again is the chip at the end of the thread, drawn once below.
+      case "askAgain":
+        return null;
       case "assistant":
         return (
           <ChatMessage

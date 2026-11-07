@@ -1,13 +1,16 @@
 import { describe, expect, it } from "vitest";
 
 import { loggedCard } from "./cardFixtures";
+import { routineCreatedCard, routineUpdatedCard } from "./trainingCardFixtures";
 import {
+  ASSISTANT_WRITE_TOOL_CARD_KINDS,
   buildLoggedCard,
   buildRecipeArchivedCard,
   buildRecipeCreatedCard,
   buildRecipeUpdatedCard,
   cardEntryOfRow,
   describeAssistantChange,
+  isAssistantWriteTool,
   mergeAssistantCards,
   withActionIds,
 } from "../../src/assistant";
@@ -334,3 +337,47 @@ function mustEntry(row: unknown): CardEntry {
   }
   return entry;
 }
+
+describe("the training tools", () => {
+  it.each([
+    ["edit_routine", "routine_updated", "Updated a routine"],
+    ["set_active_routine", "routine_active", "Changed your active routine"],
+    ["archive_routine", "routine_archived", "Archived a routine"],
+    ["create_routine", "routine_created", "Built a routine"],
+    ["update_training_goals", "goals_updated", "Updated your training goals"],
+    ["save_custom_exercise", "exercise_created", "Added an exercise"],
+    ["archive_custom_exercise", "exercise_archived", "Archived an exercise"],
+    ["update_past_set", "set_updated", "Changed a set"],
+    ["delete_workout", "workout_deleted", "Deleted a workout"],
+  ] as const)(
+    "should build a %s card of the kind %s, worded plainly as '%s'",
+    (tool, kind, title) => {
+      expect(isAssistantWriteTool(tool)).toBe(true);
+      expect(ASSISTANT_WRITE_TOOL_CARD_KINDS[tool]).toBe(kind);
+      expect(describeAssistantChange({ tool, actionCount: 1, targets: [] })).toEqual({
+        title,
+        detail: null,
+      });
+    },
+  );
+
+  it("should word a merged card of an exercise that was updated plainly", () => {
+    const [first] = [routineUpdatedCard];
+    const merged = mergeAssistantCards([
+      { ...first, kind: "exercise_updated" },
+      { ...first, kind: "exercise_updated", actionIds: [secondActionId] },
+    ]);
+
+    expect(merged.title).toBe("Updated an exercise");
+  });
+
+  it("should drop the days and the change detail of a card merged with another", () => {
+    const merged = mergeAssistantCards([
+      routineCreatedCard,
+      { ...routineCreatedCard, actionIds: [secondActionId] },
+    ]);
+
+    expect(merged.days ?? null).toBeNull();
+    expect(merged.changeDetail ?? null).toBeNull();
+  });
+});
