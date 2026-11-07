@@ -132,6 +132,55 @@ describe("threadFromMessages, a failed turn", () => {
       expect(thread[1]).toMatchObject({ kind: "notice", notice: { code: "turn_failed" } });
     },
   );
+
+  // A worker killed mid-turn leaves a card and no words, and `refuseWhileBusy` marks the turn failed later.
+  // The notice says nothing was changed and offers Try again, so it is not drawn beside a card.
+  const turnWithCard = (turnStatus: "failed" | "refused") => [
+    message({ ...userMessage("m1", firstTurnId, "Log 2 eggs"), turnStatus }),
+    message({
+      ...toolUseMessage("m2", firstTurnId, [{ id: "c1", name: "log_entry" }]),
+      turnStatus,
+    }),
+    message({
+      ...toolResultMessage("m3", firstTurnId, [
+        { toolUseId: "c1", source: "log_entry", outcome: { card: loggedCard } },
+      ]),
+      turnStatus,
+    }),
+  ];
+
+  it.each(["failed", "refused"] as const)(
+    "should draw no notice on a %s turn that holds a card",
+    (turnStatus) => {
+      const thread = threadFromMessages(turnWithCard(turnStatus), availableActions);
+
+      expect(kinds(thread)).toEqual(["user", "card"]);
+    },
+  );
+
+  it.each(["failed", "refused"] as const)(
+    "should still draw the notice on a %s turn that holds only a read",
+    (turnStatus) => {
+      const thread = threadFromMessages(
+        [
+          message({ ...userMessage("m1", firstTurnId, "What did I eat?"), turnStatus }),
+          message({
+            ...toolUseMessage("m2", firstTurnId, [{ id: "r1", name: "get_day" }]),
+            turnStatus,
+          }),
+          message({
+            ...toolResultMessage("m3", firstTurnId, [
+              { toolUseId: "r1", source: "get_day", outcome: { citation: "Based on 4 entries" } },
+            ]),
+            turnStatus,
+          }),
+        ],
+        [],
+      );
+
+      expect(kinds(thread)).toEqual(["user", "notice"]);
+    },
+  );
 });
 
 describe("threadFromMessages, the undo state of a card", () => {

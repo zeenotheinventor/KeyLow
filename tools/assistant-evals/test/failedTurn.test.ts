@@ -1,3 +1,4 @@
+import { describeTurnEndedAfterWrite } from "@keylow/core";
 import { describe, expect, it } from "vitest";
 
 import { costing, readTool, scriptedStack, writeTool } from "./helpers.ts";
@@ -49,5 +50,43 @@ describe("a turn that ended failed", () => {
     });
 
     expect(reason).toBe("the turn failed (notice turn_failed)");
+  });
+});
+
+describe("a turn that ended early after a write landed", () => {
+  const reason = "the turn ended early after a write landed, check the function log for the ending";
+
+  async function reportOf(turn: Partial<TurnResult>) {
+    const stack = scriptedStack([costing(1, { status: "complete", ...turn })]);
+    const report = await runEvals({
+      cases: [{ ...caseOf(), expect: [() => Promise.resolve({ passed: true, reason: "" })] }],
+      ...stack,
+      budgetTokens: 1_000_000,
+    });
+    return report.cases[0];
+  }
+
+  it.each([1, 2])(
+    "should be an error with its reason, and no grader runs, when the answer ends in the words for %i change(s)",
+    async (writes) => {
+      const result = await reportOf({
+        answer: `Logging both now.\n\n${describeTurnEndedAfterWrite(writes)}`,
+      });
+
+      expect(result?.status).toBe("error");
+      expect(result?.failures).toEqual([reason]);
+    },
+  );
+
+  it("should be an error when the words are the whole answer", async () => {
+    const result = await reportOf({ answer: describeTurnEndedAfterWrite(1) });
+
+    expect(result?.status).toBe("error");
+  });
+
+  it("should grade a complete answer that does not end in the words", async () => {
+    const result = await reportOf({ answer: "Logged. Your change was saved to the diary." });
+
+    expect(result?.status).toBe("passed");
   });
 });

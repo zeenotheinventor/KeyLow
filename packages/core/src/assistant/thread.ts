@@ -315,13 +315,16 @@ function finishTurn(
     };
   }
   items.push(...trailing.exerciseMuscles, ...trailing.links);
-  if (status === "failed" || status === "refused") {
+  const wroteSomething = drafts.some((item) => item.kind === "draft_card");
+  // The notice says nothing was changed and offers Try again, so a turn that holds a card never draws it. The
+  // server ends such a turn complete with words of its own (KEY-926). This covers the rows it cannot write: a
+  // worker killed mid-turn, whose open turn is marked failed later, and a `finishTurn` that threw.
+  if ((status === "failed" || status === "refused") && !wroteSomething) {
     items.push({ kind: "notice", id: `${turn[0]?.turnId}:notice`, notice: failedTurnNotice });
   }
   // Ask again is a convenience for a turn that ended complete with nothing written: the live turn sends it
   // only then, so a reopened turn draws it only then too. Sending the message again after a write landed
   // would repeat that write, and a question or a failed turn has its own way on.
-  const wroteSomething = drafts.some((item) => item.kind === "draft_card");
   if (status === "complete" && !wroteSomething) {
     items.push(...trailing.askAgains);
   }

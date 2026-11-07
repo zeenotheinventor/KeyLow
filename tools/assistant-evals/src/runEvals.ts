@@ -1,4 +1,4 @@
-import { isConfirmAnswer } from "@keylow/core";
+import { describeTurnEndedAfterWrite, isConfirmAnswer } from "@keylow/core";
 
 import type { CaseEnvironment, EvalCase } from "./case.ts";
 import type { TurnDriver } from "./driver.ts";
@@ -160,6 +160,14 @@ function failedTurnReason(turn: TurnResult): string {
     : `the turn failed (${notice}) after a call to ${asked.name}, a tool that asks first: may be confirm_unavailable (the model gave no question to put above the buttons), check the function log for the ending`;
 }
 
+// A turn that failed or was cut short after a write landed ends complete, with fixed words as its reply
+// (KEY-926). Every grader passes on `complete`, so a case that hit a limit after its write would pass. It is an
+// error instead, the same verdict a failed turn gets.
+const endedEarlyAfterWrite = (turn: TurnResult): boolean =>
+  [describeTurnEndedAfterWrite(1), describeTurnEndedAfterWrite(2)].some((words) =>
+    turn.answer.trimEnd().endsWith(words),
+  );
+
 /**
  * Runs the cases in order through the driver, grades each, and watches the spend of the eval user.
  *
@@ -231,6 +239,11 @@ export async function runEvals(input: RunInput): Promise<RunReport> {
         }
         if (turn.status === "failed") {
           throw new CaseError(failedTurnReason(turn));
+        }
+        if (endedEarlyAfterWrite(turn)) {
+          throw new CaseError(
+            "the turn ended early after a write landed, check the function log for the ending",
+          );
         }
         // A press makes no model call, so it may have no usage row. Every other turn must have one, because a
         // turn that reports none would hide its spend from the budget.

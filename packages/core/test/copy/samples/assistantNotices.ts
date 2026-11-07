@@ -16,6 +16,10 @@ export const samples: Record<string, () => string[]> = {
     ].flatMap(({ title, body, fieldText, button }) =>
       [title, body, fieldText, button].filter((text) => text !== null),
     ),
+  describeTurnEndedAfterWrite: () => [
+    copy.describeTurnEndedAfterWrite(1),
+    copy.describeTurnEndedAfterWrite(2),
+  ],
   describeResetTime: () => [
     copy.describeResetTime("2026-10-26T00:00:00Z", "Europe/London"),
     copy.describeResetTime("2026-07-02T00:00:00Z", "Europe/London"),
