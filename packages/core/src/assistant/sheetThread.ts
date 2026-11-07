@@ -294,13 +294,14 @@ function storedEntries(items: readonly AssistantThreadItem[], isAllAnswered = fa
 
 // The words of the working line while the turn streams: the step the function sent, else Thinking while there
 // is nothing else to show. That default is the part the app does by itself (press to first event, and every
-// plain answer), and a question, a notice or the end of the turn stop it flashing for the moment before `done`.
+// plain answer), and a stop, a question, a notice or the end of the turn stop it flashing for the moment before `done`.
 function workingLineWords(live: AssistantSheetLiveTurn, hasWords: boolean): string | null {
   if (live.status !== null) {
     return describeAssistantStatus(live.status);
   }
   const hasSomethingElseToShow =
     hasWords ||
+    live.stopped ||
     live.clarify !== null ||
     live.confirm !== null ||
     live.notice !== null ||
@@ -324,7 +325,9 @@ function sentEntries(
   const hasWords = replyWords(live.text, { isPartial: true }).trim() !== "";
   // A step shows its line and no caret, and a text event clears the step, so words always replace the line.
   const isWriting = isStreaming && live.status === null && hasWords;
-  if (hasWords || live.stopped || (!isStreaming && live.text.trim() !== "")) {
+  // Words held back count once the turn is over: it has ended, or its outcome has arrived while the stream closes.
+  const isOver = !isStreaming || live.outcome !== null;
+  if (hasWords || live.stopped || (isOver && live.text.trim() !== "")) {
     entries.push({
       kind: "assistant",
       key: "sent:reply",

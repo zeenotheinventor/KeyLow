@@ -152,7 +152,8 @@ export function describeAssistantStatus(status: AssistantStatus): string {
       return DEFAULT_STEP_WORDS;
     case "tool": {
       if (status.food !== null) {
-        return `Looking up ${status.food}`;
+        const food = foodWordsForStatus(status.food);
+        return food === null ? LOOKING_UP_THE_FOOD.words : `Looking up ${food}`;
       }
       const row = TOOL_WORDS.get(status.tool);
       return (
@@ -163,19 +164,31 @@ export function describeAssistantStatus(status: AssistantStatus): string {
 }
 
 const MAX_FOOD_WORDS_CODE_POINTS = 60;
+// Only this many UTF-16 units are read, so a huge value is not scanned whole. It is well over what 60 code points
+// can take (120), leaving room for the characters taken out.
+const MAX_FOOD_WORDS_UNITS_READ = 600;
+
+// Control characters, lone surrogate halves, the characters that reverse or isolate the direction of text
+// (which can make a food read as something else), and the ones that are zero-width. The zero-width joiner stays,
+// because it joins an emoji.
+const unwantedCharacters =
+  /[\p{Cc}\p{Cs}\u202A-\u202E\u2066-\u2069\u200E\u200F\u061C\u200B\u2060\uFEFF]/gu;
 
 /**
  * The food words a search used, made safe to show on the working line, or null when nothing is left. The
  * model chooses them, and on a recipe import they can come from a fetched page, so they are untrusted text:
- * anything but a string is null, control characters go, whitespace collapses to one space, and the first 60
- * code points stay, cut between whole characters so no emoji is split.
+ * anything but a string is null, control, direction and zero-width characters go, whitespace collapses to
+ * one space, and the first 60 code points stay, cut between whole characters so no emoji is split.
  */
 export function foodWordsForStatus(input: unknown): string | null {
   if (typeof input !== "string") {
     return null;
   }
   const words = input
-    .replace(/\p{Cc}/gu, (character) => (/\s/u.test(character) ? " " : ""))
+    .slice(0, MAX_FOOD_WORDS_UNITS_READ)
+    .replace(unwantedCharacters, (character) =>
+      /\p{Cc}/u.test(character) && /\s/u.test(character) ? " " : "",
+    )
     .replace(/\s+/gu, " ")
     .trim();
   const cut = Array.from(words).slice(0, MAX_FOOD_WORDS_CODE_POINTS).join("").trim();

@@ -251,6 +251,36 @@ describe("the working line", () => {
     },
   );
 
+  it("should not be drawn for a stopped turn that is still streaming for a render", () => {
+    const { entries } = build({
+      sent,
+      live: liveTurn({ stopped: true }),
+      isStreaming: true,
+    });
+
+    expect(entries.map((entry) => entry.kind)).not.toContain("status");
+  });
+
+  it("should draw a lone marker as the reply once the turn has its outcome, with no line", () => {
+    const { entries } = build({
+      sent,
+      live: liveTurn({ text: "-", outcome: "complete" }),
+      isStreaming: true,
+    });
+
+    expect(entries.map((entry) => entry.kind)).toEqual(["you", "assistant"]);
+  });
+
+  it("should draw no empty reply for an outcome with no words", () => {
+    const { entries } = build({
+      sent,
+      live: liveTurn({ cards: [recipeImportCard], outcome: "complete" }),
+      isStreaming: true,
+    });
+
+    expect(entries.map((entry) => entry.kind)).toEqual(["you", "card"]);
+  });
+
   it("should not be drawn once the turn has ended, with or without a step", () => {
     for (const overrides of [{ status }, {}]) {
       const { entries } = build({ sent, live: liveTurn(overrides), isStreaming: false });

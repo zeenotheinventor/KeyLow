@@ -169,6 +169,26 @@ describe("describeAssistantStatus", () => {
     ).toBe("Looking up toast");
   });
 
+  it.each([" ", "\n\t", "\u202E"])(
+    "should word food of %j, which holds no words, as the food",
+    (food) => {
+      expect(
+        describeAssistantStatus({ code: "tool", tool: "search_foods", food, isConfirmed: false }),
+      ).toBe("Looking up the food");
+    },
+  );
+
+  it("should clean the food words it draws", () => {
+    expect(
+      describeAssistantStatus({
+        code: "tool",
+        tool: "search_foods",
+        food: "  peanut\nbutter\u202E ",
+        isConfirmed: false,
+      }),
+    ).toBe("Looking up peanut butter");
+  });
+
   it.each(["ask_user", "import_recipe_from_url", "constructor", "toString", "future_tool"])(
     "should word the tool %s, which has no row, as Thinking",
     (tool) => {
@@ -204,6 +224,35 @@ describe("foodWordsForStatus", () => {
 
   it("should collapse a newline and tabs to one space and trim the ends", () => {
     expect(foodWordsForStatus("  peanut\n\t\tbutter\t ")).toBe("peanut butter");
+  });
+
+  it.each([
+    ["a left-to-right embedding", "\u202A"],
+    ["a right-to-left override", "\u202E"],
+    ["an isolate", "\u2066"],
+    ["a pop directional isolate", "\u2069"],
+    ["a left-to-right mark", "\u200E"],
+    ["a right-to-left mark", "\u200F"],
+    ["an Arabic letter mark", "\u061C"],
+    ["a zero-width space", "\u200B"],
+    ["a word joiner", "\u2060"],
+    ["a byte order mark", "\uFEFF"],
+  ])("should take out %s, and give null when nothing else is left", (_name, character) => {
+    expect(foodWordsForStatus(`to${character}ast`)).toBe("toast");
+    expect(foodWordsForStatus(`${character}${character}`)).toBeNull();
+    expect(foodWordsForStatus(` ${character} `)).toBeNull();
+  });
+
+  it("should keep a zero-width joiner, which joins an emoji", () => {
+    expect(foodWordsForStatus("👩\u200D💻")).toBe("👩\u200D💻");
+  });
+
+  it("should give null for a lone half of a surrogate pair", () => {
+    expect(foodWordsForStatus("\uD83D")).toBeNull();
+  });
+
+  it("should cut a huge input at 60 code points", () => {
+    expect(foodWordsForStatus("a".repeat(1_000_000))).toBe("a".repeat(60));
   });
 
   it("should cut 61 emoji at 60 without breaking a pair", () => {
