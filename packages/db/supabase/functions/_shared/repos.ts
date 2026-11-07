@@ -15,7 +15,9 @@ export type {
   LogQuickEntryInput,
   QuickEntryValues,
   RecipeDetail,
+  SuggestionLibraryOptions,
   Targets,
+  TrainingInputs,
   WeighIn,
 } from "./repos/index.js";
 export {
@@ -32,6 +34,7 @@ export {
   getMyTimeZone,
   getRecipe,
   listFoodPortions,
+  listSuggestionLibrary,
   listRecipes,
   listWeighIns,
   logEntries,
@@ -39,6 +42,8 @@ export {
   logQuickEntry,
   logRecipe,
   readLogEntryStamps,
+  readMuscleState,
+  readTrainingInputs,
   reopenProgram,
   restoreLogEntry,
   searchFoods,

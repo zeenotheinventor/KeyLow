@@ -1,5 +1,5 @@
 import { addCalendarDays, toLocalDate } from "@keylow/core/dates";
-import { TRAINING_PARAMS_V2, muscleState } from "@keylow/core/training";
+import { currentMuscleState } from "@keylow/core/training";
 import { skipToken, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 
@@ -20,8 +20,8 @@ import type { MuscleId, MuscleState } from "@keylow/core/training";
  *
  * What is cached is rows. The sets are read from the day 15 days before today in the user's profile
  * time zone through today, and held under `keys.training.sets(startDay)`, a key of a day and never of
- * `now`, so it is the same all day and a cache restored on a phone is found again. Core's `muscleState`
- * runs in `select`, so the numbers are worked out at the `now` given, from whatever rows are cached,
+ * `now`, so it is the same all day and a cache restored on a phone is found again. Core's
+ * `currentMuscleState` runs in `select`, so the numbers are worked out at the `now` given, from whatever rows are cached,
  * online or not. The plan does not change a volume status (ADR 0005, Amendment 6), so the hook reads no
  * routine and no goal.
  *
@@ -45,10 +45,7 @@ export function useMuscleState(
   const today = timeZone.data ? toLocalDate(new Date(now), timeZone.data) : null;
   const startDay = today === null ? "" : addCalendarDays(today, -HEAT_LOOKBACK_DAYS);
 
-  const select = useCallback(
-    (sets: TrainingSet[]) => muscleState(sets, now, TRAINING_PARAMS_V2),
-    [now],
-  );
+  const select = useCallback((sets: TrainingSet[]) => currentMuscleState(sets, now), [now]);
 
   // Until today's rows are there, the newest rows held under another start day stand in (a cache restored
   // on a later day than it was read).
