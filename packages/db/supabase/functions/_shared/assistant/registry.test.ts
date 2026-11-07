@@ -108,6 +108,7 @@ Deno.test(
         ["suggest_next_session", "read"],
         ["set_active_routine", "write"],
         ["archive_routine", "write"],
+        ["edit_routine", "write"],
         ["update_past_set", "write"],
         ["update_training_goals", "write"],
         ["ask_user", "read"],
@@ -210,6 +211,13 @@ Deno.test(
     for (const name of ["set_active_routine", "archive_routine"]) {
       assertEquals(toolRegistry.get(name)?.strict, false, name);
     }
+  },
+);
+
+Deno.test(
+  "edit_routine opts out of strict mode, so it takes nothing from the strict budget",
+  () => {
+    assertEquals(toolRegistry.get("edit_routine")?.strict, false);
   },
 );
 

@@ -5,6 +5,7 @@ import { copyDayTool } from "./tools/copyDay.ts";
 import { createCustomFoodTool } from "./tools/createCustomFood.ts";
 import { createRecipeTool } from "./tools/createRecipe.ts";
 import { deleteEntryTool } from "./tools/deleteEntry.ts";
+import { editRoutineTool } from "./tools/editRoutine.ts";
 import { askUserTool } from "./tools/askUser.ts";
 import { getDayTool } from "./tools/getDay.ts";
 import { getEntriesTool } from "./tools/getEntries.ts";
@@ -89,6 +90,7 @@ const toolDefinitions: readonly ToolDefinition[] = [
   suggestNextSessionTool,
   setActiveRoutineTool,
   archiveRoutineTool,
+  editRoutineTool,
   updatePastSetTool,
   updateTrainingGoalsTool,
   askUserTool,

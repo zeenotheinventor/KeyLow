@@ -92,3 +92,33 @@ Deno.test("an archive_routine input with no routine_id gives no words", () => {
   assertEquals(confirmWordsFor("archive_routine", { routine_id: 3 }), null);
   assertEquals(confirmWordsFor("archive_routine", null), null);
 });
+Deno.test(
+  "edit_routine gets the board's remove buttons for the removals of the call, and the danger tone",
+  () => {
+    const remove = { op: "remove" };
+
+    assertEquals(confirmWordsFor("edit_routine", { changes: [remove, remove, { op: "add" }] }), {
+      confirmLabel: "Remove 2",
+      cancelLabel: "Keep them",
+      tone: "danger",
+    });
+    assertEquals(confirmWordsFor("edit_routine", { changes: [remove, remove, remove] }), {
+      confirmLabel: "Remove 3",
+      cancelLabel: "Keep them",
+      tone: "danger",
+    });
+  },
+);
+
+Deno.test(
+  "an edit_routine call with fewer than two removals, or none readable, gives no words",
+  () => {
+    assertEquals(
+      confirmWordsFor("edit_routine", { changes: [{ op: "remove" }, { op: "add" }] }),
+      null,
+    );
+    assertEquals(confirmWordsFor("edit_routine", { changes: [] }), null);
+    assertEquals(confirmWordsFor("edit_routine", {}), null);
+    assertEquals(confirmWordsFor("edit_routine", null), null);
+  },
+);
