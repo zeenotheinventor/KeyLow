@@ -1,6 +1,7 @@
 // The access gates every assistant request passes before a token is spent, in this order: the kill
 // switch, consent, the entitlement, the user's daily turns, the global monthly spend (plan 2.7). A
 // failure is one typed notice, which the app words. This file sends codes, never words.
+import { isAssistantConsentCurrent } from "../_shared/core.ts";
 import { readLimit } from "../_shared/rateLimit.ts";
 
 import type { AssistantNotice } from "../_shared/core.ts";
@@ -117,12 +118,13 @@ export function createAccessStore(client: SupabaseClient<Database>): AccessStore
   return {
     async hasConsented(userId) {
       const { data, error, status } = await readWithOneRetry(() =>
-        client.from("profiles").select("assistant_consent_at").eq("id", userId).maybeSingle(),
+        client.from("profiles").select("assistant_consent_version").eq("id", userId).maybeSingle(),
       );
       if (error !== null) {
         throw failure("read consent", error, status);
       }
-      return data?.assistant_consent_at != null;
+      // A version older than the current words is not consent, so the person is asked again.
+      return isAssistantConsentCurrent(data?.assistant_consent_version ?? null);
     },
 
     async hasEntitlement(userId) {

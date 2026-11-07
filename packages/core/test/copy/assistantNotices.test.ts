@@ -308,12 +308,12 @@ describe("ASSISTANT_CONSENT_CARD", () => {
     expect(ASSISTANT_CONSENT_CARD).toEqual({
       title: "Turn on the assistant",
       paragraphs: [
-        "The assistant answers questions about your diary, weight and targets, and logs, copies and changes entries for you. Every change shows as a card with Undo.",
+        "The assistant answers questions about your diary, weight, targets and training. It logs, copies and changes entries for you, builds and changes your routines, and changes your training goals, custom exercises and past workouts. Every change shows as a card with Undo.",
         "To do this, your messages and the Ki-Lo data the assistant reads are sent to Anthropic, the company that runs its AI model, as Ki-Lo's processor. Anthropic keeps them for up to 30 days. Ki-Lo keeps your conversations until you delete them.",
       ],
       privacyLinkLabel: "Privacy policy",
       smallPrint:
-        "The assistant's answers are not medical advice. Speak to a doctor before you make big changes to your diet or your weight. You can turn the assistant off in More, Assistant.",
+        "The assistant's answers are not medical advice. Speak to a doctor before you make big changes to your diet, your weight or your training. You can turn the assistant off in More, Assistant.",
       turnOnLabel: "Turn on",
       notNowLabel: "Not now",
     });
