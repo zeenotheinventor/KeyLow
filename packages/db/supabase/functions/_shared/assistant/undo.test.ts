@@ -291,3 +291,36 @@ Deno.test("an inverse that gives no reason leaves the reason out", async () => {
 
   assertEquals(result, { status: "error", code: "undo_unavailable" });
 });
+
+// An inverse that needs the old value and answers `unavailable` without it, as the training tools do.
+const needsPreviousValue: FakeToolOptions["inverse"] = async (ctx, action) => {
+  const stored = await ctx.previousValueOf(action);
+  return stored?.fingerprint === "fingerprint-1" ? "undone" : "unavailable";
+};
+
+Deno.test(
+  "an inverse is handed the previous value and the fingerprint stored for its action",
+  async () => {
+    const { ctx, store, actionId } = await writeThenContext({ inverse: needsPreviousValue });
+    store.previousValues.set(actionId, {
+      previous: { name: "Push day" },
+      fingerprint: "fingerprint-1",
+    });
+
+    const result = await undoAction(ctx, actionId);
+
+    assertEquals(result, { status: "undone", actionId });
+  },
+);
+
+Deno.test(
+  "an inverse that is handed null answers unavailable and the action stays undoable",
+  async () => {
+    const { ctx, store, actionId } = await writeThenContext({ inverse: needsPreviousValue });
+
+    const result = await undoAction(ctx, actionId);
+
+    assertEquals(result, { status: "error", code: "undo_unavailable" });
+    assertEquals(store.actions[0]?.undoneAt, null);
+  },
+);

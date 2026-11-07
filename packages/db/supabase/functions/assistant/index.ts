@@ -39,9 +39,11 @@ Deno.serve(
       turns,
       undoWith: (undoRequest, userId) => {
         // Undo runs outside a turn, so the context carries a nil turn, no message and no day.
+        const actions = createActionStore(service);
         const context: ToolContext = {
           caller: createCallerClient(undoRequest),
-          actions: createActionStore(service),
+          actions,
+          previousValueOf: (action) => actions.previousValueOf(action, userId),
           userId,
           turn: {
             id: nilId,

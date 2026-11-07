@@ -3387,3 +3387,183 @@ Deno.test(
     );
   },
 );
+
+// ---- The previous value an Undo needs, kept beside the card and away from the model (KEY-900) ----
+
+// Words no card, log line or request has any reason to hold, so finding one anywhere is a leak.
+const previousValue = {
+  routineName: "Sentinel routine 4471",
+  deletedAt: "2026-11-03T08:10:00.123456+00:00",
+};
+const undoOutcome = { previous: previousValue, fingerprint: "fingerprint-8832" };
+const sentinels = ["Sentinel routine 4471", "08:10:00.123456", "fingerprint-8832"];
+
+const writeWithUndo = (action: string, undo: unknown = undoOutcome) =>
+  okResult({
+    name: "log_entry",
+    structured: { card: cardDraft("egg", 143), undo },
+    actionId: action,
+  });
+
+const holdsNoSentinel = (value: unknown) => {
+  const text = typeof value === "string" ? value : JSON.stringify(value);
+  for (const sentinel of sentinels) {
+    assertEquals(text.includes(sentinel), false, sentinel);
+  }
+};
+
+Deno.test(
+  "a streamed write's undo is stored in the display beside its card, with the action id",
+  async () => {
+    await withHarness(
+      {
+        responses: [
+          callTools([{ id: "t1", name: "log_entry", input: { food_id: "f1" } }]),
+          reply("Done."),
+        ],
+        answers: { log_entry: writeWithUndo(actionA) },
+      },
+      async (harness) => {
+        await harness.take("log an egg");
+
+        const [toolRow] = toolResultRows(harness);
+        assertEquals(toolRow?.display, {
+          t1: {
+            card: { actionIds: [actionA], ...cardDraft("egg", 143) },
+            undo: { actionId: actionA, ...undoOutcome },
+          },
+        });
+      },
+    );
+  },
+);
+
+Deno.test(
+  "a confirm press stores the undo of its write in the display, in the same row as the card",
+  async () => {
+    await withHarness(askingOnly(writeWithUndo(deletedAction)), async (harness) => {
+      await afterAskedDelete(harness);
+
+      const result = await harness.take(deleteLabel);
+
+      const stored = result.rows.filter((row) => row.turnId === result.turnId);
+      const [call] = blocksOf(stored[1]?.content);
+      assertEquals(stored[2]?.display, {
+        [String(call?.["id"])]: {
+          card: { actionIds: [deletedAction], ...cardDraft("egg", 143) },
+          undo: { actionId: deletedAction, ...undoOutcome },
+        },
+      });
+    });
+  },
+);
+
+Deno.test("an undo the tool gave for a write that landed nothing is not stored", async () => {
+  await withHarness(
+    {
+      responses: [
+        callTools([{ id: "t1", name: "log_entry", input: { food_id: "f1" } }]),
+        reply("Nothing changed."),
+      ],
+      answers: {
+        log_entry: okResult({ name: "log_entry", structured: { undo: undoOutcome } }),
+      },
+    },
+    async (harness) => {
+      await harness.take("log an egg");
+
+      assertEquals(toolResultRows(harness)[0]?.display, null);
+    },
+  );
+});
+
+Deno.test(
+  "an undo that cannot be read is dropped and reported without its words, and the card is kept",
+  async () => {
+    await withHarness(
+      {
+        responses: [
+          callTools([{ id: "t1", name: "log_entry", input: { food_id: "f1" } }]),
+          reply("Done."),
+        ],
+        answers: {
+          log_entry: writeWithUndo(actionA, { previous: previousValue, fingerprint: undefined }),
+        },
+      },
+      async (harness) => {
+        const result = await harness.take("log an egg");
+
+        assertEquals(toolResultRows(harness)[0]?.display, {
+          t1: { card: { actionIds: [actionA], ...cardDraft("egg", 143) } },
+        });
+        assertEquals(eventsOfType(result.events, "card").length, 1);
+        assertEquals(harness.reports.length, 1);
+        assertEquals(harness.reports[0]?.code, "internal_error");
+        assertEquals(
+          harness.reports[0]?.caught instanceof Error && harness.reports[0].caught.message,
+          "an undo cannot be stored",
+        );
+      },
+    );
+  },
+);
+
+Deno.test(
+  "no event, request, log line or report holds the undo, on a streamed write and on a press",
+  async () => {
+    const spy = spyOnConsole();
+    try {
+      await withHarness(
+        {
+          responses: [
+            callTools([{ id: "t1", name: "log_entry", input: { food_id: "f1" } }]),
+            reply("Done."),
+            callTools(
+              [{ id: "d1", name: "delete_entry", input: { ids: entryIds } }],
+              deleteQuestion,
+            ),
+            reply("You are welcome."),
+          ],
+          answers: {
+            log_entry: writeWithUndo(actionA),
+            delete_entry: inSequence(
+              confirmationResult("delete_entry", confirmationId),
+              writeWithUndo(deletedAction),
+            ),
+          },
+        },
+        async (harness) => {
+          const streamed = await harness.take("log an egg");
+          await harness.take("delete my lunch");
+          const [, asked] = harness.turnRows();
+          if (asked === undefined) {
+            throw new Error("expected the asking turn");
+          }
+          asked["pending_confirmation"] = {
+            id: confirmationId,
+            tool: "delete_entry",
+            input_hash: "a".repeat(64),
+            confirm_label: deleteLabel,
+          };
+          const pressed = await harness.take(deleteLabel);
+          await harness.take("thanks");
+
+          // The value is stored, and nothing the app or the model was sent holds it.
+          assertEquals(
+            JSON.stringify(harness.rows().map((row) => row.display)).includes(sentinels[0] ?? ""),
+            true,
+          );
+          holdsNoSentinel(streamed.events);
+          holdsNoSentinel(pressed.events);
+          holdsNoSentinel(harness.written.join(""));
+          holdsNoSentinel(harness.mock.bodies.join(""));
+          holdsNoSentinel(harness.reports.map((report) => String(report.caught)));
+        },
+      );
+    } finally {
+      spy.restore();
+    }
+
+    holdsNoSentinel(spy.lines.join("\n"));
+  },
+);

@@ -12,6 +12,7 @@ import type {
   PendingConfirmation,
   SlotRequest,
   StoredConfirmation,
+  StoredUndo,
 } from "./store.ts";
 import type {
   ConfirmationNeed,
@@ -40,6 +41,8 @@ export type FakeActionStore = ActionStore & {
   turns: FakeTurn[];
   // Counts the calls of the store, by method.
   calls: Record<string, number>;
+  // What `previousValueOf` answers, by the id of the action it belongs to.
+  previousValues: Map<string, StoredUndo>;
 };
 
 // The real store is awaited over a network, so two parallel callers both read before either writes.
@@ -55,6 +58,7 @@ export function createFakeActionStore(
     { id: turnId, conversationId, userId, pending: null },
   ];
   const calls: Record<string, number> = {};
+  const previousValues = new Map<string, StoredUndo>();
   const count = (method: string) => {
     calls[method] = (calls[method] ?? 0) + 1;
   };
@@ -69,6 +73,7 @@ export function createFakeActionStore(
     actions,
     turns,
     calls,
+    previousValues,
 
     async takenSlots(forTurn) {
       count("takenSlots");
@@ -148,6 +153,12 @@ export function createFakeActionStore(
         action.undoneAt = null;
       }
       return Promise.resolve();
+    },
+
+    previousValueOf(action: ActionRecord, forUser: string) {
+      count("previousValueOf");
+      const owned = action.turnId !== null && mine(action.id, forUser) !== undefined;
+      return Promise.resolve(owned ? (previousValues.get(action.id) ?? null) : null);
     },
 
     previousPendingConfirmation(forConversation: string, forUser: string, currentTurn: string) {
@@ -248,6 +259,7 @@ export function createFakeContext(
   const ctx: ToolContext = {
     caller: Object.create(null),
     actions: store,
+    previousValueOf: (action) => store.previousValueOf(action, userId),
     userId,
     turn: {
       id: overrides.turn?.id ?? turnId,

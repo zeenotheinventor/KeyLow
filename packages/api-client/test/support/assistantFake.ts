@@ -46,7 +46,7 @@ export const actionRow = (overrides: Partial<ActionFakeRow> = {}): ActionFakeRow
   ...overrides,
 });
 
-const loggedCard = {
+export const loggedCard = {
   actionIds: [FIRST_ACTION_ID, SECOND_ACTION_ID],
   kind: "logged",
   title: "Logged 2 eggs and toast at 08:10",
@@ -111,7 +111,15 @@ const messageRows = [
   seq: index + 1,
 }));
 
-export type MessageFakeRow = (typeof messageRows)[number];
+export type MessageFakeRow = {
+  id: string;
+  turn_id: string;
+  role: string;
+  content: unknown;
+  display: unknown;
+  conversation_id: string;
+  seq: number;
+};
 export type TurnFakeRow = { id: string; status: string };
 
 const defaultTurns: TurnFakeRow[] = [

@@ -529,3 +529,49 @@ describe("threadFromMessages, the display of a message", () => {
     expect(thread[1]).toMatchObject({ kind: "card", card: { undo: "unavailable" } });
   });
 });
+
+describe("threadFromMessages, a display entry that holds an undo", () => {
+  const undo = {
+    actionId: firstActionId,
+    previous: {
+      routineName: "Sentinel routine 4471",
+      deletedAt: "2026-11-03T08:10:00.123456+00:00",
+    },
+    fingerprint: "fingerprint-8832",
+  };
+  const withUndo = boardConversation.map((row) =>
+    row.id === "m3"
+      ? toolResultMessage("m3", firstTurnId, [
+          { toolUseId: "call-1", source: "log_entry", outcome: { card: loggedCard, undo } },
+        ])
+      : row,
+  );
+
+  it("should draw the card exactly as it does without the undo", () => {
+    expect(threadFromMessages(withUndo, availableActions)).toEqual(
+      threadFromMessages(boardConversation, availableActions),
+    );
+  });
+
+  it("should keep the previous value out of every item", () => {
+    const text = JSON.stringify(threadFromMessages(withUndo, availableActions));
+
+    expect(text).not.toContain("Sentinel routine 4471");
+    expect(text).not.toContain("fingerprint-8832");
+  });
+
+  it("should draw a card whose entry holds only an undo as nothing", () => {
+    const thread = threadFromMessages(
+      [
+        userMessage("m1", firstTurnId, "Change my routine"),
+        toolUseMessage("m2", firstTurnId, [{ id: "call-1", name: "edit_routine" }]),
+        toolResultMessage("m3", firstTurnId, [
+          { toolUseId: "call-1", source: "edit_routine", outcome: { undo } },
+        ]),
+      ],
+      availableActions,
+    );
+
+    expect(kinds(thread)).toEqual(["user"]);
+  });
+});

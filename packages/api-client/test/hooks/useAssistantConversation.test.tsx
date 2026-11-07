@@ -6,7 +6,9 @@ import { useAssistantConversation } from "../../src/hooks/useAssistantConversati
 import { keys } from "../../src/queryKeys";
 import {
   CONVERSATION_ID,
+  FIRST_ACTION_ID,
   actionRow,
+  loggedCard,
   createAssistantFakeState,
   installAssistantFake,
 } from "../support/assistantFake";
@@ -60,6 +62,40 @@ describe("useAssistantConversation", () => {
       kind: "card",
       card: { undo: "available" },
     });
+  });
+
+  it("should draw the card of a message whose display also holds an undo", async () => {
+    const state = createAssistantFakeState();
+    state.messages = state.messages.map((row) =>
+      row.id === "m3"
+        ? {
+            ...row,
+            display: {
+              "call-1": {
+                card: loggedCard,
+                undo: {
+                  actionId: FIRST_ACTION_ID,
+                  previous: { routineName: "Sentinel routine 4471" },
+                  fingerprint: "fingerprint-8832",
+                },
+              },
+            },
+          }
+        : row,
+    );
+    installAssistantFake(server, state);
+    const { wrapper } = createWrapper();
+
+    const { result } = renderHook(() => useAssistantConversation(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+    expect(result.current.data?.items[1]).toMatchObject({
+      kind: "card",
+      card: { kind: "logged", undo: "available" },
+    });
+    expect(JSON.stringify(result.current.data?.items)).not.toContain("Sentinel routine 4471");
   });
 
   it("should show the card as undone once every one of its actions is", async () => {
