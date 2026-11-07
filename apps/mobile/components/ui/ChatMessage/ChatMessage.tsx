@@ -45,20 +45,11 @@ function describeMessage(props: ChatMessageProps): string {
   return `${props.speakerLabel}: ${lines.join(" ")}`;
 }
 
-// The words of a message are the same list of paragraphs in both, and the key is the position as well as
-// the words because two paragraphs may repeat each other.
-function Paragraphs({
-  paragraphs,
-  caretIndex,
-}: {
-  paragraphs: readonly string[];
-  caretIndex?: number | undefined;
-}) {
+// Your words are plain text, never read as markdown. The key is the position as well as the words because
+// two paragraphs may repeat each other.
+function YourParagraphs({ paragraphs }: { paragraphs: readonly string[] }) {
   return paragraphs.map((paragraph, index) => (
-    <Text key={`${index}-${paragraph}`}>
-      {paragraph}
-      {index === caretIndex ? <Caret /> : null}
-    </Text>
+    <Text key={`${index}-${paragraph}`}>{paragraph}</Text>
   ));
 }
 
@@ -164,9 +155,9 @@ function AssistantLines({
 
 /**
  * One message in the assistant's conversation: your words in a bubble on the right, or the assistant's as
- * paragraphs with its markdown drawn as formatting (bold, italic, headings, bullets and numbers, and the words
- * of a link, which is never tappable), with the caret while they arrive, the Estimate badge, the citation and the stopped line
- * under them. Every word comes in by prop, because the kit adds no copy. It is one group for a screen reader,
+ * paragraphs with its markdown drawn as formatting (bold, italic, headings, bullets and numbers, and the
+ * words of a link, which is never tappable), with the caret while they arrive, the Estimate badge, the
+ * citation and the stopped line under them. Every word comes in by prop, because the kit adds no copy. It is one group for a screen reader,
  * named for who said it. It is not a live region while it streams, because Android would read the whole text
  * again for every chunk and iOS ignores a live region, so the screen announces a finished answer itself.
  */
@@ -184,7 +175,7 @@ export function ChatMessage(props: ChatMessageProps) {
         {...accessibility}
         className="max-w-[288px] gap-2 self-end rounded-medium rounded-br-small border border-border bg-background px-[14px] py-[10px]"
       >
-        <Paragraphs paragraphs={props.paragraphs} />
+        <YourParagraphs paragraphs={props.paragraphs} />
       </View>
     );
   }
