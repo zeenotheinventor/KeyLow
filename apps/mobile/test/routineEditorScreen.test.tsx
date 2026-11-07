@@ -109,12 +109,17 @@ describe("the edit routine screen", () => {
 
   it("should show Cancel editing and a loading status while the routine loads", async () => {
     routineDetailBackend.routines.set(ROUTINE_ID, pushPullLegsDraft);
+    let finishReading: () => void = () => undefined;
+    routineDetailBackend.hold = new Promise<void>((resolve) => {
+      finishReading = resolve;
+    });
     await showScreen(ROUTINE_ID);
 
     expect(screen.getByRole("button", { name: ROUTINE_EDITOR.cancelLabel })).toBeOnTheScreen();
     expect(screen.getByRole("status", { name: ROUTINE_EDITOR_LOADING_LABEL })).toBeOnTheScreen();
     expect(screen.queryByLabelText(ROUTINE_EDITOR.nameLabel)).not.toBeOnTheScreen();
     expect(screen.queryByText(GENERIC_ERROR)).not.toBeOnTheScreen();
+    finishReading();
     await screen.findByLabelText(ROUTINE_EDITOR.nameLabel);
     expect(
       screen.queryByRole("status", { name: ROUTINE_EDITOR_LOADING_LABEL }),
