@@ -13,8 +13,12 @@ import type {
  * keep their ids, so `save_routine` updates them in place.
  *
  * Where a change names an exercise a day plans twice, `position` says which (its index in the day).
- * Without it the change is refused as ambiguous. A null in `set_targets` and `update_day` keeps the
- * value it was given for, so a target RIR or a weekday cannot be cleared here.
+ * Without it the change is refused as ambiguous.
+ *
+ * A null in `set_targets` and `update_day` keeps the value it was given for. So `set_targets` cannot
+ * clear a target RIR, and a target RIR is cleared by a `remove` and then an `add` of the exercise with
+ * a null `targetRir` (at the same `position`, to keep its place). `update_day` cannot clear a weekday
+ * at all.
  */
 
 export type RoutineChange =
@@ -72,17 +76,35 @@ export type RoutineChangeRule =
   | "position_invalid"
   | RoutineDraftRule;
 
-/** Which change, by its place in the list, and which rule. Never a value, because a routine is health data. */
-export type RoutineChangeProblem = Readonly<{ index: number; rule: RoutineChangeRule }>;
+/**
+ * Which change, by its place in the list, and which rule. Never a value, because a routine is health
+ * data. The index is null when no change caused the problem, as when the routine was already broken
+ * before the list was applied.
+ */
+export type RoutineChangeProblem = Readonly<{ index: number | null; rule: RoutineChangeRule }>;
 
 export type RoutineChangesResult =
   { ok: true; draft: RoutineDraft } | { ok: false; problems: readonly RoutineChangeProblem[] };
 
-/** A day while the list is applied, with the name a change can reach it by and the change that last touched it. */
+/** A planned exercise while the list is applied, with the change that last made or edited it. */
+type WorkingExercise = Readonly<{
+  exercise: RoutineDraftExercise;
+  lastChangeIndex: number | null;
+}>;
+
+/**
+ * A day while the list is applied. `reference` is the name a change can reach it by when it was added in
+ * this list. `lastChangeIndex` is the change that last set the day's own fields (it was added, renamed,
+ * given a weekday or moved), and `lastExerciseAddIndex` the last that added an exercise to it.
+ */
 type WorkingDay = Readonly<{
   reference: string | null;
-  day: RoutineDraftDay;
+  id: string | null;
+  weekday: number | null;
+  name: string;
+  exercises: readonly WorkingExercise[];
   lastChangeIndex: number | null;
+  lastExerciseAddIndex: number | null;
 }>;
 
 type Step = { days: readonly WorkingDay[] } | { rule: RoutineChangeRule };
@@ -98,21 +120,28 @@ const insertedAt = <Item>(items: readonly Item[], position: number | null, item:
 };
 
 const dayNamed = (days: readonly WorkingDay[], dayId: string): number =>
-  days.findIndex((entry) => entry.day.id === dayId || entry.reference === dayId);
+  days.findIndex((entry) => entry.id === dayId || entry.reference === dayId);
+
+const draftDayOf = (entry: WorkingDay): RoutineDraftDay => ({
+  id: entry.id,
+  weekday: entry.weekday,
+  name: entry.name,
+  exercises: entry.exercises.map(({ exercise }) => exercise),
+});
 
 /** The one exercise a change means, by its id and, when the day plans it twice, its position. */
 const locateExercise = (
-  exercises: readonly RoutineDraftExercise[],
+  exercises: readonly WorkingExercise[],
   exerciseId: string,
   position: number | null | undefined,
 ): Located => {
   if (position !== null && position !== undefined) {
-    return exercises[position]?.exercise_id === exerciseId
+    return exercises[position]?.exercise.exercise_id === exerciseId
       ? { index: position }
       : { rule: "exercise_not_found" };
   }
-  const matches = exercises.flatMap((exercise, index) =>
-    exercise.exercise_id === exerciseId ? [index] : [],
+  const matches = exercises.flatMap((planned, index) =>
+    planned.exercise.exercise_id === exerciseId ? [index] : [],
   );
   const [only, ...others] = matches;
   if (only === undefined) {
@@ -121,15 +150,8 @@ const locateExercise = (
   return others.length > 0 ? { rule: "exercise_ambiguous" } : { index: only };
 };
 
-const withDayAt = (
-  days: readonly WorkingDay[],
-  dayIndex: number,
-  day: RoutineDraftDay,
-  changeIndex: number,
-): WorkingDay[] =>
-  days.map((entry, index) =>
-    index === dayIndex ? { ...entry, day, lastChangeIndex: changeIndex } : entry,
-  );
+const withDayAt = (days: readonly WorkingDay[], dayIndex: number, day: WorkingDay): WorkingDay[] =>
+  days.map((entry, index) => (index === dayIndex ? day : entry));
 
 const stepOnExercise = (
   days: readonly WorkingDay[],
@@ -142,18 +164,18 @@ const stepOnExercise = (
   if (entry === undefined) {
     return { rule: "day_not_found" };
   }
-  const located = locateExercise(entry.day.exercises, change.exerciseId, change.position);
+  const located = locateExercise(entry.exercises, change.exerciseId, change.position);
   if ("rule" in located) {
     return located;
   }
-  const edited = entry.day.exercises.flatMap((exercise, index) => {
+  const edited = entry.exercises.flatMap((planned, index) => {
     if (index !== located.index) {
-      return [exercise];
+      return [planned];
     }
-    const replacement = edit(exercise);
-    return replacement === null ? [] : [replacement];
+    const replacement = edit(planned.exercise);
+    return replacement === null ? [] : [{ exercise: replacement, lastChangeIndex: changeIndex }];
   });
-  return { days: withDayAt(days, dayIndex, { ...entry.day, exercises: edited }, changeIndex) };
+  return { days: withDayAt(days, dayIndex, { ...entry, exercises: edited }) };
 };
 
 const stepOnAdd = (
@@ -166,19 +188,25 @@ const stepOnAdd = (
   if (entry === undefined) {
     return { rule: "day_not_found" };
   }
-  const { exercises } = entry.day;
-  if (change.position !== null && !isIndexBetween(change.position, 0, exercises.length)) {
+  if (change.position !== null && !isIndexBetween(change.position, 0, entry.exercises.length)) {
     return { rule: "position_invalid" };
   }
-  const planned: RoutineDraftExercise = {
-    exercise_id: change.exerciseId,
-    target_sets: change.sets,
-    rep_min: change.repMin,
-    rep_max: change.repMax,
-    target_rir: change.targetRir,
+  const added: WorkingExercise = {
+    exercise: {
+      exercise_id: change.exerciseId,
+      target_sets: change.sets,
+      rep_min: change.repMin,
+      rep_max: change.repMax,
+      target_rir: change.targetRir,
+    },
+    lastChangeIndex: changeIndex,
   };
-  const day = { ...entry.day, exercises: insertedAt(exercises, change.position, planned) };
-  return { days: withDayAt(days, dayIndex, day, changeIndex) };
+  const day = {
+    ...entry,
+    exercises: insertedAt(entry.exercises, change.position, added),
+    lastExerciseAddIndex: changeIndex,
+  };
+  return { days: withDayAt(days, dayIndex, day) };
 };
 
 const stepOnAddDay = (
@@ -186,7 +214,7 @@ const stepOnAddDay = (
   change: Extract<RoutineChange, { op: "add_day" }>,
   changeIndex: number,
 ): Step => {
-  if (days.some((entry) => entry.reference === change.dayRef || entry.day.id === change.dayRef)) {
+  if (days.some((entry) => entry.reference === change.dayRef || entry.id === change.dayRef)) {
     return { rule: "day_ref_taken" };
   }
   if (change.position !== null && !isIndexBetween(change.position, 0, days.length)) {
@@ -194,8 +222,12 @@ const stepOnAddDay = (
   }
   const added: WorkingDay = {
     reference: change.dayRef,
-    day: { id: null, weekday: change.weekday, name: change.name, exercises: [] },
+    id: null,
+    weekday: change.weekday,
+    name: change.name,
+    exercises: [],
     lastChangeIndex: changeIndex,
+    lastExerciseAddIndex: null,
   };
   return { days: insertedAt(days, change.position, added) };
 };
@@ -215,15 +247,12 @@ const stepOnUpdateDay = (
   }
   const updated: WorkingDay = {
     ...entry,
-    day: {
-      ...entry.day,
-      name: change.name ?? entry.day.name,
-      weekday: change.weekday ?? entry.day.weekday,
-    },
+    name: change.name ?? entry.name,
+    weekday: change.weekday ?? entry.weekday,
     lastChangeIndex: changeIndex,
   };
   if (change.position === null) {
-    return { days: days.map((other, index) => (index === dayIndex ? updated : other)) };
+    return { days: withDayAt(days, dayIndex, updated) };
   }
   const others = days.filter((_other, index) => index !== dayIndex);
   return { days: insertedAt(others, change.position, updated) };
@@ -262,27 +291,41 @@ const latestOf = (indexes: readonly (number | null)[]): number | null =>
   );
 
 /**
- * The change a broken draft rule is blamed on: the last one that touched the day it sits on. A weekday
- * two days share is blamed on the later of their two last changes, and a rule about the whole routine
- * on the last day added. A rule no change touched is blamed on the last change.
+ * The change a broken draft rule is blamed on, or null when no change touched what it sits on:
+ *
+ * - a rule about one exercise: the last change that added or edited that exercise,
+ * - too many exercises in a day: the last change that added one to it,
+ * - a rule about the day's own fields: the last change that added, renamed or moved it, and for a
+ *   weekday two days share, the later of the two days' last such changes,
+ * - too many days: the last change that added a day,
+ * - anything else (the routine's name): null.
  */
 const blamedChangeIndex = (
   days: readonly WorkingDay[],
   path: readonly (string | number)[],
   rule: RoutineDraftRule,
   lastDayAddIndex: number | null,
-  lastChangeIndex: number,
-): number => {
+): number | null => {
   const dayIndex = path[0] === "days" ? path[1] : undefined;
   if (typeof dayIndex !== "number") {
-    return (rule === "days_too_many" ? lastDayAddIndex : null) ?? lastChangeIndex;
+    return rule === "days_too_many" ? lastDayAddIndex : null;
   }
-  const weekday = days[dayIndex]?.day.weekday;
-  const involved =
-    rule === "weekday_repeated"
-      ? days.filter((entry) => entry.day.weekday === weekday)
-      : [days[dayIndex]];
-  return latestOf(involved.map((entry) => entry?.lastChangeIndex ?? null)) ?? lastChangeIndex;
+  const entry = days[dayIndex];
+  if (path[2] === "exercises" && path.length === 3) {
+    return entry?.lastExerciseAddIndex ?? null;
+  }
+  const exerciseIndex = path[2] === "exercises" ? path[3] : undefined;
+  if (typeof exerciseIndex === "number") {
+    return entry?.exercises[exerciseIndex]?.lastChangeIndex ?? null;
+  }
+  if (rule === "weekday_repeated") {
+    return latestOf(
+      days
+        .filter((other) => other.weekday === entry?.weekday)
+        .map((other) => other.lastChangeIndex),
+    );
+  }
+  return entry?.lastChangeIndex ?? null;
 };
 
 const withoutRepeats = (problems: readonly RoutineChangeProblem[]): RoutineChangeProblem[] =>
@@ -297,7 +340,9 @@ const withoutRepeats = (problems: readonly RoutineChangeProblem[]): RoutineChang
  * Applies the changes one after the other, each against the draft the earlier ones left, and checks the
  * result with `validateRoutineDraft` once at the end, so two changes may fix each other. It is all or
  * nothing: one problem and there is no draft. The problems say which change, by its place in the list,
- * and which rule, never a name, an id or a number. The draft it is given is not changed.
+ * and which rule, never a name, an id or a number. A rule broken by a change is blamed on the last
+ * change that touched the exercise or day it sits on. A rule no change touched, because the routine
+ * was already broken, has a null index. The draft it is given is not changed.
  */
 export const applyRoutineChanges = (
   draft: RoutineDraft,
@@ -305,8 +350,12 @@ export const applyRoutineChanges = (
 ): RoutineChangesResult => {
   let days: readonly WorkingDay[] = draft.days.map((day) => ({
     reference: null,
-    day,
+    id: day.id,
+    weekday: day.weekday,
+    name: day.name,
+    exercises: day.exercises.map((exercise) => ({ exercise, lastChangeIndex: null })),
     lastChangeIndex: null,
+    lastExerciseAddIndex: null,
   }));
   let lastDayAddIndex: number | null = null;
   const problems: RoutineChangeProblem[] = [];
@@ -326,19 +375,15 @@ export const applyRoutineChanges = (
     return { ok: false, problems };
   }
 
-  const validated = validateRoutineDraft({
-    name: draft.name,
-    days: days.map((entry) => entry.day),
-  });
+  const validated = validateRoutineDraft({ name: draft.name, days: days.map(draftDayOf) });
   if (validated.ok) {
     return { ok: true, draft: validated.value };
   }
-  const lastChangeIndex = Math.max(changes.length - 1, 0);
   return {
     ok: false,
     problems: withoutRepeats(
       validated.problems.map(({ path, rule }) => ({
-        index: blamedChangeIndex(days, path, rule, lastDayAddIndex, lastChangeIndex),
+        index: blamedChangeIndex(days, path, rule, lastDayAddIndex),
         rule,
       })),
     ),

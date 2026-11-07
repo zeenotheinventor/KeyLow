@@ -487,6 +487,84 @@ describe("applyRoutineChanges", () => {
     });
   });
 
+  describe("which change a broken rule is blamed on", () => {
+    it("should blame the change that added the bad exercise, not a later good one to the same day", () => {
+      const problems = problemsOf(routine(), [
+        add({ sets: 99 }),
+        add({ exerciseId: ROW, position: 0 }),
+      ]);
+
+      expect(problems).toStrictEqual([{ index: 0, rule: "target_sets_invalid" }]);
+    });
+
+    it("should blame the change that last edited the exercise, even when a later one edits another in the day", () => {
+      const problems = problemsOf(routine(), [
+        setTargets({ sets: 99 }),
+        setTargets({ exerciseId: FLY, sets: 5 }),
+      ]);
+
+      expect(problems).toStrictEqual([{ index: 0, rule: "target_sets_invalid" }]);
+    });
+
+    it("should blame the rename for a blank day name, not a later exercise added to the day", () => {
+      const problems = problemsOf(routine(), [updateDay({ name: "  " }), add()]);
+
+      expect(problems).toStrictEqual([{ index: 0, rule: "day_name_blank" }]);
+    });
+
+    it("should blame the change that added the exercise that made a day too long", () => {
+      const thirtyExercises = day({
+        exercises: Array.from({ length: 30 }, () => exercise()),
+      });
+
+      const problems = problemsOf({ name: "Push", days: [thirtyExercises] }, [
+        setTargets({ exerciseId: BENCH, sets: 4, position: 0 }),
+        add(),
+        setTargets({ exerciseId: BENCH, sets: 5, position: 0 }),
+      ]);
+
+      expect(problems).toStrictEqual([{ index: 1, rule: "exercises_too_many" }]);
+    });
+
+    it("should blame the later of the two changes that gave two days the same weekday", () => {
+      const problems = problemsOf(routine(), [
+        updateDay({ dayId: PULL_DAY, weekday: 4 }),
+        updateDay({ dayId: PULL_DAY, weekday: 0 }),
+      ]);
+
+      expect(problems).toStrictEqual([{ index: 1, rule: "weekday_repeated" }]);
+    });
+
+    it("should say plainly that no change caused a rule the routine already broke", () => {
+      const alreadyBroken: RoutineDraft = {
+        name: "Push Pull",
+        days: [
+          day({ exercises: [exercise({ target_sets: 0 })] }),
+          day({
+            id: PULL_DAY,
+            weekday: 2,
+            name: "Pull",
+            exercises: [exercise({ exercise_id: ROW })],
+          }),
+        ],
+      };
+
+      const problems = problemsOf(alreadyBroken, [
+        { op: "remove", dayId: PULL_DAY, exerciseId: ROW },
+      ]);
+
+      expect(problems).toStrictEqual([{ index: null, rule: "target_sets_invalid" }]);
+    });
+
+    it("should give a null index, not a change that does not exist, for an empty list", () => {
+      const alreadyBroken: RoutineDraft = { name: "  ", days: [] };
+
+      expect(problemsOf(alreadyBroken, [])).toStrictEqual([
+        { index: null, rule: "routine_name_blank" },
+      ]);
+    });
+  });
+
   describe("all or nothing", () => {
     it("should return every problem and no draft when any change is refused", () => {
       const result = applyRoutineChanges(routine(), [
