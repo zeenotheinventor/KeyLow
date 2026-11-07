@@ -53,11 +53,28 @@ describe("repoError", () => {
     );
   });
 
-  it("should keep a long message to one short line", () => {
-    const error = repoError("mark the day", { code: "", message: `<html>\n${"x".repeat(500)}` });
+  it("should not name a message that is not one of the two known sentences", () => {
+    const secrets = [
+      "<html><body>502 Bad Gateway for /rest/v1/day_logs?user_id=eq.9</body></html>",
+      "TypeError: fetch failed for http://127.0.0.1:54321/rest/v1/day_logs",
+      `TypeError: ${"x".repeat(200)}`,
+      `${GATEWAY_MESSAGE} at /rest/v1/day_logs`,
+      "Failing row contains (Porridge oats, 380)",
+    ];
 
-    expect(error.message).not.toContain("\n");
-    expect(error.message.length).toBeLessThan(250);
+    for (const message of secrets) {
+      expect(repoError("mark the day", { code: "", message }).message).toBe(
+        "Could not mark the day (no code)",
+      );
+    }
+  });
+
+  it("should name a failed fetch", () => {
+    for (const message of ["TypeError: fetch failed", "AbortError: The operation was aborted"]) {
+      expect(repoError("mark the day", { code: "", message }).message).toBe(
+        `Could not mark the day (${message})`,
+      );
+    }
   });
 });
 
@@ -72,6 +89,24 @@ describe("a write that Kong answers with a 502", () => {
 
     await expect(setDayComplete(createTestClient(), "2026-11-07", true)).rejects.toThrow(
       new Error(`Could not mark the day (${GATEWAY_MESSAGE})`),
+    );
+  });
+});
+
+describe("a write that a gateway answers with a page that is not JSON", () => {
+  it("should name no code and none of the page", async () => {
+    server.use(
+      http.patch(`${REST_URL}/day_logs`, ({ request }) => postgrestRows(request, [])),
+      http.post(`${REST_URL}/day_logs`, () =>
+        HttpResponse.text("<html><body>502 Bad Gateway /rest/v1/day_logs</body></html>", {
+          status: 502,
+          headers: { "Content-Type": "text/html" },
+        }),
+      ),
+    );
+
+    await expect(setDayComplete(createTestClient(), "2026-11-07", true)).rejects.toThrow(
+      new Error("Could not mark the day (no code)"),
     );
   });
 });

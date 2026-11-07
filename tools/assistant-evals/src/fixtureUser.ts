@@ -3,7 +3,8 @@ import { buildRecipeIngredient } from "@keylow/core/recipes";
 import { buildManualWeighIn } from "@keylow/core/weight";
 import { createClient } from "@supabase/supabase-js";
 
-import { retryTransportFailure } from "./retryTransportFailure.ts";
+import { repoError } from "../../../packages/api-client/src/repos/repoError.ts";
+import { retryOnStaleConnection } from "../../../packages/db/test/support/retryOnStaleConnection.ts";
 import {
   DIARY_DAY_COUNT,
   FIXTURE_FOODS,
@@ -40,8 +41,12 @@ export type FixtureUser = Readonly<{
   remove: () => Promise<void>;
 }>;
 
-// Sessions are never persisted or refreshed, so each client is a self-contained caller.
-const stateless = { auth: { persistSession: false, autoRefreshToken: false } };
+// Sessions are never persisted or refreshed, so each client is a self-contained caller. Every request goes
+// through the retry for the local gateway's stale keepalive connection (KEY-796), as the db suites' clients do.
+const stateless = {
+  auth: { persistSession: false, autoRefreshToken: false },
+  global: { fetch: retryOnStaleConnection() },
+};
 
 const DEFAULT_NAME_PREFIX = "assistant-eval";
 const WEIGH_IN_TIME = "07:00";
@@ -86,17 +91,15 @@ async function saveRecipes(
 ): Promise<Map<string, RecipeDetail>> {
   const saved = new Map<string, RecipeDetail>();
   for (const { name, servings, yieldGrams, ingredients, steps } of fixtureRecipes) {
-    const detail = await retryTransportFailure(() =>
-      createRecipe(client, {
-        name,
-        servings,
-        yieldGrams,
-        ingredients: ingredients.map(({ food, grams }) =>
-          buildRecipeIngredient(present(foods.get(food), food), { quantity: grams, unit: "g" }),
-        ),
-        steps,
-      }),
-    );
+    const detail = await createRecipe(client, {
+      name,
+      servings,
+      yieldGrams,
+      ingredients: ingredients.map(({ food, grams }) =>
+        buildRecipeIngredient(present(foods.get(food), food), { quantity: grams, unit: "g" }),
+      ),
+      steps,
+    });
     saved.set(name, detail);
   }
   return saved;
@@ -136,31 +139,28 @@ async function writeDiaryDay(
           },
         },
   );
-  await retryTransportFailure(() => logEntries(client, items));
+  await logEntries(client, items);
 
   if (weightKg !== null) {
-    const weighIn = buildManualWeighIn({
-      weightKg,
-      measuredAt: new Date(atUtc(WEIGH_IN_TIME)),
-      note: null,
-      timeZone: "UTC",
-    });
-    await retryTransportFailure(() => addWeighIn(client, weighIn));
+    await addWeighIn(
+      client,
+      buildManualWeighIn({
+        weightKg,
+        measuredAt: new Date(atUtc(WEIGH_IN_TIME)),
+        note: null,
+        timeZone: "UTC",
+      }),
+    );
   }
   if (complete) {
-    await retryTransportFailure(() => setDayComplete(client, localDate, true));
+    await setDayComplete(client, localDate, true);
   }
   if (note !== null) {
     // No repo writes a day's note yet, so this is the one plain update, through the user's own client.
-    await retryTransportFailure(async () => {
-      const { error } = await client.from("day_logs").update({ note }).eq("local_date", localDate);
-      if (error) {
-        // The message stands in only when there is no code, as a gateway's answer has none (see `repoError`).
-        throw new Error(`Could not write the day note (${error.code || error.message})`, {
-          cause: { code: error.code },
-        });
-      }
-    });
+    const { error } = await client.from("day_logs").update({ note }).eq("local_date", localDate);
+    if (error) {
+      throw repoError("write the day note", error);
+    }
   }
 }
 
