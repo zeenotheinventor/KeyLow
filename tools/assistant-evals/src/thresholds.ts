@@ -9,6 +9,7 @@ export const EVAL_SET_NAMES = [
   "writes",
   "recipes",
   "trainingAdvice",
+  "trainingEdits",
 ] as const;
 
 export type EvalSetName = (typeof EVAL_SET_NAMES)[number];
@@ -28,4 +29,12 @@ export const THRESHOLD_PERCENT: Readonly<Record<EvalSetName, number>> = {
   recipes: 90,
   /** Training advice (KEY-895). Decides whether the assistant stays on its model (ruling 3 of KEY-881). */
   trainingAdvice: 90,
+  /** Training edits (KEY-911): every training write, its Undo and the questions around them. Zee accepted 90 on 2026-11-07. */
+  trainingEdits: 90,
 };
+
+/**
+ * The sets a run with no `--set` leaves out, because they would take it past the 300,000 token budget the other
+ * sets share. They run when named (`--set trainingEdits`), as the workflow's `sets` input does.
+ */
+export const OPT_IN_SET_NAMES: readonly EvalSetName[] = ["trainingEdits"];
