@@ -113,10 +113,10 @@ Deno.test(
   "the replies rule is positive, first in Replies, with the shapes to write instead",
   () => {
     for (const rule of [
-      `Replies\n${FIRST_PERSON_RULE} Start with the thing itself, as in "Your bench has stayed at 75 kg for 3 weeks."`,
+      `Replies\n${FIRST_PERSON_RULE} Start with the thing itself, as in "Your bench has stayed at the same weight."`,
       'For a limit, write "Ki-Lo can\'t change a routine yet, that is done in the app." or "Changing a routine is done in the app."',
       'For an offer, ask a question or name the next step, as in "Ask about shoulder press to see that one."',
-      "Answer only the question asked, and offer nothing else.",
+      "Answer only the question asked, and add no offer the person did not ask for, such as logging food.",
     ]) {
       assert(SYSTEM_PROMPT.includes(rule), `the system prompt does not hold: ${rule}`);
     }
