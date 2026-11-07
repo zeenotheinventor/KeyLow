@@ -43,6 +43,8 @@ export type {
 } from "./core/index.js";
 export {
   addCalendarDays,
+  ASSISTANT_CONSENT_VERSION,
+  isAssistantConsentCurrent,
   assistantCardSchema,
   mergeAssistantCards,
   withActionIds,

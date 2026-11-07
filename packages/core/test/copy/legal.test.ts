@@ -42,7 +42,16 @@ function allTextOf(document: LegalDocument): string {
 describe("the legal copy", () => {
   describe("the terms version", () => {
     it("should be the date the current terms took effect", () => {
-      expect(TERMS_VERSION).toBe("2026-10-26");
+      expect(TERMS_VERSION).toBe("2026-11-07");
+    });
+
+    it("should ask someone who accepted the terms of 26 October 2026 to accept again", () => {
+      expect(
+        needsTermsAcceptance(
+          { terms_accepted_at: "2026-10-27T09:30:00+00:00", terms_version: "2026-10-26" },
+          TERMS_VERSION,
+        ),
+      ).toBe(true);
     });
 
     it("should ask someone who accepted the terms of 23 October 2026 to accept again", () => {
@@ -66,7 +75,7 @@ describe("the legal copy", () => {
     it("should not ask someone who accepted the current terms again", () => {
       expect(
         needsTermsAcceptance(
-          { terms_accepted_at: "2026-10-26T09:30:00+00:00", terms_version: TERMS_VERSION },
+          { terms_accepted_at: "2026-11-07T09:30:00+00:00", terms_version: TERMS_VERSION },
           TERMS_VERSION,
         ),
       ).toBe(false);
@@ -144,7 +153,7 @@ describe("the legal copy", () => {
 
   describe.each(documents)("the %s", (_name, document) => {
     it("should carry the date it was last updated", () => {
-      expect(document.lastUpdated).toBe("Last updated 26 October 2026");
+      expect(document.lastUpdated).toBe("Last updated 7 November 2026");
     });
 
     it("should have sections that each have a heading and at least one paragraph", () => {
@@ -266,7 +275,7 @@ describe("the legal copy", () => {
         (section) => section.heading === "Why Ki-Lo uses it",
       );
       expect(why?.paragraphs).toContain(
-        "If you turn the assistant on, Ki-Lo also uses your messages and your information to answer your questions and to log, copy and change entries for you.",
+        "If you turn the assistant on, Ki-Lo also uses your messages and your information to answer your questions, including questions about your training, to log, copy and change your entries, to build and change your routines, and to change your training goals, custom exercises and workouts for you.",
       );
     });
 
