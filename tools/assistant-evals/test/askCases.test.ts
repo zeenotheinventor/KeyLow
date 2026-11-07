@@ -386,6 +386,30 @@ describe("the graders of the ask set", () => {
     });
   });
 
+  describe("noAmountsStated, what it prints", () => {
+    it("should show the stray amount with about 40 characters of its clause each side", async () => {
+      const answer =
+        "Nothing is logged for that day, so there is no way you ate 1,300 kcal of anything that I could name here.";
+
+      const outcome = await noAmountsStated([90])(contextOf([turnResult({ answer })]));
+
+      expect(outcome.passed).toBe(false);
+      expect(outcome.reason).toBe(
+        'the answer states an amount for a range with nothing in it: "so there is no way you ate [1,300 kcal] of anything that I could name here"',
+      );
+    });
+
+    it("should cut the context at the clause, so a long answer prints a short line", async () => {
+      const outcome = await noAmountsStated()(
+        contextOf([turnResult({ answer: "Fine. You had 250 g of oats. Then nothing." })]),
+      );
+
+      expect(outcome.reason).toBe(
+        'the answer states an amount for a range with nothing in it: "You had [250 g] of oats"',
+      );
+    });
+  });
+
   describe("noAmountsStated", () => {
     it("should pass for an answer that says nothing was logged", async () => {
       const turn = turnResult({ answer: "Nothing is logged for 1 September." });

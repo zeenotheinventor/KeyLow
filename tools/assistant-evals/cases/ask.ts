@@ -142,6 +142,9 @@ const AMOUNT_WITH_UNIT = /(\d[\d,.]*)\s*(?:kcal|calories|cals?|kg|kilos?|grams?|
 const CLAUSE_END = /[.!?;:\n]\s*|,\s+/;
 const ABOUT_THE_TARGET = /\b(?:left|remaining|remain|remains|target|goal|to go)\b/i;
 
+/** How much of the clause is shown each side of a stray amount. */
+const AMOUNT_CONTEXT_CHARACTERS = 40;
+
 /**
  * Passes when the last answer states no amount, except a figure of `allowed` (the targets) in a clause that also
  * says it is left, remaining, the target, the goal or to go. A range with nothing in it still has its targets,
@@ -150,18 +153,28 @@ const ABOUT_THE_TARGET = /\b(?:left|remaining|remain|remains|target|goal|to go)\
 export function noAmountsStated(allowed: readonly number[] = []): Grader {
   return (context) => {
     const clauses = (context.turns.at(-1)?.answer ?? "").split(CLAUSE_END);
-    const stray = clauses.some((clause) =>
-      [...clause.matchAll(AMOUNT_WITH_UNIT)].some(([, digits]) => {
-        const amount = Number((digits ?? "").replaceAll(",", ""));
+    for (const clause of clauses) {
+      for (const match of clause.matchAll(AMOUNT_WITH_UNIT)) {
+        const amount = Number((match[1] ?? "").replaceAll(",", ""));
         const isTargetFigure = allowed.some((value) => Math.abs(value - amount) < 0.05);
-        return !(isTargetFigure && ABOUT_THE_TARGET.test(clause));
-      }),
-    );
-    return Promise.resolve(
-      stray
-        ? fail("the answer states an amount for a range with nothing in it")
-        : pass("the answer states no amount but the targets"),
-    );
+        if (!(isTargetFigure && ABOUT_THE_TARGET.test(clause))) {
+          // The amount with a little of its clause round it, as the first person check shows its match. The
+          // synthetic eval user's answer holds no one's data.
+          const start = match.index;
+          const before = clause.slice(Math.max(0, start - AMOUNT_CONTEXT_CHARACTERS), start);
+          const after = clause.slice(
+            start + match[0].length,
+            start + match[0].length + AMOUNT_CONTEXT_CHARACTERS,
+          );
+          return Promise.resolve(
+            fail(
+              `the answer states an amount for a range with nothing in it: "${before}[${match[0]}]${after}"`,
+            ),
+          );
+        }
+      }
+    }
+    return Promise.resolve(pass("the answer states no amount but the targets"));
   };
 }
 
