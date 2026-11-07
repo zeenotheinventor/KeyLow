@@ -96,6 +96,16 @@ Deno.test("search_exercises asks for 5 exercises when the model gives no limit",
   assert(calls.some((call) => call.method === "limit" && call.args[0] === 5));
 });
 
+Deno.test(
+  "search_exercises treats a null limit as no limit, because the model sends null",
+  async () => {
+    const exercises = Array.from({ length: 8 }, (_, index) => exerciseRow(index + 1));
+    const { result } = await search({ tables: { exercises } }, { ...nothingToFilter, limit: null });
+
+    assertEquals(listOf(result, "exercises").length, 5);
+  },
+);
+
 Deno.test("search_exercises passes a limit of 1 to 10 on", async () => {
   const exercises = Array.from({ length: 8 }, (_, index) => exerciseRow(index + 1));
   const { result } = await search({ tables: { exercises } }, { ...nothingToFilter, limit: 7 });
