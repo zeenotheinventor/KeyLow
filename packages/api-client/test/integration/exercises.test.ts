@@ -4,7 +4,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { present } from "./support/training";
 import { createTestUser, deleteCreatedTestUsers } from "./support/users";
 import { ExerciseRuleError } from "../../src/errors";
-import { getExercise, searchExercises } from "../../src/repos/exercises";
+import { getExercise, readExercisesById, searchExercises } from "../../src/repos/exercises";
 import { archiveExercise, saveExercise } from "../../src/repos/exerciseWrites";
 import { startSession } from "../../src/repos/sessionWrites";
 import { addSet } from "../../src/repos/setWrites";
@@ -313,5 +313,33 @@ describe("the snapshot of a logged set when its exercise is edited", () => {
       ),
     );
     expect(JSON.stringify(await storedSnapshot(owner, second.id))).not.toBe(JSON.stringify(before));
+  });
+});
+
+describe("readExercisesById", () => {
+  it("should read a library exercise and the caller's own, and leave out an archived one and another user's", async () => {
+    const owner = await createTestUser("key919");
+    const stranger = await createTestUser("key919");
+    const own = await saveExercise(owner.client, { draft: draftOf(uniqueName("own")) });
+    const archived = await saveExercise(owner.client, { draft: draftOf(uniqueName("archived")) });
+    const strangersExercise = await saveExercise(stranger.client, {
+      draft: draftOf(uniqueName("private")),
+    });
+    await archiveExercise(owner.client, archived.id);
+
+    const ids = [globalExerciseId, own.id, archived.id, strangersExercise.id];
+    const ownerSees = await readExercisesById(owner.client, ids);
+    const strangerSees = await readExercisesById(stranger.client, ids);
+
+    expect(ownerSees.map(({ id }) => id).sort()).toEqual([globalExerciseId, own.id].sort());
+    expect(strangerSees.map(({ id }) => id).sort()).toEqual(
+      [globalExerciseId, strangersExercise.id].sort(),
+    );
+    expect(ownerSees.find(({ id }) => id === own.id)).toStrictEqual({
+      id: own.id,
+      name: own.name,
+      equipment: "cable",
+      mechanic: "isolation",
+    });
   });
 });

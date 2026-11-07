@@ -1,3 +1,4 @@
+import { exerciseTargetFor } from "../goalPresets";
 import { MUSCLE_IDS } from "../muscles";
 import { estimateSessionMinutes } from "../sessionTime";
 
@@ -100,10 +101,13 @@ export const pickExercises = (
     }
 
     const { exercise, primary, credit } = next.best;
-    const target = params.presets.exerciseTargets[goals.goal][exercise.mechanic];
+    const target = exerciseTargetFor(
+      { goal: goals.goal, experience: goals.experience, mechanic: exercise.mechanic },
+      params.presets,
+    );
     picked.push({
       exercise_id: exercise.id,
-      sets: setsPerExercise,
+      sets: target.sets,
       rep_min: target.repMin,
       rep_max: target.repMax,
       target_rir: target.targetRir,
