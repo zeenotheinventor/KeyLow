@@ -334,6 +334,11 @@ describe("ASSISTANT_CARD_WORDS", () => {
     { name: "undoLabel", board: "assistant-card · logged", word: "Undo" },
     { name: "cannotUndoLabel", board: "assistant-card · undo-unavailable", word: "Can't undo" },
     { name: "undoneTitle", board: "assistant-card · undone", word: "Undone" },
+    {
+      name: "waitUndoLabel",
+      board: "assistant-card · undo-unavailable-training",
+      word: "Can't undo yet",
+    },
   ] as const)("should word $name as $board prints it", ({ name, word }) => {
     expect(ASSISTANT_CARD_WORDS[name]).toBe(word);
   });
@@ -346,6 +351,7 @@ describe("ASSISTANT_CARD_WORDS", () => {
       "notMatchedLabel",
       "undoLabel",
       "undoneTitle",
+      "waitUndoLabel",
     ]);
   });
 });

@@ -18,6 +18,11 @@ describe("assistantNoticeSchema", () => {
     expect(assistantNoticeSchema.safeParse({ code: "busy" }).success).toBe(false);
   });
 
+  // A change refused for a workout is a plain reply and Ask again, never a notice, so a phone on an older update never sees this code.
+  it("should reject workout_in_progress, which the board draws as a reply", () => {
+    expect(assistantNoticeSchema.safeParse({ code: "workout_in_progress" }).success).toBe(false);
+  });
+
   it("should reject a day limit without the instant it resets at", () => {
     expect(assistantNoticeSchema.safeParse({ code: "day_limit" }).success).toBe(false);
   });

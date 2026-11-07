@@ -139,6 +139,7 @@ describe("describeAssistantCard, an undone card", () => {
       title: "Undone",
       subtitle: "Removed 2 eggs and toast from 08:10",
       rows: [],
+      days: [],
       total: null,
       note: null,
       link: null,

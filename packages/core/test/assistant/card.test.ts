@@ -49,6 +49,16 @@ const cardKinds = [
   "recipe_archived",
   "food_created",
   "targets_changed",
+  "routine_updated",
+  "routine_active",
+  "routine_archived",
+  "routine_created",
+  "goals_updated",
+  "exercise_created",
+  "exercise_updated",
+  "exercise_archived",
+  "set_updated",
+  "workout_deleted",
 ];
 const undoStates = ["available", "undone", "unavailable"];
 

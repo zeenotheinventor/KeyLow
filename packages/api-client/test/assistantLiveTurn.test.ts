@@ -24,10 +24,31 @@ describe("applyAssistantEvent", () => {
       confirm: null,
       answerMeta: null,
       status: null,
+      link: null,
+      askAgain: false,
       notice: null,
       stopped: false,
       outcome: null,
     });
+  });
+
+  it("should keep a link that arrives on its own", () => {
+    const link = {
+      label: "Open in routine editor",
+      target: { screen: "routine_editor", routineId: "00000000-0000-4000-8000-0000000000e2" },
+    } as const;
+
+    expect(applyAll([{ type: "link", link }]).link).toEqual(link);
+  });
+
+  it("should offer Ask again when the event arrives", () => {
+    expect(applyAll([{ type: "ask_again" }]).askAgain).toBe(true);
+  });
+
+  it("should clear the step when a link or Ask again arrives", () => {
+    const thinking = { type: "status", code: "thinking" } as const;
+
+    expect(applyAll([thinking, { type: "ask_again" }]).status).toBeNull();
   });
 
   it("should take the turn and conversation ids from the turn event", () => {

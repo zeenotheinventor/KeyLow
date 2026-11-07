@@ -39,6 +39,16 @@ export const ASSISTANT_WRITE_TOOL_CARD_KINDS = {
   archive_recipe: "recipe_archived",
   create_custom_food: "food_created",
   update_targets: "targets_changed",
+  edit_routine: "routine_updated",
+  set_active_routine: "routine_active",
+  archive_routine: "routine_archived",
+  create_routine: "routine_created",
+  update_training_goals: "goals_updated",
+  // The tool adds an exercise or renames one, and this is the kind of its plain words. The card says which.
+  save_custom_exercise: "exercise_created",
+  archive_custom_exercise: "exercise_archived",
+  update_past_set: "set_updated",
+  delete_workout: "workout_deleted",
 } as const satisfies Record<string, AssistantCardKind>;
 
 export type AssistantWriteTool = keyof typeof ASSISTANT_WRITE_TOOL_CARD_KINDS;
@@ -276,6 +286,16 @@ const plainTitles: Record<AssistantCardKind, (count: number) => string> = {
   recipe_archived: (count) => (count === 1 ? "Archived a recipe" : `Archived ${count} recipes`),
   food_created: describeFoodsCount,
   targets_changed: () => "Changed your targets",
+  routine_updated: () => "Updated a routine",
+  routine_active: () => "Changed your active routine",
+  routine_archived: () => "Archived a routine",
+  routine_created: () => "Built a routine",
+  goals_updated: () => "Updated your training goals",
+  exercise_created: () => "Added an exercise",
+  exercise_updated: () => "Updated an exercise",
+  exercise_archived: () => "Archived an exercise",
+  set_updated: () => "Changed a set",
+  workout_deleted: () => "Deleted a workout",
 };
 
 /** The title and detail of one row of "What the assistant changed". */
@@ -323,6 +343,8 @@ function plainMerge(cards: readonly AssistantCard[]): AssistantCard {
     title: plainTitles[first.kind](actionIds.length),
     sub: null,
     rows: cards.flatMap((card) => card.rows),
+    days: null,
+    changeDetail: null,
     totalText: null,
     note: null,
     link: null,

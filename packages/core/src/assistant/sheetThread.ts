@@ -12,7 +12,7 @@ import {
   describeLogsAt,
 } from "../copy/assistantSheet";
 
-import type { AssistantCard } from "./card";
+import type { AssistantCard, AssistantCardLink } from "./card";
 import type { AssistantOpenedFrom } from "./describeInLog";
 import type { AssistantStatus } from "./events";
 import type { AssistantNotice } from "./notice";
@@ -53,6 +53,10 @@ export type AssistantSheetLiveTurn = {
     cancelLabel: string;
     tone: "danger" | "primary";
   } | null;
+  /** A link on its own that the turn sent, drawn under its words. */
+  link?: AssistantCardLink | null | undefined;
+  /** Whether the turn sent the Ask again quick reply. It is offered once the turn has ended. */
+  askAgain?: boolean | undefined;
   stopped: boolean;
   notice: AssistantNotice | null;
   /** How the turn ended, null while it is still going or when it was stopped. */
@@ -81,6 +85,17 @@ export type AssistantSheetEntry =
       kind: "quickReplies";
       key: string;
       options: string[];
+    }
+  | {
+      /** A link on its own, a line that opens what the answer is about (`assistant-card · routine-updated`, Removing a day). */
+      kind: "link";
+      key: string;
+      link: AssistantCardLink;
+    }
+  | {
+      /** The turn offers Ask again. It is drawn as the quick reply at the end of the thread, as for an answer that was cut short, and has no entry of its own. */
+      kind: "askAgain";
+      key: string;
     }
   | {
       /** The two buttons under a confirmation: yes first, then the cancel. Each is sent as your message. */
@@ -119,11 +134,11 @@ export type AssistantSheetThread = {
   entries: AssistantSheetEntry[];
   /** Your last message, which Try again and Ask again send again. Null before the first one. */
   lastMessage: string | null;
-  /** Whether the thread ends in an answer that was cut short, which offers the Ask again quick reply. */
+  /** Whether the thread ends in an answer that was cut short, or a turn that asked for it, which offers the Ask again quick reply. */
   canAskAgain: boolean;
   /** The words in the empty field while a clarifying question waits for its answer ("Or say it your way"), else null. */
   fieldHint: string | null;
-  /** Whether the sheet is to be at full height, which a recipe import card needs so its ingredient list shows. */
+  /** Whether the sheet is to be at full height, which a recipe import card needs so its ingredient list shows, and so does a routine just built, so its days can open. */
   needsFullHeight: boolean;
 };
 
@@ -165,6 +180,18 @@ const answerLinesOf = (
 /** A recipe made from a link: its lines say which food each matched, which a recipe made from typed ingredients has none of. */
 const isRecipeImportCard = (card: AssistantCard): boolean =>
   card.kind === "recipe_created" && card.rows.some((row) => row.match !== null);
+
+// A routine that was just built, whose days need the room to open (`assistant-card · routine-created`): the
+// thread's last card only, because an earlier one has been read already.
+function endsWithBuiltRoutine(entries: readonly AssistantSheetEntry[]): boolean {
+  for (let position = entries.length - 1; position >= 0; position -= 1) {
+    const entry = entries[position];
+    if (entry?.kind === "card") {
+      return entry.card.kind === "routine_created";
+    }
+  }
+  return false;
+}
 
 // Whether the paragraphs of a reply end with the paragraphs of a question: the question of a confirmation is
 // the text of the reply that asked it, and the live reply joins every step's words, so words can come first.
@@ -293,6 +320,14 @@ function storedEntries(items: readonly AssistantThreadItem[], isAllAnswered = fa
           entries.push({ kind: "notice", key: item.id, notice: item.notice });
         }
         break;
+      case "link":
+        entries.push({ kind: "link", key: item.id, link: item.link });
+        break;
+      case "ask_again":
+        if (!item.answered && !isAllAnswered) {
+          entries.push({ kind: "askAgain", key: item.id });
+        }
+        break;
     }
   }
   return entries;
@@ -353,8 +388,15 @@ function sentEntries(
   if (live.confirm !== null) {
     entries.push(...confirmEntries("sent:confirm", live.confirm, false, entries.at(-1)));
   }
+  if (live.link !== undefined && live.link !== null) {
+    entries.push({ kind: "link", key: "sent:link", link: live.link });
+  }
   if (live.notice !== null && isDescribable(live.notice)) {
     entries.push({ kind: "notice", key: "sent:notice", notice: live.notice });
+  }
+  // A press while the turn is still streaming would be refused, so the chip waits for the end.
+  if (live.askAgain === true && !isStreaming) {
+    entries.push({ kind: "askAgain", key: "sent:askAgain" });
   }
   return entries;
 }
@@ -420,7 +462,8 @@ export function isSentTurnStored(
         item.kind === "notice" ||
         item.kind === "clarify" ||
         item.kind === "confirm" ||
-        (item.kind === "card" && !hasWords),
+        item.kind === "ask_again" ||
+        ((item.kind === "card" || item.kind === "link") && !hasWords),
     );
 }
 
@@ -469,11 +512,13 @@ export function buildAssistantSheetThread({
   return {
     entries,
     lastMessage: lastMessageOf(entries),
-    canAskAgain: last?.kind === "assistant" && last.isStopped && !last.isStreaming,
+    canAskAgain:
+      (last?.kind === "assistant" && last.isStopped && !last.isStreaming) ||
+      entries.some((entry) => entry.kind === "askAgain"),
     fieldHint: fieldHintOf(items, isSentShown, live),
-    needsFullHeight: entries.some(
-      (entry) => entry.kind === "card" && isRecipeImportCard(entry.card),
-    ),
+    needsFullHeight:
+      entries.some((entry) => entry.kind === "card" && isRecipeImportCard(entry.card)) ||
+      endsWithBuiltRoutine(entries),
   };
 }
 

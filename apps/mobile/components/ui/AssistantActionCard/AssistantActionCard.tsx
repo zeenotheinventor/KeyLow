@@ -5,6 +5,7 @@ import { Badge } from "../Badge";
 import { Icon } from "../Icon";
 import { PressableSurface } from "../PressableSurface";
 import { Text } from "../Text";
+import { AssistantLinkRow } from "./AssistantLinkRow";
 import { RoutineDayRow } from "./RoutineDayRow";
 
 import type {
@@ -80,18 +81,7 @@ export function AssistantActionCard({
           </Text>
         </View>
       )}
-      {link === undefined ? null : (
-        <PressableSurface
-          className="min-h-touch-target flex-row items-center gap-2 border-t border-border px-3"
-          label={link.label}
-          onPress={link.onPress}
-        >
-          <Text className="flex-1" tone="accent-ink" variant="body-strong">
-            {link.label}
-          </Text>
-          <Icon name="ChevronRight" size="sm" tone="accent-ink" />
-        </PressableSurface>
-      )}
+      {link === undefined ? null : <AssistantLinkRow label={link.label} onPress={link.onPress} />}
     </View>
   );
 }

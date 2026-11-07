@@ -258,5 +258,7 @@ export const ASSISTANT_CARD_WORDS = {
   estimateLabel: "Estimate",
   undoLabel: "Undo",
   cannotUndoLabel: "Can't undo",
+  /** Plain words in place of Undo on a training card while a workout is in progress (`assistant-card · undo-unavailable-training`, During a workout). */
+  waitUndoLabel: "Can't undo yet",
   undoneTitle: "Undone",
 } as const;

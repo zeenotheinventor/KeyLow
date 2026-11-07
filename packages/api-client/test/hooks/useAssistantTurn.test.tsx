@@ -169,6 +169,8 @@ describe("useAssistantTurn, what each board shows", () => {
       clarify: null,
       confirm: null,
       answerMeta: null,
+      link: null,
+      askAgain: false,
       status: null,
       notice: null,
       stopped: false,
@@ -746,6 +748,7 @@ describe("useAssistantTurn, what the end of a turn refreshes", () => {
       keys.assistant.changes,
       keys.assistant.status,
       keys.diary.all,
+      keys.training.activeRoutine,
     );
 
     await sendAndSettle(rendered);
@@ -754,6 +757,7 @@ describe("useAssistantTurn, what the end of a turn refreshes", () => {
     expect(isInvalidated(keys.assistant.changes)).toBe(true);
     expect(isInvalidated(keys.assistant.status)).toBe(true);
     expect(isInvalidated(keys.diary.all)).toBe(true);
+    expect(isInvalidated(keys.training.activeRoutine)).toBe(true);
   });
 
   it("should read everything again when the person stops before the card arrives", async () => {
