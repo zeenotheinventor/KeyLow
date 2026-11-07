@@ -237,6 +237,18 @@ Deno.test("an unclear exercise is asked about, with exercise names as quick repl
   }
 });
 
+Deno.test(
+  "a named food whose close matches differ only by variety is logged, not asked about",
+  () => {
+    for (const rule of [
+      "A named food is not unclear when the close matches from search_foods differ only by a variety or detail the person did not mention, such as long grain or basmati rice. Log the closest one and do not ask which. Different foods, or an unclear amount, still need the question.",
+      "Never guess a food.",
+    ]) {
+      assert(SYSTEM_PROMPT.includes(rule), `the system prompt does not hold: ${rule}`);
+    }
+  },
+);
+
 Deno.test("a read that answers invalid_input is fixed once, any other error stops the turn", () => {
   for (const rule of [
     "When a read answers invalid_input, fix the field it names once. For any other error, say in one short sentence that the step did not work and stop.",
