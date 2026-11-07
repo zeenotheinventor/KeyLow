@@ -113,7 +113,7 @@ export const updatePastSetTool: WriteToolDefinition<UpdatePastSetInput> = {
   name: "update_past_set",
   description:
     "Changes one set of a finished workout, with Undo. Take the set_id from get_workouts with a session_id, " +
-    "never from memory, and call once for each set. Give the load in the user's own unit, exactly as they " +
+    "never from memory, and call once for each set, at most ten writes in a turn, so say so when more sets are asked for. Give the load in the user's own unit, exactly as they " +
     "said it, and never convert it. Set what you are not changing to null. Giving rir clears rpe and giving " +
     "rpe clears rir. This cannot remove a load or an effort. It cannot change a workout in progress, and " +
     "then the answer is workout_in_progress. A set that is not the user's or was deleted is reported as not found.",
@@ -158,11 +158,14 @@ export const updatePastSetTool: WriteToolDefinition<UpdatePastSetInput> = {
       )
         .flatMap((exercise) => exercise.rows)
         .find((row) => row.set?.id === set.id)?.setNumber ?? 1;
+    // Only the columns that differ from the read, so an edit made in the app since is not written over.
+    const current = columnsOf(set);
     const patch: SetPatch = {
-      set_type: next.set_type,
-      reps: next.reps,
-      ...(loadKg === undefined ? {} : { load_kg: loadKg }),
-      ...(input.rir === null && input.rpe === null ? {} : { rir: next.rir, rpe: next.rpe }),
+      ...(next.set_type === current.set_type ? {} : { set_type: next.set_type }),
+      ...(next.reps === current.reps ? {} : { reps: next.reps }),
+      ...(next.load_kg === current.load_kg ? {} : { load_kg: next.load_kg }),
+      ...(next.rir === current.rir ? {} : { rir: next.rir }),
+      ...(next.rpe === current.rpe ? {} : { rpe: next.rpe }),
     };
 
     // The write is last. Nothing below it may throw.

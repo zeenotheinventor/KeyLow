@@ -160,6 +160,34 @@ Deno.test("reps change on the set and nothing else, and the card is the board's"
   assertEquals(store.actions[0]?.targetTable, "workout_sets");
 });
 
+const patchesOf = (stub: ReturnType<typeof writeStub>) =>
+  stub.calls.flatMap((call) =>
+    call.table === "workout_sets" && call.method === "update" ? [call.patch] : [],
+  );
+
+Deno.test("only the columns that differ are written", async () => {
+  const { ctx, stub } = setContext();
+
+  await executeTool(ctx, "update_past_set", { set_id: setTwoId, ...keep, reps: 8, load: 100 });
+  await executeTool(ctx, "update_past_set", { set_id: setOneId, ...keep, rpe: 9 });
+
+  assertEquals(patchesOf(stub), [{ reps: 8 }, { rpe: 9, rir: null }]);
+});
+
+Deno.test("an edit made in the app between the read and the write is not overwritten", async () => {
+  const { ctx, stub } = setContext();
+  stub.beforeNextWriteTo("workout_sets", () => {
+    const row = rowOfSet(stub, setTwoId);
+    assert(row !== undefined);
+    row["reps"] = 9;
+    row["set_type"] = "drop";
+  });
+
+  await executeTool(ctx, "update_past_set", { set_id: setTwoId, ...keep, load: 105 });
+
+  assertObjectMatch(storedOf(stub, setTwoId), { load_kg: 105, reps: 9, set_type: "drop" });
+});
+
 Deno.test("a load in kilograms is stored to the gram", async () => {
   const { ctx, stub } = setContext();
 
