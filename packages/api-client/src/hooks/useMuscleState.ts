@@ -20,8 +20,8 @@ import type { MuscleId, MuscleState } from "@keylow/core/training";
  *
  * What is cached is rows. The sets are read from the day 15 days before today in the user's profile
  * time zone through today, and held under `keys.training.sets(startDay)`, a key of a day and never of
- * `now`, so it is the same all day and a cache restored on a phone is found again. Core's `muscleState`
- * runs in `select`, so the numbers are worked out at the `now` given, from whatever rows are cached,
+ * `now`, so it is the same all day and a cache restored on a phone is found again. Core's
+ * `currentMuscleState` runs in `select`, so the numbers are worked out at the `now` given, from whatever rows are cached,
  * online or not. The plan does not change a volume status (ADR 0005, Amendment 6), so the hook reads no
  * routine and no goal.
  *
