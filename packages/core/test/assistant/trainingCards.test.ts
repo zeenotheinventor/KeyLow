@@ -272,10 +272,9 @@ describe("undoOutcomeOfResults, keeping the reason", () => {
     expect(undoOutcomeOfResults([{ result: "undo_unavailable" }])).toBe("unavailable");
   });
 
-  it("should keep the reason of the first answer that was not undone", () => {
+  it("should keep the reason of the first answer that was not undone, when none was", () => {
     expect(
       undoOutcomeOfResults([
-        { result: "undone" },
         { result: "undo_unavailable", reason: "logged" },
         { result: "undo_unavailable", reason: "changed" },
       ]),

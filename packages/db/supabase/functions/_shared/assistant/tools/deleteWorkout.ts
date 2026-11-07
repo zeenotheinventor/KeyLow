@@ -12,6 +12,7 @@ import {
 } from "../../core.ts";
 import { deleteSession, getSession, restoreSession } from "../../repos.ts";
 import { notFound } from "./entryWrite.ts";
+import { sameInstant } from "./targetsWrite.ts";
 
 import type { SessionSet } from "../../repos.ts";
 import type {
@@ -143,8 +144,13 @@ export const deleteWorkoutTool: WriteToolDefinition<DeleteWorkoutInput> = {
     if (targetId === null || targetUpdatedAt === null) {
       return unavailable;
     }
+    // The two stamps come from two reads, so they are compared as the instant they name and not as text. What
+    // `restoreSession` is given stays the action's own string: the database matches it by instant too.
     const stored = await deletedAtOf(ctx, targetId);
-    if (stored === null || (stored.deletedAt !== null && stored.deletedAt !== targetUpdatedAt)) {
+    if (
+      stored === null ||
+      (stored.deletedAt !== null && !sameInstant(stored.deletedAt, targetUpdatedAt))
+    ) {
       return unavailable;
     }
     const live = stored.deletedAt === null ? await getSession(ctx.caller, targetId) : null;

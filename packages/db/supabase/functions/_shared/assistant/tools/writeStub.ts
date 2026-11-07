@@ -56,7 +56,9 @@ export function writeStub(
 
   // A table keeps its rows under the column that names their owner.
   const ownerColumnOf = (table: string) =>
-    table === "recipes" || table === "recipe_ingredients" ? "owner_id" : "user_id";
+    table === "recipes" || table === "recipe_ingredients" || table === "exercises"
+      ? "owner_id"
+      : "user_id";
 
   const visible = (table: string, row: Row) =>
     options.callerUserId === undefined ||
@@ -163,6 +165,20 @@ export function writeStub(
       } else if (operation === "update") {
         statement += 1;
         affected = rows.filter((row) => filters.every((filter) => filter(row)));
+        // The table check that keeps an archived routine from being active.
+        if (
+          table === "routines" &&
+          patch["is_archived"] === true &&
+          affected.some((row) => row["is_active"] === true)
+        ) {
+          return {
+            data: null,
+            error: {
+              code: "23514",
+              message: 'violates check constraint "routines_active_not_archived"',
+            },
+          };
+        }
         // A stamp the caller writes itself (a program's `updated_at`) wins over the one the database would give.
         affected.forEach((row) => Object.assign(row, { updated_at: stampOf(statement) }, patch));
       } else {

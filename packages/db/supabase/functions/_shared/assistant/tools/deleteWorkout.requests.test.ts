@@ -27,7 +27,7 @@ type Captured = {
 };
 
 // A finished Legs workout with one set, and a session row that says whether it is deleted.
-function capturingCaller(state: { deleted: boolean }) {
+function capturingCaller(state: { deleted: boolean }, storedStamp: string = deletedAt) {
   const requests: Captured[] = [];
   const squat = { id: exerciseId(7), name: "Barbell squat", equipment: "barbell" };
   const finished = sessionRow(1, {
@@ -46,7 +46,7 @@ function capturingCaller(state: { deleted: boolean }) {
     if (method === "GET" && path === "/rest/v1/workout_sessions") {
       const select = search.get("select") ?? "";
       if (select === "deleted_at") {
-        return json([{ deleted_at: state.deleted ? deletedAt : null }]);
+        return json([{ deleted_at: state.deleted ? storedStamp : null }]);
       }
       // The session read filters out a deleted session, as the database does.
       return json(search.get("deleted_at") === "is.null" && state.deleted ? [] : [finished]);
@@ -176,5 +176,64 @@ Deno.test(
       requests.some(({ rawSearch }) => rawSearch.includes("123Z")),
       false,
     );
+  },
+);
+
+Deno.test(
+  "the same instant in two formats is the same stamp, and the restore is given the action's own text",
+  async () => {
+    // The session says "+00:00" and the action holds "Z": one instant, two texts.
+    const actionStamp = "2026-11-07T10:00:01.123456Z";
+    const { ctx, requests } = capturingCaller({ deleted: true }, deletedAt);
+    const action: ActionRecord = {
+      id: "action-2",
+      userId: ctx.userId,
+      conversationId: null,
+      turnId: null,
+      turnSeq: 1,
+      tool: "delete_workout",
+      targetTable: "workout_sessions",
+      targetId: sessionId,
+      targetIds: null,
+      targetLocalDate: null,
+      targetUpdatedAt: actionStamp,
+      undoneAt: null,
+    };
+
+    const outcome = await deleteWorkoutTool.inverse?.(ctx, action);
+
+    assertEquals(outcome, "undone");
+    const [sessionPatch, setsPatch] = requests.filter(({ method }) => method === "PATCH");
+    assertEquals(sessionPatch?.search.get("deleted_at"), `eq.${actionStamp}`);
+    assertEquals(setsPatch?.search.get("deleted_at"), `eq.${actionStamp}`);
+  },
+);
+
+Deno.test(
+  "a different instant is not the same stamp, so Undo is unavailable and writes nothing",
+  async () => {
+    const { ctx, requests } = capturingCaller(
+      { deleted: true },
+      "2026-11-08T09:00:00.000000+00:00",
+    );
+    const action: ActionRecord = {
+      id: "action-3",
+      userId: ctx.userId,
+      conversationId: null,
+      turnId: null,
+      turnSeq: 1,
+      tool: "delete_workout",
+      targetTable: "workout_sessions",
+      targetId: sessionId,
+      targetIds: null,
+      targetLocalDate: null,
+      targetUpdatedAt: deletedAt,
+      undoneAt: null,
+    };
+
+    const outcome = await deleteWorkoutTool.inverse?.(ctx, action);
+
+    assertEquals(outcome, "unavailable");
+    assertEquals(requests.filter(({ method }) => method !== "GET").length, 0);
   },
 );

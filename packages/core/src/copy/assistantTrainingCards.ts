@@ -1,9 +1,12 @@
 import { describeLongDate } from "./assistantDayCards";
-import { describeSets, describeShortDate } from "./bodyMap";
+import { describeSets, describeShortDate, describeWeekdayName } from "./bodyMap";
 import { describeCount } from "./counts";
+import { EXPERIENCE_OPTIONS, GOAL_OPTIONS } from "./goals";
 import { describeRepRange } from "./routines";
 import { SET_PHRASES, writtenNumbers } from "./sessionWording";
+import { addCalendarDays } from "../dates/calendarDay";
 
+import type { ExperienceLevel, TrainingGoal } from "../training/enums";
 import type { LoadUnit } from "../training/loads";
 import type { SetValues } from "../training/setInput";
 
@@ -401,6 +404,91 @@ export const describeGoalAnswerPutBack = (name: string, previousValue: string): 
 
 /** "no focus", the focus as it was when it was empty, for the line under "Undone". */
 export const GOALS_NO_FOCUS_PUT_BACK = "no focus";
+
+/* ---- create_routine (KEY-920): assistant-card · routine-created ---- */
+
+/** Any Monday will do: a routine's weekdays are 0 (Monday) to 6 (Sunday), and the day helpers take a date. */
+const A_MONDAY = "2026-10-12";
+
+/** "Built routine Push Pull Legs, 3 days", or "1 day". */
+export const describeRoutineCreatedTitle = (name: string, dayCount: number): string =>
+  `Built routine ${name}, ${describeCount(dayCount, "day", "days")}`;
+
+/** "From your goal: look better, intermediate", in the words of the goal questions, in lower case. */
+export const describeRoutineCreatedSub = (
+  goal: TrainingGoal,
+  experience: ExperienceLevel,
+): string =>
+  `From your goal: ${GOAL_OPTIONS[goal].label.toLowerCase()}, ${EXPERIENCE_OPTIONS[experience].label.toLowerCase()}`;
+
+/** "Monday · Push", or "Push" for a day with no weekday. */
+export const describeBuiltDayName = (name: string, weekday: number | null): string =>
+  weekday === null
+    ? name
+    : `${describeWeekdayName(addCalendarDays(A_MONDAY, weekday))}${SEPARATOR}${name}`;
+
+/** "5 exercises · 15 sets · about 50 min". */
+export const describeBuiltDaySummary = (
+  exerciseCount: number,
+  setCount: number,
+  minutes: number,
+): string =>
+  [
+    describeCount(exerciseCount, "exercise", "exercises"),
+    describeSets(setCount),
+    `about ${minutes} min`,
+  ].join(SEPARATOR);
+
+/** "3 sets · 8 to 10 reps · RIR 2". A target RIR of none is left out, and equal reps are one number. */
+export const describeBuiltExerciseDetail = (target: {
+  sets: number;
+  repMin: number;
+  repMax: number;
+  targetRir: number | null;
+}): string =>
+  [
+    describeSets(target.sets),
+    `${describeRepRange(target.repMin, target.repMax)} reps`,
+    ...(target.targetRir === null ? [] : [`RIR ${target.targetRir}`]),
+  ].join(SEPARATOR);
+
+/** "The week: 45 sets · 3 days". */
+export const describeBuiltWeekTotal = (setsPerWeek: number, dayCount: number): string =>
+  `The week: ${describeSets(setsPerWeek)}${SEPARATOR}${describeCount(dayCount, "day", "days")}`;
+
+/** "3 days · 45 sets a week", the short fact the changes list shows. */
+export const describeRoutineCreatedChange = (dayCount: number, setsPerWeek: number): string =>
+  `${describeCount(dayCount, "day", "days")}${SEPARATOR}${describeSets(setsPerWeek)} a week`;
+
+/** The note under a built routine: it is made and kept, and not yet the one the person follows. */
+export const ROUTINE_CREATED_NOTE =
+  "This is not your active routine. Ask to make it active, or do it in Routines.";
+
+/** The line under "Undone" for a built routine. */
+export const describeRoutineCreatedUndone = (name: string): string =>
+  `Archived ${name}. You can restore it from Archived in Routines.`;
+
+// KEY-909: training rows in "What the assistant changed", and an Undo that put some of a card back.
+
+/** The detail of a routine, set or goals row once a press says it changed (`assistant-settings · changes-training`). */
+export const CHANGED_IN_THE_APP_SINCE = "changed in the app since";
+
+/** The same for an exercise, which has no screen to change it on. */
+export const CHANGED_SINCE = "changed since";
+
+/** NOT ON THE CANVAS: what an Undo of several sets did when it put some back, "Put back 2 of 3 sets". */
+export const describeSetsPartlyPutBack = (undone: number, total: number): string =>
+  `Put back ${undone} of ${total} sets`;
+
+/** NOT ON THE CANVAS: the same for any other card that groups several writes, "Undid 2 of 3 changes". */
+export const describeChangesPartlyUndone = (undone: number, total: number): string =>
+  `Undid ${undone} of ${total} changes`;
+
+/** NOT ON THE CANVAS: the note under a card whose Undo put some of it back, after the words above, when the rest changed. */
+export const PARTLY_UNDONE_NOTE = "The rest changed since, so Undo is off for them.";
+
+/** NOT ON THE CANVAS: the same when the refusal gave no reason, which says nothing about why. */
+export const PARTLY_UNDONE_UNKNOWN_NOTE = "The rest can't be undone.";
 
 // delete_workout (KEY-907), `assistant-card · workout-deleted` and `assistant · confirm-training`.
 

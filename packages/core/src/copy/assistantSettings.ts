@@ -1,4 +1,10 @@
 import { ASSISTANT_CARD_WORDS } from "./assistantNotices";
+import {
+  describePartialUndo,
+  reasonOfOutcome,
+  stateOfOutcome,
+} from "../assistant/cardPresentation";
+import { describeChangeSub, timeOfChangeSub } from "../assistant/changes";
 
 import type { AssistantCardUndoOutcome, AssistantChangeRow } from "../assistant";
 
@@ -51,7 +57,7 @@ export const ASSISTANT_CHANGES = {
   title: "What the assistant changed",
   back: "Back to Assistant",
   footer:
-    "Undo works while an item is as the assistant left it. Once you change it in the diary or the recipe editor, change it there.",
+    "Undo works while an item is as the assistant left it. Once you change it in the diary, the recipe editor or Train, change it there. Undo on training waits while a workout is in progress.",
   emptyTitle: "Nothing changed yet",
   emptyBody:
     "When the assistant logs, copies or changes something for you, it shows here with Undo.",
@@ -69,22 +75,66 @@ export type AssistantChangeRowLook = {
   trailing: AssistantChangeRowTrailing;
 };
 
+const CHANGED_REASONS: ReadonlySet<string> = new Set(["changed", "active", "logged", "used"]);
+
 /**
  * One row of the changes list as the board draws it. The title and sub line are as the server sent them. A
  * row sent with Undo available takes `outcome`, what a press of its Undo came to, until the list is read
  * again. A row that was sent as undone or as not undoable keeps its state.
+ *
+ * `workoutInProgress` is worked out in the app, never sent, and only a training row heeds it: its Undo
+ * waits as the card's does (`assistant-card · undo-unavailable-training`) and returns when the workout
+ * ends. A press refused for a workout that has ended since is let go the same way. A training row whose
+ * press says the item changed reads so on its sub line, which the list could not know before. A press that
+ * put some of a merged row back says how many, on any row.
  */
 export function describeAssistantChangeRow(
   row: AssistantChangeRow,
   outcome: AssistantCardUndoOutcome | null,
+  { workoutInProgress = false }: { workoutInProgress?: boolean } = {},
 ): AssistantChangeRowLook {
+  // A refusal for a workout holds only while the workout does.
+  const pressed =
+    reasonOfOutcome(outcome) === "workout_in_progress" && !workoutInProgress ? null : outcome;
+  const pressedReason = reasonOfOutcome(pressed);
+  const isOffered = row.state === "undo";
   const state =
-    row.state === "undo" && outcome !== null
-      ? outcome === "undone"
+    isOffered && pressed !== null
+      ? stateOfOutcome(pressed) === "undone"
         ? "undone"
         : "cant_undo"
       : row.state;
-  const words = { title: row.title, subtitle: row.sub ?? undefined };
+  const isWaiting =
+    row.training !== undefined &&
+    isOffered &&
+    ((state === "undo" && workoutInProgress) || pressedReason === "workout_in_progress");
+
+  const time = timeOfChangeSub(row.sub);
+  const pressedDetail =
+    !isOffered || pressed === null
+      ? null
+      : typeof pressed === "object" && pressed.state === "partial"
+        ? describePartialUndo(row.training?.kind ?? null, pressed)
+        : row.training !== undefined && pressedReason !== null && CHANGED_REASONS.has(pressedReason)
+          ? row.training.changedSinceDetail
+          : null;
+  const words = {
+    title: row.title,
+    subtitle:
+      pressedDetail === null
+        ? (row.sub ?? undefined)
+        : time === null
+          ? pressedDetail
+          : describeChangeSub(time, pressedDetail),
+  };
+
+  if (isWaiting) {
+    return {
+      ...words,
+      titleTone: "primary",
+      trailing: { kind: "label", label: ASSISTANT_CARD_WORDS.waitUndoLabel },
+    };
+  }
   switch (state) {
     case "undo":
       return {

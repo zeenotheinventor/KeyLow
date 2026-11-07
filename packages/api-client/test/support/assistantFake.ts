@@ -158,6 +158,8 @@ export type AssistantFakeState = {
   deleteQuery: string | null;
   /** The `order` and `limit` the conversation read was sent. */
   conversationRead: URLSearchParams | null;
+  /** The query of each request for the messages of some turns, which the changes list makes for its cards. */
+  turnMessageReads: URLSearchParams[];
 };
 
 export const createAssistantFakeState = (
@@ -177,6 +179,7 @@ export const createAssistantFakeState = (
   deletedAllConversations: 0,
   deleteQuery: null,
   conversationRead: null,
+  turnMessageReads: [],
   ...overrides,
 });
 
@@ -195,7 +198,19 @@ export function installAssistantFake(server: SetupServer, state: AssistantFakeSt
       return new HttpResponse(null, { status: 204 });
     }),
     http.get(`${REST_URL}/assistant_messages`, ({ request }) => {
-      const conversationId = new URL(request.url).searchParams.get("conversation_id");
+      const { searchParams } = new URL(request.url);
+      const turnFilter = searchParams.get("turn_id");
+      if (turnFilter !== null) {
+        state.turnMessageReads.push(searchParams);
+        const turnIds = turnFilter.replace(/^in\.\(|\)$/g, "").split(",");
+        return postgrestRows(
+          request,
+          state.messages
+            .filter((message) => turnIds.includes(message.turn_id) && message.display !== null)
+            .map(({ id, display }) => ({ id, display })),
+        );
+      }
+      const conversationId = searchParams.get("conversation_id");
       return postgrestRows(
         request,
         conversationId === `eq.${CONVERSATION_ID}` ? pageOf(request, state.messages) : [],

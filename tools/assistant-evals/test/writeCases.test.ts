@@ -54,11 +54,11 @@ function dayIn(message: string): string {
 }
 
 describe("the write set", () => {
-  it("should have 29 cases: 20 writes, 7 Undo, 1 never repeated and 1 yesterday's lunch", () => {
+  it("should have 30 cases: 20 writes, 1 routine build, 7 Undo, 1 never repeated and 1 yesterday's lunch", () => {
     const idsStarting = (prefix: string) => cases.filter(({ id }) => id.startsWith(prefix)).length;
 
-    expect(cases).toHaveLength(29);
-    expect(idsStarting("write-")).toBe(20);
+    expect(cases).toHaveLength(30);
+    expect(idsStarting("write-")).toBe(21);
     expect(idsStarting("undo-")).toBe(7);
     expect(idsStarting("never-repeated-")).toBe(1);
     expect(idsStarting("log-yesterdays-lunch-again")).toBe(1);
@@ -262,6 +262,7 @@ const CARD_OF_TOOL: Record<string, AssistantCard["kind"]> = {
   archive_recipe: "recipe_archived",
   create_custom_food: "food_created",
   update_targets: "targets_changed",
+  create_routine: "routine_created",
 };
 
 const cardOf = (kind: AssistantCard["kind"]): AssistantCard => ({
@@ -345,6 +346,15 @@ const recipeCall = (name: string) =>
     steps: [],
     source_url: null,
   });
+
+const builtFourDays = {
+  name: "Scratch four day",
+  days: ["Push", "Pull", "Legs", "Upper"].map((name, day) => ({
+    name,
+    weekday: [0, 1, 3, 4][day] ?? null,
+    exercise_ids: Array.from({ length: 6 }, (_, index) => `exercise-${day * 6 + index}`),
+  })),
+};
 
 const isRecordInput = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
@@ -485,6 +495,31 @@ const perfect: Record<string, () => Played> = {
       { day_logs: [{ local_date: day, is_complete: false }] },
     );
   },
+  "write-build-a-4-day-routine": () =>
+    play(
+      [
+        {
+          calls: [
+            readTool("get_training_goals", {}),
+            ...Array.from({ length: 24 }, (_, index) =>
+              readTool("search_exercises", { query: `exercise ${index}` }),
+            ),
+            writeTool("create_routine", builtFourDays),
+          ],
+          actions: [["create_routine", 1]],
+        },
+      ],
+      (turns) => ({
+        routines: [{ name: "Scratch four day", is_active: false, is_archived: false }],
+        assistant_turns: [
+          {
+            id: turns[0]?.turnId ?? "",
+            created_at: "2026-11-07T10:00:00.000Z",
+            finished_at: "2026-11-07T10:00:42.500Z",
+          },
+        ],
+      }),
+    ),
   "write-create-a-recipe": () =>
     play([{ calls: [recipeCall("Scratch oat bowl")], actions: [["create_recipe", 1]] }], {
       recipes: [{ name: "Scratch oat bowl", is_archived: false }],
@@ -1098,6 +1133,91 @@ describe("a write case, played wrong", () => {
         reason.includes(`copy_day was not called with yesterday's ${YESTERDAY_COUNT} entries`),
       ),
     ).toBe(true);
+  });
+
+  it("should fail a routine build that took longer than the deadline, and a build with a repeated exercise", async () => {
+    const slow = await failures("write-build-a-4-day-routine", (played) => ({
+      ...played,
+      rows: {
+        ...played.rows,
+        assistant_turns: [
+          {
+            id: played.turns[0]?.turnId ?? "",
+            created_at: "2026-11-07T10:00:00.000Z",
+            finished_at: "2026-11-07T10:01:41.000Z",
+          },
+        ],
+      },
+    }));
+    const repeated = await failures("write-build-a-4-day-routine", (played) => ({
+      ...played,
+      turns: [
+        turnResult({
+          ...played.turns[0],
+          toolCalls: [
+            writeTool("create_routine", {
+              ...builtFourDays,
+              days: builtFourDays.days.map((day) => ({
+                ...day,
+                exercise_ids: day.exercise_ids.map(() => "exercise-0"),
+              })),
+            }),
+          ],
+        }),
+      ],
+    }));
+
+    expect(slow.some((reason) => reason.includes("over the 100 s deadline"))).toBe(true);
+    expect(
+      repeated.some((reason) =>
+        reason.includes(
+          "create_routine was not called with 4 days of 6 exercises, at least 20 of them different",
+        ),
+      ),
+    ).toBe(true);
+  });
+
+  it("should pass a build that read the muscles first and repeated an exercise on two days", async () => {
+    const reasons = await failures("write-build-a-4-day-routine", (played) => {
+      const [turn] = played.turns;
+      return {
+        ...played,
+        turns: [
+          turnResult({
+            ...turn,
+            toolCalls: [
+              readTool("get_muscle_state", {}),
+              ...(turn?.toolCalls ?? []).slice(1, -1),
+              writeTool("create_routine", {
+                ...builtFourDays,
+                days: builtFourDays.days.map((day, dayIndex) => ({
+                  ...day,
+                  exercise_ids: day.exercise_ids.map((id, index) =>
+                    dayIndex === 3 && index === 0 ? "exercise-0" : id,
+                  ),
+                })),
+              }),
+            ],
+          }),
+        ],
+      };
+    });
+
+    expect(reasons).toEqual([]);
+  });
+
+  it("should fail a build that wrote anything but the routine", async () => {
+    const reasons = await failures("write-build-a-4-day-routine", (played) => ({
+      ...played,
+      turns: [
+        turnResult({
+          ...played.turns[0],
+          toolCalls: [...(played.turns[0]?.toolCalls ?? []), writeTool("log_entry", {})],
+        }),
+      ],
+    }));
+
+    expect(reasons.some((reason) => reason.includes("log_entry was called"))).toBe(true);
   });
 
   it("should fail a recipe made from the wrong ingredient amounts", async () => {

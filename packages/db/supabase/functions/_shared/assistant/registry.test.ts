@@ -104,6 +104,7 @@ Deno.test(
         ["get_training_goals", "read"],
         ["get_workouts", "read"],
         ["get_exercise_progress", "read"],
+        ["show_exercise_muscles", "read"],
         ["get_muscle_state", "read"],
         ["suggest_next_session", "read"],
         ["set_active_routine", "write"],
@@ -111,6 +112,7 @@ Deno.test(
         ["edit_routine", "write"],
         ["update_past_set", "write"],
         ["update_training_goals", "write"],
+        ["create_routine", "write"],
         ["delete_workout", "write"],
         ["ask_user", "read"],
       ],
@@ -200,6 +202,7 @@ Deno.test(
       "get_training_goals",
       "get_workouts",
       "get_exercise_progress",
+      "show_exercise_muscles",
     ]) {
       assertEquals(toolRegistry.get(name)?.strict, false, name);
     }
@@ -209,7 +212,7 @@ Deno.test(
 Deno.test(
   "the routine state writes opt out of strict mode, so they take nothing from the strict budget",
   () => {
-    for (const name of ["set_active_routine", "archive_routine"]) {
+    for (const name of ["set_active_routine", "archive_routine", "create_routine"]) {
       assertEquals(toolRegistry.get(name)?.strict, false, name);
     }
   },
