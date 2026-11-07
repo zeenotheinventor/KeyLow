@@ -114,7 +114,7 @@ Deno.test(
   () => {
     for (const rule of [
       `Replies\n${FIRST_PERSON_RULE} Start with the thing itself, as in "Your bench has stayed at the same weight."`,
-      'For a limit, write "Ki-Lo can\'t change a routine yet, that is done in the app." or "Changing a routine is done in the app."',
+      'For a limit, write "Starting a workout is done on the Train tab." For a search that finds nothing, write "No exercise called glorp curl is in the library."',
       'For an offer to look at something else, ask a question or name the next step, as in "Ask about shoulder press to see that one." A question about a clear change never stands in for the change.',
       "Answer only the question asked, and add no offer the person did not ask for, such as logging food.",
     ]) {
@@ -127,7 +127,7 @@ Deno.test(
 Deno.test("overworked and undertrained muscles come from get_muscle_state", () => {
   assert(
     SYSTEM_PROMPT.includes(
-      "volume and recovery, and anything overworked or undertrained, only from get_muscle_state",
+      "volume and recovery, and anything overworked or undertrained, only from get_muscle_state (the last 7 days, never called this week)",
     ),
   );
 });
@@ -200,8 +200,8 @@ Deno.test("training numbers follow the same rule as food numbers", () => {
 
 Deno.test("training advice comes from the three tools and never from the model", () => {
   for (const rule of [
-    "Training advice\nWhat to train next comes only from suggest_next_session, volume and recovery, and anything overworked or undertrained, only from get_muscle_state, and progress only from get_exercise_progress.",
-    "Never invent a weight, a set count, a rep range or a programme.",
+    "Training advice\nWhat to train next comes only from suggest_next_session, volume and recovery, and anything overworked or undertrained, only from get_muscle_state (the last 7 days, never called this week), and progress only from get_exercise_progress.",
+    "Never invent a weight, a set count or a rep range.",
     "When the tools have no number for the question, say so and give what they do have, such as the last performance and the trend.",
     "A suggestion can carry a marker such as first_visit (nothing logged yet, so nothing to suggest). Say what a marker means in plain words and never print its name.",
   ]) {
@@ -249,7 +249,7 @@ Deno.test(
   "naming another exercise is a suggestion only, and a workout is not a diary entry",
   () => {
     for (const rule of [
-      "Naming another exercise when the person asks for one is fine, as a suggestion only. Ki-Lo can't change a routine or a workout yet, so say so in one short sentence and say it is done in the app.",
+      "Naming another exercise when the person asks for one is fine, as a suggestion only, and a swap they ask for is made, with the same referral.",
       "A workout is not a diary entry, so no diary tool changes one.",
     ]) {
       assert(SYSTEM_PROMPT.includes(rule), `the system prompt does not hold: ${rule}`);
@@ -289,19 +289,76 @@ Deno.test("a read that answers invalid_input is fixed once, any other error stop
   assertEquals(SYSTEM_PROMPT.includes("When a tool answers with an error"), false);
 });
 
-Deno.test("the system prompt promises no training edit, which the changes part adds", () => {
-  for (const tool of [
-    "edit_routine",
-    "set_active_routine",
-    "archive_routine",
-    "create_routine",
-    "update_training_goals",
-    "save_custom_exercise",
-    "archive_custom_exercise",
-    "update_past_set",
-    "delete_workout",
+Deno.test("the prompt no longer says Ki-Lo cannot change a routine or a workout", () => {
+  assertEquals(SYSTEM_PROMPT.includes("can't change a routine"), false);
+  assertEquals(SYSTEM_PROMPT.includes("Changing a routine is done in the app"), false);
+});
+
+Deno.test("a training change reads first, and ids are never invented", () => {
+  assert(
+    SYSTEM_PROMPT.includes(
+      "A training change reads first too: exercise ids come from search_exercises or get_routines, set ids from get_workouts, and none is invented. Make the smallest change asked for.",
+    ),
+  );
+});
+
+Deno.test("a big training change is asked about first", () => {
+  assert(
+    SYSTEM_PROMPT.includes(
+      "deletes a workout, archives a recipe, a routine or a custom exercise, removes more than one exercise from a routine or changes targets, write one short question",
+    ),
+  );
+});
+
+Deno.test("a workout in progress refuses every training write with the same words", () => {
+  for (const rule of [
+    "A workout in progress\nA training change that answers workout_in_progress changed nothing.",
+    'add that questions are still fine, and "Finish it or discard it on the Train tab, then ask again." Offer advice and try no other tool.',
+    "When the turn also made a change, name the one not made and say it can be asked for again after the workout.",
   ]) {
-    assertEquals(SYSTEM_PROMPT.includes(tool), false, tool);
+    assert(SYSTEM_PROMPT.includes(rule), `the system prompt does not hold: ${rule}`);
+  }
+});
+
+Deno.test("building a routine reads the goal, searches once, and takes no numbers", () => {
+  for (const rule of [
+    "Building a routine\nRead get_training_goals first and ask for a goal if there is none. Use its days a week unless the person said otherwise.",
+    "Make every search_exercises call in one response and name only exercises a search returned.",
+    "Ki-Lo sets the sets, reps and RIR, so create_routine takes none, and numbers the person said go through edit_routine afterwards.",
+    "Say the routine is not active and offer to make it so, calling set_active_routine only when asked.",
+    "A routine for an injury or rehab is a rehab plan, so decline and suggest a doctor or a physio.",
+  ]) {
+    assert(SYSTEM_PROMPT.includes(rule), `the system prompt does not hold: ${rule}`);
+  }
+});
+
+Deno.test("what the tools cannot do names where it is done, and teaches nothing false", () => {
+  for (const rule of [
+    "say so in one short sentence and name where in the app it is done",
+    "To remove a routine day, call edit_routine with remove_day and say a day is removed only in the routine editor, because that unlinks its logged sessions.",
+    "A custom exercise comes back only with Undo under What the assistant changed in More, Assistant.",
+  ]) {
+    assert(SYSTEM_PROMPT.includes(rule), `the system prompt does not hold: ${rule}`);
+  }
+  // A RIR cannot be cleared through edit_routine, so the prompt never offers it.
+  assertEquals(/clear\w* (?:a|the) RIR/i.test(SYSTEM_PROMPT), false);
+});
+
+Deno.test("the new sections stay away from the exercise muscles section of KEY-924", () => {
+  const between = SYSTEM_PROMPT.slice(
+    SYSTEM_PROMPT.indexOf("One question, never a guess"),
+    SYSTEM_PROMPT.indexOf("Days and times"),
+  );
+  assertEquals(between.includes("Building a routine"), false);
+  assertEquals(between.includes("A workout in progress"), false);
+});
+
+Deno.test("every training tool the prompt names exists in the registry", () => {
+  const listed = new Set(toolRegistry.list.map((tool) => tool.name));
+  // create_routine is added by KEY-920, which merges before this change, so it is not checked here.
+  for (const name of ["edit_routine", "set_active_routine", "search_exercises", "get_routines"]) {
+    assert(SYSTEM_PROMPT.includes(name), name);
+    assert(listed.has(name), name);
   }
 });
 

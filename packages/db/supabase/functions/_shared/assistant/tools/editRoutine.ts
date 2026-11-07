@@ -715,9 +715,7 @@ export const editRoutineTool: WriteToolDefinition<EditRoutineInput> = {
     "buttons name only the removals. When they say yes call again with the same input " +
     "and that confirmation_id. When they say no, do not call again. Removing one exercise, adding, " +
     "swapping, changing numbers and changing days ask nothing. If the answer is workout_in_progress " +
-    "nothing was changed: tell the user their workout is in progress so nothing in their training can " +
-    "change yet, that questions are still fine, and that they can finish or discard it on the Train tab " +
-    "and then ask again.",
+    "nothing was changed.",
   kind: "write",
   // Many nullable fields in a list of changes would use more than the strict budget of a request.
   strict: false,

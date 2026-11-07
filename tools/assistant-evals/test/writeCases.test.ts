@@ -11,6 +11,7 @@ import { lunchOfDay } from "../fixtures/describeExtras.ts";
 import { diaryDateOf } from "../fixtures/diary.ts";
 import { dayEntries } from "../fixtures/diaryTotals.ts";
 import { THRESHOLD_PERCENT } from "../src/thresholds.ts";
+import { LIVE_WORKOUT } from "../src/trainingWorld.ts";
 
 import type { EvalCase, UndoOutcome } from "../src/case.ts";
 import type { ToolCall, TurnResult, TurnStatus } from "../src/types.ts";
@@ -54,10 +55,10 @@ function dayIn(message: string): string {
 }
 
 describe("the write set", () => {
-  it("should have 29 cases: 20 writes, 7 Undo, 1 never repeated and 1 yesterday's lunch", () => {
+  it("should have 31 cases: 20 writes, 7 Undo, 1 never repeated, 1 yesterday's lunch and 2 during a workout", () => {
     const idsStarting = (prefix: string) => cases.filter(({ id }) => id.startsWith(prefix)).length;
 
-    expect(cases).toHaveLength(29);
+    expect(cases).toHaveLength(31);
     expect(idsStarting("write-")).toBe(20);
     expect(idsStarting("undo-")).toBe(7);
     expect(idsStarting("never-repeated-")).toBe(1);
@@ -353,7 +354,44 @@ const dayOf = (id: string): string =>
   dayIn(caseOf(id).messages.find((message) => /\d{4}/.test(message)) ?? "");
 
 // Each is what the turns and the rows would be if the assistant did the case right.
+// The workout the "during a workout" cases start: open, with the sets `LIVE_WORKOUT` says.
+const liveWorkoutRows: Rows = {
+  workout_sessions: [{ id: "live-session", ended_at: null, deleted_at: null }],
+  workout_sets: Array.from({ length: LIVE_WORKOUT.sets }, () => ({
+    session_id: "live-session",
+    deleted_at: null,
+  })),
+};
+
 const perfect: Record<string, () => Played> = {
+  "workout-log-eggs-and-swap-an-exercise": () =>
+    play(
+      [
+        {
+          calls: [
+            logPortion("12-940", 2, { time: "08:00" }),
+            readTool("get_routines"),
+            writeTool("edit_routine", { routine_id: "r", changes: [] }),
+          ],
+          actions: [["log_entry", 1]],
+          answer: "The eggs are logged. The swap to incline waits until the workout is finished.",
+        },
+      ],
+      {
+        ...liveWorkoutRows,
+        food_log_entries: entriesRows(dayOf("workout-log-eggs-and-swap-an-exercise"), 1),
+      },
+    ),
+  "workout-change-the-training-days": () =>
+    play(
+      [
+        {
+          calls: [writeTool("update_training_goals", { days_per_week: 5 })],
+          answer: "A workout is in progress, so nothing can change until it ends.",
+        },
+      ],
+      liveWorkoutRows,
+    ),
   "write-update-entry-count": () =>
     play(
       [
