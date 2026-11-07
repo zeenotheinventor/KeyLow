@@ -160,6 +160,13 @@ export type {
   RoutineDraftPath,
   RoutineDraftRule,
 } from "./routineDraft";
+export { applyRoutineChanges, routineFingerprint } from "./routineChanges";
+export type {
+  RoutineChange,
+  RoutineChangeProblem,
+  RoutineChangeRule,
+  RoutineChangesResult,
+} from "./routineChanges";
 export { routinePayload } from "./routinePayload";
 export type { RoutinePayload } from "./routinePayload";
 export { scaffoldSession, scaffoldSessionWithAdditions } from "./scaffoldSession";
