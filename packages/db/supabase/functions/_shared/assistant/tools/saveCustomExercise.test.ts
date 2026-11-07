@@ -5,6 +5,7 @@ import {
   assertObjectMatch,
   assertStringIncludes,
 } from "@std/assert";
+import { z } from "zod";
 
 import { executeTool } from "../executor.ts";
 import { spyOnConsole } from "../testing.ts";
@@ -19,12 +20,15 @@ import {
   undoOf,
 } from "./customExerciseFixtures.ts";
 import { saveCustomExerciseTool } from "./saveCustomExercise.ts";
-import { payloadOf, stubCaller } from "./testing.ts";
+import { searchExercisesTool } from "./searchExercises.ts";
+import { listOf, payloadOf, stubCaller } from "./testing.ts";
 import { sessionRow } from "./trainingFixtures.ts";
 import { structuredOf } from "./writeFixtures.ts";
 
-const setup = (rows: Record<string, Record<string, unknown>[]> = {}) =>
-  exerciseContext([saveCustomExerciseTool], rows);
+const setup = (
+  rows: Record<string, Record<string, unknown>[]> = {},
+  rpc?: Parameters<typeof exerciseContext>[2],
+) => exerciseContext([saveCustomExerciseTool], rows, rpc);
 
 const nameOf = (stub: ReturnType<typeof setup>["stub"], id: string) =>
   stub.tables["exercises"]?.find((row) => row["id"] === id)?.["name"];
@@ -467,3 +471,175 @@ Deno.test("the tool opts out of strict mode and is a destructive-free write", ()
   assertEquals(saveCustomExerciseTool.annotations, { readOnlyHint: false, destructiveHint: false });
   assertEquals(saveCustomExerciseTool.targetTable, "exercises");
 });
+
+// The write is the database call alone. Nothing is read back, because a read that fails after the call
+// landed would throw, and the model would retry into a second exercise.
+Deno.test(
+  "an added exercise still gets its card and Undo when a read after the write would fail",
+  async () => {
+    const { ctx, stub, store } = setup();
+    stub.failNextReadFrom("exercises");
+
+    const added = await executeTool(ctx, "save_custom_exercise", add("Hanging leg raise"));
+    keepUndoOf(added, store);
+
+    assertObjectMatch(added, { status: "ok" });
+    assertObjectMatch(structuredOf(added), {
+      card: { kind: "exercise_created", undo: "available" },
+    });
+    assertEquals(typeof undoOf(added).fingerprint, "string");
+    assertEquals(
+      stub.calls.filter(({ table }) => table === "exercises"),
+      [],
+    );
+    assertEquals(
+      stub.tables["exercises"]?.filter((row) => row["name"] === "Hanging leg raise").length,
+      1,
+    );
+  },
+);
+
+Deno.test(
+  "an edit still gets its card and Undo when a read after the write would fail",
+  async () => {
+    const { ctx, stub, store } = setup();
+    // The read before the write answers. Any read after it fails.
+    stub.failNextReadFrom("exercises", 1);
+
+    const edited = await executeTool(ctx, "save_custom_exercise", rename);
+    keepUndoOf(edited, store);
+
+    assertObjectMatch(structuredOf(edited), {
+      card: { kind: "exercise_updated", undo: "available" },
+    });
+    assertEquals(nameOf(stub, String(cableCrunch["id"])), "Kneeling cable crunch");
+    // The one read of the exercise is the one before the write.
+    assertEquals(stub.calls.filter(({ table }) => table === "exercises").length, 1);
+  },
+);
+
+Deno.test("a database call that fails wrote nothing, so the answer is tool_failed", async () => {
+  const spy = spyOnConsole();
+  try {
+    const { ctx, store, stub, reported } = setup(
+      {},
+      {
+        save_exercise: () => ({
+          data: null,
+          error: { code: "XX000", message: "Hanging leg raise" },
+        }),
+      },
+    );
+
+    const result = await executeTool(ctx, "save_custom_exercise", add("Hanging leg raise"));
+
+    assertObjectMatch(result, { status: "error", code: "tool_failed" });
+    assertEquals(store.actions.length, 0);
+    assertEquals(stub.tables["exercises"]?.length, 3);
+    assertFalse(
+      JSON.stringify(reported.map(({ caught }) => String(caught))).includes("Hanging leg raise"),
+    );
+  } finally {
+    spy.restore();
+  }
+  assertEquals(spy.lines, []);
+});
+
+Deno.test("an answer with no id still returns the card, without an action to undo", async () => {
+  const { ctx, store } = setup({}, { save_exercise: () => ({ data: null, error: null }) });
+
+  const result = await executeTool(ctx, "save_custom_exercise", add("Hanging leg raise"));
+
+  assertObjectMatch(result, { status: "ok", actionId: null });
+  assertObjectMatch(structuredOf(result), {
+    card: { kind: "exercise_created", undo: "unavailable", undoneSub: null },
+  });
+  assertEquals(store.actions.length, 0);
+});
+
+// "Add obliques" to an exercise that has a secondary muscle: the model reads the map from search_exercises,
+// as the description tells it to, and sends it back with the one addition.
+Deno.test(
+  "a model that follows the description keeps the muscles it was not asked to change",
+  async () => {
+    const withMap = {
+      ...cableCrunch,
+      exercise_muscles: [
+        { muscle_id: "abs", role: "primary", weight: 1 },
+        { muscle_id: "lower_back", role: "secondary", weight: 0.5 },
+        { muscle_id: "calves", role: "stabiliser", weight: 0.2 },
+      ],
+    };
+    const { ctx, stub } = exerciseContext([searchExercisesTool, saveCustomExerciseTool], {
+      exercises: [withMap],
+    });
+    const searching = {
+      ...ctx,
+      caller: stubCaller({
+        tables: {
+          exercises: [withMap],
+          exercise_muscles: withMap.exercise_muscles.map((muscle) => ({
+            ...muscle,
+            exercise_id: withMap.id,
+          })),
+        },
+      }).caller,
+    };
+
+    const found = await executeTool(searching, "search_exercises", {
+      query: "cable",
+      equipment: null,
+      limit: 5,
+    });
+    const [own] = listOf(found, "exercises");
+    const shown = z
+      .array(z.object({ muscle_id: z.string(), role: z.string() }))
+      .parse(own?.["muscles"]);
+    const result = await executeTool(ctx, "save_custom_exercise", {
+      id: own?.["id"],
+      name: null,
+      equipment: null,
+      muscles: [...shown, obliques],
+    });
+
+    assertEquals(result.status, "ok");
+    const stored = z
+      .array(z.object({ muscle_id: z.string(), role: z.string() }))
+      .parse(
+        stub.tables["exercises"]?.find((row) => row["id"] === withMap.id)?.["exercise_muscles"],
+      );
+    assertEquals(stored.map(({ muscle_id, role }) => `${muscle_id} ${role}`).sort(), [
+      "abs primary",
+      "calves stabiliser",
+      "lower_back secondary",
+      "obliques secondary",
+    ]);
+    assertStringIncludes(saveCustomExerciseTool.description, "search_exercises");
+  },
+);
+
+// An accepted suggestion keeps its own copy of the exercise, with its details and its snapshot, and the
+// check does not read it. So undoing the creation goes through, and the accepted day is left as it was.
+Deno.test(
+  "an accepted suggestion that names the exercise does not stop its creation being undone",
+  async () => {
+    const { ctx, store, stub } = setup();
+    const added = await executeTool(ctx, "save_custom_exercise", add("Hanging leg raise"));
+    keepUndoOf(added, store);
+    assert(added.status === "ok" && added.actionId !== null);
+    const exerciseId = targetIdOf(store.actions[0]?.targetId);
+    const accepted = {
+      id: "a1",
+      user_id: "00000000-0000-4000-8000-0000000000a1",
+      exercises: [
+        { exercise_id: exerciseId, exercise: { id: exerciseId, name: "Hanging leg raise" } },
+      ],
+    };
+    stub.tables["accepted_suggestions"] = [structuredClone(accepted)];
+
+    const result = await undoAction(ctx, added.actionId);
+
+    assertEquals(result, { status: "undone", actionId: added.actionId });
+    assertEquals(stub.tables["accepted_suggestions"], [accepted]);
+  },
+);

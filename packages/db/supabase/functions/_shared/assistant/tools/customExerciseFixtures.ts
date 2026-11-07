@@ -73,10 +73,11 @@ export const saveExerciseRpc: RpcHandler = (args, tables) => {
 export function exerciseContext(
   tools: readonly ToolDefinition[],
   rows: Record<string, Record<string, unknown>[]> = {},
+  rpc: Record<string, RpcHandler> = { save_exercise: saveExerciseRpc },
 ) {
   const stub = writeStub(
     { exercises: [cableCrunch, theirsCrunch, libraryPress], ...rows },
-    { callerUserId: userId, rpc: { save_exercise: saveExerciseRpc } },
+    { callerUserId: userId, rpc },
   );
   const made = createFakeContext(tools, {
     store: createFakeActionStore(),

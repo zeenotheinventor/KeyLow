@@ -7,9 +7,10 @@ import { z } from "zod";
 import {
   buildExerciseCreatedCard,
   buildExerciseUpdatedCard,
+  customExercisePayload,
   validateCustomExerciseDraft,
 } from "../../core.ts";
-import { archiveExercise, saveExercise } from "../../repos.ts";
+import { archiveExercise } from "../../repos.ts";
 import { notFound } from "./entryWrite.ts";
 import {
   equipmentSchema,
@@ -21,8 +22,10 @@ import {
   readExerciseState,
 } from "./exerciseWrite.ts";
 
-import type { CustomExerciseDraft } from "../../core.ts";
+import type { Database } from "../../core/database.types.ts";
+import type { CleanCustomExercise, CustomExerciseDraft } from "../../core.ts";
 import type { ExerciseState } from "./exerciseWrite.ts";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { InverseOutcome, ToolContext, WriteRunOutput, WriteToolDefinition } from "../tool.ts";
 
 const muscleInput = z.strictObject({
@@ -65,22 +68,66 @@ const saveCustomExerciseInput = z.strictObject({
 
 type SaveCustomExerciseInput = z.infer<typeof saveCustomExerciseInput>;
 
-// The fields a refused draft names, and the rules that broke, in the order of the form. A rule is a stable
-// code and never carries a value.
-function refusedDraft(draft: CustomExerciseDraft): WriteRunOutput | null {
+type Checked = { clean: CleanCustomExercise } | { refused: WriteRunOutput };
+
+// The draft as core cleans it, or the fields it names and the rules that broke, in the order of the form. A
+// rule is a stable code and never carries a value.
+function checkedDraft(draft: CustomExerciseDraft): Checked {
   const checked = validateCustomExerciseDraft(draft);
   if (checked.ok) {
-    return null;
+    return { clean: checked.value };
   }
   return {
-    data: {
-      error: "invalid_input",
-      fields: [...new Set(checked.problems.map(({ field }) => field))],
-      rules: checked.problems.map(({ rule }) => rule),
+    refused: {
+      data: {
+        error: "invalid_input",
+        fields: [...new Set(checked.problems.map(({ field }) => field))],
+        rules: checked.problems.map(({ rule }) => rule),
+      },
+      target: null,
     },
-    target: null,
   };
 }
+
+const saveExerciseFunction = "save_exercise" satisfies keyof Database["public"]["Functions"];
+type SaveExerciseArguments = Database["public"]["Functions"]["save_exercise"]["Args"];
+
+// Saves the exercise with the database call itself. The repo helper calls it and then reads the exercise
+// back, and a throw from either looks the same. A throw after the call landed would lose the card and Undo
+// of a write, and the model would retry into a second exercise. So an error here means nothing was written,
+// and what the write left is worked out from the input, with the id the call returned. The generated types
+// take a plain string for the id, which is null to add, so the client is untyped and the arguments are tied
+// to the generated ones with `satisfies`.
+async function saveThroughDatabase(
+  ctx: ToolContext,
+  id: string | null,
+  clean: CleanCustomExercise,
+): Promise<{ id: string | null; after: Saved }> {
+  const { p_exercise, p_muscles } = customExercisePayload(clean);
+  const untypedCaller: SupabaseClient = ctx.caller;
+  const { data, error } = await untypedCaller.rpc(saveExerciseFunction, {
+    p_exercise_id: id,
+    p_exercise,
+    p_muscles: [...p_muscles],
+  } satisfies Omit<SaveExerciseArguments, "p_exercise_id"> & { p_exercise_id: string | null });
+  if (error) {
+    // The code only. The message can quote the exercise.
+    throw new Error(`Could not save the exercise (${error.code || "no code"})`);
+  }
+  return {
+    id: typeof data === "string" ? data : id,
+    after: {
+      name: p_exercise.name,
+      equipment: p_exercise.equipment,
+      mechanic: p_exercise.mechanic,
+      muscles: [...p_muscles],
+      isArchived: false,
+    },
+  };
+}
+
+// What a save left, as it is stored.
+type Saved = Pick<ExerciseState, "name" | "equipment" | "mechanic" | "muscles" | "isArchived">;
 
 const draftOf = (state: ExerciseState) => ({
   name: state.name,
@@ -119,9 +166,10 @@ export const saveCustomExerciseTool: WriteToolDefinition<SaveCustomExerciseInput
   description:
     "Adds one of the user's own exercises, or changes one of them, with Undo. To add one pass id as null " +
     "with the name, the equipment and every muscle with its role, at least one primary. To change one pass " +
-    "its id from search_exercises and only the fields that change, null for the rest. Muscles replaces the " +
-    "whole map, and search_exercises shows only the main muscles, so pass muscles only when the user asked " +
-    "to change them, with every muscle the exercise should work. An exercise of the library cannot be " +
+    "its id from search_exercises and only the fields that change, null for the rest. Muscles replaces " +
+    "the whole map, so to change them take the muscles search_exercises gives for that exercise, with " +
+    "their roles, and send all of them with only what the user asked added, removed or changed. Never " +
+    "drop a muscle the user did not mention. An exercise of the library cannot be " +
     "changed, and the call answers global_exercise: tell the user, and offer to add their own. Sets the " +
     "user already logged keep what they were. An archived exercise is answered as not found, and there is " +
     "no tool to bring one back: point the user to Undo in More, Assistant, What the assistant changed. A " +
@@ -146,25 +194,22 @@ export const saveCustomExerciseTool: WriteToolDefinition<SaveCustomExerciseInput
       return globalExercise;
     }
     const draft = editedDraft(input, state);
-    const refused = refusedDraft(draft);
-    if (refused !== null) {
-      return refused;
+    const checked = checkedDraft(draft);
+    if ("refused" in checked) {
+      return checked.refused;
     }
     if (sameDraft(draft, draftOf(state))) {
       return { data: { id: input.id, changed: false }, target: null };
     }
-    const saved = await saveExercise(ctx.caller, { id: input.id, draft });
+    const { after } = await saveThroughDatabase(ctx, input.id, checked.clean);
     // The write has landed. Nothing below may throw, or the model would save the change a second time.
     return {
-      data: { id: saved.id, name: saved.name, changed: true },
+      data: { id: input.id, name: after.name, changed: true },
       structured: {
-        card: buildExerciseUpdatedCard({ before: state, after: saved }),
-        undo: {
-          previous: draftOf(state),
-          fingerprint: exerciseFingerprint({ ...saved, isArchived: false }),
-        },
+        card: buildExerciseUpdatedCard({ before: state, after }),
+        undo: { previous: draftOf(state), fingerprint: exerciseFingerprint(after) },
       },
-      target: { targetId: saved.id },
+      target: { targetId: input.id },
     };
   },
   // Puts back what an edit changed, or archives what an addition made. Both refuse once the exercise
@@ -191,7 +236,11 @@ export const saveCustomExerciseTool: WriteToolDefinition<SaveCustomExerciseInput
     if (!previous.success) {
       return "unavailable";
     }
-    await saveExercise(ctx.caller, { id: targetId, draft: previous.data });
+    const checked = checkedDraft(previous.data);
+    if ("refused" in checked) {
+      return "unavailable";
+    }
+    await saveThroughDatabase(ctx, targetId, checked.clean);
     return "undone";
   },
 };
@@ -208,19 +257,24 @@ async function add(
   if (name === null || equipment === null || muscles === null) {
     return { data: { error: "invalid_input", fields: missing }, target: null };
   }
-  const draft = { name, equipment, muscles };
-  const refused = refusedDraft(draft);
-  if (refused !== null) {
-    return refused;
+  const checked = checkedDraft({ name, equipment, muscles });
+  if ("refused" in checked) {
+    return checked.refused;
   }
-  const saved = await saveExercise(ctx.caller, { draft });
+  const { id, after } = await saveThroughDatabase(ctx, null, checked.clean);
   // The write has landed. Nothing below may throw, or the model would add the exercise a second time.
+  const card = buildExerciseCreatedCard(after);
+  if (id === null) {
+    // The database answered with no id, which it never does. Without one there is no action to undo.
+    return {
+      data: { name: after.name, changed: true },
+      structured: { card: { ...card, undo: "unavailable", undoneSub: null } },
+      target: null,
+    };
+  }
   return {
-    data: { id: saved.id, name: saved.name, changed: true },
-    structured: {
-      card: buildExerciseCreatedCard(saved),
-      undo: { previous: null, fingerprint: exerciseFingerprint({ ...saved, isArchived: false }) },
-    },
-    target: { targetId: saved.id },
+    data: { id, name: after.name, changed: true },
+    structured: { card, undo: { previous: null, fingerprint: exerciseFingerprint(after) } },
+    target: { targetId: id },
   };
 }

@@ -50,6 +50,7 @@ export type {
   TrendSet,
   ValidTargets,
   CardExercise,
+  CleanCustomExercise,
   CustomExerciseDraft,
 } from "./core/index.js";
 export {
@@ -197,5 +198,6 @@ export {
   confirmArchiveExerciseButtons,
   confirmArchiveExerciseQuestion,
   MUSCLE_ROLES,
+  customExercisePayload,
   validateCustomExerciseDraft,
 } from "./core/index.js";

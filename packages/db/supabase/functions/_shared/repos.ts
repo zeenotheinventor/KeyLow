@@ -79,5 +79,4 @@ export {
   updateRecipe,
   archiveExercise,
   restoreExercise,
-  saveExercise,
 } from "./repos/index.js";
