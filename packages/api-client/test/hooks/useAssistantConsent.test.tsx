@@ -1,4 +1,4 @@
-import { TERMS_VERSION } from "@keylow/core";
+import { ASSISTANT_CONSENT_VERSION } from "@keylow/core";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
@@ -80,6 +80,25 @@ describe("useAssistantConsent", () => {
 
   it("should read the assistant as on, with when and which version, once consented", async () => {
     stored = {
+      assistant_consent_at: "2026-11-08T09:00:00+00:00",
+      assistant_consent_version: ASSISTANT_CONSENT_VERSION,
+    };
+    const { wrapper } = await renderSignedIn();
+
+    const { result } = renderHook(() => useAssistantConsent(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+    expect(result.current.data).toEqual({
+      isOn: true,
+      consentedAt: "2026-11-08T09:00:00+00:00",
+      version: ASSISTANT_CONSENT_VERSION,
+    });
+  });
+
+  it("should read the assistant as off, keeping the version, when it was turned on under older words", async () => {
+    stored = {
       assistant_consent_at: "2026-11-03T09:00:00+00:00",
       assistant_consent_version: "2026-10-26",
     };
@@ -91,7 +110,7 @@ describe("useAssistantConsent", () => {
       expect(result.current.isSuccess).toBe(true);
     });
     expect(result.current.data).toEqual({
-      isOn: true,
+      isOn: false,
       consentedAt: "2026-11-03T09:00:00+00:00",
       version: "2026-10-26",
     });
@@ -129,7 +148,7 @@ describe("useAssistantConsent", () => {
 });
 
 describe("useSetAssistantConsent", () => {
-  it("should write the time now and the current terms version to the signed in user's own row when turning on", async () => {
+  it("should write the time now and the current assistant consent version to the signed in user's own row when turning on", async () => {
     const before = Date.now();
     const { wrapper } = await renderSignedIn();
     const { result } = renderHook(() => useSetAssistantConsent(), { wrapper });
@@ -144,7 +163,7 @@ describe("useSetAssistantConsent", () => {
       "assistant_consent_at",
       "assistant_consent_version",
     ]);
-    expect(stored.assistant_consent_version).toBe(TERMS_VERSION);
+    expect(stored.assistant_consent_version).toBe(ASSISTANT_CONSENT_VERSION);
     expect(Date.parse(stored.assistant_consent_at ?? "")).toBeGreaterThanOrEqual(before);
     expect(Date.parse(stored.assistant_consent_at ?? "")).toBeLessThanOrEqual(Date.now());
   });

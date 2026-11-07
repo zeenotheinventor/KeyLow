@@ -1,6 +1,7 @@
 export * from "./card";
 export * from "./events";
 export * from "./notice";
+export * from "./consentVersion";
 export * from "./citations";
 export * from "./writeToolWords";
 export * from "./thread";

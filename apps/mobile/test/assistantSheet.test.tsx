@@ -201,7 +201,7 @@ describe("the assistant sheet", () => {
         "Copy yesterday to today",
         "Add a recipe from a link",
         "Add a recipe from a link",
-        "The assistant's answers are not medical advice. Speak to a doctor before you make big changes to your diet or your weight.",
+        "The assistant's answers are not medical advice. Speak to a doctor before you make big changes to your diet, your weight or your training.",
         "Message",
         "Send",
       ]);

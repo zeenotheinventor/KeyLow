@@ -1,15 +1,13 @@
 // How the assistant suites call the served `assistant` function and read what it streams back. The gates
 // suite and the turn suite both use it, so the two cannot drift apart on what a consented user is or on how
 // a stream is read.
-import { parseAssistantEvent } from "@keylow/core";
+import { ASSISTANT_CONSENT_VERSION, parseAssistantEvent } from "@keylow/core";
 import { inject } from "vitest";
 
 import { createTestUser } from "./users";
 
 import type { TestUser } from "./users";
 import type { AssistantStreamEvent } from "@keylow/core";
-
-const consentVersion = "integration-test";
 
 export type AssistantResponse = { status: number; headers: Headers; text: string };
 
@@ -69,7 +67,7 @@ export async function newAssistantUser(
       .from("profiles")
       .update({
         assistant_consent_at: new Date().toISOString(),
-        assistant_consent_version: consentVersion,
+        assistant_consent_version: ASSISTANT_CONSENT_VERSION,
       })
       .eq("id", user.id);
     if (error) {

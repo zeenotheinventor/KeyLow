@@ -1,5 +1,6 @@
 import { assertEquals, assertRejects } from "@std/assert";
 
+import { ASSISTANT_CONSENT_VERSION } from "../_shared/core.ts";
 import { checkAccess, createAccessStore } from "./gates.ts";
 
 import type { Database } from "../_shared/core/database.types.ts";
@@ -292,11 +293,61 @@ function scriptedClient(script: Record<string, Answer[]>) {
   return { store: createAccessStore(client), calls };
 }
 
+const consentRow = (version: string | null) =>
+  ok({ assistant_consent_at: "2026-11-08T00:00:00Z", assistant_consent_version: version });
+
+Deno.test("the current consent version is consent, and so is a later one", async () => {
+  for (const version of [ASSISTANT_CONSENT_VERSION, "2027-01-01"]) {
+    const { store } = scriptedClient({ "from:profiles": [consentRow(version)] });
+
+    assertEquals(await store.hasConsented(userId), true, version);
+  }
+});
+
+Deno.test("an older consent version, no version and no profile row are not consent", async () => {
+  for (const answer of [consentRow("2026-10-26"), consentRow(null), ok(null)]) {
+    const { store } = scriptedClient({ "from:profiles": [answer] });
+
+    assertEquals(await store.hasConsented(userId), false);
+  }
+});
+
+Deno.test("an older consent version answers consent_needed ahead of the entitlement", async () => {
+  await withEnvironment(running, async () => {
+    const { store } = scriptedClient({ "from:profiles": [consentRow("2026-10-26")] });
+    const notEntitled = { ...store, hasEntitlement: () => Promise.resolve(false) };
+
+    assertEquals(
+      await checkAccess({ userId, store: notEntitled, now: midnightEve }, { spend: true }),
+      {
+        code: "consent_needed",
+      },
+    );
+  });
+});
+
+Deno.test("the current consent version passes the consent gate", async () => {
+  await withEnvironment(running, async () => {
+    const { store } = scriptedClient({ "from:profiles": [consentRow(ASSISTANT_CONSENT_VERSION)] });
+    const notEntitled = { ...store, hasEntitlement: () => Promise.resolve(false) };
+
+    assertEquals(
+      await checkAccess({ userId, store: notEntitled, now: midnightEve }, { spend: true }),
+      {
+        code: "plus",
+      },
+    );
+  });
+});
+
 const retriedReads = [
   {
     name: "hasConsented",
     query: "from:profiles",
-    answer: ok({ assistant_consent_at: "2026-10-01T00:00:00Z" }),
+    answer: ok({
+      assistant_consent_at: "2026-11-08T00:00:00Z",
+      assistant_consent_version: ASSISTANT_CONSENT_VERSION,
+    }),
     read: (store: AccessStore) => store.hasConsented(userId),
     result: true,
   },
