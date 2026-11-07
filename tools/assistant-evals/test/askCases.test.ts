@@ -10,6 +10,7 @@ import {
   citationIsOneOf,
   estimateLabelIs,
   noAmountsStated,
+  DIARY_READ_TOOLS,
   noFirstPerson,
   onlyReadTools,
   READ_TOOLS,
@@ -318,6 +319,15 @@ describe("the graders of the ask set", () => {
 
       expect((await onlyReadTools()(contextOf([turn]))).passed).toBe(false);
     });
+
+    it.each(["search_exercises", "get_routines", "get_training_goals"])(
+      "should fail on %s, which is the wrong tool for a question about the diary",
+      async (tool) => {
+        const turn = turnResult({ toolCalls: [readTool("get_day"), readTool(tool)] });
+
+        expect((await onlyReadTools()(contextOf([turn]))).passed).toBe(false);
+      },
+    );
   });
 
   describe("answerNames", () => {
@@ -543,5 +553,20 @@ describe("READ_TOOLS", () => {
 
   it("should include ask_user, which a question may end on", () => {
     expect(READ_TOOLS.has("ask_user")).toBe(true);
+  });
+
+  it("should hold the training reads, which the diary cases do not accept", () => {
+    for (const tool of ["search_exercises", "get_routines", "get_training_goals"]) {
+      expect(READ_TOOLS.has(tool)).toBe(true);
+      expect(DIARY_READ_TOOLS.has(tool)).toBe(false);
+    }
+  });
+
+  it("should give the diary cases every read tool but the training reads", () => {
+    const trainingReads = ["search_exercises", "get_routines", "get_training_goals"];
+
+    expect([...DIARY_READ_TOOLS].sort()).toEqual(
+      [...READ_TOOLS].filter((tool) => !trainingReads.includes(tool)).sort(),
+    );
   });
 });

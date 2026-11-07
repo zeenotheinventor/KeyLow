@@ -4,6 +4,7 @@ import {
   TREND_ESTIMATE,
   describeDayCitation,
   describeRangeCitation,
+  describeRoutineCitation,
   describeWeighInCitation,
 } from "../../src/assistant";
 
@@ -104,6 +105,38 @@ describe("describeDayCitation", () => {
   ])("should say there are no entries for %s", (localDate, expected) => {
     expect(describeDayCitation({ localDate, today, entryCount: 0 })).toBe(expected);
   });
+});
+
+describe("describeRoutineCitation", () => {
+  // No board draws this line. The words are the designer's note on the canvas, recorded on KEY-881.
+  it("should word the line as the designer's note on the canvas does", () => {
+    expect(describeRoutineCitation("Push Pull Legs")).toBe("Based on your routine Push Pull Legs");
+  });
+
+  it("should keep the name as the person wrote it", () => {
+    expect(describeRoutineCitation("upper/lower, 4 days")).toBe(
+      "Based on your routine upper/lower, 4 days",
+    );
+  });
+
+  it("should take control and direction characters out of the name and collapse its whitespace", () => {
+    expect(describeRoutineCitation("Push\n\u202EPull\u0000  Legs")).toBe(
+      "Based on your routine Push Pull Legs",
+    );
+  });
+
+  it("should cut a long name at 60 code points", () => {
+    expect(describeRoutineCitation("a".repeat(500))).toBe(
+      `Based on your routine ${"a".repeat(60)}`,
+    );
+  });
+
+  it.each([[""], ["   "], ["\u0000\u202E"]])(
+    "should leave the name out when nothing of %j is left",
+    (name) => {
+      expect(describeRoutineCitation(name)).toBe("Based on your routine");
+    },
+  );
 });
 
 describe("TREND_ESTIMATE", () => {

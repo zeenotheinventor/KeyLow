@@ -7,7 +7,7 @@ import { describe, expect, it } from "vitest";
 
 import { fakeEnvironment } from "./fakeEnvironment.ts";
 import { fakeDatabase, readTool, turnResult, writeTool } from "./helpers.ts";
-import { READ_TOOLS } from "../cases/ask.ts";
+import { DIARY_READ_TOOLS } from "../cases/ask.ts";
 import {
   IMPORT_TURN_TOOLS,
   importCalledFor,
@@ -360,7 +360,9 @@ describe("the recipe import set", () => {
   });
 
   it("should let a case use the read tools and the import, tied to the tool sources", () => {
-    expect([...IMPORT_TURN_TOOLS].sort()).toEqual([...READ_TOOLS, "import_recipe_from_url"].sort());
+    expect([...IMPORT_TURN_TOOLS].sort()).toEqual(
+      [...DIARY_READ_TOOLS, "import_recipe_from_url"].sort(),
+    );
     const toolsFolder = new URL(
       "../../../packages/db/supabase/functions/_shared/assistant/tools/",
       import.meta.url,

@@ -76,7 +76,7 @@ Deno.test("a name that is not lower snake case is refused", () => {
 });
 
 Deno.test(
-  "the real registry lists the food reads, the diary reads, the diary, day, recipe, food, targets and recipe import writes and then ask_user in order",
+  "the real registry lists the food reads, the diary reads, the diary, day, recipe, food, targets and recipe import writes, the training reads and then ask_user in order",
   () => {
     assertEquals(
       toolRegistry.list.map((tool) => [tool.name, tool.kind]),
@@ -99,6 +99,9 @@ Deno.test(
         ["create_custom_food", "write"],
         ["update_targets", "write"],
         ["import_recipe_from_url", "write"],
+        ["search_exercises", "read"],
+        ["get_routines", "read"],
+        ["get_training_goals", "read"],
         ["ask_user", "read"],
       ],
     );
@@ -177,6 +180,15 @@ Deno.test("create_custom_food opts out of strict mode and update_targets does no
   assertEquals(strictOf("create_custom_food"), false);
   assertEquals(strictOf("update_targets"), undefined);
 });
+
+Deno.test(
+  "the training reads opt out of strict mode, so they take nothing from the strict budget",
+  () => {
+    for (const name of ["search_exercises", "get_routines", "get_training_goals"]) {
+      assertEquals(toolRegistry.get(name)?.strict, false, name);
+    }
+  },
+);
 
 Deno.test(
   "the strict budget of the real registry is 16 tools, 0 optional and 14 union parameters",

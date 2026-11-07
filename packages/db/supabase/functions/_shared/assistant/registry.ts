@@ -11,9 +11,12 @@ import { getEntriesTool } from "./tools/getEntries.ts";
 import { getFoodTool } from "./tools/getFood.ts";
 import { getRangeTotalsTool } from "./tools/getRangeTotals.ts";
 import { getRecipesTool } from "./tools/getRecipes.ts";
+import { getRoutinesTool } from "./tools/getRoutines.ts";
+import { getTrainingGoalsTool } from "./tools/getTrainingGoals.ts";
 import { getWeighInsTool } from "./tools/getWeighIns.ts";
 import { importRecipeFromUrlTool } from "./tools/importRecipeFromUrl.ts";
 import { logEntryTool } from "./tools/logEntry.ts";
+import { searchExercisesTool } from "./tools/searchExercises.ts";
 import { searchFoodsTool } from "./tools/searchFoods.ts";
 import { setDayCompleteTool } from "./tools/setDayComplete.ts";
 import { updateEntryTool } from "./tools/updateEntry.ts";
@@ -69,6 +72,9 @@ const toolDefinitions: readonly ToolDefinition[] = [
   createCustomFoodTool,
   updateTargetsTool,
   importRecipeFromUrlTool,
+  searchExercisesTool,
+  getRoutinesTool,
+  getTrainingGoalsTool,
   askUserTool,
 ];
 

@@ -15,7 +15,7 @@
 // apple, an orange, eggs, a croissant, a boiled potato) may be answered with one question about the size, because the person
 // said no size and asking is not a guess. A message that names a meal ("for breakfast") may be logged with no
 // time or with a morning time. "Some cheese" may be one question or a logged slice.
-import { READ_TOOLS, onlyReadTools } from "./ask.ts";
+import { DIARY_READ_TOOLS, onlyReadTools } from "./ask.ts";
 import {
   actionRows,
   anyOfRoutes,
@@ -69,7 +69,7 @@ type BriefSpec = Readonly<{ id: string; kind: "brief"; message: string }>;
 
 export type DescribeSpec = LogSpec | ClarifySpec | BriefSpec;
 
-const WRITE_AND_READ_TOOLS: ReadonlySet<string> = new Set([...READ_TOOLS, "log_entry"]);
+const WRITE_AND_READ_TOOLS: ReadonlySet<string> = new Set([...DIARY_READ_TOOLS, "log_entry"]);
 
 /** Every case of the set, as plain data. `anchorDate` is today in a run. */
 export function describeSpecs(anchorDate: string): readonly DescribeSpec[] {

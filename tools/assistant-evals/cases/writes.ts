@@ -32,7 +32,7 @@ import {
   scaleMacroTargets,
 } from "@keylow/core";
 
-import { READ_TOOLS } from "./ask.ts";
+import { DIARY_READ_TOOLS } from "./ask.ts";
 import {
   actionRows,
   anyOfRoutes,
@@ -69,7 +69,7 @@ import type { EvalDatabase } from "../src/types.ts";
 import type { AssistantCardKind } from "@keylow/core";
 
 const ALL_TOOLS: ReadonlySet<string> = new Set([
-  ...READ_TOOLS,
+  ...DIARY_READ_TOOLS,
   "log_entry",
   "update_entry",
   "delete_entry",

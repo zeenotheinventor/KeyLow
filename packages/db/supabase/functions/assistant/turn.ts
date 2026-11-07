@@ -20,9 +20,9 @@ import { askUserTool } from "../_shared/assistant/tools/askUser.ts";
 import { wrapUntrusted } from "../_shared/assistant/untrusted.ts";
 import {
   assistantCardSchema,
-  foodWordsForStatus,
   isConfirmAnswer,
   mergeAssistantCards,
+  safeWordsToShow,
   withActionIds,
 } from "../_shared/core.ts";
 import { allowedToolsFor } from "./allowlist.ts";
@@ -624,7 +624,7 @@ async function runToolUse(
       type: "status",
       code: "tool",
       tool: name,
-      food: name === SEARCH_FOODS_TOOL ? foodWordsForStatus(input["q"]) : null,
+      food: name === SEARCH_FOODS_TOOL ? safeWordsToShow(input["q"]) : null,
       isConfirmed,
     });
   }
