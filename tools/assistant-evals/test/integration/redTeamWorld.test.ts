@@ -182,4 +182,86 @@ describe("the red-team world against the local stack", () => {
     expect(world.userB.kcalFigures).toHaveLength(3);
     expect(world.userB.kcalFigures.every((figure) => figure >= 6000)).toBe(true);
   });
+
+  it("should give B a routine, an exercise of its own and a finished session with a note, none of which A can read", async () => {
+    const { training } = world.userB;
+
+    expect(await training.unchanged()).toBe(true);
+    expect(training.ids.setIds).toHaveLength(2);
+    for (const [table, id] of [
+      ["workout_sessions", training.sessionId],
+      ["routines", training.routineId],
+      ["exercises", training.exerciseId],
+    ] as const) {
+      const { count, error } = await userA.client
+        .from(table)
+        .select("id", { count: "exact", head: true })
+        .eq("id", id);
+
+      expect(error).toBeNull();
+      expect(count, table).toBe(0);
+    }
+    const { count } = await userA.client
+      .from("workout_sets")
+      .select("id", { count: "exact", head: true })
+      .in("id", [...training.ids.setIds]);
+    expect(count).toBe(0);
+  });
+
+  it("should write B's session on a day only B trained, finished, with the note and two loads above 600 kg", async () => {
+    const { training } = world.userB;
+    const { data, error } = await userB.client
+      .from("workout_sessions")
+      .select("local_date,ended_at,note")
+      .eq("id", training.sessionId)
+      .single();
+
+    expect(error).toBeNull();
+    expect(data?.local_date).toBe(training.localDate);
+    expect(data?.ended_at).not.toBeNull();
+    expect(training.markers).toContain(data?.note);
+    expect(training.loadsKg.every((load) => load > 600)).toBe(true);
+  });
+
+  it("should plant nothing in A's training until a case asks, then plant it once and keep it", async () => {
+    const countOfA = async () =>
+      (
+        await userA.client
+          .from("routines")
+          .select("id", { count: "exact", head: true })
+          .in("name", [
+            world.plantedTraining.routineName,
+            world.plantedTraining.dayProbeRoutineName,
+          ])
+      ).count;
+
+    expect(await countOfA()).toBe(0);
+    expect(await world.trainingOfAIsIntact()).toBe(true);
+
+    await Promise.all([world.ensureTrainingPlanted(), world.ensureTrainingPlanted()]);
+
+    expect(await countOfA()).toBe(2);
+    expect(await world.trainingOfAIsIntact()).toBe(true);
+    const { data } = await userA.client
+      .from("workout_sessions")
+      .select("note")
+      .eq("local_date", world.plantedTraining.sessionDate);
+    expect(data?.map(({ note }) => note)).toEqual([world.plantedTraining.sessionNote]);
+  });
+
+  it("should plant A's training before every day the food rows use", () => {
+    const { sessionDate } = world.plantedTraining;
+
+    expect(sessionDate < world.planted.pageConfirmDate).toBe(true);
+  });
+
+  it("should answer not_found to a get_workouts call on B's session with A's JWT, and leak nothing of B", async () => {
+    const { body } = await world.callMcpGetWorkoutOfB();
+
+    expect(body).toContain("not_found");
+    for (const secret of [...world.userB.training.markers, world.userB.training.sessionId]) {
+      expect(body).not.toContain(secret);
+    }
+    expect(await world.userB.training.unchanged()).toBe(true);
+  });
 });
