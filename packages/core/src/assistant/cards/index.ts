@@ -25,3 +25,9 @@ export { buildRecipeUpdatedCard } from "./recipeUpdated";
 export { buildTargetsChangedCard } from "./targetsChanged";
 export type { TargetsChangedCardChange } from "./targetsChanged";
 export { buildUpdatedCard } from "./updated";
+export {
+  confirmRemoveExercisesButtons,
+  confirmRemoveExercisesQuestion,
+} from "./confirmRemoveExercises";
+export { buildRoutineUpdatedCard } from "./routineUpdated";
+export type { RoutineUpdatedChange } from "./routineUpdated";

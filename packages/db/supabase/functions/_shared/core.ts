@@ -49,6 +49,9 @@ export type {
   TrendRange,
   TrendSet,
   ValidTargets,
+  RoutineChangeProblem,
+  RoutineTargetWords,
+  RoutineUpdatedChange,
 } from "./core/index.js";
 export {
   addCalendarDays,
@@ -189,4 +192,12 @@ export {
   toLocalDate,
   validateRecipeDraft,
   validateTargets,
+  assistantCardLinkSchema,
+  buildRoutineUpdatedCard,
+  confirmRemoveExercisesButtons,
+  confirmRemoveExercisesQuestion,
+  describeWorkoutInProgressRefusal,
+  draftOfStoredRoutine,
+  OPEN_IN_ROUTINE_EDITOR,
+  REMOVE_DAY_REFUSAL,
 } from "./core/index.js";
