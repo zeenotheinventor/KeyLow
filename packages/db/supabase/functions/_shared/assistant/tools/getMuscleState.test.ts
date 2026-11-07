@@ -1,12 +1,13 @@
 import { assertEquals, assertFalse, assertStringIncludes } from "@std/assert";
 
-import { muscleStateRows } from "../../core.ts";
-import { readMuscleState } from "../../repos.ts";
+import { muscleStateRows, targetedMuscles } from "../../core.ts";
+import { readMuscleState, readTrainingInputs } from "../../repos.ts";
 import { executeTool } from "../executor.ts";
 import { createFakeContext, userId } from "../testing.ts";
 import { toJsonSchema } from "../tool.ts";
 import { getMuscleStateTool } from "./getMuscleState.ts";
 import {
+  activeRoutineRow,
   atFixedNow,
   fixedNow,
   fullWeekSets,
@@ -16,6 +17,7 @@ import {
   trainingTables,
 } from "./suggestionFixtures.ts";
 import { listOf, payloadOf, stubCaller } from "./testing.ts";
+import { exerciseId, goalsRow } from "./trainingFixtures.ts";
 
 import type { StubData } from "./testing.ts";
 
@@ -42,6 +44,7 @@ Deno.test("get_muscle_state is a read tool that says it is read-only and is not 
 });
 
 Deno.test("get_muscle_state says what a row holds, what area does and which week it counts", () => {
+  assertStringIncludes(getMuscleStateTool.description, "never call it this week");
   assertStringIncludes(getMuscleStateTool.description, "last 7 days");
   assertStringIncludes(getMuscleStateTool.description, "area");
   assertStringIncludes(getMuscleStateTool.description, "never work one out");
@@ -72,9 +75,10 @@ Deno.test("get_muscle_state with no area answers one row for each of the 22 musc
     "sets",
     "target",
     "status",
+    "targeted",
   ]);
   assertEquals(fieldOf(result, "area"), null);
-  assertEquals(fieldOf(result, "citation"), "Based on your muscles, 8 to 14 Oct");
+  assertEquals(fieldOf(result, "citation"), "Based on your muscles, 7 to 14 Oct");
 });
 
 Deno.test("get_muscle_state answers the same when the model leaves area out", async () => {
@@ -90,16 +94,22 @@ Deno.test(
     const { result, caller } = await fetchMuscleState(trainingTables(), { area: null });
 
     const states = await readMuscleState(caller, { now: fixedNow, timeZone: "Europe/London" });
+    const { activeRoutine, goal } = await readTrainingInputs(caller, { today: "2026-10-14" });
 
     assertEquals(
       listOf(result, "muscles"),
-      muscleStateRows(states, { now: fixedNow, timeZone: "Europe/London", area: null }).rows,
+      muscleStateRows(states, {
+        now: fixedNow,
+        timeZone: "Europe/London",
+        area: null,
+        targeted: targetedMuscles({ routine: activeRoutine, priority: goal?.muscle_priority }),
+      }).rows,
     );
   },
 );
 
 Deno.test(
-  "get_muscle_state with an area gives its muscles and the area's sets and target summed",
+  "get_muscle_state with an area gives its muscles and the area's sets and target summed over the targeted ones",
   async () => {
     const { result } = await fetchMuscleState(trainingTables(), { area: "back" });
 
@@ -107,8 +117,8 @@ Deno.test(
       listOf(result, "muscles").map((row) => row["muscle"]),
       ["Lats", "Upper traps", "Mid traps", "Lower back"],
     );
-    assertEquals(fieldOf(result, "area"), { name: "back", sets: 20.5, target: 40 });
-    assertEquals(fieldOf(result, "citation"), "Based on 20.5 sets for your back, 8 to 14 Oct");
+    assertEquals(fieldOf(result, "area"), { name: "back", sets: 18, target: 10 });
+    assertEquals(fieldOf(result, "citation"), "Based on 18 sets for your back, 7 to 14 Oct");
   },
 );
 
@@ -125,7 +135,54 @@ Deno.test(
       sets: 18,
       target: 10,
       status: "Productive",
+      targeted: true,
     });
+  },
+);
+
+Deno.test(
+  "get_muscle_state sums an area's sets and target over the muscles the routine and goal target",
+  async () => {
+    const routine = activeRoutineRow({
+      routine_days: [
+        {
+          ...activeRoutineRow().routine_days[0],
+          routine_exercises: [
+            {
+              ...activeRoutineRow().routine_days[0]?.routine_exercises[0],
+              exercises: {
+                id: exerciseId(10),
+                name: "Barbell row",
+                equipment: "barbell",
+                mechanic: "compound",
+                exercise_muscles: [
+                  { muscle_id: "lats", role: "primary", weight: 1 },
+                  { muscle_id: "traps_mid", role: "secondary", weight: 0.5 },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    });
+    const { result } = await fetchMuscleState(
+      trainingTables({
+        routines: [routine],
+        training_goals: [goalsRow({ muscle_priority: {} })],
+      }),
+      { area: "back" },
+    );
+
+    assertEquals(fieldOf(result, "area"), { name: "back", sets: 18, target: 20 });
+    assertEquals(
+      listOf(result, "muscles").map((row) => [row["muscle"], row["targeted"]]),
+      [
+        ["Lats", true],
+        ["Upper traps", false],
+        ["Mid traps", true],
+        ["Lower back", false],
+      ],
+    );
   },
 );
 
@@ -140,7 +197,7 @@ Deno.test("get_muscle_state says so when the area had no sets", async () => {
     area: "neck",
   });
 
-  assertEquals(fieldOf(result, "citation"), "No sets for your neck, 8 to 14 Oct");
+  assertEquals(fieldOf(result, "citation"), "No sets for your neck, 7 to 14 Oct");
   assertEquals(fieldOf(result, "area"), { name: "neck", sets: 0, target: 10 });
 });
 
@@ -194,8 +251,16 @@ Deno.test("get_muscle_state leaves out the user id, the muscle map and the raw c
   assertFalse(result.text.includes("readyAt"));
 });
 
-Deno.test("get_muscle_state reads the sets and the time zone and nothing else", async () => {
-  const { calls } = await fetchMuscleState(trainingTables(), { area: null });
+Deno.test(
+  "get_muscle_state reads the time zone, the sets, the routine and the goal and nothing else",
+  async () => {
+    const { calls } = await fetchMuscleState(trainingTables(), { area: null });
 
-  assertEquals([...new Set(calls.map((call) => call.table))].sort(), ["profiles", "workout_sets"]);
-});
+    assertEquals([...new Set(calls.map((call) => call.table))].sort(), [
+      "profiles",
+      "routines",
+      "training_goals",
+      "workout_sets",
+    ]);
+  },
+);

@@ -188,6 +188,67 @@ export const bigLibraryRows = () => [
   ),
 ];
 
+// The same routine with its one day on another weekday and under another name, so today is a rest day or not.
+export const routineWithDay = (weekday: number, name: string) => {
+  const routine = activeRoutineRow();
+  const [day] = routine.routine_days;
+  return { ...routine, routine_days: [{ ...day, weekday, name }] };
+};
+
+// A live `workout_sessions` row, finished unless `ended_at` is overridden, in the shape both the week read and
+// the session in progress read take. It holds no sets.
+export const sessionRow = (overrides: Record<string, unknown> = {}) => ({
+  id: "00000000-0000-4000-8000-0000000000e2",
+  local_date: fixedToday,
+  routine_day_id: exerciseId(900),
+  started_at: "2026-10-14T08:00:00+00:00",
+  ended_at: "2026-10-14T09:00:00+00:00",
+  deleted_at: null,
+  note: null,
+  routine_days: null,
+  workout_sets: [],
+  ...overrides,
+});
+
+// An accepted suggestion for today's Push: 3 sets of the row, as an accept stores it.
+export const acceptedSuggestionRow = (overrides: Record<string, unknown> = {}) => ({
+  id: "00000000-0000-4000-8000-0000000000f2",
+  local_date: fixedToday,
+  routine_day_id: exerciseId(900),
+  exercises: [
+    {
+      id: exerciseId(700),
+      position: 1,
+      exercise_id: exerciseId(20),
+      target_sets: 3,
+      target_rir: 2,
+      rep_min: 8,
+      rep_max: 10,
+      exercise: {
+        id: exerciseId(20),
+        name: "Barbell Row",
+        equipment: "barbell",
+        mechanic: "compound",
+      },
+      muscles: [muscleEntry("lats", "primary", 1)],
+      snapshot: {
+        version: 1,
+        kind: "exercise",
+        ref: exerciseId(20),
+        name: "Barbell Row",
+        equipment: "barbell",
+        mechanic: "compound",
+        muscleListVersion: 1,
+        muscles: [muscleEntry("lats", "primary", 1)],
+      },
+    },
+  ],
+  reasons: { picks: [] },
+  params_version: "keylow-suggest-v2",
+  deleted_at: null,
+  ...overrides,
+});
+
 export const trainingTables = (overrides: NonNullable<StubData["tables"]> = {}): StubData => ({
   tables: {
     profiles: [profileRow],
@@ -195,6 +256,8 @@ export const trainingTables = (overrides: NonNullable<StubData["tables"]> = {}):
     routines: [activeRoutineRow()],
     training_goals: [goalsRow({ muscle_priority: { lats: 3, biceps: 2 } })],
     exercises: libraryRows(),
+    workout_sessions: [],
+    accepted_suggestions: [],
     ...overrides,
   },
 });

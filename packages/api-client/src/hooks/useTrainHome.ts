@@ -1,9 +1,9 @@
 import { addCalendarDays, toLocalDate } from "@keylow/core/dates";
 import {
-  SESSION_TIME_PARAMS_V1,
-  todayCard,
+  todayPlanOf,
   todaySessionToView,
   weekPlanDays,
+  withSessionInProgress,
 } from "@keylow/core/training";
 
 import { useActiveRoutine } from "./useActiveRoutine";
@@ -23,28 +23,6 @@ import type {
 } from "./trainHomeTypes";
 import type { ActiveRoutine, WeekSession } from "../repos";
 import type { TodayCard, WeekPlan } from "@keylow/core/training";
-
-/**
- * The week's sessions with the one in progress among them, dated `localDate`. The session in progress is read
- * on its own, so it can be newer than the week's rows (a session just started, or a set just logged), and it
- * can have started on an earlier day (one that crosses midnight, or is left open): the database allows one
- * open session, so the Today card must offer Resume for it on whatever day it is, never Start. Core's week
- * plan puts a session on the day it started and would drop it, or leave it on yesterday, so it takes the place
- * of its own row on `localDate`: today for the card.
- */
-function withSessionInProgress(
-  weekSessions: readonly WeekSession[],
-  sessionInProgress: WeekSession | null,
-  localDate: string,
-): readonly WeekSession[] {
-  if (sessionInProgress === null) {
-    return weekSessions;
-  }
-  return [
-    ...weekSessions.filter((session) => session.id !== sessionInProgress.id),
-    { ...sessionInProgress, local_date: localDate },
-  ];
-}
 
 /**
  * The day the week strip puts the session in progress on: the day it started when that is in the week the
@@ -174,15 +152,17 @@ export function useTrainHome({ now, enabled }: TrainHomeSettings): TrainHome {
       tz: zone,
       weekStart,
     });
-  const plan = planWith(today);
-  const stripDate = stripDateOfSession(sessionInProgress.data, weekStart, today);
-  const stripPlan = stripDate === today ? plan : planWith(stripDate);
-  const card = todayCard({
-    week: plan,
+  const { plan, card } = todayPlanOf({
+    routine: planRoutineOf(routine.data, zone),
+    weekSessions: week.data,
+    sessionInProgress: sessionInProgress.data,
     now: at,
-    sessionTimeParams: SESSION_TIME_PARAMS_V1,
+    tz: zone,
+    weekStart,
     hasEverLoggedSession: everLogged.data === true,
   });
+  const stripDate = stripDateOfSession(sessionInProgress.data, weekStart, today);
+  const stripPlan = stripDate === today ? plan : planWith(stripDate);
 
   return {
     status: "ready",

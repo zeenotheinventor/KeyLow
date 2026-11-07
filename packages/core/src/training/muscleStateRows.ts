@@ -34,6 +34,8 @@ export type MuscleStateRow = {
   /** Where Productive starts for this muscle, as the suggestion's reasons use it. */
   target: number;
   status: string;
+  /** Whether the routine trains the muscle or the goal ranks it (core's `targetedMuscles`). */
+  targeted: boolean;
 };
 
 export type MuscleStateRows = {
@@ -63,14 +65,28 @@ const readyAtOf = (readyAt: string, now: string, timeZone: string): string => {
 
 /**
  * One row for each muscle of `area` (all 22 when it is null), in the order of the muscle list, and the
- * sets and target of the area summed. `states` is `currentMuscleState` at `now`, and the days and clock
+ * sets and target of the area summed over its targeted muscles, so they describe the same muscles. `states` is `currentMuscleState` at `now`, and the days and clock
  * times are read in `timeZone`.
  */
 export const muscleStateRows = (
   states: Readonly<Record<MuscleId, MuscleState>>,
-  { now, timeZone, area }: { now: string; timeZone: string; area: MuscleGroup | null },
+  {
+    now,
+    timeZone,
+    area,
+    targeted,
+  }: {
+    now: string;
+    timeZone: string;
+    area: MuscleGroup | null;
+    /** The muscles the routine and the goal target, which an area's sets and target are summed over. */
+    targeted: ReadonlySet<MuscleId>;
+  },
 ): MuscleStateRows => {
   const muscles = MUSCLE_IDS.filter((muscle) => area === null || MUSCLES[muscle].group === area);
+  // With none of the area targeted there is no basis to leave any out, as `targetedMuscles` does for the whole body.
+  const targetedInArea = muscles.filter((muscle) => targeted.has(muscle));
+  const summed = targetedInArea.length === 0 ? muscles : targetedInArea;
   return {
     rows: muscles.map((muscle) => {
       const state = states[muscle];
@@ -82,6 +98,7 @@ export const muscleStateRows = (
         sets: roundedSets(state.weeklySets),
         target: targetOf(muscle),
         status: VOLUME_STATUS_NAMES[state.volumeStatus],
+        targeted: targeted.has(muscle),
       };
     }),
     area:
@@ -89,8 +106,8 @@ export const muscleStateRows = (
         ? null
         : {
             name: area,
-            sets: roundedSets(sum(muscles.map((muscle) => states[muscle].weeklySets))),
-            target: sum(muscles.map(targetOf)),
+            sets: roundedSets(sum(summed.map((muscle) => states[muscle].weeklySets))),
+            target: sum(summed.map(targetOf)),
           },
     totalSets: roundedSets(sum(MUSCLE_IDS.map((muscle) => states[muscle].weeklySets))),
   };

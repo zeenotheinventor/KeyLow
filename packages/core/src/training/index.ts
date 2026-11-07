@@ -317,6 +317,13 @@ export { PRIORITY_GROUP_VOLUME_STATUS, summarisePriorities } from "./prioritySum
 export type { PrioritySummary } from "./prioritySummary";
 export { currentMuscleState } from "./suggest/currentMuscleState";
 export { muscleStateRows } from "./muscleStateRows";
+export { suggestionTargetOf, todayPlanOf, withSessionInProgress } from "./suggestionTarget";
+export type {
+  SuggestionTarget,
+  SuggestionTargetInput,
+  SuggestionTargetRead,
+  TodayPlanInput,
+} from "./suggestionTarget";
 export type { MuscleStateRow, MuscleStateRows } from "./muscleStateRows";
 export { nextSessionSuggestion } from "./suggest/nextSessionSuggestion";
 export type {
