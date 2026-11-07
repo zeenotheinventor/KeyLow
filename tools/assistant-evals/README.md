@@ -170,7 +170,7 @@ A check that is too eager fails a good run at a 100 % threshold, so a failure of
 
 ## The training advice set
 
-`cases/trainingAdvice.ts` has 26 cases at a threshold of 90 %, over the eval user's synthetic training history (see "The training history" below). **It decides ruling 3 of KEY-881: the assistant stays on `claude-haiku-5-5` unless this set fails.** If a run misses, do not change the model: report the failures, split into prompt or tool faults and model faults, and the decision is Zee's. The graders are in `cases/trainingAdviceGraders.ts` and what each case expects is worked out in `cases/trainingAdviceFacts.ts`.
+`cases/trainingAdvice.ts` has 26 cases and `cases/exerciseMuscles.ts` adds 6 (see "The muscles of an exercise" below), 32 in all at a threshold of 90 %, over the eval user's synthetic training history (see "The training history" below). **It decides ruling 3 of KEY-881: the assistant stays on `claude-haiku-5-5` unless this set fails.** If a run misses, do not change the model: report the failures, split into prompt or tool faults and model faults, and the decision is Zee's. The graders are in `cases/trainingAdviceGraders.ts` and what each case expects is worked out in `cases/trainingAdviceFacts.ts`.
 
 | Theme                 | Cases                                                                                                                                                                                                   | Tools                          |
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ |
@@ -222,6 +222,28 @@ The reply is not required to say where a number came from: the prompt says it ne
 **A failing case** prints its question, the tools it called with their arguments and how each ended (an error code, or `asked to confirm`, or `no result`), and the numbers it expected. It never prints an answer, bar the first-person word and the 40 characters around it. It cannot print a tool result: the driver keeps only the tool's name, input and error code.
 
 **What it does not grade.** Whether the answer invents a cause for a stall ("you are not eating enough") is wording, so no grader looks for it. The prompt and the tool descriptions carry that rule. The path to "nothing to suggest" depends on the weekday of the run and on how hot the muscles are, so the 15 minute case accepts a session or nothing, whichever core gives.
+
+### The muscles of an exercise (KEY-924)
+
+`cases/exerciseMuscles.ts` has 6 cases that join the `trainingAdvice` set. They are in a file of their own because the spec table above is built on themes and a facts layer for numbers, which these cases have none of, and a new set would need a line in `thresholds.ts`. None is must-pass, because this set decides ruling 3. The tool is `show_exercise_muscles`: the app draws a 2D figure of the muscles an exercise works under the reply, from an `exercise_muscles` event that the driver keeps as `TurnResult.exerciseMuscles`.
+
+| Case                     | Question                                                       | Passes when                                                                                      |
+| ------------------------ | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `muscles-one`            | What muscles does a Romanian deadlift work?                    | One figure, for an exercise named Romanian deadlift                                              |
+| `muscles-words`          | What does a bench press hit?                                   | One figure, for an exercise with bench press in its name. `search_exercises` alone is not enough |
+| `muscles-compare`        | Which works my hamstrings more, Romanian deadlift or leg curl? | Two figures, one for each, and no ranking                                                        |
+| `muscles-unknown`        | What muscles does a zorblat press work?                        | No figure and no muscle named. A question about which exercise is meant is a fair answer         |
+| `muscles-during-workout` | What muscles does the bench press work?                        | The case starts a workout: one figure, and the workout is untouched                              |
+| `muscles-custom`         | What muscles does my Eval face pull work?                      | One figure: rear delts primary and mid traps secondary, from `CUSTOM_EXERCISE`                   |
+
+Every case also takes `endedWell`, the critical `onlyTrainingReadTools` and `noWriteRows`, and the soft `noFirstPersonWithContext`. The graders are in the same file:
+
+- `figureIsTheMap`: each figure equals the stored map of the exercise a call of the tool read, read as the eval user with the id from the call's input, never typed.
+- `replyNamesOnlyTheFigure`: the reply and the figure agree. A muscle name found in the reply as whole words, ignoring case and trying the longest names first so "Side glutes" is not read as "Glutes", must be on one of the turn's figures. A one-figure reply names every primary muscle, by the last word of its name (singular or plural), so "chest" counts for "Upper chest".
+- `noRanking`: the reply holds no "more than", "works it more", "better", "best" or "most".
+- `noMusclesNamed`: for the exercise that is not there.
+
+A failure prints the question and the tools, and never the answer or a muscle. Each grader has a unit test with a right result and no model call (`test/exerciseMusclesCases.test.ts`).
 
 Run it by name: `pnpm --filter @keylow/assistant-evals check:assistant -- --set trainingAdvice`, or from the `assistant-evals` workflow with `-f sets="trainingAdvice"`.
 

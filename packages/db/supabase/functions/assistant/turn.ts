@@ -21,6 +21,7 @@ import { askUserTool } from "../_shared/assistant/tools/askUser.ts";
 import { wrapUntrusted } from "../_shared/assistant/untrusted.ts";
 import {
   assistantCardSchema,
+  assistantExerciseMusclesSchema,
   isConfirmAnswer,
   mergeAssistantCards,
   safeWordsToShow,
@@ -48,7 +49,11 @@ import type {
   ToolCallResult,
   ToolConnection,
 } from "../_shared/assistant/mcpClient.ts";
-import type { AssistantCard, AssistantStreamEvent } from "../_shared/core.ts";
+import type {
+  AssistantCard,
+  AssistantExerciseMuscles,
+  AssistantStreamEvent,
+} from "../_shared/core.ts";
 import type { Json } from "../_shared/core/database.types.ts";
 import type { ReportError } from "../_shared/report.ts";
 import type { AllowlistTool } from "./allowlist.ts";
@@ -116,6 +121,11 @@ const DEFAULT_LIMITS: TurnLimits = {
   streamIdleMilliseconds: MODEL_STREAM_IDLE_MILLISECONDS,
 };
 
+// The most figures of muscles one turn draws. The loop has no cap on the reads inside one response, so "show me
+// every exercise in my routine" could draw thirty figures of about 400 points each. It lives here because the
+// tool runs per call in the `mcp` function and cannot see the turn. 4 is the tech lead's number, for Zee to change.
+export const MAX_EXERCISE_MUSCLES_CARDS = 4;
+
 // The SDK parses a streamed tool input as it arrives, and a model that emits invalid JSON makes the stream
 // fail with a plain `AnthropicError` whose cause is a `SyntaxError`, never an API error. That one failure
 // is re-issued, a few times, and only while the app has been shown none of the call's text.
@@ -127,6 +137,7 @@ const CLARIFY_FIELD_HINT = "Or say it your way";
 const ASK_USER_TOOL = "ask_user";
 const IMPORT_RECIPE_TOOL = "import_recipe_from_url";
 const SEARCH_FOODS_TOOL = "search_foods";
+const SHOW_EXERCISE_MUSCLES_TOOL = "show_exercise_muscles";
 
 // Made per turn, so a missing key ends that turn and never stops the function booting.
 export function createModelClient(read: (name: string) => string | undefined): Anthropic | null {
@@ -217,6 +228,8 @@ type Run = {
   unparseableInputRetries: number;
   // Consecutive cards of one kind with nothing said between them, merged when they are written.
   pendingCards: AssistantCard[];
+  // The muscles of each exercise shown, held to the end of the turn so the figures land under the finished reply.
+  pendingExerciseMuscles: AssistantExerciseMuscles[];
   citations: (string | null)[];
   estimates: (string | null)[];
 };
@@ -448,6 +461,7 @@ const structuredSchema = z.looseObject({
   citation: z.string().min(1).nullish(),
   estimate: z.string().min(1).nullish(),
   undo: z.unknown().optional(),
+  exerciseMuscles: z.unknown().optional(),
 });
 const cardDraftSchema = assistantCardSchema.omit({ actionIds: true });
 
@@ -534,6 +548,21 @@ async function finishCall(
         run.dependencies.report("assistant", "internal_error", new Error("a card cannot be drawn"));
       }
     }
+    // The figure of an exercise's muscles, in the same row. It is a read, so it has no action and no Undo.
+    if (structured.data.exerciseMuscles !== undefined) {
+      const figure = assistantExerciseMusclesSchema.safeParse(structured.data.exerciseMuscles);
+      if (figure.success) {
+        entry["exerciseMuscles"] = toJson(figure.data);
+        run.pendingExerciseMuscles.push(figure.data);
+      } else {
+        // Fixed words only. A parse failure's own message is not reported, because it can quote the exercise.
+        run.dependencies.report(
+          "assistant",
+          "internal_error",
+          new Error("exercise muscles cannot be drawn"),
+        );
+      }
+    }
     // After the card, in the same row. The previous value is the person's own data, so it is kept here beside
     // the card for Undo and goes nowhere else. A write that landed nothing has no action to undo.
     if (structured.data.undo !== undefined && outcome.actionId !== null) {
@@ -616,6 +645,17 @@ async function runToolUse(
     await storeToolResult(
       run,
       toolResultBlock(id, wrapUntrusted(name, { error: "tool_not_allowed" }), true),
+      null,
+    );
+    return null;
+  }
+  if (
+    name === SHOW_EXERCISE_MUSCLES_TOOL &&
+    run.pendingExerciseMuscles.length >= MAX_EXERCISE_MUSCLES_CARDS
+  ) {
+    await storeToolResult(
+      run,
+      toolResultBlock(id, wrapUntrusted(name, { error: "card_limit" }), true),
       null,
     );
     return null;
@@ -895,6 +935,10 @@ async function conclude(run: Run, reached: Ending): Promise<Ending> {
     stream.done && reached.status !== "stopped" ? failedEnding("invalid_event") : reached;
   if (final.status !== "stopped") {
     flushCards(run);
+    for (const exercise of run.pendingExerciseMuscles) {
+      emit(run, { type: "exercise_muscles", exercise });
+    }
+    run.pendingExerciseMuscles = [];
   }
   if (final.status === "complete") {
     const citation = distinctLine(run.citations);
@@ -953,6 +997,7 @@ export function createRunTurn(
       lastPromptTokens: null,
       unparseableInputRetries: 0,
       pendingCards: [],
+      pendingExerciseMuscles: [],
       citations: [],
       estimates: [],
     };

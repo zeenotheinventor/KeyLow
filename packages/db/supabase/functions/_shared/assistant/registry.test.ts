@@ -104,6 +104,7 @@ Deno.test(
         ["get_training_goals", "read"],
         ["get_workouts", "read"],
         ["get_exercise_progress", "read"],
+        ["show_exercise_muscles", "read"],
         ["get_muscle_state", "read"],
         ["suggest_next_session", "read"],
         ["set_active_routine", "write"],
@@ -196,6 +197,7 @@ Deno.test(
       "get_training_goals",
       "get_workouts",
       "get_exercise_progress",
+      "show_exercise_muscles",
     ]) {
       assertEquals(toolRegistry.get(name)?.strict, false, name);
     }

@@ -11,6 +11,7 @@ import {
 } from "../_shared/core.ts";
 import { contextBlock, MODEL } from "./prompt.ts";
 import {
+  MAX_EXERCISE_MUSCLES_CARDS,
   MCP_REQUEST_TIMEOUT_MILLISECONDS,
   MODEL_REQUEST_TIMEOUT_MILLISECONDS,
   createModelClient,
@@ -29,7 +30,7 @@ import {
 } from "./turnTesting.ts";
 
 import type { ListedTool } from "../_shared/assistant/mcpClient.ts";
-import type { AssistantStreamEvent } from "../_shared/core.ts";
+import type { AssistantExerciseMuscles, AssistantStreamEvent } from "../_shared/core.ts";
 import type { Harness, HarnessOptions, ScriptedResponse, ToolAnswer } from "./turnTesting.ts";
 
 const reply = (text: string): ScriptedResponse => ({
@@ -3565,5 +3566,231 @@ Deno.test(
     }
 
     holdsNoSentinel(spy.lines.join("\n"));
+  },
+);
+
+// ---- The muscles of an exercise (KEY-924) ----
+
+const showMusclesTools = [
+  ...fakeTools,
+  listed("show_exercise_muscles", true, { exercise_id: { type: "string" } }, false),
+];
+
+const romanianDeadlift: AssistantExerciseMuscles = {
+  exerciseName: "Romanian Deadlift",
+  muscles: [
+    { muscle_id: "hamstrings", role: "primary" },
+    { muscle_id: "glute_max", role: "secondary" },
+  ],
+};
+
+const legCurl: AssistantExerciseMuscles = {
+  exerciseName: "Seated Leg Curl",
+  muscles: [{ muscle_id: "hamstrings", role: "primary" }],
+};
+
+const showMuscles = (id: string) => ({
+  id,
+  name: "show_exercise_muscles",
+  input: { exercise_id: `exercise-${id}` },
+});
+
+const musclesOf = (exercise: AssistantExerciseMuscles) =>
+  okResult({
+    name: "show_exercise_muscles",
+    payload: { exercise: exercise.exerciseName },
+    structured: { exerciseMuscles: exercise },
+  });
+
+const musclesOptions = (
+  responses: ScriptedResponse[],
+  ...answers: ToolAnswer[]
+): HarnessOptions => ({
+  responses,
+  tools: showMusclesTools,
+  answers: { show_exercise_muscles: inSequence(...answers) },
+});
+
+Deno.test(
+  "a shown exercise sends its event after the reply and before done, and stores it under the call's id",
+  async () => {
+    await withHarness(
+      musclesOptions(
+        [
+          callTools([showMuscles("m1")], "Checking."),
+          reply("Romanian deadlift works mainly your hamstrings."),
+        ],
+        musclesOf(romanianDeadlift),
+      ),
+      async (harness) => {
+        const result = await harness.take("What muscles does a Romanian deadlift work?");
+
+        const types = typesOf(withoutStatus(result.events));
+        assertEquals(types.filter((type) => type !== "text").slice(-2), [
+          "exercise_muscles",
+          "done",
+        ]);
+        assertEquals(types.lastIndexOf("text") < types.indexOf("exercise_muscles"), true);
+        assertEquals(eventsOfType(result.events, "exercise_muscles"), [
+          { type: "exercise_muscles", exercise: romanianDeadlift },
+        ]);
+        const [toolRow] = toolResultRows(harness);
+        assertEquals(toolRow?.display, { m1: { exerciseMuscles: romanianDeadlift } });
+        assertEquals(await harness.turns.turnHasAction(result.turnId), false);
+        assertEquals(typesOf(result.events).includes("answer_meta"), false);
+      },
+    );
+  },
+);
+
+Deno.test(
+  "parity: the stored thread reads the figure back as the item the live event drew",
+  async () => {
+    await withHarness(
+      musclesOptions(
+        [callTools([showMuscles("m1")]), reply("Mainly your hamstrings.")],
+        musclesOf(romanianDeadlift),
+      ),
+      async (harness) => {
+        const result = await harness.take("What does a Romanian deadlift work?");
+
+        const live = eventsOfType(result.events, "exercise_muscles").map((event) => event.exercise);
+        const stored = threadFromMessages(result.rows, []).flatMap((item) =>
+          item.kind === "exercise_muscles" ? [item.exercise] : [],
+        );
+        assertEquals(stored, live);
+        assertEquals(stored.length, 1);
+      },
+    );
+  },
+);
+
+Deno.test(
+  "two shown exercises send two events in call order and make two items, never merged",
+  async () => {
+    await withHarness(
+      musclesOptions(
+        [
+          callTools([showMuscles("m1"), showMuscles("m2")]),
+          reply("Both count a full set for your hamstrings."),
+        ],
+        musclesOf(romanianDeadlift),
+        musclesOf(legCurl),
+      ),
+      async (harness) => {
+        const result = await harness.take(
+          "Which works my hamstrings more, Romanian deadlift or leg curl?",
+        );
+
+        assertEquals(
+          eventsOfType(result.events, "exercise_muscles").map((event) => event.exercise),
+          [romanianDeadlift, legCurl],
+        );
+        const items = threadFromMessages(result.rows, []).filter(
+          (item) => item.kind === "exercise_muscles",
+        );
+        assertEquals(items.length, 2);
+      },
+    );
+  },
+);
+
+Deno.test("a fifth shown exercise answers card_limit and reaches no tool", async () => {
+  const calls = ["m1", "m2", "m3", "m4", "m5"].map(showMuscles);
+  await withHarness(
+    musclesOptions(
+      [callTools(calls), reply("Here are four of them. Which others?")],
+      ...Array.from({ length: MAX_EXERCISE_MUSCLES_CARDS }, () => musclesOf(legCurl)),
+    ),
+    async (harness) => {
+      const result = await harness.take("What does each exercise in my routine work?");
+
+      assertEquals(MAX_EXERCISE_MUSCLES_CARDS, 4);
+      assertEquals(eventsOfType(result.events, "exercise_muscles").length, 4);
+      assertEquals(harness.connections[0]?.calls.length, 4);
+      const [fifth] = toolResultRows(harness).slice(-1);
+      const [block] = blocksOf(fifth?.content);
+      assertEquals(block?.["tool_use_id"], "m5");
+      assertEquals(block?.["is_error"], true);
+      assertStringIncludes(String(block?.["content"]), '"error":"card_limit"');
+      assertEquals(fifth?.display, null);
+    },
+  );
+});
+
+Deno.test("a not_found answer draws nothing and does not use up one of the four", async () => {
+  const notFound = okResult({ name: "show_exercise_muscles", payload: { error: "not_found" } });
+  await withHarness(
+    musclesOptions(
+      [callTools(["m1", "m2", "m3", "m4", "m5"].map(showMuscles)), reply("Four are shown.")],
+      notFound,
+      musclesOf(legCurl),
+      musclesOf(legCurl),
+      musclesOf(legCurl),
+      musclesOf(legCurl),
+    ),
+    async (harness) => {
+      const result = await harness.take("What does each of these work?");
+
+      assertEquals(eventsOfType(result.events, "exercise_muscles").length, 4);
+      assertEquals(harness.connections[0]?.calls.length, 5);
+    },
+  );
+});
+
+Deno.test("a stopped turn sends no event for the figure it had", async () => {
+  let run: ReturnType<Harness["start"]> | undefined;
+  await withHarness(
+    {
+      ...musclesOptions([callTools([showMuscles("m1")]), reply("never asked for")]),
+      answers: {
+        show_exercise_muscles: async () => {
+          await run?.cancel();
+          return musclesOf(romanianDeadlift);
+        },
+      },
+    },
+    async (harness) => {
+      run = harness.start("What does a Romanian deadlift work?");
+      const result = await run.finished;
+
+      assertEquals(typesOf(result.events).includes("exercise_muscles"), false);
+      assertEquals(turnStatuses(harness), ["stopped"]);
+    },
+  );
+});
+
+Deno.test(
+  "a figure that does not parse is reported with fixed words, stored as nothing and not sent",
+  async () => {
+    const spy = spyOnConsole();
+    try {
+      await withHarness(
+        musclesOptions(
+          [callTools([showMuscles("m1")]), reply("Mainly your hamstrings.")],
+          okResult({
+            name: "show_exercise_muscles",
+            structured: {
+              exerciseMuscles: {
+                exerciseName: "Sentinel Squat",
+                muscles: [{ muscle_id: "quads", role: "primary", weight: 1 }],
+              },
+            },
+          }),
+        ),
+        async (harness) => {
+          const result = await harness.take("What does a squat work?");
+
+          assertEquals(typesOf(result.events).includes("exercise_muscles"), false);
+          assertEquals(result.events.at(-1), { type: "done", outcome: "complete" });
+          assertEquals(toolResultRows(harness)[0]?.display, null);
+          assertEquals(harness.reports.length, 1);
+          assertEquals(String(harness.reports[0]?.caught).includes("Sentinel"), false);
+        },
+      );
+    } finally {
+      spy.restore();
+    }
+    assertEquals(spy.lines.join("\n").includes("Sentinel"), false);
   },
 );

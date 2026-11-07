@@ -1,5 +1,5 @@
 import type { Database } from "@keylow/api-client";
-import type { AssistantCard } from "@keylow/core";
+import type { AssistantCard, AssistantExerciseMuscles } from "@keylow/core";
 
 // What the harness knows about a finished turn and about the database. Both are plain data, so a grader is
 // a function over them and a stub can stand in for the real thing.
@@ -52,6 +52,8 @@ export type TurnResult = Readonly<{
   confirmation?: Confirmation | undefined;
   /** The action cards the turn sent, in order. Absent when it sent none. */
   cards?: readonly AssistantCard[] | undefined;
+  /** The muscles of each exercise the turn showed (`exercise_muscles` events), in call order. Absent when it showed none. */
+  exerciseMuscles?: readonly AssistantExerciseMuscles[] | undefined;
   /** The code of the last `notice` event, such as `turn_failed`. Absent when the turn sent none. */
   noticeCode?: string | undefined;
 }>;

@@ -4,6 +4,7 @@
 export type {
   ImportCandidate,
   AssistantCard,
+  AssistantExerciseMuscles,
   AssistantCardDraft,
   AssistantNotice,
   BuildRoutineProblem,
@@ -195,4 +196,7 @@ export {
   buildRoutineClearedCard,
   confirmArchiveRoutineButtons,
   confirmArchiveRoutineQuestion,
+  assistantExerciseMusclesSchema,
+  describeRoleRow,
+  musclesByRole,
 } from "./core/index.js";

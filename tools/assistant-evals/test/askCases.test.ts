@@ -561,6 +561,7 @@ describe("READ_TOOLS", () => {
       "get_routines",
       "get_training_goals",
       "get_exercise_progress",
+      "show_exercise_muscles",
     ]) {
       expect(READ_TOOLS.has(tool)).toBe(true);
       expect(DIARY_READ_TOOLS.has(tool)).toBe(false);
@@ -576,6 +577,7 @@ describe("READ_TOOLS", () => {
       "suggest_next_session",
       "get_workouts",
       "get_exercise_progress",
+      "show_exercise_muscles",
     ];
 
     expect([...DIARY_READ_TOOLS].sort()).toEqual(
