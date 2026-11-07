@@ -3,13 +3,21 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { findGlobalExercise, logSets, present, saveExercise } from "./support/training";
 import { createTestUser, deleteCreatedTestUsers } from "./support/users";
-import { startSession } from "../../src/repos/sessionWrites";
-import { addSet, removeSet, reorderSets, restoreSet, updateSet } from "../../src/repos/setWrites";
+import { deleteSession, startSession } from "../../src/repos/sessionWrites";
+import {
+  addSet,
+  getSet,
+  removeSet,
+  reorderSets,
+  restoreSet,
+  updateSet,
+} from "../../src/repos/setWrites";
 import { getSession } from "../../src/repos/trainingSessions";
 
 import type { SavedExercise } from "./support/training";
 import type { TestUser } from "./support/users";
 import type { SetAdd } from "../../src/repos/setWrites";
+import type { SessionSet } from "../../src/repos/trainingSchemas";
 import type { ExerciseMuscleEntry } from "@keylow/core/schemas";
 
 // The set writes against the local stack with real user JWTs. Every test signs in its own user, because
@@ -227,6 +235,58 @@ describe("addSet", () => {
 
     expect(refused?.message).toBe("Could not log the set (42501)");
     expect(refused?.cause).toEqual({ code: "42501" });
+  });
+});
+
+describe("getSet", () => {
+  it("should read a set of the caller, and nothing of another user's, which reads as one that does not exist", async () => {
+    const owner = await createTestUser("key906");
+    const stranger = await createTestUser("key906");
+    const sessionId = await freshSession(owner);
+    const set = await log(owner, sessionId, globalExercise.id);
+
+    const own = await getSet(owner.client, set.id);
+    const foreign = await getSet(stranger.client, set.id);
+    const missing = await getSet(owner.client, NOT_A_ROW);
+
+    expect(own).toMatchObject({ id: set.id, session_id: sessionId, deleted_at: null });
+    expect(foreign).toBeNull();
+    expect(missing).toBeNull();
+  });
+
+  it("should read a removed set, and the set of a deleted session, with their deleted_at", async () => {
+    const owner = await createTestUser("key906");
+    const sessionId = await freshSession(owner);
+    const removed = await log(owner, sessionId, globalExercise.id);
+    const taken = await log(owner, sessionId, globalExercise.id);
+    await removeSet(owner.client, removed.id);
+    await deleteSession(owner.client, sessionId);
+
+    expect((await getSet(owner.client, removed.id))?.deleted_at).not.toBeNull();
+    expect((await getSet(owner.client, taken.id))?.deleted_at).not.toBeNull();
+  });
+});
+
+describe("getSet next to updateSet", () => {
+  // The assistant's Undo compares these columns as a string, once from the row an update returns and later from
+  // a read. A database that reformats a number (102.058 as 102.0580, 8.5 as 8.50) would make the two differ.
+  const columnsOf = (set: SessionSet) =>
+    JSON.stringify([set.set_type, set.reps, set.load_kg, set.rir, set.rpe]);
+
+  it.each([
+    ["a load to the gram", { load_kg: 102.058 }],
+    ["no load", { load_kg: null }],
+    ["an RPE of 8.5", { rpe: 8.5 }],
+  ])("should read back the same columns as the update returned for %s", async (_label, patch) => {
+    const owner = await createTestUser("key906");
+    const sessionId = await freshSession(owner);
+    const set = await log(owner, sessionId, globalExercise.id);
+
+    const updated = await updateSet(owner.client, set.id, patch);
+    const read = await getSet(owner.client, set.id);
+
+    expect(read).not.toBeNull();
+    expect(columnsOf(updated)).toBe(read === null ? "" : columnsOf(read));
   });
 });
 

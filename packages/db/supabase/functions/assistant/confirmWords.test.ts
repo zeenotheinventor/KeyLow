@@ -78,3 +78,17 @@ Deno.test("an archive_recipe input with no id gives no words", () => {
   assertEquals(confirmWordsFor("archive_recipe", { id: 3 }), null);
   assertEquals(confirmWordsFor("archive_recipe", null), null);
 });
+
+Deno.test("archive_routine gets the board's archive buttons and the primary tone", () => {
+  assertEquals(confirmWordsFor("archive_routine", { routine_id: ids[0] }), {
+    confirmLabel: "Archive routine",
+    cancelLabel: "Keep it",
+    tone: "primary",
+  });
+});
+
+Deno.test("an archive_routine input with no routine_id gives no words", () => {
+  assertEquals(confirmWordsFor("archive_routine", {}), null);
+  assertEquals(confirmWordsFor("archive_routine", { routine_id: 3 }), null);
+  assertEquals(confirmWordsFor("archive_routine", null), null);
+});
