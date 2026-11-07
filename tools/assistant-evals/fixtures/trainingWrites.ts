@@ -47,7 +47,7 @@ const EVAL_TIME_ZONE = "UTC";
 type ExerciseIds = ReadonlyMap<TrainingExercise, string>;
 
 /** The ids of the library exercises, read by `source_ref`, and the user's own exercise, made when it is not there. */
-async function exerciseIdsOf(client: SupabaseClient<Database>): Promise<ExerciseIds> {
+export async function exerciseIdsOf(client: SupabaseClient<Database>): Promise<ExerciseIds> {
   const { data, error } = await client
     .from("exercises")
     .select("id,source_ref")
