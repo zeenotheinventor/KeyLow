@@ -95,17 +95,18 @@ function validAnswers(answers: GoalAnswers): GoalAnswers {
 
 /**
  * Saves the answers as the new current goal with one `save_training_goals` call, which closes the
- * current row and inserts the next in one transaction, and resolves to the new row as stored. The
+ * current row and inserts the next in one transaction, and resolves to the new row's id. It reads
+ * nothing back, so a caller that must not fail once the goal is saved has nothing left to fail on. The
  * answers are checked by core's `goalAnswersSchema` first: answers the questionnaire would refuse throw a
  * `RangeError` naming the fields before any request. The priorities and the presets version are worked
  * out by core (`trainingGoalsPayload` over `GOAL_PRESETS_V1`), so a caller cannot send its own. When
  * another save got there first (40001, or 23505 for two first saves at once) the save is tried once
- * more; a second refusal, or any other, throws with the action and the code only.
+ * more, and a second refusal, or any other, throws with the action and the code only.
  */
-export async function saveTrainingGoals(
+export async function saveTrainingGoalsReturningId(
   client: SupabaseClient<Database>,
   answers: GoalAnswers,
-): Promise<TrainingGoalsRow> {
+): Promise<string> {
   const payload = trainingGoalsPayload(validAnswers(answers), GOAL_PRESETS_V1);
 
   let response = await client.rpc("save_training_goals", { p_goals: payload });
@@ -115,14 +116,46 @@ export async function saveTrainingGoals(
   if (response.error) {
     throw repoError("save your training goals", response.error);
   }
+  return response.data;
+}
+
+/** Saves the answers as the new current goal, as `saveTrainingGoalsReturningId` does, and resolves to the new row as stored. */
+export async function saveTrainingGoals(
+  client: SupabaseClient<Database>,
+  answers: GoalAnswers,
+): Promise<TrainingGoalsRow> {
+  const id = await saveTrainingGoalsReturningId(client, answers);
 
   const { data, error } = await client
     .from("training_goals")
     .select(GOAL_COLUMNS)
-    .eq("id", response.data)
+    .eq("id", id)
     .single();
   if (error) {
     throw repoError("load your training goals", error);
   }
   return parseGoalsRow(data);
+}
+
+/**
+ * Ends the goal, so the person has no current goal, through the one column of `training_goals` a client may
+ * update. Resolves to false when the goal was no longer current (another save ended it first). The end is
+ * now, or a millisecond after the goal began when this clock is behind the database's, because the table
+ * refuses a goal that ends before it starts.
+ */
+export async function closeTrainingGoals(
+  client: SupabaseClient<Database>,
+  goal: Pick<TrainingGoalsRow, "id" | "effective_from">,
+): Promise<boolean> {
+  const endedAt = new Date(Math.max(Date.now(), Date.parse(goal.effective_from) + 1));
+  const { data, error } = await client
+    .from("training_goals")
+    .update({ effective_to: endedAt.toISOString() })
+    .eq("id", goal.id)
+    .is("effective_to", null)
+    .select("id");
+  if (error) {
+    throw repoError("end your training goals", error);
+  }
+  return data.length > 0;
 }

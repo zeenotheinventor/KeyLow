@@ -34,3 +34,5 @@ export type { RoutineActiveCardChange } from "./routineActive";
 export { buildRoutineArchivedCard } from "./routineArchived";
 export { buildSetUpdatedCard } from "./setUpdated";
 export type { SetUpdatedCardInput } from "./setUpdated";
+export { buildGoalsUpdatedCard } from "./goalsUpdated";
+export type { GoalAnswerGiven, GoalsUpdatedCardChange } from "./goalsUpdated";

@@ -52,6 +52,8 @@ export type {
   LoadUnit,
   SetUpdatedCardInput,
   SetValues,
+  GoalAnswerGiven,
+  GoalAnswers,
 } from "./core/index.js";
 export {
   addCalendarDays,
@@ -202,4 +204,13 @@ export {
   loadToKg,
   MAX_LOAD_KG,
   sessionExercises,
+  buildGoalsUpdatedCard,
+  changedGoalAnswers,
+  goalAnswersOfRow,
+  GOAL_STARTING_ANSWERS,
+  EXPERIENCE_LEVELS,
+  MAX_DAYS_PER_WEEK,
+  MIN_DAYS_PER_WEEK,
+  TRAINING_FOCUSES,
+  TRAINING_GOALS,
 } from "./core/index.js";
