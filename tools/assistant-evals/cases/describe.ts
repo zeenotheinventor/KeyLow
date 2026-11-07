@@ -1,5 +1,5 @@
-// The describe-to-log set (KEY-700): 21 messages in which a person says what they ate. 16 resolve to
-// `log_entry` calls, 4 are too vague to log and end in one question, and 1 is the milestone's own sentence
+// The describe-to-log set (KEY-700): 22 messages in which a person says what they ate. 16 resolve to
+// `log_entry` calls, 5 end in one question, and 1 is the milestone's own sentence
 // ("two eggs, toast with butter, a flat white"). Each is graded by what the database holds and by the arguments
 // of the calls, and never by the wording of the reply, so any good route to a right answer passes.
 //
@@ -194,6 +194,9 @@ export function describeSpecs(anchorDate: string): readonly DescribeSpec[] {
     clarify("describe-some-cheese", "I had some cheese.", {
       mayLog: { codes: FOOD_ROUTES.cheeseSlice, amount: { portion: true } },
     }),
+    // The amount is clear but the matches differ in calories: the breast with skin, without skin, and meat and
+    // skin are three foods in the seed, so "which one?" is the right answer and logging the first is a guess.
+    clarify("describe-chicken-breast-skin-unsaid", "I had 150 g of grilled chicken breast."),
 
     // The milestone's own sentence. Butter and a flat white have no portion in the seed, so a weight for
     // either would be a guess: the assistant logs portions of the real foods, or asks once.
