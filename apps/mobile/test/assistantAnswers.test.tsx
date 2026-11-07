@@ -15,6 +15,7 @@ import { installVirtualClock } from "./support/virtualClock";
 
 import type { AssistantLiveTurn } from "@keylow/api-client";
 import type { AssistantThreadItem } from "@keylow/core";
+import type { TestInstance } from "test-renderer";
 
 jest.mock("@react-native-async-storage/async-storage", () => ({
   __esModule: true,
@@ -148,6 +149,12 @@ function threadWords(firstWords: string): string[] {
   return words.slice(words.indexOf(`You: ${firstWords}`), words.lastIndexOf("Message"));
 }
 
+// The mark on a working line is decoration, so it has no role to find it by and is found by what it is
+// made of. The line draws the one Svg, at 20 points, hidden from a screen reader.
+function logoOn(line: TestInstance) {
+  return line.queryAll((node) => node.type === "RNSVGSvgView");
+}
+
 // Moves the fake clock, which is how the working line's minimum time passes.
 const advanceClock = (milliseconds: number) =>
   act(async () => {
@@ -218,6 +225,18 @@ describe("the answers and the working line in the assistant thread", () => {
 
       expect(threadWords(RECIPE_ASK)).toEqual([...youSaid(RECIPE_ASK), READING_LINE]);
       expect(screen.getByRole("status", { name: READING_LINE })).toBeOnTheScreen();
+    });
+
+    it("should draw the logo on the recipe line too, at 20 points and hidden", async () => {
+      await sendStarter(RECIPE_ASK);
+      mockAssistant.live = liveTurn({ status: { code: "reading_recipe", host: "example.com" } });
+      mockAssistant.isStreaming = true;
+      await screen.rerender(sheetTree());
+
+      const logos = logoOn(screen.getByRole("status", { name: READING_LINE }));
+
+      expect(logos).toHaveLength(1);
+      expect(logos[0]?.props).toMatchObject({ width: 20, height: 20, "aria-hidden": true });
     });
 
     it("should word the host the event names", async () => {
@@ -332,6 +351,19 @@ describe("the answers and the working line in the assistant thread", () => {
         ...youSaid("What's left for today?"),
         "Thinking",
       ]);
+    });
+
+    it("should draw the logo at 20 points beside the words, adding no role or name to the line", async () => {
+      await sendStarter("What's left for today?");
+      await stream();
+
+      const line = screen.getByRole("status", { name: "Thinking" });
+      const logos = logoOn(line);
+
+      expect(logos).toHaveLength(1);
+      expect(logos[0]?.props).toMatchObject({ width: 20, height: 20, "aria-hidden": true });
+      expect(within(line).queryByRole("img")).toBeNull();
+      expect(screen.getAllByRole("status")).toHaveLength(1);
     });
 
     it("should be replaced by the words, with the line gone, once they arrive", async () => {
