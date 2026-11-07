@@ -27,6 +27,8 @@ A run stops before the case that would take it past `--budget` tokens (default 3
 
 Thresholds are in `src/thresholds.ts`: 90% ask, 80% describe (first pass), 100% red-team, 100% compaction (one case) and 90% recipes. A case ends `passed`, `failed` (the assistant missed), `error` (the harness or the infrastructure failed: a driver or database error, a failed turn, or a case over its 120 s wall-clock ceiling) or `not_run`. Errors are reported on their own and are misses for the exit code.
 
+The last line of the summary gives the size of the cached prompt: `input_tokens`, `cache_creation_input_tokens` and `cache_read_input_tokens` of the first model call of the run's first case. The tool list and the system prompt sit in the function, so their lengths are not printed. It is counts only, never any prompt or message text.
+
 ## The ask set
 
 `cases/ask.ts` has 40 questions about the synthetic diary, in five areas: day totals and what is left (8), range averages and days at target (10), what was eaten on a day or in an hour window (8), weigh-ins and the trend (8) and empty ranges or dates before the first entry (6). Four of them are two turns and also run `cacheReadOnSecondTurn()`. The questions name their dates, worked out from the anchor date the eval user's diary is dated from, so `askCasesOf(anchorDate)` gives the same set for the same day.
@@ -142,9 +144,20 @@ User A is the run's eval user (the budget counts A's usage). User B is a second 
 
 `createFixtureUser` (in `src/fixtureUser.ts`) makes a new user on a **local** stack with the service role (it refuses any other address), then writes six weeks of synthetic diary from `fixtures/diary.ts` through the api-client repos: seeded foods, two recipes, weigh-ins and one day note. It also gets an `unlimited` plan for the `assistant` feature (the free plan stops at 15 turns a day, so turn 16 of a run would answer `day_limit`). Every value is made up, the email is under `.test`, and `remove()` deletes the user and, by cascade, every row. Two runs make two users that share no row.
 
+## The training history
+
+`fixtures/training.ts` is the eval user's synthetic workout history, and `writeTrainingHistory(user)` in `fixtures/trainingWrites.ts` adds it as the user, through `startSession`, `addSet` and `finishSession` and the routine, goal and exercise repos, so no row is hand-written. It is opt-in, like `writeAskExtras`: `createFixtureUser` does not write it, and the `ask` and `describe` fixtures are unchanged. It only adds, so it is safe on the shared stack, and writing it twice on one user adds nothing, because each part looks for what it would write first. It writes one request at a time, so it is slower than the diary, which is written in parallel.
+
+- Six weeks of workouts, three sessions a week, dated back from the diary's anchor date (1 day before is yesterday, and everything is a number of days before the anchor, never a date). Each exercise is trained once a week, so every Monday to Sunday week holds one session of each kind whatever weekday the anchor falls on, and the weekly trend of an exercise reads like the list of its loads.
+- The story: the bench press rises for three weeks and then stays, with the effort rising to meet it, so its last three weeks have no gain. The squat gains every week. There is little back work, two light sets of one row a week. The quads were trained hard yesterday, so their heat is the highest.
+- One active routine and one archived routine, a current goal (strength) and an earlier one (aesthetic, closed by the current one), one custom exercise (`Eval face pull`) and one session note. No session is left open: a case that needs a live session starts and finishes its own.
+- Exercises are named by the library's `source_ref`, because their ids are made when the migration runs.
+
+`fixtures/trainingTotals.ts` works every expected number out with the core functions the tools use (`exerciseWeeklyTrend`, `currentMuscleState` and `nextSessionSuggestion`), over the planned sets built as `addSet` builds them, and never types one by hand. A case works its numbers out at the `now` it runs at (`referenceNow` gives midday on the anchor date for a check that needs a named moment). The heat of the quads falls through the day, from 0.92 at the start of the anchor day to 0.51 at the end of it. The library muscle maps in `trainingTotals.ts` are checked against the migration by `test/trainingTotals.test.ts`, and the numbers against what the repos read back by `test/integration/training.test.ts`.
+
 ## Tests
 
 ```sh
 pnpm --filter @keylow/assistant-evals test               # unit tests, a stub driver, no stack and no key
-pnpm --filter @keylow/assistant-evals test:integration   # the eval user and the usage reads, needs the local stack
+pnpm --filter @keylow/assistant-evals test:integration   # the eval user, the training history and the usage reads, needs the local stack
 ```

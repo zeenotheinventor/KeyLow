@@ -20,6 +20,12 @@ export type CaseReport = Readonly<{
   tokens: number;
 }>;
 
+/** The part of a model call's usage that shows how much of the prompt was cached. Counts only, never text. */
+export type PromptUsage = Pick<
+  TurnUsage,
+  "inputTokens" | "cacheCreationInputTokens" | "cacheReadInputTokens"
+>;
+
 export type RunReport = Readonly<{
   cases: readonly CaseReport[];
   /** The tokens the budget counts: input, output and cache creation tokens of every `assistant_usage` row of the eval user. */
@@ -31,6 +37,11 @@ export type RunReport = Readonly<{
   stopReason: "budget" | "usage_unreadable" | null;
   /** True when the run used more than the budget, which a turn that overshoots can do. */
   overBudget: boolean;
+  /**
+   * The usage of the first model call of the first case, which writes the prompt cache (or reads it, when an
+   * earlier run just wrote it), so it shows how large the cached prompt is. Null when that call was not read.
+   */
+  firstModelCall: PromptUsage | null;
 }>;
 
 export const DEFAULT_CASE_TIMEOUT_MS = 120_000;
@@ -53,6 +64,15 @@ type RunInput = Readonly<{
  */
 const countedTokensOf = (usage: TurnUsage): number =>
   usage.inputTokens + usage.outputTokens + usage.cacheCreationInputTokens;
+
+const promptUsageOf = (usage: TurnUsage | null): PromptUsage | null =>
+  usage === null
+    ? null
+    : {
+        inputTokens: usage.inputTokens,
+        cacheCreationInputTokens: usage.cacheCreationInputTokens,
+        cacheReadInputTokens: usage.cacheReadInputTokens,
+      };
 
 const hasNoUsage = (usage: TurnUsage): boolean =>
   usage.inputTokens +
@@ -147,6 +167,7 @@ export async function runEvals(input: RunInput): Promise<RunReport> {
   const spend: { latest: TurnUsage | null } = { latest: null };
   let stopReason: RunReport["stopReason"] = null;
   let largestCaseTokens = 0;
+  let firstModelCall: PromptUsage | null = null;
 
   const countedSoFar = () => (spend.latest === null ? 0 : countedTokensOf(spend.latest));
 
@@ -196,6 +217,9 @@ export async function runEvals(input: RunInput): Promise<RunReport> {
           !isConfirmPress(turns.at(-2), text)
         ) {
           throw new CaseError("no assistant_usage rows for the turn");
+        }
+        if (reports.length === 0 && index === 0) {
+          firstModelCall = promptUsageOf(await database.firstModelCallOfTurn(turn.turnId));
         }
         if (evalCase.afterTurn !== undefined && environment !== undefined) {
           await evalCase.afterTurn({ index, result: turn }, environment);
@@ -293,5 +317,6 @@ export async function runEvals(input: RunInput): Promise<RunReport> {
     budgetTokens,
     stopReason,
     overBudget: countedSoFar() > budgetTokens,
+    firstModelCall,
   };
 }

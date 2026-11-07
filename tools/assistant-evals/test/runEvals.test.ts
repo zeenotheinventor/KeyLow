@@ -558,4 +558,54 @@ describe("runEvals with a case that sets up and waits", () => {
     });
     expect(stack.driver.sent).toHaveLength(0);
   });
+  describe("the size of the cached prompt", () => {
+    it("should report the tokens of the first model call of the first case", async () => {
+      const { report } = await run(
+        [simpleCase("first"), simpleCase("second")],
+        [
+          {
+            result: turnResult(),
+            usage: { inputTokens: 12, cacheCreationInputTokens: 2_500, cacheReadInputTokens: 0 },
+          },
+          {
+            result: turnResult(),
+            usage: { inputTokens: 99, cacheCreationInputTokens: 0, cacheReadInputTokens: 2_500 },
+          },
+        ],
+      );
+
+      expect(report.firstModelCall).toEqual({
+        inputTokens: 12,
+        cacheCreationInputTokens: 2_500,
+        cacheReadInputTokens: 0,
+      });
+    });
+
+    it("should take the first turn of the case and not a later one", async () => {
+      const { report } = await run(
+        [simpleCase("two-turns", { messages: ["first", "second"] })],
+        [
+          { result: turnResult({ conversationId: "c" }), usage: { inputTokens: 5 } },
+          { result: turnResult({ conversationId: "c" }), usage: { inputTokens: 700 } },
+        ],
+      );
+
+      expect(report.firstModelCall?.inputTokens).toBe(5);
+    });
+
+    it("should be null when no case ran", async () => {
+      const { report } = await run([], []);
+
+      expect(report.firstModelCall).toBeNull();
+    });
+
+    it("should be null when the first turn of the first case failed before it billed a call", async () => {
+      const { report } = await run(
+        [simpleCase("fails")],
+        [{ result: turnResult(), throws: new Error("the stream broke") }],
+      );
+
+      expect(report.firstModelCall).toBeNull();
+    });
+  });
 });
