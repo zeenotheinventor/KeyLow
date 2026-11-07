@@ -7,6 +7,7 @@ import {
   confirmDeleteButtons,
   confirmTargetsButtons,
   describeAssistantStatus,
+  describeTurnEndedAfterWrite,
   threadFromMessages,
 } from "../_shared/core.ts";
 import { contextBlock, MODEL } from "./prompt.ts";
@@ -1284,7 +1285,7 @@ for (const [label, answer] of [
   ],
 ] as const) {
   Deno.test(
-    `a press whose write landed with ${label} ends complete with no notice, because nothing is untrue`,
+    `a press whose write landed with ${label} ends complete with the saved words and no notice, because nothing is untrue`,
     async () => {
       const spy = spyOnConsole();
       try {
@@ -1293,7 +1294,8 @@ for (const [label, answer] of [
 
           const result = await harness.take(deleteLabel);
 
-          assertEquals(typesOf(withoutStatus(result.events)), ["turn", "done"]);
+          assertEquals(typesOf(withoutStatus(result.events)), ["turn", "text", "done"]);
+          assertEquals(textOf(result.events), describeTurnEndedAfterWrite(1));
           assertEquals(result.events.at(-1), { type: "done", outcome: "complete" });
           assertEquals(turnStatuses(harness), ["confirm", "complete"]);
           assertEquals(harness.mock.bodies.length, 1);
@@ -2037,7 +2039,15 @@ Deno.test(
       async (harness) => {
         const result = await harness.take("log an egg");
 
-        assertEndedFailed(harness, result.events);
+        // The write landed, so the turn ends complete with the saved words (KEY-926), not failed.
+        assertEquals(result.events.slice(-2), [
+          { type: "text", delta: `\n\n${describeTurnEndedAfterWrite(1)}` },
+          { type: "done", outcome: "complete" },
+        ]);
+        assertEquals(eventsOfType(result.events, "notice"), []);
+        assertEquals(turnStatuses(harness), ["complete"]);
+        assertEquals(harness.connections[0]?.closeCount, 1);
+        // The call that never ran gets a result of its own, stored before the words, so the next request is valid.
         assertEquals(
           harness.connections[0]?.calls.map((call) => call.name),
           ["log_entry"],
@@ -2047,7 +2057,7 @@ Deno.test(
           toolResultRows(harness)
             .flatMap((row) => blocksOf(row.content))
             .map((block) => block["tool_use_id"]),
-          ["l1"],
+          ["l1", "g1"],
         );
         assert(isRecord(stored?.display) && "l1" in stored.display);
         assertEquals(eventsOfType(result.events, "card").length, 1);
@@ -4109,6 +4119,814 @@ Deno.test(
         );
         assertEquals(live, [romanianDeadlift]);
         assertEquals(stored, live);
+      },
+    );
+  },
+);
+
+// ---- A turn that ends early after a write landed (KEY-926) ----
+
+const savedOne = describeTurnEndedAfterWrite(1);
+const savedSeveral = describeTurnEndedAfterWrite(2);
+
+const routineDraft = {
+  kind: "routine_updated",
+  title: "Added Leg Extension to Legs",
+  sub: null,
+  rows: [],
+  days: null,
+  changeDetail: "1 change",
+  totalText: null,
+  note: null,
+  link: null,
+  undo: "available",
+  undoneSub: null,
+};
+
+const trainingTools: ListedTool[] = [
+  ...fakeTools,
+  listed("edit_routine", false, { routine_id: { type: "string" } }),
+  listed("get_routines", true, {}),
+];
+
+// The two kinds of write the ticket names, each with the read that comes before it.
+const writeKinds = [
+  {
+    label: "a food write",
+    text: "Log an egg for breakfast",
+    write: "log_entry",
+    read: "search_foods",
+    input: { food_id: "eggs-100g" },
+    landed: (actionId: string) => loggedCall(actionId, "egg", 143),
+  },
+  {
+    label: "a training write",
+    text: "Add leg extensions to Legs",
+    write: "edit_routine",
+    read: "get_routines",
+    input: { routine_id: "legs" },
+    landed: (actionId: string) =>
+      okResult({
+        name: "edit_routine",
+        structured: { card: routineDraft },
+        actionId,
+      }),
+  },
+] as const;
+type WriteKind = (typeof writeKinds)[number];
+
+const writeCall = (kind: WriteKind, id = "w1") => ({
+  id,
+  name: kind.write,
+  input: kind.input,
+});
+
+// `reads` responses that each call a read, so the next response is the `reads + 1`th model call.
+const readResponses = (kind: WriteKind, reads: number): ScriptedResponse[] =>
+  Array.from({ length: reads }, (_, at) =>
+    callTools([
+      {
+        id: `r${at}`,
+        name: kind.read,
+        input: kind.read === "search_foods" ? { query: "egg" } : {},
+      },
+    ]),
+  );
+
+const withKind = (kind: WriteKind, options: HarnessOptions): HarnessOptions => ({
+  tools: trainingTools,
+  ...options,
+  answers: { [kind.write]: kind.landed(actionA), ...options.answers },
+});
+
+const lastAssistantText = (harness: Harness): string | undefined => {
+  const blocks = blocksOf(rowsOfRole(harness, "assistant").at(-1)?.content);
+  return blocks.length === 1 && blocks[0]?.["type"] === "text"
+    ? String(blocks[0]["text"])
+    : undefined;
+};
+
+const wordsEnding = (events: readonly AssistantStreamEvent[], words: string) => {
+  assertEquals(eventsOfType(events, "notice"), []);
+  assertEquals(events.at(-1), { type: "done", outcome: "complete" });
+  assertEquals(textOf(events).endsWith(`\n\n${words}`), true);
+};
+
+const summaryEnding = (lines: readonly string[]) =>
+  /ending=(\S+)/.exec(summaryLine(lines).at(-1) ?? "")?.[1];
+
+// What a person sees when the sheet is opened again: the card, the words, no notice, no Ask again, and the
+// card's Undo from its action.
+function assertReadBack(harness: Harness, words: string, actionId = actionA) {
+  const available = {
+    id: actionId,
+    hasTarget: true,
+    undoneAt: null,
+    targetUpdatedAt: null,
+    targets: null,
+  };
+  const thread = threadFromMessages(harness.rows(), [available]);
+  // The model's own text, when it wrote some, is a reply of its own above the words.
+  const kinds = thread.map((item) => item.kind);
+  assertEquals(kinds.slice(0, 2), ["user", "card"]);
+  assertEquals(
+    kinds.slice(2).every((itemKind) => itemKind === "reply"),
+    true,
+  );
+  const reply = thread.at(-1);
+  assertEquals(reply?.kind === "reply" ? reply.text === words : false, true);
+  const card = thread.find((item) => item.kind === "card");
+  assertEquals(card?.kind === "card" ? card.card.undo : null, "available");
+  const undone = threadFromMessages(harness.rows(), [
+    {
+      ...available,
+      undoneAt: "2026-11-03T12:30:00Z",
+    },
+  ]);
+  const undoneCard = undone.find((item) => item.kind === "card");
+  assertEquals(undoneCard?.kind === "card" ? undoneCard.card.undo : null, "undone");
+}
+
+for (const kind of writeKinds) {
+  Deno.test(
+    `${kind.label} on the 12th model call: the card, the words, complete, no notice, ending written_then_model_call_limit`,
+    async () => {
+      const spy = spyOnConsole();
+      try {
+        await withHarness(
+          withKind(kind, {
+            responses: [...readResponses(kind, 11), callTools([writeCall(kind)])],
+          }),
+          async (harness) => {
+            const result = await harness.take(kind.text);
+
+            assertEquals(eventsOfType(result.events, "card").length, 1);
+            wordsEnding(result.events, savedOne);
+            assertEquals(turnStatuses(harness), ["complete"]);
+            assertEquals(lastAssistantText(harness), savedOne);
+            assertEquals(harness.usageRows().length, 12);
+            assertEquals(harness.connections[0]?.closeCount, 1);
+            assertReadBack(harness, savedOne);
+          },
+        );
+      } finally {
+        spy.restore();
+      }
+      assertEquals(summaryEnding(spy.lines), "written_then_model_call_limit");
+      assertStringIncludes(summaryLine(spy.lines)[0] ?? "", "modelCalls=12 toolCalls=12");
+    },
+  );
+
+  Deno.test(
+    `${kind.label} before the deadline: the card, the words, ending written_then_turn_deadline`,
+    async () => {
+      const spy = spyOnConsole();
+      try {
+        await withHarness(
+          withKind(kind, {
+            limits: quickDeadline(500),
+            responses: [callTools([writeCall(kind)]), reply("never asked for")],
+            answers: {
+              [kind.write]: async () => {
+                await sleep(900);
+                return kind.landed(actionA);
+              },
+            },
+          }),
+          async (harness) => {
+            const result = await harness.take(kind.text);
+
+            assertEquals(eventsOfType(result.events, "card").length, 1);
+            wordsEnding(result.events, savedOne);
+            assertEquals(turnStatuses(harness), ["complete"]);
+            assertEquals(harness.mock.bodies.length, 1);
+          },
+        );
+      } finally {
+        spy.restore();
+      }
+      assertEquals(summaryEnding(spy.lines), "written_then_turn_deadline");
+    },
+  );
+
+  Deno.test(`${kind.label} then a model error: the same, ending written_then_error`, async () => {
+    const spy = spyOnConsole();
+    try {
+      await withHarness(
+        withKind(kind, {
+          responses: [
+            callTools([writeCall(kind)]),
+            { blocks: [], stopReason: "end_turn", httpStatus: 400 },
+          ],
+        }),
+        async (harness) => {
+          const result = await harness.take(kind.text);
+
+          assertEquals(eventsOfType(result.events, "card").length, 1);
+          wordsEnding(result.events, savedOne);
+          assertEquals(turnStatuses(harness), ["complete"]);
+          assertReadBack(harness, savedOne);
+        },
+      );
+    } finally {
+      spy.restore();
+    }
+    assertEquals(summaryEnding(spy.lines), "written_then_error");
+  });
+
+  Deno.test(
+    `${kind.label} then a reply cut mid-text: the partial text, then the words after a blank line, both stored`,
+    async () => {
+      await withHarness(
+        withKind(kind, {
+          limits: quickIdleLimits,
+          responses: [
+            callTools([writeCall(kind)]),
+            {
+              blocks: [{ type: "text", text: "That is done and" }],
+              stopReason: "end_turn",
+              holdAfterFirstText: true,
+            },
+          ],
+        }),
+        async (harness) => {
+          const result = await harness.take(kind.text);
+
+          wordsEnding(result.events, savedOne);
+          assertEquals(textOf(result.events), `That \n\n${savedOne}`);
+          const texts = rowsOfRole(harness, "assistant").flatMap((row) =>
+            blocksOf(row.content).flatMap((block) =>
+              block["type"] === "text" ? [String(block["text"])] : [],
+            ),
+          );
+          assertEquals(texts.slice(-2), ["That ", savedOne]);
+          assertEquals(turnStatuses(harness), ["complete"]);
+        },
+      );
+    },
+  );
+
+  for (const [label, response, code] of [
+    [
+      "a refusal",
+      {
+        blocks: [{ type: "text", text: "I can't help." }],
+        stopReason: "refusal",
+      },
+      "refused",
+    ],
+    [
+      "max_tokens holding a call",
+      {
+        blocks: [
+          { type: "text", text: "Now the rest" },
+          {
+            type: "tool_use",
+            id: "cut",
+            name: "get_day",
+            input: { local_date: "2026" },
+          },
+        ],
+        stopReason: "max_tokens",
+      },
+      "max_tokens",
+    ],
+    [
+      "an unknown stop reason",
+      { blocks: [{ type: "text", text: "Hmm" }], stopReason: "pause_turn" },
+      "stop_reason",
+    ],
+  ] satisfies [string, ScriptedResponse, string][]) {
+    Deno.test(
+      `${kind.label} then ${label}: the words, status complete and not failed or refused, ending written_then_${code}`,
+      async () => {
+        const spy = spyOnConsole();
+        try {
+          await withHarness(
+            withKind(kind, {
+              responses: [callTools([writeCall(kind)]), response],
+            }),
+            async (harness) => {
+              const result = await harness.take(kind.text);
+
+              wordsEnding(result.events, savedOne);
+              assertEquals(turnStatuses(harness), ["complete"]);
+              assertEquals(lastAssistantText(harness), savedOne);
+              assertReadBack(harness, savedOne);
+            },
+          );
+        } finally {
+          spy.restore();
+        }
+        assertEquals(summaryEnding(spy.lines), `written_then_${code}`);
+      },
+    );
+  }
+
+  Deno.test(`${kind.label} then a confirmation nobody can ask: the words, complete`, async () => {
+    await withHarness(
+      withKind(kind, {
+        responses: [
+          callTools([
+            writeCall(kind),
+            {
+              id: "d1",
+              name: "delete_entry",
+              input: { ids: entryIds },
+            },
+          ]),
+        ],
+        answers: {
+          delete_entry: confirmationResult("delete_entry", confirmationId),
+        },
+      }),
+      async (harness) => {
+        const result = await harness.take(kind.text);
+
+        wordsEnding(result.events, savedOne);
+        assertEquals(eventsOfType(result.events, "confirm"), []);
+        assertEquals(turnStatuses(harness), ["complete"]);
+      },
+    );
+  });
+
+  Deno.test(
+    `${kind.label} then the reader goes away: no event, the words stored, complete, nothing reported`,
+    async () => {
+      const spy = spyOnConsole();
+      let run: ReturnType<Harness["start"]> | undefined;
+      try {
+        await withHarness(
+          withKind(kind, {
+            responses: [callTools([writeCall(kind)]), reply("never asked for")],
+            answers: {
+              [kind.write]: async () => {
+                await run?.cancel();
+                return kind.landed(actionA);
+              },
+            },
+          }),
+          async (harness) => {
+            run = harness.start(kind.text);
+            const result = await run.finished;
+
+            assertEquals(typesOf(result.events).includes("done"), false);
+            assertEquals(typesOf(result.events).includes("text"), false);
+            assertEquals(turnStatuses(harness), ["complete"]);
+            assertEquals(lastAssistantText(harness), savedOne);
+            assertEquals(harness.reports, []);
+            assertEquals(harness.mock.bodies.length, 1);
+            assertReadBack(harness, savedOne);
+          },
+        );
+      } finally {
+        spy.restore();
+      }
+      assertEquals(summaryEnding(spy.lines), "written_then_stopped");
+    },
+  );
+
+  Deno.test(
+    `${kind.label}, a second write refused during a workout, then the limit: the words and no Ask again`,
+    async () => {
+      const spy = spyOnConsole();
+      try {
+        await withHarness(
+          withKind(kind, {
+            responses: [
+              callTools([
+                writeCall(kind),
+                {
+                  id: "x1",
+                  name: "delete_entry",
+                  input: { ids: entryIds },
+                },
+              ]),
+              ...readResponses(kind, 11),
+            ],
+            answers: {
+              delete_entry: errorResult("delete_entry", "workout_in_progress"),
+            },
+          }),
+          async (harness) => {
+            const result = await harness.take(kind.text);
+
+            assertEquals(eventsOfType(result.events, "ask_again"), []);
+            wordsEnding(result.events, savedOne);
+            assertEquals(
+              threadFromMessages(harness.rows(), []).some((item) => item.kind === "ask_again"),
+              false,
+            );
+          },
+        );
+      } finally {
+        spy.restore();
+      }
+      assertEquals(summaryEnding(spy.lines), "written_then_model_call_limit");
+    },
+  );
+
+  Deno.test(
+    `${kind.label} then a model error plans no compaction, and a complete turn of the same size does`,
+    async () => {
+      const big = { input: 30_000 };
+      await withHarness(
+        withKind(kind, {
+          responses: [
+            { ...callTools([writeCall(kind)]), usage: big },
+            { blocks: [], stopReason: "end_turn", httpStatus: 400 },
+          ],
+        }),
+        async (harness) => {
+          await harness.take(kind.text);
+          await harness.finishBackground();
+
+          assertEquals(harness.mock.bodies.length, 2);
+        },
+      );
+      await withHarness(
+        withKind(kind, {
+          responses: [
+            { ...callTools([writeCall(kind)]), usage: big },
+            { ...reply("Logged."), usage: big },
+            reply("A note."),
+          ],
+        }),
+        async (harness) => {
+          await harness.take(kind.text);
+          await harness.finishBackground();
+
+          assertEquals(harness.mock.bodies.length, 3);
+        },
+      );
+    },
+  );
+
+  Deno.test(
+    `${kind.label} then a words insert that throws: the words still go out, complete, and one report`,
+    async () => {
+      await withHarness(
+        withKind(kind, {
+          responses: [...readResponses(kind, 11), callTools([writeCall(kind)])],
+          wrapTurns: (turns) => ({
+            ...turns,
+            appendMessages: (user, conversation, turn, messages) =>
+              JSON.stringify(messages).includes(savedOne)
+                ? Promise.reject(new Error("the insert failed"))
+                : turns.appendMessages(user, conversation, turn, messages),
+          }),
+        }),
+        async (harness) => {
+          const result = await harness.take(kind.text);
+
+          wordsEnding(result.events, savedOne);
+          assertEquals(turnStatuses(harness), ["complete"]);
+          assertEquals(harness.reports.length, 1);
+        },
+      );
+    },
+  );
+
+  Deno.test(
+    `${kind.label} then a store that cannot be read: the words go out, complete, one report, and no words row`,
+    async () => {
+      let failReads = false;
+      await withHarness(
+        withKind(kind, {
+          responses: [...readResponses(kind, 11), callTools([writeCall(kind)])],
+          answers: {
+            [kind.write]: () => {
+              failReads = true;
+              return kind.landed(actionA);
+            },
+          },
+          wrapTurns: (turns) => ({
+            ...turns,
+            readConversation: (user, conversation, options) =>
+              failReads
+                ? Promise.reject(new Error("the read failed"))
+                : turns.readConversation(user, conversation, options),
+          }),
+        }),
+        async (harness) => {
+          const result = await harness.take(kind.text);
+
+          wordsEnding(result.events, savedOne);
+          assertEquals(turnStatuses(harness), ["complete"]);
+          assertEquals(harness.reports.length, 1);
+          assertEquals(lastAssistantText(harness), undefined);
+        },
+      );
+    },
+  );
+
+  // The trap. Two calls in one response: the first lands, the second never runs. The words row is a plain
+  // text row, and `openToolUses` reads only the last assistant row, so without a result for the second call
+  // stored first, every later request would carry a `tool_use` with no result and the API would refuse it.
+  Deno.test(
+    `${kind.label}: one response with two calls, the first lands and the second throws, leaves a valid history for the next turn`,
+    async () => {
+      await withHarness(
+        withKind(kind, {
+          responses: [
+            callTools([writeCall(kind, "w1"), writeCall(kind, "w2")]),
+            reply("It is in your diary."),
+          ],
+          answers: {
+            [kind.write]: inSequence(kind.landed(actionA), failingCall()),
+          },
+        }),
+        async (harness) => {
+          const first = await harness.take(kind.text);
+          wordsEnding(first.events, savedOne);
+          assertEquals(harness.connections[0]?.calls.length, 2);
+
+          const rows = harness.rows();
+          const resultIds = toolResultRows(harness).flatMap((row) =>
+            blocksOf(row.content).map((block) => block["tool_use_id"]),
+          );
+          assertEquals(resultIds, ["w1", "w2"]);
+          // The results come first, then the words, and nothing else is stored after them.
+          assertEquals(
+            rows.slice(-2).map((row) => [row.role, blocksOf(row.content)[0]?.["type"]]),
+            [
+              ["user", "tool_result"],
+              ["assistant", "text"],
+            ],
+          );
+
+          await harness.take("What did I log today?");
+
+          const messages = messagesOf(harness.mock.json()[1]);
+          const roles = messages.map((message) => message["role"]);
+          roles.forEach((role, at) => assertNotEquals(role, roles[at - 1]));
+          for (const [at, message] of messages.entries()) {
+            const called = blocksOf(message["content"]).flatMap((block) =>
+              block["type"] === "tool_use" ? [String(block["id"])] : [],
+            );
+            if (called.length === 0) {
+              continue;
+            }
+            const answered = blocksOf(messages[at + 1]?.["content"]).flatMap((block) =>
+              block["type"] === "tool_result" ? [String(block["tool_use_id"])] : [],
+            );
+            assertEquals(answered, called);
+          }
+          const last = blocksOf(messages.at(-1)?.["content"]);
+          assertEquals(last.at(-1)?.["text"], "What did I log today?");
+          // The words sit between the results and the new message.
+          assertEquals(
+            messages.map((message) => message["role"]),
+            ["user", "assistant", "user", "assistant", "user"],
+          );
+          assertEquals(blocksOf(messages[3]?.["content"])[0]?.["text"], savedOne);
+        },
+      );
+    },
+  );
+
+  Deno.test(
+    `${kind.label}: a call that threw after its write landed is found by turnHasAction`,
+    async () => {
+      const asked: string[] = [];
+      await withHarness(
+        withKind(kind, {
+          responses: [callTools([writeCall(kind)])],
+          answers: { [kind.write]: failingCall() },
+          wrapTurns: (turns) => ({
+            ...turns,
+            turnHasAction: (turnId) => {
+              asked.push(turnId);
+              return Promise.resolve(true);
+            },
+          }),
+        }),
+        async (harness) => {
+          const result = await harness.take(kind.text);
+
+          wordsEnding(result.events, savedOne);
+          assertEquals(eventsOfType(result.events, "card"), []);
+          assertEquals(turnStatuses(harness), ["complete"]);
+          assertEquals(asked.length, 1);
+          // The call never answered, so the result stored first is the replay's.
+          assertEquals(
+            toolResultRows(harness).flatMap((row) =>
+              blocksOf(row.content).map((block) => block["tool_use_id"]),
+            ),
+            ["w1"],
+          );
+        },
+      );
+    },
+  );
+
+  Deno.test(
+    `${kind.label}: a call that threw with no action row keeps the notice and Try again`,
+    async () => {
+      await withHarness(
+        withKind(kind, {
+          responses: [callTools([writeCall(kind)])],
+          answers: { [kind.write]: failingCall() },
+          wrapTurns: (turns) => ({
+            ...turns,
+            turnHasAction: () => Promise.resolve(false),
+          }),
+        }),
+        async (harness) => {
+          const result = await harness.take(kind.text);
+
+          assertEquals(result.events.slice(-2), [
+            failedNotice,
+            {
+              type: "done",
+              outcome: "failed",
+            },
+          ]);
+          assertEquals(turnStatuses(harness), ["failed"]);
+          assertEquals(textOf(result.events).includes("saved"), false);
+        },
+      );
+    },
+  );
+
+  Deno.test(`${kind.label}: a turnHasAction that throws counts as no write`, async () => {
+    await withHarness(
+      withKind(kind, {
+        responses: [callTools([writeCall(kind)])],
+        answers: { [kind.write]: failingCall() },
+        wrapTurns: (turns) => ({
+          ...turns,
+          turnHasAction: () => Promise.reject(new Error("the lookup failed")),
+        }),
+      }),
+      async (harness) => {
+        const result = await harness.take(kind.text);
+
+        assertEquals(result.events.slice(-2), [
+          failedNotice,
+          {
+            type: "done",
+            outcome: "failed",
+          },
+        ]);
+        assertEquals(turnStatuses(harness), ["failed"]);
+      },
+    );
+  });
+
+  // The same endings with nothing landed stay as they were: the notice, Try again, status failed, no words.
+  for (const [label, options] of [
+    ["the limit", (): HarnessOptions => ({ responses: readResponses(kind, 12) })],
+    [
+      "the deadline",
+      (): HarnessOptions => ({
+        limits: quickDeadline(500),
+        responses: [callTools([{ id: "r0", name: kind.read, input: {} }]), reply("never")],
+        answers: {
+          [kind.read]: async () => {
+            await sleep(900);
+            return okResult({ name: kind.read });
+          },
+        },
+      }),
+    ],
+    [
+      "a model error",
+      (): HarnessOptions => ({
+        responses: [
+          callTools([{ id: "r0", name: kind.read, input: {} }]),
+          { blocks: [], stopReason: "end_turn", httpStatus: 400 },
+        ],
+      }),
+    ],
+  ] as const) {
+    Deno.test(`${kind.label}: ${label} with nothing landed is as before`, async () => {
+      await withHarness(withKind(kind, options()), async (harness) => {
+        const result = await harness.take(kind.text);
+
+        assertEquals(result.events.slice(-2), [
+          failedNotice,
+          {
+            type: "done",
+            outcome: "failed",
+          },
+        ]);
+        assertEquals(eventsOfType(result.events, "done").length, 1);
+        assertEquals(turnStatuses(harness), ["failed"]);
+        assertEquals(textOf(result.events).includes("saved"), false);
+        assertEquals(lastAssistantText(harness)?.includes("saved") ?? false, false);
+      });
+    });
+  }
+}
+
+Deno.test("two writes that landed get the plural words", async () => {
+  const kind = writeKinds[0];
+  await withHarness(
+    withKind(kind, {
+      responses: [
+        callTools([writeCall(kind, "w1"), writeCall(kind, "w2")]),
+        { blocks: [], stopReason: "end_turn", httpStatus: 400 },
+      ],
+      answers: {
+        log_entry: inSequence(loggedCall(actionA, "egg", 143), loggedCall(actionB, "toast", 90)),
+      },
+    }),
+    async (harness) => {
+      const result = await harness.take(kind.text);
+
+      wordsEnding(result.events, savedSeveral);
+      assertEquals(lastAssistantText(harness), savedSeveral);
+    },
+  );
+});
+
+Deno.test(
+  "a write that landed with a card, and one that changed nothing, count as one change",
+  async () => {
+    const kind = writeKinds[0];
+    await withHarness(
+      withKind(kind, {
+        responses: [
+          callTools([writeCall(kind, "w1"), writeCall(kind, "w2")]),
+          { blocks: [], stopReason: "end_turn", httpStatus: 400 },
+        ],
+        answers: {
+          log_entry: inSequence(loggedCall(actionA, "egg", 143), okResult({ name: "log_entry" })),
+        },
+      }),
+      async (harness) => {
+        const result = await harness.take(kind.text);
+
+        wordsEnding(result.events, savedOne);
+      },
+    );
+  },
+);
+
+Deno.test(
+  "a press whose write landed with no drawable card sends the words and keeps its ending",
+  async () => {
+    const spy = spyOnConsole();
+    try {
+      await withHarness(
+        askingOnly(okResult({ name: "delete_entry", actionId: deletedAction })),
+        async (harness) => {
+          await afterAskedDelete(harness);
+
+          const result = await harness.take(deleteLabel);
+
+          assertEquals(typesOf(withoutStatus(result.events)), ["turn", "text", "done"]);
+          assertEquals(textOf(result.events), savedOne);
+          assertEquals(result.events.at(-1), {
+            type: "done",
+            outcome: "complete",
+          });
+          assertEquals(turnStatuses(harness), ["confirm", "complete"]);
+          assertEquals(lastAssistantText(harness), savedOne);
+          assertEquals(harness.mock.bodies.length, 1);
+        },
+      );
+    } finally {
+      spy.restore();
+    }
+    assertEquals(summaryEnding(spy.lines), "confirm_written_no_card");
+  },
+);
+
+Deno.test(
+  "a figure beside a landed write is sent before the words, and the live turn and the stored one agree",
+  async () => {
+    const kind = writeKinds[0];
+    await withHarness(
+      {
+        tools: showMusclesTools,
+        responses: [
+          callTools([writeCall(kind), showMuscles("m1")]),
+          { blocks: [], stopReason: "end_turn", httpStatus: 400 },
+        ],
+        answers: {
+          log_entry: kind.landed(actionA),
+          show_exercise_muscles: musclesOf(romanianDeadlift),
+        },
+      },
+      async (harness) => {
+        const result = await harness.take(kind.text);
+
+        assertEquals(
+          typesOf(withoutStatus(result.events)).filter((type) => type !== "text"),
+          ["turn", "card", "exercise_muscles", "done"],
+        );
+        const wordsAt = typesOf(result.events).lastIndexOf("text");
+        assertEquals(wordsAt > typesOf(result.events).indexOf("exercise_muscles"), true);
+        wordsEnding(result.events, savedOne);
+        const live = eventsOfType(result.events, "exercise_muscles").map((event) => event.exercise);
+        const stored = threadFromMessages(result.rows, []).flatMap((item) =>
+          item.kind === "exercise_muscles" ? [item.exercise] : [],
+        );
+        assertEquals(live, [romanianDeadlift]);
+        assertEquals(stored, live);
+        assertEquals(turnStatuses(harness), ["complete"]);
       },
     );
   },

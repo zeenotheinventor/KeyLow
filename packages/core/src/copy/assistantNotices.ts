@@ -110,6 +110,18 @@ export function describeAssistantNotice(
   }
 }
 
+/**
+ * The words that end a turn which failed or was cut short after a write landed, in place of the failed-turn
+ * notice (KEY-926). That notice says "Nothing was changed" and offers Try again, which would send the message
+ * again and could repeat the write. The server stores these words and the app shows them too, when a stream
+ * breaks after a card. `writes` is how many changes the turn saved.
+ */
+export function describeTurnEndedAfterWrite(writes: number): string {
+  return writes === 1
+    ? "Your change was saved, but the reply did not finish. Sending the same message again could repeat it."
+    : "Your changes were saved, but the reply did not finish. Sending the same message again could repeat them.";
+}
+
 const DEFAULT_STEP_WORDS = "Thinking";
 
 type ToolWords = { words: string; afterConfirm?: string };

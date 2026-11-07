@@ -352,7 +352,7 @@ const plainTitles: Record<AssistantCardKind, (count: number) => string> = {
   routine_archived: () => "Archived a routine",
   routine_created: () => "Built a routine",
   goals_updated: () => "Updated your training goals",
-  exercise_created: () => "Added an exercise",
+  exercise_created: () => "Saved an exercise",
   exercise_updated: () => "Updated an exercise",
   exercise_archived: () => "Archived an exercise",
   set_updated: (count) => (count === 1 ? "Changed a set" : `Changed ${count} sets`),

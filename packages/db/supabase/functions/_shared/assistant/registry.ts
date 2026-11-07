@@ -33,6 +33,9 @@ import { setActiveRoutineTool } from "./tools/setActiveRoutine.ts";
 import { archiveRoutineTool } from "./tools/archiveRoutine.ts";
 import { updatePastSetTool } from "./tools/updatePastSet.ts";
 import { updateTrainingGoalsTool } from "./tools/updateTrainingGoals.ts";
+import { archiveCustomExerciseTool } from "./tools/archiveCustomExercise.ts";
+import { saveCustomExerciseTool } from "./tools/saveCustomExercise.ts";
+import { deleteWorkoutTool } from "./tools/deleteWorkout.ts";
 import { strictSchemaProblem } from "./tool.ts";
 
 import type { ToolDefinition, ToolRegistry } from "./tool.ts";
@@ -97,6 +100,9 @@ const toolDefinitions: readonly ToolDefinition[] = [
   updatePastSetTool,
   updateTrainingGoalsTool,
   createRoutineTool,
+  saveCustomExerciseTool,
+  archiveCustomExerciseTool,
+  deleteWorkoutTool,
   askUserTool,
 ];
 

@@ -186,7 +186,7 @@ export function openToolUses(history: readonly StoredHistoryMessage[]): OpenTool
 
 const ASK_USER_TOOL = "ask_user";
 
-function resultForOpenToolUse({ id, name }: OpenToolUse): Anthropic.ToolResultBlockParam {
+export function resultForOpenToolUse({ id, name }: OpenToolUse): Anthropic.ToolResultBlockParam {
   return name === ASK_USER_TOOL
     ? {
         type: "tool_result",
