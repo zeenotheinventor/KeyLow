@@ -297,7 +297,12 @@ Deno.test(
       tools: registered,
     });
 
-    for (const name of ["search_exercises", "get_routines", "get_training_goals"]) {
+    for (const name of [
+      "search_exercises",
+      "get_routines",
+      "get_training_goals",
+      "get_exercise_progress",
+    ]) {
       assert(readSet.includes(name), name);
     }
     assertEquals(readSet.includes("log_entry"), false);
