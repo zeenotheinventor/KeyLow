@@ -94,8 +94,9 @@ type WorkingExercise = Readonly<{
 
 /**
  * A day while the list is applied. `reference` is the name a change can reach it by when it was added in
- * this list. `lastChangeIndex` is the change that last set the day's own fields (it was added, renamed,
- * given a weekday or moved), and `lastExerciseAddIndex` the last that added an exercise to it.
+ * this list. `nameChangeIndex` and `weekdayChangeIndex` are the changes that last set those two fields
+ * (a change that leaves a field null does not count), and `lastExerciseAddIndex` the last that added an
+ * exercise to it.
  */
 type WorkingDay = Readonly<{
   reference: string | null;
@@ -103,7 +104,8 @@ type WorkingDay = Readonly<{
   weekday: number | null;
   name: string;
   exercises: readonly WorkingExercise[];
-  lastChangeIndex: number | null;
+  nameChangeIndex: number | null;
+  weekdayChangeIndex: number | null;
   lastExerciseAddIndex: number | null;
 }>;
 
@@ -173,7 +175,15 @@ const stepOnExercise = (
       return [planned];
     }
     const replacement = edit(planned.exercise);
-    return replacement === null ? [] : [{ exercise: replacement, lastChangeIndex: changeIndex }];
+    if (replacement === null) {
+      return [];
+    }
+    // An edit that names nothing hands back the exercise itself and is not blamed for it.
+    return [
+      replacement === planned.exercise
+        ? planned
+        : { exercise: replacement, lastChangeIndex: changeIndex },
+    ];
   });
   return { days: withDayAt(days, dayIndex, { ...entry, exercises: edited }) };
 };
@@ -226,7 +236,8 @@ const stepOnAddDay = (
     weekday: change.weekday,
     name: change.name,
     exercises: [],
-    lastChangeIndex: changeIndex,
+    nameChangeIndex: changeIndex,
+    weekdayChangeIndex: changeIndex,
     lastExerciseAddIndex: null,
   };
   return { days: insertedAt(days, change.position, added) };
@@ -249,7 +260,8 @@ const stepOnUpdateDay = (
     ...entry,
     name: change.name ?? entry.name,
     weekday: change.weekday ?? entry.weekday,
-    lastChangeIndex: changeIndex,
+    nameChangeIndex: change.name === null ? entry.nameChangeIndex : changeIndex,
+    weekdayChangeIndex: change.weekday === null ? entry.weekdayChangeIndex : changeIndex,
   };
   if (change.position === null) {
     return { days: withDayAt(days, dayIndex, updated) };
@@ -270,13 +282,19 @@ const stepOf = (days: readonly WorkingDay[], change: RoutineChange, changeIndex:
     case "remove":
       return stepOnExercise(days, change, changeIndex, () => null);
     case "set_targets":
-      return stepOnExercise(days, change, changeIndex, (exercise) => ({
-        exercise_id: exercise.exercise_id,
-        target_sets: change.sets ?? exercise.target_sets,
-        rep_min: change.repMin ?? exercise.rep_min,
-        rep_max: change.repMax ?? exercise.rep_max,
-        target_rir: change.targetRir ?? exercise.target_rir,
-      }));
+      return stepOnExercise(days, change, changeIndex, (exercise) =>
+        [change.sets, change.repMin, change.repMax, change.targetRir].every(
+          (named) => named === null,
+        )
+          ? exercise
+          : {
+              exercise_id: exercise.exercise_id,
+              target_sets: change.sets ?? exercise.target_sets,
+              rep_min: change.repMin ?? exercise.rep_min,
+              rep_max: change.repMax ?? exercise.rep_max,
+              target_rir: change.targetRir ?? exercise.target_rir,
+            },
+      );
     case "add_day":
       return stepOnAddDay(days, change, changeIndex);
     case "update_day":
@@ -295,8 +313,9 @@ const latestOf = (indexes: readonly (number | null)[]): number | null =>
  *
  * - a rule about one exercise: the last change that added or edited that exercise,
  * - too many exercises in a day: the last change that added one to it,
- * - a rule about the day's own fields: the last change that added, renamed or moved it, and for a
- *   weekday two days share, the later of the two days' last such changes,
+ * - a rule about a day's weekday: the last change that set it, and for a weekday two days share, the
+ *   later of the two days' last such changes,
+ * - a rule about a day's name: the last change that set it,
  * - too many days: the last change that added a day,
  * - anything else (the routine's name): null.
  */
@@ -322,10 +341,10 @@ const blamedChangeIndex = (
     return latestOf(
       days
         .filter((other) => other.weekday === entry?.weekday)
-        .map((other) => other.lastChangeIndex),
+        .map((other) => other.weekdayChangeIndex),
     );
   }
-  return entry?.lastChangeIndex ?? null;
+  return (rule === "weekday_invalid" ? entry?.weekdayChangeIndex : entry?.nameChangeIndex) ?? null;
 };
 
 const withoutRepeats = (problems: readonly RoutineChangeProblem[]): RoutineChangeProblem[] =>
@@ -354,7 +373,8 @@ export const applyRoutineChanges = (
     weekday: day.weekday,
     name: day.name,
     exercises: day.exercises.map((exercise) => ({ exercise, lastChangeIndex: null })),
-    lastChangeIndex: null,
+    nameChangeIndex: null,
+    weekdayChangeIndex: null,
     lastExerciseAddIndex: null,
   }));
   let lastDayAddIndex: number | null = null;

@@ -535,6 +535,30 @@ describe("applyRoutineChanges", () => {
       expect(problems).toStrictEqual([{ index: 1, rule: "weekday_repeated" }]);
     });
 
+    it("should not blame a rename for a weekday it left alone", () => {
+      const problems = problemsOf(routine(), [
+        updateDay({ dayId: PULL_DAY, weekday: 0 }),
+        updateDay({ name: "Chest day" }),
+      ]);
+
+      expect(problems).toStrictEqual([{ index: 0, rule: "weekday_repeated" }]);
+    });
+
+    it("should not blame a move for a name it left alone", () => {
+      const problems = problemsOf(routine(), [
+        updateDay({ name: "  " }),
+        updateDay({ position: 1 }),
+      ]);
+
+      expect(problems).toStrictEqual([{ index: 0, rule: "day_name_blank" }]);
+    });
+
+    it("should not blame a set_targets that names nothing for a bad value it left alone", () => {
+      const problems = problemsOf(routine(), [setTargets({ sets: 99 }), setTargets()]);
+
+      expect(problems).toStrictEqual([{ index: 0, rule: "target_sets_invalid" }]);
+    });
+
     it("should say plainly that no change caused a rule the routine already broke", () => {
       const alreadyBroken: RoutineDraft = {
         name: "Push Pull",
