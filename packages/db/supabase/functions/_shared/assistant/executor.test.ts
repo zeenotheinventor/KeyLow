@@ -20,6 +20,8 @@ import {
   turnsOfConversation,
   userId,
 } from "./testing.ts";
+import { stubCaller } from "./tools/testing.ts";
+import { sessionRow } from "./tools/trainingFixtures.ts";
 
 import type { ExecutionResult } from "./executor.ts";
 import type { FakeActionStore } from "./testing.ts";
@@ -1119,4 +1121,153 @@ Deno.test("the write path scrubs the user id from what the model reads", async (
   assertObjectMatch(result, { status: "ok" });
   assertEquals(payloadOf(result), { note: "saved for [removed]" });
   assertFalse(result.text.includes(userId));
+});
+
+// The guard that keeps a training write out of a workout in progress (KEY-899).
+const workoutInProgress = () =>
+  stubCaller({ tables: { workout_sessions: [sessionRow(1, { ended_at: null })] } });
+const noWorkoutInProgress = () => stubCaller({ tables: { workout_sessions: [sessionRow(1)] } });
+
+Deno.test(
+  "a flagged write answers workout_in_progress while a workout is live, and asks, takes and runs nothing",
+  async () => {
+    const write = fakeWriteTool({ ...needsYes, refusesDuringWorkout: true });
+    const { ctx, store } = createFakeContext([write.definition]);
+
+    const result = await executeTool(
+      { ...ctx, caller: workoutInProgress().caller },
+      "fake_write",
+      input,
+    );
+
+    assertObjectMatch(result, { status: "error", code: "workout_in_progress" });
+    assertEquals(payloadOf(result), { error: "workout_in_progress" });
+    assertEquals(write.runs, []);
+    assertEquals(store.actions.length, 0);
+    assertEquals(store.calls["insertReservation"], undefined);
+    assertEquals(store.calls["storePendingConfirmation"], undefined);
+    assertEquals(store.turns[0]?.pending, null);
+  },
+);
+
+Deno.test("a flagged write with no confirmation also takes no slot during a workout", async () => {
+  const write = fakeWriteTool({ refusesDuringWorkout: true });
+  const { ctx, store } = createFakeContext([write.definition]);
+
+  const result = await executeTool(
+    { ...ctx, caller: workoutInProgress().caller },
+    "fake_write",
+    input,
+  );
+
+  assertObjectMatch(result, { status: "error", code: "workout_in_progress" });
+  assertEquals(write.runs, []);
+  assertEquals(store.calls["insertReservation"], undefined);
+});
+
+Deno.test("a flagged write runs as usual when the only session has ended", async () => {
+  const write = fakeWriteTool({ refusesDuringWorkout: true });
+  const { ctx, store } = createFakeContext([write.definition]);
+
+  const result = await executeTool(
+    { ...ctx, caller: noWorkoutInProgress().caller },
+    "fake_write",
+    input,
+  );
+
+  assertObjectMatch(result, { status: "ok", actionId: "action-1" });
+  assertEquals(write.runs.length, 1);
+  assertEquals(store.actions.length, 1);
+});
+
+Deno.test(
+  "a confirmation asked with no workout and pressed during one is refused, stays unspent and works once the workout ends",
+  async () => {
+    const write = fakeWriteTool({ ...needsYes, refusesDuringWorkout: true });
+    const store = createFakeActionStore({ turns: turnsOfConversation([earlier, later]) });
+    const asked = await executeTool(
+      { ...contextOn(write, store, earlier), caller: noWorkoutInProgress().caller },
+      "fake_write",
+      input,
+    );
+    if (asked.status !== "needs_confirmation") {
+      throw new Error("expected a confirmation request");
+    }
+    const pressed = { ...input, confirmation_id: asked.confirmationId };
+
+    const during = await executeTool(
+      { ...contextOn(write, store, later), caller: workoutInProgress().caller },
+      "fake_write",
+      pressed,
+    );
+    const stillPending = store.turns.find((turn) => turn.id === earlier)?.pending;
+    const after = await executeTool(
+      { ...contextOn(write, store, later), caller: noWorkoutInProgress().caller },
+      "fake_write",
+      pressed,
+    );
+
+    assertObjectMatch(during, { status: "error", code: "workout_in_progress" });
+    assertEquals(stillPending?.id, asked.confirmationId);
+    assertEquals(store.calls["spendPendingConfirmation"], 1);
+    assertObjectMatch(after, { status: "ok" });
+    assertEquals(write.runs.length, 1);
+  },
+);
+
+Deno.test(
+  "a write without the flag ignores a live workout and never reads the sessions",
+  async () => {
+    const write = fakeWriteTool();
+    const { ctx } = createFakeContext([write.definition]);
+    const live = workoutInProgress();
+
+    const result = await executeTool({ ...ctx, caller: live.caller }, "fake_write", input);
+
+    assertObjectMatch(result, { status: "ok" });
+    assertEquals(write.runs.length, 1);
+    assertEquals(live.calls, []);
+  },
+);
+
+Deno.test("a read tool ignores a live workout", async () => {
+  const read = fakeReadTool("get_day");
+  const { ctx } = createFakeContext([read.definition]);
+  const live = workoutInProgress();
+
+  const result = await executeTool({ ...ctx, caller: live.caller }, "get_day", input);
+
+  assertObjectMatch(result, { status: "ok" });
+  assertEquals(live.calls, []);
+});
+
+Deno.test(
+  "a flagged write whose session read fails answers tool_failed, reports it and writes nothing",
+  async () => {
+    const write = fakeWriteTool({ ...needsYes, refusesDuringWorkout: true });
+    const { ctx, store, reported } = createFakeContext([write.definition]);
+    const broken = stubCaller({ failingTables: { workout_sessions: "57014" } });
+
+    const result = await executeTool({ ...ctx, caller: broken.caller }, "fake_write", input);
+
+    assertObjectMatch(result, { status: "error", code: "tool_failed" });
+    assertEquals(write.runs, []);
+    assertEquals(store.actions.length, 0);
+    assertEquals(store.calls["storePendingConfirmation"], undefined);
+    assertEquals(
+      reported.map(({ functionName, code }) => [functionName, code]),
+      [["assistant tool fake_write", "internal_error"]],
+    );
+  },
+);
+
+Deno.test("an invalid input is judged before the workout is looked up", async () => {
+  const write = fakeWriteTool({ refusesDuringWorkout: true });
+  const { ctx } = createFakeContext([write.definition]);
+  const live = workoutInProgress();
+
+  const result = await executeTool({ ...ctx, caller: live.caller }, "fake_write", { note: 5 });
+
+  assertObjectMatch(result, { status: "error", code: "invalid_input" });
+  assertEquals(live.calls, []);
 });

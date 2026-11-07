@@ -23,6 +23,8 @@ export type StubData = {
   // gone at the next, such as a session deleted between a list and its detail. A table named here that
   // is not in `tables` answers nothing at its first read.
   laterTables?: Record<string, Row[]>;
+  // The tables whose reads fail with this database error code, as a request the database refused.
+  failingTables?: Record<string, string>;
 };
 
 const isRow = (value: unknown): value is Row =>
@@ -37,6 +39,7 @@ export function stubCaller(data: StubData = {}): StubCaller {
 
   function queryOver(table: string, rows: Row[]) {
     let remaining = rows;
+    const failure = data.failingTables?.[table];
     const record = (method: string, args: unknown[]) => calls.push({ table, method, args });
     const recorded =
       (method: string) =>
@@ -100,11 +103,19 @@ export function stubCaller(data: StubData = {}): StubCaller {
       },
       maybeSingle() {
         record("maybeSingle", []);
-        return Promise.resolve({ data: remaining[0] ?? null, error: null });
+        return Promise.resolve(
+          failure === undefined
+            ? { data: remaining[0] ?? null, error: null }
+            : { data: null, error: { code: failure } },
+        );
       },
       // The repos await the builder itself, as the real client allows.
       then: (resolve: (answer: unknown) => unknown, reject: (reason: unknown) => unknown) =>
-        Promise.resolve({ data: remaining, error: null }).then(resolve, reject),
+        Promise.resolve(
+          failure === undefined
+            ? { data: remaining, error: null }
+            : { data: null, error: { code: failure } },
+        ).then(resolve, reject),
     };
     return query;
   }

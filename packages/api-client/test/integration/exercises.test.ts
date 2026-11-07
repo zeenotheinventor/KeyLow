@@ -5,7 +5,7 @@ import { present } from "./support/training";
 import { createTestUser, deleteCreatedTestUsers } from "./support/users";
 import { ExerciseRuleError } from "../../src/errors";
 import { getExercise, readExercisesById, searchExercises } from "../../src/repos/exercises";
-import { archiveExercise, saveExercise } from "../../src/repos/exerciseWrites";
+import { archiveExercise, restoreExercise, saveExercise } from "../../src/repos/exerciseWrites";
 import { startSession } from "../../src/repos/sessionWrites";
 import { addSet } from "../../src/repos/setWrites";
 
@@ -276,6 +276,58 @@ describe("archiveExercise", () => {
     await archiveExercise(owner.client, own.id);
 
     expect(await storedSnapshot(owner, set.id)).toMatchObject({ ref: own.id });
+  });
+});
+
+describe("restoreExercise", () => {
+  it("should bring an archived custom exercise back into search and onto its own read", async () => {
+    const owner = await createTestUser("key389");
+    const name = uniqueName("restored");
+    const own = await saveExercise(owner.client, { draft: draftOf(name) });
+    await archiveExercise(owner.client, own.id);
+
+    await restoreExercise(owner.client, own.id);
+
+    expect((await searchExercises(owner.client, name)).map(({ id }) => id)).toEqual([own.id]);
+    expect(await getExercise(owner.client, own.id)).toEqual(own);
+  });
+
+  it("should resolve with no change for an exercise that is already live", async () => {
+    const owner = await createTestUser("key389");
+    const own = await saveExercise(owner.client, { draft: draftOf(uniqueName("live")) });
+
+    await restoreExercise(owner.client, own.id);
+
+    expect(await getExercise(owner.client, own.id)).toEqual(own);
+  });
+
+  it("should refuse an exercise of the library with the typed rule", async () => {
+    const owner = await createTestUser("key389");
+
+    const refused = await rejectionOf(restoreExercise(owner.client, globalExerciseId));
+
+    expect(refused).toBeInstanceOf(ExerciseRuleError);
+    expect(refused?.message).toBe("Could not restore the exercise (global_exercise)");
+  });
+
+  it("should fail for the exercise of another user and leave it archived", async () => {
+    const owner = await createTestUser("key389");
+    const stranger = await createTestUser("key389");
+    const own = await saveExercise(owner.client, { draft: draftOf(uniqueName("theirs")) });
+    await archiveExercise(owner.client, own.id);
+
+    const error = await rejectionOf(restoreExercise(stranger.client, own.id));
+
+    expect(error?.message).toBe("Could not restore the exercise (PGRST116)");
+    expect(await getExercise(owner.client, own.id)).toBeNull();
+  });
+
+  it("should refuse an id that is not a UUID before any request", async () => {
+    const owner = await createTestUser("key389");
+
+    const error = await rejectionOf(restoreExercise(owner.client, "not-a-uuid"));
+
+    expect(error).toBeInstanceOf(RangeError);
   });
 });
 

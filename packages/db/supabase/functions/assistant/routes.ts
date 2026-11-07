@@ -15,6 +15,7 @@ import { checkAccess } from "./gates.ts";
 import { createEventStream, endAsFailed, eventResponse, writeEvent } from "./sse.ts";
 import { ConversationBusyError } from "./turnStore.ts";
 
+import type { UndoReason } from "../_shared/assistant/tool.ts";
 import type { UndoResult } from "../_shared/assistant/undo.ts";
 import type { AssistantNotice } from "../_shared/core.ts";
 import type { ReportError } from "../_shared/report.ts";
@@ -90,9 +91,15 @@ export function createAssistantHandler(
       return error("invalid_request", "Send the ids of the actions to undo.");
     }
     const undoOne = dependencies.undoWith(request, userId);
-    const results: { actionId: string; result: UndoCode }[] = [];
+    const results: { actionId: string; result: UndoCode; reason?: UndoReason }[] = [];
     for (const actionId of parsed.data.actionIds) {
-      results.push({ actionId, result: toUndoCode(await undoOne(actionId)) });
+      const outcome = await undoOne(actionId);
+      const reason = outcome.status === "error" ? outcome.reason : undefined;
+      results.push({
+        actionId,
+        result: toUndoCode(outcome),
+        ...(reason === undefined ? {} : { reason }),
+      });
     }
     logRoute("undo", userId, "none", startedAt);
     return json({ results });
