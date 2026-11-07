@@ -239,11 +239,11 @@ The reply is not required to say where a number came from: the prompt says it ne
 Every case also takes `endedWell`, the critical `onlyTrainingReadTools` and `noWriteRows`, and the soft `noFirstPersonWithContext`. The graders are in the same file:
 
 - `figureIsTheMap`: each figure equals the stored map of the exercise a call of the tool read, read as the eval user with the id from the call's input, never typed.
-- `replyNamesOnlyTheFigure`: the reply and the figure agree. A muscle name found in the reply as whole words, ignoring case and trying the longest names first so "Side glutes" is not read as "Glutes", must be on one of the turn's figures. A one-figure reply names every primary muscle, by the last word of its name (singular or plural), so "chest" counts for "Upper chest".
-- `noRanking`: the reply holds no "more than", "works it more", "better", "best" or "most".
+- `replyNamesOnlyTheFigure`: the reply and the figure agree. A muscle name found in the reply as whole words, ignoring case and trying the longest names first so "Side glutes" is not read as "Glutes", must be on one of the turn's figures. A one-figure reply names every primary muscle, by the last word of its name (singular or plural), so "chest" counts for "Upper chest". Other words for a muscle count as well (quadriceps, latissimus, calf, deltoid, and shoulders for a delt), and a long name that points at one muscle (quadriceps, latissimus, calf) counts as naming it, so a reply that says "quadriceps" for a figure with no quads still fails.
+- `noRanking`: the reply holds no "more than", "works it more", "better", "best" or "most", unless a "neither", "nor", "no", "not" or "never" stands within 4 words before it in the same sentence ("neither works it more than the other" is no ranking).
 - `noMusclesNamed`: for the exercise that is not there.
 
-A failure prints the question and the tools, and never the answer or a muscle. Each grader has a unit test with a right result and no model call (`test/exerciseMusclesCases.test.ts`).
+A failure prints the question and the tools. The new graders print no reply text and no muscle (the shared `noFirstPersonWithContext` quotes about 40 characters around the word it found). Each grader has a unit test with a right result and no model call (`test/exerciseMusclesCases.test.ts`).
 
 Run it by name: `pnpm --filter @keylow/assistant-evals check:assistant -- --set trainingAdvice`, or from the `assistant-evals` workflow with `-f sets="trainingAdvice"`.
 

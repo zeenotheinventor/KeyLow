@@ -528,6 +528,7 @@ async function finishCall(
   }
   const entry: Display = {};
   let card: AssistantCard | null = null;
+  let figure: AssistantExerciseMuscles | null = null;
   if (structured.success) {
     const { citation = null, estimate = null } = structured.data;
     run.citations.push(citation);
@@ -550,10 +551,10 @@ async function finishCall(
     }
     // The figure of an exercise's muscles, in the same row. It is a read, so it has no action and no Undo.
     if (structured.data.exerciseMuscles !== undefined) {
-      const figure = assistantExerciseMusclesSchema.safeParse(structured.data.exerciseMuscles);
-      if (figure.success) {
-        entry["exerciseMuscles"] = toJson(figure.data);
-        run.pendingExerciseMuscles.push(figure.data);
+      const parsed = assistantExerciseMusclesSchema.safeParse(structured.data.exerciseMuscles);
+      if (parsed.success) {
+        figure = parsed.data;
+        entry["exerciseMuscles"] = toJson(parsed.data);
       } else {
         // Fixed words only. A parse failure's own message is not reported, because it can quote the exercise.
         run.dependencies.report(
@@ -586,6 +587,10 @@ async function finishCall(
   );
   if (card !== null) {
     addCard(run, card);
+  }
+  // After the store, as for a card: a row that failed to store must not leave a figure that is sent and gone on reopening.
+  if (figure !== null) {
+    run.pendingExerciseMuscles.push(figure);
   }
   return null;
 }

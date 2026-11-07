@@ -3794,3 +3794,54 @@ Deno.test(
     assertEquals(spy.lines.join("\n").includes("Sentinel"), false);
   },
 );
+
+Deno.test("a figure whose row cannot be stored is never sent, as the turn fails", async () => {
+  await withHarness(
+    {
+      ...musclesOptions(
+        [callTools([showMuscles("m1")]), reply("never asked for")],
+        musclesOf(romanianDeadlift),
+      ),
+      wrapTurns: (turns) => ({
+        ...turns,
+        appendMessages: (userId, conversationId, turnId, messages) =>
+          messages.some((message) => message.display !== undefined && message.display !== null)
+            ? Promise.reject(new Error("the store failed"))
+            : turns.appendMessages(userId, conversationId, turnId, messages),
+      }),
+    },
+    async (harness) => {
+      const result = await harness.take("What does a Romanian deadlift work?");
+
+      assertEquals(typesOf(result.events).includes("exercise_muscles"), false);
+      assertEquals(turnStatuses(harness), ["failed"]);
+      assertEquals(
+        threadFromMessages(result.rows, []).some((item) => item.kind === "exercise_muscles"),
+        false,
+      );
+    },
+  );
+});
+
+Deno.test(
+  "a figure that was stored before a later model call failed is sent, so the live turn and the stored one agree",
+  async () => {
+    await withHarness(
+      musclesOptions(
+        [callTools([showMuscles("m1")]), { blocks: [], stopReason: "end_turn", httpStatus: 400 }],
+        musclesOf(romanianDeadlift),
+      ),
+      async (harness) => {
+        const result = await harness.take("What does a Romanian deadlift work?");
+
+        assertEquals(turnStatuses(harness), ["failed"]);
+        const live = eventsOfType(result.events, "exercise_muscles").map((event) => event.exercise);
+        const stored = threadFromMessages(result.rows, []).flatMap((item) =>
+          item.kind === "exercise_muscles" ? [item.exercise] : [],
+        );
+        assertEquals(live, [romanianDeadlift]);
+        assertEquals(stored, live);
+      },
+    );
+  },
+);

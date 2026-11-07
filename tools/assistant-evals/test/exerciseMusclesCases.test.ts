@@ -481,6 +481,53 @@ describe("the muscles the reply names", () => {
     expect(missing.reason).toContain("leaves out a primary muscle");
   });
 
+  it("should take the long names of a muscle for the primary muscles", async () => {
+    const quadsFigure: AssistantExerciseMuscles = {
+      exerciseName: "Leg Extensions",
+      muscles: [{ muscle_id: "quads", role: "primary" }],
+    };
+    const lats: AssistantExerciseMuscles = {
+      exerciseName: "Pull-Up",
+      muscles: [{ muscle_id: "lats", role: "primary" }],
+    };
+    const calves: AssistantExerciseMuscles = {
+      exerciseName: "Calf Raise",
+      muscles: [{ muscle_id: "calves", role: "primary" }],
+    };
+    const rearDelts: AssistantExerciseMuscles = {
+      exerciseName: "Reverse Fly",
+      muscles: [{ muscle_id: "delt_rear", role: "primary" }],
+    };
+    const sideGlutes: AssistantExerciseMuscles = {
+      exerciseName: "Side Lying Raise",
+      muscles: [{ muscle_id: "glute_med", role: "primary" }],
+    };
+
+    expect((await grade("Works your quadriceps.", [quadsFigure])).passed).toBe(true);
+    expect((await grade("Works your latissimus muscles.", [lats])).passed).toBe(true);
+    expect((await grade("Works your calf.", [calves])).passed).toBe(true);
+    expect((await grade("Works your rear deltoid.", [rearDelts])).passed).toBe(true);
+    expect((await grade("Works your glute.", [sideGlutes])).passed).toBe(true);
+  });
+
+  it("should take shoulders for a primary delt, and nothing else for it", async () => {
+    const press: AssistantExerciseMuscles = {
+      exerciseName: "Overhead Press",
+      muscles: [{ muscle_id: "delt_front", role: "primary" }],
+    };
+
+    expect((await grade("Works your shoulders.", [press])).passed).toBe(true);
+    expect((await grade("Works your triceps.", [press])).passed).toBe(false);
+  });
+
+  it("should still fail a long name of a muscle that is not on the figure", async () => {
+    expect((await grade("Works your hamstrings and quadriceps.", [romanian])).passed).toBe(false);
+    expect((await grade("Works your hamstrings and your calf.", [legCurl])).passed).toBe(true);
+    expect((await grade("Works your chest and your calf.", [bench])).passed).toBe(false);
+    expect((await grade("Works your chest and your latissimus.", [bench])).passed).toBe(false);
+    expect((await grade("Works your chest and your triceps.", [bench])).passed).toBe(true);
+  });
+
   it("should not need the primary muscles in a turn of two figures", async () => {
     expect((await grade("Both count a full set.", [romanian, legCurl])).passed).toBe(true);
   });
@@ -511,6 +558,27 @@ describe("the ranking and the exercise that is not there", () => {
       "The leg curl is better for hamstrings.",
       "The best one is the Romanian deadlift.",
       "The Romanian deadlift hits the most.",
+    ]) {
+      expect(await passes(noRanking(), answer), answer).toBe(false);
+    }
+  });
+
+  it("should not trip on a denial of a ranking", async () => {
+    for (const answer of [
+      "Neither works it more than the other for your hamstrings.",
+      "Neither is better for the hamstrings.",
+      "No exercise here is better, both count a full set.",
+      "That is not better or worse, only a different role.",
+    ]) {
+      expect(await passes(noRanking(), answer), answer).toBe(true);
+    }
+  });
+
+  it("should still fail a claim of one above the other, even in a sentence that holds a denial", async () => {
+    for (const answer of [
+      "Not a hard choice: the leg curl is better for your hamstrings.",
+      "Neither is bad, but the Romanian deadlift works it more than the leg curl.",
+      "No contest. Romanian deadlift is the best for hamstrings.",
     ]) {
       expect(await passes(noRanking(), answer), answer).toBe(false);
     }

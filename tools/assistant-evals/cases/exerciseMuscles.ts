@@ -6,7 +6,7 @@
 // A case passes on state and never on wording: the tool drew the right number of figures for the right
 // exercises, each figure is the stored map of the exercise the call read (read as the eval user, with the id
 // from the call's input and never typed), and the reply and the figure name the same muscles. A failing case
-// prints its question and the tools it called, and never the answer.
+// prints its question and the tools it called, and these graders print no reply text.
 import { MUSCLE_NAMES } from "@keylow/core";
 import { MUSCLE_IDS } from "@keylow/core/training";
 
@@ -147,10 +147,22 @@ const escapePattern = (text: string): string => text.replaceAll(/[.*+?^${}()|[\]
 const NOT_INSIDE_A_WORD_BEFORE = "(?<![\\p{L}\\p{N}])";
 const NOT_INSIDE_A_WORD_AFTER = "(?![\\p{L}\\p{N}])";
 
+// Other ways to say one muscle, for a correct reply that does not use the list's own word. Each is a stem, with an
+// optional plural. A long name that points at one muscle also counts as naming it, so a reply that says
+// "quadriceps" when the figure has no quads still fails. "Deltoid" and "glute" are not here, because they do not
+// say which delt or which glute, so only the last word of the name is used for them.
+const LONG_NAMES: readonly (readonly [MuscleId, string])[] = [
+  ["quads", "quadriceps"],
+  ["quads", "quadricep"],
+  ["lats", "latissimus"],
+  ["calves", "calf"],
+];
+
 // The longest names first, so "Side glutes" is read whole and "Glutes" is not found inside it.
-const NAMES_LONGEST_FIRST: readonly (readonly [MuscleId, string])[] = MUSCLE_IDS.map(
-  (muscle): readonly [MuscleId, string] => [muscle, MUSCLE_NAMES[muscle]],
-).sort(([, first], [, second]) => second.length - first.length);
+const NAMES_LONGEST_FIRST: readonly (readonly [MuscleId, string])[] = [
+  ...MUSCLE_IDS.map((muscle): readonly [MuscleId, string] => [muscle, MUSCLE_NAMES[muscle]]),
+  ...LONG_NAMES,
+].sort(([, first], [, second]) => second.length - first.length);
 
 /** The muscles whose name the reply holds as whole words, ignoring case. */
 export function musclesNamedIn(reply: string): ReadonlySet<MuscleId> {
@@ -166,14 +178,25 @@ export function musclesNamedIn(reply: string): ReadonlySet<MuscleId> {
   return named;
 }
 
-/** The last word of a muscle's name with its plural optional, so "chest" counts for "Upper chest". */
-function lastWordPattern(muscle: MuscleId): RegExp {
+// What else a reply may call a muscle that is a primary one of the figure, besides the last word of its name:
+// the full name of the muscle, and "shoulders" for any delt. "Shoulders" does not say which delt, but it is never
+// wrong for one, and a reply is not required to tell the three apart. It counts here and not in `musclesNamedIn`,
+// because a reply that says "shoulders" names no muscle of the list that could be missing from the figure.
+const OTHER_STEMS: Partial<Record<MuscleId, readonly string[]>> = {
+  quads: ["quadricep"],
+  lats: ["latissimus"],
+  calves: ["calf"],
+  delt_front: ["deltoid", "shoulder"],
+  delt_side: ["deltoid", "shoulder"],
+  delt_rear: ["deltoid", "shoulder"],
+};
+
+/** The last word of a muscle's name, and its other stems, each with its plural optional: "chest" counts for "Upper chest". */
+function namePattern(muscle: MuscleId): RegExp {
   const lastWord = (MUSCLE_NAMES[muscle].toLowerCase().split(" ").at(-1) ?? "").trim();
   const stem = lastWord.endsWith("s") ? lastWord.slice(0, -1) : lastWord;
-  return new RegExp(
-    `${NOT_INSIDE_A_WORD_BEFORE}${escapePattern(stem)}s?${NOT_INSIDE_A_WORD_AFTER}`,
-    "u",
-  );
+  const stems = [stem, ...(OTHER_STEMS[muscle] ?? [])].map(escapePattern).join("|");
+  return new RegExp(`${NOT_INSIDE_A_WORD_BEFORE}(?:${stems})s?${NOT_INSIDE_A_WORD_AFTER}`, "u");
 }
 
 /**
@@ -196,7 +219,7 @@ export function replyNamesOnlyTheFigure(): Grader {
     if (only !== undefined && others.length === 0) {
       const lowered = reply.toLowerCase();
       for (const { muscle_id, role } of only.muscles) {
-        if (role === "primary" && !lastWordPattern(muscle_id).test(lowered)) {
+        if (role === "primary" && !namePattern(muscle_id).test(lowered)) {
           return Promise.resolve(fail("the reply leaves out a primary muscle of the figure"));
         }
       }
@@ -205,15 +228,28 @@ export function replyNamesOnlyTheFigure(): Grader {
   };
 }
 
-const RANKING = /\b(?:more than|works it more|better|best|most)\b/i;
+const RANKING = /\b(?:more than|works it more|better|best|most)\b/gi;
+const DENIAL = /\b(?:neither|nor|no|not|never)\b/i;
+const WORDS_OF_DENIAL_REACH = 4;
+
+// A hit that a denial stands just before, in the same sentence, is no claim: "neither works it more than the other".
+function isDenied(reply: string, hitStart: number): boolean {
+  const sentence =
+    reply
+      .slice(0, hitStart)
+      .split(/[.!?;]/)
+      .at(-1) ?? "";
+  return DENIAL.test(sentence.trim().split(/\s+/).slice(-WORDS_OF_DENIAL_REACH).join(" "));
+}
 
 /** Passes when the reply ranks nothing: Ki-Lo holds each muscle's role and no order between exercises. */
-export const noRanking = (): Grader => (context) =>
-  Promise.resolve(
-    RANKING.test(answerOf(context))
-      ? fail("the reply ranks the exercises")
-      : pass("the reply ranks nothing"),
+export const noRanking = (): Grader => (context) => {
+  const reply = answerOf(context);
+  const claims = [...reply.matchAll(RANKING)].filter((hit) => !isDenied(reply, hit.index));
+  return Promise.resolve(
+    claims.length > 0 ? fail("the reply ranks the exercises") : pass("the reply ranks nothing"),
   );
+};
 
 /** Passes when the reply names no muscle, as for an exercise that is not there. */
 export const noMusclesNamed = (): Grader => (context) =>

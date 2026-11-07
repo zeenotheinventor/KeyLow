@@ -24,6 +24,7 @@ import type { TestUser } from "../support/users";
 const ALICE_MUSCLES = [
   { muscle_id: "delt_rear", role: "primary", weight: 1 },
   { muscle_id: "traps_mid", role: "secondary", weight: 0.5 },
+  { muscle_id: "calves", role: "stabiliser", weight: 0.2 },
 ] as const;
 
 let alice: TestUser;
@@ -49,13 +50,14 @@ afterAll(async () => {
 });
 
 describe("show_exercise_muscles", () => {
-  it("reads the caller's own custom exercise with its muscles and roles", async () => {
+  it("reads the caller's own custom exercise with its muscles and roles, a stabiliser too", async () => {
     const exercise = await getExercise(alice.client, aliceExercise.id);
 
     expect(exercise?.name).toBe(aliceExercise.name);
     expect(exercise?.muscles.map(({ muscle_id, role }) => ({ muscle_id, role }))).toEqual([
       { muscle_id: "delt_rear", role: "primary" },
       { muscle_id: "traps_mid", role: "secondary" },
+      { muscle_id: "calves", role: "stabiliser" },
     ]);
   });
 
