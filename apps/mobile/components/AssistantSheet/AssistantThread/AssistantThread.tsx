@@ -37,7 +37,6 @@ export function AssistantThread({
   onTryAgain,
   onAskAgain,
   onOpenCardLink,
-  onCardDayToggle,
   canAnswer,
   onAnswer,
 }: AssistantThreadProps) {
@@ -53,14 +52,7 @@ export function AssistantThread({
           />
         );
       case "card":
-        return (
-          <AssistantCardEntry
-            card={entry.card}
-            key={entry.key}
-            onDayToggle={onCardDayToggle}
-            onOpenLink={onOpenCardLink}
-          />
-        );
+        return <AssistantCardEntry card={entry.card} key={entry.key} onOpenLink={onOpenCardLink} />;
       case "link":
         return (
           <AssistantLinkRow

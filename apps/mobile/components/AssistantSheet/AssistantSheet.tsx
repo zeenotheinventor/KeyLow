@@ -45,6 +45,7 @@ import {
 import type { AssistantSheetProps } from "./types";
 import type { AssistantCardLink, AssistantSheetSent } from "@keylow/core";
 import type { ComponentRef } from "react";
+import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native";
 
 const deviceTimeZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
 
@@ -56,6 +57,15 @@ const SNAP_POINTS = ["87%", "94%"];
 // (`assistant · recipe-import`, `recipe-unresolved`), so its ingredient list shows.
 const OPEN_SNAP_INDEX = 0;
 const FULL_HEIGHT_SNAP_INDEX = 1;
+
+// How far from the end of the thread, in points, the person can scroll and still be reading the end of it.
+const NEAR_THE_END_DISTANCE = 40;
+// Scroll events carry on after a finger is lifted, while the flick settles. The library's scroll view does not
+// pass on the end of that, so the scroll counts as the person's until no event has arrived for this long.
+const SCROLL_SETTLED_MS = 150;
+
+const distanceFromEnd = ({ contentOffset, contentSize, layoutMeasurement }: NativeScrollEvent) =>
+  contentSize.height - layoutMeasurement.height - contentOffset.y;
 
 // The thread grows up from the composer once there is a conversation, and starts at the top when it is the
 // empty state's words.
@@ -92,9 +102,14 @@ export function AssistantSheet({
   const [draft, setDraft] = useState("");
   const [sent, setSent] = useState<AssistantSheetSent | null>(null);
   const scrollRef = useRef<ComponentRef<typeof SheetScrollView>>(null);
-  // A day of a routine card opening or closing grows the thread from the middle, so the person's place is kept
-  // for that one change in height. Everything else that grows it (a streaming reply) is followed to the end.
-  const isDayToggling = useRef(false);
+  // Whether a growing thread is followed to its end. It is on until the person's own drag takes them away from
+  // the end, and on again when they come back, send a message, start a new conversation or open the sheet.
+  // Opening a day of a routine grows the thread in the middle, and someone reading up the thread is left where
+  // they are. Only the person's own scroll changes it, never a scroll event the sheet's own scrollToEnd causes,
+  // which can report an offset behind the end while the content grows under it.
+  const isFollowingEnd = useRef(true);
+  const isUserScrolling = useRef(false);
+  const scrollSettledTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const items = conversation.data?.items;
   const timeZone = resolveAssistantTimeZone(profileTimeZone.data, deviceTimeZone());
@@ -125,6 +140,40 @@ export function AssistantSheet({
     from,
     fieldHint: thread.fieldHint,
   });
+
+  useEffect(() => {
+    if (open) {
+      isFollowingEnd.current = true;
+    }
+  }, [open]);
+  useEffect(
+    () => () => {
+      clearTimeout(scrollSettledTimer.current);
+    },
+    [],
+  );
+
+  function readUserScroll(event: NativeSyntheticEvent<NativeScrollEvent>) {
+    isFollowingEnd.current = distanceFromEnd(event.nativeEvent) <= NEAR_THE_END_DISTANCE;
+  }
+
+  // Scroll events count as the person's from the touch down to a quiet moment after the finger lifts.
+  function startUserScroll(event: NativeSyntheticEvent<NativeScrollEvent>) {
+    clearTimeout(scrollSettledTimer.current);
+    isUserScrolling.current = true;
+    readUserScroll(event);
+  }
+
+  function continueUserScroll(event: NativeSyntheticEvent<NativeScrollEvent>) {
+    if (!isUserScrolling.current) {
+      return;
+    }
+    readUserScroll(event);
+    clearTimeout(scrollSettledTimer.current);
+    scrollSettledTimer.current = setTimeout(() => {
+      isUserScrolling.current = false;
+    }, SCROLL_SETTLED_MS);
+  }
 
   // The turn on screen and what it left, for the read on open below, which finishes after the render that
   // started it.
@@ -209,6 +258,7 @@ export function AssistantSheet({
     if (!canSendWords(text)) {
       return;
     }
+    isFollowingEnd.current = true;
     setSent({ text, afterItemId: items?.at(-1)?.id ?? null });
     // A settled read is the truth, so after Delete all conversations it is null and the dead id the live turn
     // still holds is not reused. The one the first turn started stands in only while the read is unknown or failed.
@@ -239,6 +289,7 @@ export function AssistantSheet({
       // Nothing was cleared, and the thread stays as it was.
       return;
     }
+    isFollowingEnd.current = true;
     setSent(null);
     setDraft("");
   }
@@ -318,9 +369,6 @@ export function AssistantSheet({
         onAskAgain={sendLastMessageAgain}
         onTryAgain={sendLastMessageAgain}
         onOpenCardLink={openCardLink}
-        onCardDayToggle={() => {
-          isDayToggling.current = true;
-        }}
         canAnswer={canAnswerAssistantQuestion(sendState)}
         onAnswer={sendMessage}
       />
@@ -367,12 +415,13 @@ export function AssistantSheet({
           keyboardShouldPersistTaps="handled"
           ref={scrollRef}
           onContentSizeChange={() => {
-            if (isDayToggling.current) {
-              isDayToggling.current = false;
-              return;
+            if (isFollowingEnd.current) {
+              scrollRef.current?.scrollToEnd({ animated: false });
             }
-            scrollRef.current?.scrollToEnd({ animated: false });
           }}
+          onScroll={continueUserScroll}
+          onScrollBeginDrag={startUserScroll}
+          onScrollEndDrag={continueUserScroll}
         >
           {renderBody()}
         </SheetScrollView>

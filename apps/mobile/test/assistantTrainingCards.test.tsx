@@ -138,11 +138,11 @@ const removedDayLink = {
   target: { screen: "routine_editor", routineId: ROUTINE_ID },
 } as const;
 
-const sheetTree = () => (
+const sheetTree = (open = true) => (
   <ThemeProvider fixedPreference="dark">
     <KeyLowProvider client={undoClient} queryClient={queryClient}>
       <ToastProvider>
-        <AssistantSheet localDate={OPENED_ON} open onClose={onClose} />
+        <AssistantSheet localDate={OPENED_ON} open={open} onClose={onClose} />
       </ToastProvider>
     </KeyLowProvider>
   </ThemeProvider>
@@ -200,38 +200,6 @@ describe("the training cards in the assistant sheet", () => {
 
       await userSetup().press(monday());
       expect(screen.queryByText("Bench press")).not.toBeOnTheScreen();
-    });
-
-    // The thread follows a growing reply to its end, but a day opening grows the card above the reply, and
-    // going to the end would push the opened exercises above the fold.
-    it("should not scroll the thread to its end when a day opens or closes, and still follow other growth", async () => {
-      const scrollToEnd = mockScrollToEnd;
-      await showItems(
-        { kind: "card", id: "c1", card: routineCreatedCard },
-        {
-          kind: "reply",
-          id: "r1",
-          text: "Here is your routine.",
-          answerMeta: null,
-          stopped: false,
-        },
-      );
-      const growThread = async () => {
-        await fireEvent(monday(), "contentSizeChange", 390, 1200);
-      };
-
-      await growThread();
-      expect(scrollToEnd).toHaveBeenCalledTimes(1);
-      scrollToEnd.mockClear();
-
-      await userSetup().press(monday());
-      await growThread();
-      await userSetup().press(monday());
-      await growThread();
-      expect(scrollToEnd).not.toHaveBeenCalled();
-
-      await growThread();
-      expect(scrollToEnd).toHaveBeenCalledTimes(1);
     });
 
     it("should keep one day open at a time", async () => {
@@ -371,6 +339,193 @@ describe("the training cards in the assistant sheet", () => {
       await showItems({ kind: "card", id: "c1", card: { ...setUpdatedCard, kind: "logged" } });
 
       expect(screen.getByRole("button", { name: "Undo" })).toBeOnTheScreen();
+    });
+  });
+
+  // Where the thread scrolls. The sheet follows the end of the thread while the person is at it, and lets go only
+  // when their own drag takes them away. The scroll view here is a plain one that reports scrollToEnd, and its
+  // events are fired by hand, because Jest lays nothing out.
+  describe("the thread's scroll position", () => {
+    const CONTENT_HEIGHT = 2000;
+    const VIEW_HEIGHT = 600;
+    const AT_THE_END = CONTENT_HEIGHT - VIEW_HEIGHT;
+    const SCROLLED_UP = 0;
+    const NEAR_THE_END = AT_THE_END - 20;
+    const SETTLED_MS = 200;
+
+    const monday = () =>
+      screen.getByRole("button", { name: "Monday · Push, 5 exercises · 15 sets · about 50 min" });
+    const reply = (text: string): AssistantThreadItem => ({
+      kind: "reply",
+      id: "r1",
+      text,
+      answerMeta: null,
+      stopped: false,
+    });
+    const scrollEvent = (offset: number) => ({
+      nativeEvent: {
+        contentOffset: { y: offset },
+        contentSize: { height: CONTENT_HEIGHT },
+        layoutMeasurement: { height: VIEW_HEIGHT },
+      },
+    });
+    // The thread has grown, as it does when a day opens, a reply streams or a message is sent.
+    const grow = async () => {
+      await fireEvent(monday(), "contentSizeChange", 390, CONTENT_HEIGHT);
+    };
+    // A scroll event that is not the person's: the sheet's own scroll to the end reports one, behind the end while it runs.
+    const programmaticScrollTo = async (offset: number) => {
+      await fireEvent(monday(), "scroll", scrollEvent(offset));
+    };
+    // The person drags to `offset` and lets go, and the scroll comes to rest.
+    const dragTo = async (offset: number) => {
+      await fireEvent(monday(), "scrollBeginDrag", scrollEvent(AT_THE_END));
+      await fireEvent(monday(), "scroll", scrollEvent(offset));
+      await fireEvent(monday(), "scrollEndDrag", scrollEvent(offset));
+      await act(() => {
+        jest.advanceTimersByTime(SETTLED_MS);
+      });
+    };
+    async function send(words: string) {
+      await userSetup().type(screen.getByLabelText("Message"), words);
+      await userSetup().press(screen.getByRole("button", { name: "Send" }));
+    }
+    const showRoutineThenReply = () =>
+      showItems(
+        { kind: "card", id: "c1", card: routineCreatedCard },
+        reply("Here is your routine."),
+      );
+
+    it("should land at the end when the sheet opens", async () => {
+      await showRoutineThenReply();
+
+      await grow();
+
+      expect(mockScrollToEnd).toHaveBeenCalledTimes(1);
+    });
+
+    it("should not scroll to the end when a day opens while the person is scrolled up", async () => {
+      await showRoutineThenReply();
+      await dragTo(SCROLLED_UP);
+      mockScrollToEnd.mockClear();
+
+      await userSetup().press(monday());
+      await grow();
+
+      expect(mockScrollToEnd).not.toHaveBeenCalled();
+    });
+
+    it("should still scroll to the end for the next message after days opened and closed, even one that changed no height", async () => {
+      await showRoutineThenReply();
+      await grow();
+
+      // Monday opens and closes, and Wednesday opens over it with no change of height the thread reports.
+      await userSetup().press(monday());
+      await grow();
+      await userSetup().press(monday());
+      await userSetup().press(
+        screen.getByRole("button", {
+          name: "Wednesday · Pull, 5 exercises · 15 sets · about 50 min",
+        }),
+      );
+      mockScrollToEnd.mockClear();
+      await send("Swap leg press for hack squat");
+      await grow();
+
+      expect(mockScrollToEnd).toHaveBeenCalledTimes(1);
+    });
+
+    it("should scroll to the end and follow again when the person sends from scrolled up", async () => {
+      await showRoutineThenReply();
+      await dragTo(SCROLLED_UP);
+      mockScrollToEnd.mockClear();
+
+      await send("Swap leg press for hack squat");
+      await grow();
+      await grow();
+
+      expect(mockScrollToEnd).toHaveBeenCalledTimes(2);
+    });
+
+    it("should scroll to the end and follow again on a new conversation", async () => {
+      await showRoutineThenReply();
+      await dragTo(SCROLLED_UP);
+      mockScrollToEnd.mockClear();
+
+      await userSetup().press(screen.getByRole("button", { name: "New conversation" }));
+      await grow();
+
+      expect(mockScrollToEnd).toHaveBeenCalledTimes(1);
+    });
+
+    it("should land at the end again when the sheet is opened again", async () => {
+      const rendered = await showRoutineThenReply();
+      await dragTo(SCROLLED_UP);
+      await rendered.rerender(sheetTree(false));
+      await rendered.rerender(sheetTree(true));
+      mockScrollToEnd.mockClear();
+
+      await grow();
+
+      expect(mockScrollToEnd).toHaveBeenCalledTimes(1);
+    });
+
+    it("should keep following a streaming reply at the end, through scroll events that are not a drag", async () => {
+      await showRoutineThenReply();
+      await grow();
+      mockScrollToEnd.mockClear();
+
+      // The scroll to the end reports an offset behind the end while the reply grows under it.
+      await programmaticScrollTo(AT_THE_END - 300);
+      await grow();
+      await programmaticScrollTo(AT_THE_END - 150);
+      await grow();
+
+      expect(mockScrollToEnd).toHaveBeenCalledTimes(2);
+    });
+
+    it("should not follow a reply that streams while the person is scrolled up, and follow again when they return to the end", async () => {
+      await showRoutineThenReply();
+      await dragTo(SCROLLED_UP);
+      mockScrollToEnd.mockClear();
+
+      await grow();
+      await grow();
+      expect(mockScrollToEnd).not.toHaveBeenCalled();
+
+      await dragTo(NEAR_THE_END);
+      await grow();
+
+      expect(mockScrollToEnd).toHaveBeenCalledTimes(1);
+    });
+
+    it("should let a drag that stays near the end leave the thread following", async () => {
+      await showRoutineThenReply();
+      await dragTo(NEAR_THE_END);
+      mockScrollToEnd.mockClear();
+
+      await grow();
+
+      expect(mockScrollToEnd).toHaveBeenCalledTimes(1);
+    });
+
+    it("should read the scroll that carries on after the finger lifts as the person's own, until it comes to rest", async () => {
+      await showRoutineThenReply();
+      await fireEvent(monday(), "scrollBeginDrag", scrollEvent(AT_THE_END));
+      await fireEvent(monday(), "scrollEndDrag", scrollEvent(AT_THE_END - 10));
+      // The flick carries the thread up, with no drag event after the finger is lifted.
+      await act(() => {
+        jest.advanceTimersByTime(50);
+      });
+      await programmaticScrollTo(SCROLLED_UP);
+      await act(() => {
+        jest.advanceTimersByTime(SETTLED_MS);
+      });
+      mockScrollToEnd.mockClear();
+
+      await grow();
+
+      expect(mockScrollToEnd).not.toHaveBeenCalled();
     });
   });
 });

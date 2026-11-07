@@ -14,6 +14,4 @@ export type AssistantThreadProps = {
   onAnswer: (words: string) => void;
   /** Opens what a card's link leads to. */
   onOpenCardLink: (target: AssistantCardLink["target"]) => void;
-  /** Called when a day of a card is pressed, before it opens or closes. */
-  onCardDayToggle: () => void;
 };

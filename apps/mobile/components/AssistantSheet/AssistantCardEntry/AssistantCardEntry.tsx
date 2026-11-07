@@ -15,7 +15,7 @@ import type { AssistantCardUndoOutcome } from "@keylow/core";
  * training card whose Undo is still available asks whether a workout is in progress, which only a training
  * write cares about, and holds its Undo back until it ends (`assistant-card · undo-unavailable-training`).
  */
-export function AssistantCardEntry({ card, onOpenLink, onDayToggle }: AssistantCardEntryProps) {
+export function AssistantCardEntry({ card, onOpenLink }: AssistantCardEntryProps) {
   const undoAction = useUndoAssistantAction();
   const [outcome, setOutcome] = useState<AssistantCardUndoOutcome | null>(null);
   const activeSession = useActiveSession({
@@ -41,7 +41,6 @@ export function AssistantCardEntry({ card, onOpenLink, onDayToggle }: AssistantC
   return (
     <AssistantActionCard
       days={look.days.length === 0 ? undefined : look.days}
-      onDayToggle={onDayToggle}
       icon={look.icon}
       iconTone={look.iconTone}
       link={
