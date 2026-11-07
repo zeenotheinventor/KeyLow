@@ -120,7 +120,7 @@ Deno.test(
 );
 
 Deno.test(
-  "the description says a null keeps a number, that a RIR and a weekday cannot be cleared from here, and what to say in a workout",
+  "the description says a null keeps a number, that a RIR and a weekday cannot be cleared from here, and that a workout refuses the change",
   () => {
     const { description } = editRoutineTool;
     assertStringIncludes(description, "a null keeps that number");
@@ -128,7 +128,7 @@ Deno.test(
     assertStringIncludes(description, "update_day cannot clear a weekday");
     assertStringIncludes(description, "routine editor");
     assertStringIncludes(description, "workout_in_progress");
-    assertStringIncludes(description, "finish or discard it on the Train tab");
+    // The words for a refused change are in the system prompt, for every training write.
   },
 );
 

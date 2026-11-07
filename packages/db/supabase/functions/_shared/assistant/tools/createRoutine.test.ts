@@ -493,13 +493,18 @@ Deno.test(
 );
 
 Deno.test(
-  "the description asks for the searches in one response and sends a no-goal user to the Goal screen",
+  "the description asks for the searches in one response and, with no goal, asks with ask_user, saves the goal and builds",
   () => {
     const { description } = createRoutineTool;
 
     assertStringIncludes(description, "in one response");
-    assertStringIncludes(description, "Goal screen in Train");
-    assertStringIncludes(description, "Do not ask them with ask_user");
+    assertStringIncludes(
+      description,
+      "ask for their goal and experience together in one ask_user, with 3 quick replies that each give both",
+    );
+    assertStringIncludes(description, "save it with update_training_goals");
+    assertStringIncludes(description, "then call create_routine again");
+    assertEquals(description.includes("Goal screen"), false);
     assertStringIncludes(description, "edit_routine");
     assertStringIncludes(description, "read the routine with get_routines before edit_routine");
   },

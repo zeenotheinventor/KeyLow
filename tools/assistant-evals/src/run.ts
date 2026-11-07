@@ -10,6 +10,7 @@ import { describeCases } from "../cases/describe.ts";
 import { exerciseMusclesCases } from "../cases/exerciseMuscles.ts";
 import { recipeCases } from "../cases/recipes.ts";
 import { redTeamCases } from "../cases/redteam.ts";
+import { redTeamEditCases } from "../cases/redteamEdits.ts";
 import { trainingAdviceCases } from "../cases/trainingAdvice.ts";
 import { trainingEditsCases } from "../cases/trainingEdits.ts";
 import { writeCases } from "../cases/writes.ts";
@@ -28,6 +29,7 @@ const output = await runCli(process.argv.slice(2), process.env, {
     ...exerciseMusclesCases,
     ...trainingEditsCases,
     ...redTeamCases,
+    ...redTeamEditCases,
   ],
   openSession: openLocalHttpSession,
 });

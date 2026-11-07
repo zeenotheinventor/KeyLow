@@ -103,9 +103,10 @@ export const createRoutineTool: WriteToolDefinition<CreateRoutineInput> = {
     "day's id in the answer is null, read the routine with get_routines before edit_routine. An id that " +
     "is not a live exercise of the library or the user's own is invalid_input with its place " +
     "(days.0.exercise_ids.2): search again and replace it. An answer of needs_goal true means the user " +
-    "has no training goal yet and nothing was saved: tell them Ki-Lo needs their goal and experience " +
-    "first, that nothing is saved yet, and that they can set them on the Goal screen in Train. Do not ask " +
-    "them with ask_user.",
+    "has no training goal yet and nothing was saved: ask for their goal and experience together in one " +
+    'ask_user, with 3 quick replies that each give both, such as "Look better, intermediate", and say ' +
+    "nothing is saved yet. Their answer is the request to save it with update_training_goals " +
+    "(days_per_week is the number of days the user named for the routine), then call create_routine again.",
   kind: "write",
   input: createRoutineInput,
   // Nested optional fields would not fit the strict budget (D2 of KEY-881).
