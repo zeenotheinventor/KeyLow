@@ -239,6 +239,86 @@ describe("useRunCheckinsIfDue", () => {
     });
   });
 
+  describe("when the screen is gone", () => {
+    it("should run nothing when it unmounts while the schedule is being read", async () => {
+      const { result, unmount } = renderRunner();
+
+      let pending: Promise<unknown> = Promise.resolve();
+      act(() => {
+        pending = result.current();
+      });
+      unmount();
+      await pending;
+
+      expect(backend.runs).toBe(0);
+    });
+
+    it("should announce nothing when it unmounts while the run is out", async () => {
+      let release: () => void = () => undefined;
+      backend.gate = new Promise((resolve) => {
+        release = resolve;
+      });
+      const { result, unmount, onNewTargets } = renderRunner();
+      let pending: Promise<unknown> = Promise.resolve();
+      act(() => {
+        pending = result.current();
+      });
+      await waitFor(() => {
+        expect(backend.runs).toBe(1);
+      });
+
+      unmount();
+      release();
+      await pending;
+
+      expect(onNewTargets).not.toHaveBeenCalled();
+    });
+
+    it("should announce nothing when it unmounts while the target is read again after the run", async () => {
+      let releaseRun: () => void = () => undefined;
+      backend.gate = new Promise((resolve) => {
+        releaseRun = resolve;
+      });
+      let releaseRead: () => void = () => undefined;
+      const readGate = new Promise<void>((resolve) => {
+        releaseRead = resolve;
+      });
+      let isReadingAgain = false;
+      const { result, unmount, onNewTargets } = renderRunner();
+      let pending: Promise<unknown> = Promise.resolve();
+      act(() => {
+        pending = result.current();
+      });
+      await waitFor(() => {
+        expect(backend.runs).toBe(1);
+      });
+      server.use(
+        http.get(`${REST_URL}/profiles`, async ({ request }) => {
+          isReadingAgain = true;
+          await readGate;
+          return postgrestRows(request, [
+            {
+              target_kcal: backend.kcal,
+              target_protein_g: null,
+              target_carbs_g: null,
+              target_fat_g: null,
+            },
+          ]);
+        }),
+      );
+      releaseRun();
+      await waitFor(() => {
+        expect(isReadingAgain).toBe(true);
+      });
+
+      unmount();
+      releaseRead();
+      await pending;
+
+      expect(onNewTargets).not.toHaveBeenCalled();
+    });
+  });
+
   describe("when something fails", () => {
     it("should pass only the code of a refused run to the callback", async () => {
       backend.refusal = { status: 500, code: "internal_error" };
