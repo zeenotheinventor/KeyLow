@@ -1,5 +1,6 @@
 import { assert, assertEquals } from "@std/assert";
 
+import { toolRegistry } from "../_shared/assistant/registry.ts";
 import { allowedToolsFor } from "./allowlist.ts";
 
 import type { AllowlistTool } from "./allowlist.ts";
@@ -282,3 +283,23 @@ Deno.test("a write tool added to the list lands in the general set and not the r
 Deno.test("the answer is the same on every call for the same input", () => {
   assertEquals(allowed("log two eggs"), allowed("log two eggs"));
 });
+
+Deno.test(
+  "the training reads of the real registry land in the read set with no change here",
+  () => {
+    const registered = toolRegistry.list.map((tool) => ({
+      name: tool.name,
+      readOnlyHint: tool.annotations.readOnlyHint,
+    }));
+    const readSet = allowedToolsFor({
+      text: "what's in my push day?",
+      pendingConfirmationTool: null,
+      tools: registered,
+    });
+
+    for (const name of ["search_exercises", "get_routines", "get_training_goals"]) {
+      assert(readSet.includes(name), name);
+    }
+    assertEquals(readSet.includes("log_entry"), false);
+  },
+);

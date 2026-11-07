@@ -4,6 +4,7 @@ import {
   TREND_ESTIMATE,
   describeDayCitation,
   describeRangeCitation,
+  describeRoutineCitation,
   describeWeighInCitation,
 } from "../../src/assistant";
 
@@ -103,6 +104,18 @@ describe("describeDayCitation", () => {
     ["2026-10-17", "No entries on Sat 17 Oct"],
   ])("should say there are no entries for %s", (localDate, expected) => {
     expect(describeDayCitation({ localDate, today, entryCount: 0 })).toBe(expected);
+  });
+});
+
+describe("describeRoutineCitation", () => {
+  it("should name the routine the answer rests on, as the answer-training board does", () => {
+    expect(describeRoutineCitation("Push Pull Legs")).toBe("Based on your routine Push Pull Legs");
+  });
+
+  it("should keep the name as the person wrote it", () => {
+    expect(describeRoutineCitation("upper/lower, 4 days")).toBe(
+      "Based on your routine upper/lower, 4 days",
+    );
   });
 });
 

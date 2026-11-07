@@ -114,6 +114,31 @@ describe("searchExercises", () => {
     expect(fake.reads.map((url) => url.searchParams.get("limit"))).toEqual(["25", "10", "50", "1"]);
   });
 
+  it("should read only the equipment the person has when a list is given", async () => {
+    const fake = installExercisesFake(server);
+
+    await searchExercises(createTestClient(), "press", { equipment: ["barbell", "dumbbell"] });
+
+    expect(fake.reads[0]?.searchParams.get("equipment")).toBe("in.(barbell,dumbbell)");
+  });
+
+  it("should not filter by equipment when none is given, or when it is null", async () => {
+    const fake = installExercisesFake(server);
+    const client = createTestClient();
+
+    await searchExercises(client, "press");
+    await searchExercises(client, "press", { equipment: null });
+
+    expect(fake.reads.map((url) => url.searchParams.has("equipment"))).toEqual([false, false]);
+  });
+
+  it("should make no request when the list of equipment is empty, because nothing is allowed", async () => {
+    const fake = installExercisesFake(server);
+
+    expect(await searchExercises(createTestClient(), "press", { equipment: [] })).toEqual([]);
+    expect(fake.requestCount).toBe(0);
+  });
+
   it("should make no request for a query shorter than 2 characters once trimmed", async () => {
     const fake = installExercisesFake(server);
     const client = createTestClient();

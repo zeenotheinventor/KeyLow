@@ -13,8 +13,9 @@ export type StubCaller = { caller: SupabaseClient<Database>; calls: RecordedCall
 export type StubData = {
   // The rows each RPC answers with, by function name.
   rpc?: Record<string, Row[]>;
-  // The rows of each table. `eq`, `is`, `gte` and `lte` filter them and `limit` and `range` cut them, as the
-  // database would. `order` does nothing, so a table is listed in the order its read should answer in.
+  // The rows of each table. `eq`, `in`, `is`, `gte` and `lte` filter them and `limit` and `range` cut them, as
+  // the database would. A filter on an embedded table (`exercise_muscles.role`) is not modelled. `order`
+  // does nothing, so a table is listed in the order its read should answer in.
   tables?: Record<string, Row[]>;
 };
 
@@ -37,6 +38,13 @@ export function stubCaller(data: StubData = {}): StubCaller {
       eq(column: string, value: unknown) {
         record("eq", [column, value]);
         remaining = remaining.filter((row) => row[column] === value);
+        return query;
+      },
+      in(column: string, values: unknown[]) {
+        record("in", [column, values]);
+        if (!column.includes(".")) {
+          remaining = remaining.filter((row) => values.includes(row[column]));
+        }
         return query;
       },
       // A column that is absent is null, as a row of the database would say.

@@ -97,3 +97,7 @@ export const describeDayCitation = ({
     ? `No entries ${day}`
     : `Based on ${describeCount(entryCount, "entry", "entries")} ${day} and your targets`;
 };
+
+/** The line under an answer that reads one routine: "Based on your routine Push Pull Legs". */
+export const describeRoutineCitation = (routineName: string): string =>
+  `Based on your routine ${routineName}`;
