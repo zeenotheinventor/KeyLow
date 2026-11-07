@@ -183,6 +183,7 @@ const liveTurn = (overrides: Partial<AssistantLiveTurn> = {}): AssistantLiveTurn
   confirm: null,
   answerMeta: null,
   link: null,
+  exerciseMuscles: [],
   askAgain: false,
   status: null,
   notice: null,

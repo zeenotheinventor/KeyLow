@@ -174,9 +174,13 @@ export const updateTrainingGoalsTool: WriteToolDefinition<UpdateTrainingGoalsInp
     if (plan.outcome === "unchanged") {
       return { data: { saved: false, unchanged: true }, target: null };
     }
-    // Reads nothing back, so once the goal is saved there is nothing left that can throw.
-    const savedId = await saveTrainingGoalsReturningId(ctx.caller, plan.after);
     const { before, after, changed, given } = plan;
+    // Built before the write, because a card that cannot be built must not be found out after the goal is saved.
+    const card = buildGoalsUpdatedCard(
+      before === null ? { before, after, given } : { before, after },
+    );
+    // Reads nothing back, so once the goal is saved there is nothing left that can throw.
+    const savedId = await saveTrainingGoalsReturningId(ctx.caller, after);
     return {
       data: {
         saved: true,
@@ -190,9 +194,7 @@ export const updateTrainingGoalsTool: WriteToolDefinition<UpdateTrainingGoalsInp
             }
           : {}),
       },
-      structured: {
-        card: buildGoalsUpdatedCard(before === null ? { before, after, given } : { before, after }),
-      },
+      structured: { card },
       target: { targetId: savedId },
     };
   },

@@ -1,5 +1,6 @@
 import {
   GOALS_CLEARED_UNDONE,
+  GOALS_NO_FOCUS_PUT_BACK,
   GOALS_SAVED_TITLE,
   GOALS_UPDATED_NOTE,
   GOALS_UPDATED_TITLE,
@@ -95,6 +96,10 @@ function describePutBack(step: GoalQuestionStep, before: GoalAnswers, was: GoalA
       return describeGoalDays(before.days_per_week);
     case "minutes":
       return describeGoalMinutesPutBack(before.session_minutes);
+    case "focus":
+      return before.focus.length === 0
+        ? GOALS_NO_FOCUS_PUT_BACK
+        : describeGoalAnswerPutBack(was.label, was.value);
     default:
       return describeGoalAnswerPutBack(was.label, was.value);
   }

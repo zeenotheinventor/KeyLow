@@ -2,13 +2,10 @@
 // caller's current row and adds the next, as the function does, and the rows it works on. Nothing in
 // production imports this. All the answers are invented.
 import { otherUserId, userId } from "../testing.ts";
-import { stubCaller } from "./testing.ts";
 import { sessionRow } from "./trainingFixtures.ts";
 import { writeContext } from "./writeFixtures.ts";
 
-import type { Database } from "../../core/database.types.ts";
 import type { ToolDefinition } from "../tool.ts";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import type { RpcHandler } from "./writeStub.ts";
 
 export const goalRowId = (number: number) =>
@@ -95,21 +92,6 @@ export const goalsCall = (given: Record<string, unknown> = {}) => ({
   ...given,
 });
 
-// The write stub cannot embed the one-to-one `routine_days` of a session read, so the workout guard reads its
-// sessions from the read stub, which can. Everything else is the write stub's.
-function callerWithWorkouts(caller: SupabaseClient<Database>, isLive: () => boolean) {
-  const sessions = () =>
-    stubCaller({
-      tables: { workout_sessions: [sessionRow(1, isLive() ? { ended_at: null } : {})] },
-    }).caller;
-  return {
-    from: (table: keyof Database["public"]["Tables"]) =>
-      table === "workout_sessions" ? sessions().from(table) : caller.from(table),
-    rpc: (...args: Parameters<typeof caller.rpc>) => caller.rpc(...args),
-    // The repos only call the methods above. The stand-in cannot satisfy the whole client type.
-  } as unknown as SupabaseClient<Database>;
-}
-
 export function goalsContext(
   tools: readonly ToolDefinition[],
   options: {
@@ -120,17 +102,18 @@ export function goalsContext(
 ) {
   const rpc = saveGoalsRpc();
   const made = writeContext(tools, {
-    rows: { training_goals: options.goals ?? [goalsTableRow(1)] },
+    rows: {
+      training_goals: options.goals ?? [goalsTableRow(1)],
+      workout_sessions: [sessionRow(1)],
+    },
     rpc: { save_training_goals: options.rpc ?? rpc.handler },
   });
-  let workoutLive = false;
   return {
     ...made,
-    ctx: { ...made.ctx, caller: callerWithWorkouts(made.stub.caller, () => workoutLive) },
     rpc,
     // From now on the person has a workout in progress.
     startWorkout: () => {
-      workoutLive = true;
+      made.stub.tables["workout_sessions"] = [sessionRow(1, { ended_at: null })];
     },
   };
 }

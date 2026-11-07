@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { assistantCardLinkSchema, assistantCardSchema } from "./card";
+import { assistantExerciseMusclesSchema } from "./exerciseMusclesCard";
 import { assistantIdSchema } from "./ids";
 import { assistantNoticeSchema } from "./notice";
 
@@ -64,6 +65,15 @@ const linkEventSchema = z.strictObject({
 });
 
 /**
+ * The muscles an exercise works (`assistant-card · exercise-muscles`): a read, drawn by the app as a 2D
+ * figure under the reply. One event for each exercise, in call order.
+ */
+const exerciseMusclesEventSchema = z.strictObject({
+  type: z.literal("exercise_muscles"),
+  exercise: assistantExerciseMusclesSchema,
+});
+
+/**
  * The Ask again quick reply under the reply (`assistant · workout-in-progress`, A change refused): a press
  * sends the person's last message again. A later turn takes it away.
  */
@@ -121,6 +131,7 @@ export const assistantStreamEventSchema = z.discriminatedUnion("type", [
   statusEventSchema,
   cardEventSchema,
   linkEventSchema,
+  exerciseMusclesEventSchema,
   askAgainEventSchema,
   clarifyEventSchema,
   confirmEventSchema,

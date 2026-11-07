@@ -71,6 +71,15 @@ describe("buildGoalsUpdatedCard for a goal that changed", () => {
     );
   });
 
+  it("should say no focus and not None when the focus it puts back was empty", () => {
+    const draft = buildGoalsUpdatedCard({
+      before: { ...before, focus: [] },
+      after: { ...before, focus: ["arms"] },
+    });
+
+    expect(draft.undoneSub).toBe("Put back no focus");
+  });
+
   it("should treat a list in another order as the same answer", () => {
     expect(() =>
       buildGoalsUpdatedCard({
