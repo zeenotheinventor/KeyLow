@@ -160,6 +160,7 @@ export const describeSuggestionCitation = ({
   today: string;
 }): string =>
   `Based on Ki-Lo's suggestion for ${localDate === today ? "today" : describeWeekdayName(localDate)}`;
+
 const DAYS_FROM_MONDAY_TO_SUNDAY = 6;
 
 /**

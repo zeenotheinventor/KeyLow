@@ -106,6 +106,8 @@ Deno.test(
         ["get_muscle_state", "read"],
         ["suggest_next_session", "read"],
         ["get_exercise_progress", "read"],
+        ["get_muscle_state", "read"],
+        ["suggest_next_session", "read"],
         ["ask_user", "read"],
       ],
     );
