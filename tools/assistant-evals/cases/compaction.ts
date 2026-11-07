@@ -40,9 +40,10 @@ const ORDINALS = [
   "twelfth",
 ] as const;
 
-// Enough turns that the history alone is about 16,000 tokens, which with the system prompt and the tools
-// puts the next turn's prompt above the 20,000 token threshold with room to spare.
-const SEED_TURN_COUNT = 45;
+// Enough turns that the history alone is about 100,000 characters, which is 22,000 to 25,000 tokens. With the
+// system prompt and the tools (22,000 tokens or more) that puts the next turn's prompt above the 40,000 token
+// threshold with room to spare (KEY-927 raised it from 20,000).
+const SEED_TURN_COUNT = 66;
 const SENTENCES_PER_REPLY = 18;
 
 function fillerReply(turnIndex: number): string {
