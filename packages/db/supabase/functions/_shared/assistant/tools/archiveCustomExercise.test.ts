@@ -331,7 +331,7 @@ const refusal = (reason: "routine" | "suggestion") => ({
   say:
     reason === "routine"
       ? "Take it out of your routines first."
-      : "It is in a workout you accepted on Train. Undo that first.",
+      : "It is in a workout you accepted on Train. Try again after that day.",
 });
 
 Deno.test("an exercise on a routine that is not archived is refused with no question", async () => {

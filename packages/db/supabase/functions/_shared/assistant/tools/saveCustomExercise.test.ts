@@ -648,33 +648,51 @@ Deno.test(
   },
 );
 
-Deno.test(
-  "a deleted accepted suggestion, or one for a day gone by, does not stop the undo",
-  async () => {
-    for (const overrides of [
-      { deleted_at: "2026-11-02T10:00:00+00:00" },
-      { local_date: "2026-11-02" },
-    ]) {
-      const { ctx, store, stub } = setup();
-      const added = await executeTool(ctx, "save_custom_exercise", add("Hanging leg raise"));
-      keepUndoOf(added, store);
-      assert(added.status === "ok" && added.actionId !== null);
-      const exerciseId = targetIdOf(store.actions[0]?.targetId);
-      stub.tables["accepted_suggestions"] = [
-        {
-          id: "a1",
-          user_id: "00000000-0000-4000-8000-0000000000a1",
-          local_date: "2026-11-03",
-          deleted_at: null,
-          exercises: [{ exercise_id: exerciseId }],
-          ...overrides,
-        },
-      ];
+Deno.test("a deleted accepted suggestion does not stop the undo", async () => {
+  const { ctx, store, stub } = setup();
+  const added = await executeTool(ctx, "save_custom_exercise", add("Hanging leg raise"));
+  keepUndoOf(added, store);
+  assert(added.status === "ok" && added.actionId !== null);
+  const exerciseId = targetIdOf(store.actions[0]?.targetId);
+  stub.tables["accepted_suggestions"] = [
+    {
+      id: "a1",
+      user_id: "00000000-0000-4000-8000-0000000000a1",
+      local_date: "2026-11-03",
+      deleted_at: "2026-11-02T10:00:00+00:00",
+      exercises: [{ exercise_id: exerciseId }],
+    },
+  ];
 
-      assertEquals(await undoAction(ctx, added.actionId), {
-        status: "undone",
-        actionId: added.actionId,
-      });
-    }
+  assertEquals(await undoAction(ctx, added.actionId), {
+    status: "undone",
+    actionId: added.actionId,
+  });
+});
+
+// The context Undo runs in has the date 1970-01-01 (`assistant/index.ts`), so the "today or later" bound of
+// the check lets every live suggestion through, a day gone by included. That fails safe, and this pins it.
+Deno.test(
+  "on Undo any live accepted suggestion that names the exercise counts, past days too",
+  async () => {
+    const { ctx, store, stub } = setup();
+    const added = await executeTool(ctx, "save_custom_exercise", add("Hanging leg raise"));
+    keepUndoOf(added, store);
+    assert(added.status === "ok" && added.actionId !== null);
+    const exerciseId = targetIdOf(store.actions[0]?.targetId);
+    stub.tables["accepted_suggestions"] = [
+      {
+        id: "a1",
+        user_id: "00000000-0000-4000-8000-0000000000a1",
+        local_date: "2026-10-01",
+        deleted_at: null,
+        exercises: [{ exercise_id: exerciseId }],
+      },
+    ];
+    const undoContext = { ...ctx, turn: { ...ctx.turn, localDate: "1970-01-01" } };
+
+    const result = await undoAction(undoContext, added.actionId);
+
+    assertEquals(result, { status: "error", code: "undo_unavailable", reason: "used" });
   },
 );

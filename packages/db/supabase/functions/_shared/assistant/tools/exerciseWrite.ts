@@ -85,16 +85,19 @@ export const exerciseFingerprint = (
       .map(({ muscle_id, role, weight }) => [muscle_id, role, weight]),
   ]);
 
-// Whether a live accepted suggestion for today or later names the exercise. It keeps a copy of the exercise
-// in `exercises`, each item holding its `exercise_id`, and Train shows it and starts a workout from it. A
-// suggestion that was undone (deleted) or is for a day gone by is not on any screen the person will use.
+// Whether a live accepted suggestion for the turn's day or later names the exercise. It keeps a copy of the
+// exercise in `exercises`, each item holding its `exercise_id`, and Train shows it and starts a workout from
+// it. A suggestion that was undone (deleted) or is for a day gone by is not on any screen the person will
+// use. The context Undo runs in has the date 1970-01-01 (`assistant/index.ts`), so there every live
+// suggestion counts, a past day's too. That fails safe: Undo refuses more, never less.
 async function isOnAcceptedSuggestion(ctx: ToolContext, id: string): Promise<boolean> {
   const { data, error } = await ctx.caller
     .from("accepted_suggestions")
     .select("id")
     .is("deleted_at", null)
     .gte("local_date", ctx.turn.localDate)
-    .contains("exercises", [{ exercise_id: id }])
+    // A string, because the client turns an array into a Postgres array literal, which the server refuses.
+    .contains("exercises", JSON.stringify([{ exercise_id: id }]))
     .limit(1);
   if (error) {
     throw new Error(`Could not check the accepted suggestions ${error.code}`);

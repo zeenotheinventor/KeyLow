@@ -250,4 +250,4 @@ export const EXERCISE_IN_ROUTINE_REFUSAL = "Take it out of your routines first."
 
 /** NOT ON THE CANVAS: the words when a live accepted suggestion names the exercise. */
 export const EXERCISE_IN_SUGGESTION_REFUSAL =
-  "It is in a workout you accepted on Train. Undo that first.";
+  "It is in a workout you accepted on Train. Try again after that day.";

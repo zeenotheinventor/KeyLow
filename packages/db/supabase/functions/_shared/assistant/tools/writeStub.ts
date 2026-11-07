@@ -218,9 +218,14 @@ export function writeStub(
         filters.push((row) => row[column] === value);
         return query;
       },
-      // Only the jsonb containment of `[{ key: value }]` in an array column, the one form a read uses.
+      // The jsonb containment as the client sends it: a JSON string. An array or an object operand is turned
+      // into a Postgres array literal by the client, which a real server refuses, so it fails here too.
       contains(column: string, value: unknown) {
-        filters.push((row) => jsonContains(row[column], value));
+        if (typeof value !== "string") {
+          throw new TypeError("contains takes the JSON as a string, as the client sends it");
+        }
+        const part: unknown = JSON.parse(value);
+        filters.push((row) => jsonContains(row[column], part));
         return query;
       },
       gte(column: string, value: unknown) {
