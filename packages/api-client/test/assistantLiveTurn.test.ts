@@ -1,4 +1,8 @@
-import { describeTurnEndedAfterWrite, threadFromMessages } from "@keylow/core";
+import {
+  buildAssistantSheetThread,
+  describeTurnEndedAfterWrite,
+  threadFromMessages,
+} from "@keylow/core";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -353,6 +357,73 @@ describe("stoppedTurn and failedTurn", () => {
 
       expect(live.notice).toBeNull();
       expect(reopened.map((item) => item.kind)).toEqual(["user", "card"]);
+    });
+
+    it("should not add the words again when the server's own words arrived before the stream broke", () => {
+      for (const writes of [1, 2]) {
+        const live = failedTurn(
+          applyAll([
+            { type: "card", card: aCard("Logged 2 eggs") },
+            { type: "text", delta: `Done.\n\n${describeTurnEndedAfterWrite(writes)}` },
+          ]),
+        );
+
+        expect(live.text).toBe(`Done.\n\n${describeTurnEndedAfterWrite(writes)}`);
+      }
+    });
+  });
+
+  describe("a stopped turn after a card was drawn", () => {
+    const stoppedAfterCard = () =>
+      stoppedTurn(
+        applyAll([
+          { type: "card", card: aCard("Logged 2 eggs") },
+          { type: "text", delta: "Done, and" },
+        ]),
+      );
+
+    it("should end in the saved words, not stopped, with no notice and no outcome", () => {
+      const live = stoppedAfterCard();
+
+      expect(live).toMatchObject({
+        text: `Done, and\n\n${describeTurnEndedAfterWrite(1)}`,
+        stopped: false,
+        notice: null,
+        outcome: null,
+        status: null,
+      });
+      expect(live.cards).toHaveLength(1);
+    });
+
+    it("should offer no Ask again, because sending the message again would repeat the write", () => {
+      const thread = buildAssistantSheetThread({
+        items: [],
+        sent: { text: "Log 2 eggs", afterItemId: null },
+        live: stoppedAfterCard(),
+        isStreaming: false,
+      });
+
+      expect(thread.canAskAgain).toBe(false);
+    });
+
+    it("should keep a stopped turn with no card as it was, stopped and open to Ask again", () => {
+      const live = stoppedTurn(applyAll([{ type: "text", delta: "Yesterday you" }]));
+
+      expect(live).toMatchObject({ text: "Yesterday you", stopped: true, outcome: null });
+      expect(
+        buildAssistantSheetThread({
+          items: [],
+          sent: { text: "How was Monday?", afterItemId: null },
+          live,
+          isStreaming: false,
+        }).canAskAgain,
+      ).toBe(true);
+    });
+
+    it("should not add the words twice", () => {
+      const once = stoppedAfterCard();
+
+      expect(stoppedTurn(once).text).toBe(once.text);
     });
   });
 });

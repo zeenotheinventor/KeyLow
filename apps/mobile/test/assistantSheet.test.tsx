@@ -567,6 +567,21 @@ describe("the assistant sheet", () => {
       expect(announce).not.toHaveBeenCalled();
     });
 
+    it("should not announce the saved-change words of a turn the person stopped after a card", async () => {
+      const announce = jest.spyOn(AccessibilityInfo, "announceForAccessibility");
+      announce.mockClear();
+      const rendered = await renderStreaming();
+      // `stoppedTurn` ends a turn that drew a card in these words, not marked stopped and with no outcome.
+      mockAssistant.turn = {
+        ...mockAssistant.turn,
+        live: liveTurn({ text: arrived, outcome: null, stopped: false }),
+        isStreaming: false,
+      };
+      await rendered.rerender(sheetTree());
+
+      expect(announce).not.toHaveBeenCalled();
+    });
+
     it("should not announce while the answer is still arriving", async () => {
       const announce = jest.spyOn(AccessibilityInfo, "announceForAccessibility");
       announce.mockClear();
