@@ -54,7 +54,9 @@ export type UseRunCheckinsIfDueOptions = {
  * goes to `onFailureCode` as a code only, and never throws, since the daily backstop runs the check-in
  * anyway. When a run recorded check-ins and the calorie target is not what it was, `onNewTargets` is called,
  * even if the run answered with none left. The target is health data, so it is only compared and never
- * passed on. The returned function keeps its identity between renders.
+ * passed on. Once the screen using it unmounts, a call still under way starts no run and announces nothing,
+ * so a sign-out does not hand its new target to the next account. The returned function keeps its identity
+ * between renders.
  */
 export function useRunCheckinsIfDue({
   onNewTargets,
@@ -65,10 +67,18 @@ export function useRunCheckinsIfDue({
   const { mutateAsync: runDueCheckins } = useRunDueCheckins();
   const latestCallbacks = useRef({ onNewTargets, onFailureCode });
   const runInFlight = useRef<Promise<void> | null>(null);
+  const isMounted = useRef(true);
 
   useEffect(() => {
     latestCallbacks.current = { onNewTargets, onFailureCode };
   });
+
+  useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
 
   return useCallback(async () => {
     if (!onlineManager.isOnline()) {
@@ -79,7 +89,7 @@ export function useRunCheckinsIfDue({
       const targetBefore = await readCalorieTarget(queryClient, client);
       const answer = await runDueCheckins();
       // Without a target from before the run there is nothing to compare with.
-      if (answer !== null && answer.ran > 0 && targetBefore !== undefined) {
+      if (isMounted.current && answer !== null && answer.ran > 0 && targetBefore !== undefined) {
         const targetAfter = await readCalorieTarget(queryClient, client);
         if (targetAfter !== undefined && targetAfter !== targetBefore) {
           latestCallbacks.current.onNewTargets();
@@ -89,7 +99,8 @@ export function useRunCheckinsIfDue({
 
     try {
       const schedule = await getMyCheckinSchedule(client);
-      if (schedule === null || schedule.nextCheckinDate === null) {
+      // A read that finishes after the screen is gone, as when the person signs out, starts nothing.
+      if (!isMounted.current || schedule === null || schedule.nextCheckinDate === null) {
         return;
       }
       // Dates in `YYYY-MM-DD` order the same as text.
