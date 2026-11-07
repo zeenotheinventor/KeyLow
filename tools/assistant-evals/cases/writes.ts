@@ -32,7 +32,7 @@ import {
   scaleMacroTargets,
 } from "@keylow/core";
 
-import { DIARY_READ_TOOLS } from "./ask.ts";
+import { DIARY_READ_TOOLS, READ_TOOLS } from "./ask.ts";
 import {
   actionRows,
   anyOfRoutes,
@@ -62,6 +62,7 @@ import { FOOD_ROUTES, lunchOfDay } from "../fixtures/describeExtras.ts";
 import { diaryDateOf } from "../fixtures/diary.ts";
 import { dayEntries } from "../fixtures/diaryTotals.ts";
 import { noActionRows } from "../src/case.ts";
+import { trainingWorldHolder } from "../src/trainingWorldHolder.ts";
 
 import type { ExpectedItem } from "./entryGraders.ts";
 import type { EvalCase, Grader } from "../src/case.ts";
@@ -829,7 +830,7 @@ export function writeCasesOf(anchorDate: string): readonly EvalCase[] {
     { afterTurn: undoLunch.afterTurn, cleanUp: undoWrites },
   );
 
-  return [...cases, ...undoCases, repeated, again];
+  return [...cases, ...undoCases, repeated, again, buildRoutineCase];
 }
 
 /** Passes when the turns of the case are different turns, so the second did not replay the first. */
@@ -843,6 +844,100 @@ function distinctTurns(): Grader {
     );
   };
 }
+
+// The build of a 4 day routine of 24 exercises (KEY-920), which is also the timing run of `create_routine`. The
+// model reads the goal, searches for every exercise and builds once, so the turn runs the longest chain of tools
+// a build can need. The turn's own clock is read back, so the line it prints is the time the served path took.
+const BUILD_ROUTINE_NAME = "Scratch four day";
+// Any read tool is fair on the way to a build (a model may look at the muscles or the workouts first). What a
+// build may not do is write anything but the routine.
+const BUILD_ROUTINE_TOOLS: ReadonlySet<string> = new Set([...READ_TOOLS, "create_routine"]);
+const BUILD_DAYS = 4;
+const BUILD_EXERCISES_PER_DAY = 6;
+// A press or a squat may fairly come up on two days, so the build needs this many different exercises, not all 24.
+const BUILD_MINIMUM_DISTINCT_EXERCISES = 20;
+// The turn deadline of `turn.ts`, in seconds. A turn that passes it ends failed, so a build that gets close to it is
+// the risk the ticket names.
+const TURN_DEADLINE_SECONDS = 100;
+
+/** Passes when the `create_routine` call has the days asked for, each of the exercises asked for, and enough different ones. */
+function builtFourDaysOfSix(): Grader {
+  return calledWith(
+    "create_routine",
+    ({ days }) =>
+      Array.isArray(days) &&
+      days.length === BUILD_DAYS &&
+      days.every(
+        (day) =>
+          isRecord(day) &&
+          Array.isArray(day["exercise_ids"]) &&
+          day["exercise_ids"].length === BUILD_EXERCISES_PER_DAY,
+      ) &&
+      new Set(days.flatMap((day) => (isRecord(day) ? [day["exercise_ids"]].flat(2) : []))).size >=
+        BUILD_MINIMUM_DISTINCT_EXERCISES,
+    `${BUILD_DAYS} days of ${BUILD_EXERCISES_PER_DAY} exercises, at least ${BUILD_MINIMUM_DISTINCT_EXERCISES} of them different`,
+  );
+}
+
+/**
+ * Prints how long the turn took, from the turn row's own `created_at` and `finished_at`, with how many tools it
+ * ran, and fails when the turn did not end, or took longer than the deadline of `turn.ts`. The harness reads no
+ * CPU time: only the function could report that.
+ */
+function reportsTheTurnTime(): Grader {
+  return async ({ turns, database }) => {
+    const [turn] = turns;
+    if (turn === undefined) {
+      return { passed: false, reason: "no turn was sent" };
+    }
+    const [row] = await database.readRows({ table: "assistant_turns", where: { id: turn.turnId } });
+    const started = Date.parse(String(row?.["created_at"]));
+    const finished = Date.parse(String(row?.["finished_at"]));
+    if (Number.isNaN(started) || Number.isNaN(finished)) {
+      return { passed: false, reason: "the turn row has no start or no end" };
+    }
+    const seconds = (finished - started) / 1000;
+    const searches = turn.toolCalls.filter(({ name }) => name === "search_exercises").length;
+    console.log(
+      `create_routine timing: ${seconds.toFixed(1)} s wall-clock for the turn, ${turn.toolCalls.length} tool calls (${searches} search_exercises), deadline ${TURN_DEADLINE_SECONDS} s`,
+    );
+    return seconds < TURN_DEADLINE_SECONDS
+      ? { passed: true, reason: `the turn took ${seconds.toFixed(1)} s` }
+      : {
+          passed: false,
+          reason: `the turn took ${seconds.toFixed(1)} s, over the ${TURN_DEADLINE_SECONDS} s deadline`,
+        };
+  };
+}
+
+const buildMessages: EvalCase["messages"] = [
+  `Build me a ${BUILD_DAYS} day routine called ${BUILD_ROUTINE_NAME}, with ${BUILD_EXERCISES_PER_DAY} exercises a day, on Monday, Tuesday, Thursday and Friday.`,
+];
+
+const buildRoutineCase: EvalCase = {
+  id: "write-build-a-4-day-routine",
+  set: "writes",
+  // The goal is part of the training history, written before the case's ceiling.
+  prepare: () => trainingWorldHolder.current().ensureHistory(),
+  messages: buildMessages,
+  expect: [
+    turnEnded(0, "complete"),
+    builtFourDaysOfSix(),
+    actionRows("create_routine", 1),
+    cardOfKind(0, "routine_created"),
+    rowCount(
+      {
+        table: "routines",
+        where: { name: BUILD_ROUTINE_NAME, is_active: false, is_archived: false },
+      },
+      1,
+    ),
+    onlyTheseTools(BUILD_ROUTINE_TOOLS),
+    reportsTheTurnTime(),
+  ].map((grade) => withContext(grade, buildMessages)),
+  // Undo archives the routine, so the eval user's routine list is as it was, bar one archived routine.
+  cleanUp: undoWrites,
+};
 
 /** The set for a run now: the eval user's today is the UTC date, as the ask set takes it. */
 export const writeCases: readonly EvalCase[] = writeCasesOf(new Date().toISOString().slice(0, 10));

@@ -126,6 +126,7 @@ export type { TrendSetRow, TrendSetRows } from "./trainingSchemas";
 export { getRoutine, listRoutines } from "./routines";
 export type { ListRoutinesOptions } from "./routines";
 export { saveRoutine, setActiveRoutine, setRoutineArchived } from "./routineWrites";
+export { RoutineRuleError } from "../errors";
 export type { RoutineSave } from "./routineWrites";
 export type { RoutineDetail, RoutineListEntry, RoutineRecord } from "./routineSchemas";
 export { deleteSession, finishSession, restoreSession, startSession } from "./sessionWrites";
