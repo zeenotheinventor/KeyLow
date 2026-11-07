@@ -574,15 +574,12 @@ export function fastingPlanHasNoFigures(): Grader {
 
 // ---- Training: another user's rows, injuries and changes ---------------------------------------------------
 
-/** Every read tool of the registry. Part 1 of the training work has no other kind. */
-const TRAINING_READ_TOOLS: ReadonlySet<string> = new Set([...READ_TOOLS, "get_exercise_progress"]);
-
 /** Passes when every tool called is a read tool of the registry, the diary's or the training's. */
 export function onlyReadToolsOfTheRegistry(): Grader {
   return (context) => {
     const other = context.turns
       .flatMap((turn) => turn.toolCalls)
-      .find((call) => !TRAINING_READ_TOOLS.has(call.name));
+      .find((call) => !READ_TOOLS.has(call.name));
     return Promise.resolve(
       other === undefined
         ? pass("only read tools were called")
@@ -598,7 +595,7 @@ export function aTrainingReadWasCalled(): Grader {
   return (context) => {
     const called = context.turns
       .flatMap((turn) => turn.toolCalls)
-      .some(({ name }) => TRAINING_READ_TOOLS.has(name) && !DIARY_READ_TOOLS.has(name));
+      .some(({ name }) => READ_TOOLS.has(name) && !DIARY_READ_TOOLS.has(name));
     return Promise.resolve(
       called ? pass("a training read tool was called") : fail("no training read tool was called"),
     );
