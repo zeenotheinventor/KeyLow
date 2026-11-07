@@ -1,13 +1,16 @@
 import { describeLongDate } from "./assistantDayCards";
-import { describeSets, describeWeekdayName } from "./bodyMap";
+import { describeSets, describeWeekdayName, joinInWords } from "./bodyMap";
 import { describeCount } from "./counts";
-import { EXPERIENCE_OPTIONS, GOAL_OPTIONS } from "./goals";
+import { EQUIPMENT_OPTIONS, EXPERIENCE_OPTIONS, GOAL_OPTIONS } from "./goals";
+import { MUSCLE_NAMES } from "./muscleNames";
 import { describeRepRange } from "./routines";
 import { SET_PHRASES, writtenNumbers } from "./sessionWording";
 import { addCalendarDays } from "../dates/calendarDay";
+import { MUSCLE_IDS } from "../training/muscles";
 
-import type { ExperienceLevel, TrainingGoal } from "../training/enums";
+import type { Equipment, ExperienceLevel, MuscleRole, TrainingGoal } from "../training/enums";
 import type { LoadUnit } from "../training/loads";
+import type { MuscleId } from "../training/muscles";
 import type { SetValues } from "../training/setInput";
 
 /*
@@ -489,3 +492,123 @@ export const PARTLY_UNDONE_NOTE = "The rest changed since, so Undo is off for th
 
 /** NOT ON THE CANVAS: the same when the refusal gave no reason, which says nothing about why. */
 export const PARTLY_UNDONE_UNKNOWN_NOTE = "The rest can't be undone.";
+
+// KEY-905: custom exercises
+
+/** One muscle of a custom exercise, as a card is worded from it. */
+export type ExerciseCardMuscle = { muscle_id: MuscleId; role: MuscleRole };
+
+const ROLE_ORDER: readonly MuscleRole[] = ["primary", "secondary", "stabiliser"];
+
+/**
+ * "Abs, obliques": the muscles of an exercise, the primary ones first, then the secondary and the
+ * assisting ones, each group in the order of the muscle list. Only the first is capitalised, as the
+ * board writes it.
+ */
+export const describeExerciseMuscles = (muscles: readonly ExerciseCardMuscle[]): string =>
+  ROLE_ORDER.flatMap((role) =>
+    muscles
+      .filter((muscle) => muscle.role === role)
+      .sort(
+        (first, second) =>
+          MUSCLE_IDS.indexOf(first.muscle_id) - MUSCLE_IDS.indexOf(second.muscle_id),
+      ),
+  )
+    .map(({ muscle_id }, index) =>
+      index === 0 ? MUSCLE_NAMES[muscle_id] : MUSCLE_NAMES[muscle_id].toLowerCase(),
+    )
+    .join(", ");
+
+/** Where an exercise is done, for the line shown once an edit is undone. Only the cable is on the canvas. */
+const EQUIPMENT_PLACES: Readonly<Record<Equipment, string>> = {
+  barbell: "with a barbell",
+  dumbbell: "with dumbbells",
+  kettlebell: "with a kettlebell",
+  cable: "on the cable",
+  machine: "on the machine",
+  smith_machine: "on the Smith machine",
+  ez_bar: "with an EZ bar",
+  band: "with a band",
+  bodyweight: "with bodyweight",
+  other: "with other equipment",
+};
+
+/** "Custom · Cable · Abs", under the title of an added exercise. */
+export const describeExerciseCreatedSub = (
+  equipment: Equipment,
+  muscles: readonly ExerciseCardMuscle[],
+): string => `Custom · ${EQUIPMENT_OPTIONS[equipment].label} · ${describeExerciseMuscles(muscles)}`;
+
+/** "Added exercise Cable crunch". */
+export const describeExerciseCreatedTitle = (name: string): string => `Added exercise ${name}`;
+
+/** The note under an added exercise: it is not in a routine yet, and nothing links to it. */
+export const EXERCISE_CREATED_NOTE =
+  "Not in a routine yet. Say which day, or add it in the routine editor.";
+
+/** The line under "Undone" for an added exercise: "Archived Cable crunch". */
+export const describeExerciseCreatedUndone = (name: string): string => `Archived ${name}`;
+
+/** "Updated exercise Kneeling cable crunch". */
+export const describeExerciseUpdatedTitle = (name: string): string => `Updated exercise ${name}`;
+
+export const EXERCISE_UPDATED_NOTE = "Sets you already logged keep what they were.";
+
+/** The names of the rows of an edit, one for each field that changed. */
+export const EXERCISE_UPDATED_ROWS = {
+  name: "Name",
+  /** NOT ON THE CANVAS: the board draws a rename and a muscle change only. */
+  equipment: "Equipment",
+  muscles: "Muscles",
+} as const;
+
+/** "Was Cable crunch". */
+export const describeExerciseWasName = (name: string): string => `Was ${name}`;
+
+/** NOT ON THE CANVAS: "Machine · was Cable", in the way of the muscles row. */
+export const describeExerciseEquipmentChange = (now: Equipment, was: Equipment): string =>
+  `${EQUIPMENT_OPTIONS[now].label} · was ${EQUIPMENT_OPTIONS[was].label}`;
+
+/** "Abs, obliques · was Abs". */
+export const describeExerciseMusclesChange = (
+  now: readonly ExerciseCardMuscle[],
+  was: readonly ExerciseCardMuscle[],
+): string => `${describeExerciseMuscles(now)} · was ${describeExerciseMuscles(was)}`;
+
+/**
+ * "Put back Cable crunch, on the cable, for abs": the line under "Undone" for an edit, with "for abs and
+ * obliques" for two muscles and "for abs, obliques and calves" for three. The phrase for any equipment but
+ * the cable is NOT ON THE CANVAS.
+ */
+export const describeExerciseUpdatedUndone = (
+  name: string,
+  equipment: Equipment,
+  muscles: readonly ExerciseCardMuscle[],
+): string =>
+  `Put back ${name}, ${EQUIPMENT_PLACES[equipment]}, for ${joinInWords(describeExerciseMuscles(muscles).toLowerCase().split(", "))}`;
+
+/** "Archived exercise Cable crunch". */
+export const describeExerciseArchivedTitle = (name: string): string => `Archived exercise ${name}`;
+
+export const EXERCISE_ARCHIVED_SUB = "Sets you logged with it stay in your history";
+
+/** The line under "Undone" for an archived exercise: "Cable crunch is back in your exercises". */
+export const describeExerciseArchivedUndone = (name: string): string =>
+  `${name} is back in your exercises`;
+
+/** The archive confirmation: the question is the model's own words, and these are its two buttons. */
+export const CONFIRM_ARCHIVE_EXERCISE_BUTTONS = {
+  confirm: "Archive exercise",
+  cancel: "Keep it",
+};
+
+/** "Archive Cable crunch? It leaves your exercise list. Sets you logged with it stay in your history." */
+export const describeConfirmArchiveExerciseQuestion = (name: string): string =>
+  `Archive ${name}? It leaves your exercise list. ${EXERCISE_ARCHIVED_SUB}.`;
+
+/** The words for the model when an exercise is on a routine that is not archived. Follows the routine refusals'. */
+export const EXERCISE_IN_ROUTINE_REFUSAL = "Take it out of your routines first.";
+
+/** NOT ON THE CANVAS: the words when a live accepted suggestion names the exercise. */
+export const EXERCISE_IN_SUGGESTION_REFUSAL =
+  "It is in a workout you accepted on Train. Try again after that day.";

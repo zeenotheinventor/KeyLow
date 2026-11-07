@@ -44,3 +44,11 @@ export { buildSetUpdatedCard } from "./setUpdated";
 export type { SetUpdatedCardInput } from "./setUpdated";
 export { buildGoalsUpdatedCard } from "./goalsUpdated";
 export type { GoalAnswerGiven, GoalsUpdatedCardChange } from "./goalsUpdated";
+export {
+  confirmArchiveExerciseButtons,
+  confirmArchiveExerciseQuestion,
+} from "./confirmArchiveExercise";
+export { buildExerciseArchivedCard } from "./exerciseArchived";
+export { buildExerciseCreatedCard } from "./exerciseCreated";
+export type { CardExercise } from "./exerciseCreated";
+export { buildExerciseUpdatedCard } from "./exerciseUpdated";

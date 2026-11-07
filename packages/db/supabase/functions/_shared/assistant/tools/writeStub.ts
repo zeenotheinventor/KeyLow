@@ -35,6 +35,23 @@ export type WriteStub = {
 const stampOf = (statement: number) =>
   `2026-11-03T09:00:${String(statement).padStart(2, "0")}.000000+00:00`;
 
+// Postgres `@>`: an array holds every item the other does, an object every key, and anything else is equal.
+const jsonContains = (whole: unknown, part: unknown): boolean => {
+  if (Array.isArray(part)) {
+    return (
+      Array.isArray(whole) && part.every((item) => whole.some((held) => jsonContains(held, item)))
+    );
+  }
+  if (typeof part === "object" && part !== null) {
+    return (
+      typeof whole === "object" &&
+      whole !== null &&
+      Object.entries(part).every(([key, item]) => jsonContains(Reflect.get(whole, key), item))
+    );
+  }
+  return whole === part;
+};
+
 export function writeStub(
   initial: Record<string, Row[]> = {},
   options: {
@@ -60,10 +77,12 @@ export function writeStub(
       ? "owner_id"
       : "user_id";
 
+  // The library's exercises have no owner and everyone sees them, as the select policy of `exercises` says.
   const visible = (table: string, row: Row) =>
     options.callerUserId === undefined ||
     row[ownerColumnOf(table)] === undefined ||
-    row[ownerColumnOf(table)] === options.callerUserId;
+    row[ownerColumnOf(table)] === options.callerUserId ||
+    (table === "exercises" && row["owner_id"] === null);
 
   // The commas that are not inside the brackets of an embedded table.
   const topLevelColumns = (columns: string): string[] => {
@@ -211,6 +230,20 @@ export function writeStub(
       },
       eq(column: string, value: unknown) {
         filters.push((row) => row[column] === value);
+        return query;
+      },
+      // The jsonb containment as the client sends it: a JSON string. An array or an object operand is turned
+      // into a Postgres array literal by the client, which a real server refuses, so it fails here too.
+      contains(column: string, value: unknown) {
+        if (typeof value !== "string") {
+          throw new TypeError("contains takes the JSON as a string, as the client sends it");
+        }
+        const part: unknown = JSON.parse(value);
+        filters.push((row) => jsonContains(row[column], part));
+        return query;
+      },
+      gte(column: string, value: unknown) {
+        filters.push((row) => String(row[column] ?? "") >= String(value));
         return query;
       },
       in(column: string, values: unknown[]) {

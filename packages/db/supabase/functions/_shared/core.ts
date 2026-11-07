@@ -58,6 +58,9 @@ export type {
   SetValues,
   GoalAnswerGiven,
   GoalAnswers,
+  CardExercise,
+  CleanCustomExercise,
+  CustomExerciseDraft,
 } from "./core/index.js";
 export {
   addCalendarDays,
@@ -236,4 +239,14 @@ export {
   assistantExerciseMusclesSchema,
   describeRoleRow,
   musclesByRole,
+  buildExerciseArchivedCard,
+  buildExerciseCreatedCard,
+  buildExerciseUpdatedCard,
+  confirmArchiveExerciseButtons,
+  confirmArchiveExerciseQuestion,
+  MUSCLE_ROLES,
+  customExercisePayload,
+  EXERCISE_IN_ROUTINE_REFUSAL,
+  EXERCISE_IN_SUGGESTION_REFUSAL,
+  validateCustomExerciseDraft,
 } from "./core/index.js";
