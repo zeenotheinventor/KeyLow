@@ -3,8 +3,15 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { findGlobalExercise, logSets, present, saveExercise } from "./support/training";
 import { createTestUser, deleteCreatedTestUsers } from "./support/users";
-import { startSession } from "../../src/repos/sessionWrites";
-import { addSet, removeSet, reorderSets, restoreSet, updateSet } from "../../src/repos/setWrites";
+import { deleteSession, startSession } from "../../src/repos/sessionWrites";
+import {
+  addSet,
+  getSet,
+  removeSet,
+  reorderSets,
+  restoreSet,
+  updateSet,
+} from "../../src/repos/setWrites";
 import { getSession } from "../../src/repos/trainingSessions";
 
 import type { SavedExercise } from "./support/training";
@@ -227,6 +234,35 @@ describe("addSet", () => {
 
     expect(refused?.message).toBe("Could not log the set (42501)");
     expect(refused?.cause).toEqual({ code: "42501" });
+  });
+});
+
+describe("getSet", () => {
+  it("should read a set of the caller, and nothing of another user's, which reads as one that does not exist", async () => {
+    const owner = await createTestUser("key906");
+    const stranger = await createTestUser("key906");
+    const sessionId = await freshSession(owner);
+    const set = await log(owner, sessionId, globalExercise.id);
+
+    const own = await getSet(owner.client, set.id);
+    const foreign = await getSet(stranger.client, set.id);
+    const missing = await getSet(owner.client, NOT_A_ROW);
+
+    expect(own).toMatchObject({ id: set.id, session_id: sessionId, deleted_at: null });
+    expect(foreign).toBeNull();
+    expect(missing).toBeNull();
+  });
+
+  it("should read a removed set, and the set of a deleted session, with their deleted_at", async () => {
+    const owner = await createTestUser("key906");
+    const sessionId = await freshSession(owner);
+    const removed = await log(owner, sessionId, globalExercise.id);
+    const taken = await log(owner, sessionId, globalExercise.id);
+    await removeSet(owner.client, removed.id);
+    await deleteSession(owner.client, sessionId);
+
+    expect((await getSet(owner.client, removed.id))?.deleted_at).not.toBeNull();
+    expect((await getSet(owner.client, taken.id))?.deleted_at).not.toBeNull();
   });
 });
 

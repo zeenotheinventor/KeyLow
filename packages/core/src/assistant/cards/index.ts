@@ -25,3 +25,5 @@ export { buildRecipeUpdatedCard } from "./recipeUpdated";
 export { buildTargetsChangedCard } from "./targetsChanged";
 export type { TargetsChangedCardChange } from "./targetsChanged";
 export { buildUpdatedCard } from "./updated";
+export { buildSetUpdatedCard } from "./setUpdated";
+export type { SetUpdatedCardInput } from "./setUpdated";
