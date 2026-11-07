@@ -33,6 +33,21 @@ export const ASSISTANT_SHEET = {
 } as const;
 
 /**
+ * The words the empty sheet and the field change when the sheet is opened from the Train header
+ * (`assistant · empty-train`). The lede and the not-medical line are the Diary's.
+ */
+export const ASSISTANT_TRAIN_SHEET = {
+  emptyHeading: "Ask about your training",
+  /** Each sends its words as your message. */
+  starters: [
+    "What should I train today?",
+    "Why has my bench stalled?",
+    "Am I doing enough for my back?",
+  ],
+  composerPlaceholder: "Ask about your training",
+} as const;
+
+/**
  * The note of a card whose Undo is off because the entries it made were changed in the diary since
  * (`assistant-card · undo-unavailable`). A card read back from the thread carries no such note, so the
  * sheet words it for the cards that make or copy diary entries.

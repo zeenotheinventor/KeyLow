@@ -10,10 +10,16 @@ import type { AssistantEmptyProps } from "./types";
  * The empty sheet in the thread (`assistant · empty`): a heading, a line on how to say it, four starters
  * that each send their words, and the not-medical-advice line, which is shown here and on the consent card
  * only. Opened from Describe (`assistant · describe`) it is the Describe intro alone, with no starters and
- * no not-medical-advice line. Core says which words, and which parts, each way has.
+ * no not-medical-advice line, and opened from the Train header (`assistant · empty-train`) it has three
+ * training starters. Core says which words, and which parts, each way has.
  */
-export function AssistantEmpty({ onStarterPress, isDisabled, describeAt }: AssistantEmptyProps) {
-  const words = describeAssistantEmpty(describeAt);
+export function AssistantEmpty({
+  onStarterPress,
+  isDisabled,
+  describeAt,
+  from,
+}: AssistantEmptyProps) {
+  const words = describeAssistantEmpty(describeAt, from);
 
   return (
     <View className="gap-4 pt-2">

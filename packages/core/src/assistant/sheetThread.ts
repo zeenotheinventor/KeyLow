@@ -5,9 +5,15 @@ import {
   describeAssistantNotice,
   describeAssistantStatus,
 } from "../copy/assistantNotices";
-import { ASSISTANT_DESCRIBE, ASSISTANT_SHEET, describeLogsAt } from "../copy/assistantSheet";
+import {
+  ASSISTANT_DESCRIBE,
+  ASSISTANT_SHEET,
+  ASSISTANT_TRAIN_SHEET,
+  describeLogsAt,
+} from "../copy/assistantSheet";
 
 import type { AssistantCard } from "./card";
+import type { AssistantOpenedFrom } from "./describeInLog";
 import type { AssistantStatus } from "./events";
 import type { AssistantNotice } from "./notice";
 import type { AssistantThreadItem } from "./thread";
@@ -639,20 +645,25 @@ export function describeAssistantComposer({
   isOnline,
   timeZone,
   describeAt,
+  from,
   fieldHint = null,
 }: {
   access: AssistantSheetAccess;
   isOnline: boolean;
   timeZone: string;
   describeAt?: string | undefined;
+  /** The Train header, which asks about training in the field. */
+  from?: AssistantOpenedFrom | undefined;
   /** The words of a clarifying question waiting for its answer, which the field shows in place of its own. */
   fieldHint?: string | null | undefined;
 }): AssistantComposerLook {
   const placeholder =
     fieldHint ??
-    (describeAt === undefined
-      ? ASSISTANT_SHEET.composerPlaceholder
-      : ASSISTANT_DESCRIBE.composerPlaceholder);
+    (describeAt !== undefined
+      ? ASSISTANT_DESCRIBE.composerPlaceholder
+      : from === "train"
+        ? ASSISTANT_TRAIN_SHEET.composerPlaceholder
+        : ASSISTANT_SHEET.composerPlaceholder);
   switch (access.kind) {
     case "consent":
       return { isShown: false };

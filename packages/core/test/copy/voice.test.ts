@@ -26,9 +26,10 @@ const exportedFunctionNames = Object.entries(copy)
   .filter(([, value]) => typeof value === "function")
   .map(([name]) => name);
 
-// The sign up checkbox, the setup buttons that say "my targets" and the Export my data row, title and mention in
-// the Privacy Policy are the person's own words, not Ki-Lo's.
+// The sign up checkbox, the setup buttons that say "my targets", the Export my data row, title and mention in
+// the Privacy Policy and the training starters of the assistant are the person's own words, not Ki-Lo's.
 const personsOwnStatements = [
+  ...copy.ASSISTANT_TRAIN_SHEET.starters,
   copy.ACCOUNT_EXPORT_COPY.moreRow.title,
   copy.ACCOUNT_EXPORT_COPY.title,
   // The web's downloaded footer sends the person back to the page by its name.

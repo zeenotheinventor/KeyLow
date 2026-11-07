@@ -187,7 +187,9 @@ describe("the Assistant settings screen", () => {
 
       expect(switchRow()).toBeChecked();
       expect(
-        screen.getByText("On. Open it from the Diary header or Describe in Log food."),
+        screen.getByText(
+          "On. Open it from the Diary header, the Train header or Describe in Log food.",
+        ),
       ).toBeOnTheScreen();
     });
 
