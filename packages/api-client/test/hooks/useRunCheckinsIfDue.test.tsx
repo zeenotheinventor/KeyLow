@@ -273,6 +273,50 @@ describe("useRunCheckinsIfDue", () => {
 
       expect(onNewTargets).not.toHaveBeenCalled();
     });
+
+    it("should announce nothing when it unmounts while the target is read again after the run", async () => {
+      let releaseRun: () => void = () => undefined;
+      backend.gate = new Promise((resolve) => {
+        releaseRun = resolve;
+      });
+      let releaseRead: () => void = () => undefined;
+      const readGate = new Promise<void>((resolve) => {
+        releaseRead = resolve;
+      });
+      let isReadingAgain = false;
+      const { result, unmount, onNewTargets } = renderRunner();
+      let pending: Promise<unknown> = Promise.resolve();
+      act(() => {
+        pending = result.current();
+      });
+      await waitFor(() => {
+        expect(backend.runs).toBe(1);
+      });
+      server.use(
+        http.get(`${REST_URL}/profiles`, async ({ request }) => {
+          isReadingAgain = true;
+          await readGate;
+          return postgrestRows(request, [
+            {
+              target_kcal: backend.kcal,
+              target_protein_g: null,
+              target_carbs_g: null,
+              target_fat_g: null,
+            },
+          ]);
+        }),
+      );
+      releaseRun();
+      await waitFor(() => {
+        expect(isReadingAgain).toBe(true);
+      });
+
+      unmount();
+      releaseRead();
+      await pending;
+
+      expect(onNewTargets).not.toHaveBeenCalled();
+    });
   });
 
   describe("when something fails", () => {

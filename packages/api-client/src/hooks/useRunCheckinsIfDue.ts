@@ -89,9 +89,9 @@ export function useRunCheckinsIfDue({
       const targetBefore = await readCalorieTarget(queryClient, client);
       const answer = await runDueCheckins();
       // Without a target from before the run there is nothing to compare with.
-      if (isMounted.current && answer !== null && answer.ran > 0 && targetBefore !== undefined) {
+      if (answer !== null && answer.ran > 0 && targetBefore !== undefined) {
         const targetAfter = await readCalorieTarget(queryClient, client);
-        if (targetAfter !== undefined && targetAfter !== targetBefore) {
+        if (isMounted.current && targetAfter !== undefined && targetAfter !== targetBefore) {
           latestCallbacks.current.onNewTargets();
         }
       }
