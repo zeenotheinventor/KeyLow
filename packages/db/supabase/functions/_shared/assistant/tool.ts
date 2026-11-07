@@ -34,6 +34,9 @@ export type ToolContext = {
   // The only holder of the service client: ids-only rows of `assistant_actions` and the turn's
   // pending confirmation.
   actions: ActionStore;
+  // The `previous` the write tool stored beside its card, for the action being undone, or null when it is gone.
+  // For an `inverse` only: an inverse that gets null answers `unavailable`. Scoped to `userId`.
+  previousValueOf(action: ActionRecord): Promise<JsonValue | null>;
   userId: string;
   turn: ToolTurn;
   registry: ToolRegistry;

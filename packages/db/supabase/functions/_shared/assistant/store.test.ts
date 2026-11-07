@@ -1,9 +1,9 @@
 import { assertEquals, assertRejects } from "@std/assert";
 
-import { conversationId, createFakeActionStore, turnId, userId } from "./testing.ts";
+import { conversationId, createFakeActionStore, otherUserId, turnId, userId } from "./testing.ts";
 import { createActionStore, reserveNextSlot } from "./store.ts";
 
-import type { SlotRequest } from "./store.ts";
+import type { ActionRecord, SlotRequest } from "./store.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 const request: SlotRequest = {
@@ -136,5 +136,159 @@ Deno.test(
 
     assertEquals(previous, null);
     assertEquals(queried, ["from assistant_turns"]);
+  },
+);
+
+// ---- The previous value an Undo reads back (KEY-900) ----
+
+const undoneActionId = "00000000-0000-4000-8000-0000000000f1";
+
+const storedAction: ActionRecord = {
+  id: undoneActionId,
+  userId,
+  conversationId,
+  turnId,
+  turnSeq: 1,
+  tool: "fake_write",
+  targetTable: "routines",
+  targetId: "row-1",
+  targetIds: null,
+  targetLocalDate: null,
+  targetUpdatedAt: null,
+  undoneAt: null,
+};
+
+type MessageRow = { turn_id: string | null; user_id: string; display: unknown };
+
+// An in-memory `assistant_messages` that applies the `eq` filters it is sent, so a query that forgets the
+// person's id returns another person's row here as it would on the service client.
+function messagesClient(
+  rows: MessageRow[],
+  failure: { code: string; message: string } | null = null,
+) {
+  const queried: string[] = [];
+  const query = (filters: [string, unknown][]) => ({
+    eq: (column: string, value: unknown) => query([...filters, [column, value]]),
+    then: (resolve: (answer: unknown) => unknown) =>
+      resolve(
+        failure === null
+          ? {
+              data: rows
+                .filter((row) =>
+                  filters.every(([column, value]) =>
+                    Object.entries(row).some(([key, actual]) => key === column && actual === value),
+                  ),
+                )
+                .map((row) => ({ display: row.display })),
+              error: null,
+            }
+          : { data: null, error: failure },
+      ),
+  });
+  const builder = {
+    from: (table: string) => {
+      queried.push(table);
+      return { select: () => query([]) };
+    },
+  };
+  // The store only calls the methods above. The stub cannot satisfy the whole client type.
+  return { client: builder as unknown as SupabaseClient, queried };
+}
+
+const undoDisplay = (actionId: string, previous: unknown) => ({
+  "toolu-1": { card: { kind: "changed" }, undo: { actionId, previous, fingerprint: "f-1" } },
+});
+
+Deno.test("the previous value is the one stored beside the card of that action", async () => {
+  const previous = { name: "Push day", exercises: ["bench", "dips"] };
+  const { client } = messagesClient([
+    { turn_id: turnId, user_id: userId, display: null },
+    { turn_id: turnId, user_id: userId, display: undoDisplay("another-action", { name: "No" }) },
+    { turn_id: turnId, user_id: userId, display: undoDisplay(undoneActionId, previous) },
+  ]);
+
+  const value = await createActionStore(client).previousValueOf(storedAction, userId);
+
+  assertEquals(value, previous);
+});
+
+Deno.test("a stored string comes back exactly as it went in", async () => {
+  const deletedAt = "2026-11-03T08:10:00.123456+00:00";
+  const { client } = messagesClient([
+    { turn_id: turnId, user_id: userId, display: undoDisplay(undoneActionId, { deletedAt }) },
+  ]);
+
+  const value = await createActionStore(client).previousValueOf(storedAction, userId);
+
+  assertEquals(value, { deletedAt });
+});
+
+Deno.test(
+  "another person's action id answers null, whoever the row says owns the action",
+  async () => {
+    const { client } = messagesClient([
+      { turn_id: turnId, user_id: userId, display: undoDisplay(undoneActionId, { name: "Mine" }) },
+    ]);
+
+    const value = await createActionStore(client).previousValueOf(
+      { ...storedAction, userId: otherUserId },
+      otherUserId,
+    );
+
+    assertEquals(value, null);
+  },
+);
+
+Deno.test("an action whose turn is gone answers null and reads nothing", async () => {
+  const { client, queried } = messagesClient([]);
+
+  const value = await createActionStore(client).previousValueOf(
+    { ...storedAction, turnId: null },
+    userId,
+  );
+
+  assertEquals(value, null);
+  assertEquals(queried, []);
+});
+
+Deno.test("a deleted conversation has no messages left, so the answer is null", async () => {
+  const { client } = messagesClient([]);
+
+  assertEquals(await createActionStore(client).previousValueOf(storedAction, userId), null);
+});
+
+Deno.test("an action with no entry in its turn answers null", async () => {
+  const { client } = messagesClient([
+    { turn_id: turnId, user_id: userId, display: { "toolu-1": { card: { kind: "changed" } } } },
+  ]);
+
+  assertEquals(await createActionStore(client).previousValueOf(storedAction, userId), null);
+});
+
+Deno.test("an entry whose undo cannot be read answers null", async () => {
+  const { client } = messagesClient([
+    { turn_id: turnId, user_id: userId, display: { "toolu-1": { undo: "oops" } } },
+    { turn_id: turnId, user_id: userId, display: "oops" },
+  ]);
+
+  assertEquals(await createActionStore(client).previousValueOf(storedAction, userId), null);
+});
+
+Deno.test(
+  "a failed read throws the operation and the code and never the database message",
+  async () => {
+    const { client } = messagesClient([], { code: "XX000", message: "row 143 kcal leaked" });
+
+    const caught = await createActionStore(client)
+      .previousValueOf(storedAction, userId)
+      .then(
+        () => null,
+        (error: unknown) => error,
+      );
+
+    assertEquals(
+      caught instanceof Error && caught.message,
+      "assistant action store read previous value failed XX000",
+    );
   },
 );

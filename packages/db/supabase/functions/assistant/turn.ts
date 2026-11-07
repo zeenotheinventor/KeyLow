@@ -16,6 +16,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 
 import { toAnthropicTools } from "../_shared/assistant/adapters/anthropic.ts";
+import { undoOutcomeSchema } from "../_shared/assistant/store.ts";
 import { askUserTool } from "../_shared/assistant/tools/askUser.ts";
 import { wrapUntrusted } from "../_shared/assistant/untrusted.ts";
 import {
@@ -446,6 +447,7 @@ const structuredSchema = z.looseObject({
   card: z.unknown().optional(),
   citation: z.string().min(1).nullish(),
   estimate: z.string().min(1).nullish(),
+  undo: z.unknown().optional(),
 });
 const cardDraftSchema = assistantCardSchema.omit({ actionIds: true });
 
@@ -530,6 +532,21 @@ async function finishCall(
       } else {
         // The write landed and the app cannot draw it, which is a bug in the tool.
         run.dependencies.report("assistant", "internal_error", new Error("a card cannot be drawn"));
+      }
+    }
+    // After the card, in the same row. The previous value is the person's own data, so it is kept here beside
+    // the card for Undo and goes nowhere else. A write that landed nothing has no action to undo.
+    if (structured.data.undo !== undefined && outcome.actionId !== null) {
+      const undo = undoOutcomeSchema.safeParse(structured.data.undo);
+      if (undo.success) {
+        entry["undo"] = toJson({ actionId: outcome.actionId, ...undo.data });
+      } else {
+        // Fixed words only. A parse failure's own message is not reported, because it can quote the value.
+        run.dependencies.report(
+          "assistant",
+          "internal_error",
+          new Error("an undo cannot be stored"),
+        );
       }
     }
   }

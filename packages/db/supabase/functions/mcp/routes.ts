@@ -116,6 +116,7 @@ export function createMcpEndpoint(
       const context: ToolContext = {
         caller,
         actions: dependencies.actions,
+        previousValueOf: (action) => dependencies.actions.previousValueOf(action, user.id),
         userId: user.id,
         turn: {
           id: turn.id,
