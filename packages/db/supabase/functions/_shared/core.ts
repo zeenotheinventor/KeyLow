@@ -4,6 +4,7 @@
 export type {
   ImportCandidate,
   AssistantCard,
+  AssistantExerciseMuscles,
   AssistantCardDraft,
   AssistantNotice,
   BuildRoutineProblem,
@@ -235,6 +236,9 @@ export {
   MIN_WEEKDAY,
   SUGGEST_PARAMS_V2,
   routinePayload,
+  assistantExerciseMusclesSchema,
+  describeRoleRow,
+  musclesByRole,
   buildExerciseArchivedCard,
   buildExerciseCreatedCard,
   buildExerciseUpdatedCard,

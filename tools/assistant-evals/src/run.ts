@@ -7,6 +7,7 @@ import { openLocalHttpSession } from "./httpSession.ts";
 import { askCases } from "../cases/ask.ts";
 import { compactionCases } from "../cases/compaction.ts";
 import { describeCases } from "../cases/describe.ts";
+import { exerciseMusclesCases } from "../cases/exerciseMuscles.ts";
 import { recipeCases } from "../cases/recipes.ts";
 import { redTeamCases } from "../cases/redteam.ts";
 import { trainingAdviceCases } from "../cases/trainingAdvice.ts";
@@ -23,6 +24,7 @@ const output = await runCli(process.argv.slice(2), process.env, {
     ...writeCases,
     ...recipeCases,
     ...trainingAdviceCases,
+    ...exerciseMusclesCases,
     ...redTeamCases,
   ],
   openSession: openLocalHttpSession,

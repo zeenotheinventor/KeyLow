@@ -289,6 +289,47 @@ Deno.test("a read that answers invalid_input is fixed once, any other error stop
   assertEquals(SYSTEM_PROMPT.includes("When a tool answers with an error"), false);
 });
 
+const MUSCLES_SECTION_TITLE = "What an exercise works\n";
+const sectionTitles = SYSTEM_PROMPT.split("\n\n").map((section) => section.split("\n")[0]);
+
+Deno.test(
+  "what an exercise works is a section of its own between the one question and days and times",
+  () => {
+    const position = sectionTitles.indexOf("What an exercise works");
+    assertEquals(sectionTitles[position - 1], "One question, never a guess");
+    assertEquals(sectionTitles[position + 1], "Days and times");
+    assertEquals(SYSTEM_PROMPT.split(MUSCLES_SECTION_TITLE).length, 2);
+  },
+);
+
+Deno.test(
+  "the muscles section sends each exercise to show_exercise_muscles, at most 4 in an answer",
+  () => {
+    for (const rule of [
+      "find each exercise with search_exercises and call show_exercise_muscles once for each, at most 4 in one answer. When more are asked about, ask which.",
+      "primary_muscles in a search result is not the answer, because it leaves muscles out and draws nothing.",
+      "A name with several close matches is not unclear: show the closest.",
+      "This changes nothing, so it works during a workout.",
+    ]) {
+      assert(SYSTEM_PROMPT.includes(rule), `the system prompt does not hold: ${rule}`);
+    }
+  },
+);
+
+Deno.test(
+  "the muscles section keeps the reply short, to the muscles given, and with no ranking",
+  () => {
+    for (const rule of [
+      "write one or two short sentences and name only muscles the tool gave, primary ones first",
+      "Ki-Lo holds each muscle's role and no ranking.",
+      'as in "Both count a full set for your hamstrings.", and never says one works it more or is better.',
+      "When no exercise is found, say so in one short sentence and name no muscles.",
+    ]) {
+      assert(SYSTEM_PROMPT.includes(rule), `the system prompt does not hold: ${rule}`);
+    }
+  },
+);
+
 Deno.test("the system prompt promises no training edit, which the changes part adds", () => {
   for (const tool of [
     "edit_routine",
