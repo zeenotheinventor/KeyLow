@@ -345,7 +345,7 @@ describe("the training tools", () => {
     ["archive_routine", "routine_archived", "Archived a routine"],
     ["create_routine", "routine_created", "Built a routine"],
     ["update_training_goals", "goals_updated", "Updated your training goals"],
-    ["save_custom_exercise", "exercise_created", "Added an exercise"],
+    ["save_custom_exercise", "exercise_created", "Saved an exercise"],
     ["archive_custom_exercise", "exercise_archived", "Archived an exercise"],
     ["update_past_set", "set_updated", "Changed a set"],
     ["delete_workout", "workout_deleted", "Deleted a workout"],

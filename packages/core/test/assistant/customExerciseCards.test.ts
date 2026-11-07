@@ -135,7 +135,21 @@ describe("buildExerciseUpdatedCard", () => {
     });
 
     expect(draft.undoneSub).toBe(
-      "Put back Kneeling cable crunch, with dumbbells, for abs, obliques",
+      "Put back Kneeling cable crunch, with dumbbells, for abs and obliques",
+    );
+  });
+
+  it("should join three muscles in the line shown once undone the way a sentence does", () => {
+    const draft = buildExerciseUpdatedCard({
+      before: {
+        ...kneelingCableCrunch,
+        muscles: [...kneelingCableCrunch.muscles, { muscle_id: "calves", role: "stabiliser" }],
+      },
+      after: cableCrunch,
+    });
+
+    expect(draft.undoneSub).toBe(
+      "Put back Kneeling cable crunch, on the cable, for abs, obliques and calves",
     );
   });
 });

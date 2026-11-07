@@ -1,4 +1,5 @@
 import { describeLongDate } from "./assistantDayCards";
+import { joinInWords } from "./bodyMap";
 import { EQUIPMENT_OPTIONS } from "./goals";
 import { MUSCLE_NAMES } from "./muscleNames";
 import { SET_PHRASES, writtenNumbers } from "./sessionWording";
@@ -180,7 +181,7 @@ export const describeExerciseCreatedSub = (
 /** "Added exercise Cable crunch". */
 export const describeExerciseCreatedTitle = (name: string): string => `Added exercise ${name}`;
 
-/** NOT ON THE CANVAS: the card is not in a routine, and nothing links to the exercise. */
+/** The note under an added exercise: it is not in a routine yet, and nothing links to it. */
 export const EXERCISE_CREATED_NOTE =
   "Not in a routine yet. Say which day, or add it in the routine editor.";
 
@@ -214,15 +215,16 @@ export const describeExerciseMusclesChange = (
 ): string => `${describeExerciseMuscles(now)} · was ${describeExerciseMuscles(was)}`;
 
 /**
- * "Put back Cable crunch, on the cable, for abs": the line under "Undone" for an edit. The phrase for any
- * equipment but the cable is NOT ON THE CANVAS.
+ * "Put back Cable crunch, on the cable, for abs": the line under "Undone" for an edit, with "for abs and
+ * obliques" for two muscles and "for abs, obliques and calves" for three. The phrase for any equipment but
+ * the cable is NOT ON THE CANVAS.
  */
 export const describeExerciseUpdatedUndone = (
   name: string,
   equipment: Equipment,
   muscles: readonly ExerciseCardMuscle[],
 ): string =>
-  `Put back ${name}, ${EQUIPMENT_PLACES[equipment]}, for ${describeExerciseMuscles(muscles).toLowerCase()}`;
+  `Put back ${name}, ${EQUIPMENT_PLACES[equipment]}, for ${joinInWords(describeExerciseMuscles(muscles).toLowerCase().split(", "))}`;
 
 /** "Archived exercise Cable crunch". */
 export const describeExerciseArchivedTitle = (name: string): string => `Archived exercise ${name}`;
@@ -242,3 +244,10 @@ export const CONFIRM_ARCHIVE_EXERCISE_BUTTONS = {
 /** "Archive Cable crunch? It leaves your exercise list. Sets you logged with it stay in your history." */
 export const describeConfirmArchiveExerciseQuestion = (name: string): string =>
   `Archive ${name}? It leaves your exercise list. ${EXERCISE_ARCHIVED_SUB}.`;
+
+/** The words for the model when an exercise is on a routine that is not archived. Follows the routine refusals'. */
+export const EXERCISE_IN_ROUTINE_REFUSAL = "Take it out of your routines first.";
+
+/** NOT ON THE CANVAS: the words when a live accepted suggestion names the exercise. */
+export const EXERCISE_IN_SUGGESTION_REFUSAL =
+  "It is in a workout you accepted on Train. Undo that first.";

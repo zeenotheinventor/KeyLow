@@ -9,18 +9,42 @@ import {
   buildExerciseArchivedCard,
   confirmArchiveExerciseButtons,
   confirmArchiveExerciseQuestion,
+  EXERCISE_IN_ROUTINE_REFUSAL,
+  EXERCISE_IN_SUGGESTION_REFUSAL,
 } from "../../core.ts";
 import { archiveExercise, restoreExercise } from "../../repos.ts";
 import { notFound } from "./entryWrite.ts";
-import { globalExercise, readExerciseState } from "./exerciseWrite.ts";
+import { globalExercise, plannedOn, readExerciseState } from "./exerciseWrite.ts";
 
-import type { ConfirmationNeed, WriteToolDefinition } from "../tool.ts";
+import type {
+  ConfirmationNeed,
+  ToolContext,
+  WriteRunOutput,
+  WriteToolDefinition,
+} from "../tool.ts";
 
 const archiveCustomExerciseInput = z.strictObject({
   id: z.guid().describe("The id of the user's own exercise, from search_exercises."),
 });
 
 type ArchiveCustomExerciseInput = z.infer<typeof archiveCustomExerciseInput>;
+
+// Refused while the exercise is on a routine that is not archived or on a live accepted suggestion, because
+// the next workout would show it and logging a set reads the exercise live. Sets already logged do not
+// block, since the question says they stay in history.
+async function inUseRefusal(ctx: ToolContext, id: string): Promise<WriteRunOutput | null> {
+  const planned = await plannedOn(ctx, id);
+  if (planned === null) {
+    return null;
+  }
+  return {
+    data: {
+      error: "in_use",
+      say: planned === "routine" ? EXERCISE_IN_ROUTINE_REFUSAL : EXERCISE_IN_SUGGESTION_REFUSAL,
+    },
+    target: null,
+  };
+}
 
 export const archiveCustomExerciseTool: WriteToolDefinition<ArchiveCustomExerciseInput> = {
   name: "archive_custom_exercise",
@@ -30,7 +54,9 @@ export const archiveCustomExerciseTool: WriteToolDefinition<ArchiveCustomExercis
     "call, before it, write the question in your own words, naming the exercise, that it leaves their " +
     "exercise list and that sets they logged with it stay in their history, and when they say yes call " +
     "again with the same id and that confirmation_id. When they say no, do not call again. An exercise " +
-    "of the library cannot be archived, and the call answers global_exercise. An exercise that is not the " +
+    "of the library cannot be archived, and the call answers global_exercise. One that is on a routine or " +
+    "on a workout the user accepted is answered in_use with the words to say, and nothing is asked. An " +
+    "exercise that is not the " +
     "user's is reported as not found. There is no tool to bring an exercise back: point the user to Undo " +
     "in More, Assistant, What the assistant changed.",
   kind: "write",
@@ -44,7 +70,12 @@ export const archiveCustomExerciseTool: WriteToolDefinition<ArchiveCustomExercis
   // that is archived already are answered by `run`, without a question or a button.
   async needsConfirmation({ id }, ctx): Promise<ConfirmationNeed> {
     const state = await readExerciseState(ctx, id);
-    if (state === null || state.isLibrary || state.isArchived) {
+    if (
+      state === null ||
+      state.isLibrary ||
+      state.isArchived ||
+      (await inUseRefusal(ctx, id)) !== null
+    ) {
       return false;
     }
     return {
@@ -62,6 +93,10 @@ export const archiveCustomExerciseTool: WriteToolDefinition<ArchiveCustomExercis
     }
     if (state.isArchived) {
       return { data: { id, archived: true, changed: false }, target: null };
+    }
+    const refused = await inUseRefusal(ctx, id);
+    if (refused !== null) {
+      return refused;
     }
     await archiveExercise(ctx.caller, id);
     return {

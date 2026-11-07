@@ -299,3 +299,126 @@ Deno.test("nothing about the exercise is logged", async () => {
 
   assertEquals(spy.lines, []);
 });
+
+// What puts an exercise on a screen the person will open: a routine that is not archived, and an accepted
+// suggestion that is live. A set logged with it does not, because the question says those stay in history.
+const inRoutine = (archived: boolean) => ({
+  routine_exercises: [
+    {
+      id: "re1",
+      user_id: userId,
+      exercise_id: cableCrunchId,
+      routine_days: { routines: { is_archived: archived } },
+    },
+  ],
+});
+
+const acceptedWith = (overrides: Record<string, unknown> = {}) => ({
+  accepted_suggestions: [
+    {
+      id: "as1",
+      user_id: userId,
+      local_date: "2026-11-03",
+      deleted_at: null,
+      exercises: [{ exercise_id: cableCrunchId, exercise: { id: cableCrunchId } }],
+      ...overrides,
+    },
+  ],
+});
+
+const refusal = (reason: "routine" | "suggestion") => ({
+  error: "in_use",
+  say:
+    reason === "routine"
+      ? "Take it out of your routines first."
+      : "It is in a workout you accepted on Train. Undo that first.",
+});
+
+Deno.test("an exercise on a routine that is not archived is refused with no question", async () => {
+  const { asking, stub, store } = archiveContexts(inRoutine(false));
+
+  const result = await executeTool(asking, "archive_custom_exercise", { id: cableCrunchId });
+
+  assertEquals(result.status, "ok");
+  assertEquals(payloadOf(result), refusal("routine"));
+  assertEquals(deletedAtOf(stub, cableCrunchId), null);
+  assertEquals(store.actions.length, 0);
+  assertEquals(store.turns[0]?.pending, null);
+});
+
+Deno.test(
+  "an exercise on a live accepted suggestion of today or later is refused with no question",
+  async () => {
+    for (const local_date of ["2026-11-03", "2026-11-09"]) {
+      const { asking, store } = archiveContexts(acceptedWith({ local_date }));
+
+      const result = await executeTool(asking, "archive_custom_exercise", { id: cableCrunchId });
+
+      assertEquals(payloadOf(result), refusal("suggestion"));
+      assertEquals(store.turns[0]?.pending, null);
+    }
+  },
+);
+
+Deno.test(
+  "a routine that is archived, a deleted or past suggestion and logged sets do not stop the question",
+  async () => {
+    const blockers = [
+      inRoutine(true),
+      acceptedWith({ deleted_at: "2026-11-02T10:00:00+00:00" }),
+      acceptedWith({ local_date: "2026-11-02" }),
+      { workout_sets: [{ id: "s1", user_id: userId, exercise_id: cableCrunchId }] },
+    ];
+    for (const rows of blockers) {
+      const { asking } = archiveContexts(rows);
+
+      const result = await executeTool(asking, "archive_custom_exercise", { id: cableCrunchId });
+
+      assertEquals(result.status, "needs_confirmation");
+    }
+  },
+);
+
+Deno.test(
+  "the confirming call asks again whether it is in use, and archives nothing when it now is",
+  async () => {
+    const { asking, confirming, stub, store } = archiveContexts();
+    const asked = await executeTool(asking, "archive_custom_exercise", { id: cableCrunchId });
+    assert(asked.status === "needs_confirmation");
+    // The person put it on a routine between the question and the answer.
+    stub.tables["routine_exercises"] = inRoutine(false)["routine_exercises"];
+
+    const result = await executeTool(confirming, "archive_custom_exercise", {
+      id: cableCrunchId,
+      confirmation_id: asked.confirmationId,
+    });
+
+    assertEquals(payloadOf(result), refusal("routine"));
+    assertEquals(deletedAtOf(stub, cableCrunchId), null);
+    assertEquals(store.actions.length, 0);
+  },
+);
+
+Deno.test(
+  "a library exercise is global_exercise before in_use, and not_found before both",
+  async () => {
+    const { asking } = archiveContexts({
+      routine_exercises: [
+        {
+          id: "re2",
+          user_id: userId,
+          exercise_id: String(libraryPress["id"]),
+          routine_days: { routines: { is_archived: false } },
+        },
+      ],
+    });
+
+    const library = await executeTool(asking, "archive_custom_exercise", {
+      id: String(libraryPress["id"]),
+    });
+    const missing = await executeTool(asking, "archive_custom_exercise", { id: missingExerciseId });
+
+    assertEquals(payloadOf(library), { error: "global_exercise" });
+    assertEquals(payloadOf(missing), { error: "not_found" });
+  },
+);

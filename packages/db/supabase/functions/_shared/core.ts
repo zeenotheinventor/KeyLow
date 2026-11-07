@@ -212,5 +212,7 @@ export {
   confirmArchiveExerciseQuestion,
   MUSCLE_ROLES,
   customExercisePayload,
+  EXERCISE_IN_ROUTINE_REFUSAL,
+  EXERCISE_IN_SUGGESTION_REFUSAL,
   validateCustomExerciseDraft,
 } from "./core/index.js";

@@ -618,10 +618,11 @@ Deno.test(
   },
 );
 
-// An accepted suggestion keeps its own copy of the exercise, with its details and its snapshot, and the
-// check does not read it. So undoing the creation goes through, and the accepted day is left as it was.
+// An accepted suggestion shows the exercise on Train and starts a workout from it, and logging a set reads
+// the exercise live, so undoing the creation would leave a day nobody can log. It counts as use, while it is
+// live and for today or later.
 Deno.test(
-  "an accepted suggestion that names the exercise does not stop its creation being undone",
+  "an added exercise cannot be undone while a live accepted suggestion names it",
   async () => {
     const { ctx, store, stub } = setup();
     const added = await executeTool(ctx, "save_custom_exercise", add("Hanging leg raise"));
@@ -631,15 +632,49 @@ Deno.test(
     const accepted = {
       id: "a1",
       user_id: "00000000-0000-4000-8000-0000000000a1",
-      exercises: [
-        { exercise_id: exerciseId, exercise: { id: exerciseId, name: "Hanging leg raise" } },
-      ],
+      local_date: "2026-11-03",
+      deleted_at: null,
+      exercises: [{ exercise_id: exerciseId, exercise: { id: exerciseId } }],
     };
     stub.tables["accepted_suggestions"] = [structuredClone(accepted)];
 
     const result = await undoAction(ctx, added.actionId);
 
-    assertEquals(result, { status: "undone", actionId: added.actionId });
-    assertEquals(stub.tables["accepted_suggestions"], [accepted]);
+    assertEquals(result, { status: "error", code: "undo_unavailable", reason: "used" });
+    assertEquals(
+      stub.tables["exercises"]?.find((row) => row["id"] === exerciseId)?.["deleted_at"],
+      null,
+    );
+  },
+);
+
+Deno.test(
+  "a deleted accepted suggestion, or one for a day gone by, does not stop the undo",
+  async () => {
+    for (const overrides of [
+      { deleted_at: "2026-11-02T10:00:00+00:00" },
+      { local_date: "2026-11-02" },
+    ]) {
+      const { ctx, store, stub } = setup();
+      const added = await executeTool(ctx, "save_custom_exercise", add("Hanging leg raise"));
+      keepUndoOf(added, store);
+      assert(added.status === "ok" && added.actionId !== null);
+      const exerciseId = targetIdOf(store.actions[0]?.targetId);
+      stub.tables["accepted_suggestions"] = [
+        {
+          id: "a1",
+          user_id: "00000000-0000-4000-8000-0000000000a1",
+          local_date: "2026-11-03",
+          deleted_at: null,
+          exercises: [{ exercise_id: exerciseId }],
+          ...overrides,
+        },
+      ];
+
+      assertEquals(await undoAction(ctx, added.actionId), {
+        status: "undone",
+        actionId: added.actionId,
+      });
+    }
   },
 );

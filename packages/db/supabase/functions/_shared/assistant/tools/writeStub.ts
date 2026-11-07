@@ -35,6 +35,23 @@ export type WriteStub = {
 const stampOf = (statement: number) =>
   `2026-11-03T09:00:${String(statement).padStart(2, "0")}.000000+00:00`;
 
+// Postgres `@>`: an array holds every item the other does, an object every key, and anything else is equal.
+const jsonContains = (whole: unknown, part: unknown): boolean => {
+  if (Array.isArray(part)) {
+    return (
+      Array.isArray(whole) && part.every((item) => whole.some((held) => jsonContains(held, item)))
+    );
+  }
+  if (typeof part === "object" && part !== null) {
+    return (
+      typeof whole === "object" &&
+      whole !== null &&
+      Object.entries(part).every(([key, item]) => jsonContains(Reflect.get(whole, key), item))
+    );
+  }
+  return whole === part;
+};
+
 export function writeStub(
   initial: Record<string, Row[]> = {},
   options: {
@@ -199,6 +216,15 @@ export function writeStub(
       },
       eq(column: string, value: unknown) {
         filters.push((row) => row[column] === value);
+        return query;
+      },
+      // Only the jsonb containment of `[{ key: value }]` in an array column, the one form a read uses.
+      contains(column: string, value: unknown) {
+        filters.push((row) => jsonContains(row[column], value));
+        return query;
+      },
+      gte(column: string, value: unknown) {
+        filters.push((row) => String(row[column] ?? "") >= String(value));
         return query;
       },
       in(column: string, values: unknown[]) {

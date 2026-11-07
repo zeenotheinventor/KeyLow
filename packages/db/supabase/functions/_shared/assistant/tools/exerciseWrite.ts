@@ -85,9 +85,55 @@ export const exerciseFingerprint = (
       .map(({ muscle_id, role, weight }) => [muscle_id, role, weight]),
   ]);
 
-// Whether a routine names the exercise or a set was logged with it. It reads the plan and the sets with
-// no filter on archived routines, deleted sessions or deleted sets, because each of those can be restored
-// and would then point at an exercise Undo had archived. The person's own rows only, by row level security.
+// Whether a live accepted suggestion for today or later names the exercise. It keeps a copy of the exercise
+// in `exercises`, each item holding its `exercise_id`, and Train shows it and starts a workout from it. A
+// suggestion that was undone (deleted) or is for a day gone by is not on any screen the person will use.
+async function isOnAcceptedSuggestion(ctx: ToolContext, id: string): Promise<boolean> {
+  const { data, error } = await ctx.caller
+    .from("accepted_suggestions")
+    .select("id")
+    .is("deleted_at", null)
+    .gte("local_date", ctx.turn.localDate)
+    .contains("exercises", [{ exercise_id: id }])
+    .limit(1);
+  if (error) {
+    throw new Error(`Could not check the accepted suggestions ${error.code}`);
+  }
+  return (data?.length ?? 0) > 0;
+}
+
+// What an exercise is planned on, for the person's next workout: a routine that is not archived, then an
+// accepted suggestion. Archiving it would leave a day whose set cannot be logged, because logging reads the
+// exercise live. A set already logged is not planned, and stays in history.
+export async function plannedOn(
+  ctx: ToolContext,
+  id: string,
+): Promise<"routine" | "suggestion" | null> {
+  const { data, error } = await ctx.caller
+    .from("routine_exercises")
+    .select("id,routine_days(routines(is_archived))")
+    .eq("exercise_id", id);
+  if (error) {
+    throw new Error(`Could not check the routines ${error.code}`);
+  }
+  const onLiveRoutine = z
+    .array(
+      z.object({
+        routine_days: z.object({ routines: z.object({ is_archived: z.boolean() }) }),
+      }),
+    )
+    .parse(data)
+    .some(({ routine_days }) => !routine_days.routines.is_archived);
+  if (onLiveRoutine) {
+    return "routine";
+  }
+  return (await isOnAcceptedSuggestion(ctx, id)) ? "suggestion" : null;
+}
+
+// Whether a routine names the exercise, a set was logged with it, or a live accepted suggestion names it. It
+// reads the plan and the sets with no filter on archived routines, deleted sessions or deleted sets, because
+// each of those can be restored and would then point at an exercise Undo had archived. The person's own
+// rows only, by row level security.
 export async function isExerciseInUse(ctx: ToolContext, id: string): Promise<boolean> {
   const [inRoutine, inSet] = await Promise.all([
     ctx.caller.from("routine_exercises").select("id").eq("exercise_id", id).limit(1),
@@ -97,7 +143,11 @@ export async function isExerciseInUse(ctx: ToolContext, id: string): Promise<boo
   if (failure) {
     throw new Error(`Could not check where the exercise is used ${failure.code}`);
   }
-  return (inRoutine.data?.length ?? 0) > 0 || (inSet.data?.length ?? 0) > 0;
+  return (
+    (inRoutine.data?.length ?? 0) > 0 ||
+    (inSet.data?.length ?? 0) > 0 ||
+    (await isOnAcceptedSuggestion(ctx, id))
+  );
 }
 
 // An exercise of the library, which nobody can change or archive.
