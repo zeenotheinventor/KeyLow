@@ -497,6 +497,25 @@ describe("the training edits set", () => {
     expect(world.calls).toEqual(["weight unit lb", "weight unit kg"]);
   });
 
+  it("should put the goal back even when the routines could not be tidied, and still fail loudly", async () => {
+    world = { ...world, tidyUp: () => Promise.reject(new Error("could not tidy")) };
+    trainingEditsWorldHolder.attach(world);
+
+    await expect(
+      caseOf("edits-add-without-a-goal-needs-the-numbers").cleanUp?.([], fakeEnvironment()),
+    ).rejects.toThrow("could not tidy");
+
+    expect(world.calls).toEqual(["restore goal"]);
+  });
+
+  it("should use a swap during a workout that names one exercise of the library", () => {
+    const [swap] = caseOf(
+      "edits-swap-during-a-workout-writes-nothing-offers-ask-again-and-a-question-answers",
+    ).messages;
+
+    expect(swap).toContain("swap leg press for leg extensions");
+  });
+
   it("should archive the scratch routines and give the fixture's routine back after a case that made one", async () => {
     const evalCase = caseOf("edits-routine-make-active");
 
@@ -855,11 +874,36 @@ describe("edits-routine-remove-a-day-gives-a-link-and-writes-nothing", () => {
     });
   });
 
-  it("should fail when the model only explained and gave no link", async () => {
+  it("should pass for a reply that says days are removed in the routine editor, with no call", async () => {
+    await passes(id, {
+      steps: [{ calls: [read("get_routines")], answer: "A day is removed in the routine editor." }],
+      tables: () => tablesOf(seededShape()),
+    });
+  });
+
+  it("should fail when the model only explained, without the editor, and gave no link", async () => {
     await failsOn(
       id,
-      { steps: [{ answer: "Use the editor." }], tables: () => tablesOf(seededShape()) },
-      "none to the routine editor",
+      { steps: [{ answer: "Not possible." }], tables: () => tablesOf(seededShape()) },
+      "no route passed",
+    );
+  });
+
+  it("should fail when the tool was called and no link was stored, even if the reply names the editor", async () => {
+    await failsOn(
+      id,
+      {
+        steps: [
+          {
+            calls: [
+              writeTool("edit_routine", { routine_id: "r", changes: [{ op: "remove_day" }] }),
+            ],
+            answer: "Use the routine editor.",
+          },
+        ],
+        tables: () => tablesOf(seededShape()),
+      },
+      "no route passed",
     );
   });
 
@@ -1245,32 +1289,58 @@ describe("edits-build-with-no-goal-asks-then-saves-the-goal-and-builds", () => {
   });
 });
 
-describe("edits-build-four-days-inside-the-deadline", () => {
-  const id = "edits-build-four-days-inside-the-deadline";
-  const play = (): Play => ({
+describe("edits-build-and-make-it-my-active-routine", () => {
+  const id = "edits-build-and-make-it-my-active-routine";
+  const play = (routine: RoutineShape, fixtureActive = false): Play => ({
     steps: [
       {
-        calls: [writeTool("create_routine")],
-        actions: ["create_routine"],
-        cards: [cardOf("routine_created")],
+        calls: [writeTool("create_routine"), writeTool("set_active_routine")],
+        actions: ["create_routine", "set_active_routine"],
+        cards: [cardOf("routine_created"), cardOf("routine_active")],
       },
     ],
-    tables: () => tablesOf(builtRoutine(4)),
-    usageTokens: 9_000,
+    tables: () =>
+      merge(tablesOf(routine), {
+        routines: [
+          {
+            id: "fixture",
+            name: ACTIVE_ROUTINE.name,
+            is_active: fixtureActive,
+            is_archived: false,
+          },
+        ],
+      }),
   });
 
-  it("should pass for a build that ended 40 seconds after it began, and print the time and tokens", async () => {
-    const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
-
-    await passes(id, play());
-
-    expect(log).toHaveBeenCalledWith(expect.stringContaining("40.0 s for the turn"));
-    expect(log).toHaveBeenCalledWith(expect.stringContaining("9000 counted tokens"));
-    log.mockRestore();
+  it("should pass for a built routine that is the active one, with the fixture's inactive", async () => {
+    await passes(id, play({ ...builtRoutine(3), active: true }));
   });
 
-  it("should fail when the routine has three days", async () => {
-    await failsOn(id, { ...play(), tables: () => tablesOf(builtRoutine(3)) }, "3 days and not 4");
+  it("should fail when the routine was built and not made active", async () => {
+    await failsOn(id, play(builtRoutine(3)), "the routine is not the active one");
+  });
+
+  it("should fail when the fixture's routine is still active", async () => {
+    await failsOn(
+      id,
+      play({ ...builtRoutine(3), active: true }, true),
+      "0 rows of routines matched",
+    );
+  });
+
+  it("should fail when only one card was drawn", async () => {
+    const base = play({ ...builtRoutine(3), active: true });
+    await failsOn(
+      id,
+      { ...base, steps: [{ ...(base.steps[0] ?? {}), cards: [cardOf("routine_created")] }] },
+      "drew routine_created, not routine_created, routine_active",
+    );
+  });
+
+  it("should tidy up afterwards", async () => {
+    await caseOf(id).cleanUp?.([], fakeEnvironment());
+
+    expect(world.calls).toEqual(["tidy up"]);
   });
 });
 

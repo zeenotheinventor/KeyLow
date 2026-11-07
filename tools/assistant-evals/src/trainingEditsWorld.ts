@@ -1,5 +1,6 @@
 import {
   addSet,
+  deleteSession,
   finishSession,
   getRoutine,
   listRoutines,
@@ -269,27 +270,33 @@ export function createTrainingEditsWorld({
         );
       }
       const setIds: string[] = [];
-      for (const [index, line] of sets.entries()) {
-        const added = await addSet(client, {
-          sessionId: started.id,
-          exerciseId: idOf(ids, line.sourceRef),
-          draft: {
-            setType: "working",
-            load: String(line.loadKg),
-            reps: String(line.reps),
-            rir: "2",
-            rpe: "",
-          },
-          unit: "kg",
-          effortMode: "rir",
-          now: new Date(startedAt.getTime() + (index + 1) * SET_SPACING_MILLISECONDS),
+      try {
+        for (const [index, line] of sets.entries()) {
+          const added = await addSet(client, {
+            sessionId: started.id,
+            exerciseId: idOf(ids, line.sourceRef),
+            draft: {
+              setType: "working",
+              load: String(line.loadKg),
+              reps: String(line.reps),
+              rir: "2",
+              rpe: "",
+            },
+            unit: "kg",
+            effortMode: "rir",
+            now: new Date(startedAt.getTime() + (index + 1) * SET_SPACING_MILLISECONDS),
+          });
+          setIds.push(added.id);
+        }
+        await finishSession(client, started.id, {
+          endedAt: new Date(startedAt.getTime() + (sets.length + 1) * SET_SPACING_MILLISECONDS),
+          note: null,
         });
-        setIds.push(added.id);
+      } catch (error) {
+        // A workout left open would make every later write case refuse, so it goes before the error does.
+        await deleteSession(client, started.id).catch(() => undefined);
+        throw error;
       }
-      await finishSession(client, started.id, {
-        endedAt: new Date(startedAt.getTime() + (sets.length + 1) * SET_SPACING_MILLISECONDS),
-        note: null,
-      });
       return { sessionId: started.id, setIds };
     },
 

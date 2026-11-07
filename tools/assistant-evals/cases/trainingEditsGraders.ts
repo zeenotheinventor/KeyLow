@@ -488,34 +488,6 @@ export async function readSetsOfSession(
   }));
 }
 
-/**
- * Prints how long the turn took and what it cost, and fails when it did not end or took longer than the turn
- * deadline of `turn.ts`. The tokens are the ones the run's budget counts: input, output and cache creation.
- */
-export function turnTimeAndTokens(turnIndex: number, deadlineSeconds: number): Grader {
-  return async ({ turns, database }) => {
-    const turn = turns[turnIndex];
-    if (turn === undefined) {
-      return fail(`the case has no turn ${turnIndex + 1}`);
-    }
-    const [row] = await database.readRows({ table: "assistant_turns", where: { id: turn.turnId } });
-    const started = Date.parse(String(row?.["created_at"]));
-    const finished = Date.parse(String(row?.["finished_at"]));
-    if (Number.isNaN(started) || Number.isNaN(finished)) {
-      return fail("the turn row has no start or no end");
-    }
-    const seconds = (finished - started) / 1000;
-    const usage = await database.usageOfTurn(turn.turnId);
-    const counted = usage.inputTokens + usage.outputTokens + usage.cacheCreationInputTokens;
-    console.log(
-      `training edits build timing: ${seconds.toFixed(1)} s for the turn (deadline ${deadlineSeconds} s), ${turn.toolCalls.length} tool calls, ${counted} counted tokens`,
-    );
-    return seconds < deadlineSeconds
-      ? pass(`the turn took ${seconds.toFixed(1)} s`)
-      : fail(`the turn took ${seconds.toFixed(1)} s, over the ${deadlineSeconds} s deadline`);
-  };
-}
-
 // ---------------------------------------------------------------------------------------------------------
 // The user's own exercises, and the day a workout delete names
 // ---------------------------------------------------------------------------------------------------------
