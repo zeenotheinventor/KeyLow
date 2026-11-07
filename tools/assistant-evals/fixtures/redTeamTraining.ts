@@ -176,7 +176,7 @@ type PlannedSession = Readonly<{
  * set that ran before this one may have left one open (a case that started a workout and was cut short), and the
  * red-team set runs last, so it is deleted first, which is what the app's own discard does.
  */
-async function saveFinishedSession(client: Client, plan: PlannedSession) {
+export async function saveFinishedSession(client: Client, plan: PlannedSession) {
   const inProgress = await getActiveSession(client);
   if (inProgress !== null) {
     await deleteSession(client, inProgress.id);
