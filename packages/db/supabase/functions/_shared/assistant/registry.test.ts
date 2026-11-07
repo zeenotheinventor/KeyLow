@@ -308,3 +308,52 @@ Deno.test(
     });
   },
 );
+
+// The tables of the training feature. A write to one of them must not run while a workout is in progress,
+// so its tool carries `refusesDuringWorkout` and the executor and Undo refuse it (KEY-899).
+const trainingTables: ReadonlySet<string> = new Set([
+  "exercises",
+  "exercise_muscles",
+  "routines",
+  "routine_days",
+  "routine_exercises",
+  "training_goals",
+  "workout_sessions",
+  "workout_sets",
+]);
+
+const trainingWritesWithoutTheGuard = (tools: readonly ToolDefinition[]): string[] =>
+  tools
+    .filter(
+      (tool) =>
+        tool.kind === "write" &&
+        trainingTables.has(tool.targetTable) &&
+        tool.refusesDuringWorkout !== true,
+    )
+    .map((tool) => tool.name);
+
+Deno.test(
+  "every write tool of the registry that changes a training table refuses a live workout",
+  () => {
+    assertEquals(trainingWritesWithoutTheGuard(toolRegistry.list), []);
+  },
+);
+
+Deno.test("the check names a training write that lacks the guard and spares the rest", () => {
+  const guarded: WriteToolDefinition<Record<string, never>> = {
+    ...write("log_set"),
+    targetTable: "workout_sets",
+    refusesDuringWorkout: true,
+  };
+
+  assertEquals(
+    trainingWritesWithoutTheGuard([
+      guarded,
+      { ...write("remove_set"), targetTable: "workout_sets" },
+      { ...write("archive_routine"), targetTable: "routines" },
+      write("log_entry"),
+      read("get_workouts"),
+    ]),
+    ["remove_set", "archive_routine"],
+  );
+});

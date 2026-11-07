@@ -371,6 +371,27 @@ Deno.test("undo answers each id with a code", async () => {
   });
 });
 
+Deno.test("undo passes the reason of an unavailable undo beside its result", async () => {
+  const ids = [1, 2].map((n) => `00000000-0000-4000-8000-00000000000${n}`);
+  const made = fake({
+    undo: (id) =>
+      Promise.resolve(
+        id === ids[0]
+          ? { status: "error", code: "undo_unavailable", reason: "workout_in_progress" }
+          : { status: "error", code: "undo_unavailable" },
+      ),
+  });
+
+  const response = await call(made.dependencies, "undo", { body: { actionIds: ids } });
+
+  assertEquals(await response.json(), {
+    results: [
+      { actionId: ids[0], result: "undo_unavailable", reason: "workout_in_progress" },
+      { actionId: ids[1], result: "undo_unavailable" },
+    ],
+  });
+});
+
 Deno.test("undo refuses a body that is not a list of ids", async () => {
   const { dependencies } = fake();
   for (const body of [{}, { actionIds: [] }, { actionIds: ["not-an-id"] }]) {

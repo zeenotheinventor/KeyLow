@@ -1232,13 +1232,14 @@ Deno.test("any case and spaces around the button's words behave the same", async
 });
 
 // What a press that wrote nothing is reported as. A result the person can cause (the entry or the recipe is
-// already gone, a state already in place, a confirmation already spent, the write limit) ends with the notice and
+// already gone, a state already in place, a confirmation already spent, the write limit, a workout in progress) ends with the notice and
 // is not reported, so Sentry holds only what is unexpected.
 for (const [label, answer, reportCount] of [
   ["a tool_failed error", errorResult("delete_entry", "tool_failed"), 1],
   ["an invalid_input error", errorResult("delete_entry", "invalid_input"), 1],
   ["a confirmation_invalid error", errorResult("delete_entry", "confirmation_invalid"), 0],
   ["a write_limit_reached error", errorResult("delete_entry", "write_limit_reached"), 0],
+  ["a workout_in_progress error", errorResult("delete_entry", "workout_in_progress"), 0],
   ["not_found", okResult({ name: "delete_entry", payload: { error: "not_found" } }), 0],
   ["changed false", okResult({ name: "delete_entry", payload: { changed: false } }), 0],
 ] as const) {

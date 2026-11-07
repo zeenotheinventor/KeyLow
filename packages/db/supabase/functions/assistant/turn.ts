@@ -701,6 +701,7 @@ async function runModelCalls(run: Run, session: Session): Promise<Ending> {
 const PRESS_REFUSALS: ReadonlySet<string> = new Set([
   "confirmation_invalid",
   "write_limit_reached",
+  "workout_in_progress",
 ]);
 
 // The press of a confirm button (KEY-840). The person has decided, so the loop makes the stored call itself and
@@ -747,7 +748,7 @@ async function runConfirmedCall(
   }
   // An error, `not_found` and a write that changed nothing all end here. Only what is unexpected is reported: a
   // call that never ran, or an error that is not a refusal the person can cause. `not_found` and a state already
-  // in place are answers and not errors, and a spent confirmation or the write limit is a refusal.
+  // in place are answers and not errors, and a spent confirmation, the write limit or a workout in progress is a refusal.
   const refused = run.lastErrorCode !== null && PRESS_REFUSALS.has(run.lastErrorCode);
   const benign = run.counts.toolCalls > 0 && (run.lastErrorCode === null || refused);
   if (!benign) {

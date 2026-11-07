@@ -27,6 +27,9 @@ export type FocusOverlay = Readonly<Partial<Record<MuscleId, MusclePriorityLevel
 /** The reps and effort an exercise the app suggests is given. */
 export type ExerciseTarget = Readonly<{ repMin: number; repMax: number; targetRir: number }>;
 
+/** What a planned exercise is given: its sets, reps and target RIR. */
+export type ExercisePrescription = ExerciseTarget & Readonly<{ sets: number }>;
+
 export type GoalPresets = Readonly<{
   version: typeof TRAINING_PARAMS_VERSION;
   /** What a goal ranks before any focus. The hybrid base is the higher of the aesthetic and strength bases. */
@@ -169,3 +172,20 @@ export const deriveMusclePriority = (
 export const goalTargetedMuscles = (
   priority: Readonly<Partial<Record<MuscleId, number>>>,
 ): ReadonlySet<MuscleId> => new Set(MUSCLE_IDS.filter((muscle) => (priority[muscle] ?? 0) > 0));
+
+/**
+ * The sets, reps and target RIR an exercise is given for a goal, an experience and the exercise's
+ * mechanic. A suggested exercise and an exercise of a built routine both read it here, so the two cannot
+ * drift apart.
+ */
+export const exerciseTargetFor = (
+  {
+    goal,
+    experience,
+    mechanic,
+  }: { goal: TrainingGoal; experience: ExperienceLevel; mechanic: ExerciseMechanic },
+  presets: GoalPresets,
+): ExercisePrescription => ({
+  sets: presets.setsPerExercise[experience],
+  ...presets.exerciseTargets[goal][mechanic],
+});

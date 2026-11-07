@@ -65,6 +65,16 @@ const exerciseDetailSchema = z
     muscles: [...exercise_muscles].sort(inListOrder),
   }));
 
+const exerciseLineSchema = z.object({
+  id: exerciseShape.id,
+  name: exerciseShape.name,
+  equipment: exerciseShape.equipment,
+  mechanic: exerciseShape.mechanic,
+});
+
+/** One exercise as a built routine needs it: what it is called, what it uses and whether it is a compound. */
+export type ExerciseLine = z.output<typeof exerciseLineSchema>;
+
 /**
  * One exercise of a search, for its row. `source` is `user` for the signed in user's own exercise and
  * `free_exercise_db` for the library. The muscle ids are for the row's chips: the primary muscles first
@@ -171,4 +181,33 @@ export async function getExercise(
   }
 
   return data === null ? null : parseRow(exerciseDetailSchema, data, "load the exercise", idOfRow);
+}
+
+/**
+ * The live exercises with these ids, in one request: the id, name, equipment and mechanic of each, in no
+ * particular order. An id that is not in the answer does not exist, is archived, or is another user's
+ * private exercise, which all look the same because row level security shows a user the library and their
+ * own exercises only. No ids means no request.
+ */
+export async function readExercisesById(
+  client: SupabaseClient<Database>,
+  ids: readonly string[],
+): Promise<ExerciseLine[]> {
+  ids.forEach(assertExerciseId);
+
+  if (ids.length === 0) {
+    return [];
+  }
+
+  const { data, error } = await client
+    .from("exercises")
+    .select("id,name,equipment,mechanic")
+    .in("id", ids)
+    .is("deleted_at", null);
+
+  if (error) {
+    throw repoError("read the exercises", error);
+  }
+
+  return data.map((row) => parseRow(exerciseLineSchema, row, "read the exercises", idOfRow));
 }

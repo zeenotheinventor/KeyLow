@@ -160,6 +160,13 @@ export type {
   RoutineDraftPath,
   RoutineDraftRule,
 } from "./routineDraft";
+export { applyRoutineChanges, routineFingerprint } from "./routineChanges";
+export type {
+  RoutineChange,
+  RoutineChangeProblem,
+  RoutineChangeRule,
+  RoutineChangesResult,
+} from "./routineChanges";
 export { routinePayload } from "./routinePayload";
 export type { RoutinePayload } from "./routinePayload";
 export { scaffoldSession, scaffoldSessionWithAdditions } from "./scaffoldSession";
@@ -171,6 +178,15 @@ export type {
   SessionPlanJoin,
   SessionScaffold,
 } from "./scaffoldSession";
+export { buildRoutineDraft, summariseBuiltRoutine } from "./buildRoutineDraft";
+export type {
+  BuildRoutineProblem,
+  BuildRoutineResult,
+  BuildRoutineRule,
+  BuiltRoutineDaySummary,
+  BuiltRoutineSummary,
+  RoutineToBuild,
+} from "./buildRoutineDraft";
 export { summariseRoutine } from "./summariseRoutine";
 export type { RoutineDaySummary, RoutineSummary, SummarisedRoutine } from "./summariseRoutine";
 export { estimateSessionMinutes, SESSION_TIME_PARAMS_V1 } from "./sessionTime";
@@ -207,8 +223,14 @@ export type { DayMoment, DayMoments, DayMomentsInput } from "./bodyMapMoments";
 
 export { goalAnswersSchema } from "./goalAnswers";
 export type { GoalAnswers } from "./goalAnswers";
-export { deriveMusclePriority, GOAL_PRESETS_V1, goalTargetedMuscles } from "./goalPresets";
+export {
+  deriveMusclePriority,
+  exerciseTargetFor,
+  GOAL_PRESETS_V1,
+  goalTargetedMuscles,
+} from "./goalPresets";
 export type {
+  ExercisePrescription,
   ExerciseTarget,
   FocusOverlay,
   GoalPresets,

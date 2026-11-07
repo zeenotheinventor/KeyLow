@@ -5,6 +5,7 @@
 // A failure never throws to the model. It comes back as a typed result holding a code and no wording,
 // and the code is the only thing Sentry hears besides the tool's name.
 import { isConfirmAnswer } from "../core.ts";
+import { getActiveSession } from "../repos.ts";
 import { inputHash } from "./inputHash.ts";
 import { reserveNextSlot } from "./store.ts";
 import { confirmationIdKey, parseToolInput } from "./tool.ts";
@@ -19,6 +20,7 @@ export type ToolErrorCode =
   | "no_user_message"
   | "invalid_input"
   | "write_limit_reached"
+  | "workout_in_progress"
   | "confirmation_invalid"
   | "tool_failed";
 
@@ -81,6 +83,12 @@ function splitConfirmationId(rawInput: unknown): SplitInput {
     : { valid: false };
 }
 
+// Whether the person has a workout in progress. A read that fails throws, so a caller that cannot tell
+// refuses the write and does not guess.
+export async function isWorkoutInProgress(ctx: ToolContext): Promise<boolean> {
+  return (await getActiveSession(ctx.caller)) !== null;
+}
+
 export async function executeTool(
   ctx: ToolContext,
   name: string,
@@ -141,6 +149,12 @@ async function runWrite(
   const parsed = parseToolInput(tool, split.rest);
   if (!parsed.success) {
     return failed(tool.name, "invalid_input", { fields: parsed.fields });
+  }
+
+  // Checked on every call, so a confirmation asked while no workout was open and pressed after one started
+  // is refused too, and stays unspent for when the workout ends. Nothing is asked, stored or taken first.
+  if (tool.refusesDuringWorkout === true && (await isWorkoutInProgress(ctx))) {
+    return failed(tool.name, "workout_in_progress");
   }
 
   // The previous turn that holds the confirmation this call carries, when the call needs one.

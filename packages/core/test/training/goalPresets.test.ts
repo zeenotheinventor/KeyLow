@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   deriveMusclePriority,
+  exerciseTargetFor,
   GOAL_PRESETS_V1,
   MUSCLE_IDS,
   TRAINING_PARAMS_VERSION,
@@ -427,4 +428,58 @@ describe("deriveMusclePriority", () => {
   it("should return the 22 muscles in the order of the list", () => {
     expect(Object.keys(priorityOf("hybrid", ["chest"]))).toStrictEqual([...MUSCLE_IDS]);
   });
+});
+
+/*
+ * The exercise table of the document, one row per goal and mechanic, then the sets for each experience.
+ * Written out as literals, never read from the presets, so a changed value fails here.
+ */
+describe("exerciseTargetFor", () => {
+  type Row = readonly [
+    "aesthetic" | "strength" | "hybrid",
+    "compound" | "isolation",
+    "beginner" | "intermediate" | "advanced",
+    number,
+    number,
+    number,
+    number,
+  ];
+
+  /* prettier-ignore */
+  const ALL_EIGHTEEN: readonly Row[] = [
+    ["aesthetic", "compound", "beginner", 2, 8, 10, 2],
+    ["aesthetic", "compound", "intermediate", 3, 8, 10, 2],
+    ["aesthetic", "compound", "advanced", 4, 8, 10, 2],
+    ["aesthetic", "isolation", "beginner", 2, 12, 15, 1],
+    ["aesthetic", "isolation", "intermediate", 3, 12, 15, 1],
+    ["aesthetic", "isolation", "advanced", 4, 12, 15, 1],
+    ["strength", "compound", "beginner", 2, 3, 5, 2],
+    ["strength", "compound", "intermediate", 3, 3, 5, 2],
+    ["strength", "compound", "advanced", 4, 3, 5, 2],
+    ["strength", "isolation", "beginner", 2, 8, 12, 2],
+    ["strength", "isolation", "intermediate", 3, 8, 12, 2],
+    ["strength", "isolation", "advanced", 4, 8, 12, 2],
+    ["hybrid", "compound", "beginner", 2, 5, 8, 2],
+    ["hybrid", "compound", "intermediate", 3, 5, 8, 2],
+    ["hybrid", "compound", "advanced", 4, 5, 8, 2],
+    ["hybrid", "isolation", "beginner", 2, 10, 15, 1],
+    ["hybrid", "isolation", "intermediate", 3, 10, 15, 1],
+    ["hybrid", "isolation", "advanced", 4, 10, 15, 1],
+  ];
+
+  it("should pin all 18 combinations of goal, mechanic and experience", () => {
+    expect(ALL_EIGHTEEN).toHaveLength(18);
+  });
+
+  it.each(ALL_EIGHTEEN)(
+    "should give %s %s %s the sets %i, reps %i to %i and RIR %i",
+    (goal, mechanic, experience, sets, repMin, repMax, targetRir) => {
+      expect(exerciseTargetFor({ goal, experience, mechanic }, GOAL_PRESETS_V1)).toStrictEqual({
+        sets,
+        repMin,
+        repMax,
+        targetRir,
+      });
+    },
+  );
 });
