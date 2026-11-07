@@ -1,10 +1,16 @@
-import { confirmArchiveRoutineButtons, confirmRemoveExercisesButtons } from "@keylow/core";
+import {
+  confirmArchiveExerciseButtons,
+  confirmArchiveRoutineButtons,
+  confirmDeleteWorkoutButtons,
+  confirmRemoveExercisesButtons,
+} from "@keylow/core";
 import { GOAL_STARTING_ANSWERS, loadToKg } from "@keylow/core/training";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fakeEnvironment } from "./fakeEnvironment.ts";
 import { fakeDatabase, readTool, turnResult, writeTool } from "./helpers.ts";
 import { sayThursday, thursdayOf, trainingEditsCasesOf } from "../cases/trainingEdits.ts";
+import { namesDay } from "../cases/trainingEditsGraders.ts";
 import { ACTIVE_ROUTINE, CURRENT_GOAL } from "../fixtures/training.ts";
 import { THRESHOLD_PERCENT } from "../src/thresholds.ts";
 import { trainingEditsWorldHolder } from "../src/trainingEditsWorld.ts";
@@ -230,11 +236,11 @@ function fakeWorld(): FakeWorld {
     seedWorkout: (workout) => {
       workouts.push(workout);
       return Promise.resolve({
-        sessionId: "session-1",
+        sessionId: `session-${workouts.length}`,
         setIds: workout.sets.map((_set, index) => `set-${index + 1}`),
       });
     },
-    seedCustomExercise: () => Promise.resolve("custom-1"),
+    seedCustomExercise: (draft) => Promise.resolve(`custom:${draft.name}`),
     setWeightUnit: (unit) => (calls.push(`weight unit ${unit}`), Promise.resolve()),
     changeRoutineThroughTheApp: (id) => (
       calls.push(`app changes routine ${id}`),
@@ -261,6 +267,16 @@ function fakeWorld(): FakeWorld {
         ],
       }),
     pressUndo: () => Promise.resolve(world.undoResults),
+    actionIdsOfTurn: () => Promise.resolve(["action-1"]),
+    pressUndoFor: (ids) => (
+      calls.push(`undo for ${ids.join(",")}`),
+      Promise.resolve(world.undoResults)
+    ),
+    deleteConversation: (id) => (calls.push(`delete conversation ${id}`), Promise.resolve()),
+    putExerciseInRoutine: (routineId, exerciseId) => (
+      calls.push(`put ${exerciseId} in ${routineId}`),
+      Promise.resolve()
+    ),
   };
   return world;
 }
@@ -311,6 +327,8 @@ type Step = {
   /** Tools that left an action row, one row each. */
   actions?: readonly string[];
   cards?: AssistantCard[];
+  /** What the turn asked, when it ended waiting for a yes. */
+  confirmation?: { question: string };
   /** Whether the turn stored an Ask again. */
   askAgain?: boolean;
   /** The routine id a stored link opens, when the turn stored one. */
@@ -330,6 +348,15 @@ function playOf(play: Play): { turns: TurnResult[]; database: EvalDatabase } {
       status: step.status ?? "complete",
       toolCalls: step.calls ?? [],
       ...(step.cards === undefined ? {} : { cards: step.cards }),
+      ...(step.confirmation === undefined
+        ? {}
+        : {
+            confirmation: {
+              question: step.confirmation.question,
+              confirmLabel: "Yes",
+              cancelLabel: "No",
+            },
+          }),
     }),
   );
   const tables = merge(exerciseRows, play.tables?.(world.seeded) ?? {}, {
@@ -365,6 +392,7 @@ function playOf(play: Play): { turns: TurnResult[]; database: EvalDatabase } {
 async function gradeCase(id: string, play: Play): Promise<string[]> {
   const evalCase = caseOf(id);
   await evalCase.prepare?.();
+  world.workouts.length = 0;
   await evalCase.setup?.(fakeEnvironment());
   const { turns, database } = playOf(play);
   const outcomes = await Promise.all(evalCase.expect.map((grade) => grade({ turns, database })));
@@ -412,8 +440,8 @@ describe("the training edits set", () => {
     expect(cases.every(({ expect: graders }) => graders.length > 0)).toBe(true);
   });
 
-  it("should have 35 cases", () => {
-    expect(cases).toHaveLength(35);
+  it("should have 48 cases", () => {
+    expect(cases).toHaveLength(48);
   });
 
   it("should write the fixture's history before every case, so tidying up has a routine to put back", async () => {
@@ -439,7 +467,7 @@ describe("the training edits set", () => {
       days.push(...world.workouts.map(({ localDate }) => localDate));
     }
 
-    expect(days).toHaveLength(4);
+    expect(days).toHaveLength(9);
     expect(new Set(days).size).toBe(days.length);
   });
 
@@ -2054,5 +2082,461 @@ describe("edits-an-exercise-that-does-not-exist-is-searched-or-asked-never-guess
       },
       "edit_routine was called",
     );
+  });
+});
+
+// ---------------------------------------------------------------------------------------------------------
+// The user's own exercises, deleting a workout, and Undo after the conversation is gone
+// ---------------------------------------------------------------------------------------------------------
+
+const exerciseRow = (name: string, over: Row = {}): Tables => ({
+  exercises: [
+    {
+      id: `custom:${name}`,
+      name,
+      equipment: "dumbbell",
+      deleted_at: null,
+      source_ref: null,
+      mechanic: "isolation",
+      ...over,
+    },
+  ],
+  exercise_muscles: [
+    { exercise_id: `custom:${name}`, muscle_id: "chest_lower", role: "primary" },
+    { exercise_id: `custom:${name}`, muscle_id: "delt_front", role: "secondary" },
+  ],
+});
+
+describe("the custom exercise cases", () => {
+  it("should pass for a cable exercise with a chest primary and secondary front delts, and no card link", async () => {
+    await passes("edits-exercise-create-a-custom-one-with-no-card-link", {
+      steps: [{ actions: ["save_custom_exercise"], cards: [cardOf("exercise_created")] }],
+      tables: () => exerciseRow("Scratch cable crossover", { equipment: "cable" }),
+    });
+  });
+
+  it("should fail when the card holds a link", async () => {
+    const link = {
+      label: "Open",
+      target: {
+        screen: "routine_editor" as const,
+        routineId: "11111111-1111-4111-8111-111111111111",
+      },
+    };
+    await failsOn(
+      "edits-exercise-create-a-custom-one-with-no-card-link",
+      {
+        steps: [
+          { actions: ["save_custom_exercise"], cards: [cardOf("exercise_created", 0, link)] },
+        ],
+        tables: () => exerciseRow("Scratch cable crossover", { equipment: "cable" }),
+      },
+      "a card holds a link",
+    );
+  });
+
+  it("should fail when the equipment is not the one asked for", async () => {
+    await failsOn(
+      "edits-exercise-create-a-custom-one-with-no-card-link",
+      {
+        steps: [{ actions: ["save_custom_exercise"], cards: [cardOf("exercise_created")] }],
+        tables: () => exerciseRow("Scratch cable crossover"),
+      },
+      "not a cable exercise",
+    );
+  });
+
+  const edit = (equipment: string, muscles: Row[], calls: ToolCall[]): Play => ({
+    steps: [{ calls, actions: ["save_custom_exercise"], cards: [cardOf("exercise_updated")] }],
+    tables: () => ({
+      exercises: [
+        {
+          id: "custom:Scratch dumbbell fly",
+          name: "Scratch dumbbell fly",
+          equipment,
+          deleted_at: null,
+        },
+      ],
+      exercise_muscles: muscles,
+    }),
+  });
+  const bothMuscles: Row[] = [
+    { exercise_id: "custom:Scratch dumbbell fly", muscle_id: "chest_lower", role: "primary" },
+    { exercise_id: "custom:Scratch dumbbell fly", muscle_id: "delt_front", role: "secondary" },
+  ];
+  const searchThenSave = [
+    read("search_exercises"),
+    writeTool("save_custom_exercise", { id: "custom:Scratch dumbbell fly", equipment: "cable" }),
+  ];
+
+  it("should pass for an equipment edit by the searched id that keeps the secondary muscle", async () => {
+    await passes(
+      "edits-exercise-edit-keeps-a-secondary-muscle",
+      edit("cable", bothMuscles, searchThenSave),
+    );
+  });
+
+  it("should fail when the edit replaced the map and dropped the secondary muscle", async () => {
+    await failsOn(
+      "edits-exercise-edit-keeps-a-secondary-muscle",
+      edit("cable", bothMuscles.slice(0, 1), searchThenSave),
+      "lost the chest or the secondary front delts",
+    );
+  });
+
+  it("should fail when the id was not the one search_exercises gave", async () => {
+    await failsOn(
+      "edits-exercise-edit-keeps-a-secondary-muscle",
+      edit("cable", bothMuscles, [
+        read("search_exercises"),
+        writeTool("save_custom_exercise", { id: "made-up" }),
+      ]),
+      "the id search_exercises gave",
+    );
+  });
+
+  it("should fail when no search came first", async () => {
+    await failsOn(
+      "edits-exercise-edit-keeps-a-secondary-muscle",
+      edit("cable", bothMuscles, searchThenSave.slice(1)),
+      "search_exercises was not called",
+    );
+  });
+
+  it("should press the archive labels core gives", () => {
+    expect(caseOf("edits-exercise-archive-after-a-yes").messages[1]).toBe(
+      confirmArchiveExerciseButtons().confirmLabel,
+    );
+    expect(caseOf("edits-exercise-archive-after-a-no").messages[1]).toBe(
+      confirmArchiveExerciseButtons().cancelLabel,
+    );
+  });
+
+  it("should pass for an archive after a yes, and fail when it was not archived", async () => {
+    const steps = [
+      { status: "confirm" as const },
+      { actions: ["archive_custom_exercise"], cards: [cardOf("exercise_archived")] },
+    ];
+    await passes("edits-exercise-archive-after-a-yes", {
+      steps,
+      tables: () => exerciseRow("Scratch rope pulldown", { deleted_at: "2026-11-07T10:00:00Z" }),
+    });
+    await failsOn(
+      "edits-exercise-archive-after-a-yes",
+      { steps, tables: () => exerciseRow("Scratch rope pulldown") },
+      "the exercise is not archived",
+    );
+  });
+
+  it("should pass for an archive after a no that kept the exercise, and fail when it went", async () => {
+    const steps = [{ status: "confirm" as const }, { status: "complete" as const }];
+    await passes("edits-exercise-archive-after-a-no", {
+      steps,
+      tables: () => exerciseRow("Scratch rope curl"),
+    });
+    await failsOn(
+      "edits-exercise-archive-after-a-no",
+      {
+        steps,
+        tables: () => exerciseRow("Scratch rope curl", { deleted_at: "2026-11-07T10:00:00Z" }),
+      },
+      "the exercise is archived",
+    );
+  });
+
+  const inUseId = "edits-exercise-archive-one-in-a-routine-is-refused-without-a-question";
+  const live = () => exerciseRow("Scratch row machine");
+
+  it("should pass when the tool answered in_use and the reply names the routine", async () => {
+    await passes(inUseId, {
+      steps: [
+        {
+          calls: [{ ...writeTool("archive_custom_exercise"), errorCode: "in_use" }],
+          answer: "Take it out of your routines first.",
+        },
+      ],
+      tables: live,
+    });
+  });
+
+  it("should pass when the reply explains it without calling the tool", async () => {
+    await passes(inUseId, {
+      steps: [{ calls: [read("get_routines")], answer: "It is in a routine." }],
+      tables: live,
+    });
+  });
+
+  it("should fail when the tool asked for a yes, or was refused for another reason", async () => {
+    await failsOn(
+      inUseId,
+      {
+        steps: [{ status: "confirm", calls: [writeTool("archive_custom_exercise")] }],
+        tables: live,
+      },
+      "ended confirm",
+    );
+    await failsOn(
+      inUseId,
+      {
+        steps: [
+          {
+            calls: [{ ...writeTool("archive_custom_exercise"), errorCode: "not_found" }],
+            answer: "A routine.",
+          },
+        ],
+        tables: live,
+      },
+      "no route passed",
+    );
+  });
+
+  it("should fail when the exercise was archived", async () => {
+    await failsOn(
+      inUseId,
+      {
+        steps: [{ actions: ["archive_custom_exercise"], answer: "A routine." }],
+        tables: () => exerciseRow("Scratch row machine", { deleted_at: "2026-11-07T10:00:00Z" }),
+      },
+      "left 1 action rows",
+    );
+  });
+
+  it("should undo a created exercise, an edited one and an archived one", async () => {
+    const created = caseOf("edits-undo-a-created-exercise");
+    const { turns, database } = playOf({
+      steps: [{ actions: ["save_custom_exercise"] }],
+      tables: () => ({}),
+    });
+    await pressUndo("edits-undo-a-created-exercise", 0, turns, ["undone", "already_undone"]);
+    expect(
+      (await Promise.all(created.expect.map((grade) => grade({ turns, database })))).filter(
+        ({ passed }) => !passed,
+      ),
+    ).toEqual([]);
+
+    const editedCase = caseOf("edits-undo-an-edited-exercise");
+    await editedCase.setup?.(fakeEnvironment());
+    const back = playOf({
+      steps: [{ actions: ["save_custom_exercise"] }],
+      tables: () => exerciseRow("Scratch dumbbell raise"),
+    });
+    await pressUndo("edits-undo-an-edited-exercise", 0, back.turns, ["undone", "already_undone"]);
+    expect(
+      (await Promise.all(editedCase.expect.map((grade) => grade(back)))).filter(
+        ({ passed }) => !passed,
+      ),
+    ).toEqual([]);
+    const notBack = playOf({
+      steps: [{ actions: ["save_custom_exercise"] }],
+      tables: () => exerciseRow("Scratch dumbbell raise", { equipment: "cable" }),
+    });
+    await pressUndo("edits-undo-an-edited-exercise", 0, notBack.turns, [
+      "undone",
+      "already_undone",
+    ]);
+    expect(
+      (await Promise.all(editedCase.expect.map((grade) => grade(notBack)))).some(
+        ({ passed }) => !passed,
+      ),
+    ).toBe(true);
+
+    const archivedCase = caseOf("edits-undo-an-archived-exercise");
+    await archivedCase.setup?.(fakeEnvironment());
+    const unarchived = playOf({
+      steps: [{ status: "confirm" }, { actions: ["archive_custom_exercise"] }],
+      tables: () => exerciseRow("Scratch rope row"),
+    });
+    await pressUndo("edits-undo-an-archived-exercise", 1, unarchived.turns, [
+      "undone",
+      "already_undone",
+    ]);
+    expect(
+      (await Promise.all(archivedCase.expect.map((grade) => grade(unarchived)))).filter(
+        ({ passed }) => !passed,
+      ),
+    ).toEqual([]);
+  });
+});
+
+describe("the delete workout cases", () => {
+  const sessionRows = (...states: boolean[]): Tables => ({
+    workout_sessions: states.map((deleted, index) => ({
+      id: `session-${index + 1}`,
+      deleted_at: deleted ? "2026-11-07T10:00:00Z" : null,
+    })),
+  });
+  // setup seeds the routine first, so the workouts are session-1 and session-2 in the order of the case.
+  const deleteCall = (sessionId: string): ToolCall =>
+    writeTool("delete_workout", { session_id: sessionId });
+  const asked = (question: string): Step => ({
+    status: "confirm",
+    calls: [deleteCall("session-1")],
+    confirmation: { question },
+  });
+
+  it("should press the labels core gives", () => {
+    expect(caseOf("edits-workout-delete-after-a-yes").messages[1]).toBe(
+      confirmDeleteWorkoutButtons().confirmLabel,
+    );
+    expect(caseOf("edits-workout-delete-after-a-no").messages[1]).toBe(
+      confirmDeleteWorkoutButtons().cancelLabel,
+    );
+  });
+
+  it("should pass for a question, then a press that deletes the workout named, with no model call", async () => {
+    await passes("edits-workout-delete-after-a-yes", {
+      steps: [
+        { status: "confirm", calls: [deleteCall("session-1")] },
+        { actions: ["delete_workout"], cards: [cardOf("workout_deleted")] },
+      ],
+      tables: () => sessionRows(true),
+    });
+  });
+
+  it("should fail when the call named a workout that is not the one asked about", async () => {
+    await failsOn(
+      "edits-workout-delete-after-a-yes",
+      {
+        steps: [
+          { status: "confirm", calls: [deleteCall("session-9")] },
+          { actions: ["delete_workout"], cards: [cardOf("workout_deleted")] },
+        ],
+        tables: () => sessionRows(true),
+      },
+      "named a workout other than the one asked about",
+    );
+  });
+
+  it("should pass for a no that deletes nothing, and fail when the workout went", async () => {
+    const steps: Step[] = [
+      { status: "confirm", calls: [deleteCall("session-1")] },
+      { status: "complete" },
+    ];
+    await passes("edits-workout-delete-after-a-no", { steps, tables: () => sessionRows(false) });
+    await failsOn(
+      "edits-workout-delete-after-a-no",
+      { steps, tables: () => sessionRows(true) },
+      "the workout is deleted",
+    );
+  });
+
+  const misnamedId = "edits-workout-delete-the-day-in-the-question-is-the-day-deleted";
+  const [newer, older] = [thursdayOf(ANCHOR, 8), thursdayOf(ANCHOR, 9)];
+  const say = (date: string) => sayThursday(date).replace(/^Thursday /, "");
+  const press: Step = { actions: ["delete_workout"], cards: [cardOf("workout_deleted")] };
+
+  it("should pass when the question names the newer day, the call names the newer workout and the older stays", async () => {
+    await passes(misnamedId, {
+      steps: [asked(`Delete your Legs workout from ${say(newer)}?`), press],
+      tables: () => sessionRows(true, false),
+    });
+  });
+
+  it("should fail when the question names the older day although the call names the newer workout", async () => {
+    await failsOn(
+      misnamedId,
+      {
+        steps: [asked(`Delete your Legs workout from ${say(older)}?`), press],
+        tables: () => sessionRows(true, false),
+      },
+      "does not name the day",
+    );
+  });
+
+  it("should fail when the question names both days", async () => {
+    await failsOn(
+      misnamedId,
+      {
+        steps: [asked(`${say(newer)} or ${say(older)}?`), press],
+        tables: () => sessionRows(true, false),
+      },
+      "names the day of the other workout",
+    );
+  });
+
+  it("should fail when the older workout was deleted too", async () => {
+    await failsOn(
+      misnamedId,
+      {
+        steps: [asked(`Delete the ${say(newer)} workout?`), press],
+        tables: () => sessionRows(true, true),
+      },
+      "the workout is deleted",
+    );
+  });
+
+  it("should read a day written as 8th of Oct or October 8, and not a bare weekday or a count", () => {
+    expect(namesDay("Delete the 8th of Oct workout?", "2026-10-08")).toBe(true);
+    expect(namesDay("Delete the October 8 workout?", "2026-10-08")).toBe(true);
+    expect(namesDay("Delete Thursday's workout with 8 sets?", "2026-10-08")).toBe(false);
+    expect(namesDay("Delete 18 October?", "2026-10-08")).toBe(false);
+  });
+
+  it("should undo a deleted workout, with its sets back", async () => {
+    const id = "edits-undo-a-deleted-workout";
+    await caseOf(id).setup?.(fakeEnvironment());
+    const { turns, database } = playOf({
+      steps: [{ status: "confirm" }, { actions: ["delete_workout"] }],
+      tables: () => ({
+        ...sessionRows(false),
+        workout_sets: [0, 1].map((position) => ({
+          session_id: "session-1",
+          id: `set-${position}`,
+          position,
+          reps: 5,
+          load_kg: 100,
+          deleted_at: null,
+        })),
+      }),
+    });
+    await pressUndo(id, 1, turns, ["undone", "already_undone"]);
+
+    expect(
+      (await Promise.all(caseOf(id).expect.map((grade) => grade({ turns, database })))).filter(
+        ({ passed }) => !passed,
+      ),
+    ).toEqual([]);
+  });
+});
+
+describe("edits-undo-after-the-conversation-is-deleted", () => {
+  const id = "edits-undo-after-the-conversation-is-deleted";
+
+  async function run(results: AssistantUndoResult[], archived: boolean) {
+    const evalCase = caseOf(id);
+    await evalCase.setup?.(fakeEnvironment());
+    world.undoResults = results;
+    const { turns, database } = playOf({
+      steps: [{ status: "confirm" }, { actions: ["archive_routine"] }],
+      tables: () => tablesOf({ ...seededShape(), archived }),
+    });
+    await evalCase.afterTurn?.({ index: 1, result: turns[1] ?? turnResult() }, fakeEnvironment());
+    const outcomes = await Promise.all(evalCase.expect.map((grade) => grade({ turns, database })));
+    return outcomes.filter(({ passed }) => !passed).map(({ reason }) => reason);
+  }
+  const undone: AssistantUndoResult[] = [
+    { actionId: "44444444-4444-4444-8444-444444444444", result: "undone" },
+  ];
+
+  it("should read the action ids before it deletes the conversation, then press Undo for them", async () => {
+    expect(await run(undone, false)).toEqual([]);
+    expect(
+      world.calls.filter((call) => call.startsWith("delete") || call.startsWith("undo")),
+    ).toEqual(["delete conversation conversation-1", "undo for action-1"]);
+  });
+
+  it("should fail when Undo answered unavailable once the conversation was gone", async () => {
+    const reasons = await run(
+      [{ actionId: "44444444-4444-4444-8444-444444444444", result: "undo_unavailable" }],
+      false,
+    );
+
+    expect(reasons.join(" ")).toContain(
+      "Undo answered undo_unavailable after the conversation was deleted",
+    );
+  });
+
+  it("should fail when the routine is still archived", async () => {
+    expect((await run(undone, true)).join(" ")).toContain("the routine is still archived");
   });
 });

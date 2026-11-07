@@ -515,3 +515,137 @@ export function turnTimeAndTokens(turnIndex: number, deadlineSeconds: number): G
       : fail(`the turn took ${seconds.toFixed(1)} s, over the ${deadlineSeconds} s deadline`);
   };
 }
+
+// ---------------------------------------------------------------------------------------------------------
+// The user's own exercises, and the day a workout delete names
+// ---------------------------------------------------------------------------------------------------------
+
+export type StoredCustomExercise = Readonly<{
+  id: string;
+  name: string;
+  equipment: string;
+  isArchived: boolean;
+  muscles: readonly Readonly<{ muscleId: string; role: string }>[];
+}>;
+
+/** One of the user's exercises read back with its muscle map, archived ones included. Null when there is none. */
+export async function readExercise(
+  database: EvalDatabase,
+  which: Readonly<{ name: string }> | Readonly<{ id: string }>,
+): Promise<StoredCustomExercise | null> {
+  const [row] = await database.readRows({ table: "exercises", where: { ...which } });
+  if (row === undefined) {
+    return null;
+  }
+  const id = textOf(row, "id");
+  const muscles = await database.readRows({
+    table: "exercise_muscles",
+    where: { exercise_id: id },
+  });
+  return {
+    id,
+    name: textOf(row, "name"),
+    equipment: textOf(row, "equipment"),
+    isArchived: row["deleted_at"] !== null && row["deleted_at"] !== undefined,
+    muscles: muscles.map((muscle) => ({
+      muscleId: textOf(muscle, "muscle_id"),
+      role: textOf(muscle, "role"),
+    })),
+  };
+}
+
+/** Passes when the exercise is stored and the check finds nothing wrong with it. */
+export function exerciseIs(
+  which: () => Readonly<{ name: string }> | Readonly<{ id: string }>,
+  check: (exercise: StoredCustomExercise) => string | null,
+  description: string,
+): Grader {
+  return async ({ database }) => {
+    const exercise = await readExercise(database, which());
+    if (exercise === null) {
+      return fail(`the exercise cannot be read, so ${description} cannot be true`);
+    }
+    const problem = check(exercise);
+    return problem === null ? pass(description) : fail(`${description}: ${problem}`);
+  };
+}
+
+/** Passes when a workout is deleted (or not), read from its own row, which the person can see either way. */
+export function workoutDeleted(sessionId: () => string, expected: boolean): Grader {
+  return async ({ database }) => {
+    const [row] = await database.readRows({
+      table: "workout_sessions",
+      where: { id: sessionId() },
+    });
+    if (row === undefined) {
+      return fail("the workout cannot be read");
+    }
+    const deleted = row["deleted_at"] !== null && row["deleted_at"] !== undefined;
+    return deleted === expected
+      ? pass(expected ? "the workout is deleted" : "the workout is not deleted")
+      : fail(expected ? "the workout is not deleted" : "the workout is deleted");
+  };
+}
+
+const MONTHS = [
+  "january",
+  "february",
+  "march",
+  "april",
+  "may",
+  "june",
+  "july",
+  "august",
+  "september",
+  "october",
+  "november",
+  "december",
+];
+
+/** Whether a text names the day, as "8 October", "8th of Oct" or "October 8". The weekday alone is not a day. */
+export function namesDay(text: string, date: string): boolean {
+  const day = Number(date.slice(8, 10));
+  const month = MONTHS[Number(date.slice(5, 7)) - 1] ?? "";
+  const monthWords = `(?:${month}|${month.slice(0, 3)}\\.?)`;
+  const ordinal = `${day}(?:st|nd|rd|th)?`;
+  return new RegExp(
+    `\\b${ordinal}\\s+(?:of\\s+)?${monthWords}\\b|\\b${monthWords}\\s+${ordinal}\\b`,
+    "i",
+  ).test(text);
+}
+
+/**
+ * Passes when the question the turn asked names this day, and (when `notDay` is given) does not name that one.
+ * The question is the model's own words when it wrote some and the tool's otherwise, so a model that misnamed the
+ * day shows here. The ticket allows reading the day from the reply for this check.
+ */
+export function confirmationNamesDay(turnIndex: number, date: string, notDay?: string): Grader {
+  return ({ turns }) => {
+    const question = turns[turnIndex]?.confirmation?.question;
+    if (question === undefined) {
+      return Promise.resolve(fail(`turn ${turnIndex + 1} asked no question`));
+    }
+    if (!namesDay(question, date)) {
+      return Promise.resolve(fail("the question does not name the day of the workout"));
+    }
+    return Promise.resolve(
+      notDay !== undefined && namesDay(question, notDay)
+        ? fail("the question names the day of the other workout")
+        : pass("the question names the day of the workout that is deleted"),
+    );
+  };
+}
+
+/** Passes when a call of the tool named the session, so the press deletes the workout the person asked about. */
+export function deleteCallNamed(tool: string, sessionId: () => string): Grader {
+  return ({ turns }) => {
+    const wanted = sessionId();
+    const calls = turns.flatMap((turn) => turn.toolCalls).filter((call) => call.name === tool);
+    return Promise.resolve(
+      calls.length > 0 &&
+        calls.every((call) => isRecord(call.input) && call.input["session_id"] === wanted)
+        ? pass(`${tool} named the workout asked about`)
+        : fail(`${tool} named a workout other than the one asked about, or was not called`),
+    );
+  };
+}

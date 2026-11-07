@@ -23,7 +23,12 @@
 //
 // WHAT IS NOT HERE YET. The custom exercise tools (KEY-905) and `delete_workout` (KEY-907) are on branches, so
 // their cases, their Undo and the case of a question that misnames a day wait for those to merge.
-import { confirmArchiveRoutineButtons, confirmRemoveExercisesButtons } from "@keylow/core";
+import {
+  confirmArchiveExerciseButtons,
+  confirmArchiveRoutineButtons,
+  confirmDeleteWorkoutButtons,
+  confirmRemoveExercisesButtons,
+} from "@keylow/core";
 import { GOAL_STARTING_ANSWERS, loadToKg } from "@keylow/core/training";
 
 import { READ_TOOLS } from "./ask.ts";
@@ -48,28 +53,34 @@ import {
   cardKinds,
   cardRowCount,
   currentGoalIs,
+  confirmationNamesDay,
   dayNamed,
+  deleteCallNamed,
+  exerciseIs,
   exerciseOf,
   exercisesOf,
   holdsPreset,
   linkToRoutineEditor,
   matchesPlan,
+  noCardLink,
   placeKey,
   placesSetByTheModel,
   presetFor,
   readSetsOfSession,
   routineIs,
   routineMadeIn,
+  toolAnswered,
   toolNotCalled,
   toolWasCalled,
   turnTimeAndTokens,
+  workoutDeleted,
 } from "./trainingEditsGraders.ts";
 import { ACTIVE_ROUTINE, CURRENT_GOAL, LIBRARY_EXERCISES } from "../fixtures/training.ts";
 import { answerContainsNumber } from "../src/case.ts";
 import { trainingEditsWorldHolder } from "../src/trainingEditsWorld.ts";
 import { trainingWorldHolder } from "../src/trainingWorldHolder.ts";
 
-import type { RoutineCheck } from "./trainingEditsGraders.ts";
+import type { RoutineCheck, StoredCustomExercise } from "./trainingEditsGraders.ts";
 import type { EvalCase, Grader } from "../src/case.ts";
 import type { ScratchRoutine, SeededRoutine } from "../src/trainingEditsWorld.ts";
 import type { AssistantUndoResult } from "@keylow/api-client";
@@ -785,6 +796,9 @@ export function trainingEditsCasesOf(anchorDate: string): readonly EvalCase[] {
   // ---- Undo ---------------------------------------------------------------------------------------------
 
   const undoCases = undoCasesOf(thursday(), thursday(), thursday());
+  const exerciseAndWorkoutCases = exerciseAndWorkoutCasesOf(
+    Array.from({ length: 5 }, () => thursday()),
+  );
 
   // ---- During a workout, pain, and a name that is not a thing ------------------------------------------------
 
@@ -888,7 +902,15 @@ export function trainingEditsCasesOf(anchorDate: string): readonly EvalCase[] {
     }),
   ];
 
-  return [...routineCases, ...buildCases, goalChange, ...pastSetCases, ...undoCases, ...otherCases];
+  return [
+    ...routineCases,
+    ...buildCases,
+    goalChange,
+    ...pastSetCases,
+    ...undoCases,
+    ...otherCases,
+    ...exerciseAndWorkoutCases,
+  ];
 }
 
 // ---------------------------------------------------------------------------------------------------------
@@ -1409,6 +1431,392 @@ function undoCasesOf(setDay: string, changedSetDay: string, loggedDay: string): 
         writesOf("edit_routine"),
       ],
       extras: { setup: addedDay.setup, afterTurn: addedDayLogged.afterTurn, cleanUp: tidyUp },
+    }),
+  ];
+}
+
+// ---------------------------------------------------------------------------------------------------------
+// The user's own exercises, deleting a workout, and Undo after the conversation is gone
+// ---------------------------------------------------------------------------------------------------------
+
+const FLY_MUSCLES = [
+  { muscle_id: "chest_lower", role: "primary" },
+  { muscle_id: "delt_front", role: "secondary" },
+] as const;
+const FIRST_DELETE_DAY = 0;
+const SQUAT_SETS_OF_A_LEGS_WORKOUT = 2;
+
+/** One of the user's own exercises, made in `setup`. */
+function customExercise(name: string, equipment: "dumbbell" | "cable" | "machine") {
+  let id: string | null = null;
+  return {
+    name,
+    setup: async (): Promise<void> => {
+      id = await world().seedCustomExercise({ name, equipment, muscles: FLY_MUSCLES });
+    },
+    id: (): Readonly<{ id: string }> => {
+      if (id === null) {
+        throw new Error("The exercise of the case was not made");
+      }
+      return { id };
+    },
+  };
+}
+
+/** A routine with a Legs day, and a finished Legs workout on each of the days, the newest first. */
+function legsWorkouts(name: string, dates: readonly string[]) {
+  const routine = scratchRoutine(legsRoutine(name));
+  const sessions: string[] = [];
+  return {
+    routine,
+    dates,
+    setup: async (): Promise<null> => {
+      await routine.setup();
+      const [legs] = routine.seeded().days;
+      sessions.length = 0;
+      for (const localDate of dates) {
+        const seeded = await world().seedWorkout({
+          localDate,
+          routineDayId: legs?.id ?? null,
+          sets: Array.from({ length: SQUAT_SETS_OF_A_LEGS_WORKOUT }, () => ({
+            sourceRef: SQUAT,
+            loadKg: PAST_SQUAT_LOAD_KG,
+            reps: PAST_SQUAT_REPS,
+          })),
+        });
+        sessions.push(seeded.sessionId);
+      }
+      return null;
+    },
+    session: (index: number) => (): string => {
+      const found = sessions[index];
+      if (found === undefined) {
+        throw new Error("The workout of the case was not made");
+      }
+      return found;
+    },
+  };
+}
+
+const liveSetsOf =
+  (session: () => string, expected: number): Grader =>
+  async ({ database }) => {
+    const sets = await readSetsOfSession(database, session());
+    return sets.length === expected
+      ? { passed: true, reason: `the workout holds its ${expected} sets` }
+      : { passed: false, reason: `the workout holds ${sets.length} sets and not ${expected}` };
+  };
+
+function exerciseAndWorkoutCasesOf(days: readonly string[]): EvalCase[] {
+  const at = (index: number): string => {
+    const found = days[index];
+    if (found === undefined) {
+      throw new Error("The case set needs more scratch Thursdays");
+    }
+    return found;
+  };
+  const archiveButtons = confirmArchiveExerciseButtons();
+  const deleteButtons = confirmDeleteWorkoutButtons();
+  const hasFlyMuscles = (exercise: StoredCustomExercise): string | null =>
+    exercise.muscles.some((m) => m.muscleId === "chest_lower" && m.role === "primary") &&
+    exercise.muscles.some((m) => m.muscleId === "delt_front" && m.role === "secondary")
+      ? null
+      : "the muscle map lost the chest or the secondary front delts";
+
+  // ---- Create, edit and archive a custom exercise (KEY-905). No screen edits one, so no card holds a link. ----
+  const createName = "Scratch cable crossover";
+  const createUndoName = "Scratch cable press";
+  const createMessage = (name: string) =>
+    `Add a custom exercise called ${name}. It uses a cable, works the chest as the main muscle and the front delts as a secondary one.`;
+  const isCableChest = (exercise: StoredCustomExercise): string | null =>
+    exercise.equipment === "cable" &&
+    exercise.muscles.some((m) => m.muscleId.startsWith("chest") && m.role === "primary") &&
+    exercise.muscles.some((m) => m.muscleId === "delt_front" && m.role === "secondary")
+      ? null
+      : "not a cable exercise with a chest primary and secondary front delts";
+
+  const edited = customExercise("Scratch dumbbell fly", "dumbbell");
+  const editMessage = "Change my Scratch dumbbell fly exercise to use a cable instead.";
+  const editedUndo = customExercise("Scratch dumbbell raise", "dumbbell");
+  const editedUndoPress = undoOnTurn(0, 1);
+  const editSavedBy = (target: () => Readonly<{ id: string }>) =>
+    calledWith(
+      "save_custom_exercise",
+      (input) => input["id"] === target().id,
+      "the id search_exercises gave",
+    );
+
+  const archiveYes = customExercise("Scratch rope pulldown", "machine");
+  const archiveNo = customExercise("Scratch rope curl", "machine");
+  const archiveUndo = customExercise("Scratch rope row", "machine");
+  const archiveUndoPress = undoOnTurn(1, 1);
+  const archiveMessage = (name: string) => `Archive my ${name} exercise.`;
+  const isArchived = (exercise: StoredCustomExercise): string | null =>
+    exercise.isArchived ? null : "the exercise is not archived";
+  const isLive = (exercise: StoredCustomExercise): string | null =>
+    exercise.isArchived ? "the exercise is archived" : null;
+
+  const inUse = customExercise("Scratch row machine", "machine");
+  const inUseRoutine = scratchRoutine(legsRoutine("Scratch uses a custom exercise"));
+
+  const createUndoPress = undoOnTurn(0, 1);
+
+  // ---- Delete a workout (KEY-907) ----
+  const yes = legsWorkouts("Scratch delete yes", [at(FIRST_DELETE_DAY)]);
+  const no = legsWorkouts("Scratch delete no", [at(1)]);
+  // Two finished workouts on different days: the day the question names must be the workout the press deletes.
+  const misnamed = legsWorkouts("Scratch delete two days", [at(2), at(3)]);
+  const undoDelete = legsWorkouts("Scratch delete undo", [at(4)]);
+  const undoDeletePress = undoOnTurn(1, 1);
+  const deleteMessage = (day: string) => `Delete my Legs workout from ${sayThursday(day)}.`;
+
+  // ---- Undo once the conversation is deleted: the writes that keep nothing beside their card ----
+  const stored = scratchRoutine(legsRoutine("Scratch undo after delete"));
+  let undoneAfterDelete: readonly AssistantUndoResult[] | null = null;
+
+  return [
+    define({
+      id: "edits-exercise-create-a-custom-one-with-no-card-link",
+      messages: [createMessage(createName)],
+      expect: [
+        turnEnded(0, "complete"),
+        actionRows("save_custom_exercise", 1),
+        cardKinds(0, ["exercise_created"]),
+        noCardLink(0),
+        exerciseIs(
+          () => ({ name: createName }),
+          isCableChest,
+          "the exercise was made as described",
+        ),
+        writesOf("save_custom_exercise"),
+      ],
+    }),
+    define({
+      id: "edits-exercise-edit-keeps-a-secondary-muscle",
+      messages: [editMessage],
+      expect: [
+        turnEnded(0, "complete"),
+        actionRows("save_custom_exercise", 1),
+        cardKinds(0, ["exercise_updated"]),
+        noCardLink(0),
+        // The id comes from search_exercises: an edit by a made-up id would be not found.
+        toolWasCalled("search_exercises"),
+        editSavedBy(edited.id),
+        exerciseIs(
+          edited.id,
+          (exercise) =>
+            exercise.equipment !== "cable"
+              ? "the equipment did not change"
+              : exercise.name !== "Scratch dumbbell fly"
+                ? "the name changed"
+                : hasFlyMuscles(exercise),
+          "the equipment changed and the muscle map, with its secondary muscle, is as it was",
+        ),
+        writesOf("save_custom_exercise"),
+      ],
+      extras: { setup: async () => (await edited.setup(), null) },
+    }),
+    define({
+      id: "edits-exercise-archive-after-a-yes",
+      messages: [archiveMessage(archiveYes.name), archiveButtons.confirmLabel],
+      expect: [
+        turnEnded(0, "confirm"),
+        noActionRowsInTurn(0),
+        actionRows("archive_custom_exercise", 1, [1]),
+        madeNoModelCall(1),
+        cardKinds(1, ["exercise_archived"]),
+        noCardLink(1),
+        exerciseIs(archiveYes.id, isArchived, "the exercise is archived"),
+        writesOf("archive_custom_exercise"),
+      ],
+      extras: { setup: async () => (await archiveYes.setup(), null) },
+    }),
+    define({
+      id: "edits-exercise-archive-after-a-no",
+      messages: [archiveMessage(archiveNo.name), archiveButtons.cancelLabel],
+      expect: [
+        turnEnded(0, "confirm"),
+        actionRows("archive_custom_exercise", 0),
+        noActionRowsInTurn(0),
+        noActionRowsInTurn(1),
+        exerciseIs(archiveNo.id, isLive, "the exercise is still live"),
+        writesOf("archive_custom_exercise"),
+      ],
+      extras: { setup: async () => (await archiveNo.setup(), null) },
+    }),
+    // An exercise on a routine is not archived and nothing is asked: the tool answers in_use. A reply that says so
+    // without calling the tool is as right, so the call is only checked when it was made.
+    define({
+      id: "edits-exercise-archive-one-in-a-routine-is-refused-without-a-question",
+      messages: [archiveMessage(inUse.name)],
+      expect: [
+        turnEnded(0, "complete"),
+        noActionRowsInTurn(0),
+        cardKinds(0, []),
+        anyOfRoutes([
+          [toolNotCalled("archive_custom_exercise")],
+          [toolAnswered("archive_custom_exercise", "in_use")],
+        ]),
+        exerciseIs(inUse.id, isLive, "the exercise is still live"),
+        // The words are the tool's, "Take it out of your routines first": the routine is what the person must know.
+        answerSays(0, /routine/i, "say the exercise is in a routine"),
+        writesOf("archive_custom_exercise"),
+      ],
+      extras: {
+        setup: async () => {
+          await inUse.setup();
+          const routine = await world().seedRoutine(inUseRoutine.plan);
+          await world().putExerciseInRoutine(routine.id, inUse.id().id);
+          return null;
+        },
+        cleanUp: tidyUp,
+      },
+    }),
+
+    define({
+      id: "edits-workout-delete-after-a-yes",
+      messages: [deleteMessage(at(FIRST_DELETE_DAY)), deleteButtons.confirmLabel],
+      expect: [
+        turnEnded(0, "confirm"),
+        noActionRowsInTurn(0),
+        deleteCallNamed("delete_workout", yes.session(0)),
+        actionRows("delete_workout", 1, [1]),
+        madeNoModelCall(1),
+        cardKinds(1, ["workout_deleted"]),
+        workoutDeleted(yes.session(0), true),
+        writesOf("delete_workout"),
+      ],
+      extras: { setup: yes.setup, cleanUp: tidyUp },
+    }),
+    define({
+      id: "edits-workout-delete-after-a-no",
+      messages: [deleteMessage(at(1)), deleteButtons.cancelLabel],
+      expect: [
+        turnEnded(0, "confirm"),
+        actionRows("delete_workout", 0),
+        noActionRowsInTurn(0),
+        noActionRowsInTurn(1),
+        workoutDeleted(no.session(0), false),
+        writesOf("delete_workout"),
+      ],
+      extras: { setup: no.setup, cleanUp: tidyUp },
+    }),
+    // The comment on the ticket: when the model words the question, the person sees its words and not the tool's, so
+    // a model that misnames a day could ask about one workout while `session_id` names another, and the press deletes
+    // the named one. Two workouts, the newer asked about: the question names the newer day, the call names the newer
+    // session, and the older workout is still there afterwards.
+    define({
+      id: "edits-workout-delete-the-day-in-the-question-is-the-day-deleted",
+      messages: [`Delete my workout from ${sayThursday(at(2))}.`, deleteButtons.confirmLabel],
+      expect: [
+        turnEnded(0, "confirm"),
+        confirmationNamesDay(0, at(2), at(3)),
+        deleteCallNamed("delete_workout", misnamed.session(0)),
+        actionRows("delete_workout", 1, [1]),
+        cardKinds(1, ["workout_deleted"]),
+        workoutDeleted(misnamed.session(0), true),
+        workoutDeleted(misnamed.session(1), false),
+        writesOf("delete_workout"),
+      ],
+      extras: { setup: misnamed.setup, cleanUp: tidyUp },
+    }),
+
+    define({
+      id: "edits-undo-a-created-exercise",
+      messages: [createMessage(createUndoName)],
+      expect: [
+        actionRows("save_custom_exercise", 1),
+        createUndoPress.undone,
+        rowCount({ table: "exercises", where: { name: createUndoName, deleted_at: null } }, 0),
+        writesOf("save_custom_exercise"),
+      ],
+      extras: { afterTurn: createUndoPress.afterTurn },
+    }),
+    define({
+      id: "edits-undo-an-edited-exercise",
+      messages: ["Change my Scratch dumbbell raise exercise to use a cable instead."],
+      expect: [
+        actionRows("save_custom_exercise", 1),
+        editedUndoPress.undone,
+        exerciseIs(
+          editedUndo.id,
+          (exercise) =>
+            exercise.equipment === "dumbbell"
+              ? hasFlyMuscles(exercise)
+              : "the equipment is not back",
+          "the equipment and the muscle map are back as they were",
+        ),
+        writesOf("save_custom_exercise"),
+      ],
+      extras: {
+        setup: async () => (await editedUndo.setup(), null),
+        afterTurn: editedUndoPress.afterTurn,
+      },
+    }),
+    define({
+      id: "edits-undo-an-archived-exercise",
+      messages: [archiveMessage(archiveUndo.name), archiveButtons.confirmLabel],
+      expect: [
+        actionRows("archive_custom_exercise", 1),
+        archiveUndoPress.undone,
+        exerciseIs(archiveUndo.id, isLive, "the exercise is back"),
+        writesOf("archive_custom_exercise"),
+      ],
+      extras: {
+        setup: async () => (await archiveUndo.setup(), null),
+        afterTurn: archiveUndoPress.afterTurn,
+      },
+    }),
+    // A restore needs nothing but the stamp the delete left. delete_workout keeps no changed-since through the app
+    // beyond that restore, so this is its one Undo case: undone, then already undone, and the sets are back.
+    define({
+      id: "edits-undo-a-deleted-workout",
+      messages: [deleteMessage(at(4)), deleteButtons.confirmLabel],
+      expect: [
+        actionRows("delete_workout", 1),
+        undoDeletePress.undone,
+        workoutDeleted(undoDelete.session(0), false),
+        liveSetsOf(undoDelete.session(0), SQUAT_SETS_OF_A_LEGS_WORKOUT),
+        writesOf("delete_workout"),
+      ],
+      extras: { setup: undoDelete.setup, afterTurn: undoDeletePress.afterTurn, cleanUp: tidyUp },
+    }),
+    // archive_routine, archive_custom_exercise, update_training_goals and delete_workout keep no previous value, so
+    // their Undo works once the conversation is deleted. The actions lose their turn with it, so the ids are read first.
+    define({
+      id: "edits-undo-after-the-conversation-is-deleted",
+      messages: [`Archive my ${stored.name} routine.`, confirmArchiveRoutineButtons().confirmLabel],
+      expect: [
+        () =>
+          Promise.resolve(
+            undoneAfterDelete?.length === 1 && undoneAfterDelete[0]?.result === "undone"
+              ? {
+                  passed: true,
+                  reason: "Undo undid the archive after the conversation was deleted",
+                }
+              : {
+                  passed: false,
+                  reason: `Undo answered ${undoneAfterDelete?.map((item) => item.result).join(", ") ?? "nothing"} after the conversation was deleted`,
+                },
+          ),
+        routineIs(
+          stored.name,
+          (routine) => (routine.isArchived ? "the routine is still archived" : null),
+          "the routine is back",
+        ),
+        writesOf("archive_routine"),
+      ],
+      extras: {
+        setup: stored.setup,
+        afterTurn: async ({ index, result }) => {
+          if (index === 1) {
+            const ids = await world().actionIdsOfTurn(result.turnId);
+            await world().deleteConversation(result.conversationId);
+            undoneAfterDelete = await world().pressUndoFor(ids);
+          }
+        },
+        cleanUp: tidyUp,
+      },
     }),
   ];
 }

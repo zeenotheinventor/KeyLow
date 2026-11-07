@@ -113,6 +113,14 @@ export type TrainingEditsWorld = Readonly<{
   routineNamed: (name: string) => Promise<SeededRoutine | null>;
   /** Presses Undo for every action of the turn, and answers each result with its reason. */
   pressUndo: (turnId: string) => Promise<readonly AssistantUndoResult[]>;
+  /** The ids of the actions a turn left, in the order they were written. */
+  actionIdsOfTurn: (turnId: string) => Promise<readonly string[]>;
+  /** Presses Undo for these actions, which may belong to a conversation that no longer exists. */
+  pressUndoFor: (actionIds: readonly string[]) => Promise<readonly AssistantUndoResult[]>;
+  /** Deletes one conversation of the eval user, with its turns and messages. The actions stay, with no turn. */
+  deleteConversation: (conversationId: string) => Promise<void>;
+  /** Puts one of the user's own exercises at the end of the first day of a routine, as the editor does. */
+  putExerciseInRoutine: (routineId: string, exerciseId: string) => Promise<void>;
 }>;
 
 let attached: TrainingEditsWorld | null = null;
@@ -373,7 +381,7 @@ export function createTrainingEditsWorld({
       return id === null ? null : routineById(id);
     },
 
-    async pressUndo(turnId) {
+    async actionIdsOfTurn(turnId) {
       const { data, error } = await client
         .from("assistant_actions")
         .select("id")
@@ -382,12 +390,63 @@ export function createTrainingEditsWorld({
       if (error) {
         throw failure("read the actions of the turn", error);
       }
-      return data.length === 0
-        ? []
-        : undoAssistantActions(
-            client,
-            data.map(({ id }) => id),
-          );
+      return data.map(({ id }) => id);
+    },
+
+    async pressUndoFor(actionIds) {
+      return actionIds.length === 0 ? [] : undoAssistantActions(client, [...actionIds]);
+    },
+
+    async pressUndo(turnId) {
+      return this.pressUndoFor(await this.actionIdsOfTurn(turnId));
+    },
+
+    async deleteConversation(conversationId) {
+      const { error } = await client
+        .from("assistant_conversations")
+        .delete()
+        .eq("id", conversationId);
+      if (error) {
+        throw failure("delete the conversation", error);
+      }
+    },
+
+    async putExerciseInRoutine(routineId, exerciseId) {
+      const routine = await getRoutine(client, routineId);
+      if (routine === null) {
+        throw new Error("The routine to change cannot be read");
+      }
+      await saveRoutine(client, {
+        id: routineId,
+        draft: {
+          name: routine.name,
+          days: routine.days.map((day, index) => ({
+            id: day.id,
+            weekday: day.weekday,
+            name: day.name,
+            exercises: [
+              ...day.exercises.map((line) => ({
+                exercise_id: line.exercise.id,
+                target_sets: line.target_sets,
+                rep_min: line.rep_min,
+                rep_max: line.rep_max,
+                target_rir: line.target_rir,
+              })),
+              ...(index === 0
+                ? [
+                    {
+                      exercise_id: exerciseId,
+                      target_sets: 3,
+                      rep_min: 8,
+                      rep_max: 12,
+                      target_rir: null,
+                    },
+                  ]
+                : []),
+            ],
+          })),
+        },
+      });
     },
   };
 }
