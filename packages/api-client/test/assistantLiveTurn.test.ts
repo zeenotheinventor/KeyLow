@@ -1,3 +1,4 @@
+import { describeTurnEndedAfterWrite, threadFromMessages } from "@keylow/core";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -254,6 +255,104 @@ describe("stoppedTurn and failedTurn", () => {
       outcome: "failed",
       status: null,
       stopped: false,
+    });
+  });
+
+  describe("after a card was drawn", () => {
+    const firstActionId = "00000000-0000-4000-8000-0000000000d1";
+    const secondActionId = "00000000-0000-4000-8000-0000000000d2";
+
+    it("should show the saved words and no notice, whatever broke the stream", () => {
+      const live = failedTurn(
+        applyAll([
+          { type: "card", card: aCard("Logged 2 eggs") },
+          { type: "text", delta: "Done, and" },
+        ]),
+      );
+
+      expect(live.notice).toBeNull();
+      expect(live.text).toBe(`Done, and\n\n${describeTurnEndedAfterWrite(1)}`);
+      expect(live.outcome).toBe("failed");
+      expect(live.cards).toHaveLength(1);
+    });
+
+    it("should put the words alone in a reply that had no text yet", () => {
+      const live = failedTurn(applyAll([{ type: "card", card: aCard("Logged 2 eggs") }]));
+
+      expect(live.text).toBe(describeTurnEndedAfterWrite(1));
+    });
+
+    it("should use the plural when the cards hold more than one change", () => {
+      const merged = {
+        ...aCard("Logged 2 foods"),
+        actionIds: [firstActionId, secondActionId],
+      };
+
+      const live = failedTurn(applyAll([{ type: "card", card: merged }]));
+
+      expect(live.text).toBe(describeTurnEndedAfterWrite(2));
+    });
+
+    it("should count one change for each card of a different kind", () => {
+      const live = failedTurn(
+        applyAll([
+          { type: "card", card: aCard("Logged an egg") },
+          {
+            type: "card",
+            card: { ...aCard("Updated"), kind: "updated", actionIds: [secondActionId] },
+          },
+        ]),
+      );
+
+      expect(live.text).toBe(describeTurnEndedAfterWrite(2));
+    });
+
+    it("should keep a notice that already arrived, with the cards as they are", () => {
+      const live = failedTurn(
+        applyAll([
+          { type: "card", card: aCard("Logged 2 eggs") },
+          { type: "notice", notice: { code: "switched_off" } },
+        ]),
+      );
+
+      expect(live.notice).toEqual({ code: "switched_off" });
+    });
+
+    it("should agree with a reopened failed turn that holds the same card: no notice in either", () => {
+      const card = aCard("Logged 2 eggs");
+      const live = failedTurn(applyAll([{ type: "card", card }]));
+      const reopened = threadFromMessages(
+        [
+          {
+            id: "m1",
+            turnId: TURN_ID,
+            role: "user",
+            content: [{ type: "text", text: "Log 2 eggs" }],
+            display: null,
+            turnStatus: "failed",
+          },
+          {
+            id: "m2",
+            turnId: TURN_ID,
+            role: "assistant",
+            content: [{ type: "tool_use", id: "c1", name: "log_entry", input: {} }],
+            display: null,
+            turnStatus: "failed",
+          },
+          {
+            id: "m3",
+            turnId: TURN_ID,
+            role: "user",
+            content: [{ type: "tool_result", tool_use_id: "c1" }],
+            display: { c1: { card } },
+            turnStatus: "failed",
+          },
+        ],
+        [],
+      );
+
+      expect(live.notice).toBeNull();
+      expect(reopened.map((item) => item.kind)).toEqual(["user", "card"]);
     });
   });
 });

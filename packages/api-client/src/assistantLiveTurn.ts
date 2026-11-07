@@ -1,3 +1,5 @@
+import { describeTurnEndedAfterWrite } from "@keylow/core";
+
 import type {
   AssistantCard,
   AssistantCardLink,
@@ -125,12 +127,28 @@ export function stoppedTurn(live: AssistantLiveTurn): AssistantLiveTurn {
 /**
  * The turn after it broke off (a network failure, an event the app cannot read): what arrived stays,
  * including a notice, so a day limit followed by a dropped connection still shows the day limit.
+ *
+ * A turn that has drawn a card is the exception to the failed-turn notice. That notice says "Nothing was
+ * changed" and offers Try again, which would send the message again and could repeat the write. The reply
+ * ends in the words for a saved change instead, as the server's own ending does (KEY-926). It is best effort:
+ * a write whose card never arrived still shows the notice until the conversation is read again.
  */
 export function failedTurn(live: AssistantLiveTurn): AssistantLiveTurn {
+  if (live.cards.length === 0) {
+    return {
+      ...live,
+      status: null,
+      notice: live.notice ?? { code: "turn_failed" },
+      outcome: "failed",
+    };
+  }
+  // A card groups the writes of one kind that came together, so its action ids are the writes.
+  const writes = live.cards.reduce((count, card) => count + card.actionIds.length, 0);
+  const words = describeTurnEndedAfterWrite(writes);
   return {
     ...live,
     status: null,
-    notice: live.notice ?? { code: "turn_failed" },
+    text: live.text.trim() === "" ? words : `${live.text}\n\n${words}`,
     outcome: "failed",
   };
 }

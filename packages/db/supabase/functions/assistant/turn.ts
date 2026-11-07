@@ -22,6 +22,7 @@ import { wrapUntrusted } from "../_shared/assistant/untrusted.ts";
 import {
   assistantCardLinkSchema,
   assistantCardSchema,
+  describeTurnEndedAfterWrite,
   describeWorkoutInProgressRefusal,
   isConfirmAnswer,
   mergeAssistantCards,
@@ -37,6 +38,7 @@ import {
   contextBlock,
   MODEL,
   openToolUses,
+  resultForOpenToolUse,
   toApiMessagesWithNote,
   userContent,
 } from "./prompt.ts";
@@ -61,7 +63,7 @@ import type { UsageToRecord } from "./usage.ts";
 
 // A turn with ten writes needs eleven model calls (one for each write and the answer), and the reads before
 // the writes take a few more. More than this is a loop, and each call is a few seconds of the Edge Function's
-// wall-clock limit, so the turn ends failed.
+// wall-clock limit, so the turn ends failed, or complete with the saved words when a write landed (`conclude`).
 export const MAX_MODEL_CALLS = 12;
 
 // The MCP client's default is 60 s per attempt, and a connect, a list or a read call retries once, so a hung
@@ -784,13 +786,16 @@ async function runConfirmedCall(
   }
   if (run.landedWrites > 0) {
     // The write landed and the app cannot draw its card (a tool or a deploy that disagrees on the card). The
-    // failed-turn notice says nothing was changed, which would be untrue, and there are no words of the loop's
-    // own to put in its place. The turn ends complete with no card, and the report says what happened.
+    // failed-turn notice says nothing was changed, which would be untrue, so the turn ends complete with the
+    // words that say it was saved, and the report says what happened.
     run.dependencies.report(
       "assistant",
       "internal_error",
       new Error("a confirmed write landed without a card"),
     );
+    const words = describeTurnEndedAfterWrite(run.landedWrites);
+    await storeAssistantContent(run, [{ type: "text", text: words }]);
+    emit(run, { type: "text", delta: words });
     return ending("complete", "confirm_written_no_card");
   }
   // An error, `not_found` and a write that changed nothing all end here. Only what is unexpected is reported: a
@@ -915,17 +920,91 @@ async function planTurnCompaction(run: Run): Promise<(() => Promise<void>) | nul
   });
 }
 
+const endsEarly = ({ status }: Ending): boolean =>
+  status === "failed" || status === "refused" || status === "stopped";
+
+// Whether a write of the turn landed. The loop counts the answers that hold an action. A call that threw
+// (`McpClientError` on the 20 s timeout) never answered and may have landed, so when none was counted and a
+// call was made, the turn's actions are asked once. A lookup that fails counts as none.
+async function writeLanded(run: Run): Promise<boolean> {
+  if (run.landedWrites > 0) {
+    return true;
+  }
+  if (run.counts.toolCalls === 0) {
+    return false;
+  }
+  try {
+    const landed = await run.dependencies.turns.turnHasAction(run.context.turnId);
+    run.landedWrites = landed ? 1 : 0;
+    return landed;
+  } catch (caught) {
+    run.dependencies.report("assistant", "internal_error", caught);
+    return false;
+  }
+}
+
+// Reads the rows and stores the words in one insert, after a result for each call that has none. A response
+// with two calls where the first landed and the second never ran leaves one open, and `openToolUses` looks
+// only at the last assistant row, so a plain text row stored after it would hide the call and every later
+// request would carry a `tool_use` with no result and be refused. Nothing is stored unless the read worked.
+async function storeWordsAfterWrite(run: Run, words: string): Promise<void> {
+  const { userId, conversationId, turnId } = run.context;
+  const { turns } = run.dependencies;
+  const { messages } = await turns.readConversation(userId, conversationId, {
+    excludeMessageId: NO_MESSAGE_ID,
+  });
+  const open = openToolUses(messages);
+  await turns.appendMessages(userId, conversationId, turnId, [
+    ...(open.length === 0
+      ? []
+      : [
+          {
+            role: "user" as const,
+            content: open.map(resultForOpenToolUse).map(toJson),
+            display: null,
+          },
+        ]),
+    { role: "assistant", content: [{ type: "text", text: words }] },
+  ]);
+}
+
+// A turn that was going to end failed, refused or stopped, and landed a write, ends complete with fixed words as
+// its reply (KEY-926). The failed-turn notice says "Nothing was changed" and offers Try again, which would send
+// the message again and could repeat the write. The model's half-written text stays above the words. The
+// report keeps the cause apart from the ending, and a stop is not a fault.
+async function endWithWordsAfterWrite(run: Run, early: Ending): Promise<Ending> {
+  const words = describeTurnEndedAfterWrite(run.landedWrites);
+  let failedToStore = false;
+  try {
+    await storeWordsAfterWrite(run, words);
+  } catch (caught) {
+    failedToStore = true;
+    run.dependencies.report("assistant", "internal_error", caught);
+  }
+  if (!failedToStore && early.status !== "stopped") {
+    run.dependencies.report(
+      "assistant",
+      "internal_error",
+      new Error(`a turn ended early after a write landed: ${early.code}`),
+    );
+  }
+  emit(run, { type: "text", delta: `\n\n${words}` });
+  return ending("complete", `written_then_${early.code}`);
+}
+
 // The cards, the answer meta, the status and the closing events. The status is final before `done` is
 // written, so the app that reads the thread on `done` finds it. A `finishTurn` that throws is reported and
 // does not change how the turn ended.
 async function conclude(run: Run, reached: Ending): Promise<Ending> {
   const { stream, context, dependencies } = run;
   // An event that broke the contract has already ended the stream as failed.
-  const final =
+  const early =
     stream.done && reached.status !== "stopped" ? failedEnding("invalid_event") : reached;
-  if (final.status !== "stopped") {
+  const endedAfterWrite = endsEarly(early) && (await writeLanded(run));
+  if (early.status !== "stopped") {
     flushCards(run);
   }
+  const final = endedAfterWrite ? await endWithWordsAfterWrite(run, early) : early;
   if (final.status === "complete") {
     const citation = distinctLine(run.citations);
     const estimate = distinctLine(run.estimates);
@@ -945,7 +1024,9 @@ async function conclude(run: Run, reached: Ending): Promise<Ending> {
   }
   // Decided before `done`, so the person cannot start the next turn before the conversation is read, and run
   // after it, so the person never waits.
-  const compaction = final.status === "complete" ? await planTurnCompaction(run) : null;
+  // Not after words that ended a turn early: a failed turn plans none, and the next complete turn does it.
+  const compaction =
+    final.status === "complete" && !endedAfterWrite ? await planTurnCompaction(run) : null;
   switch (final.status) {
     case "complete":
     case "clarify":

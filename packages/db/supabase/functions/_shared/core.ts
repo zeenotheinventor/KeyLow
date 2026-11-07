@@ -103,6 +103,7 @@ export {
   dayTarget,
   daysSinceMonday,
   describeAssistantStatus,
+  describeTurnEndedAfterWrite,
   describeDayCitation,
   describeProgressCitation,
   describeProgressWeek,

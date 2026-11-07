@@ -9,6 +9,7 @@ import {
   describeAssistantNotice,
   describeAssistantStatus,
   describeResetTime,
+  describeTurnEndedAfterWrite,
   safeWordsToShow,
 } from "../../src/copy";
 
@@ -93,6 +94,25 @@ describe("describeAssistantNotice", () => {
       fieldText: null,
       button: "Try again",
     });
+  });
+});
+
+describe("describeTurnEndedAfterWrite", () => {
+  it("should say one change was saved and that sending the message again could repeat it", () => {
+    expect(describeTurnEndedAfterWrite(1)).toBe(
+      "Your change was saved, but the reply did not finish. Sending the same message again could repeat it.",
+    );
+  });
+
+  it("should use the plural for several changes", () => {
+    expect(describeTurnEndedAfterWrite(2)).toBe(
+      "Your changes were saved, but the reply did not finish. Sending the same message again could repeat them.",
+    );
+    expect(describeTurnEndedAfterWrite(7)).toBe(describeTurnEndedAfterWrite(2));
+  });
+
+  it.each([1, 2])("should not speak as the assistant (%i)", (writes) => {
+    expect(describeTurnEndedAfterWrite(writes)).not.toMatch(/\b(I|I'll|I can|me|my)\b/);
   });
 });
 
