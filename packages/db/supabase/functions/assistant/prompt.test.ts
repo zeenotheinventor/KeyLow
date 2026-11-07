@@ -238,10 +238,10 @@ Deno.test("an unclear exercise is asked about, with exercise names as quick repl
 });
 
 Deno.test(
-  "a named food whose close matches differ only by variety is logged, not asked about",
+  "a named food whose close matches have nearly the same numbers is logged, not asked about",
   () => {
     for (const rule of [
-      "A named food is not unclear when the close matches from search_foods differ only by a variety or detail the person did not mention, such as long grain or basmati rice. Log the closest one and do not ask which. Different foods, or an unclear amount, still need the question.",
+      "A named food is not unclear when the close matches from search_foods have nearly the same kcal and macros, such as long grain or basmati rice. Log the closest one and do not ask which. When the difference changes them noticeably, such as with or without skin or skimmed or whole, or the amount is unclear, ask.",
       "Never guess a food.",
     ]) {
       assert(SYSTEM_PROMPT.includes(rule), `the system prompt does not hold: ${rule}`);

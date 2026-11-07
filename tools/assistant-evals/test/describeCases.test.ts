@@ -139,10 +139,10 @@ const asking = (question: string, replies: string[] = []) =>
   });
 
 describe("the describe set", () => {
-  it("should have 21 cases: 16 that log, 4 that ask and the milestone's own sentence", () => {
-    expect(cases).toHaveLength(21);
+  it("should have 22 cases: 16 that log, 5 that ask and the milestone's own sentence", () => {
+    expect(cases).toHaveLength(22);
     expect(logSpecs).toHaveLength(16);
-    expect(clarifySpecs).toHaveLength(4);
+    expect(clarifySpecs).toHaveLength(5);
     expect(specs.filter(({ kind }) => kind === "brief")).toHaveLength(1);
   });
 
@@ -152,8 +152,8 @@ describe("the describe set", () => {
   });
 
   it("should give every case its own id and its own message, and send one message", () => {
-    expect(new Set(cases.map(({ id }) => id)).size).toBe(21);
-    expect(new Set(cases.flatMap(({ messages }) => messages)).size).toBe(21);
+    expect(new Set(cases.map(({ id }) => id)).size).toBe(22);
+    expect(new Set(cases.flatMap(({ messages }) => messages)).size).toBe(22);
     expect(cases.every(({ messages }) => messages.length === 1)).toBe(true);
   });
 
@@ -168,8 +168,9 @@ describe("the describe set", () => {
     }
   });
 
-  it("should word the chicken so that the skin cannot draw a question, and keep grams cases with nothing to ask", () => {
+  it("should word the chicken that is logged so that the skin cannot draw a question, and keep grams cases with nothing to ask", () => {
     const chickenMessages = specs
+      .filter(({ kind }) => kind !== "clarify")
       .map(({ message }) => message)
       .filter((message) => /chicken breast/.test(message));
 
@@ -193,8 +194,15 @@ describe("the describe set", () => {
     );
   });
 
-  it("should have the clarify case for some chicken and rice, with three others", () => {
+  it("should have the clarify case for some chicken and rice, with four others", () => {
     expect(clarifySpecs.map(({ id }) => id)).toContain("describe-some-chicken-and-rice");
+  });
+
+  it("should ask about a chicken breast that does not say whether it has skin, because the calories differ", () => {
+    const spec = clarifySpecs.find(({ id }) => id === "describe-chicken-breast-skin-unsaid");
+
+    expect(spec?.message).toBe("I had 150 g of grilled chicken breast.");
+    expect(spec?.mayLog).toBeNull();
   });
 
   it("should ask about the food or the amount where the food has no portion and no amount was given", () => {
@@ -578,6 +586,21 @@ describe("a clarify case", () => {
       failures.some((reason) => reason.includes("the case left rows in assistant_actions")),
     ).toBe(true);
     expect(failures.some((reason) => reason.includes("log_entry is not a read tool"))).toBe(true);
+  });
+
+  it("should fail the chicken breast with no skin said when it was logged without a question", async () => {
+    const turn = turnResult({ toolCalls: [writeTool("log_entry", { kind: "grams", grams: 150 })] });
+    const database = rowDatabase({
+      assistant_actions: [{ turn_id: turn.turnId, tool: "log_entry" }],
+    });
+
+    const failures = await failuresOf(
+      caseOf("describe-chicken-breast-skin-unsaid"),
+      turn,
+      database,
+    );
+
+    expect(failures.length).toBeGreaterThan(0);
   });
 
   it("should fail when two questions were asked", async () => {
