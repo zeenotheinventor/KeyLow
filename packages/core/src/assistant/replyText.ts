@@ -57,8 +57,11 @@ const spanOf = (text: string, style: InlineStyle, isCode = false): ReplySpan => 
   isCode,
 });
 
-// The position of the run of `character` that closes an opener of the same length, or -1. A closer comes
-// straight after a character that is not a space, and a single one is not followed by a letter or digit.
+// The position where a closer of `length` characters starts, or -1. A closer comes straight after a character
+// that is not a space, and a single one is not followed by a letter or digit. A longer run closes it with its
+// last `length` characters when its first characters close an opener inside, which is how `**bold *it***` and
+// `*a **b***` end both at once. A run that closes nothing inside it stays content, so `*a **b** c*` still
+// closes at its last `*`.
 function findCloser(
   content: string,
   from: number,
@@ -66,6 +69,7 @@ function findCloser(
   character: string,
   length: number,
 ): number {
+  const openedLengths = new Set<number>();
   let position = from;
   while (position < end) {
     const current = content[position];
@@ -76,13 +80,23 @@ function findCloser(
       while (runEnd < end && content[runEnd] === character) {
         runEnd += 1;
       }
-      const isClosing =
-        runEnd - position === length &&
-        position > from &&
-        !isSpace(content[position - 1]) &&
-        (length > 1 || !isLetterOrDigit(characterAt(content, runEnd)));
-      if (isClosing) {
-        return position;
+      const runLength = runEnd - position;
+      const closerStart = runEnd - length;
+      const canClose =
+        runLength >= length &&
+        closerStart > from &&
+        !isSpace(content[closerStart - 1]) &&
+        (length > 1 || !isLetterOrDigit(characterAt(content, runEnd))) &&
+        (runLength === length || openedLengths.has(runLength - length));
+      if (canClose) {
+        return closerStart;
+      }
+      const canOpen =
+        runEnd < end &&
+        !isSpace(characterAt(content, runEnd)) &&
+        !isLetterOrDigit(characterBefore(content, position));
+      if (canOpen) {
+        openedLengths.add(runLength);
       }
       position = runEnd;
     } else {
@@ -232,10 +246,20 @@ function scanInline(scan: InlineScan, start: number, style: InlineStyle): ReplyS
       let linkEnd = -1;
       if (close !== -1 && hasWords) {
         if (content[close + 1] === "(" && close + 1 < end) {
-          const parenthesis = isParenthesisMissing ? -1 : content.indexOf(")", close + 2);
-          if (parenthesis !== -1 && parenthesis < end) {
-            linkEnd = parenthesis + 1;
-          } else {
+          // The address ends at the first `)`. A space or tab before it means this is not a link.
+          let addressEnd = close + 2;
+          while (
+            !isParenthesisMissing &&
+            addressEnd < end &&
+            content[addressEnd] !== ")" &&
+            content[addressEnd] !== " " &&
+            content[addressEnd] !== "\t"
+          ) {
+            addressEnd += 1;
+          }
+          if (!isParenthesisMissing && addressEnd < end && content[addressEnd] === ")") {
+            linkEnd = addressEnd + 1;
+          } else if (addressEnd >= end || isParenthesisMissing) {
             isParenthesisMissing = true;
             // The address is still arriving, so only its words are drawn until it ends.
             linkEnd = isOpenEnded ? end : -1;
@@ -324,7 +348,18 @@ function isTableDivider(rest: string): boolean {
   return hasDash && hasBar;
 }
 
-const isFence = (rest: string): boolean => /^(```+|~~~+)[^`]*$/.test(rest);
+// Three or more backticks with no other backtick after them, or three or more tildes, then anything.
+function isFence(rest: string): boolean {
+  const marker = rest[0];
+  if (marker !== "`" && marker !== "~") {
+    return false;
+  }
+  let run = 0;
+  while (rest[run] === marker) {
+    run += 1;
+  }
+  return run >= 3 && (marker === "~" || !rest.includes("`", run));
+}
 
 // A last line that is only the start of a marker: it may become a bullet, a number, a heading, a quote or a rule.
 const isHeldBackLine = (rest: string): boolean =>

@@ -76,6 +76,21 @@ describe("parseReplyText", () => {
       ]);
     });
 
+    it("should let a longer run close the outer opener, so the inner one still closes", () => {
+      expect(parse("**bold *it***")).toEqual([
+        line(strong("bold "), { ...strong("it"), isEmphasis: true }),
+      ]);
+      expect(parse("*a **b***")).toEqual([
+        line(emphasis("a "), { ...emphasis("b"), isStrong: true }),
+      ]);
+    });
+
+    it("should not let a longer run close an outer opener when nothing inside it was opened", () => {
+      expect(parse("*a **b** c*")).toEqual([
+        line(emphasis("a "), { ...emphasis("b"), isStrong: true }, emphasis(" c")),
+      ]);
+    });
+
     it("should draw emphasis inside strong", () => {
       expect(parse("**a *b* c**")).toEqual([
         line(strong("a "), { ...strong("b"), isEmphasis: true }, strong(" c")),
@@ -177,6 +192,15 @@ describe("parseReplyText", () => {
       expect(parse("![a plate](https://example.com/p.png)")).toEqual([line(plain("a plate"))]);
       expect(parse("![](https://example.com/p.png)")).toEqual([
         line(plain("![](https://example.com/p.png)")),
+      ]);
+    });
+
+    it("should leave a link whose address holds a space as typed, and lose no word", () => {
+      expect(parse("see [note](about 100 kcal) ok")).toEqual([
+        line(plain("see [note](about 100 kcal) ok")),
+      ]);
+      expect(parse("see [note](about\t100) ok")).toEqual([
+        line(plain("see [note](about\t100) ok")),
       ]);
     });
 
@@ -318,6 +342,14 @@ describe("parseReplyText", () => {
       ]);
     });
 
+    it("should hide an address only until the first space, and then show the line as typed", () => {
+      expect(parsePartial("see [note](about")).toEqual([line(plain("see note"))]);
+      expect(parsePartial("see [note](about 100")).toEqual([line(plain("see [note](about 100"))]);
+      expect(parsePartial("see [note](about 100 kcal) ok")).toEqual([
+        line(plain("see [note](about 100 kcal) ok")),
+      ]);
+    });
+
     it("should bring the brackets back when they turn out not to be a link", () => {
       expect(parsePartial("see [1]")).toEqual([line(plain("see 1"))]);
       expect(parsePartial("see [1] and")).toEqual([line(plain("see [1] and"))]);
@@ -352,6 +384,7 @@ describe("parseReplyText", () => {
         "1. First step",
         "2) Second step",
         "![a plate](https://example.com/p.png)",
+        "- **bold *it*** and *a **b*** done",
       ].join("\n");
 
       for (let length = 0; length <= reply.length; length += 1) {
@@ -425,12 +458,21 @@ describe("parseReplyText", () => {
     });
 
     it.each([
+      ["tildes then a backtick", `${"~".repeat(100_000)}\``],
+      ["backticks then a letter", `${"`".repeat(100_000)}a`],
+    ])("should drop 100,000 characters of %s as a fence, quickly", (_name, hostile) => {
+      expect(parse(hostile)).toEqual([]);
+    });
+
+    it.each([
       ["open brackets", "[a ".repeat(7_000)],
       ["open links", "[a](b ".repeat(4_000)],
       ["open code", "`a ".repeat(7_000)],
       ["open strong", "**a ".repeat(5_000)],
       ["open underscores", "_a ".repeat(7_000)],
       ["closed pairs", "*a* ".repeat(5_000)],
+      ["open links with no space", "[a](b".repeat(4_000)],
+      ["a backtick fence with a second run", `\`\`\`${"`a".repeat(30_000)}`],
     ])("should parse 20,000 characters of %s quickly", (_name, hostile) => {
       expect(parse(hostile).length).toBeGreaterThan(0);
       expect(parseReplyText(hostile, partial).length).toBeGreaterThan(0);
