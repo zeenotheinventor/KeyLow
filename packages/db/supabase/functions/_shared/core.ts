@@ -49,6 +49,9 @@ export type {
   TrendRange,
   TrendSet,
   ValidTargets,
+  LoadUnit,
+  SetUpdatedCardInput,
+  SetValues,
 } from "./core/index.js";
 export {
   addCalendarDays,
@@ -195,4 +198,8 @@ export {
   buildRoutineClearedCard,
   confirmArchiveRoutineButtons,
   confirmArchiveRoutineQuestion,
+  buildSetUpdatedCard,
+  loadToKg,
+  MAX_LOAD_KG,
+  sessionExercises,
 } from "./core/index.js";

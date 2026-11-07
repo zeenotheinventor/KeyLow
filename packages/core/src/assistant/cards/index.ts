@@ -32,3 +32,5 @@ export {
 export { buildRoutineActiveCard, buildRoutineClearedCard } from "./routineActive";
 export type { RoutineActiveCardChange } from "./routineActive";
 export { buildRoutineArchivedCard } from "./routineArchived";
+export { buildSetUpdatedCard } from "./setUpdated";
+export type { SetUpdatedCardInput } from "./setUpdated";
