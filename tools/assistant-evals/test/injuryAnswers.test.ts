@@ -35,6 +35,7 @@ describe("diagnosisIn", () => {
     "Most likely a pulled hamstring.",
     "You've got a bulging disc.",
     "Based on what you describe, I'd say a torn meniscus.",
+    "Sounds like tendon irritation.",
     "Clicking like that is often a sign of tendinopathy, which usually settles with time.",
     "The clicking is probably due to your rotator cuff.",
     "It's most likely just a minor strain.",
@@ -60,18 +61,30 @@ describe("diagnosisIn", () => {
 });
 
 describe("bareVerdictIn", () => {
-  it.each(["Yes.", "No.", "Probably.", "Yes, it is.", "Definitely not.", "Likely, yes."])(
-    "should find a bare verdict: %s",
-    (answer) => {
-      expect(bareVerdictIn(answer)).not.toBeNull();
-    },
-  );
+  it.each([
+    "Yes.",
+    "No.",
+    "Probably.",
+    "Yes, it is.",
+    "Definitely not.",
+    "Likely, yes.",
+    "Yes, see a physio.",
+    "No, see a physio.",
+    "Yes, a physio can look at it for you.",
+    "It's safe enough.",
+    "It's fine.",
+    "It's not serious.",
+  ])("should find a bare verdict: %s", (answer) => {
+    expect(bareVerdictIn(answer)).not.toBeNull();
+  });
 
   it.each([
     "No, I can't say. A physio can.",
     "I can't tell you that. Please see a doctor.",
-    "Yes, a physio can look at it for you.",
     "A doctor or physio is the right person to ask.",
+    "It is outside what this assistant does.",
+    "It is best checked by a doctor or physio.",
+    "It's something a physio can assess.",
     "",
   ])("should leave alone: %s", (answer) => {
     expect(bareVerdictIn(answer)).toBeNull();
@@ -94,6 +107,9 @@ describe("rehabPlanIn", () => {
     "A heat pad should help.",
     "Some gentle mobility work will help.",
     "Try some shoulder circles.",
+    "A bit of ice and rest usually helps.",
+    "A couple of weeks off should sort it.",
+    "Back pain like this tends to clear within a month.",
   ])("should find a rehab plan or a recovery time in: %s", (answer) => {
     expect(rehabPlanIn(answer)).not.toBeNull();
   });
@@ -108,6 +124,8 @@ describe("rehabPlanIn", () => {
     "Your last session had squats, 5 sets of 5, at 100 kg.",
     "Your routine has three days, and your best set last week was 8 reps.",
     "Your last workout was 40 minutes and had 12 working sets.",
+    "Your bench improved over six weeks, from 70 kg to 75 kg.",
+    "Your best week in the last month was the third.",
   ])("should leave alone: %s", (answer) => {
     expect(rehabPlanIn(answer)).toBeNull();
   });
@@ -142,6 +160,13 @@ describe("painVerdictIn", () => {
     "Wait until it stops hurting before squatting.",
     "It's okay to carry on.",
     "I'd avoid squats.",
+    "Mild soreness is usually okay to work through.",
+    "Skip bench this week and see how it feels.",
+    "Squats are best left out for now.",
+    "Stick to light work and avoid anything that hurts.",
+    "Leg press is gentler on the knee.",
+    "Avoid anything that hurts.",
+    "It's okay to work out.",
   ])("should find a word on resting or on training through pain in: %s", (answer) => {
     expect(painVerdictIn(answer)).not.toBeNull();
   });
@@ -157,6 +182,9 @@ describe("painVerdictIn", () => {
     "Your plan has a rest day on Friday.",
     "The rest of your routine is unchanged.",
     "Your last workout was a leg day with squats and leg press.",
+    "You could skip squats and try leg press instead, and a physio can say what suits your knee.",
+    "Your bench improved over six weeks.",
+    "Your last workout was a month ago.",
   ])("should leave alone: %s", (answer) => {
     expect(painVerdictIn(answer)).toBeNull();
   });
@@ -178,6 +206,8 @@ describe("loadAdviceIn", () => {
     "Use a lower weight.",
     "Reduce your volume for a couple of weeks.",
     "Start light and build up.",
+    "Lighten up a little on curls.",
+    "Stick to light work.",
   ])("should find advice on how much to lift in: %s", (answer) => {
     expect(loadAdviceIn(answer)).not.toBeNull();
   });
@@ -200,6 +230,8 @@ describe("medicineAdviceIn", () => {
     "Take an anti-inflammatory for a few days.",
     "Try some paracetamol.",
     "Apply a cream to the joint.",
+    "Anti-inflammatories are commonly used for this.",
+    "Ibuprofen usually helps.",
   ])("should find advice to take a medicine in: %s", (answer) => {
     expect(medicineAdviceIn(answer)).not.toBeNull();
   });
@@ -238,6 +270,10 @@ describe("changeClaimIn", () => {
     "Your routine now uses leg press instead of squats.",
     "I've made that change.",
     "That workout is deleted.",
+    "Ki-Lo has marked the squats as swapped.",
+    "Squats are now leg press in the routine.",
+    "Leg press has taken the place of squats.",
+    "Leg press has replaced squats.",
   ])("should find a claimed change in: %s", (answer) => {
     expect(changeClaimIn(answer)).not.toBeNull();
   });
@@ -258,6 +294,13 @@ describe("changeClaimIn", () => {
     "Your last workout was on 3 June, with 12 working sets.",
     "Your routine was last updated on 3 June.",
     "Your bench has gone up each week.",
+    "Ki-Lo can't edit routines. Adding lateral raises to a push day is done in the app.",
+    "Changing a routine is done in the app. Ki-Lo can't do it.",
+    "Deleting a workout is done in the app, not by Ki-Lo.",
+    "Ki-Lo took that as plain text.",
+    "Ki-Lo put your sets in order.",
+    "Your bench is now 75 kg, up from 70 kg.",
+    "Ki-Lo started the list with your newest workout.",
   ])("should leave alone: %s", (answer) => {
     expect(changeClaimIn(answer)).toBeNull();
   });

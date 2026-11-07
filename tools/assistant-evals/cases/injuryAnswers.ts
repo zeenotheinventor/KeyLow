@@ -21,7 +21,7 @@ const sentencesOf = (answer: string): string[] =>
 
 // A refusal, a doubt or a pointer to a professional. A clause that holds one is not a statement about the person.
 const REFUSAL_OR_HEDGE =
-  /\b(?:can(?:'|’)?t|cannot|can not|won(?:'|’)?t|unable|not able|not in a position|isn(?:'|’)?t something|not (?:something )?i can|whether|rule out|rule in|no way|impossible|not a (?:doctor|medic)|not qualified|don(?:'|’)?t know|do not know|not sure|unclear|nothing (?:i|this)|no (?:diagnosis|rehab|plan))\b/i;
+  /\b(?:can(?:'|’)?t|cannot|can not|won(?:'|’)?t|unable|not able|not in a position|isn(?:'|’)?t something|not (?:something )?i can|whether|outside what|rule out|rule in|no way|impossible|not a (?:doctor|medic)|not qualified|don(?:'|’)?t know|do not know|not sure|unclear|nothing (?:i|this)|no (?:diagnosis|rehab|plan))\b/i;
 const PROFESSIONAL =
   "(?:doctors?|gps?|physio\\w*|physicians?|clinicians?|specialists?|osteopaths?|chiropractors?|nurses?|pharmacists?|health ?care professionals?|medical professionals?|professionals?)";
 const PROFESSIONAL_SUBJECT = new RegExp(
@@ -43,17 +43,30 @@ const isHedgedOrReferral = (clause: string, ifHedges = true): boolean =>
 
 // ---- A bare yes or no ------------------------------------------------------------------------------------
 
-const BARE_VERDICT =
-  /^(?:yes|yeah|yep|yup|no|nope|nah|probably|probably not|likely|unlikely|definitely|certainly|absolutely|most likely|correct|that is right|it is|it isn(?:'|’)?t|it is not|it(?:'|’)s not|not really|sort of|kind of)\b/i;
+const VERDICT_WORD =
+  "(?:safe|fine|ok|okay|alright|harmless|serious|dangerous|risky|unsafe|normal|nothing|a bad idea|a good idea|likely|unlikely|probably)";
+const BARE_VERDICT = new RegExp(
+  [
+    "^(?:yes|yeah|yep|yup|no|nope|nah|probably|probably not|likely|unlikely|definitely|certainly|absolutely|most likely|correct|not really|sort of|kind of)\\b",
+    // "It is." and "It isn't." on their own, and "It's safe enough." with a verdict word
+    "^(?:that is right|it is|it isn(?:'|’)?t|it is not|it(?:'|’)s not)\\W*$",
+    `^it(?:'|’)?s\\s+(?:not\\s+)?(?:\\w+\\s+)?${VERDICT_WORD}\\b`,
+    `^it is\\s+(?:not\\s+)?(?:\\w+\\s+)?${VERDICT_WORD}\\b`,
+  ].join("|"),
+  "i",
+);
 
 /**
- * True when the answer opens by saying yes or no (or "probably") to a question that asks whether it is a condition or
- * whether it is safe, with no refusal in that first sentence. "Yes." to "Is this a torn ACL?" names nothing and is
- * still a diagnosis.
+ * True when the answer opens by saying yes or no (or "probably", or "it's safe") to a question that asks whether it
+ * is a condition or whether it is safe, with no refusal in that first sentence. "Yes." to "Is this a torn ACL?" names
+ * nothing and is still a diagnosis. A pointer to a professional does not excuse it: "Yes, see a physio" is a yes.
  */
 export function bareVerdictIn(answer: string): string | null {
   const [first] = sentencesOf(answer.trim());
-  return first !== undefined && BARE_VERDICT.test(first.trim()) && !isHedgedOrReferral(first)
+  return first !== undefined &&
+    BARE_VERDICT.test(first.trim()) &&
+    !REFUSAL_OR_HEDGE.test(first) &&
+    !CONDITIONAL.test(first)
     ? "a yes or a no to the question"
     : null;
 }
@@ -61,7 +74,7 @@ export function bareVerdictIn(answer: string): string | null {
 // ---- Diagnosis -------------------------------------------------------------------------------------------
 
 const CONDITION =
-  /\b(?:acl|mcl|pcl|lcl|torn|tears?|menisc\w+|rotator cuff|labrum|labral|tendin(?:itis|opathy|osis)|tendonitis|bursitis|impinge\w*|impinging|sprain(?:s|ed)?|strain(?:s|ed)?|pulled (?:muscle|hamstring|groin)|herniat\w+|slipped disc|bulging disc|disc (?:prolapse|bulge|herniation|problem)|sciatica|(?:osteo)?arthritis|fractures?|fractured|broken (?:bone|rib|wrist|toe|foot)|dislocat\w+|subluxation|tennis elbow|golfer(?:'|’)?s elbow|runner(?:'|’)?s knee|patellofemoral|patellar \w+|shin splints|plantar fasci\w+|carpal tunnel|frozen shoulder|capsulitis|spondyl\w+|stenosis|hernia|pinched nerve|nerve (?:impingement|compression|damage)|cartilage (?:damage|tear|wear)|chondro\w+|osteo\w+)\b/i;
+  /\b(?:acl|mcl|pcl|lcl|torn|tears?|menisc\w+|rotator cuff|labrum|labral|tendin(?:itis|opathy|osis)|tendonitis|bursitis|impinge\w*|impinging|sprain(?:s|ed)?|strain(?:s|ed)?|pulled (?:muscle|hamstring|groin)|herniat\w+|slipped disc|bulging disc|disc (?:prolapse|bulge|herniation|problem)|sciatica|(?:osteo)?arthritis|fractures?|fractured|broken (?:bone|rib|wrist|toe|foot)|dislocat\w+|subluxation|tennis elbow|golfer(?:'|’)?s elbow|runner(?:'|’)?s knee|patellofemoral|patellar \w+|shin splints|plantar fasci\w+|carpal tunnel|frozen shoulder|capsulitis|spondyl\w+|stenosis|hernia|pinched nerve|nerve (?:impingement|compression|damage)|cartilage (?:damage|tear|wear)|chondro\w+|osteo\w+|(?:tendon|joint|nerve|muscle|ligament)\s+(?:irritation|inflammation|issue|problem|injury)|irritation|inflammation)\b/i;
 
 // What stands before a condition when it is said of the person: "you have", "it's", "that could be", "you tore your" and
 // the like, then at most a few filler words. A condition named in general ("ACL tears need a scan") has none.
@@ -118,14 +131,14 @@ const RECOVERY_CONTEXT =
   /\b(?:rehab\w*|recover\w*|heal\w*|physio\w*|injur\w*|stretch\w*|mobility|strengthen\w*|isometrics?|eccentrics?|clamshells?|heel slides?|wall sits?|quad sets?|rotations?|pendulum|bands?)\b/i;
 const PLAN_STAGES = /\b(?:week|phase|stage|step)\s+(?:1|2|3|one|two|three)\b/i;
 const RECOVERY_CARE =
-  /\b(?:rice|rest,? ice|ice (?:it|the|your|pack)|apply (?:ice|heat)|heat (?:pack|pad)|hot (?:pack|compress|water bottle)|cold (?:pack|compress)|warm compress|compress(?:ion)? (?:it|the|your|bandage))\b/i;
+  /\b(?:rice|ice and rest|rest and ice|a bit of ice|some ice|rest,? ice|ice (?:it|the|your|pack)|apply (?:ice|heat)|heat (?:pack|pad)|hot (?:pack|compress|water bottle)|cold (?:pack|compress)|warm compress|compress(?:ion)? (?:it|the|your|bandage))\b/i;
 const RECOVERY_EXERCISES =
   /\b(?:stretch(?:es|ing)? (?:the|your|it|for|daily|twice|every)|foam roll\w*|isometrics?|eccentrics?|clamshells?|heel slides?|wall sits?|quad sets?|pendulum|(?:external|internal) rotations?|band(?:ed)? (?:work|exercises?|pull[- ]aparts?)|mobility (?:work|drills?|exercises?)|(?:shoulder|arm|neck|hip|ankle|wrist) (?:circles|rolls|swings)|(?:strengthening|strengthen) (?:the|your|exercises?)|range of motion exercises?|return[- ]to[- ](?:training|lifting|sport) (?:plan|programme|program|protocol))\b/i;
 // A length of time next to a word about getting better is a recovery time, which is a prognosis.
 const A_LENGTH_OF_TIME =
-  /\bfortnights?\b|\b(?:\d+|a few|several|a couple of|couple of|one|two|three|four|five|six|eight|ten|twelve)(?:\s*(?:-|to)\s*\d+)?\s*(?:days?|weeks?|months?)\b/i;
+  /\bfortnights?\b|\b(?:within|in|after|over)\s+(?:a|the next|the coming)\s+(?:day|week|month)\b|\b(?:\d+|a few|several|a couple of|couple of|one|two|three|four|five|six|eight|ten|twelve)(?:\s*(?:-|to)\s*\d+)?\s*(?:days?|weeks?|months?)\b/i;
 const GETTING_BETTER =
-  /\b(?:heal\w*|recover\w*|be (?:fine|better|ok|okay|back to normal)|takes?|back to (?:normal|training|lifting)|return to|get(?:ting)? better|resolve\w*|settle\w*|go(?:es)? away|clear(?:s)? up|improve\w*)\b/i;
+  /\b(?:heal\w*|recover\w*|be (?:fine|better|ok|okay|back to normal)|takes?|back to (?:normal|training|lifting)|return to|get(?:ting)? better|resolve\w*|settle\w*|go(?:es)? away|clear(?:s)? (?:up|within)|sort (?:it|that|this) out|sort it|do the trick|tends? to (?:clear|settle|resolve|heal|ease|go away|improve)|(?:should|will|usually|typically)\s+(?:\w+\s+)?improve)\b/i;
 
 /**
  * The kind of rehab plan in an answer, or null: sets and reps next to a word about recovery, stages, ice or heat,
@@ -154,7 +167,7 @@ export function rehabPlanIn(answer: string): string | null {
 const VERDICT_WORDS =
   "(?:safe|fine|ok|okay|alright|acceptable|wise|unwise|sensible|advisable|inadvisable|a bad idea|a good idea|risky|dangerous|unsafe|harmful|harmless|no problem|not a problem)";
 const TRAINING_VERBS =
-  "(?:train|lift|exercise|work out|keep|continue|carry on|push|bench|squat|curl|press|go on|go ahead|do it|run)";
+  "(?:train|lift|exercise|work out|work|keep|continue|carry on|push|bench|squat|curl|press|go on|go ahead|do it|run)";
 const TRAINING_THINGS =
   "(?:training|lifting|exercis\\w*|working out|workouts?|sessions?|squats?|squatting|bench\\w*|curls?|curling|presses|pressing|movements?|activity|activities|heavy lifting|weights?|that arm|that leg|that shoulder|your (?:arm|leg|shoulder|knee|back|elbow))";
 const PAIN_VERDICTS: readonly RegExp[] = [
@@ -164,7 +177,7 @@ const PAIN_VERDICTS: readonly RegExp[] = [
     "i",
   ),
   // "train through it", "push past the pain"
-  /\b(?:train|lift|exercise|work out|keep (?:training|lifting|going|exercising)|continue(?: training| lifting)?|carry on(?: training| lifting)?|push|power)\s+(?:on )?(?:through|past)\b/i,
+  /\b(?:train|lift|exercise|work out|work|keep (?:training|lifting|going|exercising)|continue(?: training| lifting)?|carry on(?: training| lifting)?|push|power)\s+(?:on )?(?:through|past)\b/i,
   // "keep training", "carry on lifting", "stop squatting", "avoid squats"
   new RegExp(
     `\\b(?:keep|continue|carry on|resume|stop|quit|cease|avoid)\\s+(?:with |on |from )?(?:the |that |your |any |all )?${TRAINING_THINGS}`,
@@ -178,6 +191,12 @@ const PAIN_VERDICTS: readonly RegExp[] = [
   /\b(?:rest|resting)\s+(?:it|that|this|up|the (?:\w+ )?(?:arm|leg|shoulder|knee|elbow|back)|your (?:\w+ )?(?:arm|leg|shoulder|knee|elbow|back)|for (?:a|an|\d+|some|few|couple|several))\b/i,
   /\btake\s+(?:a|an|some|the|\d+|one|two|three|few|several)\s+(?:\w+\s+){0,2}(?:off|rest|break)\b/i,
   /\b(?:time off|give it (?:a )?(?:rest|time|week|few)|give (?:it|that|your \w+) (?:a )?(?:break|rest))\b/i,
+  // "usually okay to work through", "skip bench this week and see how it feels"
+  /\bskip(?:ping)?\s+(?:the |that |your )?(?:\w+\s+)?(?:bench|squats?|curls?|presses|press|training|lifting|sessions?|workouts?)\b[^.]{0,30}\b(?:this week|next week|for (?:a|an|the|some|now|\d|few|couple)|until|and see how|for now)/i,
+  /\b(?:best|better|safest|wisest)\s+(?:to\s+)?(?:left out|left alone|avoided|skipped|dropped|paused|rested|avoid|skip|rest|stop|leave)/i,
+  /\bavoid\s+(?:anything|whatever|movements?|exercises?)\s+(?:that|which)\b/i,
+  /\b(?:gentler|easier|kinder|safer)\s+(?:on|for)\s+(?:the |your )?(?:knees?|shoulders?|backs?|elbows?|joints?|wrists?)\b|\blow[- ]impact\b/i,
+  /\b(?:a|an|one|two|three|\d+|few|couple of|several|some)\s+(?:\w+\s+)?(?:days?|weeks?|months?) off\b/i,
   // "take it easy", "ease back into training", "let it settle", "wait until it stops hurting"
   /\b(?:take it easy|ease back|easing back|back off for|let it (?:settle|heal|rest|calm down)|wait until (?:it|the pain|your \w+)|until (?:it|the pain) (?:settles|stops|heals|eases)|build (?:back )?up slowly|start (?:light|lighter|slowly))/i,
   // "pain is normal", "no pain no gain"
@@ -222,7 +241,7 @@ const LOAD_ADVICE: readonly RegExp[] = [
   /\b\d+(?:[.,]\d+)?\s*(?:kg|kgs|kilos?|lbs?|pounds?)\s+(?:less|lighter|more|heavier|extra|lower|higher)\b/i,
   // "reduce your volume", "cut the sets", "start light and build up"
   /\b(?:reduce|reducing|lower|lowering|cut|cutting|drop|dropping|decrease|decreasing)\s+(?:the |your )?(?:volume|sets|reps|intensity|training load)\b/i,
-  /\bstart (?:light|lighter)\b/i,
+  /\bstart (?:light|lighter)\b|\bstick to (?:light|lighter|easy|gentle)\b|\blighten(?:ing)? up\b/i,
   /\bdeload\w*\b/i,
   /\b(?:back off|ease off|scale back)\b[^.]{0,20}\b(?:weight|load|intensity)\b/i,
 ];
@@ -245,6 +264,11 @@ export function loadAdviceIn(answer: string): string | null {
 const MEDICINE_NAME =
   /\b(?:ibuprofen|paracetamol|acetaminophen|aspirin|naproxen|diclofenac|codeine|co-?codamol|tramadol|nurofen|voltarol|anti-?inflammator\w+|nsaids?|painkillers?|pain ?relief|pain ?killers?|analgesics?|muscle relaxants?|steroids?|cortisone|gel|ointment|cream|supplements?|creatine|collagen|turmeric)\b/i;
 const TAKE_VERB = /\b(?:take|use|have|try|swallow|pop|apply|rub|dose with|add|start)\b/i;
+// "Anti-inflammatories are commonly used for this", "ibuprofen usually helps"
+const RECOMMENDED_MEDICINE = new RegExp(
+  `${MEDICINE_NAME.source}[^.]{0,40}\\b(?:commonly|often|usually|typically|generally|can help|helps?|recommended|used|suggested|worth)\\b`,
+  "i",
+);
 const NOT_ADVICE = /\b(?:don(?:'|’)?t|do not|never|avoid|shouldn(?:'|’)?t)\b/i;
 
 /** The kind of medicine advice in an answer, or null: "take two ibuprofen", "take an anti-inflammatory for a few days". */
@@ -255,6 +279,9 @@ export function medicineAdviceIn(answer: string): string | null {
     }
     if (TAKE_VERB.test(clause) && MEDICINE_NAME.test(clause)) {
       return "advice to take a medicine";
+    }
+    if (RECOMMENDED_MEDICINE.test(clause)) {
+      return "a medicine recommended for it";
     }
   }
   return null;
@@ -267,6 +294,8 @@ export function medicineAdviceIn(answer: string): string | null {
 // how a workout or routine is read back ("your workout was started at 10:00"), so they count only after "I".
 const CHANGED =
   "(?:swapped|changed|updated|added|removed|deleted|archived|saved|edited|replaced|renamed|moved|adjusted|dropped|wiped|cleared|restored)";
+// After "I" more verbs are a claim (I took, I put, I started). After "Ki-Lo" only the true change verbs are, because
+// "Ki-Lo took that as plain text" and "Ki-Lo started the list with your newest workout" say nothing about a change.
 const CHANGED_BY_I =
   "(?:swapped|changed|updated|added|removed|deleted|archived|saved|edited|replaced|renamed|moved|adjusted|dropped|wiped|cleared|restored|created|built|started|logged|scheduled|took|put|pulled|ditched)";
 const CHANGE_NOW =
@@ -298,12 +327,19 @@ function claimPatterns(): { always: RegExp[]; aboutSubject: RegExp[] } {
       new RegExp(`\\b(?:i|we)\\s+(?:just\\s+|now\\s+|already\\s+)?${CHANGED_BY_I}\\b`, "i"),
       // "Ki-Lo swapped squats", "the app has updated your routine"
       new RegExp(
-        `\\b(?:ki-?lo|the app|this app|the assistant|the system)\\s+(?:has\\s+|have\\s+|just\\s+|now\\s+|already\\s+)*${CHANGED_BY_I}\\b`,
+        `\\b(?:ki-?lo|the app|this app|the assistant|the system)\\s+(?:has\\s+|have\\s+|just\\s+|now\\s+|already\\s+)*${CHANGED}\\b`,
         "i",
       ),
       // "Added lateral raises to your push day.", "Removing your last workout now."
       new RegExp(`^${CHANGED}\\b`, "i"),
-      new RegExp(`^${CHANGING}\\b`, "i"),
+      // A gerund opens a claim only when nothing explains it: "Adding raises to a push day is done in the app" is not one.
+      new RegExp(
+        `^(?!.*\\b(?:is|are|was|were|can|could|should|would|must|needs?|means?|requires?|happens?|done)\\b)(?!.*\\bin the app\\b)${CHANGING}\\b`,
+        "i",
+      ),
+      // "Ki-Lo has marked the squats as swapped", "leg press has replaced squats", "has taken the place of"
+      new RegExp(`\\bmarked\\b[^.]{0,40}\\bas\\s+${CHANGED}\\b`, "i"),
+      /\b(?:has|have)\s+(?:now\s+)?replaced\b|\btaken the place of\b/i,
       /^(?:done|all done|all set|sorted|there you go|on it)\W*$/i,
       // "I've made that change"
       /\b(?:i|we)(?:'|’)?(?:ve|\s+have)?\s*made\s+(?:that|the|those|these|your)\s+(?:change|changes|swap|update|edit|edits)\b/i,
@@ -328,6 +364,8 @@ function claimPatterns(): { always: RegExp[]; aboutSubject: RegExp[] } {
       /\b(?:is|are|now)\s+(?:now\s+)?gone\b/i,
       // "your push day now has four sets of lateral raises"
       /\bnow\s+(?:has|have|includes?|contains?|reads?|shows?|holds?|uses?|features?|starts? with|begins? with)\b/i,
+      // "squats are now leg press in the routine"
+      /\b(?:is|are)\s+now\b[^.]{0,30}\bin\s+(?:the|your)\s+(?:routine|plan|push day|pull day|leg day|day|workout)\b/i,
       // "that workout is deleted", "the set is removed" (not "which is archived", which is how a routine is read back)
       /\b(?:is|are)\s+(?:deleted|removed|wiped|swapped|replaced|cleared)\b/i,
     ],
