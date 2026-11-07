@@ -482,3 +482,164 @@ describe("the programs target source", () => {
     ]);
   });
 });
+
+describe("the training cards of the changes list", () => {
+  const TRAINING_TURN_ID = "00000000-0000-4000-8000-0000000000c1";
+  const FOOD_TURN_ID = "00000000-0000-4000-8000-0000000000c2";
+  const PREVIOUS_VALUE_MARKER = "a-routine-name-that-must-not-leave-the-read";
+
+  const storedCard = {
+    actionIds: [FIRST_ACTION_ID],
+    kind: "routine_updated",
+    title: "Updated routine Push Pull Legs",
+    sub: null,
+    rows: [],
+    changeDetail: "4 changes",
+    totalText: null,
+    note: null,
+    link: null,
+    undo: "available",
+    undoneSub: null,
+  };
+  const messageOf = (turnId: string, display: unknown, id = `m-${turnId}`) => ({
+    id,
+    turn_id: turnId,
+    role: "user",
+    content: [],
+    display,
+    conversation_id: CONVERSATION_ID,
+    seq: 1,
+  });
+  const trainingDisplay = {
+    "call-1": {
+      card: storedCard,
+      undo: { previous: { name: PREVIOUS_VALUE_MARKER }, fingerprint: "f" },
+    },
+  };
+  const trainingAction = actionRow({
+    id: FIRST_ACTION_ID,
+    turn_id: TRAINING_TURN_ID,
+    tool: "edit_routine",
+  });
+  const foodAction = actionRow({ id: SECOND_ACTION_ID, turn_id: FOOD_TURN_ID, tool: "log_entry" });
+
+  const read = (state: ReturnType<typeof createAssistantFakeState>) => {
+    installAssistantFake(server, state);
+    return readAssistantActions(createTestClient(), { withCards: true }, noSources);
+  };
+
+  it("should read the words of the card of a training write and nothing else the display holds", async () => {
+    const { cards } = await read(
+      createAssistantFakeState({
+        actions: [trainingAction],
+        messages: [messageOf(TRAINING_TURN_ID, trainingDisplay)],
+      }),
+    );
+
+    expect(cards).toEqual([
+      {
+        actionIds: [FIRST_ACTION_ID],
+        kind: "routine_updated",
+        title: "Updated routine Push Pull Legs",
+        sub: null,
+        link: null,
+        changeDetail: "4 changes",
+      },
+    ]);
+    expect(JSON.stringify(cards)).not.toContain(PREVIOUS_VALUE_MARKER);
+  });
+
+  it("should make one select for the turns of the training writes, naming only the columns it needs", async () => {
+    const state = createAssistantFakeState({
+      actions: [trainingAction, foodAction],
+      messages: [messageOf(TRAINING_TURN_ID, trainingDisplay)],
+    });
+
+    await read(state);
+
+    expect(state.turnMessageReads).toHaveLength(1);
+    expect(state.turnMessageReads[0]?.get("select")).toBe("id,display");
+    expect(state.turnMessageReads[0]?.get("turn_id")).toBe(`in.(${TRAINING_TURN_ID})`);
+  });
+
+  it("should read no messages when no write is a training one", async () => {
+    const state = createAssistantFakeState({ actions: [foodAction] });
+
+    const { cards } = await read(state);
+
+    expect(state.turnMessageReads).toEqual([]);
+    expect(cards).toEqual([]);
+  });
+
+  it("should read no messages for a write whose conversation was deleted, which has no turn", async () => {
+    const state = createAssistantFakeState({
+      actions: [{ ...trainingAction, turn_id: null, conversation_id: null }],
+    });
+
+    const { cards } = await read(state);
+
+    expect(state.turnMessageReads).toEqual([]);
+    expect(cards).toEqual([]);
+  });
+
+  it("should give no card for a turn whose messages are gone, so its row falls back", async () => {
+    const { cards } = await read(
+      createAssistantFakeState({ actions: [trainingAction], messages: [] }),
+    );
+
+    expect(cards).toEqual([]);
+  });
+
+  it("should read no messages at all for the conversation's own read, which draws the cards itself", async () => {
+    const state = createAssistantFakeState({ actions: [trainingAction] });
+    installAssistantFake(server, state);
+
+    await readAssistantActions(createTestClient(), {}, noSources);
+
+    expect(state.turnMessageReads).toEqual([]);
+  });
+
+  it("should ask for at most 100 turns at a time, which keeps the request's address short", async () => {
+    const turnId = (index: number) => `00000000-0000-4000-8000-${String(index).padStart(12, "0")}`;
+    const actions = Array.from({ length: 250 }, (_, index) =>
+      actionRow({
+        id: `10000000-0000-4000-8000-${String(index).padStart(12, "0")}`,
+        turn_id: turnId(index),
+        tool: "update_training_goals",
+      }),
+    );
+    const state = createAssistantFakeState({ actions, messages: [] });
+
+    await read(state);
+
+    expect(
+      state.turnMessageReads
+        .map((query) => query.get("turn_id")?.split(",").length ?? 0)
+        .sort((a, b) => a - b),
+    ).toEqual([50, 100, 100]);
+  });
+
+  it("should name the action and the database code in a failure and never the database's message", async () => {
+    installAssistantFake(server, createAssistantFakeState({ actions: [trainingAction] }));
+    server.use(
+      http.get(`${REST_URL}/assistant_messages`, () =>
+        postgrestError(500, "XX000", `failing row (${PREVIOUS_VALUE_MARKER}) violates a check`),
+      ),
+    );
+
+    const failure = await readAssistantActions(
+      createTestClient(),
+      { withCards: true },
+      noSources,
+    ).then(
+      () => null,
+      (thrown: unknown) => thrown,
+    );
+
+    expect(failure).toMatchObject({
+      message: "Could not load what the assistant changed (XX000)",
+      cause: { code: "XX000" },
+    });
+    expect(JSON.stringify(failure)).not.toContain(PREVIOUS_VALUE_MARKER);
+  });
+});

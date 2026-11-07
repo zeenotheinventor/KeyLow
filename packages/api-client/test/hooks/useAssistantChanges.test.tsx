@@ -143,3 +143,131 @@ describe("useAssistantChanges", () => {
     expect(queryClient.getQueryState(keys.assistant.changes)?.status).toBe("success");
   });
 });
+
+describe("useAssistantChanges, the training rows", () => {
+  const TURN_ID = "00000000-0000-4000-8000-0000000000c1";
+  const PREVIOUS_VALUE_MARKER = "a-routine-name-that-must-not-reach-the-cache";
+  const card = {
+    actionIds: [FIRST_ACTION_ID],
+    kind: "routine_updated",
+    title: "Updated routine Push Pull Legs",
+    sub: null,
+    rows: [],
+    changeDetail: "4 changes",
+    totalText: null,
+    note: null,
+    link: null,
+    undo: "available",
+    undoneSub: null,
+  };
+  const trainingMessage = {
+    id: "m-training",
+    turn_id: TURN_ID,
+    role: "user",
+    content: [],
+    display: {
+      "call-1": { card, undo: { previous: { name: PREVIOUS_VALUE_MARKER }, fingerprint: "f" } },
+    },
+    conversation_id: "00000000-0000-4000-8000-0000000000b1",
+    seq: 1,
+  };
+
+  it("should word a training row from the card its turn stored, and keep the stored value out of the cache", async () => {
+    installAssistantFake(
+      server,
+      createAssistantFakeState({
+        actions: [
+          actionRow({
+            id: FIRST_ACTION_ID,
+            turn_id: TURN_ID,
+            tool: "edit_routine",
+            created_at: "2026-10-27T08:12:00Z",
+          }),
+        ],
+        messages: [trainingMessage],
+      }),
+    );
+    const { wrapper, queryClient } = createWrapper();
+
+    const { result } = renderHook(() => useAssistantChanges(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+    expect(result.current.data?.days[0]?.rows).toEqual([
+      {
+        key: FIRST_ACTION_ID,
+        actionIds: [FIRST_ACTION_ID],
+        title: "Updated routine Push Pull Legs",
+        sub: "08:12 · 4 changes",
+        state: "undo",
+        training: { kind: "routine_updated", changedSinceDetail: "changed in the app since" },
+      },
+    ]);
+    expect(
+      JSON.stringify(
+        queryClient
+          .getQueryCache()
+          .getAll()
+          .map((query) => query.state.data),
+      ),
+    ).not.toContain(PREVIOUS_VALUE_MARKER);
+    expect(JSON.stringify(result.current.data)).not.toContain(PREVIOUS_VALUE_MARKER);
+  });
+
+  it("should word the row plainly with no Undo for an edit once its conversation was deleted", async () => {
+    installAssistantFake(
+      server,
+      createAssistantFakeState({
+        actions: [
+          actionRow({
+            id: FIRST_ACTION_ID,
+            turn_id: null,
+            conversation_id: null,
+            tool: "edit_routine",
+            created_at: "2026-10-27T08:12:00Z",
+          }),
+        ],
+        messages: [],
+      }),
+    );
+    const { wrapper } = createWrapper();
+
+    const { result } = renderHook(() => useAssistantChanges(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+    expect(result.current.data?.days[0]?.rows).toMatchObject([
+      { title: "Updated a routine", sub: "08:12", state: "cant_undo" },
+    ]);
+  });
+
+  it("should keep Undo on an archive once its conversation was deleted, which undoes from the row", async () => {
+    installAssistantFake(
+      server,
+      createAssistantFakeState({
+        actions: [
+          actionRow({
+            id: FIRST_ACTION_ID,
+            turn_id: null,
+            conversation_id: null,
+            tool: "archive_routine",
+            created_at: "2026-10-27T08:12:00Z",
+          }),
+        ],
+        messages: [],
+      }),
+    );
+    const { wrapper } = createWrapper();
+
+    const { result } = renderHook(() => useAssistantChanges(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+    expect(result.current.data?.days[0]?.rows).toMatchObject([
+      { title: "Archived a routine", sub: "08:12", state: "undo" },
+    ]);
+  });
+});

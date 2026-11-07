@@ -467,3 +467,25 @@ export const ROUTINE_CREATED_NOTE =
 /** The line under "Undone" for a built routine. */
 export const describeRoutineCreatedUndone = (name: string): string =>
   `Archived ${name}. You can restore it from Archived in Routines.`;
+
+// KEY-909: training rows in "What the assistant changed", and an Undo that put some of a card back.
+
+/** The detail of a routine, set or goals row once a press says it changed (`assistant-settings · changes-training`). */
+export const CHANGED_IN_THE_APP_SINCE = "changed in the app since";
+
+/** The same for an exercise, which has no screen to change it on. */
+export const CHANGED_SINCE = "changed since";
+
+/** NOT ON THE CANVAS: what an Undo of several sets did when it put some back, "Put back 2 of 3 sets". */
+export const describeSetsPartlyPutBack = (undone: number, total: number): string =>
+  `Put back ${undone} of ${total} sets`;
+
+/** NOT ON THE CANVAS: the same for any other card that groups several writes, "Undid 2 of 3 changes". */
+export const describeChangesPartlyUndone = (undone: number, total: number): string =>
+  `Undid ${undone} of ${total} changes`;
+
+/** NOT ON THE CANVAS: the note under a card whose Undo put some of it back, after the words above, when the rest changed. */
+export const PARTLY_UNDONE_NOTE = "The rest changed since, so Undo is off for them.";
+
+/** NOT ON THE CANVAS: the same when the refusal gave no reason, which says nothing about why. */
+export const PARTLY_UNDONE_UNKNOWN_NOTE = "The rest can't be undone.";

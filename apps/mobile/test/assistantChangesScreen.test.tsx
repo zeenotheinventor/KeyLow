@@ -10,17 +10,19 @@ import { resolvedColor } from "./support/themeColor";
 
 import type { AssistantChanges } from "@keylow/core";
 
-type UndoAnswer = { actionId: string; result: string }[];
+type UndoAnswer = { actionId: string; result: string; reason?: string }[];
 
 // What the two assistant hooks answer. The hooks are tested where they live, in `@keylow/api-client`.
 const mockAssistant: {
   changes: { data: AssistantChanges | undefined };
+  activeSession: { data: object | null | undefined };
   undo: {
     mutateAsync: jest.Mock<Promise<UndoAnswer>, [{ actionIds: string[] }]>;
     isPending: boolean;
   };
 } = {
   changes: { data: undefined },
+  activeSession: { data: null },
   undo: {
     mutateAsync: jest.fn<Promise<UndoAnswer>, [{ actionIds: string[] }]>(),
     isPending: false,
@@ -30,6 +32,7 @@ const mockAssistant: {
 jest.mock("@keylow/api-client", () => ({
   ...jest.requireActual<object>("@keylow/api-client"),
   useAssistantChanges: () => mockAssistant.changes,
+  useActiveSession: () => mockAssistant.activeSession,
   useUndoAssistantAction: () => mockAssistant.undo,
 }));
 jest.mock("@react-native-async-storage/async-storage", () => ({
@@ -99,7 +102,7 @@ const changes: AssistantChanges = {
 };
 
 const FOOTER =
-  "Undo works while an item is as the assistant left it. Once you change it in the diary or the recipe editor, change it there.";
+  "Undo works while an item is as the assistant left it. Once you change it in the diary, the recipe editor or Train, change it there. Undo on training waits while a workout is in progress.";
 
 async function renderChanges() {
   const user = userEvent.setup();
@@ -124,6 +127,7 @@ describe("the What the assistant changed screen", () => {
     registerAppStyles(kitStyles);
     resetRouterMock();
     mockAssistant.changes = { data: changes };
+    mockAssistant.activeSession = { data: null };
     mockAssistant.undo = {
       mutateAsync: jest.fn<Promise<UndoAnswer>, [{ actionIds: string[] }]>(),
       isPending: false,
@@ -342,6 +346,197 @@ describe("the What the assistant changed screen", () => {
       expect(screen.getByRole("heading", { name: "What the assistant changed" })).toBeOnTheScreen();
       expect(screen.queryByText("Nothing changed yet")).not.toBeOnTheScreen();
       expect(screen.queryByText(FOOTER)).not.toBeOnTheScreen();
+    });
+  });
+
+  // The rows of `assistant-settings · changes-training`, as the hook words them from the stored cards.
+  describe("assistant-settings · changes-training", () => {
+    const training = {
+      kind: "routine_updated",
+      changedSinceDetail: "changed in the app since",
+    } as const;
+    const trainingChanges: AssistantChanges = {
+      count: 4,
+      days: [
+        {
+          label: "Today",
+          rows: [
+            {
+              key: "t1",
+              actionIds: ["t1"],
+              title: "Updated routine Push Pull Legs",
+              sub: "08:12 · 4 changes",
+              state: "undo",
+              training,
+            },
+            {
+              key: "t2",
+              actionIds: ["t2", "t3", "t4"],
+              title: "Changed 3 sets in Legs",
+              sub: "09:02 · Thu 8 Oct",
+              state: "undo",
+              training: { ...training, kind: "set_updated" },
+            },
+            {
+              key: "t5",
+              actionIds: ["t5"],
+              title: "Updated exercise Cable row",
+              sub: "09:30",
+              state: "undo",
+              training: { kind: "exercise_updated", changedSinceDetail: "changed since" },
+            },
+            {
+              key: "t6",
+              actionIds: ["t6"],
+              title: "Archived routine Starting strength",
+              sub: "18:40",
+              state: "undo",
+              training: { ...training, kind: "routine_archived" },
+            },
+          ],
+        },
+      ],
+    };
+
+    beforeEach(() => {
+      mockAssistant.changes = { data: trainingChanges };
+    });
+
+    it("should draw each training row's title and sub as sent, with Undo", async () => {
+      await renderChanges();
+
+      expect(screen.getByText("Updated routine Push Pull Legs")).toBeOnTheScreen();
+      expect(screen.getByText("08:12 · 4 changes")).toBeOnTheScreen();
+      expect(screen.getByText("09:02 · Thu 8 Oct")).toBeOnTheScreen();
+      expect(screen.getAllByRole("button", { name: /^Undo, / })).toHaveLength(4);
+    });
+
+    it("should send the row's action ids when Undo is pressed on a training row, and read Undone", async () => {
+      mockAssistant.undo.mutateAsync.mockResolvedValue([{ actionId: "t1", result: "undone" }]);
+      const user = await renderChanges();
+
+      await user.press(undoButtonFor("Updated routine Push Pull Legs"));
+
+      expect(mockAssistant.undo.mutateAsync).toHaveBeenCalledWith({ actionIds: ["t1"] });
+      expect(
+        screen.getByLabelText("Updated routine Push Pull Legs, 08:12 · 4 changes, Undone"),
+      ).toBeOnTheScreen();
+    });
+
+    describe("while a workout is in progress", () => {
+      beforeEach(() => {
+        mockAssistant.activeSession = { data: { id: "session-1" } };
+      });
+
+      it("should say Can't undo yet with no button, on every training row", async () => {
+        await renderChanges();
+
+        expect(screen.getAllByText("Can't undo yet")).toHaveLength(4);
+        expect(screen.queryByRole("button", { name: /^Undo, / })).not.toBeOnTheScreen();
+      });
+
+      it("should leave a food row's Undo as it was", async () => {
+        mockAssistant.changes = {
+          data: {
+            count: 2,
+            days: [
+              {
+                label: "Today",
+                rows: [
+                  ...(changes.days[0]?.rows.slice(0, 1) ?? []),
+                  ...(trainingChanges.days[0]?.rows.slice(0, 1) ?? []),
+                ],
+              },
+            ],
+          },
+        };
+        await renderChanges();
+
+        expect(undoButtonFor("Logged 2 eggs and toast at 08:10")).toBeOnTheScreen();
+        expect(screen.getAllByText("Can't undo yet")).toHaveLength(1);
+      });
+    });
+
+    it("should read Can't undo, with changed in the app since, when a press says the routine changed", async () => {
+      mockAssistant.undo.mutateAsync.mockResolvedValue([
+        { actionId: "t6", result: "undo_unavailable", reason: "changed" },
+      ]);
+      const user = await renderChanges();
+
+      await user.press(undoButtonFor("Archived routine Starting strength"));
+
+      expect(
+        screen.getByLabelText(
+          "Archived routine Starting strength, 18:40 · changed in the app since, Can't undo",
+        ),
+      ).toBeOnTheScreen();
+    });
+
+    it("should read changed since for an exercise", async () => {
+      mockAssistant.undo.mutateAsync.mockResolvedValue([
+        { actionId: "t5", result: "undo_unavailable", reason: "changed" },
+      ]);
+      const user = await renderChanges();
+
+      await user.press(undoButtonFor("Updated exercise Cable row"));
+
+      expect(
+        screen.getByLabelText("Updated exercise Cable row, 09:30 · changed since, Can't undo"),
+      ).toBeOnTheScreen();
+    });
+
+    it("should read plain Can't undo when the answer gave no reason", async () => {
+      mockAssistant.undo.mutateAsync.mockResolvedValue([
+        { actionId: "t1", result: "undo_unavailable" },
+      ]);
+      const user = await renderChanges();
+
+      await user.press(undoButtonFor("Updated routine Push Pull Legs"));
+
+      expect(
+        screen.getByLabelText("Updated routine Push Pull Legs, 08:12 · 4 changes, Can't undo"),
+      ).toBeOnTheScreen();
+    });
+
+    it("should say what was put back when only some of three sets were", async () => {
+      mockAssistant.undo.mutateAsync.mockResolvedValue([
+        { actionId: "t2", result: "undone" },
+        { actionId: "t3", result: "undone" },
+        { actionId: "t4", result: "undo_unavailable", reason: "changed" },
+      ]);
+      const user = await renderChanges();
+
+      await user.press(undoButtonFor("Changed 3 sets in Legs"));
+
+      expect(
+        screen.getByLabelText("Changed 3 sets in Legs, 09:02 · Put back 2 of 3 sets, Can't undo"),
+      ).toBeOnTheScreen();
+    });
+
+    it("should wait while the workout lasts after a press it refused, and offer Undo again once it ends", async () => {
+      mockAssistant.undo.mutateAsync.mockResolvedValue([
+        { actionId: "t1", result: "undo_unavailable", reason: "workout_in_progress" },
+      ]);
+      const user = await renderChanges();
+      const rerender = () =>
+        screen.rerender(
+          <ThemeProvider fixedPreference="dark">
+            <AssistantChangesRoute />
+          </ThemeProvider>,
+        );
+
+      await user.press(undoButtonFor("Updated routine Push Pull Legs"));
+      mockAssistant.activeSession = { data: { id: "session-1" } };
+      await rerender();
+
+      expect(
+        screen.getByLabelText("Updated routine Push Pull Legs, 08:12 · 4 changes, Can't undo yet"),
+      ).toBeOnTheScreen();
+
+      mockAssistant.activeSession = { data: null };
+      await rerender();
+
+      expect(undoButtonFor("Updated routine Push Pull Legs")).toBeOnTheScreen();
     });
   });
 });
