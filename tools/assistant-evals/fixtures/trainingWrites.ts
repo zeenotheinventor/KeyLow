@@ -3,9 +3,13 @@
 // so the snapshots, the positions and the stamps are the ones the app makes. Never a hand-written row.
 //
 // It only adds. Each part looks for what it would write and leaves it alone when it is there, so a second call on
-// one user adds nothing, and a user's other rows are never touched. A live session is not part of the history:
-// every session written here is finished.
+// one user adds nothing, and a user's other rows are never touched. The one exception is a session a stopped run
+// left in progress at a planned start: it is deleted and written again. A live session is not part of the
+// history, so every session written here is finished.
 import {
+  addSet,
+  deleteSession,
+  finishSession,
   listRoutines,
   listTrainingGoalsHistory,
   saveExercise,
@@ -15,8 +19,6 @@ import {
   setActiveRoutine,
   setRoutineArchived,
   startSession,
-  addSet,
-  finishSession,
 } from "@keylow/api-client";
 
 import {
@@ -94,16 +96,22 @@ const present = <Value>(value: Value | undefined, what: string): Value => {
   return value;
 };
 
-/** The moments the user's live sessions started at, as epoch milliseconds, so a session already written is skipped. */
-async function startedAtOfSessions(client: SupabaseClient<Database>): Promise<ReadonlySet<number>> {
+type StoredSession = Readonly<{ id: string; startedAt: number; isFinished: boolean }>;
+
+/** The user's sessions not deleted, finished or not, with their start as epoch milliseconds. */
+async function storedSessionsOf(client: SupabaseClient<Database>): Promise<StoredSession[]> {
   const { data, error } = await client
     .from("workout_sessions")
-    .select("started_at")
+    .select("id,started_at,ended_at")
     .is("deleted_at", null);
   if (error) {
     throw new Error(`Could not read the sessions already written (${error.code})`);
   }
-  return new Set(data.map(({ started_at }) => Date.parse(started_at)));
+  return data.map(({ id, started_at, ended_at }) => ({
+    id,
+    startedAt: Date.parse(started_at),
+    isFinished: ended_at !== null,
+  }));
 }
 
 async function writeSession(
@@ -139,14 +147,31 @@ async function writeSession(
   await finishSession(client, started.id, { endedAt, note: session.note });
 }
 
-async function writeSessions(
+/**
+ * Writes the sessions not written yet. A session counts as written once it is finished. One that a run left in
+ * progress (it stopped part way) is deleted and written again, because `startSession` would hand it back for
+ * every later start and the history could never be finished.
+ */
+export async function writeSessions(
   client: SupabaseClient<Database>,
   anchorDate: string,
   exerciseIds: ExerciseIds,
 ) {
-  const written = await startedAtOfSessions(client);
+  const planned = trainingSessions();
+  const plannedStarts = new Set(
+    planned.map((session) => sessionMoments(anchorDate, session).startedAt.getTime()),
+  );
+  const stored = await storedSessionsOf(client);
+  for (const { id, startedAt, isFinished } of stored) {
+    if (!isFinished && plannedStarts.has(startedAt)) {
+      await deleteSession(client, id);
+    }
+  }
+  const written = new Set(
+    stored.filter(({ isFinished }) => isFinished).map(({ startedAt }) => startedAt),
+  );
   // One at a time and the oldest first: a user has one session in progress at most.
-  for (const session of trainingSessions()) {
+  for (const session of planned) {
     if (!written.has(sessionMoments(anchorDate, session).startedAt.getTime())) {
       await writeSession(client, anchorDate, session, exerciseIds);
     }

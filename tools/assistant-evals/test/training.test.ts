@@ -8,6 +8,7 @@ import {
   CUSTOM_EXERCISE,
   EARLIER_GOAL,
   LIBRARY_EXERCISE_KEYS,
+  SESSION_SLOTS,
   TRAINING_WEEK_COUNT,
   sessionMoments,
   setsOfSession,
@@ -104,6 +105,23 @@ describe("the synthetic training history", () => {
       expect(endedAt.toISOString().slice(0, 10)).toBe(localDate);
     }
   });
+});
+
+describe("the weekly slots of the history", () => {
+  const slotted = SESSION_SLOTS.flatMap(({ exercises }) => exercises).map(
+    (slot) => [slot.exercise, slot] as const,
+  );
+
+  it.each(slotted)("should hold a load for each of the six weeks of %s", (_exercise, slot) => {
+    expect(slot.loadsKg).toHaveLength(TRAINING_WEEK_COUNT);
+  });
+
+  it.each(slotted)(
+    "should hold a rir for each of the six weeks of %s, or one for all",
+    (_exercise, slot) => {
+      expect(typeof slot.rir === "number" || slot.rir.length === TRAINING_WEEK_COUNT).toBe(true);
+    },
+  );
 });
 
 describe("the dates of the history", () => {

@@ -87,7 +87,7 @@ export type PlannedSession = Readonly<{
   note: string | null;
 }>;
 
-type ExerciseSlot = Readonly<{
+export type ExerciseSlot = Readonly<{
   exercise: TrainingExercise;
   /** The heaviest load of each week, oldest first. */
   loadsKg: readonly number[];
@@ -99,7 +99,7 @@ type ExerciseSlot = Readonly<{
   warmUp?: true;
 }>;
 
-type SessionSlot = Readonly<{
+export type SessionSlot = Readonly<{
   /** The number of days before the anchor in the latest week. The earlier weeks are 7 days apart. */
   daysBefore: number;
   startTime: string;
@@ -107,7 +107,7 @@ type SessionSlot = Readonly<{
 }>;
 
 // Arms and back first, then push, then the lower body, which is what ends the history, yesterday.
-const SESSION_SLOTS: readonly SessionSlot[] = [
+export const SESSION_SLOTS: readonly SessionSlot[] = [
   {
     daysBefore: 5,
     startTime: "17:30",
@@ -188,11 +188,20 @@ const SMALLEST_PLATE_KG = 2.5;
 const warmUpLoadKg = (loadKg: number): number =>
   Math.round((loadKg * WARM_UP_SHARE_OF_LOAD) / SMALLEST_PLATE_KG) * SMALLEST_PLATE_KG;
 
+// A short list is a mistake in the plan, and a default would log a 0 kg set without a word.
+const forWeek = (values: readonly number[], week: number, what: string): number => {
+  const value = values[week];
+  if (value === undefined) {
+    throw new Error(`The training plan has no ${what} for week ${week}`);
+  }
+  return value;
+};
+
 const rirOfWeek = (rir: ExerciseSlot["rir"], week: number): number =>
-  typeof rir === "number" ? rir : (rir[week] ?? rir[0] ?? 0);
+  typeof rir === "number" ? rir : forWeek(rir, week, "RIR");
 
 function exerciseOfWeek(slot: ExerciseSlot, week: number): PlannedExercise {
-  const loadKg = slot.loadsKg[week] ?? 0;
+  const loadKg = forWeek(slot.loadsKg, week, `load of ${slot.exercise}`);
   const rir = rirOfWeek(slot.rir, week);
   const working = slot.reps.map((reps): PlannedSet => ({ setType: "working", loadKg, reps, rir }));
   return {

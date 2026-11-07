@@ -593,6 +593,25 @@ describe("runEvals with a case that sets up and waits", () => {
       expect(report.firstModelCall?.inputTokens).toBe(5);
     });
 
+    it("should never decide a verdict: a call that cannot be read leaves the line empty and the case passing", async () => {
+      const stack = scriptedStack([{ result: turnResult(), usage: { inputTokens: 40 } }]);
+      const database = {
+        ...stack.database,
+        firstModelCallOfTurn: () =>
+          Promise.reject(new Error("Could not read assistant_usage (42501)")),
+      };
+
+      const report = await runEvals({
+        cases: [simpleCase("reads", { expect: [noWrite()] })],
+        driver: stack.driver,
+        database,
+        budgetTokens: 1_000_000,
+      });
+
+      expect(report.cases[0]).toMatchObject({ status: "passed", failures: [] });
+      expect(report.firstModelCall).toBeNull();
+    });
+
     it("should be null when no case ran", async () => {
       const { report } = await run([], []);
 

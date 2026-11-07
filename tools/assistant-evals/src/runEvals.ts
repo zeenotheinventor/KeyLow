@@ -219,7 +219,10 @@ export async function runEvals(input: RunInput): Promise<RunReport> {
           throw new CaseError("no assistant_usage rows for the turn");
         }
         if (reports.length === 0 && index === 0) {
-          firstModelCall = promptUsageOf(await database.firstModelCallOfTurn(turn.turnId));
+          // A line for the summary, so a read that fails leaves it empty and never changes the case's verdict.
+          firstModelCall = await database
+            .firstModelCallOfTurn(turn.turnId)
+            .then(promptUsageOf, () => null);
         }
         if (evalCase.afterTurn !== undefined && environment !== undefined) {
           await evalCase.afterTurn({ index, result: turn }, environment);

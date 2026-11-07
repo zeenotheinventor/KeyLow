@@ -163,6 +163,13 @@ export type ExpectedSet = HeatSet &
     exercise: TrainingExercise;
   };
 
+const present = <Value>(value: Value | undefined, what: string): Value => {
+  if (value === undefined) {
+    throw new Error(`The training history has no ${what}`);
+  }
+  return value;
+};
+
 /**
  * Every planned set as the app would hold it once logged and read back: the row's own fields, the session's
  * `local_date`, and the snapshot. Ids are made up and used for nothing but the snapshot's reference.
@@ -184,7 +191,7 @@ export function expectedSets(anchorDate: string): readonly ExpectedSet[] {
           rpe: null,
         },
         position,
-        performedAt: (setTimes[position] ?? new Date(localDate)).toISOString(),
+        performedAt: present(setTimes[position], "a set time").toISOString(),
         liveSetsInSession: position,
       });
       return {

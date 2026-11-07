@@ -12,6 +12,7 @@ import {
 import { addCalendarDays, daysSinceMonday } from "@keylow/core/dates";
 import {
   MUSCLE_IDS,
+  TRAINING_PARAMS_V2,
   TREND_RANGE_WEEKS,
   currentMuscleState,
   exerciseWeeklyTrend,
@@ -45,6 +46,10 @@ import type { FixtureUser } from "../../src/fixtureUser.ts";
 // run, named under key887-<run id> at keylow.test, and afterAll removes it. Every read is of this user's own
 // rows, so rows another session left on the shared stack cannot change a result, and nothing counts a whole table.
 const RUN_ID = crypto.randomUUID().slice(0, 8);
+
+// The repos read the heat window from the day before its first day (`HEAT_LOOKBACK_DAYS` in the api-client's
+// `trainingReads`, which the package does not export), so the same number is worked out from core's window here.
+const HEAT_LOOKBACK_DAYS = TRAINING_PARAMS_V2.heatWindowDays + 1;
 
 let user: FixtureUser;
 let now: string;
@@ -109,7 +114,10 @@ describe("the numbers core works out from what the repos read back", () => {
       .eq("source", "free_exercise_db")
       .eq("source_ref", sourceRef)
       .single();
-    return data?.id ?? "";
+    if (data === null) {
+      throw new Error(`The library exercise ${sourceRef} is missing`);
+    }
+    return data.id;
   };
 
   it.each(LIBRARY_EXERCISE_KEYS)(
@@ -136,7 +144,7 @@ describe("the numbers core works out from what the repos read back", () => {
   it("should give the muscle state that the planned sets give", async () => {
     const sets = await listSetsFrom(
       user.client,
-      addCalendarDays(user.anchorDate, -15),
+      addCalendarDays(user.anchorDate, -HEAT_LOOKBACK_DAYS),
       user.anchorDate,
     );
 
@@ -163,7 +171,7 @@ describe("the next session suggested from what the repos read back", () => {
     const library = await listSuggestionLibrary(user.client, { equipment: goal?.equipment ?? [] });
     const sets = await listSetsFrom(
       user.client,
-      addCalendarDays(user.anchorDate, -15),
+      addCalendarDays(user.anchorDate, -HEAT_LOOKBACK_DAYS),
       user.anchorDate,
     );
     const inputs = { now, day: user.anchorDate, goal, library, activeRoutine, timeZone: "UTC" };
