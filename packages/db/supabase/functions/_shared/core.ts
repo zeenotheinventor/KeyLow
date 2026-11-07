@@ -52,6 +52,9 @@ export type {
   RoutineChangeProblem,
   RoutineTargetWords,
   RoutineUpdatedChange,
+  LoadUnit,
+  SetUpdatedCardInput,
+  SetValues,
 } from "./core/index.js";
 export {
   addCalendarDays,
@@ -206,4 +209,8 @@ export {
   draftOfStoredRoutine,
   OPEN_IN_ROUTINE_EDITOR,
   REMOVE_DAY_REFUSAL,
+  buildSetUpdatedCard,
+  loadToKg,
+  MAX_LOAD_KG,
+  sessionExercises,
 } from "./core/index.js";

@@ -3,7 +3,7 @@
 // fills in what the database fills in (the id, `created_at`, the generated `kcal`, and an `updated_at`
 // stamped once per statement, as the trigger does) and hides the rows of another user, as row level
 // security does. A select may embed the rows a row holds under the name of the embedded table
-// (`recipe_ingredients(position,food_id)`), and an RPC is answered by the handler a test passes in.
+// (`recipe_ingredients(position,food_id)`) or as an object (`routine_days(name)`), and an RPC is answered by the handler a test passes in.
 // Nothing in production imports this.
 import type { Database } from "../../core/database.types.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -89,8 +89,12 @@ export function writeStub(
               return column in row ? [[column, row[column]]] : [];
             }
             const inner = row[embedded[1]];
-            return Array.isArray(inner)
-              ? [[embedded[1], inner.map((item: Row) => project(item, embedded[2] ?? "*"))]]
+            if (Array.isArray(inner)) {
+              return [[embedded[1], inner.map((item: Row) => project(item, embedded[2] ?? "*"))]];
+            }
+            // A row that belongs to one other row (a session's routine day) is embedded as an object.
+            return typeof inner === "object" && inner !== null
+              ? [[embedded[1], project(inner as Row, embedded[2] ?? "*")]]
               : [];
           }),
         );

@@ -575,14 +575,19 @@ function cardChangesOf(plan: Extract<Plan, { ok: true }>, input: EditRoutineInpu
     }
   }
 
-  // The numbers of an exercise put in are the ones in the routine as saved. The day of a day this call added has
-  // no id yet, so it is found by its name, and a number that cannot be found keeps the one the call resolved.
+  // The numbers of an exercise put in are the ones in the routine as saved. A day this call added has no id yet,
+  // so it is the n-th day without an id, in the order the call added them, and two of them may share a name. A
+  // number that cannot be found keeps the one the call resolved.
+  const addedDayRefs = input.changes.flatMap((change) =>
+    change.op === "add_day" && change.day_ref !== null ? [change.day_ref] : [],
+  );
+  const daysWithoutId = after.days.filter((candidate) => candidate.id === null);
   const savedNumbers = (put: PutIn) => {
-    const day = after.days.find((candidate) =>
-      put.dayKey !== null && candidate.id === put.dayKey
-        ? true
-        : candidate.id === null && candidate.name === addedDayNames.get(put.dayKey ?? ""),
-    );
+    const addedAt = put.dayKey === null ? -1 : addedDayRefs.indexOf(put.dayKey);
+    const day =
+      addedAt === -1
+        ? after.days.find((candidate) => candidate.id === put.dayKey)
+        : daysWithoutId[addedAt];
     return wordsOf(day?.exercises.find(({ exercise_id }) => exercise_id === put.exerciseId));
   };
   return entries.map(({ row, putIn }): RoutineUpdatedChange => {

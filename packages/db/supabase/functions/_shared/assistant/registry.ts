@@ -29,6 +29,7 @@ import { updateRecipeTool } from "./tools/updateRecipe.ts";
 import { updateTargetsTool } from "./tools/updateTargets.ts";
 import { setActiveRoutineTool } from "./tools/setActiveRoutine.ts";
 import { archiveRoutineTool } from "./tools/archiveRoutine.ts";
+import { updatePastSetTool } from "./tools/updatePastSet.ts";
 import { strictSchemaProblem } from "./tool.ts";
 
 import type { ToolDefinition, ToolRegistry } from "./tool.ts";
@@ -89,6 +90,7 @@ const toolDefinitions: readonly ToolDefinition[] = [
   setActiveRoutineTool,
   archiveRoutineTool,
   editRoutineTool,
+  updatePastSetTool,
   askUserTool,
 ];
 

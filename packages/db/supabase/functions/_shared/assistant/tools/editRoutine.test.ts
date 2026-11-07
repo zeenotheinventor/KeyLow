@@ -1064,3 +1064,40 @@ Deno.test(
     assertEquals(world.saves.length, 0);
   },
 );
+
+Deno.test(
+  "two days added in one call with the same name each show their own exercise's numbers",
+  async () => {
+    const world = routineWorld();
+
+    const result = await run(world, [
+      change({ op: "add_day", day_ref: "first", name: "Arms", weekday: 5 }),
+      change({ op: "add_day", day_ref: "second", name: "Arms", weekday: 6 }),
+      change({
+        op: "add",
+        day_id: "first",
+        exercise_id: ids.legExtension,
+        sets: 3,
+        rep_min: 8,
+        rep_max: 12,
+        target_rir: 2,
+      }),
+      change({
+        op: "add",
+        day_id: "second",
+        exercise_id: ids.legExtension,
+        sets: 5,
+        rep_min: 6,
+        rep_max: 10,
+        target_rir: 1,
+      }),
+    ]);
+
+    assertEquals(rowsOf(result), [
+      ["Added day Arms", "Saturday"],
+      ["Added day Arms", "Sunday"],
+      ["Added Leg extension", "Arms · 3 sets, 8 to 12 reps, RIR 2"],
+      ["Added Leg extension", "Arms · 5 sets, 6 to 10 reps, RIR 1"],
+    ]);
+  },
+);

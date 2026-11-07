@@ -38,3 +38,5 @@ export {
 } from "./confirmRemoveExercises";
 export { buildRoutineUpdatedCard } from "./routineUpdated";
 export type { RoutineUpdatedChange } from "./routineUpdated";
+export { buildSetUpdatedCard } from "./setUpdated";
+export type { SetUpdatedCardInput } from "./setUpdated";

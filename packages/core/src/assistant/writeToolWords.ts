@@ -9,6 +9,7 @@ import {
   describeRecipeUpdatedTitle,
   describeRecipesCount,
 } from "../copy/assistantRecipeCards";
+import { describeSetUpdatedTitle, describeSetsPutBack } from "../copy/assistantTrainingCards";
 import { formatCalories, formatGrams } from "../format/numbers";
 
 import type { AssistantCard, AssistantCardKind } from "./card";
@@ -272,7 +273,40 @@ const cardMergers: Readonly<Partial<Record<AssistantCardKind, AssistantCardMerge
   recipe_created: mergeRecipeCards,
   recipe_updated: mergeRecipeCards,
   recipe_archived: mergeRecipeCards,
+  set_updated: mergeSetUpdatedCards,
 };
+
+const setUpdatedTitlePattern = /^Changed a set in (.+)$/;
+
+// Several `update_past_set` calls of one workout are one card: "Changed 3 sets in Legs", the rows joined
+// and one Undo over all the action ids. Each call's title is taken apart again for the place, as a log's is.
+// Sets of different workouts have no one day or session to name, so they are worded plainly.
+function mergeSetUpdatedCards(cards: readonly AssistantCard[]): AssistantCard {
+  const merged = plainMerge(cards);
+  const count = merged.actionIds.length;
+  const [first] = cards;
+  const place = first === undefined ? undefined : setUpdatedTitlePattern.exec(first.title)?.[1];
+  const isOneWorkout =
+    first !== undefined &&
+    place !== undefined &&
+    cards.every(
+      (card) =>
+        setUpdatedTitlePattern.exec(card.title)?.[1] === place &&
+        card.sub === first.sub &&
+        JSON.stringify(card.link) === JSON.stringify(first.link),
+    );
+  if (!isOneWorkout) {
+    return { ...merged, undoneSub: describeSetsPutBack(count, null) };
+  }
+  return {
+    ...merged,
+    title: describeSetUpdatedTitle(place, count),
+    sub: first.sub,
+    changeDetail: first.changeDetail ?? null,
+    link: first.link,
+    undoneSub: describeSetsPutBack(count, place),
+  };
+}
 
 const plainTitles: Record<AssistantCardKind, (count: number) => string> = {
   logged: (count) => `Logged ${entries(count)}`,
@@ -294,7 +328,7 @@ const plainTitles: Record<AssistantCardKind, (count: number) => string> = {
   exercise_created: () => "Added an exercise",
   exercise_updated: () => "Updated an exercise",
   exercise_archived: () => "Archived an exercise",
-  set_updated: () => "Changed a set",
+  set_updated: (count) => (count === 1 ? "Changed a set" : `Changed ${count} sets`),
   workout_deleted: () => "Deleted a workout",
 };
 
