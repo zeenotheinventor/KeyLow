@@ -3,6 +3,7 @@ import { buildRecipeIngredient } from "@keylow/core/recipes";
 import { buildManualWeighIn } from "@keylow/core/weight";
 import { createClient } from "@supabase/supabase-js";
 
+import { retryTransportFailure } from "./retryTransportFailure.ts";
 import {
   DIARY_DAY_COUNT,
   FIXTURE_FOODS,
@@ -85,15 +86,17 @@ async function saveRecipes(
 ): Promise<Map<string, RecipeDetail>> {
   const saved = new Map<string, RecipeDetail>();
   for (const { name, servings, yieldGrams, ingredients, steps } of fixtureRecipes) {
-    const detail = await createRecipe(client, {
-      name,
-      servings,
-      yieldGrams,
-      ingredients: ingredients.map(({ food, grams }) =>
-        buildRecipeIngredient(present(foods.get(food), food), { quantity: grams, unit: "g" }),
-      ),
-      steps,
-    });
+    const detail = await retryTransportFailure(() =>
+      createRecipe(client, {
+        name,
+        servings,
+        yieldGrams,
+        ingredients: ingredients.map(({ food, grams }) =>
+          buildRecipeIngredient(present(foods.get(food), food), { quantity: grams, unit: "g" }),
+        ),
+        steps,
+      }),
+    );
     saved.set(name, detail);
   }
   return saved;
@@ -133,28 +136,31 @@ async function writeDiaryDay(
           },
         },
   );
-  await logEntries(client, items);
+  await retryTransportFailure(() => logEntries(client, items));
 
   if (weightKg !== null) {
-    await addWeighIn(
-      client,
-      buildManualWeighIn({
-        weightKg,
-        measuredAt: new Date(atUtc(WEIGH_IN_TIME)),
-        note: null,
-        timeZone: "UTC",
-      }),
-    );
+    const weighIn = buildManualWeighIn({
+      weightKg,
+      measuredAt: new Date(atUtc(WEIGH_IN_TIME)),
+      note: null,
+      timeZone: "UTC",
+    });
+    await retryTransportFailure(() => addWeighIn(client, weighIn));
   }
   if (complete) {
-    await setDayComplete(client, localDate, true);
+    await retryTransportFailure(() => setDayComplete(client, localDate, true));
   }
   if (note !== null) {
     // No repo writes a day's note yet, so this is the one plain update, through the user's own client.
-    const { error } = await client.from("day_logs").update({ note }).eq("local_date", localDate);
-    if (error) {
-      throw new Error(`Could not write the day note (${error.code})`);
-    }
+    await retryTransportFailure(async () => {
+      const { error } = await client.from("day_logs").update({ note }).eq("local_date", localDate);
+      if (error) {
+        // The message stands in only when there is no code, as a gateway's answer has none (see `repoError`).
+        throw new Error(`Could not write the day note (${error.code || error.message})`, {
+          cause: { code: error.code },
+        });
+      }
+    });
   }
 }
 
