@@ -131,6 +131,22 @@ const toolWords: [string[], string, string][] = [
   [["copy_day"], "Looking at the day", "Copying the day"],
   [["archive_recipe"], "Looking at the recipe", "Archiving the recipe"],
   [["update_targets"], "Looking at your targets", "Changing your targets"],
+  [["search_exercises"], "Looking up exercises", "Looking up exercises"],
+  [["get_workouts"], "Checking your workouts", "Checking your workouts"],
+  [["get_exercise_progress"], "Checking your progress", "Checking your progress"],
+  [["get_routines"], "Checking your routines", "Checking your routines"],
+  [["get_training_goals"], "Checking your goals", "Checking your goals"],
+  [["get_muscle_state"], "Checking your recovery", "Checking your recovery"],
+  [["suggest_next_session"], "Working out what to train", "Working out what to train"],
+  [["edit_routine"], "Looking at the routine", "Changing the routine"],
+  [["set_active_routine"], "Changing your active routine", "Changing your active routine"],
+  [["archive_routine"], "Looking at the routine", "Archiving the routine"],
+  [["create_routine"], "Building your routine", "Building your routine"],
+  [["update_training_goals"], "Saving your goals", "Saving your goals"],
+  [["save_custom_exercise"], "Saving the exercise", "Saving the exercise"],
+  [["archive_custom_exercise"], "Looking at the exercise", "Archiving the exercise"],
+  [["update_past_set"], "Updating the set", "Updating the set"],
+  [["delete_workout"], "Looking at the workout", "Removing the workout"],
 ];
 
 describe("describeAssistantStatus", () => {
