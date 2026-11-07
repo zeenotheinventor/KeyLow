@@ -3,9 +3,11 @@ import { describe, expect, it } from "vitest";
 import {
   TREND_ESTIMATE,
   describeDayCitation,
+  describeMuscleCitation,
   describeProgressCitation,
   describeRangeCitation,
   describeRoutineCitation,
+  describeSuggestionCitation,
   describeWeighInCitation,
   describeWorkoutsCitation,
 } from "../../src/assistant";
@@ -140,6 +142,62 @@ describe("describeRoutineCitation", () => {
       expect(describeRoutineCitation(name)).toBe("Based on your routine");
     },
   );
+});
+
+/*
+ * The words are the approved mobile boards' `assistant · answer-training` ("Your back had 18 sets in the
+ * last 7 days, against a target of 22") and `assistant · answer-suggestion`.
+ */
+describe("describeMuscleCitation", () => {
+  it("should name the sets, the area and the 7 days they were counted over", () => {
+    expect(
+      describeMuscleCitation({ area: "back", sets: 18, from: "2026-10-08", to: "2026-10-14" }),
+    ).toBe("Based on 18 sets for your back, 8 to 14 Oct");
+  });
+
+  it("should write the sets as the body map does, to two decimals at most", () => {
+    expect(
+      describeMuscleCitation({ area: "arms", sets: 5.5, from: "2026-10-08", to: "2026-10-14" }),
+    ).toBe("Based on 5.5 sets for your arms, 8 to 14 Oct");
+  });
+
+  it("should say one set in the singular", () => {
+    expect(
+      describeMuscleCitation({ area: "neck", sets: 1, from: "2026-10-08", to: "2026-10-14" }),
+    ).toBe("Based on 1 set for your neck, 8 to 14 Oct");
+  });
+
+  it("should say so when the area had no sets", () => {
+    expect(
+      describeMuscleCitation({ area: "back", sets: 0, from: "2026-10-08", to: "2026-10-14" }),
+    ).toBe("No sets for your back, 8 to 14 Oct");
+  });
+
+  it("should not count sets across all the muscles, which would count a set once for each muscle it works", () => {
+    expect(
+      describeMuscleCitation({ area: null, sets: 31, from: "2026-10-08", to: "2026-10-14" }),
+    ).toBe("Based on your muscles, 8 to 14 Oct");
+  });
+
+  it("should say so when no muscle had a set", () => {
+    expect(
+      describeMuscleCitation({ area: null, sets: 0, from: "2026-10-08", to: "2026-10-14" }),
+    ).toBe("No sets, 8 to 14 Oct");
+  });
+});
+
+describe("describeSuggestionCitation", () => {
+  it("should name today", () => {
+    expect(describeSuggestionCitation({ localDate: "2026-10-15", today: "2026-10-15" })).toBe(
+      "Based on Ki-Lo's suggestion for today",
+    );
+  });
+
+  it("should name the weekday of another day", () => {
+    expect(describeSuggestionCitation({ localDate: "2026-10-15", today: "2026-10-14" })).toBe(
+      "Based on Ki-Lo's suggestion for Thursday",
+    );
+  });
 });
 
 describe("describeProgressCitation", () => {

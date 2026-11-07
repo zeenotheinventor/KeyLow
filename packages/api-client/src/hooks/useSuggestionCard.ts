@@ -7,7 +7,8 @@ import {
   describeSuggestionCard,
   describeSuggestionDetail,
 } from "@keylow/core/copy";
-import { addCalendarDays, toLocalDate } from "@keylow/core/dates";
+import { toLocalDate } from "@keylow/core/dates";
+import { suggestionTargetOf } from "@keylow/core/training";
 import { useRef } from "react";
 
 import { useAcceptedSuggestions } from "./useAcceptedSuggestions";
@@ -33,7 +34,7 @@ import type {
   SuggestionDetailCopy,
   SuggestionRepRange,
 } from "@keylow/core/copy";
-import type { PlanAdjusted } from "@keylow/core/training";
+import type { PlanAdjusted, SuggestionTarget as CoreSuggestionTarget } from "@keylow/core/training";
 
 /** What the app does with the toast: one with Undo for an add, and a failure sentence for a write that did not go through. */
 export type SuggestionNotices = {
@@ -103,11 +104,7 @@ export type SuggestionCardState =
       start?: (() => void) | undefined;
     };
 
-type SuggestionTarget = {
-  day: string;
-  /** The routine day the suggestion is added to, or null for a session that follows no routine day. */
-  routineDayId: string | null;
-  routineDayName: string | null;
+type SuggestionTarget = Omit<CoreSuggestionTarget, "isRestDay"> & {
   today: string;
   /** The profile's zone, which a session started from the suggestion is dated in. */
   timeZone: string;
@@ -146,53 +143,26 @@ function canWordDetail(
 }
 
 /**
- * The day the card asks for, from the Today card: the next planned day on a rest day, today on a planned day,
- * and tomorrow, as a session that follows no routine day, when there is no routine day to add to. No card
- * on the first visit (it has its own Set your goal), while a session runs or once it is done.
+ * The day the card asks for, from the Today card (core's `suggestionTargetOf`, which the assistant asks too):
+ * the next planned day on a rest day, today on a planned day, and tomorrow, as a session that follows no
+ * routine day, when there is no routine day to add to. No card on the first visit (it has its own Set your
+ * goal), while a session runs or once it is done.
  */
 function targetOf(home: TrainHome, now: Date): SuggestionTarget | null {
   if (home.status !== "ready") {
     return null;
   }
   const today = toLocalDate(now, home.timeZone);
-  const { routineDays } = home;
-  const fresh = {
-    day: addCalendarDays(today, 1),
-    routineDayId: null,
-    routineDayName: null,
+  const read = suggestionTargetOf({
     today,
-    timeZone: home.timeZone,
-    routineDays,
-  };
-  if (home.today === null) {
-    return home.hasRoutine || !home.hasLoggedSession ? null : fresh;
-  }
-  const { card } = home.today;
-  if (card.kind === "planned") {
-    // Today's suggestion is stored under the day today plans, so the projection folds it into that day and
-    // the session started from the day takes it up. The day is null only if the plan places none today.
-    return {
-      day: today,
-      routineDayId: home.today.plannedDayId,
-      routineDayName: card.dayName,
-      today,
-      timeZone: home.timeZone,
-      routineDays,
-    };
-  }
-  if (card.kind === "rest") {
-    return card.next === null
-      ? fresh
-      : {
-          day: card.next.date,
-          routineDayId: card.next.id,
-          routineDayName: card.next.name,
-          today,
-          timeZone: home.timeZone,
-          routineDays,
-        };
-  }
-  return null;
+    card: home.today?.card ?? null,
+    plannedDayId: home.today?.plannedDayId ?? null,
+    hasRoutine: home.hasRoutine,
+    hasLoggedSession: home.hasLoggedSession,
+  });
+  return read.status === "day"
+    ? { ...read.target, today, timeZone: home.timeZone, routineDays: home.routineDays }
+    : null;
 }
 
 /** A session that follows no routine day, worded as an added day, so the accepted words are core's. */
