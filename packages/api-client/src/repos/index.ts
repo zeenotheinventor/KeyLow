@@ -103,6 +103,8 @@ export { importBodyMeasurements, listBodyMeasurements } from "./bodyMeasurements
 export type { BodyMeasurementImportResult } from "./bodyMeasurements";
 export type { BodyMeasurement } from "./bodyMeasurementSchemas";
 export { getActiveRoutine, listSetsFrom, listWeekSessions } from "./training";
+export { HEAT_LOOKBACK_DAYS, readMuscleState, readTrainingInputs } from "./trainingReads";
+export type { TrainingInputs } from "./trainingReads";
 export type {
   ActiveRoutine,
   LastPerformanceSession,

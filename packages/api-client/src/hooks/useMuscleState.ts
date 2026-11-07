@@ -1,5 +1,5 @@
 import { addCalendarDays, toLocalDate } from "@keylow/core/dates";
-import { TRAINING_PARAMS_V2, muscleState } from "@keylow/core/training";
+import { currentMuscleState } from "@keylow/core/training";
 import { skipToken, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 
@@ -45,10 +45,7 @@ export function useMuscleState(
   const today = timeZone.data ? toLocalDate(new Date(now), timeZone.data) : null;
   const startDay = today === null ? "" : addCalendarDays(today, -HEAT_LOOKBACK_DAYS);
 
-  const select = useCallback(
-    (sets: TrainingSet[]) => muscleState(sets, now, TRAINING_PARAMS_V2),
-    [now],
-  );
+  const select = useCallback((sets: TrainingSet[]) => currentMuscleState(sets, now), [now]);
 
   // Until today's rows are there, the newest rows held under another start day stand in (a cache restored
   // on a later day than it was read).

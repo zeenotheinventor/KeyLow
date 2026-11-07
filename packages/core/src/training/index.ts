@@ -315,6 +315,16 @@ export type {
 } from "./nutritionProposal";
 export { PRIORITY_GROUP_VOLUME_STATUS, summarisePriorities } from "./prioritySummary";
 export type { PrioritySummary } from "./prioritySummary";
+export { currentMuscleState } from "./suggest/currentMuscleState";
+export { nextSessionSuggestion } from "./suggest/nextSessionSuggestion";
+export type {
+  NextSessionSuggestionInput,
+  SuggestionRead,
+  SuggestionUnavailableReason,
+} from "./suggest/nextSessionSuggestion";
+export { plannedDayOf } from "./suggest/plannedDayOf";
+export { planRoutineOf } from "./suggest/planRoutineOf";
+export type { StoredPlanRoutine } from "./suggest/planRoutineOf";
 export { SUGGEST_PARAMS_V2 } from "./suggest/suggestParams";
 export type { ExerciseTieBreak, SuggestParams } from "./suggest/suggestParams";
 export { suggestSession } from "./suggest/suggestSession";
