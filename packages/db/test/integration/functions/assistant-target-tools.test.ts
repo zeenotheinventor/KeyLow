@@ -8,6 +8,7 @@ import { callAssistant, eventsOf, newAssistantUser, turnBody } from "../support/
 import { requireServedFunction } from "../support/functionsLane";
 import { adminClient } from "../support/stack";
 import { deleteCreatedTestUsers } from "../support/users";
+import { withoutIdsAndDates } from "../support/withoutIdsAndDates";
 
 import type { ScriptedReply } from "../support/anthropicMock";
 import type { TestUser } from "../support/users";
@@ -310,7 +311,7 @@ describe("a turn that calls create_custom_food", () => {
       target_local_date: null,
       target_updated_at: null,
     });
-    const written = JSON.stringify(data);
+    const written = withoutIdsAndDates(data);
     for (const word of [marker, "protein", "210", "bar"]) {
       expect(written).not.toContain(word);
     }
@@ -438,7 +439,7 @@ describe("the turn that follows a yes", () => {
       target_local_date: null,
     });
     expect(data?.[0]?.target_updated_at).not.toBeNull();
-    const written = JSON.stringify(data);
+    const written = withoutIdsAndDates(data);
     for (const word of [
       "2000",
       "2140",
