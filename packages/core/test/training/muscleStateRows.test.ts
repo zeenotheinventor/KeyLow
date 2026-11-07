@@ -115,7 +115,7 @@ describe("muscleStateRows", () => {
       "Mid traps",
       "Lower back",
     ]);
-    expect(area).toEqual({ name: "back", sets: 18, target: 40 });
+    expect(area).toEqual({ name: "back", sets: 18, target: 40, targeted: true });
   });
 
   it("should give no area totals when no area is asked for, but the sets across all the muscles", () => {
@@ -164,7 +164,7 @@ describe("muscleStateRows", () => {
       targeted: new Set(["lats", "traps_mid"]),
     });
 
-    expect(area).toEqual({ name: "back", sets: 18, target: 20 });
+    expect(area).toEqual({ name: "back", sets: 18, target: 20, targeted: true });
     expect(rows.map((row) => [row.muscle, row.targeted])).toEqual([
       ["Lats", true],
       ["Upper traps", false],
@@ -181,6 +181,6 @@ describe("muscleStateRows", () => {
       targeted: new Set(["biceps"]),
     });
 
-    expect(area).toEqual({ name: "back", sets: 18, target: 40 });
+    expect(area).toEqual({ name: "back", sets: 18, target: 40, targeted: false });
   });
 });

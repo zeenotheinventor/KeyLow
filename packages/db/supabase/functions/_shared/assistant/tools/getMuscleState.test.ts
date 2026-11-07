@@ -45,6 +45,10 @@ Deno.test("get_muscle_state is a read tool that says it is read-only and is not 
 
 Deno.test("get_muscle_state says what a row holds, what area does and which week it counts", () => {
   assertStringIncludes(getMuscleStateTool.description, "never call it this week");
+  assertStringIncludes(
+    getMuscleStateTool.description,
+    "targeted false means the routine and goal do not train the muscle, say so instead of judging its volume",
+  );
   assertStringIncludes(getMuscleStateTool.description, "last 7 days");
   assertStringIncludes(getMuscleStateTool.description, "area");
   assertStringIncludes(getMuscleStateTool.description, "never work one out");
@@ -117,7 +121,7 @@ Deno.test(
       listOf(result, "muscles").map((row) => row["muscle"]),
       ["Lats", "Upper traps", "Mid traps", "Lower back"],
     );
-    assertEquals(fieldOf(result, "area"), { name: "back", sets: 18, target: 10 });
+    assertEquals(fieldOf(result, "area"), { name: "back", sets: 18, target: 10, targeted: true });
     assertEquals(fieldOf(result, "citation"), "Based on 18 sets for your back, 7 to 14 Oct");
   },
 );
@@ -173,7 +177,7 @@ Deno.test(
       { area: "back" },
     );
 
-    assertEquals(fieldOf(result, "area"), { name: "back", sets: 18, target: 20 });
+    assertEquals(fieldOf(result, "area"), { name: "back", sets: 18, target: 20, targeted: true });
     assertEquals(
       listOf(result, "muscles").map((row) => [row["muscle"], row["targeted"]]),
       [
@@ -198,7 +202,7 @@ Deno.test("get_muscle_state says so when the area had no sets", async () => {
   });
 
   assertEquals(fieldOf(result, "citation"), "No sets for your neck, 7 to 14 Oct");
-  assertEquals(fieldOf(result, "area"), { name: "neck", sets: 0, target: 10 });
+  assertEquals(fieldOf(result, "area"), { name: "neck", sets: 0, target: 10, targeted: false });
 });
 
 Deno.test("get_muscle_state counts a set of a workout that is still going", async () => {
@@ -262,5 +266,18 @@ Deno.test(
       "training_goals",
       "workout_sets",
     ]);
+  },
+);
+
+Deno.test(
+  "get_muscle_state says an area is not targeted when the routine and goal train none of it",
+  async () => {
+    const { result } = await fetchMuscleState(trainingTables(), { area: "legs" });
+
+    assertEquals(fieldOf(result, "area"), { name: "legs", sets: 0, target: 70, targeted: false });
+    assertEquals(
+      listOf(result, "muscles").every((row) => row["targeted"] === false),
+      true,
+    );
   },
 );

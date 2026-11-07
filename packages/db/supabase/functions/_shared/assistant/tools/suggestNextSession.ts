@@ -1,5 +1,5 @@
 // The session Ki-Lo suggests, for "What should I train today?". The day, and whether there is a suggestion at
-// all, are the Today card's (core's `suggestionTargetOf` over `todayPlanOf`, which the Train home asks too),
+// all, are the Today card's (core's `suggestionTargetOf` over `todayCardOf`, which the Train home asks too),
 // the calculation is core's `nextSessionSuggestion`, and the words are the suggestion detail's, so the model
 // only phrases them. It writes nothing: accepting a suggestion stays in the app. The exercise library is read
 // here and never sent on, only the picks are.
@@ -22,7 +22,7 @@ import {
   nextSessionSuggestion,
   planRoutineOf,
   suggestionTargetOf,
-  todayPlanOf,
+  todayCardOf,
 } from "../../core.ts";
 import {
   getActiveSession,
@@ -67,7 +67,8 @@ export const suggestNextSessionTool: ReadToolDefinition<z.infer<typeof suggestNe
   name: "suggest_next_session",
   description:
     'Gives the session Ki-Lo suggests, for "What should I train today?", for the day the Today card ' +
-    "asks for. Answers day (today or a weekday), is_rest_day (then day is the next planned day), " +
+    "asks for. Answers day (today or a weekday) and its date, is_rest_day (the next planned day, or " +
+    "tomorrow when none is planned), " +
     "headline, plan_day (null for a built session), exercises (exercise_id, name, target, origin plan " +
     "or added, why), sets, minutes, skipped (hot muscles left out) and no_room, or nothing with its " +
     "reason. done_today true means today's session is finished and this is the next day's. accepted " +
@@ -107,7 +108,7 @@ export const suggestNextSessionTool: ReadToolDefinition<z.infer<typeof suggestNe
       getActiveSession(ctx.caller),
       hasNoRoutine ? hasLoggedSession(ctx.caller) : Promise.resolve(false),
     ]);
-    const { plan, card } = todayPlanOf({
+    const { plan, card } = todayCardOf({
       routine: planRoutineOf(activeRoutine, timeZone),
       weekSessions,
       sessionInProgress,
@@ -134,6 +135,7 @@ export const suggestNextSessionTool: ReadToolDefinition<z.infer<typeof suggestNe
     const citation = describeSuggestionCitation({ localDate: target.day, today });
     const dayFacts = {
       day,
+      date: target.day,
       is_rest_day: target.isRestDay,
       ...(read.status === "done" ? { done_today: true } : {}),
       ...(minutes === null && equipment === null ? {} : { limited_to: { minutes, equipment } }),

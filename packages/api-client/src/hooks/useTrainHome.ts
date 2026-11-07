@@ -1,6 +1,6 @@
 import { addCalendarDays, toLocalDate } from "@keylow/core/dates";
 import {
-  todayPlanOf,
+  todayCardOf,
   todaySessionToView,
   weekPlanDays,
   withSessionInProgress,
@@ -152,7 +152,7 @@ export function useTrainHome({ now, enabled }: TrainHomeSettings): TrainHome {
       tz: zone,
       weekStart,
     });
-  const { plan, card } = todayPlanOf({
+  const { plan, card } = todayCardOf({
     routine: planRoutineOf(routine.data, zone),
     weekSessions: week.data,
     sessionInProgress: sessionInProgress.data,

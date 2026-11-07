@@ -35,6 +35,8 @@ export const getMuscleStateTool: ReadToolDefinition<z.infer<typeof getMuscleStat
     'with the sets and target summed over the muscles the routine and goal target, for "Am I doing ' +
     'enough for my back?". Each muscle has its heat in words and percent, ready_at ("now" or a local ' +
     "time), sets (effort-weighted), target (the sets where Productive starts), status and targeted. " +
+    "targeted false means the routine and goal do not train the muscle, say so instead of judging its " +
+    "volume, and area.targeted false means they train none of the area, so its sums are of the whole area. " +
     "The citation is printed under your answer. Use these numbers as given and never work one out.",
   kind: "read",
   input: getMuscleStateInput,

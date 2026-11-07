@@ -41,7 +41,13 @@ export type MuscleStateRow = {
 export type MuscleStateRows = {
   rows: MuscleStateRow[];
   /** The sets and target of the area asked for, summed over its muscles, or null when none was asked for. */
-  area: { name: MuscleGroup; sets: number; target: number } | null;
+  area: {
+    name: MuscleGroup;
+    sets: number;
+    target: number;
+    /** False when the routine and goal train none of the area's muscles, so the sums are of the whole area. */
+    targeted: boolean;
+  } | null;
   /** The sets over every muscle, which counts a set once for each muscle it works. */
   totalSets: number;
 };
@@ -108,6 +114,7 @@ export const muscleStateRows = (
             name: area,
             sets: roundedSets(sum(summed.map((muscle) => states[muscle].weeklySets))),
             target: sum(summed.map(targetOf)),
+            targeted: targetedInArea.length > 0,
           },
     totalSets: roundedSets(sum(MUSCLE_IDS.map((muscle) => states[muscle].weeklySets))),
   };

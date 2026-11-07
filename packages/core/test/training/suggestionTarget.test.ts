@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { suggestionTargetOf, todayPlanOf, withSessionInProgress } from "../../src/training";
+import { suggestionTargetOf, todayCardOf, withSessionInProgress } from "../../src/training";
 
 import type { TodayCard, WeekSession } from "../../src/training";
 
@@ -145,7 +145,7 @@ describe("withSessionInProgress", () => {
   });
 });
 
-describe("todayPlanOf", () => {
+describe("todayCardOf", () => {
   it("should read a rest day of an empty week as no_routine with no routine, and first_time when never logged", () => {
     const base = {
       routine: null,
@@ -156,10 +156,10 @@ describe("todayPlanOf", () => {
       weekStart: "2026-10-12",
     };
 
-    expect(todayPlanOf({ ...base, hasEverLoggedSession: true }).card).toEqual({
+    expect(todayCardOf({ ...base, hasEverLoggedSession: true }).card).toEqual({
       kind: "no_routine",
     });
-    expect(todayPlanOf({ ...base, hasEverLoggedSession: false }).card).toEqual({
+    expect(todayCardOf({ ...base, hasEverLoggedSession: false }).card).toEqual({
       kind: "first_time",
     });
   });

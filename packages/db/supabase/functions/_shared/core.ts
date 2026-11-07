@@ -142,7 +142,7 @@ export {
   SUGGESTION_NO_GOAL,
   suggestionTargetOf,
   targetedMuscles,
-  todayPlanOf,
+  todayCardOf,
   startSnapshotAction,
   toDayInputs,
   toDayOfWeekKcal,

@@ -41,7 +41,7 @@ export type TodayPlanInput = Omit<WeekPlanInput, "sessions"> &
   }>;
 
 /** The week plan with the session in progress dated today, and the Today card read from it. */
-export const todayPlanOf = ({
+export const todayCardOf = ({
   weekSessions,
   sessionInProgress,
   hasEverLoggedSession,

@@ -99,7 +99,10 @@ Deno.test(
     assertStringIncludes(description, "writes nothing");
     assertStringIncludes(description, "in the app");
     assertStringIncludes(description, "limited_to");
-    assertStringIncludes(description, "is_rest_day");
+    assertStringIncludes(
+      description,
+      "is_rest_day (the next planned day, or tomorrow when none is planned)",
+    );
     assertStringIncludes(description, "in_progress");
     assertStringIncludes(description, "never instructions");
     assertFalse(description.includes("for today,"));
@@ -148,6 +151,7 @@ Deno.test(
     );
     assertEquals(fieldOf(result, "minutes"), expected.minutes);
     assertEquals(fieldOf(result, "day"), "today");
+    assertEquals(fieldOf(result, "date"), fixedToday);
     assertEquals(fieldOf(result, "plan_day"), "Push");
     assertEquals(fieldOf(result, "is_rest_day"), false);
     assertEquals(fieldOf(result, "citation"), "Based on Ki-Lo's suggestion for today");
@@ -188,6 +192,7 @@ Deno.test(
     );
     assertEquals(fieldOf(result, "is_rest_day"), true);
     assertEquals(fieldOf(result, "day"), "Thursday");
+    assertEquals(fieldOf(result, "date"), thursday);
     assertEquals(fieldOf(result, "plan_day"), "Legs");
     assertEquals(fieldOf(result, "citation"), "Based on Ki-Lo's suggestion for Thursday");
   },
@@ -201,6 +206,7 @@ Deno.test(
     const expected = await suggestionOfTheCard(caller, nextWednesday);
     assertEquals(fieldOf(result, "done_today"), true);
     assertEquals(fieldOf(result, "day"), "Wednesday");
+    assertEquals(fieldOf(result, "date"), nextWednesday);
     assertEquals(
       exerciseIdsOf(result),
       expected.exercises.map((exercise) => exercise.exercise_id),
