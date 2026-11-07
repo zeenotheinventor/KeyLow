@@ -3,7 +3,7 @@
 // model sees (a strict schema refuses them), and zod still enforces them when the executor validates.
 import { z } from "zod";
 
-import { addCalendarDays } from "../../core.ts";
+import { addCalendarDays, daysSinceMonday } from "../../core.ts";
 
 // Trimmed first, so "  a " is one character and is refused, as the repos would answer it with nothing.
 export const searchTextSchema = z
@@ -42,3 +42,16 @@ export const isRangeOfAtMost =
   (days: number) =>
   ({ from, to }: { from: string; to: string }): boolean =>
     from <= to && addCalendarDays(from, days - 1) >= to;
+
+// The Mondays of the weeks a range touches, oldest first, because the repos read a week at a time.
+export function weekStartsOf(from: string, to: string): string[] {
+  const starts: string[] = [];
+  for (
+    let start = addCalendarDays(from, -daysSinceMonday(from));
+    start <= to;
+    start = addCalendarDays(start, 7)
+  ) {
+    starts.push(start);
+  }
+  return starts;
+}

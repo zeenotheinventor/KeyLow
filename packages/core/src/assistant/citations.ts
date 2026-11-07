@@ -74,6 +74,20 @@ export const describeWeighInCitation = ({
     : `Based on ${describeCount(count, "weigh-in", "weigh-ins")}, ${describeDateRange(from, to)}`;
 
 /**
+ * The line under an answer about logged workouts, as the board `assistant · answer-training` draws it:
+ * "Based on 2 workouts, 12 to 13 Oct". One workout read by itself gives its own day twice, "Based on 1
+ * workout, 8 Oct". A range with nothing in it says so, "No workouts, 12 to 13 Oct", and is never an error.
+ */
+export const describeWorkoutsCitation = ({
+  from,
+  to,
+  workoutCount,
+}: RangeInput & { workoutCount: number }): string =>
+  workoutCount === 0
+    ? `No workouts, ${describeDateRange(from, to)}`
+    : `Based on ${describeCount(workoutCount, "workout", "workouts")}, ${describeDateRange(from, to)}`;
+
+/**
  * The line under an answer about one day and the person's targets: "Based on 4 entries today and your
  * targets". The day is named as today or yesterday, and otherwise by its short date, "Sat 24 Oct". A day
  * with no entries says "No entries today" and does not mention the targets.

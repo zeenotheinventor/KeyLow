@@ -114,3 +114,57 @@ export const goalsRow = (overrides: Record<string, unknown> = {}) => ({
   created_at: "2026-09-01T08:00:00+00:00",
   ...overrides,
 });
+
+export const sessionId = (number: number) =>
+  `00000000-0000-4000-8000-0000000b${String(number).padStart(4, "0")}`;
+
+export const setId = (number: number) =>
+  `00000000-0000-4000-8000-0000000c${String(number).padStart(4, "0")}`;
+
+// A `workout_sets` row as the session read selects it, with the snapshot every set freezes and the columns
+// the tool must not pass on.
+export const setRow = (
+  number: number,
+  exercise: { id: string; name: string; equipment: string },
+  overrides: Record<string, unknown> = {},
+) => ({
+  id: setId(number),
+  session_id: sessionId(1),
+  user_id: userId,
+  exercise_id: exercise.id,
+  position: number,
+  set_type: "working",
+  reps: 8,
+  load_kg: 80,
+  rir: 2,
+  rpe: null,
+  performed_at: "2026-10-12T18:10:00+00:00",
+  snapshot: {
+    version: 1,
+    kind: "exercise",
+    ref: exercise.id,
+    name: exercise.name,
+    equipment: exercise.equipment,
+    mechanic: "compound",
+    muscleListVersion: 1,
+    muscles: [{ muscle_id: "chest_upper", role: "primary", weight: 1 }],
+  },
+  deleted_at: null,
+  ...overrides,
+});
+
+// A `workout_sessions` row with its routine day's name and its sets embedded: the history list and the
+// session detail read the same table. Monday 12 October, a Push day of 52 minutes.
+export const sessionRow = (number: number, overrides: Record<string, unknown> = {}) => ({
+  id: sessionId(number),
+  user_id: userId,
+  local_date: "2026-10-12",
+  routine_day_id: exerciseId(900),
+  started_at: "2026-10-12T18:00:00+00:00",
+  ended_at: "2026-10-12T18:52:00+00:00",
+  note: null,
+  deleted_at: null,
+  routine_days: { name: "Push" },
+  workout_sets: [] as Record<string, unknown>[],
+  ...overrides,
+});
