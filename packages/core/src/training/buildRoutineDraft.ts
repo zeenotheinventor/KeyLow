@@ -44,17 +44,29 @@ const problem = (
   rule: BuildRoutineProblem["rule"],
 ): BuildRoutineProblem => ({ path, rule });
 
-/** The problems of the shape and the ids, before any number is chosen. A day over the cap is refused whole. */
-const shapeProblems = (
+type ResolvedExercise = Readonly<{ id: string; mechanic: ExerciseMechanic }>;
+
+type ResolvedDay = Readonly<{
+  name: string;
+  weekday: number | null;
+  exercises: readonly ResolvedExercise[];
+}>;
+
+/**
+ * Reads the shape and the ids in one pass: the problems found, and each day with the mechanic of every
+ * exercise that is in the library. A day over the cap is refused whole.
+ */
+const resolveShape = (
   { days }: RoutineToBuild,
-  exercises: ReadonlyMap<string, unknown>,
-): BuildRoutineProblem[] => {
+  library: ReadonlyMap<string, { mechanic: ExerciseMechanic }>,
+): { problems: BuildRoutineProblem[]; days: ResolvedDay[] } => {
+  const problems: BuildRoutineProblem[] = [];
   if (days.length === 0) {
-    return [problem(["days"], "days_none")];
+    problems.push(problem(["days"], "days_none"));
+  } else if (days.length > MAX_DAYS_PER_ROUTINE) {
+    problems.push(problem(["days"], "days_too_many"));
   }
-  const problems: BuildRoutineProblem[] =
-    days.length > MAX_DAYS_PER_ROUTINE ? [problem(["days"], "days_too_many")] : [];
-  days.forEach((day, dayIndex) => {
+  const resolved = days.map((day, dayIndex): ResolvedDay => {
     const path = ["days", dayIndex, "exercises"];
     if (day.exerciseIds.length === 0) {
       problems.push(problem(path, "exercises_none"));
@@ -62,25 +74,31 @@ const shapeProblems = (
       problems.push(problem(path, "exercises_too_many"));
     }
     const seen = new Set<string>();
+    const exercises: ResolvedExercise[] = [];
     day.exerciseIds.forEach((id, exerciseIndex) => {
-      if (!exercises.has(id)) {
+      const exercise = library.get(id);
+      if (exercise === undefined) {
         problems.push(problem([...path, exerciseIndex], "exercise_unknown"));
       } else if (seen.has(id)) {
         problems.push(problem([...path, exerciseIndex], "exercise_repeated"));
+      } else {
+        exercises.push({ id, mechanic: exercise.mechanic });
       }
       seen.add(id);
     });
+    return { name: day.name, weekday: day.weekday, exercises };
   });
-  return problems;
+  return { problems, days: resolved };
 };
 
 /**
  * A new routine's draft: every day new (`id` null), every exercise given the sets, reps and target RIR of
- * the goal, the exercise's mechanic and the experience. It refuses with every problem it finds and builds
- * nothing: no day, a day with no exercise, more than `MAX_DAYS_PER_ROUTINE` days, more exercises in a day
- * than Ki-Lo suggests for one session (`SUGGEST_PARAMS_V2.maxExercises.fresh`), an id that is not in
- * `exercises`, and an exercise twice in a day. What is left goes through `validateRoutineDraft`, so a
- * blank name or a repeated weekday is refused with its rules.
+ * the goal, the exercise's mechanic and the experience. A shape that is wrong returns every one of its
+ * problems at once and builds nothing: no day, a day with no exercise, more than `MAX_DAYS_PER_ROUTINE`
+ * days, more exercises in a day than Ki-Lo suggests for one session
+ * (`SUGGEST_PARAMS_V2.maxExercises.fresh`), an id that is not in `exercises`, and an exercise twice in a
+ * day. Only a sound shape goes on to `validateRoutineDraft`, so a blank name or a repeated weekday is
+ * refused with its rules on their own.
  */
 export const buildRoutineDraft = (
   input: RoutineToBuild,
@@ -88,34 +106,25 @@ export const buildRoutineDraft = (
   { goal, experience }: { goal: TrainingGoal; experience: ExperienceLevel },
   presets: GoalPresets,
 ): BuildRoutineResult => {
-  const problems = shapeProblems(input, exercises);
-  if (problems.length > 0) {
-    return { ok: false, problems };
+  const shape = resolveShape(input, exercises);
+  if (shape.problems.length > 0) {
+    return { ok: false, problems: shape.problems };
   }
   const checked = validateRoutineDraft({
     name: input.name,
-    days: input.days.map((day) => ({
+    days: shape.days.map((day) => ({
       id: null,
       weekday: day.weekday,
       name: day.name,
-      exercises: day.exerciseIds.flatMap((id) => {
-        const exercise = exercises.get(id);
-        if (exercise === undefined) {
-          return [];
-        }
-        const target = exerciseTargetFor(
-          { goal, experience, mechanic: exercise.mechanic },
-          presets,
-        );
-        return [
-          {
-            exercise_id: id,
-            target_sets: target.sets,
-            rep_min: target.repMin,
-            rep_max: target.repMax,
-            target_rir: target.targetRir,
-          },
-        ];
+      exercises: day.exercises.map(({ id, mechanic }) => {
+        const target = exerciseTargetFor({ goal, experience, mechanic }, presets);
+        return {
+          exercise_id: id,
+          target_sets: target.sets,
+          rep_min: target.repMin,
+          rep_max: target.repMax,
+          target_rir: target.targetRir,
+        };
       }),
     })),
   });
