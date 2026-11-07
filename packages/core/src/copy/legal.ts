@@ -3,8 +3,12 @@ import { MONTH_NAMES_LONG } from "./diaryDay";
 /**
  * The version of the Terms of Use and the Privacy Policy that people accept at sign-up. It is the date
  * the current wording took effect. A later version asks people to accept again.
+ *
+ * Moving it means moving the pins in `test/copy/legal.test.ts` (the version and the "Last updated" line).
+ * The assistant's own consent has a version of its own, `ASSISTANT_CONSENT_VERSION`, which does not move
+ * with this one unless the assistant's words change too.
  */
-export const TERMS_VERSION = "2026-10-26";
+export const TERMS_VERSION = "2026-11-07";
 
 /** The "Last updated" line under a document's title, from a version date such as `2026-10-15`. */
 export function describeLastUpdated(versionDate: string): string {
@@ -95,7 +99,7 @@ export const PRIVACY_POLICY: LegalDocument = {
       heading: "Why Ki-Lo uses it",
       paragraphs: [
         "Ki-Lo uses your information to run your food diary, your workout log and the adaptive engine. The engine estimates your energy expenditure and sets your targets.",
-        "If you turn the assistant on, Ki-Lo also uses your messages and your information to answer your questions and to log, copy and change entries for you.",
+        "If you turn the assistant on, Ki-Lo also uses your messages and your information to answer your questions, including questions about your training, to log, copy and change your entries, to build and change your routines, and to change your training goals, custom exercises and workouts for you.",
         "Your information is used for nothing else, apart from the error reports described under Who else handles your information.",
       ],
     },

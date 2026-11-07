@@ -46,6 +46,8 @@ export type {
 } from "./core/index.js";
 export {
   addCalendarDays,
+  ASSISTANT_CONSENT_VERSION,
+  isAssistantConsentCurrent,
   assistantCardSchema,
   mergeAssistantCards,
   withActionIds,
@@ -86,6 +88,7 @@ export {
   currentMuscleState,
   dayTarget,
   daysSinceMonday,
+  describeAssistantStatus,
   describeDayCitation,
   describeProgressCitation,
   describeProgressWeek,
@@ -110,6 +113,7 @@ export {
   roundGrams,
   scaleMacroTargets,
   roundKilograms,
+  safeWordsToShow,
   sumEntries,
   TREND_ESTIMATE,
   TREND_RANGE_WEEKS,
