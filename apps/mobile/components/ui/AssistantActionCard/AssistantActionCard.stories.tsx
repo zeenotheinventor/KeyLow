@@ -2,7 +2,7 @@ import { View } from "react-native";
 
 import { AssistantActionCard } from "./AssistantActionCard";
 
-import type { AssistantActionCardRow } from "./types";
+import type { AssistantActionCardDay, AssistantActionCardRow } from "./types";
 import type { Meta, StoryObj } from "@storybook/react-native";
 
 // Each story is one `assistant-card` board, or the `assistant` board named in its comment, with the
@@ -221,4 +221,127 @@ export const RecipeUnresolved: Story = {
     link: { label: "Choose a food for the wine", onPress: () => undefined },
     undo: undoAvailable,
   },
+};
+
+const compoundDetail = "3 sets · 8 to 10 reps · RIR 2";
+const isolationDetail = "3 sets · 12 to 15 reps · RIR 1";
+const fiveExerciseSummary = "5 exercises · 15 sets · about 50 min";
+const eightExerciseSummary = "8 exercises · 24 sets · about 75 min";
+
+const pushExercises = [
+  { name: "Barbell bench press", detail: compoundDetail },
+  { name: "Overhead press", detail: compoundDetail },
+  { name: "Incline dumbbell press", detail: compoundDetail },
+  { name: "Lateral raise", detail: isolationDetail },
+  { name: "Triceps pushdown", detail: isolationDetail },
+];
+
+const pullExercises = [
+  { name: "Lat pulldown", detail: compoundDetail },
+  { name: "Barbell row", detail: compoundDetail },
+  { name: "Seated cable row", detail: compoundDetail },
+  { name: "Face pull", detail: isolationDetail },
+  { name: "Barbell curl", detail: isolationDetail },
+];
+
+const legsExercises = [
+  { name: "Barbell squat", detail: compoundDetail },
+  { name: "Romanian deadlift", detail: compoundDetail },
+  { name: "Leg press", detail: compoundDetail },
+  { name: "Seated leg curl", detail: isolationDetail },
+  { name: "Standing calf raise", detail: isolationDetail },
+];
+
+const threeDays: AssistantActionCardDay[] = [
+  { name: "Monday · Push", summary: fiveExerciseSummary, exercises: pushExercises },
+  { name: "Wednesday · Pull", summary: fiveExerciseSummary, exercises: pullExercises },
+  { name: "Friday · Legs", summary: fiveExerciseSummary, exercises: legsExercises },
+];
+
+const upperExercises = [
+  { name: "Barbell bench press", detail: compoundDetail },
+  { name: "Barbell row", detail: compoundDetail },
+  { name: "Overhead press", detail: compoundDetail },
+  { name: "Lat pulldown", detail: compoundDetail },
+  { name: "Lateral raise", detail: isolationDetail },
+  { name: "Face pull", detail: isolationDetail },
+  { name: "Barbell curl", detail: isolationDetail },
+  { name: "Triceps pushdown", detail: isolationDetail },
+];
+
+const sevenDays: AssistantActionCardDay[] = [
+  "Monday · Chest",
+  "Tuesday · Back",
+  "Wednesday · Legs",
+  "Thursday · Upper",
+  "Friday · Lower",
+  "Saturday · Shoulders",
+  "Sunday · Arms",
+].map((name) => ({ name, summary: eightExerciseSummary, exercises: upperExercises }));
+
+const routineCreatedNote =
+  "This is not your active routine. Ask to make it active, or do it in Routines.";
+const routineCreatedLink = { label: "Open in routine editor", onPress: () => undefined };
+const routineActiveNote =
+  "It is your active routine now, so Undo is off. Undo making it active first.";
+const routineCreatedSubtitle = "From your goal: look better, intermediate";
+
+const threeDayRoutine = {
+  icon: "Check",
+  title: "Built routine Push Pull Legs, 3 days",
+  subtitle: routineCreatedSubtitle,
+  days: threeDays,
+  total: "The week: 45 sets · 3 days",
+  note: routineCreatedNote,
+  link: routineCreatedLink,
+  undo: undoAvailable,
+} as const;
+
+const sevenDayRoutine = {
+  icon: "Check",
+  title: "Built routine Seven day split, 7 days",
+  subtitle: routineCreatedSubtitle,
+  days: sevenDays,
+  total: "The week: 168 sets · 7 days",
+  note: routineCreatedNote,
+  link: routineCreatedLink,
+  undo: undoAvailable,
+} as const;
+
+const undoOffForActiveRoutine = {
+  note: routineActiveNote,
+  undo: { state: "unavailable", label: "Can't undo" },
+} as const;
+
+// `assistant-card · routine-created`, "3 days, as it arrives": every day closed, the card's own state.
+export const RoutineThreeDays: Story = { args: threeDayRoutine };
+
+// `assistant-card · routine-created`, "3 days, a day opened": Monday open, its exercises listed in place.
+export const RoutineThreeDaysOpen: Story = {
+  args: { ...threeDayRoutine, initiallyOpenDay: 0 },
+};
+
+// `assistant-card · routine-created`, "7 days of 8, as it arrives": the card's longest, all closed.
+export const RoutineSevenDays: Story = { args: sevenDayRoutine };
+
+// `assistant-card · routine-created`, "7 days of 8, a day opened": Thursday open.
+export const RoutineSevenDaysOpen: Story = {
+  args: { ...sevenDayRoutine, initiallyOpenDay: 3 },
+};
+
+// `assistant-card · routine-created`, "Can't undo": the routine was made active since, and the days stay.
+export const RoutineThreeDaysCantUndo: Story = {
+  args: { ...threeDayRoutine, ...undoOffForActiveRoutine },
+};
+
+export const RoutineThreeDaysOpenCantUndo: Story = {
+  args: { ...threeDayRoutine, ...undoOffForActiveRoutine, initiallyOpenDay: 0 },
+};
+
+export const RoutineSevenDaysCantUndo: Story = {
+  args: { ...sevenDayRoutine, ...undoOffForActiveRoutine },
+};
+
+export const RoutineSevenDaysOpenCantUndo: Story = {
+  args: { ...sevenDayRoutine, ...undoOffForActiveRoutine, initiallyOpenDay: 3 },
 };

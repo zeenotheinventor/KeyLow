@@ -412,6 +412,168 @@ describe("AssistantActionCard", () => {
     });
   });
 
+  describe("the days", () => {
+    const pushDay = {
+      name: "Monday · Push",
+      summary: "5 exercises · 15 sets · about 50 min",
+      exercises: [
+        { name: "Barbell bench press", detail: "3 sets · 8 to 10 reps · RIR 2" },
+        { name: "Lateral raise", detail: "3 sets · 12 to 15 reps · RIR 1" },
+      ],
+    };
+    const pullDay = {
+      name: "Wednesday · Pull",
+      summary: "5 exercises · 15 sets · about 50 min",
+      exercises: [{ name: "Lat pulldown", detail: "3 sets · 8 to 10 reps · RIR 2" }],
+    };
+    const legsDay = {
+      name: "Friday · Legs",
+      summary: "5 exercises · 15 sets · about 50 min",
+      exercises: [{ name: "Barbell squat", detail: "3 sets · 8 to 10 reps · RIR 2" }],
+    };
+    const days = [pushDay, pullDay, legsDay];
+
+    const dayButton = (day: { name: string; summary: string }) =>
+      screen.getByRole("button", { name: `${day.name}, ${day.summary}` });
+    const dayButtonExpanded = (day: { name: string; summary: string }, expanded: boolean) =>
+      screen.getByRole("button", { name: `${day.name}, ${day.summary}`, expanded });
+
+    it("should draw one button per day, named by the day's name and summary, all closed on arrival", async () => {
+      await renderCard({ days });
+
+      expect(dayButtonExpanded(pushDay, false)).toBeOnTheScreen();
+      expect(dayButtonExpanded(pullDay, false)).toBeOnTheScreen();
+      expect(dayButtonExpanded(legsDay, false)).toBeOnTheScreen();
+    });
+
+    it("should draw each day's name and its summary as given", async () => {
+      await renderCard({ days });
+
+      expect(screen.getByText("Monday · Push")).toBeOnTheScreen();
+      expect(screen.getAllByText("5 exercises · 15 sets · about 50 min")).toHaveLength(3);
+    });
+
+    it("should draw no exercise while every day is closed", async () => {
+      await renderCard({ days });
+
+      expect(screen.queryByText("Barbell bench press")).not.toBeOnTheScreen();
+      expect(screen.queryByText("Lat pulldown")).not.toBeOnTheScreen();
+    });
+
+    it("should draw the day's exercises, name and detail exactly as given, once it is pressed", async () => {
+      const user = userEvent.setup();
+      await renderCard({ days });
+
+      await user.press(dayButton(pushDay));
+
+      expect(dayButtonExpanded(pushDay, true)).toBeOnTheScreen();
+      expect(screen.getByText("Barbell bench press")).toBeOnTheScreen();
+      expect(screen.getByText("3 sets · 8 to 10 reps · RIR 2")).toBeOnTheScreen();
+      expect(screen.getByText("Lateral raise")).toBeOnTheScreen();
+      expect(screen.getByText("3 sets · 12 to 15 reps · RIR 1")).toBeOnTheScreen();
+    });
+
+    it("should close the open day when another is pressed, so one is open at a time", async () => {
+      const user = userEvent.setup();
+      await renderCard({ days });
+      await user.press(dayButton(pushDay));
+
+      await user.press(dayButton(pullDay));
+
+      expect(dayButtonExpanded(pushDay, false)).toBeOnTheScreen();
+      expect(dayButtonExpanded(pullDay, true)).toBeOnTheScreen();
+      expect(screen.queryByText("Barbell bench press")).not.toBeOnTheScreen();
+      expect(screen.getByText("Lat pulldown")).toBeOnTheScreen();
+    });
+
+    it("should close the open day when it is pressed again", async () => {
+      const user = userEvent.setup();
+      await renderCard({ days });
+      await user.press(dayButton(pushDay));
+
+      await user.press(dayButton(pushDay));
+
+      expect(dayButtonExpanded(pushDay, false)).toBeOnTheScreen();
+      expect(screen.queryByText("Barbell bench press")).not.toBeOnTheScreen();
+    });
+
+    it("should open the day it is given on arrival, and no other", async () => {
+      await renderCard({ days, initiallyOpenDay: 1 });
+
+      expect(dayButtonExpanded(pushDay, false)).toBeOnTheScreen();
+      expect(dayButtonExpanded(pullDay, true)).toBeOnTheScreen();
+      expect(dayButtonExpanded(legsDay, false)).toBeOnTheScreen();
+      expect(screen.getByText("Lat pulldown")).toBeOnTheScreen();
+    });
+
+    it("should draw the days after the rows and before the total", async () => {
+      await renderCard({
+        rows: [{ name: "A row", detail: "A row's detail" }],
+        days: [pushDay],
+        total: "The week: 15 sets · 1 day",
+      });
+
+      const words = textsInOrder();
+      expect(words.indexOf("A row's detail")).toBeLessThan(words.indexOf("Monday · Push"));
+      expect(words.indexOf("Monday · Push")).toBeLessThan(
+        words.indexOf("The week: 15 sets · 1 day"),
+      );
+    });
+
+    it("should draw no day button when no days are given", async () => {
+      await renderCard({ rows: eggsAndToastRows });
+
+      expect(screen.getAllByRole("button")).toHaveLength(1);
+      expect(screen.getByRole("button", { name: "Undo" })).toBeOnTheScreen();
+    });
+
+    it("should keep the Undo and the link working beside the days", async () => {
+      const user = userEvent.setup();
+      const onUndo = jest.fn();
+      const onLink = jest.fn();
+      await renderCard({
+        days,
+        undo: { state: "available", label: "Undo", onPress: onUndo },
+        link: { label: "Open in routine editor", onPress: onLink },
+      });
+
+      await user.press(screen.getByRole("button", { name: "Undo" }));
+      await user.press(screen.getByRole("button", { name: "Open in routine editor" }));
+
+      expect(onUndo).toHaveBeenCalledTimes(1);
+      expect(onLink).toHaveBeenCalledTimes(1);
+    });
+
+    it("should draw each day at least 52 points high, the board's height", async () => {
+      await renderCard({ days });
+
+      expect(viewsDrawn({ minHeight: 52 })).toHaveLength(3);
+    });
+
+    it.each(schemes)("should write the summary in secondary ink in %s", async (scheme) => {
+      await renderCard({ days }, scheme);
+
+      expect(screen.getAllByText("5 exercises · 15 sets · about 50 min")[0]).toHaveStyle({
+        color: resolvedColor(scheme, "text-secondary"),
+      });
+    });
+
+    it.each(schemes)("should write an exercise's detail in muted ink in %s", async (scheme) => {
+      await renderCard({ days, initiallyOpenDay: 0 }, scheme);
+
+      expect(screen.getByText("3 sets · 8 to 10 reps · RIR 2")).toHaveStyle({
+        color: resolvedColor(scheme, "text-muted"),
+      });
+    });
+
+    it("should draw the chevron pointing up on the open day and down on the others", async () => {
+      await renderCard({ days, initiallyOpenDay: 0 });
+
+      expect(pathsDrawn(chevronUpPath)).toHaveLength(1);
+      expect(pathsDrawn(chevronDownPath)).toHaveLength(2);
+    });
+  });
+
   describe("the link", () => {
     it("should be a button named by its label, which calls onPress", async () => {
       const user = userEvent.setup();
@@ -447,4 +609,23 @@ describe("AssistantActionCard", () => {
 // The icon is decoration, so its drawing is looked for.
 function drawings() {
   return screen.root?.queryAll((node) => node.type === "RNSVGSvgView") ?? [];
+}
+
+const chevronDownPath = "m6 9 6 6 6-6";
+const chevronUpPath = "m18 15-6-6-6 6";
+
+// The icons are decoration, so the glyph drawn is found by the path of its stroke.
+function pathsDrawn(pathData: string) {
+  return (
+    screen.root?.queryAll((node) => node.type === "RNSVGPath" && node.props.d === pathData) ?? []
+  );
+}
+
+// Every line of words on the screen, in the order it is drawn.
+function textsInOrder() {
+  return (
+    screen.root
+      ?.queryAll((node) => node.type === "Text")
+      .map((node) => String(node.props.children)) ?? []
+  );
 }
