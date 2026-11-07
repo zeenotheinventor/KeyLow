@@ -1,4 +1,5 @@
 import { safeWordsToShow } from "../copy/assistantNotices";
+import { describeSets, describeWeekdayName } from "../copy/bodyMap";
 import { describeCount } from "../copy/counts";
 import { MONTH_NAMES_SHORT, WEEKDAY_NAMES_SHORT } from "../copy/diaryDay";
 import { addCalendarDays, parseCalendarDay } from "../dates/calendarDay";
@@ -125,6 +126,40 @@ export const describeRoutineCitation = (routineName: string): string => {
 
   return name === null ? "Based on your routine" : `Based on your routine ${name}`;
 };
+
+/**
+ * The line under an answer about the muscles, as `assistant · answer-training` prints it: "Based on 18 sets
+ * for your back, 8 to 14 Oct", the 7 days the sets were counted over. With no area it names the muscles and
+ * not a count, because the sets of all the muscles count a set once for each muscle it works.
+ */
+export const describeMuscleCitation = ({
+  area,
+  sets,
+  from,
+  to,
+}: RangeInput & { area: string | null; sets: number }): string => {
+  const range = describeDateRange(from, to);
+  if (sets === 0) {
+    return `No sets${area === null ? "" : ` for your ${area}`}, ${range}`;
+  }
+
+  return area === null
+    ? `Based on your muscles, ${range}`
+    : `Based on ${describeSets(sets)} for your ${area}, ${range}`;
+};
+
+/**
+ * The line under an answer about the suggested session, as `assistant · answer-suggestion` prints it: "Based
+ * on Ki-Lo's suggestion for Thursday", and "for today" when the day is today.
+ */
+export const describeSuggestionCitation = ({
+  localDate,
+  today,
+}: {
+  localDate: string;
+  today: string;
+}): string =>
+  `Based on Ki-Lo's suggestion for ${localDate === today ? "today" : describeWeekdayName(localDate)}`;
 
 const DAYS_FROM_MONDAY_TO_SUNDAY = 6;
 
