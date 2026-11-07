@@ -45,6 +45,7 @@ describe("summariseSets", () => {
         errored: 0,
         passRate: 0.9,
         thresholdPercent: 90,
+        mustPassMissed: [],
         met: true,
       },
       {
@@ -55,6 +56,7 @@ describe("summariseSets", () => {
         errored: 0,
         passRate: 0.6,
         thresholdPercent: 80,
+        mustPassMissed: [],
         met: false,
       },
       {
@@ -65,6 +67,7 @@ describe("summariseSets", () => {
         errored: 0,
         passRate: 1,
         thresholdPercent: 100,
+        mustPassMissed: [],
         met: true,
       },
     ]);
@@ -88,6 +91,7 @@ describe("summariseSets", () => {
         errored: 0,
         passRate: 0.9,
         thresholdPercent: 90,
+        mustPassMissed: [],
         met: true,
       },
     ]);
@@ -109,6 +113,7 @@ describe("summariseSets", () => {
         errored: 1,
         passRate: 0.8,
         thresholdPercent: 90,
+        mustPassMissed: [],
         met: false,
       },
     ]);
@@ -290,6 +295,65 @@ describe("formatReport, the size of the cached prompt", () => {
 
     expect(formatReport(report, summariseSets(report), ["ask"])).toContain(
       "First model call of the first case: not read",
+    );
+  });
+});
+
+describe("the must-pass cases of a set", () => {
+  const trainingRun = (extra: CaseReport[]) =>
+    runOf([
+      ...Array.from({ length: 19 }, (_, index) =>
+        caseReport("trainingAdvice", "passed", { id: `case-${index}` }),
+      ),
+      ...extra,
+    ]);
+
+  it("should meet the threshold when the percentage is reached and nothing must-pass missed", () => {
+    const report = trainingRun([
+      caseReport("trainingAdvice", "failed", { id: "ordinary" }),
+      caseReport("trainingAdvice", "passed", { id: "important", mustPass: true }),
+    ]);
+
+    expect(summariseSets(report)[0]).toMatchObject({ met: true, mustPassMissed: [] });
+  });
+
+  it("should fail the set when a must-pass case failed, though the percentage is reached", () => {
+    const report = trainingRun([
+      caseReport("trainingAdvice", "failed", { id: "important", mustPass: true }),
+    ]);
+
+    const [summary] = summariseSets(report);
+
+    expect(summary).toMatchObject({ passed: 19, total: 20, mustPassMissed: ["important"] });
+    expect(summary?.met).toBe(false);
+    expect(exitCodeOf(report, summariseSets(report))).toBe(1);
+  });
+
+  it("should count a must-pass case that errored or was not run as missed", () => {
+    for (const status of ["error", "not_run"] as const) {
+      const report = trainingRun([
+        caseReport("trainingAdvice", status, { id: "x", mustPass: true }),
+      ]);
+
+      expect(summariseSets(report)[0]?.mustPassMissed).toEqual(["x"]);
+    }
+  });
+
+  it("should fail the set on a critical failure in any case", () => {
+    const report = trainingRun([
+      caseReport("trainingAdvice", "failed", { id: "wrote", critical: true }),
+    ]);
+
+    expect(summariseSets(report)[0]).toMatchObject({ met: false, mustPassMissed: ["wrote"] });
+  });
+
+  it("should say which cases missed in the report", () => {
+    const report = trainingRun([
+      caseReport("trainingAdvice", "failed", { id: "important", mustPass: true }),
+    ]);
+
+    expect(formatReport(report, summariseSets(report), ["trainingAdvice"])).toContain(
+      "trainingAdvice: 19 of 20 passed (95%), threshold 90%, must-pass missed: important, NOT met",
     );
   });
 });

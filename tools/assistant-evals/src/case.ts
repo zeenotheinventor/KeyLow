@@ -1,7 +1,12 @@
 import type { EvalSetName } from "./thresholds.ts";
 import type { EvalDatabase, RowQuery, TurnResult } from "./types.ts";
 
-export type GradeOutcome = Readonly<{ passed: boolean; reason: string }>;
+export type GradeOutcome = Readonly<{
+  passed: boolean;
+  reason: string;
+  /** A failed critical outcome fails its whole set, whatever the set's percentage (see `EvalCase.mustPass`). */
+  critical?: true;
+}>;
 
 /** What a grader reads: the turns of one case, in order, and the database as the eval user. */
 export type GradeContext = Readonly<{
@@ -53,6 +58,17 @@ export type EvalCase = Readonly<{
   messages: readonly [string, ...string[]];
   /** The case passes when every grader passes. */
   expect: readonly Grader[];
+  /**
+   * True when a miss of this case, whether it fails, errors or is not run, fails its set whatever the set's
+   * percentage. The set's other cases still count towards the percentage.
+   */
+  mustPass?: true;
+  /**
+   * Runs before the case's ceiling starts, and so outside it, for work that is slow and that every later case
+   * shares (writing a history). A failure ends the case in error. It runs once for each case, so it has to do
+   * nothing when it has run before.
+   */
+  prepare?: () => Promise<void>;
   /**
    * Runs after the graders, and also when a turn failed, so a case that wrote to rows the other sets read
    * (today's diary, the targets) puts them back. It gets the turns sent so far.
