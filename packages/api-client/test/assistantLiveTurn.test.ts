@@ -62,6 +62,22 @@ describe("applyAssistantEvent", () => {
     expect(live.text).toBe("Both count.");
   });
 
+  it("should keep the object of each exercise's muscles as later events arrive", () => {
+    const exercise: AssistantExerciseMuscles = {
+      exerciseName: "Seated Leg Curl",
+      muscles: [{ muscle_id: "hamstrings", role: "primary" }],
+    };
+
+    const live = applyAll([
+      { type: "exercise_muscles", exercise },
+      { type: "text", delta: "Both count." },
+      { type: "done", outcome: "complete" },
+    ]);
+
+    // The cards are memoised on this object, so a streamed token must not replace it.
+    expect(live.exerciseMuscles[0]).toBe(exercise);
+  });
+
   it("should clear the step when the muscles of an exercise arrive", () => {
     const thinking = { type: "status", code: "thinking" } as const;
     const exercise: AssistantExerciseMuscles = {

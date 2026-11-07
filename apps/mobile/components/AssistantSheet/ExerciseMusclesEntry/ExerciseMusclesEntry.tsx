@@ -1,5 +1,6 @@
 import { describeExerciseMusclesFigureLabel, EXERCISE_MUSCLES } from "@keylow/core/copy";
 import { exerciseRoleValues, musclesByRole } from "@keylow/core/training";
+import { memo } from "react";
 import { View } from "react-native";
 
 import { useBodyFigure } from "../../../lib/bodyFigure";
@@ -16,9 +17,14 @@ const SIDES = ["front", "back"] as const;
  * exercise's name and caption, the front and the back of the body coloured by role, and a row for each
  * role. It is a read, so it has no icon, no Undo and no link, and it is flat as the action card is. The body
  * is always 2D, whatever the person chose in More, and waits for the stored figure setting so the wrong body
- * never shows first. The card holds its muscles, so there is no request, no loading and no failure.
+ * never shows first. The card holds its muscles, so there is no request, no loading and no failure. It is
+ * memoised, because the thread draws again for every streamed token and each card holds two SVG figures. Its
+ * one prop is a stable reference: the live turn keeps the object it was sent, and a stored conversation read
+ * again keeps the objects that did not change.
  */
-export function ExerciseMusclesEntry({ exercise }: ExerciseMusclesEntryProps) {
+export const ExerciseMusclesEntry = memo(function ExerciseMusclesEntry({
+  exercise,
+}: ExerciseMusclesEntryProps) {
   const { figure, isReady: isFigureReady } = useBodyFigure();
   const figureValues = exerciseRoleValues(exercise.muscles);
 
@@ -54,4 +60,4 @@ export function ExerciseMusclesEntry({ exercise }: ExerciseMusclesEntryProps) {
       </View>
     </View>
   );
-}
+});

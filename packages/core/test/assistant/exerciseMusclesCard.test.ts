@@ -17,6 +17,7 @@ import {
   parseAssistantEvent,
   threadFromMessages,
 } from "../../src/assistant";
+import { MUSCLE_IDS } from "../../src/training";
 
 import type {
   AssistantCardLink,
@@ -80,6 +81,22 @@ describe("the exercise_muscles event", () => {
   it("should reject an extra key on the exercise", () => {
     expect(
       assistantExerciseMusclesSchema.safeParse({ ...seatedLegCurl, exerciseId: "x" }).success,
+    ).toBe(false);
+  });
+
+  it("should take one row for each muscle of the list and no more", () => {
+    const everyMuscle = MUSCLE_IDS.map((muscle_id) => ({ muscle_id, role: "primary" as const }));
+    const withOneMore = [
+      ...everyMuscle,
+      { muscle_id: "hamstrings" as const, role: "primary" as const },
+    ];
+
+    expect(everyMuscle).toHaveLength(22);
+    expect(
+      assistantExerciseMusclesSchema.safeParse({ ...seatedLegCurl, muscles: everyMuscle }).success,
+    ).toBe(true);
+    expect(
+      assistantExerciseMusclesSchema.safeParse({ ...seatedLegCurl, muscles: withOneMore }).success,
     ).toBe(false);
   });
 
@@ -261,6 +278,16 @@ describe("buildAssistantSheetThread, the muscles of an exercise", () => {
     expect(build({ items: [storedItem("e1", seatedLegCurl)] }).entries).toEqual([
       { kind: "exerciseMuscles", key: "e1", exercise: seatedLegCurl },
     ]);
+  });
+
+  it("should hand the card the same exercise object, stored or live, so a memoised card is not drawn again", () => {
+    const stored = build({ items: [storedItem("e1", seatedLegCurl)] }).entries[0];
+    const sent = { text: "Hello", afterItemId: null };
+    const live = build({ sent, live: liveTurn({ exerciseMuscles: [seatedLegCurl] }) }).entries[1];
+
+    expect(stored).toMatchObject({ exercise: seatedLegCurl });
+    expect(stored?.kind === "exerciseMuscles" && stored.exercise).toBe(seatedLegCurl);
+    expect(live?.kind === "exerciseMuscles" && live.exercise).toBe(seatedLegCurl);
   });
 
   it("should draw the reply of the turn on screen, then its cards", () => {
