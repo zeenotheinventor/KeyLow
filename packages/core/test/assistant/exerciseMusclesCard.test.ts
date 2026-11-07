@@ -215,7 +215,7 @@ describe("threadFromMessages, the muscles of an exercise", () => {
     expect(thread.map((item) => item.kind)).toEqual(["user", "reply"]);
   });
 
-  it("should keep the order reply, muscles, link, notice, Ask again", () => {
+  it("should keep the order reply, muscles, link, Ask again", () => {
     const thread = threadFromMessages(
       storedTurn(
         [
@@ -227,7 +227,6 @@ describe("threadFromMessages, the muscles of an exercise", () => {
         "Words.",
         firstTurnId,
         ["m1", "m2", "m3", "m4"],
-        "failed",
       ),
       [],
     );
@@ -237,7 +236,6 @@ describe("threadFromMessages, the muscles of an exercise", () => {
       "reply",
       "exercise_muscles",
       "link",
-      "notice",
       "ask_again",
     ]);
   });

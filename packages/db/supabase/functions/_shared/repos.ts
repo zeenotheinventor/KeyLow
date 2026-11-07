@@ -17,6 +17,7 @@ export type {
   LogQuickEntryInput,
   QuickEntryValues,
   RecipeDetail,
+  RoutineDetail,
   SessionWithSets,
   SuggestionLibraryOptions,
   Targets,
@@ -27,6 +28,7 @@ export type {
 } from "./repos/index.js";
 export {
   CopyDayPartialWriteError,
+  RoutineRuleError,
   FoodsPartialWriteError,
   copyDay,
   createFood,
@@ -82,4 +84,7 @@ export {
   setActiveRoutine,
   getSet,
   updateSet,
+  closeTrainingGoals,
+  listTrainingGoalsHistory,
+  saveTrainingGoalsReturningId,
 } from "./repos/index.js";

@@ -12,6 +12,7 @@ import {
   confirmDeleteButtons,
   confirmTargetsButtons,
   confirmArchiveRoutineButtons,
+  confirmRemoveExercisesButtons,
 } from "../_shared/core.ts";
 
 export type ConfirmWords = {
@@ -27,6 +28,7 @@ const copyDayInput = z.object({ entry_count: z.number().int().min(1) });
 const archiveRecipeInput = z.object({ id: z.string() });
 const updateTargetsInput = z.object({ current_kcal: z.number().int().nullable() });
 const archiveRoutineInput = z.object({ routine_id: z.string() });
+const editRoutineInput = z.object({ changes: z.array(z.object({ op: z.string() })) });
 
 // The buttons of `update_targets` name the number the person keeps, which the tool's input holds as
 // `current_kcal`. `needsConfirmation` reads the person's own number and refuses a call that disagrees, so a
@@ -72,6 +74,17 @@ const wordsByTool: ReadonlyMap<string, WordsFor> = new Map<string, WordsFor>([
       archiveRoutineInput.safeParse(input).success
         ? { ...confirmArchiveRoutineButtons(), tone: "primary" }
         : null,
+  ],
+  // The buttons count the removals of the call. A call with fewer than two asks nothing, so it has no buttons.
+  [
+    "edit_routine",
+    (input) => {
+      const parsed = editRoutineInput.safeParse(input);
+      const removals = parsed.success
+        ? parsed.data.changes.filter(({ op }) => op === "remove").length
+        : 0;
+      return removals >= 2 ? { ...confirmRemoveExercisesButtons(removals), tone: "danger" } : null;
+    },
   ],
 ]);
 

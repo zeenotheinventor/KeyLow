@@ -1,5 +1,16 @@
 import { describe, expect, it } from "vitest";
 
+import { GOLDEN_LIBRARY, evenState } from "./suggestGolden";
+import { FULL_GYM, MINUTES_PRESETS } from "../../src/copy";
+import {
+  changedGoalAnswers,
+  GOAL_STARTING_ANSWERS,
+  goalAnswersSchema,
+  GOAL_PRESETS_V1,
+  suggestSession,
+  SUGGEST_PARAMS_V2,
+  trainingGoalsPayload,
+} from "../../src/training";
 import {
   goalAnswersOfRow,
   goalDraftReducer,
@@ -9,6 +20,7 @@ import {
   isGoalStepAnswered,
 } from "../../src/training/goalDraft";
 
+import type { GoalAnswers } from "../../src/training";
 import type { GoalDraftAnswers } from "../../src/training/goalDraft";
 
 describe("the goal draft", () => {
@@ -261,6 +273,95 @@ describe("the goal draft", () => {
         equipment: ["dumbbell"],
         experience: "advanced",
       });
+    });
+  });
+
+  describe("the answers a first goal starts with", () => {
+    it("should leave the focus empty, as the app's own start does", () => {
+      expect(GOAL_STARTING_ANSWERS.focus).toStrictEqual(initialGoalDraft().focus);
+    });
+
+    it("should pick the full gym, as the app's own shortcut does", () => {
+      expect(GOAL_STARTING_ANSWERS.equipment).toStrictEqual(FULL_GYM.equipment);
+    });
+
+    it("should hold the middle of the session lengths the questionnaire offers", () => {
+      expect(GOAL_STARTING_ANSWERS.session_minutes).toBe(
+        MINUTES_PRESETS[Math.floor(MINUTES_PRESETS.length / 2)],
+      );
+      expect(GOAL_STARTING_ANSWERS.session_minutes).toBe(60);
+    });
+
+    it("should start at three days a week", () => {
+      expect(GOAL_STARTING_ANSWERS.days_per_week).toBe(3);
+    });
+
+    it("should be a goal the questionnaire accepts once the goal and the experience are added", () => {
+      const answers = { ...GOAL_STARTING_ANSWERS, goal: "aesthetic", experience: "intermediate" };
+
+      expect(goalAnswersSchema.safeParse(answers).success).toBe(true);
+    });
+
+    it("should give a session to suggest, so a goal saved this way is not a dead end", () => {
+      const answers = goalAnswersSchema.parse({
+        ...GOAL_STARTING_ANSWERS,
+        goal: "aesthetic",
+        experience: "intermediate",
+      });
+      const { goal, experience, equipment, session_minutes, muscle_priority } =
+        trainingGoalsPayload(answers, GOAL_PRESETS_V1);
+
+      const suggestion = suggestSession(
+        evenState(0, 0),
+        { goal, experience, equipment, session_minutes, muscle_priority },
+        GOLDEN_LIBRARY,
+        {},
+        SUGGEST_PARAMS_V2,
+      );
+
+      expect(suggestion.kind).toBe("session");
+    });
+  });
+
+  describe("the answers that changed", () => {
+    const before: GoalAnswers = {
+      goal: "aesthetic",
+      focus: ["arms", "legs"],
+      days_per_week: 4,
+      session_minutes: 45,
+      equipment: ["dumbbell", "bodyweight"],
+      experience: "intermediate",
+    };
+
+    it("should name none when the answers are the same", () => {
+      expect(changedGoalAnswers(before, { ...before })).toStrictEqual([]);
+    });
+
+    it("should name the answers that differ, in the order of the questions", () => {
+      expect(
+        changedGoalAnswers(before, {
+          ...before,
+          experience: "advanced",
+          days_per_week: 3,
+          goal: "strength",
+        }),
+      ).toStrictEqual(["goal", "days_per_week", "experience"]);
+    });
+
+    it("should read a list in another order as the same answer", () => {
+      expect(
+        changedGoalAnswers(before, {
+          ...before,
+          focus: ["legs", "arms"],
+          equipment: ["bodyweight", "dumbbell"],
+        }),
+      ).toStrictEqual([]);
+    });
+
+    it("should name a list that gained or lost a value", () => {
+      expect(
+        changedGoalAnswers(before, { ...before, focus: ["arms"], equipment: ["dumbbell"] }),
+      ).toStrictEqual(["focus", "equipment"]);
     });
   });
 });
