@@ -23,6 +23,7 @@ import {
 import {
   getCurrentTrainingGoals,
   getRoutine,
+  RoutineRuleError,
   readExercisesById,
   setRoutineArchived,
 } from "../../repos.ts";
@@ -98,7 +99,8 @@ export const createRoutineTool: WriteToolDefinition<CreateRoutineInput> = {
     "set_active_routine next. The answer has the routine_id, is_active false, each day's id, name, " +
     "exercises, sets and minutes, sets_per_week and two flags to mention: over_session_minutes lists the " +
     "days, counted from 0, that run longer than the user's session length, and outside_equipment lists " +
-    "[day, exercise] pairs, counted from 0, for an exercise their equipment does not cover. An id that " +
+    "[day, exercise] pairs, counted from 0, for an exercise their equipment does not cover. When a " +
+    "day's id in the answer is null, read the routine with get_routines before edit_routine. An id that " +
     "is not a live exercise of the library or the user's own is invalid_input with its place " +
     "(days.0.exercise_ids.2): search again and replace it. An answer of needs_goal true means the user " +
     "has no training goal yet and nothing was saved: tell them Ki-Lo needs their goal and experience " +
@@ -240,7 +242,16 @@ export const createRoutineTool: WriteToolDefinition<CreateRoutineInput> = {
     ) {
       return { status: "unavailable", reason: "logged" };
     }
-    await setRoutineArchived(ctx.caller, targetId, true);
+    try {
+      await setRoutineArchived(ctx.caller, targetId, true);
+    } catch (caught) {
+      // The person made the routine active between the read above and this write, and the table refuses to
+      // archive the active routine. Nothing was changed.
+      if (caught instanceof RoutineRuleError && caught.rule === "active_routine") {
+        return { status: "unavailable", reason: "active" };
+      }
+      throw caught;
+    }
     return "undone";
   },
 };

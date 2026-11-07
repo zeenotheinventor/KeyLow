@@ -16,6 +16,8 @@ export const fingerprintOfStoredRoutine = (routine: RoutineDetail): string =>
   routineFingerprint(draftOfStoredRoutine(routine));
 
 // Whether a live workout was started from one of these routine days, in one select under the caller's JWT.
+// A deleted workout is ignored: this Undo only archives, and unlinks nothing, so a deleted workout loses nothing.
+// An edit that removes days (KEY-902) counts deleted workouts too, because removing a day unlinks them.
 // The database's message can quote a row, so a failure keeps its code only.
 export async function hasWorkoutOnDays(
   ctx: ToolContext,

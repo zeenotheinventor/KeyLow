@@ -1170,9 +1170,54 @@ describe("a write case, played wrong", () => {
     expect(slow.some((reason) => reason.includes("over the 100 s deadline"))).toBe(true);
     expect(
       repeated.some((reason) =>
-        reason.includes("create_routine was not called with 4 days of 6 different exercises"),
+        reason.includes(
+          "create_routine was not called with 4 days of 6 exercises, at least 20 of them different",
+        ),
       ),
     ).toBe(true);
+  });
+
+  it("should pass a build that read the muscles first and repeated an exercise on two days", async () => {
+    const reasons = await failures("write-build-a-4-day-routine", (played) => {
+      const [turn] = played.turns;
+      return {
+        ...played,
+        turns: [
+          turnResult({
+            ...turn,
+            toolCalls: [
+              readTool("get_muscle_state", {}),
+              ...(turn?.toolCalls ?? []).slice(1, -1),
+              writeTool("create_routine", {
+                ...builtFourDays,
+                days: builtFourDays.days.map((day, dayIndex) => ({
+                  ...day,
+                  exercise_ids: day.exercise_ids.map((id, index) =>
+                    dayIndex === 3 && index === 0 ? "exercise-0" : id,
+                  ),
+                })),
+              }),
+            ],
+          }),
+        ],
+      };
+    });
+
+    expect(reasons).toEqual([]);
+  });
+
+  it("should fail a build that wrote anything but the routine", async () => {
+    const reasons = await failures("write-build-a-4-day-routine", (played) => ({
+      ...played,
+      turns: [
+        turnResult({
+          ...played.turns[0],
+          toolCalls: [...(played.turns[0]?.toolCalls ?? []), writeTool("log_entry", {})],
+        }),
+      ],
+    }));
+
+    expect(reasons.some((reason) => reason.includes("log_entry was called"))).toBe(true);
   });
 
   it("should fail a recipe made from the wrong ingredient amounts", async () => {

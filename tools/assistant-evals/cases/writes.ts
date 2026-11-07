@@ -32,7 +32,7 @@ import {
   scaleMacroTargets,
 } from "@keylow/core";
 
-import { DIARY_READ_TOOLS } from "./ask.ts";
+import { DIARY_READ_TOOLS, READ_TOOLS } from "./ask.ts";
 import {
   actionRows,
   anyOfRoutes,
@@ -849,19 +849,18 @@ function distinctTurns(): Grader {
 // model reads the goal, searches for every exercise and builds once, so the turn runs the longest chain of tools
 // a build can need. The turn's own clock is read back, so the line it prints is the time the served path took.
 const BUILD_ROUTINE_NAME = "Scratch four day";
-const BUILD_ROUTINE_TOOLS: ReadonlySet<string> = new Set([
-  "get_training_goals",
-  "get_routines",
-  "search_exercises",
-  "create_routine",
-]);
+// Any read tool is fair on the way to a build (a model may look at the muscles or the workouts first). What a
+// build may not do is write anything but the routine.
+const BUILD_ROUTINE_TOOLS: ReadonlySet<string> = new Set([...READ_TOOLS, "create_routine"]);
 const BUILD_DAYS = 4;
 const BUILD_EXERCISES_PER_DAY = 6;
+// A press or a squat may fairly come up on two days, so the build needs this many different exercises, not all 24.
+const BUILD_MINIMUM_DISTINCT_EXERCISES = 20;
 // The turn deadline of `turn.ts`, in seconds. A turn that passes it ends failed, so a build that gets close to it is
 // the risk the ticket names.
 const TURN_DEADLINE_SECONDS = 100;
 
-/** Passes when the one `create_routine` call has the days and the exercises asked for, none of them twice. */
+/** Passes when the `create_routine` call has the days asked for, each of the exercises asked for, and enough different ones. */
 function builtFourDaysOfSix(): Grader {
   return calledWith(
     "create_routine",
@@ -874,9 +873,9 @@ function builtFourDaysOfSix(): Grader {
           Array.isArray(day["exercise_ids"]) &&
           day["exercise_ids"].length === BUILD_EXERCISES_PER_DAY,
       ) &&
-      new Set(days.flatMap((day) => (isRecord(day) ? [day["exercise_ids"]].flat(2) : []))).size ===
-        BUILD_DAYS * BUILD_EXERCISES_PER_DAY,
-    `${BUILD_DAYS} days of ${BUILD_EXERCISES_PER_DAY} different exercises`,
+      new Set(days.flatMap((day) => (isRecord(day) ? [day["exercise_ids"]].flat(2) : []))).size >=
+        BUILD_MINIMUM_DISTINCT_EXERCISES,
+    `${BUILD_DAYS} days of ${BUILD_EXERCISES_PER_DAY} exercises, at least ${BUILD_MINIMUM_DISTINCT_EXERCISES} of them different`,
   );
 }
 

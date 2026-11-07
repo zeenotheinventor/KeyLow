@@ -86,6 +86,28 @@ async function liveSetsOf(client: SupabaseClient<Database>, sessionId: string, a
   return { count, highestPosition: data[0]?.position ?? null };
 }
 
+/**
+ * A set by its id as stored, removed or not (`deleted_at` says which), or null when it does not exist or is
+ * not the caller's, the same in both cases. The assistant reads a set it was named by id, to find its session.
+ * Throws a `RangeError` before any request when `id` is not a UUID.
+ */
+export async function getSet(
+  client: SupabaseClient<Database>,
+  id: string,
+): Promise<SessionSet | null> {
+  assertId(id, "set");
+
+  const { data, error } = await client
+    .from("workout_sets")
+    .select(SESSION_SET_COLUMNS)
+    .eq("id", id)
+    .maybeSingle();
+  if (error) {
+    throw repoError("load the set", error);
+  }
+  return data === null ? null : parseSessionSet(data, "load the set");
+}
+
 export type SetAdd = {
   sessionId: string;
   exerciseId: string;

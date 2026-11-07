@@ -271,8 +271,9 @@ Deno.test("a flag-free build says so with empty lists", async () => {
 });
 
 Deno.test(
-  "the result never echoes the routine and stays under 2,000 characters at 7 days of 8",
+  "the result never echoes the routine and stays under 2,000 characters at 7 days of 8 with plain day names",
   async () => {
+    // Plain letters. A name of characters that JSON escapes takes more room, up to 5,405 characters, and nothing is cut.
     const longName = "d".repeat(100);
     const { ctx } = setUp({
       goal: goalsRow({ session_minutes: 30, equipment: ["cable"] }),
@@ -500,6 +501,7 @@ Deno.test(
     assertStringIncludes(description, "Goal screen in Train");
     assertStringIncludes(description, "Do not ask them with ask_user");
     assertStringIncludes(description, "edit_routine");
+    assertStringIncludes(description, "read the routine with get_routines before edit_routine");
   },
 );
 
@@ -577,3 +579,45 @@ Deno.test("the save is one rpc call and the routine is read back once, after it"
   assertEquals(methods.filter((table) => table === "routines").length, 1);
   assert(methods.indexOf("rpc:save_routine") < methods.indexOf("routines"));
 });
+
+Deno.test(
+  "Undo is unavailable as active when the routine became active between the read and the archive",
+  async () => {
+    const setup = setUp();
+    const result = await executeTool(setup.ctx, "create_routine", threeDays);
+    const actionId = keepUndo(setup, result);
+    const [row] = routinesOf(setup.stub);
+    setup.stub.beforeNextWriteTo("routines", () => {
+      Object.assign(row ?? {}, { is_active: true });
+    });
+
+    assertEquals(await undoAction(setup.ctx, actionId), {
+      status: "error",
+      code: "undo_unavailable",
+      reason: "active",
+    });
+    assertEquals(row?.["is_archived"], false);
+    assertEquals(setup.reported, []);
+  },
+);
+
+Deno.test(
+  "a day exactly as long as the session minutes is not flagged, and one minute over is",
+  async () => {
+    // Six exercises of three sets each are 6 x 2 + 18 x 2.5 = 57 minutes, which rounds to 55.
+    const flagged = async (sessionMinutes: number) => {
+      const { ctx } = setUp({
+        goal: goalsRow({ session_minutes: sessionMinutes }),
+        rows: { exercises: Array.from({ length: 6 }, (_, index) => libraryExercise(index + 1)) },
+      });
+      const result = await executeTool(ctx, "create_routine", {
+        name: "One day",
+        days: [{ name: "Everything", weekday: null, exercise_ids: ids(1, 6) }],
+      });
+      return (payloadOf(result) as Record<string, unknown>)["over_session_minutes"];
+    };
+
+    assertEquals(await flagged(55), []);
+    assertEquals(await flagged(54), [0]);
+  },
+);
