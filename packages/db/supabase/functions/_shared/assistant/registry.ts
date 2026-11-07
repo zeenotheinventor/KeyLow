@@ -8,6 +8,7 @@ import { deleteEntryTool } from "./tools/deleteEntry.ts";
 import { askUserTool } from "./tools/askUser.ts";
 import { getDayTool } from "./tools/getDay.ts";
 import { getEntriesTool } from "./tools/getEntries.ts";
+import { getExerciseProgressTool } from "./tools/getExerciseProgress.ts";
 import { getFoodTool } from "./tools/getFood.ts";
 import { getRangeTotalsTool } from "./tools/getRangeTotals.ts";
 import { getRecipesTool } from "./tools/getRecipes.ts";
@@ -75,6 +76,7 @@ const toolDefinitions: readonly ToolDefinition[] = [
   searchExercisesTool,
   getRoutinesTool,
   getTrainingGoalsTool,
+  getExerciseProgressTool,
   askUserTool,
 ];
 

@@ -1,7 +1,13 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 
-import { TREND_RANGES, TREND_RANGE_WEEKS, exerciseWeeklyTrend } from "../../src/training";
+import { addCalendarDays } from "../../src/dates";
+import {
+  TREND_RANGES,
+  TREND_RANGE_WEEKS,
+  exerciseWeeklyTrend,
+  weeksWithoutProgress,
+} from "../../src/training";
 
 import type { TrendEntry, TrendSet } from "../../src/training";
 
@@ -432,5 +438,115 @@ describe("the input rules", () => {
       new RangeError("A set's local date must be a calendar day written YYYY-MM-DD"),
     );
     expect(() => exerciseWeeklyTrend([], { ...options, earlier: sets })).toThrow(RangeError);
+  });
+});
+
+describe("weeksWithoutProgress", () => {
+  // The Monday of the week of NOW, 19 Oct, and of the weeks before it.
+  const weeksAgo = (weeks: number) => addCalendarDays("2026-10-19", -7 * weeks);
+  const trendOf = (weeks: Array<{ monday: string } & Partial<TrendSet>>) =>
+    exerciseWeeklyTrend(
+      weeks.map(({ monday, ...overrides }) => aSet(monday, overrides)),
+      { ...options, range: "3m" },
+    );
+
+  it("should be 0 while every trained week beats the one before", () => {
+    const trend = trendOf([
+      { monday: weeksAgo(2), load_kg: 60 },
+      { monday: weeksAgo(1), load_kg: 62.5 },
+      { monday: weeksAgo(0), load_kg: 65 },
+    ]);
+
+    expect(weeksWithoutProgress(trend)).toBe(0);
+  });
+
+  it("should count the trained weeks since the best last moved up when the load stood still", () => {
+    const trend = trendOf([
+      { monday: weeksAgo(3), load_kg: 55 },
+      { monday: weeksAgo(2), load_kg: 60 },
+      { monday: weeksAgo(1), load_kg: 60 },
+      { monday: weeksAgo(0), load_kg: 60 },
+    ]);
+
+    expect(weeksWithoutProgress(trend)).toBe(2);
+  });
+
+  it("should count weeks the best fell as well as weeks it stood still", () => {
+    const trend = trendOf([
+      { monday: weeksAgo(3), load_kg: 65 },
+      { monday: weeksAgo(2), load_kg: 62.5 },
+      { monday: weeksAgo(1), load_kg: 62.5 },
+      { monday: weeksAgo(0), load_kg: 60 },
+    ]);
+
+    expect(weeksWithoutProgress(trend)).toBe(3);
+  });
+
+  it("should count only the weeks since the latest rise, not the ones before it", () => {
+    const trend = trendOf([
+      { monday: weeksAgo(4), load_kg: 60 },
+      { monday: weeksAgo(3), load_kg: 60 },
+      { monday: weeksAgo(2), load_kg: 60 },
+      { monday: weeksAgo(1), load_kg: 62.5 },
+      { monday: weeksAgo(0), load_kg: 62.5 },
+    ]);
+
+    expect(weeksWithoutProgress(trend)).toBe(1);
+  });
+
+  it("should be 0 for a one-week history, which has nothing to compare with", () => {
+    expect(weeksWithoutProgress(trendOf([{ monday: weeksAgo(0) }]))).toBe(0);
+  });
+
+  it("should be 0 for an exercise with no trained week in the range", () => {
+    expect(weeksWithoutProgress(trendOf([]))).toBe(0);
+  });
+
+  it("should skip the weeks not trained, since they are neither progress nor a stall", () => {
+    const trend = trendOf([
+      { monday: weeksAgo(4), load_kg: 60 },
+      { monday: weeksAgo(2), load_kg: 60 },
+      { monday: weeksAgo(0), load_kg: 60 },
+    ]);
+
+    expect(weeksWithoutProgress(trend)).toBe(2);
+  });
+
+  it("should read a heavier load with fewer reps as progress, since the load comes first", () => {
+    const trend = trendOf([
+      { monday: weeksAgo(1), load_kg: 60, reps: 8 },
+      { monday: weeksAgo(0), load_kg: 62.5, reps: 5 },
+    ]);
+
+    expect(weeksWithoutProgress(trend)).toBe(0);
+  });
+
+  it("should read a lighter load with more reps as a fall", () => {
+    const trend = trendOf([
+      { monday: weeksAgo(1), load_kg: 62.5, reps: 5 },
+      { monday: weeksAgo(0), load_kg: 60, reps: 12 },
+    ]);
+
+    expect(weeksWithoutProgress(trend)).toBe(1);
+  });
+
+  it("should follow the reps for an exercise with no load", () => {
+    const trend = trendOf([
+      { monday: weeksAgo(3), load_kg: null, reps: 10 },
+      { monday: weeksAgo(2), load_kg: null, reps: 12 },
+      { monday: weeksAgo(1), load_kg: null, reps: 12 },
+      { monday: weeksAgo(0), load_kg: null, reps: 11 },
+    ]);
+
+    expect(weeksWithoutProgress(trend)).toBe(2);
+  });
+
+  it("should read a move from a load to no load as a fall", () => {
+    const trend = trendOf([
+      { monday: weeksAgo(1), load_kg: 10, reps: 8 },
+      { monday: weeksAgo(0), load_kg: null, reps: 15 },
+    ]);
+
+    expect(weeksWithoutProgress(trend)).toBe(1);
   });
 });
