@@ -86,10 +86,7 @@ describe("threadFromMessages, a link and Ask again", () => {
   });
 
   it("should give every item of one tool result its own id, so no two entries share a React key", () => {
-    const thread = threadFromMessages(
-      storedTurn({ card: routineUpdatedCard, link, askAgain: true }, "Done."),
-      [],
-    );
+    const thread = threadFromMessages(storedTurn({ link, askAgain: true }, "Done."), []);
 
     const ids = thread.map((item) => item.id);
     expect(new Set(ids).size).toBe(ids.length);
@@ -97,6 +94,53 @@ describe("threadFromMessages, a link and Ask again", () => {
     expect(thread.find((item) => item.kind === "ask_again")?.id).toBe("m3:0:askAgain");
     const keys = build({ items: thread }).entries.map((entry) => entry.key);
     expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  it.each(["failed", "stopped", "refused", "clarify", "confirm"] as const)(
+    "should not draw Ask again on a turn that ended %s, where the live turn never showed it",
+    (turnStatus) => {
+      const messages = storedTurn({ askAgain: true }, "Your workout is in progress.").map(
+        (message) => ({ ...message, turnStatus }),
+      );
+
+      expect(threadFromMessages(messages, []).some((item) => item.kind === "ask_again")).toBe(
+        false,
+      );
+    },
+  );
+
+  it("should not draw Ask again on a turn where a write landed, because sending the message again would repeat it", () => {
+    const refusedFirst = [
+      ...storedTurn({ askAgain: true }),
+      toolResultMessage("m5", firstTurnId, [
+        {
+          toolUseId: `${firstTurnId}:write`,
+          source: "edit_routine",
+          outcome: { card: routineUpdatedCard },
+        },
+      ]),
+      replyMessage("m6", firstTurnId, "Done, and the swap waits."),
+    ];
+    const writeFirst = [
+      userMessage("m1", firstTurnId, "Log 2 eggs and swap bench"),
+      toolResultMessage("m3", firstTurnId, [
+        {
+          toolUseId: `${firstTurnId}:write`,
+          source: "edit_routine",
+          outcome: { card: routineUpdatedCard },
+        },
+      ]),
+      toolResultMessage("m4", firstTurnId, [
+        { toolUseId: `${firstTurnId}:call`, source: "edit_routine", outcome: { askAgain: true } },
+      ]),
+      replyMessage("m6", firstTurnId, "Logged, and the swap waits."),
+    ];
+
+    for (const messages of [refusedFirst, writeFirst]) {
+      const kinds = threadFromMessages(messages, []).map((item) => item.kind);
+      expect(kinds).toContain("card");
+      expect(kinds).not.toContain("ask_again");
+    }
   });
 
   it("should draw neither when the display says there is none", () => {

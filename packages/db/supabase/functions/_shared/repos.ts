@@ -22,6 +22,8 @@ export type {
   Targets,
   TrainingInputs,
   WeighIn,
+  SessionSet,
+  SetPatch,
 } from "./repos/index.js";
 export {
   CopyDayPartialWriteError,
@@ -78,4 +80,9 @@ export {
   updateMyTargets,
   updateRecipe,
   setActiveRoutine,
+  getSet,
+  updateSet,
+  closeTrainingGoals,
+  listTrainingGoalsHistory,
+  saveTrainingGoalsReturningId,
 } from "./repos/index.js";

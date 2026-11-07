@@ -109,6 +109,9 @@ Deno.test(
         ["suggest_next_session", "read"],
         ["set_active_routine", "write"],
         ["archive_routine", "write"],
+        ["edit_routine", "write"],
+        ["update_past_set", "write"],
+        ["update_training_goals", "write"],
         ["ask_user", "read"],
       ],
     );
@@ -214,12 +217,29 @@ Deno.test(
 );
 
 Deno.test(
+  "edit_routine opts out of strict mode, so it takes nothing from the strict budget",
+  () => {
+    assertEquals(toolRegistry.get("edit_routine")?.strict, false);
+  },
+);
+
+Deno.test(
   "the muscle and suggestion reads are read-only and opt out of strict mode, so they take nothing from the strict budget",
   () => {
     for (const name of ["get_muscle_state", "suggest_next_session"]) {
       assertEquals(toolRegistry.get(name)?.strict, false, name);
       assertEquals(toolRegistry.get(name)?.annotations.readOnlyHint, true, name);
     }
+  },
+);
+
+Deno.test(
+  "update_past_set opts out of strict mode, so it takes nothing from the strict budget",
+  () => {
+    const tool = toolRegistry.get("update_past_set");
+
+    assertEquals(tool?.strict, false);
+    assertEquals(tool?.kind, "write");
   },
 );
 
@@ -370,3 +390,14 @@ Deno.test("the check names a training write that lacks the guard and spares the 
     ["remove_set", "archive_routine"],
   );
 });
+
+Deno.test(
+  "update_training_goals is a write that opts out of strict, so the strict budget does not move",
+  () => {
+    const goals = toolRegistry.get("update_training_goals");
+
+    assertEquals(goals?.kind, "write");
+    assertEquals(goals?.strict, false);
+    assertEquals(goals?.kind === "write" ? goals.refusesDuringWorkout : undefined, true);
+  },
+);

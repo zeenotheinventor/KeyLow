@@ -20,8 +20,10 @@ import { undoOutcomeSchema } from "../_shared/assistant/store.ts";
 import { askUserTool } from "../_shared/assistant/tools/askUser.ts";
 import { wrapUntrusted } from "../_shared/assistant/untrusted.ts";
 import {
+  assistantCardLinkSchema,
   assistantCardSchema,
   assistantExerciseMusclesSchema,
+  describeWorkoutInProgressRefusal,
   isConfirmAnswer,
   mergeAssistantCards,
   safeWordsToShow,
@@ -223,6 +225,9 @@ type Run = {
   landedWrites: number;
   // The code of the last tool error the loop read, so a press that wrote nothing can tell a refusal from a fault.
   lastErrorCode: string | null;
+  // Whether a write of this turn was refused for a workout in progress, so the turn ends with Ask again. Set
+  // by the first such refusal, which is also the only one that stores it, so a reopened turn draws one chip.
+  askAgain: boolean;
   // The prompt of the last model call that answered, which is what the next request's size will start from.
   lastPromptTokens: number | null;
   unparseableInputRetries: number;
@@ -458,6 +463,7 @@ async function callModel(
 
 const structuredSchema = z.looseObject({
   card: z.unknown().optional(),
+  link: z.unknown().optional(),
   citation: z.string().min(1).nullish(),
   estimate: z.string().min(1).nullish(),
   undo: z.unknown().optional(),
@@ -511,7 +517,12 @@ async function finishCall(
   }
   if (outcome.status === "error") {
     run.lastErrorCode = outcome.code;
-    await storeToolResult(run, block, null);
+    // A write refused for a workout in progress is answered by the model's words and then Ask again
+    // (`assistant · workout-in-progress`), with no notice and no failed turn. The chip is stored on the first
+    // such result only, because the app draws one for each entry that holds it.
+    const storesAskAgain = outcome.code === "workout_in_progress" && !run.askAgain;
+    run.askAgain ||= outcome.code === "workout_in_progress";
+    await storeToolResult(run, block, storesAskAgain ? { [toolUse.id]: { askAgain: true } } : null);
     return null;
   }
   if (outcome.actionId !== null) {
@@ -562,6 +573,17 @@ async function finishCall(
           "internal_error",
           new Error("exercise muscles cannot be drawn"),
         );
+      }
+    }
+    // A link on its own, under the words of an answer that changed nothing (a day that cannot be removed here).
+    if (structured.data.link !== undefined) {
+      const link = assistantCardLinkSchema.safeParse(structured.data.link);
+      if (link.success) {
+        entry["link"] = toJson(link.data);
+        emit(run, { type: "link", link: link.data });
+      } else {
+        // Fixed words only. A parse failure's own message is not reported, because it can quote the value.
+        run.dependencies.report("assistant", "internal_error", new Error("a link cannot be drawn"));
       }
     }
     // After the card, in the same row. The previous value is the person's own data, so it is kept here beside
@@ -759,11 +781,11 @@ async function runModelCalls(run: Run, session: Session): Promise<Ending> {
   return failedEnding("model_call_limit");
 }
 
-// The executor's refusals that a person can cause on a press, and that the notice already answers.
+// The executor's refusals that a person can cause on a press, and that the notice already answers. A workout in
+// progress is answered in words of its own, before this is read.
 const PRESS_REFUSALS: ReadonlySet<string> = new Set([
   "confirmation_invalid",
   "write_limit_reached",
-  "workout_in_progress",
 ]);
 
 // The press of a confirm button (KEY-840). The person has decided, so the loop makes the stored call itself and
@@ -793,6 +815,14 @@ async function runConfirmedCall(
   const finished = await runToolUse(run, session, call, "", true);
   if (finished !== null) {
     return finished;
+  }
+  if (run.lastErrorCode === "workout_in_progress") {
+    // A workout started after the question was asked. No model answers a press, so the words are core's, and the
+    // turn ends complete with Ask again, as a refusal that a model words does. Nothing was written or spent.
+    const words = describeWorkoutInProgressRefusal();
+    await storeAssistantContent(run, [{ type: "text", text: words }]);
+    emit(run, { type: "text", delta: words });
+    return ending("complete", "confirm_refused_workout");
   }
   if (run.pendingCards.length > 0) {
     return ending("complete");
@@ -951,6 +981,11 @@ async function conclude(run: Run, reached: Ending): Promise<Ending> {
     if (citation !== null || estimate !== null) {
       emit(run, { type: "answer_meta", citation, estimate });
     }
+    // Once, however many writes of the turn were refused, and after the words that led to it. Not when a write of
+    // the turn landed: sending the message again would repeat it, and the model's words say what waits.
+    if (run.askAgain && run.landedWrites === 0) {
+      emit(run, { type: "ask_again" });
+    }
   }
   try {
     await dependencies.turns.finishTurn(context.userId, context.turnId, final.status);
@@ -999,6 +1034,7 @@ export function createRunTurn(
       counts: { modelCalls: 0, toolCalls: 0 },
       landedWrites: 0,
       lastErrorCode: null,
+      askAgain: false,
       lastPromptTokens: null,
       unparseableInputRetries: 0,
       pendingCards: [],

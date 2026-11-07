@@ -130,14 +130,16 @@ export type { RoutineSave } from "./routineWrites";
 export type { RoutineDetail, RoutineListEntry, RoutineRecord } from "./routineSchemas";
 export { deleteSession, finishSession, restoreSession, startSession } from "./sessionWrites";
 export type { SessionFinish, SessionRestore, SessionStart } from "./sessionWrites";
-export { addSet, removeSet, reorderSets, restoreSet, updateSet } from "./setWrites";
+export { addSet, getSet, removeSet, reorderSets, restoreSet, updateSet } from "./setWrites";
 export type { SetAdd, SetPatch } from "./setWrites";
 export { findPreviousSessionWeek, listSessionsInWeek } from "./trainingHistory";
 export type { HistorySessionRow, HistorySetRow } from "./trainingSchemas";
 export {
+  closeTrainingGoals,
   getCurrentTrainingGoals,
   listTrainingGoalsHistory,
   saveTrainingGoals,
+  saveTrainingGoalsReturningId,
 } from "./trainingGoals";
 export { exerciseHitOf, getExercise, readExercisesById, searchExercises } from "./exercises";
 export type {

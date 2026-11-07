@@ -3,9 +3,11 @@ import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import {
+  closeTrainingGoals,
   getCurrentTrainingGoals,
   listTrainingGoalsHistory,
   saveTrainingGoals,
+  saveTrainingGoalsReturningId,
 } from "../../src/repos/trainingGoals";
 import { createTestClient } from "../createTestClient";
 import {
@@ -250,5 +252,103 @@ describe("saveTrainingGoals", () => {
     expect(error?.message).toMatch(/^Could not save your training goals/);
     expect(textOf(error)).not.toContain("v_taper");
     expect(textOf(error)).not.toContain("aesthetic");
+  });
+});
+
+describe("saveTrainingGoalsReturningId", () => {
+  it("should send the payload core derives from the answers and resolve to the new row's id", async () => {
+    const fake = installTrainingGoalsFake(server, { rows: [trainingGoalsRow(strengthAnswers)] });
+
+    const id = await saveTrainingGoalsReturningId(createTestClient(), vTaperAnswers);
+
+    expect(fake.saves).toEqual([{ p_goals: trainingGoalsPayload(vTaperAnswers, GOAL_PRESETS_V1) }]);
+    expect(id).toBe(NEW_GOAL_ROW_ID);
+  });
+
+  it("should read nothing back, so no failure can come after the goal is saved", async () => {
+    const fake = installTrainingGoalsFake(server);
+    fake.failReadsWith("57014");
+
+    const id = await saveTrainingGoalsReturningId(createTestClient(), vTaperAnswers);
+
+    expect(id).toBe(NEW_GOAL_ROW_ID);
+    expect(fake.reads).toEqual([]);
+  });
+
+  it("should retry once on a serialization failure, as saveTrainingGoals does", async () => {
+    const fake = installTrainingGoalsFake(server);
+    fake.failNextSaves("40001");
+
+    const id = await saveTrainingGoalsReturningId(createTestClient(), vTaperAnswers);
+
+    expect(fake.saves).toHaveLength(2);
+    expect(id).toBe(NEW_GOAL_ROW_ID);
+  });
+
+  it("should state the action and the code only when the save is refused", async () => {
+    const fake = installTrainingGoalsFake(server);
+    fake.failNextSaves("42501");
+
+    const error = await rejectionOf(
+      saveTrainingGoalsReturningId(createTestClient(), vTaperAnswers),
+    );
+
+    expect(error?.message).toBe("Could not save your training goals (42501)");
+    expect(textOf(error)).not.toContain(RECOGNISABLE_GOAL_TEXT);
+  });
+});
+
+describe("closeTrainingGoals", () => {
+  const current = trainingGoalsRow(vTaperAnswers);
+
+  it("should end the current goal and resolve to true", async () => {
+    const fake = installTrainingGoalsFake(server, { rows: [current] });
+
+    const closed = await closeTrainingGoals(createTestClient(), current);
+
+    expect(closed).toBe(true);
+    expect(fake.rows[0]?.effective_to).not.toBeNull();
+  });
+
+  it("should only ask for the row with the id that has not ended", async () => {
+    const fake = installTrainingGoalsFake(server, { rows: [current] });
+
+    await closeTrainingGoals(createTestClient(), current);
+
+    const [close] = fake.closes;
+    expect(close?.query).toContain(`id=eq.${GOAL_ROW_ID}`);
+    expect(close?.query).toContain("effective_to=is.null");
+  });
+
+  it("should end the goal after it started, even when this clock is behind the one that started it", async () => {
+    const startedAhead = trainingGoalsRow(vTaperAnswers, {
+      effective_from: new Date(Date.now() + 60_000).toISOString(),
+    });
+    const fake = installTrainingGoalsFake(server, { rows: [startedAhead] });
+
+    await closeTrainingGoals(createTestClient(), startedAhead);
+
+    const endedAt = fake.rows[0]?.effective_to ?? "";
+    expect(Date.parse(endedAt)).toBeGreaterThan(Date.parse(startedAhead.effective_from));
+  });
+
+  it("should resolve to false when the goal had already ended", async () => {
+    const ended = trainingGoalsRow(vTaperAnswers, { effective_to: "2026-10-11T09:00:00+00:00" });
+    const fake = installTrainingGoalsFake(server, { rows: [ended] });
+
+    const closed = await closeTrainingGoals(createTestClient(), ended);
+
+    expect(closed).toBe(false);
+    expect(fake.rows[0]?.effective_to).toBe("2026-10-11T09:00:00+00:00");
+  });
+
+  it("should state the action and the code only when the update is refused", async () => {
+    const fake = installTrainingGoalsFake(server, { rows: [current] });
+    fake.failClosesWith("42501");
+
+    const error = await rejectionOf(closeTrainingGoals(createTestClient(), current));
+
+    expect(error?.message).toBe("Could not end your training goals (42501)");
+    expect(textOf(error)).not.toContain(RECOGNISABLE_GOAL_TEXT);
   });
 });

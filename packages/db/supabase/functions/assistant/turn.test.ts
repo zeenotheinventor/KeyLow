@@ -1240,7 +1240,6 @@ for (const [label, answer, reportCount] of [
   ["an invalid_input error", errorResult("delete_entry", "invalid_input"), 1],
   ["a confirmation_invalid error", errorResult("delete_entry", "confirmation_invalid"), 0],
   ["a write_limit_reached error", errorResult("delete_entry", "write_limit_reached"), 0],
-  ["a workout_in_progress error", errorResult("delete_entry", "workout_in_progress"), 0],
   ["not_found", okResult({ name: "delete_entry", payload: { error: "not_found" } }), 0],
   ["changed false", okResult({ name: "delete_entry", payload: { changed: false } }), 0],
 ] as const) {
@@ -3568,6 +3567,275 @@ Deno.test(
     holdsNoSentinel(spy.lines.join("\n"));
   },
 );
+
+// ---- A write refused for a workout in progress, and a link on its own (KEY-902) ----
+
+const workoutRefusedWords =
+  "Your Legs workout is in progress, so nothing in your training can change yet.";
+
+const refusedCall = (id: string) => ({ id, name: "delete_entry", input: { ids: entryIds } });
+
+Deno.test(
+  "a write refused for a workout in progress is the model's words, then Ask again, then a normal done, with no notice",
+  async () => {
+    await withHarness(
+      {
+        responses: [callTools([refusedCall("d1")]), reply(workoutRefusedWords)],
+        answers: { delete_entry: errorResult("delete_entry", "workout_in_progress") },
+      },
+      async (harness) => {
+        const result = await harness.take("delete my lunch");
+
+        // The model's words stream in pieces.
+        assertEquals(
+          typesOf(withoutStatus(result.events)).filter((type, at, all) => type !== all[at - 1]),
+          ["turn", "text", "ask_again", "done"],
+        );
+        assertEquals(textOf(result.events), workoutRefusedWords);
+        assertEquals(result.events.at(-1), { type: "done", outcome: "complete" });
+        assertEquals(eventsOfType(result.events, "notice"), []);
+        assertEquals(turnStatuses(harness), ["complete"]);
+        assertEquals(harness.reports.length, 0);
+      },
+    );
+  },
+);
+
+Deno.test(
+  "the refusal stores Ask again, so a reopened turn has the chip and no Try again, and a normal status",
+  async () => {
+    await withHarness(
+      {
+        responses: [callTools([refusedCall("d1")]), reply(workoutRefusedWords)],
+        answers: { delete_entry: errorResult("delete_entry", "workout_in_progress") },
+      },
+      async (harness) => {
+        const result = await harness.take("delete my lunch");
+
+        const thread = threadFromMessages(result.rows, []);
+        assertEquals(
+          thread.map((item) => item.kind),
+          ["user", "reply", "ask_again"],
+        );
+        assertEquals(
+          thread.some((item) => item.kind === "notice"),
+          false,
+        );
+        assertEquals(
+          result.rows.every((row) => row.turnStatus === "complete"),
+          true,
+        );
+      },
+    );
+  },
+);
+
+Deno.test(
+  "several writes refused in one turn store Ask again once and send it once at the end",
+  async () => {
+    await withHarness(
+      {
+        responses: [
+          callTools([refusedCall("d1"), refusedCall("d2"), refusedCall("d3")]),
+          reply(workoutRefusedWords),
+        ],
+        answers: { delete_entry: errorResult("delete_entry", "workout_in_progress") },
+      },
+      async (harness) => {
+        const result = await harness.take("delete my lunch");
+
+        assertEquals(eventsOfType(result.events, "ask_again").length, 1);
+        const stored = toolResultRows(harness).flatMap((row) =>
+          isRecord(row.display) ? Object.entries(row.display) : [],
+        );
+        assertEquals(stored, [["d1", { askAgain: true }]]);
+        assertEquals(
+          threadFromMessages(result.rows, []).filter((item) => item.kind === "ask_again").length,
+          1,
+        );
+      },
+    );
+  },
+);
+
+// Ask again sends the whole message again, so it is not offered once a write of the turn has landed.
+for (const [label, order] of [
+  ["a refusal then a write", ["refused", "landed"]],
+  ["a write then a refusal", ["landed", "refused"]],
+] as const) {
+  Deno.test(
+    `${label} in one turn send no Ask again live and draw none on a reopened turn, so the two agree`,
+    async () => {
+      const calls = order.map((kind, at) =>
+        kind === "refused"
+          ? { id: `r${at}`, name: "delete_entry", input: { ids: entryIds } }
+          : { id: `w${at}`, name: "log_entry", input: { food_id: "x" } },
+      );
+      await withHarness(
+        {
+          responses: [callTools(calls), reply("The eggs are logged and the swap waits.")],
+          answers: {
+            delete_entry: errorResult("delete_entry", "workout_in_progress"),
+            log_entry: loggedCall(actionA, "Egg", 144),
+          },
+        },
+        async (harness) => {
+          const result = await harness.take("Log 2 eggs and swap bench");
+
+          assertEquals(eventsOfType(result.events, "ask_again"), []);
+          assertEquals(result.events.at(-1), { type: "done", outcome: "complete" });
+          const kinds = threadFromMessages(result.rows, []).map((item) => item.kind);
+          assertEquals(kinds.includes("card"), true);
+          assertEquals(kinds.includes("ask_again"), false);
+        },
+      );
+    },
+  );
+}
+
+Deno.test("a turn with no refusal sends no Ask again and stores none", async () => {
+  await withHarness({ responses: [reply("Hello.")] }, async (harness) => {
+    const result = await harness.take("hi");
+
+    assertEquals(eventsOfType(result.events, "ask_again"), []);
+  });
+});
+
+Deno.test(
+  "a press after a workout started writes the fixed words, then Ask again, with no model call and nothing spent",
+  async () => {
+    await withHarness(
+      askingOnly(errorResult("delete_entry", "workout_in_progress")),
+      async (harness) => {
+        await afterAskedDelete(harness);
+        const modelCalls = harness.mock.bodies.length;
+        const usageRows = harness.usageRows().length;
+
+        const result = await harness.take(deleteLabel);
+
+        assertEquals(typesOf(withoutStatus(result.events)), ["turn", "text", "ask_again", "done"]);
+        assertEquals(
+          textOf(result.events),
+          "Your workout is in progress, so nothing in your training can change yet. Questions are still fine.\n\nFinish it or discard it on the Train tab, then ask again.",
+        );
+        assertEquals(result.events.at(-1), { type: "done", outcome: "complete" });
+        assertEquals(turnStatuses(harness), ["confirm", "complete"]);
+        assertEquals(harness.mock.bodies.length, modelCalls);
+        assertEquals(harness.usageRows().length, usageRows);
+        assertEquals(harness.reports.length, 0);
+        assertEquals(pressedCalls(harness).length, 1);
+      },
+    );
+  },
+);
+
+Deno.test(
+  "the press after a workout started reads back as two paragraphs and one Ask again",
+  async () => {
+    await withHarness(
+      askingOnly(errorResult("delete_entry", "workout_in_progress")),
+      async (harness) => {
+        await afterAskedDelete(harness);
+
+        const result = await harness.take(deleteLabel);
+
+        const thread = threadFromMessages(result.rows, []).slice(-3);
+        assertEquals(
+          thread.map((item) => item.kind),
+          ["user", "reply", "ask_again"],
+        );
+        const [, reply] = thread;
+        assertEquals(reply?.kind === "reply" ? reply.text.split("\n\n").length : 0, 2);
+      },
+    );
+  },
+);
+
+Deno.test(
+  "a press whose workout refusal comes with the call summary logs the refusal and no fault",
+  async () => {
+    const spy = spyOnConsole();
+    try {
+      await withHarness(
+        askingOnly(errorResult("delete_entry", "workout_in_progress")),
+        async (harness) => {
+          await afterAskedDelete(harness);
+          await harness.take(deleteLabel);
+        },
+      );
+    } finally {
+      spy.restore();
+    }
+
+    const summaries = spy.lines.filter((line) => line.startsWith("assistant turn "));
+    assertStringIncludes(
+      summaries.at(-1) ?? "",
+      "modelCalls=0 toolCalls=1 ending=confirm_refused_workout",
+    );
+  },
+);
+
+const routineLink = {
+  label: "Open in routine editor",
+  target: {
+    screen: "routine_editor" as const,
+    routineId: "00000000-0000-4000-8000-0000000000e2",
+  },
+};
+
+Deno.test(
+  "a result with a link and no card sends the link event, stores it, and reads back on a stored thread",
+  async () => {
+    await withHarness(
+      {
+        responses: [
+          callTools([{ id: "l1", name: "log_entry", input: { food_id: "x" } }]),
+          reply("A day can only be removed in the routine editor."),
+        ],
+        answers: {
+          log_entry: okResult({ name: "log_entry", structured: { link: routineLink } }),
+        },
+      },
+      async (harness) => {
+        const result = await harness.take("remove my legs day");
+
+        assertEquals(eventsOfType(result.events, "link"), [{ type: "link", link: routineLink }]);
+        assertEquals(eventsOfType(result.events, "card"), []);
+        const stored = toolResultRows(harness).flatMap((row) =>
+          isRecord(row.display) ? Object.entries(row.display) : [],
+        );
+        assertEquals(stored, [["l1", { link: routineLink }]]);
+        const linkItem = threadFromMessages(result.rows, []).find((item) => item.kind === "link");
+        assertEquals(linkItem?.kind === "link" ? linkItem.link : null, routineLink);
+      },
+    );
+  },
+);
+
+Deno.test("a link the app cannot draw is dropped and reported with fixed words", async () => {
+  await withHarness(
+    {
+      responses: [
+        callTools([{ id: "l1", name: "log_entry", input: { food_id: "x" } }]),
+        reply("Done."),
+      ],
+      answers: {
+        log_entry: okResult({
+          name: "log_entry",
+          structured: { link: { label: "Open", target: { screen: "elsewhere" } } },
+        }),
+      },
+    },
+    async (harness) => {
+      const result = await harness.take("remove my legs day");
+
+      assertEquals(eventsOfType(result.events, "link"), []);
+      assertEquals(harness.reports.length, 1);
+      assertEquals(String(harness.reports[0]?.caught).includes("elsewhere"), false);
+      assertEquals(result.events.at(-1), { type: "done", outcome: "complete" });
+    },
+  );
+});
 
 // ---- The muscles of an exercise (KEY-924) ----
 
