@@ -11,4 +11,12 @@ export const storyStates = [
   "ConfirmDeleted",
   "RecipeImport",
   "RecipeUnresolved",
+  "RoutineThreeDays",
+  "RoutineThreeDaysOpen",
+  "RoutineSevenDays",
+  "RoutineSevenDaysOpen",
+  "RoutineThreeDaysCantUndo",
+  "RoutineThreeDaysOpenCantUndo",
+  "RoutineSevenDaysCantUndo",
+  "RoutineSevenDaysOpenCantUndo",
 ];

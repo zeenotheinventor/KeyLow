@@ -28,6 +28,16 @@ export type AssistantActionCardRow = AssistantActionCardRowWords &
     | { match: AssistantActionCardMatch; matchLabel: string }
   );
 
+/** One day of a routine, drawn as a row that opens to its exercises. Every word is drawn exactly as given. */
+export type AssistantActionCardDay = {
+  /** The day and its focus, such as "Monday · Push". */
+  name: string;
+  /** What the day holds, such as "5 exercises · 15 sets · about 50 min". */
+  summary: string;
+  /** What the day lists when it is open: each exercise's name, and its detail such as "3 sets · 8 to 10 reps · RIR 2". */
+  exercises: readonly { name: string; detail: string }[];
+};
+
 /**
  * `available` is the Undo button. `busy` is the button while the undo runs, and it does nothing on a
  * press. `done` draws no action and mutes the title, because the card stays in the thread after an Undo.
@@ -50,6 +60,10 @@ export type AssistantActionCardProps = {
   title: string;
   subtitle?: string | undefined;
   rows?: readonly AssistantActionCardRow[] | undefined;
+  /** One row per day of a routine, after the rows and before the total. All are closed on arrival and one is open at a time. */
+  days?: readonly AssistantActionCardDay[] | undefined;
+  /** The index of the day that is open on arrival, for a story. A card in the thread leaves it out, so every day is closed. */
+  initiallyOpenDay?: number | undefined;
   /** The line under the rows, such as "232 kcal · P 15 g · C 17 g · F 10 g". */
   total?: string | undefined;
   note?: string | undefined;
