@@ -7,7 +7,9 @@ import { assistantNoticeSchema } from "./notice";
 /*
  * The events the `assistant` Edge Function streams to the app, one JSON event per Server-Sent Events
  * `data:` line (M8 plan, section 5, "Contracts"). Both sides parse them with these schemas, so a field
- * the other side does not know is an error, never a silent extra.
+ * the other side does not know is an error, never a silent extra. The one place that is lenient is
+ * `parseAssistantEvent`: a status it cannot read is the default step, so a server that is ahead of the app
+ * (a new status code, a new field) never fails the person's turn.
  */
 
 /** The first event of every turn: which turn this is and the conversation it belongs to. */
@@ -24,15 +26,27 @@ const textEventSchema = z.strictObject({
 });
 
 /**
- * What the function is doing while no text arrives, with send disabled. The only one is reading a
- * recipe page, and the screen words it as "Reading the recipe at example.com" from `host`
- * (`assistant · recipe-import`, left).
+ * What the function is doing while no text arrives, with send disabled (`assistant · working`). Reading a
+ * recipe page is worded from `host` (`assistant · recipe-import`, left), the default step is "Thinking",
+ * and a tool is worded by the app from its `tool` name, which is a plain string on the wire so a new tool
+ * needs words in the app and no change here. `food` is the words a search used, and `isConfirmed` is true
+ * once the person has pressed a confirm button.
  */
-const statusEventSchema = z.strictObject({
-  type: z.literal("status"),
-  code: z.literal("reading_recipe"),
-  host: z.string().min(1),
-});
+const statusEventSchema = z.discriminatedUnion("code", [
+  z.strictObject({
+    type: z.literal("status"),
+    code: z.literal("reading_recipe"),
+    host: z.string().min(1),
+  }),
+  z.strictObject({ type: z.literal("status"), code: z.literal("thinking") }),
+  z.strictObject({
+    type: z.literal("status"),
+    code: z.literal("tool"),
+    tool: z.string().min(1).max(64),
+    food: z.string().min(1).max(120).nullable(),
+    isConfirmed: z.boolean(),
+  }),
+]);
 
 /** A write was applied: its action card, with Undo. */
 const cardEventSchema = z.strictObject({
@@ -100,6 +114,12 @@ export const assistantStreamEventSchema = z.discriminatedUnion("type", [
 
 export type AssistantStreamEvent = z.infer<typeof assistantStreamEventSchema>;
 
+// Omit does not distribute over a union, so each member loses its `type` on its own.
+type WithoutType<Event> = Event extends unknown ? Omit<Event, "type"> : never;
+
+/** What a status event says, without its `type`: the turn's current step. */
+export type AssistantStatus = WithoutType<Extract<AssistantStreamEvent, { type: "status" }>>;
+
 /**
  * One SSE `data:` payload that did not parse. `invalid_json` is a payload that is not JSON, and
  * `invalid_event` a JSON value that is not an event, with the paths of the fields that broke, such as
@@ -119,7 +139,11 @@ const readJson = (line: string): { ok: true; value: unknown } | { ok: false } =>
   }
 };
 
-/** Reads one SSE `data:` payload as an assistant event. It never throws. */
+// A status the schema refused is a step this app has no words for, so it reads as the default step.
+const isStatusObject = (value: unknown): boolean =>
+  typeof value === "object" && value !== null && "type" in value && value.type === "status";
+
+/** Reads one SSE `data:` payload as an assistant event. It never throws, and a status it cannot read is `thinking`. */
 export const parseAssistantEvent = (line: string): ParsedAssistantEvent => {
   const json = readJson(line);
   if (!json.ok) {
@@ -128,6 +152,9 @@ export const parseAssistantEvent = (line: string): ParsedAssistantEvent => {
   const result = assistantStreamEventSchema.safeParse(json.value);
   if (result.success) {
     return { ok: true, event: result.data };
+  }
+  if (isStatusObject(json.value)) {
+    return { ok: true, event: { type: "status", code: "thinking" } };
   }
   const fieldPaths = result.error.issues
     .flatMap((issue) =>

@@ -1,3 +1,4 @@
+import { replyWords } from "./replyText";
 import {
   ASSISTANT_CARD_WORDS,
   ASSISTANT_OFFLINE,
@@ -7,6 +8,7 @@ import {
 import { ASSISTANT_DESCRIBE, ASSISTANT_SHEET, describeLogsAt } from "../copy/assistantSheet";
 
 import type { AssistantCard } from "./card";
+import type { AssistantStatus } from "./events";
 import type { AssistantNotice } from "./notice";
 import type { AssistantThreadItem } from "./thread";
 import type { DescribableAssistantNotice } from "../copy/assistantNotices";
@@ -19,7 +21,8 @@ import type { DescribableAssistantNotice } from "../copy/assistantNotices";
  * `confirm`): its words, then the quick replies or the two buttons, which are gone once the person has
  * sent their next message. An answer from the person's data carries its citation and, for the trend
  * weight, its Estimate line, exactly as the tool sent them (`assistant · answer`, `answer-estimate`), and
- * a recipe link shows the working line while its page is read (`assistant · recipe-reading`).
+ * the working line shows the turn's current step under your message, "Thinking" until the assistant says
+ * more (`assistant · working`, `assistant · recipe-reading`).
  */
 
 /** What the sheet needs of the turn being written: the part of `AssistantLiveTurn` it draws. */
@@ -29,8 +32,8 @@ export type AssistantSheetLiveTurn = {
   cards: readonly AssistantCard[];
   /** The line under the answer and the Estimate badge, sent at the end of an answer from the person's data. */
   answerMeta: { citation: string | null; estimate: string | null } | null;
-  /** The recipe page being read, until the next event of the turn. */
-  status: { code: "reading_recipe"; host: string } | null;
+  /** The step the assistant is on, until the next event of the turn. */
+  status: AssistantStatus | null;
   /** The question that ended the turn, with the words in the field and up to three quick replies. */
   clarify: {
     question: string;
@@ -46,6 +49,8 @@ export type AssistantSheetLiveTurn = {
   } | null;
   stopped: boolean;
   notice: AssistantNotice | null;
+  /** How the turn ended, null while it is still going or when it was stopped. */
+  outcome: "complete" | "clarify" | "confirm" | "failed" | null;
 };
 
 /**
@@ -91,7 +96,7 @@ export type AssistantSheetEntry =
       estimate: AssistantSheetEstimate | null;
     }
   | {
-      /** The working line under your message while a recipe page is read. */
+      /** The working line under your message while the assistant works with no words to show. */
       kind: "status";
       key: string;
       text: string;
@@ -287,6 +292,23 @@ function storedEntries(items: readonly AssistantThreadItem[], isAllAnswered = fa
   return entries;
 }
 
+// The words of the working line while the turn streams: the step the function sent, else Thinking while there
+// is nothing else to show. That default is the part the app does by itself (press to first event, and every
+// plain answer), and a stop, a question, a notice or the end of the turn stop it flashing for the moment before `done`.
+function workingLineWords(live: AssistantSheetLiveTurn, hasWords: boolean): string | null {
+  if (live.status !== null) {
+    return describeAssistantStatus(live.status);
+  }
+  const hasSomethingElseToShow =
+    hasWords ||
+    live.stopped ||
+    live.clarify !== null ||
+    live.confirm !== null ||
+    live.notice !== null ||
+    live.outcome !== null;
+  return hasSomethingElseToShow ? null : describeAssistantStatus({ code: "thinking" });
+}
+
 function sentEntries(
   sent: AssistantSheetSent,
   live: AssistantSheetLiveTurn | null,
@@ -299,23 +321,25 @@ function sentEntries(
   for (const [position, card] of live.cards.entries()) {
     entries.push({ kind: "card", key: `sent:card:${position}`, card });
   }
-  // While a recipe page is read no words arrive, so there is no caret to draw, and the working line stands in.
-  const status = isStreaming ? live.status : null;
-  const isWriting = isStreaming && status === null;
-  if (live.text.trim() !== "" || live.stopped || isWriting) {
-    const paragraphs = paragraphsOf(live.text);
+  // A marker the next chunk decides (a lone `**` or `-`) is held back, so it is not words yet and draws no caret.
+  const hasWords = replyWords(live.text, { isPartial: true }).trim() !== "";
+  // A step shows its line and no caret, and a text event clears the step, so words always replace the line.
+  const isWriting = isStreaming && live.status === null && hasWords;
+  // Words held back count once the turn is over: it has ended, or its outcome has arrived while the stream closes.
+  const isOver = !isStreaming || live.outcome !== null;
+  if (hasWords || live.stopped || (isOver && live.text.trim() !== "")) {
     entries.push({
       kind: "assistant",
       key: "sent:reply",
-      // One empty paragraph draws the caret alone, before the first words arrive.
-      paragraphs: isWriting && paragraphs.length === 0 ? [""] : paragraphs,
+      paragraphs: paragraphsOf(live.text),
       isStreaming: isWriting,
       isStopped: live.stopped && !isStreaming,
       ...answerLinesOf(live.answerMeta),
     });
   }
-  if (status !== null) {
-    entries.push({ kind: "status", key: "sent:status", text: describeAssistantStatus(status) });
+  const workingWords = isStreaming ? workingLineWords(live, hasWords) : null;
+  if (workingWords !== null) {
+    entries.push({ kind: "status", key: "sent:status", text: workingWords });
   }
   if (live.clarify !== null) {
     entries.push(...clarifyEntries("sent:clarify", live.clarify, false, entries.at(-1)));
@@ -448,8 +472,8 @@ export function buildAssistantSheetThread({
 }
 
 /**
- * Send is on for a message with words, while the app is online, no answer is arriving, no recipe page is
- * being read, and the stored conversation has been read (a read that failed counts) and is not being read
+ * Send is on for a message with words, while the app is online, no answer is arriving, no step of the
+ * turn is showing, and the stored conversation has been read (a read that failed counts) and is not being read
  * again. Before that the conversation's id is not known, and a message would start a new conversation by
  * accident.
  */
@@ -465,8 +489,8 @@ type AssistantSendState = {
   isOnline: boolean;
   isThreadKnown: boolean;
   isThreadFetching: boolean;
-  /** The turn's status is `reading_recipe`: a recipe page is being read, until the next event of the turn. */
-  isReadingRecipe: boolean;
+  /** The turn has a step showing (any status), until the next event of the turn. */
+  isWorking: boolean;
   access: AssistantSheetAccess;
 };
 
@@ -480,12 +504,12 @@ export function canAnswerAssistantQuestion({
   isOnline,
   isThreadKnown,
   isThreadFetching,
-  isReadingRecipe,
+  isWorking,
   access,
 }: AssistantSendState): boolean {
   return (
     !isStreaming &&
-    !isReadingRecipe &&
+    !isWorking &&
     isOnline &&
     isThreadKnown &&
     !isThreadFetching &&

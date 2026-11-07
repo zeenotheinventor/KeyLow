@@ -32,6 +32,7 @@ const liveTurn = (overrides: Partial<AssistantSheetLiveTurn> = {}): AssistantShe
   status: null,
   stopped: false,
   notice: null,
+  outcome: null,
   ...overrides,
 });
 
@@ -145,10 +146,21 @@ describe("buildAssistantSheetThread", () => {
       ]);
     });
 
-    it("should draw the caret alone before the first words arrive", () => {
+    it("should draw the working line, and no caret, before the first words arrive", () => {
       const thread = build({ sent, live: liveTurn(), isStreaming: true, items: storedItems });
 
-      expect(thread.entries.at(-1)).toMatchObject({ paragraphs: [""], isStreaming: true });
+      expect(thread.entries.slice(-2)).toEqual([
+        { kind: "you", key: "sent:you", text: "What did I eat yesterday?" },
+        { kind: "status", key: "sent:status", text: "Thinking" },
+      ]);
+    });
+
+    it("should never draw an assistant entry holding one empty paragraph", () => {
+      for (const text of ["", "**", "-", "\n\n"]) {
+        const { entries } = build({ sent, live: liveTurn({ text }), isStreaming: true });
+
+        expect(entries).not.toContainEqual(expect.objectContaining({ paragraphs: [""] }));
+      }
     });
 
     it("should stop drawing it once the stored conversation has moved on, so nothing shows twice", () => {
@@ -963,7 +975,7 @@ describe("buildAssistantSheetThread with a question", () => {
       });
 
       expect(thread.entries.some((entry) => entry.kind === "quickReplies")).toBe(false);
-      expect(thread.entries.at(-1)).toMatchObject({ kind: "assistant", isStreaming: true });
+      expect(thread.entries.at(-1)).toMatchObject({ kind: "status", text: "Thinking" });
     });
 
     it("should draw the stored confirmation without its buttons while the next turn is drawn", () => {
@@ -1086,7 +1098,7 @@ describe("canSendAssistantMessage", () => {
     isOnline: true,
     isThreadKnown: true,
     isThreadFetching: false,
-    isReadingRecipe: false,
+    isWorking: false,
     access: { kind: "open" } satisfies AssistantSheetAccess,
   };
 
@@ -1129,7 +1141,7 @@ describe("canAnswerAssistantQuestion", () => {
     isOnline: true,
     isThreadKnown: true,
     isThreadFetching: false,
-    isReadingRecipe: false,
+    isWorking: false,
     access: { kind: "open" } satisfies AssistantSheetAccess,
   };
 

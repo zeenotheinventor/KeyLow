@@ -13,6 +13,8 @@ const eventFixtures = [
   { type: "turn", turnId, conversationId },
   { type: "text", delta: "Yesterday, Saturday 24 October, you logged 8 entries" },
   { type: "status", code: "reading_recipe", host: "example.com" },
+  { type: "status", code: "thinking" },
+  { type: "status", code: "tool", tool: "search_foods", food: "toast", isConfirmed: false },
   { type: "card", card: loggedCard },
   {
     type: "clarify",
@@ -73,7 +75,13 @@ describe("assistantStreamEventSchema, any event", () => {
     ).toBe(false);
   });
 
-  it("should reject a status code other than reading the recipe", () => {
+  it("should reject a status with a code the app does not know", () => {
+    expect(assistantStreamEventSchema.safeParse({ type: "status", code: "dreaming" }).success).toBe(
+      false,
+    );
+  });
+
+  it("should reject a thinking status that carries a host", () => {
     expect(
       assistantStreamEventSchema.safeParse({
         type: "status",
@@ -81,6 +89,35 @@ describe("assistantStreamEventSchema, any event", () => {
         host: "example.com",
       }).success,
     ).toBe(false);
+  });
+
+  it("should parse a tool status with no food words", () => {
+    const status = { type: "status", code: "tool", tool: "get_day", food: null, isConfirmed: true };
+
+    expect(assistantStreamEventSchema.parse(status)).toEqual(status);
+  });
+
+  it("should reject a tool status with an empty tool name", () => {
+    expect(
+      assistantStreamEventSchema.safeParse({
+        type: "status",
+        code: "tool",
+        tool: "",
+        food: null,
+        isConfirmed: false,
+      }).success,
+    ).toBe(false);
+  });
+
+  it("should reject a tool status whose food is longer than 120 units", () => {
+    const status = { type: "status", code: "tool", tool: "search_foods", isConfirmed: false };
+
+    expect(assistantStreamEventSchema.safeParse({ ...status, food: "a".repeat(120) }).success).toBe(
+      true,
+    );
+    expect(assistantStreamEventSchema.safeParse({ ...status, food: "a".repeat(121) }).success).toBe(
+      false,
+    );
   });
 
   it("should reject a status with no host to word the reading line from", () => {

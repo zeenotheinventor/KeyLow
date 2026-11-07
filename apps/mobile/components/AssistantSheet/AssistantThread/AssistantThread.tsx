@@ -27,7 +27,7 @@ const askAgainOptions = [{ value: "ask-again", label: ASSISTANT_STOPPED.askAgain
  * The messages and action cards of the conversation, oldest first, with the quick reply under an answer
  * that was cut short, the quick replies under a clarifying question, the two buttons under a
  * confirmation, the citation and Estimate lines under an answer from the person's data, and the working
- * line while a recipe page is read.
+ * line while the assistant works with no words to show.
  * Every word comes from the thread the screen was given or from core's copy, so nothing here words a
  * message, and nothing in it decides what to show.
  */
