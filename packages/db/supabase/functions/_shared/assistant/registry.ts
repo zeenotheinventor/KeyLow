@@ -11,6 +11,7 @@ import { getEntriesTool } from "./tools/getEntries.ts";
 import { getFoodTool } from "./tools/getFood.ts";
 import { getRangeTotalsTool } from "./tools/getRangeTotals.ts";
 import { getRecipesTool } from "./tools/getRecipes.ts";
+import { getMuscleStateTool } from "./tools/getMuscleState.ts";
 import { getRoutinesTool } from "./tools/getRoutines.ts";
 import { getTrainingGoalsTool } from "./tools/getTrainingGoals.ts";
 import { getWeighInsTool } from "./tools/getWeighIns.ts";
@@ -19,6 +20,7 @@ import { logEntryTool } from "./tools/logEntry.ts";
 import { searchExercisesTool } from "./tools/searchExercises.ts";
 import { searchFoodsTool } from "./tools/searchFoods.ts";
 import { setDayCompleteTool } from "./tools/setDayComplete.ts";
+import { suggestNextSessionTool } from "./tools/suggestNextSession.ts";
 import { updateEntryTool } from "./tools/updateEntry.ts";
 import { updateRecipeTool } from "./tools/updateRecipe.ts";
 import { updateTargetsTool } from "./tools/updateTargets.ts";
@@ -75,6 +77,8 @@ const toolDefinitions: readonly ToolDefinition[] = [
   searchExercisesTool,
   getRoutinesTool,
   getTrainingGoalsTool,
+  getMuscleStateTool,
+  suggestNextSessionTool,
   askUserTool,
 ];
 

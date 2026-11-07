@@ -89,6 +89,11 @@ export const READ_TOOLS: ReadonlySet<string> = new Set([
   "get_food",
   "get_recipes",
   "search_foods",
+  "search_exercises",
+  "get_routines",
+  "get_training_goals",
+  "get_muscle_state",
+  "suggest_next_session",
 ]);
 
 /** Passes when every tool called is a read tool. */

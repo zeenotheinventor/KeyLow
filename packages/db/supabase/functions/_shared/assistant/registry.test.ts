@@ -102,6 +102,8 @@ Deno.test(
         ["search_exercises", "read"],
         ["get_routines", "read"],
         ["get_training_goals", "read"],
+        ["get_muscle_state", "read"],
+        ["suggest_next_session", "read"],
         ["ask_user", "read"],
       ],
     );
@@ -186,6 +188,16 @@ Deno.test(
   () => {
     for (const name of ["search_exercises", "get_routines", "get_training_goals"]) {
       assertEquals(toolRegistry.get(name)?.strict, false, name);
+    }
+  },
+);
+
+Deno.test(
+  "the muscle and suggestion reads are read-only and opt out of strict mode, so they take nothing from the strict budget",
+  () => {
+    for (const name of ["get_muscle_state", "suggest_next_session"]) {
+      assertEquals(toolRegistry.get(name)?.strict, false, name);
+      assertEquals(toolRegistry.get(name)?.annotations.readOnlyHint, true, name);
     }
   },
 );
