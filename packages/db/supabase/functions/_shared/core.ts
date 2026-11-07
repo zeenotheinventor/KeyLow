@@ -49,6 +49,8 @@ export type {
   TrendRange,
   TrendSet,
   ValidTargets,
+  GoalAnswerGiven,
+  GoalAnswers,
 } from "./core/index.js";
 export {
   addCalendarDays,
@@ -189,4 +191,13 @@ export {
   toLocalDate,
   validateRecipeDraft,
   validateTargets,
+  buildGoalsUpdatedCard,
+  changedGoalAnswers,
+  goalAnswersOfRow,
+  GOAL_STARTING_ANSWERS,
+  EXPERIENCE_LEVELS,
+  MAX_DAYS_PER_WEEK,
+  MIN_DAYS_PER_WEEK,
+  TRAINING_FOCUSES,
+  TRAINING_GOALS,
 } from "./core/index.js";

@@ -25,3 +25,5 @@ export { buildRecipeUpdatedCard } from "./recipeUpdated";
 export { buildTargetsChangedCard } from "./targetsChanged";
 export type { TargetsChangedCardChange } from "./targetsChanged";
 export { buildUpdatedCard } from "./updated";
+export { buildGoalsUpdatedCard } from "./goalsUpdated";
+export type { GoalAnswerGiven, GoalsUpdatedCardChange } from "./goalsUpdated";

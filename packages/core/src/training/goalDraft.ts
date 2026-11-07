@@ -1,4 +1,5 @@
 import { goalAnswersSchema } from "./goalAnswers";
+import { FULL_GYM } from "../copy/goals";
 
 import type { GoalAnswers } from "./goalAnswers";
 import type { TrainingGoalsRow } from "../schemas";
@@ -34,7 +35,7 @@ const answerKeyOfStep = [
 ] as const satisfies readonly (keyof GoalAnswers)[];
 
 /** The six answers of a stored goal and nothing else of the row, so the flow opens filled with them. */
-export function goalAnswersOfRow(row: TrainingGoalsRow): GoalDraftAnswers {
+export function goalAnswersOfRow(row: TrainingGoalsRow): GoalAnswers {
   return {
     goal: row.goal,
     focus: row.focus,
@@ -44,6 +45,21 @@ export function goalAnswersOfRow(row: TrainingGoalsRow): GoalDraftAnswers {
     experience: row.experience,
   };
 }
+
+/**
+ * The four answers a first goal starts with when the person gave only their goal and experience, which is
+ * what the assistant asks (KEY-904). The app has no defaults, as a question not answered has no key, so
+ * these are named once here. The focus is empty, as `initialGoalDraft` starts it. The equipment is the Full
+ * gym shortcut, because an empty list saves but leaves `suggestSession` nothing to pick from. The session is
+ * the middle of the lengths the questionnaire offers, so it flags neither a short day nor a long one. The
+ * days are three, which a person who named their own number replaces.
+ */
+export const GOAL_STARTING_ANSWERS: Readonly<Omit<GoalAnswers, "goal" | "experience">> = {
+  focus: [],
+  days_per_week: 3,
+  session_minutes: 60,
+  equipment: [...FULL_GYM.equipment],
+};
 
 /** The draft to start from: the answers given, if any, with an empty focus where none was. */
 export function initialGoalDraft(answers: GoalDraftAnswers = {}): GoalDraft {
@@ -69,6 +85,18 @@ export function isGoalStepAnswered(draft: GoalDraft, step: number): boolean {
 
 const sameValues = <Value>(first: readonly Value[], second: readonly Value[]): boolean =>
   first.length === second.length && first.every((value) => second.includes(value));
+
+/**
+ * The questions whose answer differs between two goals, in the order the questions are asked. A list is
+ * the same answer when it holds the same values, in any order, as it is in `hasGoalDraftChanged`.
+ */
+export function changedGoalAnswers(before: GoalAnswers, after: GoalAnswers): (keyof GoalAnswers)[] {
+  return answerKeyOfStep.filter((key) => {
+    const was = before[key];
+    const now = after[key];
+    return Array.isArray(was) && Array.isArray(now) ? !sameValues(was, now) : was !== now;
+  });
+}
 
 /**
  * Whether the draft differs from the one the flow opened with, which is what closing the questionnaire

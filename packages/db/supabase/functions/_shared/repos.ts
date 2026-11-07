@@ -77,4 +77,7 @@ export {
   updateLogEntry,
   updateMyTargets,
   updateRecipe,
+  closeTrainingGoals,
+  listTrainingGoalsHistory,
+  saveTrainingGoalsReturningId,
 } from "./repos/index.js";

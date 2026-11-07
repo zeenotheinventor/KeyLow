@@ -450,8 +450,10 @@ export type {
 export { weekDayLookOf, type WeekDayLook } from "./weekDayLook";
 export { workingNumberOfRow } from "./exerciseRows";
 export {
+  changedGoalAnswers,
   firstUnansweredStep,
   goalAnswersOfRow,
+  GOAL_STARTING_ANSWERS,
   goalDraftReducer,
   hasGoalDraftChanged,
   initialGoalDraft,
