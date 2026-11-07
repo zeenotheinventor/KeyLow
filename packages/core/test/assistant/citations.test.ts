@@ -3,11 +3,13 @@ import { describe, expect, it } from "vitest";
 import {
   TREND_ESTIMATE,
   describeDayCitation,
+  describeProgressCitation,
   describeRangeCitation,
   describeRoutineCitation,
   describeWeighInCitation,
   describeWorkoutsCitation,
 } from "../../src/assistant";
+import { exerciseWeeklyTrend } from "../../src/training";
 
 /*
  * The words are the approved mobile boards': `assistant · answer` ("Based on 38 entries, 12 to 18 Oct"),
@@ -138,6 +140,74 @@ describe("describeRoutineCitation", () => {
       expect(describeRoutineCitation(name)).toBe("Based on your routine");
     },
   );
+});
+
+describe("describeProgressCitation", () => {
+  const trendOf = (trainedMondays: string[], now = "2026-10-20T12:00:00Z") =>
+    exerciseWeeklyTrend(
+      trainedMondays.map((localDate) => ({
+        set_type: "working" as const,
+        reps: 8,
+        load_kg: 80,
+        local_date: localDate,
+      })),
+      { range: "1y", now, timeZone: "UTC" },
+    );
+
+  // `assistant · answer-training`: "Based on 6 weeks of bench press, 7 Sep to 11 Oct".
+  it("should word the line as the answer-training board does, to the Sunday that ends the latest week", () => {
+    const trend = trendOf(["2026-09-07", "2026-09-14", "2026-09-21", "2026-09-28", "2026-10-05"]);
+
+    expect(describeProgressCitation("Bench press", trend)).toBe(
+      "Based on 5 weeks of bench press, 7 Sep to 11 Oct",
+    );
+  });
+
+  it("should count the weeks trained and not the weeks the dates span", () => {
+    const trend = trendOf(["2026-08-31", "2026-09-28", "2026-10-12"]);
+
+    expect(describeProgressCitation("Barbell row", trend)).toBe(
+      "Based on 3 weeks of barbell row, 31 Aug to 18 Oct",
+    );
+  });
+
+  it("should use the singular for one trained week", () => {
+    expect(describeProgressCitation("Squat", trendOf(["2026-10-12"]))).toBe(
+      "Based on 1 week of squat, 12 to 18 Oct",
+    );
+  });
+
+  it("should name both years when the weeks cross a year end", () => {
+    const trend = trendOf(["2026-12-21", "2026-12-28"], "2027-01-04T12:00:00Z");
+
+    expect(describeProgressCitation("Deadlift", trend)).toBe(
+      "Based on 2 weeks of deadlift, 21 Dec 2026 to 3 Jan 2027",
+    );
+  });
+
+  it("should clean and cut a name the person wrote, like any words shown from outside", () => {
+    const trend = trendOf(["2026-10-12"]);
+
+    expect(describeProgressCitation("Cable\n\u202EFLY\u0000  Machine", trend)).toBe(
+      "Based on 1 week of cable fly machine, 12 to 18 Oct",
+    );
+    expect(describeProgressCitation("A".repeat(500), trend)).toBe(
+      `Based on 1 week of ${"a".repeat(60)}, 12 to 18 Oct`,
+    );
+  });
+
+  it.each([[""], ["   "], ["\u0000\u202E"]])(
+    "should call it this exercise when nothing of the name %j is left",
+    (name) => {
+      expect(describeProgressCitation(name, trendOf(["2026-10-12"]))).toBe(
+        "Based on 1 week of this exercise, 12 to 18 Oct",
+      );
+    },
+  );
+
+  it("should say there are no weeks when none was trained", () => {
+    expect(describeProgressCitation("Bench press", trendOf([]))).toBe("No weeks of bench press");
+  });
 });
 
 describe("describeWorkoutsCitation", () => {

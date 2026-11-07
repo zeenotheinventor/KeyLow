@@ -556,7 +556,12 @@ describe("READ_TOOLS", () => {
   });
 
   it("should hold the training reads, which the diary cases do not accept", () => {
-    for (const tool of ["search_exercises", "get_routines", "get_training_goals"]) {
+    for (const tool of [
+      "search_exercises",
+      "get_routines",
+      "get_training_goals",
+      "get_exercise_progress",
+    ]) {
       expect(READ_TOOLS.has(tool)).toBe(true);
       expect(DIARY_READ_TOOLS.has(tool)).toBe(false);
     }
@@ -568,6 +573,7 @@ describe("READ_TOOLS", () => {
       "get_routines",
       "get_training_goals",
       "get_workouts",
+      "get_exercise_progress",
     ];
 
     expect([...DIARY_READ_TOOLS].sort()).toEqual(

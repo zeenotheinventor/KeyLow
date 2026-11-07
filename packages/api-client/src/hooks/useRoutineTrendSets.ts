@@ -1,9 +1,9 @@
+import { trendReadWindow } from "@keylow/core/training";
 import { skipToken, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { newestCachedTrendRows } from "./newestCachedTrendRows";
 import { retryUnlessRangeError } from "./retryUnlessRangeError";
 import { toTrainingReadResult } from "./trainingReadResult";
-import { trendReadWindow } from "./trendReadWindow";
 import { useProfileTimeZone } from "./useProfileTimeZone";
 import { useSupabase } from "../KeyLowProvider";
 import { keys } from "../queryKeys";
