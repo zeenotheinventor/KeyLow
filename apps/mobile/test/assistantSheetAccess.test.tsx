@@ -432,6 +432,10 @@ describe("the assistant sheet's access states", () => {
       await renderSheet();
 
       expect(screen.getByLabelText("Message")).toBeOnTheScreen();
+      expect(
+        screen.queryByRole("status", { name: "Loading your conversation" }),
+      ).not.toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Copy yesterday to today" })).toBeOnTheScreen();
     });
 
     it("should stop waiting after the first failed read, which is retried for seconds", async () => {
@@ -439,6 +443,10 @@ describe("the assistant sheet's access states", () => {
       await renderSheet();
 
       expect(screen.getByLabelText("Message")).toBeOnTheScreen();
+      expect(
+        screen.queryByRole("status", { name: "Loading your conversation" }),
+      ).not.toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Copy yesterday to today" })).toBeOnTheScreen();
     });
 
     it("should stop waiting offline for a status that was never read", async () => {
@@ -452,6 +460,10 @@ describe("the assistant sheet's access states", () => {
 
       expect(screen.getByLabelText("Message")).toHaveProp("editable", false);
       expect(screen.getByPlaceholderText("Needs a connection")).toBeOnTheScreen();
+      expect(
+        screen.queryByRole("status", { name: "Loading your conversation" }),
+      ).not.toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Copy yesterday to today" })).toBeOnTheScreen();
     });
   });
 

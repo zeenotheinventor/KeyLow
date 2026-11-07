@@ -380,7 +380,7 @@ describe("the assistant sheet", () => {
       expect(screen.getByRole("button", { name: "Copy yesterday to today" })).toBeOnTheScreen();
     });
 
-    it("should be replaced by the thread when the conversation could not be read", async () => {
+    it("should be replaced by the starters when the conversation could not be read", async () => {
       mockAssistant.conversation = {
         data: undefined,
         isSuccess: false,
@@ -392,6 +392,7 @@ describe("the assistant sheet", () => {
       expect(
         screen.queryByRole("status", { name: "Loading your conversation" }),
       ).not.toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Copy yesterday to today" })).toBeOnTheScreen();
     });
 
     it("should show the offline banner over the field, still with the placeholder, while offline", async () => {
