@@ -1,5 +1,5 @@
 import {
-  ROUTINE_CREATED_LINK_LABEL,
+  OPEN_IN_ROUTINE_EDITOR,
   ROUTINE_CREATED_NOTE,
   describeBuiltDayName,
   describeBuiltDaySummary,
@@ -61,7 +61,7 @@ export function buildRoutineCreatedCard(input: RoutineCreatedCardInput): Assista
     totalText: describeBuiltWeekTotal(setsPerWeek, days.length),
     note: ROUTINE_CREATED_NOTE,
     link: {
-      label: ROUTINE_CREATED_LINK_LABEL,
+      label: OPEN_IN_ROUTINE_EDITOR,
       target: { screen: "routine_editor", routineId: input.routineId },
     },
     undo: "available",

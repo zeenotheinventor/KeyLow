@@ -17,17 +17,22 @@ import {
   buildRoutineCreatedCard,
   buildRoutineDraft,
   draftOfStoredRoutine,
+  routineFingerprint,
   summariseBuiltRoutine,
 } from "../../core.ts";
 import {
   getCurrentTrainingGoals,
   getRoutine,
   readExercisesById,
-  saveRoutine,
   setRoutineArchived,
 } from "../../repos.ts";
 import { invalidInput } from "./entryWrite.ts";
-import { fingerprintOfStoredRoutine, hasWorkoutOnDays } from "./routineWrite.ts";
+import {
+  fingerprintOfStoredRoutine,
+  hasWorkoutOnDays,
+  readBackQuietly,
+  saveRoutineDraft,
+} from "./routineWrite.ts";
 
 import type { BuildRoutineProblem } from "../../core.ts";
 import type { WriteRunOutput, WriteToolDefinition } from "../tool.ts";
@@ -114,6 +119,7 @@ export const createRoutineTool: WriteToolDefinition<CreateRoutineInput> = {
     const lines = await readExercisesById(ctx.caller, [
       ...new Set(days.flatMap((day) => day.exercise_ids)),
     ]);
+    const byId = new Map(lines.map((line) => [line.id, line]));
     const built = buildRoutineDraft(
       {
         name,
@@ -123,7 +129,7 @@ export const createRoutineTool: WriteToolDefinition<CreateRoutineInput> = {
           exerciseIds: day.exercise_ids,
         })),
       },
-      new Map(lines.map((line) => [line.id, line])),
+      byId,
       goals,
       SUGGEST_PARAMS_V2.presets,
     );
@@ -131,35 +137,50 @@ export const createRoutineTool: WriteToolDefinition<CreateRoutineInput> = {
       return invalidInput([...new Set(built.problems.map(fieldOf))]);
     }
 
-    const stored = await saveRoutine(ctx.caller, { id: null, draft: built.draft });
+    const routineId = await saveRoutineDraft(ctx, null, built.draft);
 
-    // The write has landed. What follows is worked out from the routine as stored, so the card and the
-    // fingerprint are what a later read shows, and none of it can throw.
-    const summary = summariseBuiltRoutine(
-      draftOfStoredRoutine(stored),
-      SUGGEST_PARAMS_V2.sessionTime,
-    );
-    const outsideEquipment = stored.days.flatMap((day, dayIndex) =>
-      day.exercises.flatMap((planned, exerciseIndex) =>
-        goals.equipment.includes(planned.exercise.equipment) ? [] : [[dayIndex, exerciseIndex]],
+    // The write has landed, so nothing below may throw. The routine is read back for the day ids and the
+    // names as stored, and when that read fails the draft, the exercises read before the save and the id
+    // the call gave say the same. The draft's fingerprint is the one a read gives, so Undo still works.
+    const stored = await readBackQuietly(ctx, routineId);
+    const draft = stored === null ? built.draft : draftOfStoredRoutine(stored);
+    const summary = summariseBuiltRoutine(draft, SUGGEST_PARAMS_V2.sessionTime);
+    const shown = (stored?.days ?? []).map((day) => ({
+      id: day.id as string | null,
+      exercises: day.exercises.map((planned) => planned.exercise),
+    }));
+    const planned = draft.days.map((day, dayIndex) => {
+      const exercises =
+        shown[dayIndex]?.exercises ??
+        day.exercises.map((planned) => ({
+          name: byId.get(planned.exercise_id)?.name ?? "",
+          equipment: byId.get(planned.exercise_id)?.equipment,
+        }));
+      return { day, id: shown[dayIndex]?.id ?? null, exercises };
+    });
+    const outsideEquipment = planned.flatMap(({ exercises }, dayIndex) =>
+      exercises.flatMap((exercise, exerciseIndex) =>
+        exercise.equipment !== undefined && goals.equipment.includes(exercise.equipment)
+          ? []
+          : [[dayIndex, exerciseIndex]],
       ),
     );
     const overSessionMinutes = summary.days.flatMap((day, dayIndex) =>
       day.minutes > goals.session_minutes ? [dayIndex] : [],
     );
     const card = buildRoutineCreatedCard({
-      routineId: stored.id,
-      name: stored.name,
+      routineId,
+      name: draft.name,
       goal: goals.goal,
       experience: goals.experience,
-      days: stored.days.map((day, dayIndex) => ({
+      days: planned.map(({ day, exercises }, dayIndex) => ({
         name: day.name,
         weekday: day.weekday,
         exerciseCount: summary.days[dayIndex]?.exerciseCount ?? day.exercises.length,
         setCount: summary.days[dayIndex]?.setCount ?? 0,
         minutes: summary.days[dayIndex]?.minutes ?? 0,
-        exercises: day.exercises.map((planned) => ({
-          name: planned.exercise.name,
+        exercises: day.exercises.map((planned, exerciseIndex) => ({
+          name: exercises[exerciseIndex]?.name ?? "",
           sets: planned.target_sets,
           repMin: planned.rep_min,
           repMax: planned.rep_max,
@@ -170,10 +191,10 @@ export const createRoutineTool: WriteToolDefinition<CreateRoutineInput> = {
     });
     return {
       data: {
-        routine_id: stored.id,
+        routine_id: routineId,
         is_active: false,
-        days: stored.days.map((day, dayIndex) => ({
-          id: day.id,
+        days: planned.map(({ day, id }, dayIndex) => ({
+          id,
           name: day.name,
           exercises: summary.days[dayIndex]?.exerciseCount ?? day.exercises.length,
           sets: summary.days[dayIndex]?.setCount ?? 0,
@@ -186,9 +207,9 @@ export const createRoutineTool: WriteToolDefinition<CreateRoutineInput> = {
       structured: {
         card,
         // Nothing to put back: Undo archives the routine, and only if it is still as it was.
-        undo: { previous: null, fingerprint: fingerprintOfStoredRoutine(stored) },
+        undo: { previous: null, fingerprint: routineFingerprint(draft) },
       },
-      target: { targetId: stored.id },
+      target: { targetId: routineId },
     };
   },
   // Archives the routine, unless it changed, is the active one, or a workout was logged from it since.

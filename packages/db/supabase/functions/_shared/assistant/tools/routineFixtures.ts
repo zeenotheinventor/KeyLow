@@ -75,6 +75,7 @@ export function routineContext(
   options: {
     goal?: Record<string, unknown> | null;
     rows?: Record<string, Record<string, unknown>[]>;
+    saveRoutine?: RpcHandler;
   } = {},
 ) {
   const goal = options.goal === undefined ? goalsRow() : options.goal;
@@ -88,6 +89,6 @@ export function routineContext(
       ],
       ...options.rows,
     },
-    rpc: { save_routine: saveRoutineRpc },
+    rpc: { save_routine: options.saveRoutine ?? saveRoutineRpc },
   });
 }

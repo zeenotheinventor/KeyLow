@@ -106,6 +106,8 @@ Deno.test(
         ["get_exercise_progress", "read"],
         ["get_muscle_state", "read"],
         ["suggest_next_session", "read"],
+        ["set_active_routine", "write"],
+        ["archive_routine", "write"],
         ["create_routine", "write"],
         ["ask_user", "read"],
       ],
@@ -202,9 +204,11 @@ Deno.test(
 );
 
 Deno.test(
-  "create_routine opts out of strict mode, so it takes nothing from the strict budget",
+  "the routine state writes opt out of strict mode, so they take nothing from the strict budget",
   () => {
-    assertEquals(toolRegistry.get("create_routine")?.strict, false);
+    for (const name of ["set_active_routine", "archive_routine", "create_routine"]) {
+      assertEquals(toolRegistry.get(name)?.strict, false, name);
+    }
   },
 );
 

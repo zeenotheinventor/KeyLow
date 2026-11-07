@@ -502,3 +502,78 @@ Deno.test(
     assertStringIncludes(description, "edit_routine");
   },
 );
+
+Deno.test(
+  "when the read-back fails after the save, the card, the result and the Undo come from the draft",
+  async () => {
+    const setup = setUp();
+    setup.stub.failNextReadFrom("routines");
+
+    const result = await executeTool(setup.ctx, "create_routine", threeDays);
+
+    assertEquals(result.status, "ok");
+    assertEquals(routinesOf(setup.stub).length, 1);
+    const [row] = routinesOf(setup.stub);
+    assertObjectMatch(payloadOf(result) as Record<string, unknown>, {
+      routine_id: row?.["id"],
+      is_active: false,
+      sets_per_week: 45,
+    });
+    const days = asRecords((payloadOf(result) as Record<string, unknown>)["days"]);
+    assertEquals(days.length, 3);
+    assertEquals(
+      days.map((day) => day["sets"]),
+      [15, 15, 15],
+    );
+    const card = structuredOf(result)["card"] as Record<string, unknown>;
+    assertEquals(
+      asRecords(card["days"]).map((day) => day["name"]),
+      ["Monday · Push", "Wednesday · Pull", "Friday · Legs"],
+    );
+    assertObjectMatch(card, {
+      title: "Built routine Push Pull Legs, 3 days",
+      link: { target: { screen: "routine_editor", routineId: row?.["id"] } },
+    });
+    // The fingerprint of the draft is the one a read of the routine gives, so Undo still works.
+    const actionId = keepUndo(setup, result);
+    const stored = await getRoutine(setup.stub.caller, String(row?.["id"]));
+    assert(stored !== null);
+    assertEquals(
+      (structuredOf(result)["undo"] as { fingerprint: string }).fingerprint,
+      fingerprintOfStoredRoutine(stored),
+    );
+    assertEquals((await undoAction(setup.ctx, actionId)).status, "undone");
+    assertEquals(setup.store.actions.length, 1);
+    assertEquals(setup.reported.length, 1);
+  },
+);
+
+Deno.test(
+  "a failed save is tool_failed with nothing landed, and the report quotes no name",
+  async () => {
+    const setup = setUp({
+      saveRoutine: () => ({
+        data: null,
+        error: { code: "XX000", message: "Push Pull Legs broke" },
+      }),
+    });
+
+    const result = await executeTool(setup.ctx, "create_routine", threeDays);
+
+    assertEquals(result.status === "error" ? result.code : null, "tool_failed");
+    assertEquals(routinesOf(setup.stub), []);
+    assertEquals(setup.store.actions.length, 0);
+    assertFalse(JSON.stringify(setup.reported.map((each) => String(each.caught))).includes("Push"));
+  },
+);
+
+Deno.test("the save is one rpc call and the routine is read back once, after it", async () => {
+  const { ctx, stub } = setUp();
+
+  await executeTool(ctx, "create_routine", threeDays);
+
+  const methods = stub.calls.map((call) => call.table);
+  assertEquals(methods.filter((table) => table === "rpc:save_routine").length, 1);
+  assertEquals(methods.filter((table) => table === "routines").length, 1);
+  assert(methods.indexOf("rpc:save_routine") < methods.indexOf("routines"));
+});
