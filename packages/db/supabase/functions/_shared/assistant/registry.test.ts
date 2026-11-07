@@ -106,6 +106,8 @@ Deno.test(
         ["get_exercise_progress", "read"],
         ["get_muscle_state", "read"],
         ["suggest_next_session", "read"],
+        ["save_custom_exercise", "write"],
+        ["archive_custom_exercise", "write"],
         ["ask_user", "read"],
       ],
     );
@@ -196,6 +198,16 @@ Deno.test(
       "get_exercise_progress",
     ]) {
       assertEquals(toolRegistry.get(name)?.strict, false, name);
+    }
+  },
+);
+
+Deno.test(
+  "the custom exercise writes opt out of strict mode, so they take nothing from the strict budget",
+  () => {
+    for (const name of ["save_custom_exercise", "archive_custom_exercise"]) {
+      assertEquals(toolRegistry.get(name)?.strict, false, name);
+      assertEquals(toolRegistry.get(name)?.annotations.readOnlyHint, false, name);
     }
   },
 );

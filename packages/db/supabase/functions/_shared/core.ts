@@ -49,6 +49,8 @@ export type {
   TrendRange,
   TrendSet,
   ValidTargets,
+  CardExercise,
+  CustomExerciseDraft,
 } from "./core/index.js";
 export {
   addCalendarDays,
@@ -189,4 +191,11 @@ export {
   toLocalDate,
   validateRecipeDraft,
   validateTargets,
+  buildExerciseArchivedCard,
+  buildExerciseCreatedCard,
+  buildExerciseUpdatedCard,
+  confirmArchiveExerciseButtons,
+  confirmArchiveExerciseQuestion,
+  MUSCLE_ROLES,
+  validateCustomExerciseDraft,
 } from "./core/index.js";

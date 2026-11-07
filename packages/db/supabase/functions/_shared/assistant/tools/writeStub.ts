@@ -56,12 +56,16 @@ export function writeStub(
 
   // A table keeps its rows under the column that names their owner.
   const ownerColumnOf = (table: string) =>
-    table === "recipes" || table === "recipe_ingredients" ? "owner_id" : "user_id";
+    table === "recipes" || table === "recipe_ingredients" || table === "exercises"
+      ? "owner_id"
+      : "user_id";
 
+  // The library's exercises have no owner and everyone sees them, as the select policy of `exercises` says.
   const visible = (table: string, row: Row) =>
     options.callerUserId === undefined ||
     row[ownerColumnOf(table)] === undefined ||
-    row[ownerColumnOf(table)] === options.callerUserId;
+    row[ownerColumnOf(table)] === options.callerUserId ||
+    (table === "exercises" && row["owner_id"] === null);
 
   // The commas that are not inside the brackets of an embedded table.
   const topLevelColumns = (columns: string): string[] => {
