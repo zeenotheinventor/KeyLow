@@ -4,6 +4,7 @@ import { archiveRecipeTool } from "./tools/archiveRecipe.ts";
 import { copyDayTool } from "./tools/copyDay.ts";
 import { createCustomFoodTool } from "./tools/createCustomFood.ts";
 import { createRecipeTool } from "./tools/createRecipe.ts";
+import { createRoutineTool } from "./tools/createRoutine.ts";
 import { deleteEntryTool } from "./tools/deleteEntry.ts";
 import { editRoutineTool } from "./tools/editRoutine.ts";
 import { askUserTool } from "./tools/askUser.ts";
@@ -27,10 +28,13 @@ import { suggestNextSessionTool } from "./tools/suggestNextSession.ts";
 import { updateEntryTool } from "./tools/updateEntry.ts";
 import { updateRecipeTool } from "./tools/updateRecipe.ts";
 import { updateTargetsTool } from "./tools/updateTargets.ts";
+import { showExerciseMusclesTool } from "./tools/showExerciseMuscles.ts";
 import { setActiveRoutineTool } from "./tools/setActiveRoutine.ts";
 import { archiveRoutineTool } from "./tools/archiveRoutine.ts";
 import { updatePastSetTool } from "./tools/updatePastSet.ts";
 import { updateTrainingGoalsTool } from "./tools/updateTrainingGoals.ts";
+import { archiveCustomExerciseTool } from "./tools/archiveCustomExercise.ts";
+import { saveCustomExerciseTool } from "./tools/saveCustomExercise.ts";
 import { strictSchemaProblem } from "./tool.ts";
 
 import type { ToolDefinition, ToolRegistry } from "./tool.ts";
@@ -86,6 +90,7 @@ const toolDefinitions: readonly ToolDefinition[] = [
   getTrainingGoalsTool,
   getWorkoutsTool,
   getExerciseProgressTool,
+  showExerciseMusclesTool,
   getMuscleStateTool,
   suggestNextSessionTool,
   setActiveRoutineTool,
@@ -93,6 +98,9 @@ const toolDefinitions: readonly ToolDefinition[] = [
   editRoutineTool,
   updatePastSetTool,
   updateTrainingGoalsTool,
+  createRoutineTool,
+  saveCustomExerciseTool,
+  archiveCustomExerciseTool,
   askUserTool,
 ];
 

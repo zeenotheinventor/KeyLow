@@ -104,6 +104,7 @@ Deno.test(
         ["get_training_goals", "read"],
         ["get_workouts", "read"],
         ["get_exercise_progress", "read"],
+        ["show_exercise_muscles", "read"],
         ["get_muscle_state", "read"],
         ["suggest_next_session", "read"],
         ["set_active_routine", "write"],
@@ -111,6 +112,9 @@ Deno.test(
         ["edit_routine", "write"],
         ["update_past_set", "write"],
         ["update_training_goals", "write"],
+        ["create_routine", "write"],
+        ["save_custom_exercise", "write"],
+        ["archive_custom_exercise", "write"],
         ["ask_user", "read"],
       ],
     );
@@ -199,6 +203,7 @@ Deno.test(
       "get_training_goals",
       "get_workouts",
       "get_exercise_progress",
+      "show_exercise_muscles",
     ]) {
       assertEquals(toolRegistry.get(name)?.strict, false, name);
     }
@@ -208,7 +213,7 @@ Deno.test(
 Deno.test(
   "the routine state writes opt out of strict mode, so they take nothing from the strict budget",
   () => {
-    for (const name of ["set_active_routine", "archive_routine"]) {
+    for (const name of ["set_active_routine", "archive_routine", "create_routine"]) {
       assertEquals(toolRegistry.get(name)?.strict, false, name);
     }
   },
@@ -218,6 +223,16 @@ Deno.test(
   "edit_routine opts out of strict mode, so it takes nothing from the strict budget",
   () => {
     assertEquals(toolRegistry.get("edit_routine")?.strict, false);
+  },
+);
+
+Deno.test(
+  "the custom exercise writes opt out of strict mode, so they take nothing from the strict budget",
+  () => {
+    for (const name of ["save_custom_exercise", "archive_custom_exercise"]) {
+      assertEquals(toolRegistry.get(name)?.strict, false, name);
+      assertEquals(toolRegistry.get(name)?.annotations.readOnlyHint, false, name);
+    }
   },
 );
 

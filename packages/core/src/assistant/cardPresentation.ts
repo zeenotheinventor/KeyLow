@@ -1,5 +1,11 @@
 import { ASSISTANT_CARD_WORDS } from "../copy/assistantNotices";
 import { ASSISTANT_CARD_NOTES } from "../copy/assistantSheet";
+import {
+  PARTLY_UNDONE_NOTE,
+  PARTLY_UNDONE_UNKNOWN_NOTE,
+  describeChangesPartlyUndone,
+  describeSetsPartlyPutBack,
+} from "../copy/assistantTrainingCards";
 
 import type {
   AssistantCard,
@@ -101,10 +107,15 @@ export type AssistantCardLook = {
 
 /**
  * What the person's own Undo came to, for a card that was sent as available. An unavailable answer that
- * said why keeps its reason, and `workout_in_progress` is the one that clears by itself.
+ * said why keeps its reason, and `workout_in_progress` is the one that clears by itself. A card that groups
+ * several writes can come out `partial`: the route undoes each action on its own, so some were put back
+ * (`undone` of `total`) and the rest were refused.
  */
 export type AssistantCardUndoOutcome =
-  "undone" | "unavailable" | { state: "unavailable"; reason: AssistantUndoReason };
+  | "undone"
+  | "unavailable"
+  | { state: "unavailable"; reason: AssistantUndoReason }
+  | { state: "partial"; undone: number; total: number; reason?: AssistantUndoReason };
 
 /** One code of the undo route's answer for each action id. */
 export type AssistantUndoCode = "undone" | "already_undone" | "undo_unavailable" | "not_found";
@@ -121,18 +132,31 @@ export type AssistantUndoAnswer = {
 const answerOf = (answer: AssistantUndoCode | AssistantUndoAnswer): AssistantUndoAnswer =>
   typeof answer === "string" ? { result: answer } : answer;
 
+const isPutBack = ({ result }: AssistantUndoAnswer): boolean =>
+  result === "undone" || result === "already_undone";
+
 /**
  * What a card's Undo came to: undone once every action is (already undone counts, someone got there
- * first), otherwise unavailable, whether an action's entries changed or were not found. The first
+ * first). When only some were put back it is partial, with how many, because the card would otherwise say
+ * nothing was, and it keeps the first refusal's reason. Otherwise unavailable, whether an action's entries changed or were not found, and the first
  * action that was not undone gives the reason, when it sent one. Codes alone are read as they always were.
  */
 export function undoOutcomeOfResults(
   results: readonly (AssistantUndoCode | AssistantUndoAnswer)[],
 ): AssistantCardUndoOutcome {
   const answers = results.map(answerOf);
-  const refused = answers.find(({ result }) => result !== "undone" && result !== "already_undone");
+  const refused = answers.find((answer) => !isPutBack(answer));
   if (answers.length > 0 && refused === undefined) {
     return "undone";
+  }
+  const undone = answers.filter(isPutBack).length;
+  if (undone > 0) {
+    return {
+      state: "partial",
+      undone,
+      total: answers.length,
+      ...(refused?.reason === undefined ? {} : { reason: refused.reason }),
+    };
   }
   return refused?.reason === undefined
     ? "unavailable"
@@ -165,10 +189,37 @@ function describeRow(row: AssistantCardRow): AssistantCardRowLook {
   }
 }
 
-const reasonOfOutcome = (outcome: AssistantCardUndoOutcome | null): AssistantUndoReason | null =>
-  typeof outcome === "object" && outcome !== null ? outcome.reason : null;
+/** The words of a partial outcome: what was put back. */
+export function describePartialUndo(
+  kind: AssistantCardKind | null,
+  { undone, total }: { undone: number; total: number },
+): string {
+  return kind === "set_updated"
+    ? describeSetsPartlyPutBack(undone, total)
+    : describeChangesPartlyUndone(undone, total);
+}
 
-const stateOfOutcome = (outcome: AssistantCardUndoOutcome): "undone" | "unavailable" =>
+/** The reason a press was refused for, from an unavailable or a partial outcome, or null when there is none. */
+export const reasonOfOutcome = (
+  outcome: AssistantCardUndoOutcome | null,
+): AssistantUndoReason | null =>
+  typeof outcome === "object" && outcome !== null ? (outcome.reason ?? null) : null;
+
+// Why the rest of a partial outcome was not put back. A refusal that gave no reason says nothing about why,
+// since a failed write can be tried again.
+const partialNoteOf = (
+  kind: AssistantCardKind,
+  outcome: { undone: number; total: number },
+  reason: AssistantUndoReason | null,
+): string =>
+  `${describePartialUndo(kind, outcome)}. ${
+    reason === null || reason === "workout_in_progress"
+      ? PARTLY_UNDONE_UNKNOWN_NOTE
+      : PARTLY_UNDONE_NOTE
+  }`;
+
+/** The Undo state a press leaves a card in. A partial outcome is unavailable, because what is left cannot be undone. */
+export const stateOfOutcome = (outcome: AssistantCardUndoOutcome): "undone" | "unavailable" =>
   outcome === "undone" ? "undone" : "unavailable";
 
 // Why a training card's Undo is off, from the kind and the reason the undo route gave, or null when the
@@ -272,17 +323,26 @@ export function describeAssistantCard(
   if (isWaiting || (isUnavailable && pressedReason === "workout_in_progress" && isTraining)) {
     return {
       ...looksSame,
-      note: ASSISTANT_CARD_NOTES.waitForWorkout,
+      // What an Undo put back stays true while the rest waits.
+      note:
+        typeof pressed === "object" && pressed?.state === "partial"
+          ? `${describePartialUndo(card.kind, pressed)}. ${ASSISTANT_CARD_NOTES.waitForWorkout}`
+          : ASSISTANT_CARD_NOTES.waitForWorkout,
       undo: { state: "unavailable", label: ASSISTANT_CARD_WORDS.waitUndoLabel },
     };
   }
 
   const refusalNote =
     isUnavailable && isTraining ? trainingNoteOfRefusal(card.kind, pressedReason) : null;
+  const partialNote =
+    isUnavailable && typeof pressed === "object" && pressed?.state === "partial"
+      ? partialNoteOf(card.kind, pressed, pressedReason)
+      : null;
 
   return {
     ...looksSame,
     note:
+      partialNote ??
       refusalNote ??
       card.note ??
       (isUnavailable && KINDS_OF_DIARY_ENTRIES.has(card.kind)

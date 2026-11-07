@@ -13,6 +13,7 @@ import {
   confirmTargetsButtons,
   confirmArchiveRoutineButtons,
   confirmRemoveExercisesButtons,
+  confirmArchiveExerciseButtons,
 } from "../_shared/core.ts";
 
 export type ConfirmWords = {
@@ -29,6 +30,7 @@ const archiveRecipeInput = z.object({ id: z.string() });
 const updateTargetsInput = z.object({ current_kcal: z.number().int().nullable() });
 const archiveRoutineInput = z.object({ routine_id: z.string() });
 const editRoutineInput = z.object({ changes: z.array(z.object({ op: z.string() })) });
+const archiveCustomExerciseInput = z.object({ id: z.string() });
 
 // The buttons of `update_targets` name the number the person keeps, which the tool's input holds as
 // `current_kcal`. `needsConfirmation` reads the person's own number and refuses a call that disagrees, so a
@@ -85,6 +87,13 @@ const wordsByTool: ReadonlyMap<string, WordsFor> = new Map<string, WordsFor>([
         : 0;
       return removals >= 2 ? { ...confirmRemoveExercisesButtons(removals), tone: "danger" } : null;
     },
+  ],
+  [
+    "archive_custom_exercise",
+    (input) =>
+      archiveCustomExerciseInput.safeParse(input).success
+        ? { ...confirmArchiveExerciseButtons(), tone: "primary" }
+        : null,
   ],
 ]);
 

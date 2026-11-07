@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import { loggedCard } from "./cardFixtures";
 import { routineCreatedCard, routineUpdatedCard } from "./trainingCardFixtures";
 import {
+  ASSISTANT_TOOLS_NEEDING_STORED_UNDO,
+  ASSISTANT_TOOLS_WITHOUT_STORED_UNDO,
   ASSISTANT_WRITE_TOOL_CARD_KINDS,
   buildLoggedCard,
   buildRecipeArchivedCard,
@@ -11,6 +13,7 @@ import {
   cardEntryOfRow,
   describeAssistantChange,
   isAssistantWriteTool,
+  isTrainingCardKind,
   mergeAssistantCards,
   withActionIds,
 } from "../../src/assistant";
@@ -345,7 +348,7 @@ describe("the training tools", () => {
     ["archive_routine", "routine_archived", "Archived a routine"],
     ["create_routine", "routine_created", "Built a routine"],
     ["update_training_goals", "goals_updated", "Updated your training goals"],
-    ["save_custom_exercise", "exercise_created", "Added an exercise"],
+    ["save_custom_exercise", "exercise_created", "Saved an exercise"],
     ["archive_custom_exercise", "exercise_archived", "Archived an exercise"],
     ["update_past_set", "set_updated", "Changed a set"],
     ["delete_workout", "workout_deleted", "Deleted a workout"],
@@ -379,5 +382,50 @@ describe("the training tools", () => {
 
     expect(merged.days ?? null).toBeNull();
     expect(merged.changeDetail ?? null).toBeNull();
+  });
+});
+
+describe("ASSISTANT_TOOLS_NEEDING_STORED_UNDO", () => {
+  it("should name the training writes whose Undo reads the value their turn stored", () => {
+    expect([...ASSISTANT_TOOLS_NEEDING_STORED_UNDO].sort()).toEqual([
+      "create_routine",
+      "edit_routine",
+      "save_custom_exercise",
+      "set_active_routine",
+      "update_past_set",
+    ]);
+  });
+
+  it("should name write tools only, so a renamed tool cannot slip out of the set unnoticed", () => {
+    expect([...ASSISTANT_TOOLS_NEEDING_STORED_UNDO].every(isAssistantWriteTool)).toBe(true);
+  });
+
+  it("should leave out the writes that undo from the row alone, which are listed on their own", () => {
+    expect([...ASSISTANT_TOOLS_WITHOUT_STORED_UNDO].sort()).toEqual([
+      "archive_custom_exercise",
+      "archive_routine",
+      "delete_workout",
+      "update_training_goals",
+    ]);
+    for (const tool of ASSISTANT_TOOLS_WITHOUT_STORED_UNDO) {
+      expect(ASSISTANT_TOOLS_NEEDING_STORED_UNDO.has(tool)).toBe(false);
+    }
+  });
+
+  // A tool in neither list would offer Undo after its conversation is deleted, and every press would answer
+  // unavailable. A new training write must say which kind of Undo it has.
+  it("should place every training write tool in exactly one of the two lists", () => {
+    const trainingTools = Object.entries(ASSISTANT_WRITE_TOOL_CARD_KINDS)
+      .filter(([, kind]) => isTrainingCardKind(kind))
+      .map(([tool]) => tool);
+
+    expect(trainingTools.length).toBeGreaterThan(0);
+    for (const tool of trainingTools) {
+      const lists = [
+        ASSISTANT_TOOLS_NEEDING_STORED_UNDO.has(tool),
+        ASSISTANT_TOOLS_WITHOUT_STORED_UNDO.has(tool),
+      ];
+      expect([tool, lists.filter(Boolean).length]).toEqual([tool, 1]);
+    }
   });
 });

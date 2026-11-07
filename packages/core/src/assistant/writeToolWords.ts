@@ -66,6 +66,33 @@ export const ASSISTANT_TOOLS_WITHOUT_UNDO: ReadonlySet<string> = new Set([
   "update_recipe",
 ]);
 
+/**
+ * The training write tools whose Undo needs the value the turn stored (`previousValueOf`), or the
+ * fingerprint it stored to tell that the person has not changed the row since. Once the conversation is
+ * deleted its turns go, the actions keep a null `turn_id`, and Undo on these answers unavailable on every
+ * press. The tools left out undo from the row alone: `archive_routine` and `archive_custom_exercise`
+ * restore the row, `update_training_goals` reads the goals history and `delete_workout` restores the
+ * session, so their Undo still works with no turn.
+ */
+export const ASSISTANT_TOOLS_NEEDING_STORED_UNDO: ReadonlySet<string> = new Set([
+  "edit_routine",
+  "set_active_routine",
+  "create_routine",
+  "update_past_set",
+  "save_custom_exercise",
+]);
+
+/**
+ * The other training writes, which undo from the row alone and so keep Undo once the conversation is
+ * deleted. Every training write is in one of the two sets, which a test pins, so a new tool has to say.
+ */
+export const ASSISTANT_TOOLS_WITHOUT_STORED_UNDO: ReadonlySet<string> = new Set([
+  "archive_routine",
+  "archive_custom_exercise",
+  "update_training_goals",
+  "delete_workout",
+]);
+
 /** The kinds of card those tools build. */
 export const ASSISTANT_CARD_KINDS_WITHOUT_UNDO: ReadonlySet<AssistantCardKind> = new Set(
   [...ASSISTANT_TOOLS_WITHOUT_UNDO].flatMap((tool) =>
@@ -325,7 +352,7 @@ const plainTitles: Record<AssistantCardKind, (count: number) => string> = {
   routine_archived: () => "Archived a routine",
   routine_created: () => "Built a routine",
   goals_updated: () => "Updated your training goals",
-  exercise_created: () => "Added an exercise",
+  exercise_created: () => "Saved an exercise",
   exercise_updated: () => "Updated an exercise",
   exercise_archived: () => "Archived an exercise",
   set_updated: (count) => (count === 1 ? "Changed a set" : `Changed ${count} sets`),
