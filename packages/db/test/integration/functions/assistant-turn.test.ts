@@ -437,7 +437,8 @@ describe("the undo kept beside a card, read back by previousValueOf", () => {
     await storeUndo({ deletedAt: "2026-11-03T08:10:00.123456+00:00" });
     const before = await ownAction();
 
-    const { error } = await adminClient()
+    // As the person, which is how a conversation is deleted. The service role has no delete on it.
+    const { error } = await undoTurn.user.client
       .from("assistant_conversations")
       .delete()
       .eq("id", conversationId);
