@@ -17,6 +17,7 @@ export type {
   LogQuickEntryInput,
   QuickEntryValues,
   RecipeDetail,
+  RoutineDetail,
   SessionWithSets,
   SuggestionLibraryOptions,
   Targets,

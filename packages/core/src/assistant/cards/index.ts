@@ -22,6 +22,8 @@ export type { RecipeCardRecipe } from "./recipeCreated";
 export { buildRecipeImportedCard } from "./recipeImported";
 export type { RecipeImportedCardInput, RecipeImportedLine } from "./recipeImported";
 export { buildRecipeUpdatedCard } from "./recipeUpdated";
+export { buildRoutineCreatedCard } from "./routineCreated";
+export type { RoutineCreatedCardInput } from "./routineCreated";
 export { buildTargetsChangedCard } from "./targetsChanged";
 export type { TargetsChangedCardChange } from "./targetsChanged";
 export { buildUpdatedCard } from "./updated";

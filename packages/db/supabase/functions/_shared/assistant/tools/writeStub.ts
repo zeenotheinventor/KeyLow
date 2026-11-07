@@ -56,7 +56,9 @@ export function writeStub(
 
   // A table keeps its rows under the column that names their owner.
   const ownerColumnOf = (table: string) =>
-    table === "recipes" || table === "recipe_ingredients" ? "owner_id" : "user_id";
+    table === "recipes" || table === "recipe_ingredients" || table === "exercises"
+      ? "owner_id"
+      : "user_id";
 
   const visible = (table: string, row: Row) =>
     options.callerUserId === undefined ||
@@ -89,8 +91,12 @@ export function writeStub(
               return column in row ? [[column, row[column]]] : [];
             }
             const inner = row[embedded[1]];
-            return Array.isArray(inner)
-              ? [[embedded[1], inner.map((item: Row) => project(item, embedded[2] ?? "*"))]]
+            if (Array.isArray(inner)) {
+              return [[embedded[1], inner.map((item: Row) => project(item, embedded[2] ?? "*"))]];
+            }
+            // A row on the one side of a relation (`exercises(id,name)` under a planned exercise).
+            return typeof inner === "object" && inner !== null
+              ? [[embedded[1], project(inner as Row, embedded[2] ?? "*")]]
               : [];
           }),
         );
