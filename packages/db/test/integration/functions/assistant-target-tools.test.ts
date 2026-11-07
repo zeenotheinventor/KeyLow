@@ -385,7 +385,14 @@ describe("the turn that follows a yes for another person, with no model step scr
 
 describe("the turn that follows a yes", () => {
   it("streams the card alone, with no reply under it", () => {
-    expect(changeEvents.map((event) => event.type)).toEqual(["turn", "card", "done"]);
+    expect(changeEvents.map((event) => event.type)).toEqual(["turn", "status", "card", "done"]);
+    expect(changeEvents[1]).toEqual({
+      type: "status",
+      code: "tool",
+      tool: "update_targets",
+      food: null,
+      isConfirmed: true,
+    });
     expect(changeEvents.at(-1)).toEqual({ type: "done", outcome: "complete" });
   });
 
