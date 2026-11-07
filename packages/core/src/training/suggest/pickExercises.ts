@@ -1,3 +1,4 @@
+import { exerciseTargetFor } from "../goalPresets";
 import { MUSCLE_IDS } from "../muscles";
 import { estimateSessionMinutes } from "../sessionTime";
 
@@ -47,7 +48,7 @@ export const pickExercises = (
   goals: SuggestGoals,
   start: PickStart,
 ): Picked => {
-  const { scoreOf, priorityOf, isHot, reasonOf, setsPerExercise } = context;
+  const { scoreOf, priorityOf, isHot, reasonOf } = context;
   const chosen = new Set(start.taken);
   const led = new Set<MuscleId>();
   const picked: SuggestedExercise[] = [];
@@ -83,10 +84,15 @@ export const pickExercises = (
       break;
     }
 
+    const { exercise, primary, credit } = next.best;
+    const target = exerciseTargetFor(
+      { goal: goals.goal, experience: goals.experience, mechanic: exercise.mechanic },
+      params.presets,
+    );
     const minutesIfAdded = estimateSessionMinutes(
       {
         exercises: start.exercises + picked.length + 1,
-        sets: start.sets + totalSets + setsPerExercise,
+        sets: start.sets + totalSets + target.sets,
       },
       params.sessionTime,
     );
@@ -99,11 +105,9 @@ export const pickExercises = (
       break;
     }
 
-    const { exercise, primary, credit } = next.best;
-    const target = params.presets.exerciseTargets[goals.goal][exercise.mechanic];
     picked.push({
       exercise_id: exercise.id,
-      sets: setsPerExercise,
+      sets: target.sets,
       rep_min: target.repMin,
       rep_max: target.repMax,
       target_rir: target.targetRir,
@@ -112,8 +116,8 @@ export const pickExercises = (
         .map(reasonOf)
         .filter((reason) => reason.score > 0),
     });
-    context.creditSets(credit, setsPerExercise);
-    totalSets += setsPerExercise;
+    context.creditSets(credit, target.sets);
+    totalSets += target.sets;
     chosen.add(exercise.id);
     led.add(next.lead);
   }
