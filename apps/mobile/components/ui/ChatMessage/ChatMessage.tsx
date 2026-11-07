@@ -54,14 +54,15 @@ function YourParagraphs({ paragraphs }: { paragraphs: readonly string[] }) {
 }
 
 // Italic is the `italic` class on Geist Regular, because the app bundles no italic face, and code stays in
-// Geist, because it bundles no mono face. A span with no style is plain words.
-function Spans({ spans }: { spans: readonly ReplySpan[] }) {
+// Geist, because it bundles no mono face. A span with no style is plain words. In a heading every span keeps
+// the strong look, so emphasis inside it does not lose its weight.
+function Spans({ spans, isHeading }: { spans: readonly ReplySpan[]; isHeading: boolean }) {
   return spans.map((span, index) => (
     <Fragment key={index}>
       {span.isStrong || span.isEmphasis ? (
         <Text
           className={span.isEmphasis ? "italic" : ""}
-          variant={span.isStrong ? "body-strong" : "body"}
+          variant={span.isStrong || isHeading ? "body-strong" : "body"}
         >
           {span.text}
         </Text>
@@ -76,7 +77,7 @@ function Spans({ spans }: { spans: readonly ReplySpan[] }) {
 function ReplyBlockView({ block, hasCaret }: { block: ReplyBlock; hasCaret: boolean }) {
   const words = (
     <>
-      <Spans spans={block.spans} />
+      <Spans isHeading={block.kind === "heading"} spans={block.spans} />
       {hasCaret ? <Caret /> : null}
     </>
   );
@@ -85,7 +86,7 @@ function ReplyBlockView({ block, hasCaret }: { block: ReplyBlock; hasCaret: bool
   }
   return (
     <View className={block.depth === 1 ? "flex-row items-start pl-[20px]" : "flex-row items-start"}>
-      <Text className="w-[20px] shrink-0" tone="secondary">
+      <Text className="min-w-[20px] shrink-0" tone="secondary">
         {block.number === null ? "•" : `${block.number}.`}
       </Text>
       <Text className="flex-1">{words}</Text>
@@ -157,9 +158,10 @@ function AssistantLines({
  * One message in the assistant's conversation: your words in a bubble on the right, or the assistant's as
  * paragraphs with its markdown drawn as formatting (bold, italic, headings, bullets and numbers, and the
  * words of a link, which is never tappable), with the caret while they arrive, the Estimate badge, the
- * citation and the stopped line under them. Every word comes in by prop, because the kit adds no copy. It is one group for a screen reader,
- * named for who said it. It is not a live region while it streams, because Android would read the whole text
- * again for every chunk and iOS ignores a live region, so the screen announces a finished answer itself.
+ * citation and the stopped line under them. Every word comes in by prop, because the kit adds no copy. It is
+ * one group for a screen reader, named for who said it. It is not a live region while it streams, because
+ * Android would read the whole text again for every chunk and iOS ignores a live region, so the screen
+ * announces a finished answer itself.
  */
 export function ChatMessage(props: ChatMessageProps) {
   const accessibility = {

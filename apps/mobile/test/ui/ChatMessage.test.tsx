@@ -279,13 +279,13 @@ describe("ChatMessage", () => {
       expect(screen.queryByText(/\*/)).not.toBeOnTheScreen();
     });
 
-    it("should draw the bullet in the secondary tone in a 20 point column", async () => {
+    it("should draw the bullet in the secondary tone in a column that is at least 20 points", async () => {
       await renderMessage(formatted, "dark");
       await screen.findAllByText("•");
 
       expect(screen.getAllByText("•")[0]).toHaveStyle({
         color: resolvedColor("dark", "text-secondary"),
-        width: 20,
+        minWidth: 20,
       });
     });
 
@@ -295,6 +295,24 @@ describe("ChatMessage", () => {
       expect(screen.getByText("1.")).toBeOnTheScreen();
       expect(screen.getByText("2.")).toBeOnTheScreen();
       expect(screen.getByText("Flat white")).toBeOnTheScreen();
+    });
+
+    it("should let the marker column grow for a number of two digits", async () => {
+      await renderMessage({ ...answer, paragraphs: ["10. Tenth"] });
+      await screen.findByText("10.");
+
+      expect(screen.getByText("10.")).toHaveStyle({ minWidth: 20, flexShrink: 0 });
+      expect(screen.getByText("10.")).not.toHaveStyle({ width: 20 });
+    });
+
+    it("should keep the weight of the heading on emphasis inside it", async () => {
+      await renderMessage({ ...answer, paragraphs: ["## A *b* c"] });
+      await screen.findByText("b");
+
+      expect(screen.getByText("b")).toHaveStyle({
+        fontFamily: "Geist-SemiBold",
+        fontStyle: "italic",
+      });
     });
 
     it("should draw the heading in the body-strong look, never larger", async () => {
@@ -384,6 +402,27 @@ describe("ChatMessage", () => {
 
       expect(viewsDrawn(caretStyle)).toHaveLength(1);
       expect(caretIn("First words.")).toHaveLength(1);
+    });
+
+    it("should keep the same nodes while chunks arrive, so nothing mounts again", async () => {
+      const arriving = (words: string): ChatMessageProps => ({
+        ...answer,
+        paragraphs: [words],
+        isStreaming: true,
+      });
+      const tree = (props: ChatMessageProps) => (
+        <ThemeProvider fixedPreference="dark">
+          <ChatMessage {...props} />
+        </ThemeProvider>
+      );
+      const rendered = await render(tree(arriving("Two things:\n- **Log fo")));
+      const bold = screen.getByText("Log fo");
+      const item = screen.getByText("Log fo").parent;
+
+      await rendered.rerender(tree(arriving("Two things:\n- **Log food:** add foods")));
+
+      expect(screen.getByText("Log food:")).toBe(bold);
+      expect(screen.getByText("Log food:").parent).toBe(item);
     });
 
     it("should draw the caret alone when nothing draws yet", async () => {
