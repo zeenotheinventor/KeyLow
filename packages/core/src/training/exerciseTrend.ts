@@ -1,9 +1,11 @@
 import { isWorkingType } from "./liveSets";
 import { parseMoment } from "./muscleState";
+import { describeTrendMovement } from "../copy/exerciseTrend";
 import { addCalendarDays, daysSinceMonday, isCalendarDay } from "../dates/calendarDay";
 import { isValidTimeZone } from "../dates/isValidTimeZone";
 import { toLocalDate } from "../dates/toLocalDate";
 
+import type { LoadUnit } from "./loads";
 import type { WorkoutSetRow } from "../schemas/training";
 
 /*
@@ -191,37 +193,53 @@ export const exerciseWeeklyTrend = (
   return { weeks, latest: [...weeks].reverse().find(hasValue) ?? null };
 };
 
-// Whether a trained week beat the last week trained before it. The load comes first, no load counting as
-// 0 kg as the change does, and only when the loads are equal do the reps decide. A first week beat nothing.
-const isProgress = (change: TrendChange): boolean => {
-  switch (change.kind) {
-    case "first":
-    case "same":
-      return false;
-    case "load":
-      return (change.latestLoadKg ?? 0) > (change.previousLoadKg ?? 0);
-    case "reps":
-      return change.repsChange > 0;
-  }
-};
-
 /**
  * How many trained weeks the best value has stood still or fallen, counted back from the latest trained
- * week and stopping at the first week that beat the one before it (or at the first week trained). A week
- * not trained is neither: it is skipped, as the change skips it. 0 for a trend that is still rising, for
- * one trained week and for no trained week. The assistant's "stalled for three weeks" arrives as this
- * number, so the model never counts it.
+ * week and stopping at the first week that beat the one before it, or at the first week ever trained. A week
+ * not trained is skipped, as the change skips it. A week beats the one before it when the screen shows it up
+ * (`describeTrendMovement`: the load first, as shown in `unit`, and the reps when the load shows no
+ * change), so the count agrees with the arrows beside the weeks. 0 for a trend that is still rising, for
+ * one trained week and for no trained week.
+ *
+ * `isAtLeast` is true when every trained week of the trend was a stall and the oldest was compared with a
+ * week before the trend (`earlier`), so the stall may run further back than the weeks given. The assistant's
+ * "stalled for three weeks" arrives as this number, so the model never counts it.
  */
-export const weeksWithoutProgress = (trend: ExerciseTrend): number => {
+export const weeksWithoutProgress = (
+  trend: ExerciseTrend,
+  unit: LoadUnit,
+): Readonly<{ weeks: number; isAtLeast: boolean }> => {
+  const trained = trend.weeks.filter(hasValue);
   let weeks = 0;
-  for (const entry of [...trend.weeks].reverse()) {
-    if (entry.change === null) {
-      continue;
-    }
-    if (entry.change.kind === "first" || isProgress(entry.change)) {
-      break;
+  for (const entry of [...trained].reverse()) {
+    if (
+      entry.change.kind === "first" ||
+      describeTrendMovement(entry.change, unit)?.direction === "up"
+    ) {
+      return { weeks, isAtLeast: false };
     }
     weeks += 1;
   }
-  return weeks;
+  return { weeks, isAtLeast: weeks > 0 };
+};
+
+/**
+ * The days a trend range reads, from the Monday of its first whole week through today in the user's zone,
+ * both `YYYY-MM-DD`. `now` is an ISO timestamp with a zone. The Monday is the first week of the trend
+ * `exerciseWeeklyTrend` works out for the same range, now and zone. The screen and the assistant read rows
+ * through this one window, so they cannot drift apart.
+ */
+export const trendReadWindow = (
+  range: TrendRange,
+  now: string,
+  timeZone: string,
+): { fromWeek: string; throughDay: string } => {
+  const throughDay = toLocalDate(new Date(now), timeZone);
+  return {
+    fromWeek: addCalendarDays(
+      mondayOf(throughDay),
+      -(TREND_RANGE_WEEKS[range] - 1) * DAYS_PER_WEEK,
+    ),
+    throughDay,
+  };
 };

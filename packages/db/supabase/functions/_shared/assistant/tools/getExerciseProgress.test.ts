@@ -8,6 +8,7 @@ import {
   localToday,
   TREND_RANGE_WEEKS,
   TREND_RANGES,
+  trendReadWindow,
 } from "../../core.ts";
 import { executeTool } from "../executor.ts";
 import { createFakeContext, userId } from "../testing.ts";
@@ -55,14 +56,34 @@ const field = (result: ExecutionResult, key: string) => {
 const structuredOf = (result: ExecutionResult) =>
   result.status === "ok" ? result.structured : "error";
 
-// What the exercise progress screen's own reader gives for the same rows: core's trend, in the screen's words,
-// for the weeks trained.
-function screenWeeks(rows: ReturnType<typeof trendSetRow>[], range: TrendRange, unit: "kg" | "lb") {
-  const trend = exerciseWeeklyTrend(trendSetsOf(rows), {
-    range,
-    now: new Date().toISOString(),
-    timeZone,
-  });
+// What the exercise progress screen's own reader gives for the same rows: the rows of the range's window and
+// the last week trained before it, worked out by core's trend, in the screen's words, for the weeks trained.
+function screenWeeks(
+  rows: ReturnType<typeof trendSetRow>[],
+  range: TrendRange,
+  unit: "kg" | "lb",
+  zone = timeZone,
+) {
+  const now = new Date().toISOString();
+  const { fromWeek, throughDay } = trendReadWindow(range, now, zone);
+  const sets = trendSetsOf(rows);
+  const before = sets.filter((set) => set.local_date < fromWeek);
+  const newestBefore = before
+    .map((set) => set.local_date)
+    .sort()
+    .at(-1);
+  const trend = exerciseWeeklyTrend(
+    sets.filter((set) => set.local_date >= fromWeek && set.local_date <= throughDay),
+    {
+      range,
+      now,
+      timeZone: zone,
+      earlier:
+        newestBefore === undefined
+          ? []
+          : before.filter((set) => mondayOf(set.local_date) === mondayOf(newestBefore)),
+    },
+  );
   return trend.weeks
     .filter((entry) => entry.value !== null)
     .map((entry) => describeProgressWeek(entry, unit))
@@ -92,6 +113,8 @@ Deno.test(
     assertStringIncludes(description, "never suggest a load");
     assertStringIncludes(description, "trained weeks only");
     assertStringIncludes(description, "trained is false");
+    assertStringIncludes(description, "stall_may_be_longer");
+    assertStringIncludes(description, "since it last rose");
   },
 );
 
@@ -117,7 +140,6 @@ for (const range of TREND_RANGES) {
       const expected = screenWeeks(rows, range, "kg");
       assertEquals(expected.length, TREND_RANGE_WEEKS[range]);
       assertEquals(listOf(result, "weeks"), expected);
-      assertEquals(field(result, "latest"), expected.at(-1));
     },
   );
 }
@@ -328,6 +350,9 @@ Deno.test("get_exercise_progress rejects input it does not accept, before any re
     { exercise_id: benchPress.id, range: "5y" },
     { range: "3m" },
     { exercise_id: benchPress.id, range: "3m", include_warmups: true },
+    null,
+    [],
+    "bench press",
   ];
 
   for (const input of badInputs) {
@@ -340,6 +365,121 @@ Deno.test("get_exercise_progress rejects input it does not accept, before any re
     assertEquals(calls, []);
   }
 });
+
+Deno.test(
+  "get_exercise_progress answers the weeks of the range asked for and nothing else, with no latest field",
+  async () => {
+    const rows = weeklyRows(benchPress.id, today, 30, (weeksBack) => 100 - weeksBack);
+    const { result } = await fetchProgress(dataOf(rows), askedFor("4w"));
+
+    assertEquals(Object.keys(JSON.parse(JSON.stringify(payloadOf(result)))), [
+      "trained",
+      "weeks",
+      "weeks_without_progress",
+      "stall_may_be_longer",
+      "citation",
+    ]);
+    assertEquals(listOf(result, "weeks").length, 4);
+  },
+);
+
+Deno.test(
+  "get_exercise_progress counts a stall longer than the range asked for, back to when the best last rose",
+  async () => {
+    // Flat at 80 kg for the last 20 weeks, after a rise that ended 20 weeks ago: 19 weeks without progress.
+    const rows = weeklyRows(benchPress.id, today, 40, (weeksBack) =>
+      weeksBack >= 20 ? 60 + (40 - weeksBack) / 2 : 80,
+    );
+
+    for (const range of TREND_RANGES) {
+      const { result } = await fetchProgress(dataOf(rows), askedFor(range));
+
+      assertEquals(listOf(result, "weeks").length, Math.min(TREND_RANGE_WEEKS[range], 40), range);
+      assertEquals(field(result, "weeks_without_progress"), 19, range);
+      assertEquals(field(result, "stall_may_be_longer"), false, range);
+    }
+  },
+);
+
+Deno.test(
+  "get_exercise_progress says the stall may be longer when it runs back past the year it reads",
+  async () => {
+    const rows = weeklyRows(benchPress.id, today, 70, () => 80);
+    const { result } = await fetchProgress(dataOf(rows), askedFor("4w"));
+
+    assertEquals(listOf(result, "weeks").length, 4);
+    assertEquals(field(result, "weeks_without_progress"), 52);
+    assertEquals(field(result, "stall_may_be_longer"), true);
+  },
+);
+
+Deno.test(
+  "get_exercise_progress compares the first week of the range with the last week trained before it",
+  async () => {
+    const rows = [
+      trendSetRow(benchPress.id, addCalendarDays(mondayOf(today), -70), { loadKg: 60, reps: 8 }),
+      trendSetRow(benchPress.id, mondayOf(today), { loadKg: 62.5, reps: 8 }),
+    ];
+    const { result } = await fetchProgress(dataOf(rows), askedFor("4w"));
+
+    assertEquals(listOf(result, "weeks"), screenWeeks(rows, "4w", "kg"));
+    assertEquals(
+      listOf(result, "weeks").map((week) => week["change"]),
+      ["+2.5 kg"],
+    );
+  },
+);
+
+Deno.test(
+  "get_exercise_progress compares the oldest week of the year with a week trained before the year",
+  async () => {
+    const rows = [
+      trendSetRow(benchPress.id, addCalendarDays(mondayOf(today), -7 * 70), {
+        loadKg: 60,
+        reps: 8,
+      }),
+      trendSetRow(benchPress.id, addCalendarDays(mondayOf(today), -7 * 10), {
+        loadKg: 80,
+        reps: 8,
+      }),
+    ];
+    const { result } = await fetchProgress(dataOf(rows), askedFor("1y"));
+
+    assertEquals(
+      listOf(result, "weeks").map((week) => week["change"]),
+      ["+20 kg"],
+    );
+  },
+);
+
+// Two zones a day or more apart at every moment, so one of them has a date that UTC does not.
+for (const zone of ["Pacific/Kiritimati", "Pacific/Pago_Pago"]) {
+  Deno.test(
+    `get_exercise_progress puts a Sunday and the Monday after it in two weeks, and reads today, in ${zone}`,
+    async () => {
+      const zoneToday = localToday(new Date().toISOString(), zone);
+      const monday = mondayOf(zoneToday);
+      const rows = [
+        trendSetRow(benchPress.id, addCalendarDays(monday, -1), { loadKg: 60, reps: 8 }),
+        trendSetRow(benchPress.id, monday, { loadKg: 62.5, reps: 8 }),
+        trendSetRow(benchPress.id, zoneToday, { loadKg: 65, reps: 8 }),
+      ];
+      const { result } = await fetchProgress(
+        dataOf(rows, { profiles: [profile({ timezone: zone })] }),
+        askedFor("4w"),
+      );
+
+      assertEquals(listOf(result, "weeks"), screenWeeks(rows, "4w", "kg", zone));
+      assertEquals(
+        listOf(result, "weeks").map((week) => [week["best"], week["change"]]),
+        [
+          ["60 kg for 8 reps", "First week"],
+          ["65 kg for 8 reps", "+5 kg"],
+        ],
+      );
+    },
+  );
+}
 
 Deno.test("get_exercise_progress keeps the user's id out of what the model reads", async () => {
   const rows = weeklyRows(benchPress.id, today, 3, () => 80);

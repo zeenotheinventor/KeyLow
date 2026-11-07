@@ -382,6 +382,7 @@ export {
   TREND_RANGES,
   TREND_RANGE_WEEKS,
   exerciseWeeklyTrend,
+  trendReadWindow,
   weeksWithoutProgress,
 } from "./exerciseTrend";
 export type {

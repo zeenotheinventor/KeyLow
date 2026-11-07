@@ -118,6 +118,7 @@ export {
   TREND_ESTIMATE,
   TREND_RANGE_WEEKS,
   TREND_RANGES,
+  trendReadWindow,
   weeklyRateKg,
   weeksWithoutProgress,
   localToday,

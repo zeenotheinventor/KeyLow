@@ -6,6 +6,7 @@ import {
   TREND_RANGES,
   TREND_RANGE_WEEKS,
   exerciseWeeklyTrend,
+  trendReadWindow,
   weeksWithoutProgress,
 } from "../../src/training";
 
@@ -457,7 +458,7 @@ describe("weeksWithoutProgress", () => {
       { monday: weeksAgo(0), load_kg: 65 },
     ]);
 
-    expect(weeksWithoutProgress(trend)).toBe(0);
+    expect(weeksWithoutProgress(trend, "kg")).toEqual({ weeks: 0, isAtLeast: false });
   });
 
   it("should count the trained weeks since the best last moved up when the load stood still", () => {
@@ -468,7 +469,7 @@ describe("weeksWithoutProgress", () => {
       { monday: weeksAgo(0), load_kg: 60 },
     ]);
 
-    expect(weeksWithoutProgress(trend)).toBe(2);
+    expect(weeksWithoutProgress(trend, "kg")).toEqual({ weeks: 2, isAtLeast: false });
   });
 
   it("should count weeks the best fell as well as weeks it stood still", () => {
@@ -479,7 +480,7 @@ describe("weeksWithoutProgress", () => {
       { monday: weeksAgo(0), load_kg: 60 },
     ]);
 
-    expect(weeksWithoutProgress(trend)).toBe(3);
+    expect(weeksWithoutProgress(trend, "kg")).toEqual({ weeks: 3, isAtLeast: false });
   });
 
   it("should count only the weeks since the latest rise, not the ones before it", () => {
@@ -491,15 +492,18 @@ describe("weeksWithoutProgress", () => {
       { monday: weeksAgo(0), load_kg: 62.5 },
     ]);
 
-    expect(weeksWithoutProgress(trend)).toBe(1);
+    expect(weeksWithoutProgress(trend, "kg")).toEqual({ weeks: 1, isAtLeast: false });
   });
 
   it("should be 0 for a one-week history, which has nothing to compare with", () => {
-    expect(weeksWithoutProgress(trendOf([{ monday: weeksAgo(0) }]))).toBe(0);
+    expect(weeksWithoutProgress(trendOf([{ monday: weeksAgo(0) }]), "kg")).toEqual({
+      weeks: 0,
+      isAtLeast: false,
+    });
   });
 
   it("should be 0 for an exercise with no trained week in the range", () => {
-    expect(weeksWithoutProgress(trendOf([]))).toBe(0);
+    expect(weeksWithoutProgress(trendOf([]), "kg")).toEqual({ weeks: 0, isAtLeast: false });
   });
 
   it("should skip the weeks not trained, since they are neither progress nor a stall", () => {
@@ -509,7 +513,7 @@ describe("weeksWithoutProgress", () => {
       { monday: weeksAgo(0), load_kg: 60 },
     ]);
 
-    expect(weeksWithoutProgress(trend)).toBe(2);
+    expect(weeksWithoutProgress(trend, "kg")).toEqual({ weeks: 2, isAtLeast: false });
   });
 
   it("should read a heavier load with fewer reps as progress, since the load comes first", () => {
@@ -518,7 +522,7 @@ describe("weeksWithoutProgress", () => {
       { monday: weeksAgo(0), load_kg: 62.5, reps: 5 },
     ]);
 
-    expect(weeksWithoutProgress(trend)).toBe(0);
+    expect(weeksWithoutProgress(trend, "kg")).toEqual({ weeks: 0, isAtLeast: false });
   });
 
   it("should read a lighter load with more reps as a fall", () => {
@@ -527,7 +531,7 @@ describe("weeksWithoutProgress", () => {
       { monday: weeksAgo(0), load_kg: 60, reps: 12 },
     ]);
 
-    expect(weeksWithoutProgress(trend)).toBe(1);
+    expect(weeksWithoutProgress(trend, "kg")).toEqual({ weeks: 1, isAtLeast: false });
   });
 
   it("should follow the reps for an exercise with no load", () => {
@@ -538,7 +542,7 @@ describe("weeksWithoutProgress", () => {
       { monday: weeksAgo(0), load_kg: null, reps: 11 },
     ]);
 
-    expect(weeksWithoutProgress(trend)).toBe(2);
+    expect(weeksWithoutProgress(trend, "kg")).toEqual({ weeks: 2, isAtLeast: false });
   });
 
   it("should read a move from a load to no load as a fall", () => {
@@ -547,6 +551,93 @@ describe("weeksWithoutProgress", () => {
       { monday: weeksAgo(0), load_kg: null, reps: 15 },
     ]);
 
-    expect(weeksWithoutProgress(trend)).toBe(1);
+    expect(weeksWithoutProgress(trend, "kg")).toEqual({ weeks: 1, isAtLeast: false });
+  });
+
+  it("should say the count is at least that when the stall runs back past the oldest week read", () => {
+    const trend = exerciseWeeklyTrend([aSet(weeksAgo(2)), aSet(weeksAgo(1)), aSet(weeksAgo(0))], {
+      ...options,
+      range: "3m",
+      earlier: [aSet(weeksAgo(30))],
+    });
+
+    expect(weeksWithoutProgress(trend, "kg")).toEqual({ weeks: 3, isAtLeast: true });
+  });
+
+  it("should be exact when the oldest week read beat the older week it was compared with", () => {
+    const trend = exerciseWeeklyTrend([aSet(weeksAgo(1)), aSet(weeksAgo(0))], {
+      ...options,
+      range: "3m",
+      earlier: [aSet(weeksAgo(30), { load_kg: 50 })],
+    });
+
+    expect(weeksWithoutProgress(trend, "kg")).toEqual({ weeks: 1, isAtLeast: false });
+  });
+
+  it("should be exact for a history that starts with its first trained week", () => {
+    const trend = trendOf([{ monday: weeksAgo(1) }, { monday: weeksAgo(0) }]);
+
+    expect(weeksWithoutProgress(trend, "kg")).toEqual({ weeks: 1, isAtLeast: false });
+  });
+
+  // 100.02 kg shows as 100 kg, so the screen says "No change" and so does the count. In pounds the same
+  // two loads show as 220.5 and 220.5 lb too.
+  it("should read a change the screen shows as no change as a stall, in the unit shown", () => {
+    const trend = trendOf([
+      { monday: weeksAgo(1), load_kg: 100, reps: 5 },
+      { monday: weeksAgo(0), load_kg: 100.02, reps: 5 },
+    ]);
+
+    expect(weeksWithoutProgress(trend, "kg")).toEqual({ weeks: 1, isAtLeast: false });
+    expect(weeksWithoutProgress(trend, "lb")).toEqual({ weeks: 1, isAtLeast: false });
+  });
+
+  it("should read a load change too small to show as the reps change, as the screen does", () => {
+    const trend = trendOf([
+      { monday: weeksAgo(1), load_kg: 100, reps: 5 },
+      { monday: weeksAgo(0), load_kg: 100.02, reps: 6 },
+    ]);
+
+    expect(weeksWithoutProgress(trend, "kg")).toEqual({ weeks: 0, isAtLeast: false });
+  });
+});
+
+describe("trendReadWindow", () => {
+  it("should start each range on the Monday that makes it the right number of whole weeks", () => {
+    const now = "2026-10-20T12:00:00Z";
+
+    expect(trendReadWindow("4w", now, "UTC")).toEqual({
+      fromWeek: "2026-09-28",
+      throughDay: "2026-10-20",
+    });
+    expect(trendReadWindow("3m", now, "UTC").fromWeek).toBe("2026-07-27");
+    expect(trendReadWindow("1y", now, "UTC").fromWeek).toBe("2025-10-27");
+  });
+
+  it("should read today in the profile zone", () => {
+    // 23:30 UTC on Sunday 18 Oct is 12:30 on Monday 19 Oct in Auckland.
+    const now = "2026-10-18T23:30:00Z";
+
+    expect(trendReadWindow("4w", now, "UTC")).toEqual({
+      fromWeek: "2026-09-21",
+      throughDay: "2026-10-18",
+    });
+    expect(trendReadWindow("4w", now, "Pacific/Auckland")).toEqual({
+      fromWeek: "2026-09-28",
+      throughDay: "2026-10-19",
+    });
+  });
+
+  it("should start the same week as the trend does, so the rows read are the rows it works from", () => {
+    const now = "2026-10-18T23:30:00Z";
+
+    for (const timeZone of ["UTC", "Pacific/Auckland", "Pacific/Pago_Pago"]) {
+      for (const range of TREND_RANGES) {
+        const { fromWeek } = trendReadWindow(range, now, timeZone);
+        const trend = exerciseWeeklyTrend([], { range, now, timeZone });
+
+        expect(trend.weeks[0]?.weekStart).toBe(fromWeek);
+      }
+    }
   });
 });
