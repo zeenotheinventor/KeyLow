@@ -1,3 +1,4 @@
+import { assistantChangeCardsOfDisplay, isTrainingWriteTool } from "@keylow/core";
 import { formatClockTime, isValidTimeZone } from "@keylow/core/dates";
 import { z } from "zod";
 
@@ -9,6 +10,7 @@ import { getMyTimeZone } from "./targets";
 import type { Database } from "../database.types";
 import type {
   AssistantChangeAction,
+  AssistantChangeStoredCard,
   AssistantChangeTarget,
   AssistantStoredMessage,
 } from "@keylow/core";
@@ -198,6 +200,8 @@ export const assistantTargetSources: ReadonlyMap<string, AssistantTargetSource> 
 export type AssistantActionsRead = {
   actions: AssistantChangeAction[];
   targets: AssistantChangeTarget[];
+  /** The words of the training cards stored with the actions' turns, and nothing else the turns hold. Empty unless asked for. */
+  cards: AssistantChangeStoredCard[];
 };
 
 const targetIdsOf = (row: ActionRow): string[] => [
@@ -232,12 +236,46 @@ async function readTargetsByTable(
 }
 
 /**
+ * The training cards the turns of `rows` stored, for the changes list, which has no card for a training
+ * write in the action row. One select reads the messages of the turns of the training writes (at most 100
+ * turns to a request, to keep its URL short, and a person's own, since row level security shows no one
+ * else's). Only `turn_id` and `display` are read, `display` is parsed here for the words of its cards, and
+ * the rest of it is dropped on the spot: it also holds the value an Undo puts back, which must never reach
+ * the query cache or a log. A turn that is gone, with its conversation, has no card.
+ */
+async function readStoredCards(
+  client: SupabaseClient<Database>,
+  rows: readonly ActionRow[],
+): Promise<AssistantChangeStoredCard[]> {
+  const turnIds = new Set(
+    rows.flatMap((row) =>
+      row.turn_id !== null && isTrainingWriteTool(row.tool) ? [row.turn_id] : [],
+    ),
+  );
+  const reads = await Promise.all(
+    chunksOf([...turnIds], TARGET_CHUNK_SIZE).map((chunk) =>
+      readAllRows("load what the assistant changed", (from, to) =>
+        client
+          .from("assistant_messages")
+          .select("id, display")
+          .in("turn_id", chunk)
+          .not("display", "is", null)
+          .order("id", { ascending: true })
+          .range(from, to),
+      ),
+    ),
+  );
+  return reads.flat().flatMap((message) => assistantChangeCardsOfDisplay(message.display));
+}
+
+/**
  * The caller's `assistant_actions`, newest first, with what their target rows read now. Row level security
  * shows a person their own rows. `conversationId` limits the read to one conversation's actions.
+ * `withCards` also reads the training cards of the actions' turns, which only the changes list words from.
  */
 export async function readAssistantActions(
   client: SupabaseClient<Database>,
-  { conversationId }: { conversationId?: string } = {},
+  { conversationId, withCards = false }: { conversationId?: string; withCards?: boolean } = {},
   sources: ReadonlyMap<string, AssistantTargetSource> = assistantTargetSources,
 ): Promise<AssistantActionsRead> {
   const data = await readAllRows("load what the assistant changed", (from, to) => {
@@ -249,7 +287,10 @@ export async function readAssistantActions(
       .range(from, to);
   });
 
-  const targetsByTable = await readTargetsByTable(client, data, sources);
+  const [targetsByTable, cards] = await Promise.all([
+    readTargetsByTable(client, data, sources),
+    withCards ? readStoredCards(client, data) : Promise.resolve([]),
+  ]);
   const actions = data.map((row): AssistantChangeAction => {
     const ids = targetIdsOf(row);
     const read = targetsByTable.get(row.target_table);
@@ -278,7 +319,7 @@ export async function readAssistantActions(
       return { id, row: target?.row ?? null };
     }),
   );
-  return { actions, targets };
+  return { actions, targets, cards };
 }
 
 export type AssistantConversationRead = {

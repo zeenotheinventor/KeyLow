@@ -66,6 +66,22 @@ export const ASSISTANT_TOOLS_WITHOUT_UNDO: ReadonlySet<string> = new Set([
   "update_recipe",
 ]);
 
+/**
+ * The training write tools whose Undo needs the value the turn stored (`previousValueOf`), or the
+ * fingerprint it stored to tell that the person has not changed the row since. Once the conversation is
+ * deleted its turns go, the actions keep a null `turn_id`, and Undo on these answers unavailable on every
+ * press. The tools left out undo from the row alone: `archive_routine` and `archive_custom_exercise`
+ * restore the row, `update_training_goals` reads the goals history and `delete_workout` restores the
+ * session, so their Undo still works with no turn.
+ */
+export const ASSISTANT_TOOLS_NEEDING_STORED_UNDO: ReadonlySet<string> = new Set([
+  "edit_routine",
+  "set_active_routine",
+  "create_routine",
+  "update_past_set",
+  "save_custom_exercise",
+]);
+
 /** The kinds of card those tools build. */
 export const ASSISTANT_CARD_KINDS_WITHOUT_UNDO: ReadonlySet<AssistantCardKind> = new Set(
   [...ASSISTANT_TOOLS_WITHOUT_UNDO].flatMap((tool) =>

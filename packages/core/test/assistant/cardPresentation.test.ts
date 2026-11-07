@@ -11,6 +11,7 @@ import {
   targetsChangedCard,
   undoUnavailableCard,
 } from "./cardFixtures";
+import { routineUpdatedCard, setUpdatedCard } from "./trainingCardFixtures";
 import { describeAssistantCard, undoOutcomeOfResults } from "../../src/assistant";
 
 import type { AssistantCard, AssistantCardKind } from "../../src/assistant";
@@ -233,9 +234,83 @@ describe("undoOutcomeOfResults", () => {
     [["undone", "already_undone"], "undone"],
     [["undo_unavailable"], "unavailable"],
     [["not_found"], "unavailable"],
-    [["undone", "undo_unavailable"], "unavailable"],
     [[], "unavailable"],
   ] as const)("should read %j as %s", (results, outcome) => {
     expect(undoOutcomeOfResults(results)).toBe(outcome);
+  });
+
+  it("should read some put back and some refused as a partial outcome that counts them", () => {
+    expect(undoOutcomeOfResults(["undone", "undone", "undo_unavailable"])).toEqual({
+      state: "partial",
+      undone: 2,
+      total: 3,
+    });
+  });
+
+  it("should count an action that was already undone as put back", () => {
+    expect(undoOutcomeOfResults(["already_undone", "not_found"])).toEqual({
+      state: "partial",
+      undone: 1,
+      total: 2,
+    });
+  });
+
+  it("should read every action refused as unavailable with the first reason, not as partial", () => {
+    expect(
+      undoOutcomeOfResults([
+        { result: "undo_unavailable", reason: "changed" },
+        { result: "undo_unavailable" },
+      ]),
+    ).toEqual({ state: "unavailable", reason: "changed" });
+  });
+});
+
+describe("describeAssistantCard, an Undo that put some of a merged card back", () => {
+  const partial = { state: "partial", undone: 2, total: 3 } as const;
+  const threeSets: AssistantCard = {
+    ...setUpdatedCard,
+    actionIds: ["a1", "a2", "a3"],
+    title: "Changed 3 sets in Legs",
+  };
+
+  it("should draw Can't undo with a plural note that says what was put back, on three sets", () => {
+    const look = describeAssistantCard(threeSets, partial);
+
+    expect(look.undo).toEqual({ state: "unavailable", label: "Can't undo" });
+    expect(look.note).toBe(
+      "Put back 2 of 3 sets. The rest changed since, so Undo is off for them.",
+    );
+  });
+
+  it("should word any other merged card as changes", () => {
+    const look = describeAssistantCard({ ...loggedCard, actionIds: ["a1", "a2", "a3"] }, partial);
+
+    expect(look.undo.state).toBe("unavailable");
+    expect(look.note).toBe(
+      "Undid 2 of 3 changes. The rest changed since, so Undo is off for them.",
+    );
+  });
+
+  it("should keep the title and the rows of the card, which still show what it changed", () => {
+    const look = describeAssistantCard(threeSets, partial);
+
+    expect(look.title).toBe("Changed 3 sets in Legs");
+    expect(look.rows).toHaveLength(1);
+  });
+
+  it("should not apply to a card that was sent undone", () => {
+    expect(describeAssistantCard({ ...threeSets, undo: "undone" }, partial).undo.state).toBe(
+      "done",
+    );
+  });
+});
+
+describe("describeAssistantCard, a workout refusal on a training card", () => {
+  it("should hold the refusal while the workout is in progress", () => {
+    const outcome = { state: "unavailable", reason: "workout_in_progress" } as const;
+
+    expect(
+      describeAssistantCard(routineUpdatedCard, outcome, { workoutInProgress: true }).undo.label,
+    ).toBe("Can't undo yet");
   });
 });

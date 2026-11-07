@@ -125,3 +125,22 @@ export const describeSetPutBack = (rowName: string, figures: string): string =>
 /** "Put back 3 sets in Legs" (NOT ON THE CANVAS), and "Put back 3 sets" for sets of several workouts. */
 export const describeSetsPutBack = (count: number, place: string | null): string =>
   `Put back ${count} sets${place === null ? "" : ` in ${place}`}`;
+
+// KEY-909: training rows in "What the assistant changed", and an Undo that put some of a card back.
+
+/** The detail of a routine, set or goals row once a press says it changed (`assistant-settings · changes-training`). */
+export const CHANGED_IN_THE_APP_SINCE = "changed in the app since";
+
+/** The same for an exercise, which has no screen to change it on. */
+export const CHANGED_SINCE = "changed since";
+
+/** NOT ON THE CANVAS: what an Undo of several sets did when it put some back, "Put back 2 of 3 sets". */
+export const describeSetsPartlyPutBack = (undone: number, total: number): string =>
+  `Put back ${undone} of ${total} sets`;
+
+/** NOT ON THE CANVAS: the same for any other card that groups several writes, "Undid 2 of 3 changes". */
+export const describeChangesPartlyUndone = (undone: number, total: number): string =>
+  `Undid ${undone} of ${total} changes`;
+
+/** NOT ON THE CANVAS: the note under a card whose Undo put some of it back, after the words above. */
+export const PARTLY_UNDONE_NOTE = "The rest changed since, so Undo is off for them.";

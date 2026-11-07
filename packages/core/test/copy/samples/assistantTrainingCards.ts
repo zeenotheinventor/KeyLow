@@ -47,4 +47,6 @@ export const samples: Record<string, () => string[]> = {
     copy.describeSetsPutBack(3, "Legs"),
     copy.describeSetsPutBack(2, null),
   ],
+  describeSetsPartlyPutBack: () => [copy.describeSetsPartlyPutBack(2, 3)],
+  describeChangesPartlyUndone: () => [copy.describeChangesPartlyUndone(2, 3)],
 };

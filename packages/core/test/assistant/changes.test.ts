@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { assistantChangesFromActions } from "../../src/assistant";
+import { assistantChangeCardsOfDisplay, assistantChangesFromActions } from "../../src/assistant";
 
 import type {
   AssistantChangeAction,
   AssistantChangeInput,
+  AssistantChangeStoredCard,
   AssistantChangeTarget,
 } from "../../src/assistant";
 
@@ -316,5 +317,288 @@ describe("assistantChangesFromActions, the order and the days", () => {
     const changes = assistantChangesFromActions([reserved], { now, timeZone, targets: [] });
 
     expect(changes.days[0]?.rows[0]).toMatchObject({ state: "cant_undo", sub: "08:11" });
+  });
+});
+
+// The training rows of `assistant-settings · changes-training`, worded from the cards the turns stored.
+describe("assistantChangesFromActions, the training rows", () => {
+  const storedCard = (
+    id: string,
+    overrides: Partial<AssistantChangeStoredCard>,
+  ): AssistantChangeStoredCard => ({
+    actionIds: [id],
+    kind: "routine_updated",
+    title: "",
+    sub: null,
+    link: null,
+    changeDetail: null,
+    ...overrides,
+  });
+  const sessionLink = {
+    label: "Open the session",
+    target: { screen: "session_detail", sessionId: "00000000-0000-4000-8000-0000000000e3" },
+  } as const;
+  const written = (turnNumber: number, tool: string, createdAt: string, turnSeq = 1) =>
+    action({ turnId: turn(turnNumber), tool, createdAt, turnSeq });
+
+  const updated = written(6, "edit_routine", "2026-10-27T08:12:00Z");
+  const built = written(7, "create_routine", "2026-10-27T08:30:00Z");
+  const active = written(8, "set_active_routine", "2026-10-27T08:34:00Z");
+  const sets = [1, 2, 3].map((slot) =>
+    written(9, "update_past_set", `2026-10-27T09:02:0${slot}Z`, slot),
+  );
+  const deleted = written(10, "delete_workout", "2026-10-26T19:05:00Z");
+  const archivedRoutine = written(11, "archive_routine", "2026-10-26T18:40:00Z");
+
+  const cards: AssistantChangeStoredCard[] = [
+    storedCard(updated.id, { title: "Updated routine Push Pull Legs", changeDetail: "4 changes" }),
+    storedCard(built.id, {
+      kind: "routine_created",
+      title: "Built routine Upper Lower",
+      changeDetail: "4 days · 60 sets a week",
+    }),
+    storedCard(active.id, {
+      kind: "routine_active",
+      title: "Push Pull Legs is your active routine",
+      changeDetail: "was Upper Lower",
+    }),
+    ...sets.map((write) =>
+      storedCard(write.id, {
+        kind: "set_updated",
+        title: "Changed a set in Legs",
+        sub: "Thursday 8 October",
+        link: sessionLink,
+        changeDetail: "Thu 8 Oct",
+      }),
+    ),
+    storedCard(deleted.id, {
+      kind: "workout_deleted",
+      title: "Deleted workout Legs",
+      changeDetail: "Thu 8 Oct · 16 sets",
+    }),
+    storedCard(archivedRoutine.id, {
+      kind: "routine_archived",
+      title: "Archived routine Starting strength",
+    }),
+  ];
+  const everyAction = [updated, built, active, ...sets, deleted, archivedRoutine];
+
+  const rowsOf = (list: readonly AssistantChangeAction[], stored = cards) =>
+    assistantChangesFromActions(list, { now, timeZone, targets: [], cards: stored }).days.flatMap(
+      (day) => day.rows,
+    );
+
+  it("should word each row of the board from its card: the title, the time and the card's fact", () => {
+    expect(rowsOf(everyAction).map((row) => [row.title, row.sub])).toEqual([
+      ["Changed 3 sets in Legs", "09:02 · Thu 8 Oct"],
+      ["Push Pull Legs is your active routine", "08:34 · was Upper Lower"],
+      ["Built routine Upper Lower", "08:30 · 4 days · 60 sets a week"],
+      ["Updated routine Push Pull Legs", "08:12 · 4 changes"],
+      ["Deleted workout Legs", "19:05 · Thu 8 Oct · 16 sets"],
+      ["Archived routine Starting strength", "18:40"],
+    ]);
+  });
+
+  it("should group the three sets of one turn into one row that undoes all three", () => {
+    const [row] = rowsOf(everyAction);
+
+    expect(row?.actionIds).toEqual(sets.map((write) => write.id));
+  });
+
+  it("should offer Undo on every row, since no training table says whether it changed", () => {
+    expect(rowsOf(everyAction).map((row) => row.state)).toEqual(Array(6).fill("undo"));
+  });
+
+  it("should read an undone training row as Undone", () => {
+    const undoneUpdate = { ...updated, undoneAt: "2026-10-27T08:20:00Z" };
+
+    expect(rowsOf([undoneUpdate]).map((row) => row.state)).toEqual(["undone"]);
+  });
+
+  describe("the words once a press says it changed", () => {
+    it.each([
+      ["edit_routine", "routine_updated", "changed in the app since"],
+      ["set_active_routine", "routine_active", "changed in the app since"],
+      ["update_past_set", "set_updated", "changed in the app since"],
+      ["update_training_goals", "goals_updated", "changed in the app since"],
+      ["save_custom_exercise", "exercise_updated", "changed since"],
+      ["archive_custom_exercise", "exercise_archived", "changed since"],
+    ] as const)("should give %s the words %s reads", (tool, kind, words) => {
+      const write = written(12, tool, "2026-10-27T08:00:00Z");
+
+      const [row] = rowsOf([write], [storedCard(write.id, { kind, title: "A change" })]);
+
+      expect(row?.training).toEqual({ kind, changedSinceDetail: words });
+    });
+
+    it("should say an exercise saved by the tool is an update when the card says so, whatever the plain kind", () => {
+      const write = written(12, "save_custom_exercise", "2026-10-27T08:00:00Z");
+
+      const [row] = rowsOf(
+        [write],
+        [storedCard(write.id, { kind: "exercise_updated", title: "Updated exercise Cable row" })],
+      );
+
+      expect(row?.title).toBe("Updated exercise Cable row");
+      expect(row?.training?.kind).toBe("exercise_updated");
+    });
+  });
+
+  describe("with no card", () => {
+    it("should fall back to the plain words with the time alone, and never an id", () => {
+      const rows = rowsOf(everyAction, []);
+
+      expect(rows.map((row) => [row.title, row.sub])).toEqual([
+        ["Changed 3 sets", "09:02"],
+        ["Changed your active routine", "08:34"],
+        ["Built a routine", "08:30"],
+        ["Updated a routine", "08:12"],
+        ["Deleted a workout", "19:05"],
+        ["Archived a routine", "18:40"],
+      ]);
+    });
+
+    it("should fall back for a group when only some of its writes have a card", () => {
+      const [row] = rowsOf(sets, cards.slice(3, 5));
+
+      expect(row?.title).toBe("Changed 3 sets");
+    });
+
+    it("should still know it is a training row, with the kind of its tool", () => {
+      const [row] = rowsOf([updated], []);
+
+      expect(row?.training).toEqual({
+        kind: "routine_updated",
+        changedSinceDetail: "changed in the app since",
+      });
+    });
+  });
+
+  describe("after the conversation is deleted", () => {
+    const goneTurn = (write: AssistantChangeAction): AssistantChangeAction => ({
+      ...write,
+      turnId: null,
+    });
+
+    it.each([
+      "edit_routine",
+      "set_active_routine",
+      "create_routine",
+      "update_past_set",
+      "save_custom_exercise",
+    ])("should say Can't undo for %s, whose Undo needs the value its turn stored", (tool) => {
+      const write = goneTurn(written(1, tool, "2026-10-27T08:00:00Z"));
+
+      expect(rowsOf([write], []).map((row) => row.state)).toEqual(["cant_undo"]);
+    });
+
+    it.each([
+      "archive_routine",
+      "archive_custom_exercise",
+      "update_training_goals",
+      "delete_workout",
+    ])("should keep Undo for %s, which undoes from the row alone", (tool) => {
+      const write = goneTurn(written(1, tool, "2026-10-27T08:00:00Z"));
+
+      expect(rowsOf([write], []).map((row) => row.state)).toEqual(["undo"]);
+    });
+
+    it("should not say it changed in the app, since nothing did", () => {
+      const write = goneTurn(written(1, "edit_routine", "2026-10-27T08:00:00Z"));
+
+      expect(rowsOf([write], []).map((row) => row.sub)).toEqual(["08:00"]);
+    });
+
+    it("should leave an undone row Undone", () => {
+      const write = {
+        ...goneTurn(written(1, "edit_routine", "2026-10-27T08:00:00Z")),
+        undoneAt: "2026-10-27T09:00:00Z",
+      };
+
+      expect(rowsOf([write], []).map((row) => row.state)).toEqual(["undone"]);
+    });
+  });
+
+  it("should leave a food row exactly as it was, with no training part and whatever cards there are", () => {
+    const eggsRow = rowsOf([eggs], [storedCard(eggs.id, { title: "Updated routine Nothing" })]);
+
+    expect(eggsRow).toEqual([
+      {
+        key: eggs.id,
+        actionIds: [eggs.id],
+        title: "Logged 1 entry",
+        sub: "08:11",
+        state: "undo",
+      },
+    ]);
+  });
+
+  it("should not word a training row from a stored card of another kind of write", () => {
+    const [row] = rowsOf(
+      [updated],
+      [storedCard(updated.id, { kind: "logged", title: "Logged an egg" })],
+    );
+
+    expect(row?.title).toBe("Updated a routine");
+  });
+});
+
+describe("assistantChangeCardsOfDisplay", () => {
+  const card = {
+    actionIds: ["00000000-0000-4000-8000-0000000000d1"],
+    kind: "routine_updated",
+    title: "Updated routine Push Pull Legs",
+    sub: "Legs · 4 changes",
+    rows: [
+      {
+        name: "Changed Barbell squat",
+        amountText: null,
+        time: null,
+        kcalText: null,
+        match: null,
+        matchedFood: null,
+        estimate: false,
+      },
+    ],
+    changeDetail: "4 changes",
+    totalText: null,
+    note: null,
+    link: null,
+    undo: "available",
+    undoneSub: null,
+  };
+
+  it("should keep the words of a training card and drop every other part of the display", () => {
+    const cards = assistantChangeCardsOfDisplay({
+      "tool-1": { card, undo: { previous: { secret: "kept out" }, fingerprint: "abc" } },
+    });
+
+    expect(cards).toEqual([
+      {
+        actionIds: card.actionIds,
+        kind: "routine_updated",
+        title: "Updated routine Push Pull Legs",
+        sub: "Legs · 4 changes",
+        link: null,
+        changeDetail: "4 changes",
+      },
+    ]);
+    expect(JSON.stringify(cards)).not.toContain("kept out");
+    expect(JSON.stringify(cards)).not.toContain("abc");
+  });
+
+  it("should skip an entry with no card, a card that does not parse and a card of a food kind", () => {
+    expect(
+      assistantChangeCardsOfDisplay({
+        a: { askAgain: true },
+        b: { card: { title: "not a card" } },
+        c: { card: { ...card, kind: "logged" } },
+        d: "text",
+      }),
+    ).toEqual([]);
+  });
+
+  it.each([null, undefined, "text", 3, [card]])("should read %j as no cards", (display) => {
+    expect(assistantChangeCardsOfDisplay(display)).toEqual([]);
   });
 });

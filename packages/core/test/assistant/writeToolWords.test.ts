@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { loggedCard } from "./cardFixtures";
 import { routineCreatedCard, routineUpdatedCard } from "./trainingCardFixtures";
 import {
+  ASSISTANT_TOOLS_NEEDING_STORED_UNDO,
   ASSISTANT_WRITE_TOOL_CARD_KINDS,
   buildLoggedCard,
   buildRecipeArchivedCard,
@@ -379,5 +380,32 @@ describe("the training tools", () => {
 
     expect(merged.days ?? null).toBeNull();
     expect(merged.changeDetail ?? null).toBeNull();
+  });
+});
+
+describe("ASSISTANT_TOOLS_NEEDING_STORED_UNDO", () => {
+  it("should name the training writes whose Undo reads the value their turn stored", () => {
+    expect([...ASSISTANT_TOOLS_NEEDING_STORED_UNDO].sort()).toEqual([
+      "create_routine",
+      "edit_routine",
+      "save_custom_exercise",
+      "set_active_routine",
+      "update_past_set",
+    ]);
+  });
+
+  it("should name write tools only, so a renamed tool cannot slip out of the set unnoticed", () => {
+    expect([...ASSISTANT_TOOLS_NEEDING_STORED_UNDO].every(isAssistantWriteTool)).toBe(true);
+  });
+
+  it("should leave out the writes that undo from the row alone", () => {
+    for (const tool of [
+      "archive_routine",
+      "archive_custom_exercise",
+      "update_training_goals",
+      "delete_workout",
+    ]) {
+      expect(ASSISTANT_TOOLS_NEEDING_STORED_UNDO.has(tool)).toBe(false);
+    }
   });
 });

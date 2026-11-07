@@ -441,3 +441,122 @@ describe("the assistant conversation and its changes against the local stack wit
     });
   });
 });
+
+/*
+ * The training cards of the changes list (KEY-909): a training row is worded from the card its turn stored in
+ * `assistant_messages.display`, read with the caller's own JWT. NOT RUN LOCALLY: these need the stack, so they
+ * first run in CI's `db` job.
+ */
+describe("the training cards of the changes list, with two users", () => {
+  const PREVIOUS_VALUE_MARKER = "a-routine-name-that-must-not-leave-the-read";
+  let userA: TestUser;
+  let userB: TestUser;
+  let conversationA: Conversation;
+  let conversationB: Conversation;
+  const actionIdA = crypto.randomUUID();
+  const actionIdB = crypto.randomUUID();
+
+  const trainingCard = (actionId: string, title: string): Json => ({
+    actionIds: [actionId],
+    kind: "routine_updated",
+    title,
+    sub: null,
+    rows: [],
+    changeDetail: "4 changes",
+    totalText: null,
+    note: null,
+    link: null,
+    undo: "available",
+    undoneSub: null,
+  });
+
+  /** A turn's tool result message, with the card and the value Undo puts back, as the turn loop stores them. */
+  async function storeTrainingResult(user: TestUser, conversation: Conversation, card: Json) {
+    const inserted = await adminClient()
+      .from("assistant_messages")
+      .insert({
+        conversation_id: conversation.id,
+        turn_id: conversation.turnIds[0] ?? "",
+        user_id: user.id,
+        role: "user",
+        content: [{ type: "tool_result", tool_use_id: "call-9", content: "done" }],
+        display: {
+          "call-9": {
+            card,
+            undo: { previous: { name: PREVIOUS_VALUE_MARKER }, fingerprint: "f" },
+          },
+        },
+        seq: 90,
+      });
+    expect(inserted.error).toBeNull();
+  }
+
+  beforeAll(async () => {
+    [userA, userB] = await Promise.all([createTestUser("key909"), createTestUser("key909")]);
+    conversationA = await storeConversation(
+      userA,
+      [{ text: "A: add a day", reply: "A: Done." }],
+      "2026-10-27T08:12:00Z",
+    );
+    conversationB = await storeConversation(
+      userB,
+      [{ text: "B: add a day", reply: "B: Done." }],
+      "2026-10-27T08:13:00Z",
+    );
+    await storeAction({
+      id: actionIdA,
+      user: userA,
+      conversation: conversationA,
+      turnSeq: 1,
+      tool: "edit_routine",
+      createdAt: "2026-10-27T08:12:00Z",
+    });
+    await storeAction({
+      id: actionIdB,
+      user: userB,
+      conversation: conversationB,
+      turnSeq: 1,
+      tool: "edit_routine",
+      createdAt: "2026-10-27T08:13:00Z",
+    });
+    await storeTrainingResult(userA, conversationA, trainingCard(actionIdA, "Updated routine A"));
+    await storeTrainingResult(userB, conversationB, trainingCard(actionIdB, "Updated routine B"));
+  });
+
+  afterAll(async () => {
+    await deleteCreatedTestUsers();
+  });
+
+  it("should read the caller's own card and never the other user's", async () => {
+    const read = await readAssistantActions(userA.client, { withCards: true });
+
+    expect(read.cards.map((card) => card.title)).toEqual(["Updated routine A"]);
+  });
+
+  it("should keep the value Undo puts back out of what the read returns", async () => {
+    const read = await readAssistantActions(userA.client, { withCards: true });
+
+    expect(JSON.stringify(read)).not.toContain(PREVIOUS_VALUE_MARKER);
+  });
+
+  it("should show the caller no message of another user's turn, even when named", async () => {
+    const { data, error } = await userA.client
+      .from("assistant_messages")
+      .select("id, display")
+      .in("turn_id", conversationB.turnIds);
+
+    expect(error).toBeNull();
+    expect(data).toEqual([]);
+  });
+
+  it("should fall back to no card once the conversation is deleted, and leave the other user's card", async () => {
+    await deleteAllAssistantConversations(userA.client);
+
+    const readA = await readAssistantActions(userA.client, { withCards: true });
+    const readB = await readAssistantActions(userB.client, { withCards: true });
+
+    expect(readA.actions.map((action) => action.turnId)).toEqual([null]);
+    expect(readA.cards).toEqual([]);
+    expect(readB.cards.map((card) => card.title)).toEqual(["Updated routine B"]);
+  });
+});
