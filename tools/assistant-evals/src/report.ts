@@ -87,6 +87,13 @@ export function formatReport(
     ? [`OVER BUDGET: ${report.tokensUsed} tokens used, the budget was ${report.budgetTokens}.`]
     : [];
 
+  const { firstModelCall } = report;
+  const promptLine = `First model call of the first case: ${
+    firstModelCall === null
+      ? "not read"
+      : `input_tokens ${firstModelCall.inputTokens}, cache_creation_input_tokens ${firstModelCall.cacheCreationInputTokens}, cache_read_input_tokens ${firstModelCall.cacheReadInputTokens}`
+  }`;
+
   return [
     ...setLines,
     ...listed("failed"),
@@ -95,5 +102,6 @@ export function formatReport(
     ...overBudgetLines,
     `Tokens used: ${report.tokensUsed} of ${report.budgetTokens} (input, output and cache creation tokens, not the ${report.cacheReadTokens} cache read tokens)`,
     `Cost: USD ${(report.costUsdMicros / 1_000_000).toFixed(4)}`,
+    promptLine,
   ].join("\n");
 }
