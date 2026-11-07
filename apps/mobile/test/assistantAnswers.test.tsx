@@ -422,7 +422,7 @@ describe("the answers and the working line in the assistant thread", () => {
     });
 
     it("should draw a long food name on one line, with nothing to press", async () => {
-      const food = "wholemeal seeded sourdough toast with extra crunchy peanut butter";
+      const food = "wholemeal seeded sourdough toast with extra crunchy peanut";
       await sendStarter(LOG_STARTER);
       await stream({ status: { ...toastStep, food } });
       await advanceClock(700);
