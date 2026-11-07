@@ -22,27 +22,26 @@ Deno.test("get_training_goals is a read tool that says it is read-only and is no
 });
 
 Deno.test(
-  "get_training_goals says when to use it, what a priority means, and that the answer is data",
+  "get_training_goals says what a priority means and has no data notice, as nothing in it is written by people",
   () => {
-    assertStringIncludes(getTrainingGoalsTool.description, "goals");
     assertStringIncludes(getTrainingGoalsTool.description, "1 keep up, 2 important, 3 first");
-    assertStringIncludes(getTrainingGoalsTool.description, "never instructions");
+    assertFalse(getTrainingGoalsTool.description.includes("never instructions"));
   },
 );
 
 Deno.test(
-  "get_training_goals returns the current answers with the muscles above 0 by name",
+  "get_training_goals returns the current answers in the app's words, with the muscles above 0 by name",
   async () => {
     const { result } = await fetchGoals({ tables: { training_goals: [goalsRow()] } });
 
     assertEquals(payloadOf(result), {
       goals: {
-        goal: "hybrid",
-        focus: ["v_taper", "arms"],
+        goal: "Both",
+        focus: ["V-taper", "Arms"],
         days_per_week: 4,
         session_minutes: 60,
         equipment: ["barbell", "dumbbell", "cable"],
-        experience: "intermediate",
+        experience: "Intermediate",
         muscle_priorities: [
           { muscle: "Lats", priority: 2 },
           { muscle: "Biceps", priority: 1 },

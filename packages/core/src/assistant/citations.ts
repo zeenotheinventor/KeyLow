@@ -1,3 +1,4 @@
+import { safeWordsToShow } from "../copy/assistantNotices";
 import { describeCount } from "../copy/counts";
 import { MONTH_NAMES_SHORT, WEEKDAY_NAMES_SHORT } from "../copy/diaryDay";
 import { addCalendarDays, parseCalendarDay } from "../dates/calendarDay";
@@ -98,6 +99,13 @@ export const describeDayCitation = ({
     : `Based on ${describeCount(entryCount, "entry", "entries")} ${day} and your targets`;
 };
 
-/** The line under an answer that reads one routine: "Based on your routine Push Pull Legs". */
-export const describeRoutineCitation = (routineName: string): string =>
-  `Based on your routine ${routineName}`;
+/**
+ * The line under an answer that reads one routine: "Based on your routine Push Pull Legs". No board draws it,
+ * the words are the designer's note on the canvas, recorded on KEY-881. The name is the person's own text, so
+ * it is cleaned and cut like any words shown from outside, and a name with nothing left is left out.
+ */
+export const describeRoutineCitation = (routineName: string): string => {
+  const name = safeWordsToShow(routineName);
+
+  return name === null ? "Based on your routine" : `Based on your routine ${name}`;
+};

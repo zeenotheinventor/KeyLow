@@ -9,7 +9,7 @@ import {
   describeAssistantNotice,
   describeAssistantStatus,
   describeResetTime,
-  foodWordsForStatus,
+  safeWordsToShow,
 } from "../../src/copy";
 
 // Checked by `tsc` (the package's typecheck script), not at runtime: the consent notice is not a notice,
@@ -215,31 +215,31 @@ describe("describeAssistantStatus", () => {
   );
 });
 
-describe("foodWordsForStatus", () => {
+describe("safeWordsToShow", () => {
   it.each([[undefined], [null], [42], [{ food: "toast" }], [["toast"]]])(
     "should give null for %j, which is not a string",
     (input) => {
-      expect(foodWordsForStatus(input)).toBeNull();
+      expect(safeWordsToShow(input)).toBeNull();
     },
   );
 
   it.each([[""], ["   "], ["\u0000\u001f\u007f"], ["\n\t \r"]])(
     "should give null for %j, which holds no words",
     (input) => {
-      expect(foodWordsForStatus(input)).toBeNull();
+      expect(safeWordsToShow(input)).toBeNull();
     },
   );
 
   it("should keep plain words as they are", () => {
-    expect(foodWordsForStatus("wholemeal toast")).toBe("wholemeal toast");
+    expect(safeWordsToShow("wholemeal toast")).toBe("wholemeal toast");
   });
 
   it("should take control characters out", () => {
-    expect(foodWordsForStatus("toa\u0000st\u001b[31m")).toBe("toast[31m");
+    expect(safeWordsToShow("toa\u0000st\u001b[31m")).toBe("toast[31m");
   });
 
   it("should collapse a newline and tabs to one space and trim the ends", () => {
-    expect(foodWordsForStatus("  peanut\n\t\tbutter\t ")).toBe("peanut butter");
+    expect(safeWordsToShow("  peanut\n\t\tbutter\t ")).toBe("peanut butter");
   });
 
   it.each([
@@ -254,35 +254,35 @@ describe("foodWordsForStatus", () => {
     ["a word joiner", "\u2060"],
     ["a byte order mark", "\uFEFF"],
   ])("should take out %s, and give null when nothing else is left", (_name, character) => {
-    expect(foodWordsForStatus(`to${character}ast`)).toBe("toast");
-    expect(foodWordsForStatus(`${character}${character}`)).toBeNull();
-    expect(foodWordsForStatus(` ${character} `)).toBeNull();
+    expect(safeWordsToShow(`to${character}ast`)).toBe("toast");
+    expect(safeWordsToShow(`${character}${character}`)).toBeNull();
+    expect(safeWordsToShow(` ${character} `)).toBeNull();
   });
 
   it("should keep a zero-width joiner, which joins an emoji", () => {
-    expect(foodWordsForStatus("👩\u200D💻")).toBe("👩\u200D💻");
+    expect(safeWordsToShow("👩\u200D💻")).toBe("👩\u200D💻");
   });
 
   it("should give null for a lone half of a surrogate pair", () => {
-    expect(foodWordsForStatus("\uD83D")).toBeNull();
+    expect(safeWordsToShow("\uD83D")).toBeNull();
   });
 
   it("should cut a huge input at 60 code points", () => {
-    expect(foodWordsForStatus("a".repeat(1_000_000))).toBe("a".repeat(60));
+    expect(safeWordsToShow("a".repeat(1_000_000))).toBe("a".repeat(60));
   });
 
   it("should cut 61 emoji at 60 without breaking a pair", () => {
-    const words = foodWordsForStatus("🍞".repeat(61));
+    const words = safeWordsToShow("🍞".repeat(61));
 
     expect(words).toBe("🍞".repeat(60));
   });
 
   it("should leave 60 code points whole", () => {
-    expect(foodWordsForStatus("a".repeat(60))).toBe("a".repeat(60));
+    expect(safeWordsToShow("a".repeat(60))).toBe("a".repeat(60));
   });
 
   it("should not end on a space when the cut falls after one", () => {
-    expect(foodWordsForStatus(`${"a".repeat(59)} b`)).toBe("a".repeat(59));
+    expect(safeWordsToShow(`${"a".repeat(59)} b`)).toBe("a".repeat(59));
   });
 });
 

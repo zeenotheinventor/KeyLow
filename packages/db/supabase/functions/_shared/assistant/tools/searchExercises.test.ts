@@ -34,6 +34,17 @@ Deno.test(
 );
 
 Deno.test(
+  "search_exercises tells the model it searches by name only, and what an empty list means",
+  () => {
+    assertStringIncludes(searchExercisesTool.description, "name only");
+    assertStringIncludes(
+      JSON.stringify(toJsonSchema(searchExercisesTool)),
+      "An empty list matches nothing",
+    );
+  },
+);
+
+Deno.test(
   "the schema of search_exercises lets the model leave limit out and send null equipment",
   () => {
     const schema = toJsonSchema(searchExercisesTool);
@@ -131,6 +142,29 @@ Deno.test("search_exercises reads only the equipment the model names", async () 
   assert(calls.some((call) => call.method === "in" && call.args[0] === "equipment"));
 });
 
+Deno.test(
+  "search_exercises answers an empty list for an empty list of equipment, with no read",
+  async () => {
+    const { result, calls } = await search(
+      { tables: { exercises: [exerciseRow(1)] } },
+      { query: "press", equipment: [], limit: 5 },
+    );
+
+    assertEquals(payloadOf(result), { exercises: [] });
+    assertEquals(calls, []);
+  },
+);
+
+Deno.test("search_exercises reads any equipment when the model leaves equipment out", async () => {
+  const { result, calls } = await search(
+    { tables: { exercises: [exerciseRow(1)] } },
+    { query: "press" },
+  );
+
+  assertEquals(listOf(result, "exercises").length, 1);
+  assertFalse(calls.some((call) => call.method === "in" && call.args[0] === "equipment"));
+});
+
 Deno.test("search_exercises reads every kind of equipment when equipment is null", async () => {
   const { calls } = await search({ tables: { exercises: [exerciseRow(1)] } }, nothingToFilter);
 
@@ -177,7 +211,6 @@ Deno.test("search_exercises rejects input it does not accept", async () => {
   const badInputs = [
     { query: "p", equipment: null },
     { query: "p".repeat(81), equipment: null },
-    { query: "press", equipment: [] },
     { query: "press", equipment: ["jetpack"] },
     { query: "press", equipment: "barbell" },
     { query: "press", equipment: null, limit: 0 },

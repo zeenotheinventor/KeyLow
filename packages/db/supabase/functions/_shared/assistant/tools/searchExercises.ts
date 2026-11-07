@@ -1,6 +1,6 @@
-// The exercise library and the user's own exercises, for "find me a chest exercise" and for an id a
-// routine can use. Row level security shows a user the library and their own exercises only, and an
-// archived exercise is never read.
+// The exercise library and the user's own exercises, searched by part of a name and never by muscle, for
+// "find the bench press" and for an id a routine can use. Row level security shows a user the library and
+// their own exercises only, and an archived exercise is never read.
 import { z } from "zod";
 
 import { EQUIPMENT, MUSCLE_NAMES } from "../../core.ts";
@@ -13,19 +13,20 @@ const searchExercisesInput = z.strictObject({
   query: searchTextSchema,
   equipment: z
     .array(z.enum(EQUIPMENT))
-    .min(1)
     .nullable()
-    .describe("Only exercises that use one of these kinds of equipment, or null for any."),
+    .default(null)
+    .describe(
+      "Only exercises that use one of these kinds of equipment, or null for any. An empty list matches nothing.",
+    ),
   limit: resultLimitSchema.default(5),
 });
 
 export const searchExercisesTool: ReadToolDefinition<z.infer<typeof searchExercisesInput>> = {
   name: "search_exercises",
   description:
-    "Searches the exercises the user can use, the library and their own, by part of a name. Each has " +
-    "its id, name, equipment, the muscles it mainly works and whether it is the user's own. Use it to " +
-    "find an exercise, or to find one the user's equipment allows by passing equipment. An archived " +
-    "exercise is never listed. Use these ids and never invent one. " +
+    "Finds exercises by part of their name, from the library and the user's own. It searches the name " +
+    'only, so "chest" does not find a chest exercise: search names such as "bench". Each has its id, ' +
+    "name, equipment, main muscles and is_own. Use these ids, never invent one. " +
     dataNotice,
   kind: "read",
   input: searchExercisesInput,

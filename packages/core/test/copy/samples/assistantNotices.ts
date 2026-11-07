@@ -69,5 +69,5 @@ export const samples: Record<string, () => string[]> = {
       isConfirmed: false,
     }),
   ],
-  foodWordsForStatus: () => [copy.foodWordsForStatus("toast") ?? ""],
+  safeWordsToShow: () => [copy.safeWordsToShow("toast") ?? ""],
 };

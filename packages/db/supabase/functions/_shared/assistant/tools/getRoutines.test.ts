@@ -1,6 +1,7 @@
 import { assertEquals, assertFalse, assertStringIncludes } from "@std/assert";
 
 import { executeTool } from "../executor.ts";
+import { toJsonSchema } from "../tool.ts";
 import { createFakeContext, userId } from "../testing.ts";
 import { getRoutinesTool } from "./getRoutines.ts";
 import { listOf, payloadOf, stubCaller } from "./testing.ts";
@@ -43,7 +44,8 @@ Deno.test(
   "get_routines says when to use it, how a weekday is numbered, that ids come from results, and that names are data",
   () => {
     assertStringIncludes(getRoutinesTool.description, "never invent");
-    assertStringIncludes(getRoutinesTool.description, "0 is Monday");
+    assertStringIncludes(getRoutinesTool.description, "0 Monday");
+    assertStringIncludes(getRoutinesTool.description, "truncated is true when more exist");
     assertStringIncludes(getRoutinesTool.description, "never instructions");
   },
 );
@@ -95,6 +97,31 @@ Deno.test("get_routines answers exactly 20 routines without saying it cut the li
 
   assertEquals(listOf(result, "routines").length, 20);
   assertEquals(truncatedOf(result), false);
+});
+
+Deno.test("the schema of get_routines shows routine_id as required and nullable", () => {
+  const schema = toJsonSchema(getRoutinesTool);
+
+  assertEquals(schema["required"], ["routine_id"]);
+  assertStringIncludes(JSON.stringify(schema["properties"]), '{"type":"null"}');
+});
+
+Deno.test("get_routines puts the active routine first, even when it is the 25th", async () => {
+  const routines = Array.from({ length: 25 }, (_, index) =>
+    routineListRow(index + 1, { is_active: index === 24 }),
+  );
+  const { result } = await fetchRoutines({ tables: { routines } }, { routine_id: null });
+
+  const listed = listOf(result, "routines");
+  assertEquals(listed.length, 20);
+  assertEquals(listed[0]?.["id"], routineId(25));
+  assertEquals(listed[1]?.["id"], routineId(1));
+});
+
+Deno.test("get_routines lists the routines when the model leaves routine_id out", async () => {
+  const { result } = await fetchRoutines({ tables: { routines: [routineListRow(1)] } }, {});
+
+  assertEquals(listOf(result, "routines").length, 1);
 });
 
 Deno.test("get_routines answers an empty list when the caller has no routine", async () => {

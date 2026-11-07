@@ -16,18 +16,19 @@ const getRoutinesInput = z.strictObject({
   routine_id: z
     .guid()
     .nullable()
+    .default(null)
     .describe("The id of a routine from this tool's list, or null to list the routines."),
 });
 
 export const getRoutinesTool: ReadToolDefinition<z.infer<typeof getRoutinesInput>> = {
   name: "get_routines",
   description:
-    "Reads the user's routines. With routine_id null it lists the routines that are not archived, at " +
-    `most ${maxListedRoutines}, each with its id, name, whether it is the active one and how many days it has. ` +
-    "With a routine_id it reads that routine: its days, each with its id, name and weekday (0 is Monday " +
-    "to 6 is Sunday, null is any day), and each day's exercises in order, with the exercise_id, name, " +
-    "sets, rep range and target reps in reserve (null is none set). The citation is the line the app " +
-    "prints under your answer. Use these ids and never invent one. " +
+    "Reads the user's routines. With routine_id null it lists those that are not archived, the active " +
+    `one first, at most ${maxListedRoutines}, each with its id, name, is_active and day_count, and truncated is ` +
+    "true when more exist. With a routine_id it reads that routine: its days, each with an id, name and " +
+    "weekday (0 Monday to 6 Sunday, null any day), and each day's exercises in order, with exercise_id, " +
+    "name, sets, rep_min, rep_max and target_rir (null none set). The citation is printed under your " +
+    "answer. Ids come from here, never invent one. " +
     dataNotice,
   kind: "read",
   input: getRoutinesInput,
@@ -37,14 +38,20 @@ export const getRoutinesTool: ReadToolDefinition<z.infer<typeof getRoutinesInput
   async run(ctx, { routine_id }): Promise<ToolRunOutput> {
     if (routine_id === null) {
       const routines = await listRoutines(ctx.caller, { archived: false });
+      // The active routine is the one a question most likely means, so it is never the one cut off.
+      const activeFirst = [...routines].sort(
+        (first, second) => Number(second.is_active) - Number(first.is_active),
+      );
       return {
         data: {
-          routines: routines.slice(0, maxListedRoutines).map(({ id, name, is_active, days }) => ({
-            id,
-            name,
-            is_active,
-            day_count: days.length,
-          })),
+          routines: activeFirst
+            .slice(0, maxListedRoutines)
+            .map(({ id, name, is_active, days }) => ({
+              id,
+              name,
+              is_active,
+              day_count: days.length,
+            })),
           truncated: routines.length > maxListedRoutines,
         },
       };
