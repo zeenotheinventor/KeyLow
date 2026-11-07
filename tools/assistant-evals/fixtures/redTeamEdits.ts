@@ -161,6 +161,10 @@ export type EditWorld = Readonly<{
   markStateOfA: (name: string) => Promise<void>;
   /** True when A's training is as it was when the name was marked. */
   stateOfAIsUnchangedSince: (name: string) => Promise<boolean>;
+  /** Remembers the state of B's training under a name, read as B. B's training must be written already. */
+  markStateOfB: (name: string) => Promise<void>;
+  /** True when B's training, read as B, is as it was when the name was marked. */
+  stateOfBIsUnchangedSince: (name: string) => Promise<boolean>;
 }>;
 
 export type EditWorldOptions = Readonly<{
@@ -590,6 +594,18 @@ export function createEditWorld(options: EditWorldOptions): EditWorld {
     async markStateOfA(name) {
       await rows();
       marks.set(name, await trainingSnapshotOf(userA.client));
+    },
+
+    async markStateOfB(name) {
+      marks.set(`B ${name}`, await trainingSnapshotOf(userB.client));
+    },
+
+    async stateOfBIsUnchangedSince(name) {
+      const marked = marks.get(`B ${name}`);
+      if (marked === undefined) {
+        throw new Error(`The state of B's training was never marked as ${name}`);
+      }
+      return marked === (await trainingSnapshotOf(userB.client));
     },
 
     async stateOfAIsUnchangedSince(name) {

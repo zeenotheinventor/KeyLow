@@ -87,6 +87,8 @@ export function fakeEditWorld(overrides: Partial<EditWorld> = {}): EditWorld {
     discardWorkout: () => Promise.resolve(),
     markStateOfA: () => Promise.resolve(),
     stateOfAIsUnchangedSince: () => Promise.resolve(true),
+    markStateOfB: () => Promise.resolve(),
+    stateOfBIsUnchangedSince: () => Promise.resolve(true),
     ...overrides,
   };
 }
