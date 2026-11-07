@@ -4,7 +4,7 @@ import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 
 import { CURRENT_GOAL, trainingSessions } from "../../fixtures/training.ts";
 import { createFixtureUser } from "../../src/fixtureUser.ts";
-import { LIVE_WORKOUT, createTrainingWorld } from "../../src/trainingWorld.ts";
+import { LIVE_WORKOUT, createTrainingWorld, mondayOf } from "../../src/trainingWorld.ts";
 
 import type { FixtureUser } from "../../src/fixtureUser.ts";
 import type { TrainingWorld } from "../../src/trainingWorld.ts";
@@ -131,7 +131,7 @@ describe("a workout in progress", () => {
     expect(await getActiveSession(user.client)).toBeNull();
     expect(await countSessions()).toBe(trainingSessions().length);
     expect(
-      (await listSessionsInWeek(user.client, user.anchorDate)).every(
+      (await listSessionsInWeek(user.client, mondayOf(user.anchorDate))).every(
         ({ ended_at }) => ended_at !== null,
       ),
     ).toBe(true);

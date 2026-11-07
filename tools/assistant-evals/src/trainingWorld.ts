@@ -96,7 +96,8 @@ export type TrainingWorld = Readonly<{
 // The repos read the heat window from the day before its first day, as the tools do (`readTrainingInputs`).
 const HEAT_LOOKBACK_DAYS = TRAINING_PARAMS_V2.heatWindowDays + 1;
 
-const mondayOf = (localDate: string): string =>
+/** The Monday of the week a calendar day is in. The week reads of the repos take a Monday and refuse any other day. */
+export const mondayOf = (localDate: string): string =>
   addCalendarDays(localDate, -daysSinceMonday(localDate));
 
 export function createTrainingWorld({
