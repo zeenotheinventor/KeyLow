@@ -13,7 +13,13 @@ import {
 } from "../../core.ts";
 import { listWeighIns } from "../../repos.ts";
 import { citedResult } from "./diaryView.ts";
-import { dataNotice, isRangeOfAtMost, localDateSchema, maxRangeDays } from "./shared.ts";
+import {
+  dataNotice,
+  hasNoFieldProblem,
+  isRangeOfAtMost,
+  localDateSchema,
+  maxRangeDays,
+} from "./shared.ts";
 
 import type { ReadToolDefinition } from "../tool.ts";
 
@@ -26,7 +32,7 @@ const getWeighInsInput = z
       `The last day of the range, YYYY-MM-DD, in the user's own time zone, at most ${maxRangeDays} days from the first.`,
     ),
   })
-  .refine(isRangeOfAtMost(maxRangeDays), { path: ["to"] });
+  .refine(isRangeOfAtMost(maxRangeDays), { path: ["to"], when: hasNoFieldProblem });
 
 export const getWeighInsTool: ReadToolDefinition<z.infer<typeof getWeighInsInput>> = {
   name: "get_weigh_ins",

@@ -569,6 +569,7 @@ describe("READ_TOOLS", () => {
       "get_training_goals",
       "get_muscle_state",
       "suggest_next_session",
+      "get_workouts",
     ];
 
     expect([...DIARY_READ_TOOLS].sort()).toEqual(

@@ -114,7 +114,12 @@ export type {
   TrainingSet,
   WeekSession,
 } from "./trainingSchemas";
-export { getActiveSession, getLastPerformance, getSession } from "./trainingSessions";
+export {
+  getActiveSession,
+  getLastPerformance,
+  getSession,
+  getSessionsByIds,
+} from "./trainingSessions";
 export type { LastPerformanceOptions } from "./trainingSessions";
 export { listTrendSets } from "./trainingTrend";
 export type { TrendSetRow, TrendSetRows } from "./trainingSchemas";

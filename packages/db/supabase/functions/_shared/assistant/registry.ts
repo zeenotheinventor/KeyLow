@@ -15,6 +15,7 @@ import { getMuscleStateTool } from "./tools/getMuscleState.ts";
 import { getRoutinesTool } from "./tools/getRoutines.ts";
 import { getTrainingGoalsTool } from "./tools/getTrainingGoals.ts";
 import { getWeighInsTool } from "./tools/getWeighIns.ts";
+import { getWorkoutsTool } from "./tools/getWorkouts.ts";
 import { importRecipeFromUrlTool } from "./tools/importRecipeFromUrl.ts";
 import { logEntryTool } from "./tools/logEntry.ts";
 import { searchExercisesTool } from "./tools/searchExercises.ts";
@@ -77,6 +78,7 @@ const toolDefinitions: readonly ToolDefinition[] = [
   searchExercisesTool,
   getRoutinesTool,
   getTrainingGoalsTool,
+  getWorkoutsTool,
   getMuscleStateTool,
   suggestNextSessionTool,
   askUserTool,

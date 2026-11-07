@@ -102,6 +102,7 @@ Deno.test(
         ["search_exercises", "read"],
         ["get_routines", "read"],
         ["get_training_goals", "read"],
+        ["get_workouts", "read"],
         ["get_muscle_state", "read"],
         ["suggest_next_session", "read"],
         ["ask_user", "read"],
@@ -186,7 +187,7 @@ Deno.test("create_custom_food opts out of strict mode and update_targets does no
 Deno.test(
   "the training reads opt out of strict mode, so they take nothing from the strict budget",
   () => {
-    for (const name of ["search_exercises", "get_routines", "get_training_goals"]) {
+    for (const name of ["search_exercises", "get_routines", "get_training_goals", "get_workouts"]) {
       assertEquals(toolRegistry.get(name)?.strict, false, name);
     }
   },

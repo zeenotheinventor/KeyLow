@@ -8,6 +8,7 @@ import {
   describeRoutineCitation,
   describeSuggestionCitation,
   describeWeighInCitation,
+  describeWorkoutsCitation,
 } from "../../src/assistant";
 
 /*
@@ -194,6 +195,40 @@ describe("describeSuggestionCitation", () => {
     expect(describeSuggestionCitation({ localDate: "2026-10-15", today: "2026-10-14" })).toBe(
       "Based on Ki-Lo's suggestion for Thursday",
     );
+  });
+});
+
+describe("describeWorkoutsCitation", () => {
+  // The words are the board `assistant · answer-training`: "Based on 2 workouts, 12 to 13 Oct" and "Based on
+  // 1 workout, 8 Oct". The line for a range with nothing in it is the ticket's, KEY-891: no board draws it.
+  it("should write the answer-training board's line for a range inside one month", () => {
+    expect(
+      describeWorkoutsCitation({ from: "2026-10-12", to: "2026-10-13", workoutCount: 2 }),
+    ).toBe("Based on 2 workouts, 12 to 13 Oct");
+  });
+
+  it("should write the answer-training board's line for one workout on one day", () => {
+    expect(
+      describeWorkoutsCitation({ from: "2026-10-08", to: "2026-10-08", workoutCount: 1 }),
+    ).toBe("Based on 1 workout, 8 Oct");
+  });
+
+  it("should name both months when the range crosses a month end", () => {
+    expect(
+      describeWorkoutsCitation({ from: "2026-09-28", to: "2026-10-04", workoutCount: 5 }),
+    ).toBe("Based on 5 workouts, 28 Sep to 4 Oct");
+  });
+
+  it("should name both years when the range crosses a year end", () => {
+    expect(
+      describeWorkoutsCitation({ from: "2026-12-28", to: "2027-01-03", workoutCount: 3 }),
+    ).toBe("Based on 3 workouts, 28 Dec 2026 to 3 Jan 2027");
+  });
+
+  it("should say there were none, and not that the answer is based on 0 workouts", () => {
+    expect(
+      describeWorkoutsCitation({ from: "2026-10-12", to: "2026-10-13", workoutCount: 0 }),
+    ).toBe("No workouts, 12 to 13 Oct");
   });
 });
 
