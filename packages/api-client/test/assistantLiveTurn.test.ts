@@ -8,7 +8,7 @@ import {
 } from "../src/assistantLiveTurn";
 import { aCard, CONVERSATION_ID, TURN_ID } from "./support/assistantStream";
 
-import type { AssistantStreamEvent } from "@keylow/core";
+import type { AssistantExerciseMuscles, AssistantStreamEvent } from "@keylow/core";
 
 const applyAll = (events: AssistantStreamEvent[]) =>
   events.reduce(applyAssistantEvent, newLiveTurn());
@@ -25,6 +25,7 @@ describe("applyAssistantEvent", () => {
       answerMeta: null,
       status: null,
       link: null,
+      exerciseMuscles: [],
       askAgain: false,
       notice: null,
       stopped: false,
@@ -39,6 +40,36 @@ describe("applyAssistantEvent", () => {
     } as const;
 
     expect(applyAll([{ type: "link", link }]).link).toEqual(link);
+  });
+
+  it("should keep the muscles of each exercise in the order they arrived", () => {
+    const romanianDeadlift: AssistantExerciseMuscles = {
+      exerciseName: "Romanian Deadlift",
+      muscles: [{ muscle_id: "hamstrings", role: "primary" }],
+    };
+    const seatedLegCurl: AssistantExerciseMuscles = {
+      exerciseName: "Seated Leg Curl",
+      muscles: [{ muscle_id: "hamstrings", role: "primary" }],
+    };
+
+    const live = applyAll([
+      { type: "exercise_muscles", exercise: romanianDeadlift },
+      { type: "text", delta: "Both count." },
+      { type: "exercise_muscles", exercise: seatedLegCurl },
+    ]);
+
+    expect(live.exerciseMuscles).toEqual([romanianDeadlift, seatedLegCurl]);
+    expect(live.text).toBe("Both count.");
+  });
+
+  it("should clear the step when the muscles of an exercise arrive", () => {
+    const thinking = { type: "status", code: "thinking" } as const;
+    const exercise: AssistantExerciseMuscles = {
+      exerciseName: "Seated Leg Curl",
+      muscles: [{ muscle_id: "hamstrings", role: "primary" }],
+    };
+
+    expect(applyAll([thinking, { type: "exercise_muscles", exercise }]).status).toBeNull();
   });
 
   it("should offer Ask again when the event arrives", () => {

@@ -1,6 +1,7 @@
 import type {
   AssistantCard,
   AssistantCardLink,
+  AssistantExerciseMuscles,
   AssistantNotice,
   AssistantStatus,
   AssistantStreamEvent,
@@ -16,7 +17,8 @@ type EventOfType<Type extends AssistantStreamEvent["type"]> = Omit<
  * `text` grows with the reply (`assistant · streaming`), `cards` are the writes with their Undo, `clarify`
  * and `confirm` end the turn with a question, `answerMeta` sits under an answer, `status` is the step the
  * assistant is on, `notice` is a gate or a failure, and `stopped` is set when the person closed the sheet
- * before the end. `link` is a link that arrived on its own, and `askAgain` whether the turn offered the Ask
+ * before the end. `exerciseMuscles` are the muscles of each exercise the turn showed, in call order. `link` is a
+ * link that arrived on its own, and `askAgain` whether the turn offered the Ask
  * again quick reply. `outcome` is how the turn ended, null while it is still going or when it was stopped.
  */
 export type AssistantLiveTurn = {
@@ -27,6 +29,7 @@ export type AssistantLiveTurn = {
   clarify: EventOfType<"clarify"> | null;
   confirm: EventOfType<"confirm"> | null;
   answerMeta: EventOfType<"answer_meta"> | null;
+  exerciseMuscles: AssistantExerciseMuscles[];
   link: AssistantCardLink | null;
   askAgain: boolean;
   status: AssistantStatus | null;
@@ -44,6 +47,7 @@ export function newLiveTurn(): AssistantLiveTurn {
     clarify: null,
     confirm: null,
     answerMeta: null,
+    exerciseMuscles: [],
     link: null,
     askAgain: false,
     status: null,
@@ -72,6 +76,8 @@ export function applyAssistantEvent(
       return { ...live, status: null, text: live.text + event.delta };
     case "card":
       return { ...live, status: null, cards: [...live.cards, event.card] };
+    case "exercise_muscles":
+      return { ...live, status: null, exerciseMuscles: [...live.exerciseMuscles, event.exercise] };
     case "link":
       return { ...live, status: null, link: event.link };
     case "ask_again":
