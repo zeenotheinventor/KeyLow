@@ -4,14 +4,25 @@ import {
   getActiveRoutine,
   getActiveSession,
   getCurrentTrainingGoals,
+  listSetsFrom,
   listSuggestionLibrary,
+  listWeekSessions,
   saveTrainingGoals,
   startSession,
 } from "@keylow/api-client";
-import { muscleStateRows, targetedMuscles } from "@keylow/core/training";
+import { addCalendarDays, daysSinceMonday, toLocalDate } from "@keylow/core/dates";
+import {
+  TRAINING_PARAMS_V2,
+  currentMuscleState,
+  muscleStateRows,
+  nextSessionSuggestion,
+  planRoutineOf,
+  suggestionTargetOf,
+  targetedMuscles,
+  todayCardOf,
+} from "@keylow/core/training";
 
 import { CURRENT_GOAL } from "../fixtures/training.ts";
-import { expectedMuscleState, expectedSuggestion } from "../fixtures/trainingTotals.ts";
 import { exerciseIdsOf, writeTrainingHistory } from "../fixtures/trainingWrites.ts";
 
 import type { FixtureUser } from "./fixtureUser.ts";
@@ -20,7 +31,8 @@ import type { Equipment, MuscleGroup, MuscleStateRow } from "@keylow/core/traini
 
 // What the training advice cases may do to the eval user and read back from it. Only the user's own client can
 // write these rows, so the session builds it from the eval user and the cases reach it through
-// `trainingWorldHolder`. The expected numbers are worked out here with core, over the rows as the tools read them.
+// `trainingWorldHolder`. The expected figures are worked out here with core, over the rows the way the tools read
+// them: the same window of sets, the same goal and routine, the same Today card for the day of a suggestion.
 
 const EVAL_TIME_ZONE = "UTC";
 
@@ -30,16 +42,25 @@ const LIVE_WORKOUT_LOAD = "75";
 const LIVE_WORKOUT_REPS = "5";
 const LIVE_WORKOUT_RIR = "2";
 
-/** The session `suggest_next_session` gives for a day, as numbers. `null` when there is nothing to suggest. */
-export type SuggestionFacts = Readonly<{
-  sets: number;
-  minutes: number;
-  repRanges: readonly (readonly [number, number])[];
-}> | null;
+/**
+ * What `suggest_next_session` answers, as numbers. `none` is no session to give: a workout is open, or nothing
+ * was ever logged. `nothing` is a day with nothing to suggest.
+ */
+export type SuggestionAnswer =
+  | Readonly<{
+      kind: "session";
+      /** The day the tool answers for, which the Today card picks. */
+      day: string;
+      sets: number;
+      minutes: number;
+      /** The sets of each exercise, as its row prints them. */
+      exerciseSets: readonly number[];
+      repRanges: readonly (readonly [number, number])[];
+    }>
+  | Readonly<{ kind: "nothing"; day: string }>
+  | Readonly<{ kind: "none" }>;
 
 export type SuggestionQuery = Readonly<{
-  /** The local day the suggestion is for, `YYYY-MM-DD`. */
-  day: string;
   minutes: number | null;
   equipment: readonly Equipment[] | null;
 }>;
@@ -55,7 +76,9 @@ export type TrainingWorld = Readonly<{
   /** Writes the six weeks of workouts, the routines and the goals once, and does nothing after. */
   ensureHistory: () => Promise<void>;
   exerciseIds: () => Promise<ReadonlyMap<TrainingExercise, string>>;
-  suggestionFacts: (query: SuggestionQuery, now: string) => Promise<SuggestionFacts>;
+  /** The name of an exercise the model read, or null when there is none with that id. */
+  exerciseName: (id: string) => Promise<string | null>;
+  suggestion: (query: SuggestionQuery, now: string) => Promise<SuggestionAnswer>;
   muscleFacts: (area: MuscleGroup | null, now: string) => Promise<MuscleFacts>;
   /** Closes the current goal, so the user has none. */
   clearGoal: () => Promise<void>;
@@ -67,18 +90,37 @@ export type TrainingWorld = Readonly<{
   discardWorkout: () => Promise<void>;
 }>;
 
+// The repos read the heat window from the day before its first day, as the tools do (`readTrainingInputs`).
+const HEAT_LOOKBACK_DAYS = TRAINING_PARAMS_V2.heatWindowDays + 1;
+
+const mondayOf = (localDate: string): string =>
+  addCalendarDays(localDate, -daysSinceMonday(localDate));
+
 export function createTrainingWorld({
   client,
   anchorDate,
 }: Pick<FixtureUser, "client" | "anchorDate">): TrainingWorld {
   let history: Promise<void> | null = null;
 
-  async function readInputs() {
-    const [goal, activeRoutine] = await Promise.all([
-      getCurrentTrainingGoals(client),
+  // What the tools read first: the window of sets, the active routine and the goal.
+  async function readInputs(today: string) {
+    const [sets, activeRoutine, goal] = await Promise.all([
+      listSetsFrom(client, addCalendarDays(today, -HEAT_LOOKBACK_DAYS), today),
       getActiveRoutine(client),
+      getCurrentTrainingGoals(client),
     ]);
-    return { goal, activeRoutine };
+    return { sets, activeRoutine, goal };
+  }
+
+  async function hasLoggedAnySession(): Promise<boolean> {
+    const { count, error } = await client
+      .from("workout_sessions")
+      .select("*", { count: "exact", head: true })
+      .is("deleted_at", null);
+    if (error) {
+      throw new Error(`Could not count the eval user's workouts (${error.code})`);
+    }
+    return (count ?? 0) > 0;
   }
 
   return {
@@ -94,31 +136,80 @@ export function createTrainingWorld({
 
     exerciseIds: () => exerciseIdsOf(client),
 
-    async suggestionFacts({ day, minutes, equipment }, now) {
-      const { goal, activeRoutine } = await readInputs();
+    async exerciseName(id) {
+      const { data, error } = await client
+        .from("exercises")
+        .select("name")
+        .eq("id", id)
+        .maybeSingle();
+      if (error) {
+        throw new Error(`Could not read the exercise the model read (${error.code})`);
+      }
+      return data?.name ?? null;
+    },
+
+    async suggestion({ minutes, equipment }, now) {
+      const timeZone = EVAL_TIME_ZONE;
+      const today = toLocalDate(new Date(now), timeZone);
+      const inputs = await readInputs(today);
+      const { goal, activeRoutine, sets } = inputs;
+      if (goal === null) {
+        return { kind: "none" };
+      }
+      // The Today card, read as the tool and the Train home read it, says which day the suggestion is for.
+      const weekStart = mondayOf(today);
+      const [weekSessions, sessionInProgress, hasLogged] = await Promise.all([
+        listWeekSessions(client, weekStart),
+        getActiveSession(client),
+        activeRoutine === null ? hasLoggedAnySession() : Promise.resolve(false),
+      ]);
+      const { plan, card } = todayCardOf({
+        routine: planRoutineOf(activeRoutine, timeZone),
+        weekSessions,
+        sessionInProgress,
+        now,
+        tz: timeZone,
+        weekStart,
+        hasEverLoggedSession: hasLogged,
+      });
+      const read = suggestionTargetOf({
+        today,
+        card,
+        plannedDayId: plan.days.find((day) => day.date === plan.today)?.plannedDay?.id ?? null,
+        hasRoutine: activeRoutine !== null,
+        hasLoggedSession: hasLogged,
+      });
+      if (read.status === "in_progress" || read.status === "none") {
+        return { kind: "none" };
+      }
+      const target = read.status === "done" ? read.next : read.target;
       const equipmentToRead =
         equipment === null
-          ? (goal?.equipment ?? [])
-          : (goal?.equipment ?? []).filter((kind) => equipment.includes(kind));
+          ? goal.equipment
+          : goal.equipment.filter((kind) => equipment.includes(kind));
       const library = await listSuggestionLibrary(client, { equipment: equipmentToRead });
-      const read = expectedSuggestion(anchorDate, {
+      const { suggestion } = nextSessionSuggestion({
+        sets,
         now,
-        day,
         goal,
         library,
         activeRoutine,
+        timeZone,
+        day: target.day,
         constraints: {
           ...(minutes === null ? {} : { minutes }),
           ...(equipment === null ? {} : { equipment }),
         },
       });
-      const { suggestion } = read;
       if (suggestion === null || suggestion.kind === "nothing") {
-        return null;
+        return { kind: "nothing", day: target.day };
       }
       return {
+        kind: "session",
+        day: target.day,
         sets: suggestion.sets,
         minutes: suggestion.minutes,
+        exerciseSets: suggestion.exercises.map(({ sets: exerciseSets }) => exerciseSets),
         // A kept exercise has the routine's rep range, which the cases already allow.
         repRanges: suggestion.exercises.flatMap((exercise) =>
           "rep_min" in exercise ? [[exercise.rep_min, exercise.rep_max] as const] : [],
@@ -127,8 +218,10 @@ export function createTrainingWorld({
     },
 
     async muscleFacts(area, now) {
-      const { goal, activeRoutine } = await readInputs();
-      const { rows, area: areaTotals } = muscleStateRows(expectedMuscleState(anchorDate, now), {
+      const today = toLocalDate(new Date(now), EVAL_TIME_ZONE);
+      // Read from the rows, as the tool does, so a workout in progress counts.
+      const { sets, activeRoutine, goal } = await readInputs(today);
+      const { rows, area: areaTotals } = muscleStateRows(currentMuscleState(sets, now), {
         now,
         timeZone: EVAL_TIME_ZONE,
         area,
@@ -144,12 +237,16 @@ export function createTrainingWorld({
     },
 
     async clearGoal() {
-      const { error } = await client
+      const { data, error } = await client
         .from("training_goals")
         .update({ effective_to: new Date().toISOString() })
-        .is("effective_to", null);
+        .is("effective_to", null)
+        .select("id");
       if (error) {
         throw new Error(`Could not close the eval user's training goal (${error.code})`);
+      }
+      if (data.length !== 1) {
+        throw new Error(`Expected to close one training goal and closed ${data.length}`);
       }
     },
 
