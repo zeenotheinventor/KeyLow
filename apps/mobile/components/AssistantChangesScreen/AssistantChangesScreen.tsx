@@ -1,4 +1,4 @@
-import { useAssistantChanges } from "@keylow/api-client";
+import { useActiveSession, useAssistantChanges } from "@keylow/api-client";
 import { ASSISTANT_CHANGES } from "@keylow/core/copy";
 import { useRouter } from "expo-router";
 import { vars } from "nativewind";
@@ -11,13 +11,18 @@ import { EmptyState, GroupedList, SheetHeader, Text } from "../ui";
 /**
  * "What the assistant changed", pushed from the Assistant settings (`assistant-settings · changes` and
  * `changes-empty`): one group for each day, newest first, with a row for each card the assistant drew, and
- * the footer about when Undo works. With no rows it is the empty state alone. Until the list is read only
+ * the footer about when Undo works. A training row waits ("Can't undo yet") while a workout is in progress. With no rows it is the empty state alone. Until the list is read only
  * the header is drawn, since no board draws a loading or a failed read.
  */
 export function AssistantChangesScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const changes = useAssistantChanges();
+  // One read for every row. Only a training row heeds it, so it is read once there is one to wait.
+  const hasTrainingRow =
+    changes.data?.days.some((day) => day.rows.some((row) => row.training !== undefined)) ?? false;
+  const activeSession = useActiveSession({ enabled: hasTrainingRow });
+  const workoutInProgress = activeSession.data !== undefined && activeSession.data !== null;
 
   function goBack() {
     // A cold link to this screen has nothing before it, so Back goes to the Assistant settings instead.
@@ -47,7 +52,7 @@ export function AssistantChangesScreen() {
         {days.map((day) => (
           <GroupedList key={day.label} title={day.label}>
             {day.rows.map((row) => (
-              <AssistantChangeRow key={row.key} row={row} />
+              <AssistantChangeRow key={row.key} row={row} workoutInProgress={workoutInProgress} />
             ))}
           </GroupedList>
         ))}

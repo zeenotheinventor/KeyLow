@@ -111,6 +111,36 @@ describe("createHttpDriver, cards", () => {
   });
 });
 
+describe("createHttpDriver, the muscles of an exercise", () => {
+  const exercise = {
+    exerciseName: "Romanian Deadlift",
+    muscles: [{ muscle_id: "hamstrings", role: "primary" }],
+  };
+
+  it("should keep the exercises a turn showed, in order", async () => {
+    const second = { exerciseName: "Seated Leg Curl", muscles: exercise.muscles };
+    streamOf(
+      turnEvent,
+      sse({ type: "text", delta: "Both count a full set." }),
+      sse({ type: "exercise_muscles", exercise }),
+      sse({ type: "exercise_muscles", exercise: second }),
+      sse({ type: "done", outcome: "complete" }),
+    );
+
+    const result = await driver().sendMessage({ conversationId: null, text: "compare them" });
+
+    expect(result.exerciseMuscles).toEqual([exercise, second]);
+  });
+
+  it("should leave the exercises out when the turn showed none", async () => {
+    streamOf(turnEvent, sse({ type: "done", outcome: "complete" }));
+
+    const result = await driver().sendMessage({ conversationId: null, text: "hello" });
+
+    expect(result).not.toHaveProperty("exerciseMuscles");
+  });
+});
+
 describe("createHttpDriver, one turn", () => {
   it("should post the turn with the day in the user's time zone, and no hour", async () => {
     streamOf(turnEvent, sse({ type: "done", outcome: "complete" }));

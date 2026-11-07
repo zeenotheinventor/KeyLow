@@ -103,6 +103,7 @@ export const READ_TOOLS: ReadonlySet<string> = new Set([
   "suggest_next_session",
   "get_workouts",
   "get_exercise_progress",
+  "show_exercise_muscles",
 ]);
 
 /** Passes when every tool called is a read tool of the diary. */

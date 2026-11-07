@@ -2,7 +2,7 @@ import { fakeDatabase } from "./helpers.ts";
 
 import type { EvalDatabase, RowQuery } from "../src/types.ts";
 
-type Row = Readonly<Record<string, string | number | boolean | null>>;
+type Row = Readonly<Record<string, unknown>>;
 
 /**
  * An `EvalDatabase` whose tables hold the rows it was given, so a count or a read depends on the filters as

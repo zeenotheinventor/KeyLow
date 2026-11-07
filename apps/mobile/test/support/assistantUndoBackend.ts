@@ -9,15 +9,18 @@ type UndoCode = "undone" | "already_undone" | "undo_unavailable" | "not_found";
 export const undoBackend: {
   /** The code each action id gets. An id not listed is undone. */
   codes: Record<string, UndoCode>;
+  /** The reason the route gives for an action id it refused, for the ids listed. */
+  reasons: Record<string, string>;
   /** Makes every request fail with a server error whose body quotes a value. */
   fails: boolean;
   /** Holds every request until it settles. */
   gate: Promise<void> | undefined;
   bodies: unknown[];
-} = { codes: {}, fails: false, gate: undefined, bodies: [] };
+} = { codes: {}, reasons: {}, fails: false, gate: undefined, bodies: [] };
 
 export function resetUndoBackend(): void {
   undoBackend.codes = {};
+  undoBackend.reasons = {};
   undoBackend.fails = false;
   undoBackend.gate = undefined;
   undoBackend.bodies = [];
@@ -49,6 +52,9 @@ async function answerUndo(body: unknown): Promise<Response> {
     results: actionIds.map((actionId) => ({
       actionId,
       result: undoBackend.codes[actionId] ?? "undone",
+      ...(undoBackend.reasons[actionId] === undefined
+        ? {}
+        : { reason: undoBackend.reasons[actionId] }),
     })),
   });
 }

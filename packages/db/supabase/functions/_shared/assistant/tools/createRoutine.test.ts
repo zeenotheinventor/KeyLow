@@ -500,8 +500,9 @@ Deno.test(
     assertStringIncludes(description, "in one response");
     assertStringIncludes(
       description,
-      "ask for their goal and experience with ask_user, giving the answers as quick replies, save them with update_training_goals",
+      "ask for their goal and experience together in one ask_user, with 3 quick replies that each give both",
     );
+    assertStringIncludes(description, "save it with update_training_goals");
     assertStringIncludes(description, "then call create_routine again");
     assertEquals(description.includes("Goal screen"), false);
     assertStringIncludes(description, "edit_routine");

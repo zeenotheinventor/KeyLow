@@ -153,4 +153,6 @@ export const samples: Record<string, () => string[]> = {
     copy.describeRoutineCreatedChange(1, 15),
   ],
   describeRoutineCreatedUndone: () => [copy.describeRoutineCreatedUndone("Push Pull Legs")],
+  describeSetsPartlyPutBack: () => [copy.describeSetsPartlyPutBack(2, 3)],
+  describeChangesPartlyUndone: () => [copy.describeChangesPartlyUndone(2, 3)],
 };

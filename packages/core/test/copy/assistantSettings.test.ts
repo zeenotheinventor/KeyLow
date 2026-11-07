@@ -90,7 +90,7 @@ describe("ASSISTANT_CHANGES", () => {
       title: "What the assistant changed",
       back: "Back to Assistant",
       footer:
-        "Undo works while an item is as the assistant left it. Once you change it in the diary or the recipe editor, change it there.",
+        "Undo works while an item is as the assistant left it. Once you change it in the diary, the recipe editor or Train, change it there. Undo on training waits while a workout is in progress.",
       emptyTitle: "Nothing changed yet",
       emptyBody:
         "When the assistant logs, copies or changes something for you, it shows here with Undo.",
@@ -159,5 +159,151 @@ describe("describeAssistantChangeRow", () => {
       kind: "label",
       label: "Can't undo",
     });
+  });
+});
+
+const trainingRow = (
+  kind: "routine_updated" | "exercise_updated" | "set_updated" = "routine_updated",
+  state: AssistantChangeRow["state"] = "undo",
+): AssistantChangeRow => ({
+  key: "a1",
+  actionIds: ["a1", "a2", "a3"],
+  title: "Updated routine Push Pull Legs",
+  sub: "08:12 · 4 changes",
+  state,
+  training: {
+    kind,
+    changedSinceDetail: kind === "exercise_updated" ? "changed since" : "changed in the app since",
+  },
+});
+
+describe("describeAssistantChangeRow, a training row", () => {
+  it("should draw Undo as any row, while no workout is in progress", () => {
+    expect(describeAssistantChangeRow(trainingRow(), null).trailing).toEqual({
+      kind: "action",
+      label: "Undo",
+    });
+  });
+
+  it("should draw Can't undo yet as a plain label, with no button, while a workout is in progress", () => {
+    expect(describeAssistantChangeRow(trainingRow(), null, { workoutInProgress: true })).toEqual({
+      title: "Updated routine Push Pull Legs",
+      subtitle: "08:12 · 4 changes",
+      titleTone: "primary",
+      trailing: { kind: "label", label: "Can't undo yet" },
+    });
+  });
+
+  it("should draw Undo again once the workout ends", () => {
+    expect(
+      describeAssistantChangeRow(trainingRow(), null, { workoutInProgress: false }).trailing.kind,
+    ).toBe("action");
+  });
+
+  it("should not hold back a row that is undone or cannot be undone", () => {
+    expect(
+      describeAssistantChangeRow(trainingRow("routine_updated", "undone"), null, {
+        workoutInProgress: true,
+      }).trailing,
+    ).toEqual({ kind: "label", label: "Undone" });
+    expect(
+      describeAssistantChangeRow(trainingRow("routine_updated", "cant_undo"), null, {
+        workoutInProgress: true,
+      }).trailing,
+    ).toEqual({ kind: "label", label: "Can't undo" });
+  });
+
+  describe("a press refused because a workout is in progress", () => {
+    const refused = { state: "unavailable", reason: "workout_in_progress" } as const;
+
+    it("should keep reading Can't undo yet while the workout lasts", () => {
+      expect(
+        describeAssistantChangeRow(trainingRow(), refused, { workoutInProgress: true }).trailing,
+      ).toEqual({ kind: "label", label: "Can't undo yet" });
+    });
+
+    it("should let go of the refusal and offer Undo once the workout has ended", () => {
+      const look = describeAssistantChangeRow(trainingRow(), refused, { workoutInProgress: false });
+
+      expect(look.trailing).toEqual({ kind: "action", label: "Undo" });
+      expect(look.subtitle).toBe("08:12 · 4 changes");
+    });
+  });
+
+  describe("a press refused because the item changed", () => {
+    it.each(["changed", "active", "logged", "used"] as const)(
+      "should read Can't undo, with the sub changed in the app since, for reason %s",
+      (reason) => {
+        const look = describeAssistantChangeRow(trainingRow(), { state: "unavailable", reason });
+
+        expect(look.trailing).toEqual({ kind: "label", label: "Can't undo" });
+        expect(look.subtitle).toBe("08:12 · changed in the app since");
+      },
+    );
+
+    it("should read changed since for an exercise, which has no screen", () => {
+      const look = describeAssistantChangeRow(trainingRow("exercise_updated"), {
+        state: "unavailable",
+        reason: "changed",
+      });
+
+      expect(look.subtitle).toBe("08:12 · changed since");
+    });
+
+    it("should leave the sub alone when the answer gave no reason", () => {
+      const look = describeAssistantChangeRow(trainingRow(), "unavailable");
+
+      expect(look.trailing).toEqual({ kind: "label", label: "Can't undo" });
+      expect(look.subtitle).toBe("08:12 · 4 changes");
+    });
+  });
+});
+
+describe("describeAssistantChangeRow, an Undo that put some back", () => {
+  const partial = { state: "partial", undone: 2, total: 3 } as const;
+
+  it("should say Can't undo and what was put back, on three sets", () => {
+    const row: AssistantChangeRow = {
+      ...trainingRow("set_updated"),
+      title: "Changed 3 sets in Legs",
+      sub: "09:02 · Thu 8 Oct",
+    };
+
+    const look = describeAssistantChangeRow(row, partial);
+
+    expect(look.trailing).toEqual({ kind: "label", label: "Can't undo" });
+    expect(look.subtitle).toBe("09:02 · Put back 2 of 3 sets");
+  });
+
+  it("should wait, as Can't undo yet, while a workout refused the rest, and keep what was put back", () => {
+    const look = describeAssistantChangeRow(
+      trainingRow("set_updated"),
+      { ...partial, reason: "workout_in_progress" },
+      { workoutInProgress: true },
+    );
+
+    expect(look.trailing).toEqual({ kind: "label", label: "Can't undo yet" });
+    expect(look.subtitle).toBe("08:12 · Put back 2 of 3 sets");
+  });
+
+  it("should offer Undo again once the workout that refused the rest has ended", () => {
+    const look = describeAssistantChangeRow(
+      trainingRow("set_updated"),
+      { ...partial, reason: "workout_in_progress" },
+      { workoutInProgress: false },
+    );
+
+    expect(look.trailing).toEqual({ kind: "action", label: "Undo" });
+    expect(look.subtitle).toBe("08:12 · 4 changes");
+  });
+
+  it("should say changes on a row that is not of sets, food rows included", () => {
+    expect(describeAssistantChangeRow(row("undo", "08:11 · 2 entries"), partial).subtitle).toBe(
+      "08:11 · Undid 2 of 3 changes",
+    );
+  });
+
+  it("should leave a row that was not offered Undo as it was", () => {
+    expect(describeAssistantChangeRow(row("undone", "08:11"), partial).subtitle).toBe("08:11");
   });
 });

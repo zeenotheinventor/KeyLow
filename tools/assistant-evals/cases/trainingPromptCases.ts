@@ -1,15 +1,18 @@
-// Two cases of the write set for a training change asked for during a workout (KEY-908). The executor refuses
+// Three cases of the write set for the training part of the prompt (KEY-908). Two are a training change asked for
+// during a workout. The executor refuses
 // every training write while a workout is in progress, and after that the words are the model's own, so these
 // cases check what the person is left knowing. KEY-911 owns the full set of edit cases, so only these are here.
 //
 // Both start a workout in `setup` and discard it in `cleanUp`, as the training advice cases do, and a reply is
 // graded only for what a right reply cannot avoid saying: that the workout is the reason, and (when the turn
 // also wrote something) which change was not made. Its wording is never graded.
+import { threadFromMessages } from "@keylow/core";
+
 import { READ_TOOLS } from "./ask.ts";
 import {
   actionRows,
-  anyOfRoutes,
   askedOnce,
+  calledWith,
   cardOfKind,
   noActionRowsInTurn,
   onlyTheseTools,
@@ -43,12 +46,17 @@ function answerSays(
   };
 }
 
+const roleOf = (value: unknown): "user" | "assistant" | null =>
+  value === "user" || value === "assistant" ? value : null;
+
 /**
- * Passes when no `ask_again` was stored for the turn. A turn that wrote something and was also refused for a
- * workout shows no Ask again, because pressing it would send the whole message again and could log twice
- * (KEY-902). The executor stores `display[<tool_use_id>] = { askAgain: true }` on the turn's messages.
+ * Passes when the thread the person sees for the turn does (or does not) hold an Ask again. It is built from
+ * the stored rows by core's own thread builder, because the executor stores `askAgain` on the first refusal
+ * whatever else landed in the turn and core decides what is drawn: a turn that also wrote something shows none
+ * (pressing it would send the whole message again and could log twice, KEY-902), and a turn that only
+ * refused shows one.
  */
-function noAskAgainStored(turnIndex: number): Grader {
+function askAgainShown(turnIndex: number, shown: boolean): Grader {
   return async ({ turns, database }) => {
     const turn = turns[turnIndex];
     if (turn === undefined) {
@@ -58,11 +66,31 @@ function noAskAgainStored(turnIndex: number): Grader {
       table: "assistant_messages",
       where: { turn_id: turn.turnId },
     });
-    return rows.some(({ display }) =>
-      /askAgain\\?"\s*:\s*true/.test(JSON.stringify(display ?? null)),
-    )
-      ? fail("an Ask again was stored for a turn that also wrote")
-      : pass("no Ask again was stored");
+    const messages = [...rows]
+      .sort((left, right) => Number(left["seq"]) - Number(right["seq"]))
+      .flatMap((row) => {
+        const { id } = row;
+        const role = roleOf(row["role"]);
+        return typeof id === "string" && role !== null
+          ? [
+              {
+                id,
+                turnId: turn.turnId,
+                role,
+                content: row["content"],
+                display: row["display"],
+                turnStatus: turn.status,
+              },
+            ]
+          : [];
+      });
+    const drawn = threadFromMessages(messages, []).some(({ kind }) => kind === "ask_again");
+    if (messages.length === 0) {
+      return fail("the turn has no stored messages to build the thread from");
+    }
+    return drawn === shown
+      ? pass(shown ? "the thread shows Ask again" : "the thread shows no Ask again")
+      : fail(shown ? "the thread shows no Ask again" : "the thread shows an Ask again");
   };
 }
 
@@ -103,10 +131,11 @@ const discardsTheWorkout: NonNullable<EvalCase["cleanUp"]> = async (turns, envir
 const mentionsTheWorkout = [/workout/i, "mention the workout"] as const;
 
 /**
- * The cases, for a first message that logs two large eggs on the scratch day `eggsDay` and swaps an exercise.
- * The swap names the exercises in full, because a fair model asks which incline press when it is not told.
+ * The cases, for a first message that logs two large eggs on the scratch day `eggsDay` and swaps one exercise
+ * of the eval user's routine for another. Both are named in full and are in the fixtures, so a fair model has
+ * nothing to ask about and the case cannot pass without the eggs logged.
  */
-export function workoutRefusalCasesOf(eggsDay: string, eggsMessage: string): readonly EvalCase[] {
+export function trainingPromptCasesOf(eggsDay: string, eggsMessage: string): readonly EvalCase[] {
   const swapMessages: EvalCase["messages"] = [eggsMessage];
   const goalMessages: EvalCase["messages"] = ["Set my training days to 5 a week."];
 
@@ -118,15 +147,9 @@ export function workoutRefusalCasesOf(eggsDay: string, eggsMessage: string): rea
     // The swap was refused, so nothing was written to the routine, and the workout is as it was.
     actionRows("edit_routine", 0, [0]),
     workoutUntouched(LIVE_WORKOUT.sets),
-    noAskAgainStored(0),
-    // The reply is the only thing that tells the person what waits: it names the swap and the workout.
-    answerSays(mentionsTheWorkout, [/swap|incline|bench/i, "name the swap that was not made"]),
-  ];
-  // Asking which incline exercise is fair when the message leaves it open, and then nothing is written.
-  const askedWhichExercise: readonly Grader[] = [
-    askedOnce(),
-    noActionRowsInTurn(0),
-    workoutUntouched(LIVE_WORKOUT.sets),
+    // The turn wrote, so the person sees no Ask again, and the reply is what tells them what waits.
+    askAgainShown(0, false),
+    answerSays(mentionsTheWorkout, [/swap|pushdown|curl/i, "name the swap that was not made"]),
   ];
 
   return [
@@ -135,10 +158,9 @@ export function workoutRefusalCasesOf(eggsDay: string, eggsMessage: string): rea
       set: "writes",
       ...startsAWorkout,
       messages: swapMessages,
-      expect: [
-        anyOfRoutes([loggedAndSwapRefused, askedWhichExercise]),
-        onlyTheseTools(WORKOUT_REFUSAL_TOOLS),
-      ].map((grade) => withContext(grade, swapMessages)),
+      expect: [...loggedAndSwapRefused, onlyTheseTools(WORKOUT_REFUSAL_TOOLS)].map((grade) =>
+        withContext(grade, swapMessages),
+      ),
       cleanUp: discardsTheWorkout,
     },
     {
@@ -151,10 +173,44 @@ export function workoutRefusalCasesOf(eggsDay: string, eggsMessage: string): rea
         toolCalled("update_training_goals"),
         noActionRowsInTurn(0),
         workoutUntouched(LIVE_WORKOUT.sets),
-        answerSays(mentionsTheWorkout),
+        // The turn only refused, so the person is offered Ask again.
+        askAgainShown(0, true),
+        answerSays(mentionsTheWorkout, [/train tab/i, "point to the Train tab"]),
         onlyTheseTools(WORKOUT_REFUSAL_TOOLS),
       ].map((grade) => withContext(grade, goalMessages)),
       cleanUp: discardsTheWorkout,
     },
+    noGoalBuildCase,
   ];
 }
+
+// A build asked for by a person with no training goal: the reply is one question with quick replies and nothing
+// is written. The second half (their answer saved with `update_training_goals`, then the build) writes a goal
+// that the other sets would then read, and goals are history rows that `restoreGoal` cannot put back, so it
+// is not played here.
+const noGoalMessages: EvalCase["messages"] = ["Build me a 3 day routine called Scratch no goal."];
+
+const noGoalBuildCase: EvalCase = {
+  id: "build-a-routine-with-no-goal-asks-for-it",
+  set: "writes",
+  prepare: () => trainingWorldHolder.current().ensureHistory(),
+  setup: async () => {
+    await trainingWorldHolder.current().clearGoal();
+    return null;
+  },
+  messages: noGoalMessages,
+  expect: [
+    turnEnded(0, "clarify"),
+    askedOnce(),
+    calledWith(
+      "ask_user",
+      ({ quick_replies: replies }) =>
+        Array.isArray(replies) && replies.length >= 1 && replies.length <= 3,
+      "1 to 3 quick replies",
+    ),
+    // Only reads: no routine is built and no goal is saved before the person has answered.
+    noActionRowsInTurn(0),
+    onlyTheseTools(READ_TOOLS),
+  ].map((grade) => withContext(grade, noGoalMessages)),
+  cleanUp: () => trainingWorldHolder.current().restoreGoal(),
+};

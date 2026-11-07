@@ -309,6 +309,22 @@ Deno.test(
   },
 );
 
+Deno.test("a question about the muscles of an exercise reaches show_exercise_muscles", () => {
+  const registered = toolRegistry.list.map((tool) => ({
+    name: tool.name,
+    readOnlyHint: tool.annotations.readOnlyHint,
+  }));
+  for (const text of [
+    "What muscles does a Romanian deadlift work?",
+    "Show me what a squat works",
+    "Which works my hamstrings more, Romanian deadlift or leg curl?",
+  ]) {
+    const tools = allowedToolsFor({ text, pendingConfirmationTool: null, tools: registered });
+    assert(tools.includes("show_exercise_muscles"), text);
+    assert(tools.includes("search_exercises"), text);
+  }
+});
+
 Deno.test("a training question gets the read set", () => {
   for (const text of [
     "What should I train today?",

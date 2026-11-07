@@ -1,5 +1,5 @@
 // The write set (KEY-700): 29 cases for the assistant's writes, and two more for training changes during a
-// workout (KEY-908, `workoutRefusals.ts`). 20 check one tool each (update_entry,
+// workout (KEY-908, `trainingPromptCases.ts`). 20 check one tool each (update_entry,
 // delete_entry, copy_day, set_day_complete, create_recipe, archive_recipe, create_custom_food and
 // update_targets, with the four that ask first answered both ways), 7 press Undo, 1 sends the same message twice
 // and 1 logs yesterday's lunch again.
@@ -58,7 +58,7 @@ import {
   undoWrites,
   withContext,
 } from "./entryGraders.ts";
-import { workoutRefusalCasesOf } from "./workoutRefusals.ts";
+import { trainingPromptCasesOf } from "./trainingPromptCases.ts";
 import { ASK_TARGETS } from "../fixtures/askExtras.ts";
 import { FOOD_ROUTES, lunchOfDay } from "../fixtures/describeExtras.ts";
 import { diaryDateOf } from "../fixtures/diary.ts";
@@ -706,9 +706,9 @@ export function writeCasesOf(anchorDate: string): readonly EvalCase[] {
   // Two training changes asked for during a workout (KEY-908), which the executor refuses.
   const workoutDay = scratchDay();
   cases.push(
-    ...workoutRefusalCasesOf(
+    ...trainingPromptCasesOf(
       workoutDay,
-      `${logEggs(workoutDay).slice(0, -1)} and swap bench press for incline bench press.`,
+      `${logEggs(workoutDay).slice(0, -1)} and swap the triceps pushdown for the barbell curl.`,
     ),
   );
 

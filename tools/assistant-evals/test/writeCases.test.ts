@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { fakeEnvironment } from "./fakeEnvironment.ts";
 import { noUsage, readTool, turnResult, writeTool } from "./helpers.ts";
 import { rowDatabase } from "./rowDatabase.ts";
+import { storedRows } from "./storedTurnRows.ts";
 import { READ_TOOLS } from "../cases/ask.ts";
 import { describeCasesOf } from "../cases/describe.ts";
 import { scratchDayOf, writeCasesOf } from "../cases/writes.ts";
@@ -55,10 +56,10 @@ function dayIn(message: string): string {
 }
 
 describe("the write set", () => {
-  it("should have 32 cases: 20 writes, 1 routine build, 7 Undo, 1 never repeated, 1 yesterday's lunch and 2 during a workout", () => {
+  it("should have 33 cases: 20 writes, 1 routine build, 7 Undo, 1 never repeated, 1 yesterday's lunch, 2 during a workout and 1 build with no goal", () => {
     const idsStarting = (prefix: string) => cases.filter(({ id }) => id.startsWith(prefix)).length;
 
-    expect(cases).toHaveLength(32);
+    expect(cases).toHaveLength(33);
     expect(idsStarting("write-")).toBe(21);
     expect(idsStarting("undo-")).toBe(7);
     expect(idsStarting("never-repeated-")).toBe(1);
@@ -211,7 +212,7 @@ describe("the write set", () => {
 const foodIdOf = (code: string) => `food-${code}`;
 const portionIdOf = (code: string) => `portion-${code}`;
 
-type Rows = Record<string, Record<string, string | number | boolean | null>[]>;
+type Rows = Record<string, Record<string, unknown>[]>;
 type Played = { turns: TurnResult[]; rows: Rows };
 
 const logPortion = (code: string, count: number, extra: Record<string, unknown> = {}): ToolCall =>
@@ -384,23 +385,42 @@ const perfect: Record<string, () => Played> = {
             writeTool("edit_routine", { routine_id: "r", changes: [] }),
           ],
           actions: [["log_entry", 1]],
-          answer: "The eggs are logged. The swap to incline waits until the workout is finished.",
+          answer:
+            "The eggs are logged. The swap to the barbell curl waits until the workout is finished.",
         },
       ],
-      {
+      (turns) => ({
         ...liveWorkoutRows,
         food_log_entries: entriesRows(dayOf("workout-log-eggs-and-swap-an-exercise"), 1),
-      },
+        assistant_messages: storedRows(turns[0] ?? turnResult(), true),
+      }),
     ),
+  "build-a-routine-with-no-goal-asks-for-it": () =>
+    play([
+      {
+        status: "clarify",
+        calls: [
+          readTool("get_training_goals"),
+          readTool("ask_user", {
+            question: "What is your goal and how experienced are you?",
+            quick_replies: ["Look better, intermediate", "Get stronger, beginner"],
+          }),
+        ],
+      },
+    ]),
   "workout-change-the-training-days": () =>
     play(
       [
         {
           calls: [writeTool("update_training_goals", { days_per_week: 5 })],
-          answer: "A workout is in progress, so nothing can change until it ends.",
+          answer:
+            "A workout is in progress. Finish it or discard it on the Train tab, then ask again.",
         },
       ],
-      liveWorkoutRows,
+      (turns) => ({
+        ...liveWorkoutRows,
+        assistant_messages: storedRows(turns[0] ?? turnResult(), false),
+      }),
     ),
   "write-update-entry-count": () =>
     play(
