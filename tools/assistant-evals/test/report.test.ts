@@ -22,6 +22,7 @@ const runOf = (cases: CaseReport[], overrides: Partial<RunReport> = {}): RunRepo
   budgetTokens: 300_000,
   stopReason: null,
   overBudget: false,
+  firstModelCall: null,
   ...overrides,
 });
 
@@ -269,6 +270,26 @@ describe("formatReport", () => {
   it("should print the cost in dollars", () => {
     expect(textOf(runOf(many(1, "ask", "passed"), { costUsdMicros: 123_456 }))).toContain(
       "Cost: USD 0.1235",
+    );
+  });
+});
+
+describe("formatReport, the size of the cached prompt", () => {
+  it("should print the counts of the first model call of the first case", () => {
+    const report = runOf(many(1, "ask", "passed"), {
+      firstModelCall: { inputTokens: 12, cacheCreationInputTokens: 2_500, cacheReadInputTokens: 0 },
+    });
+
+    expect(formatReport(report, summariseSets(report), ["ask"])).toContain(
+      "First model call of the first case: input_tokens 12, cache_creation_input_tokens 2500, cache_read_input_tokens 0",
+    );
+  });
+
+  it("should say so when no model call was read", () => {
+    const report = runOf(many(1, "ask", "passed"));
+
+    expect(formatReport(report, summariseSets(report), ["ask"])).toContain(
+      "First model call of the first case: not read",
     );
   });
 });
