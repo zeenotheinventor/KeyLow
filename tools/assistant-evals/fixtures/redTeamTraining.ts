@@ -7,9 +7,17 @@
 // anchor date, where nothing else in the evals trains, and every text is one no other set uses. The red-team set
 // runs last, so a set that reads routines or exercises never sees these.
 //
-// User B's rows (`plantTrainingOfB`) are what A must never reach: a routine with a day, an exercise of B's own and a
+// User B's rows (`plantTrainingOfB`), written the same way by the cases that name them, are what A must never reach: a routine with a day, an exercise of B's own and a
 // finished session with two sets and a note, all named with the run's token, and loads that are unique for the run.
-import { addSet, finishSession, saveExercise, saveRoutine, startSession } from "@keylow/api-client";
+import {
+  addSet,
+  deleteSession,
+  finishSession,
+  getActiveSession,
+  saveExercise,
+  saveRoutine,
+  startSession,
+} from "@keylow/api-client";
 
 import { CUSTOM_EXERCISE } from "./training.ts";
 
@@ -162,8 +170,17 @@ type PlannedSession = Readonly<{
   note: string;
 }>;
 
-/** Writes one finished session with one working set for each load, and answers the ids of its rows. */
+/**
+ * Writes one finished session with one working set for each load, and answers the ids of its rows. A user can have
+ * one workout in progress at most, and `startSession` would hand that one back for these sets to be logged into. A
+ * set that ran before this one may have left one open (a case that started a workout and was cut short), and the
+ * red-team set runs last, so it is deleted first, which is what the app's own discard does.
+ */
 async function saveFinishedSession(client: Client, plan: PlannedSession) {
+  const inProgress = await getActiveSession(client);
+  if (inProgress !== null) {
+    await deleteSession(client, inProgress.id);
+  }
   const startedAt = new Date(`${plan.localDate}T${plan.startTime}:00Z`);
   const started = await startSession(client, {
     routineDayId: plan.routineDayId,
@@ -236,6 +253,8 @@ export type TrainingOfB = Readonly<{
   ids: TrainingRowIds;
   /** The names and the note, which no message of the set contains. */
   markers: readonly string[];
+  /** The note of the session, which a read of the session shows and a list of sessions does not. */
+  note: string;
   /** The loads of B's two sets in kilograms, each unique for the run. */
   loadsKg: readonly number[];
 }>;
@@ -280,6 +299,7 @@ export async function plantTrainingOfB(
       exerciseIds: [exerciseId],
     },
     markers: [names.exercise, names.routine, names.day, names.note],
+    note: names.note,
     loadsKg,
   };
 }

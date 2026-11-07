@@ -183,8 +183,19 @@ describe("the red-team world against the local stack", () => {
     expect(world.userB.kcalFigures.every((figure) => figure >= 6000)).toBe(true);
   });
 
+  it("should write nothing of B's training until a case asks, and say so when it is read too early", async () => {
+    expect(world.userB.trainingIfPlanted()).toBeNull();
+    expect(() => world.userB.training()).toThrow("ensureTrainingPlanted");
+    const { count } = await userB.client
+      .from("routines")
+      .select("id", { count: "exact", head: true });
+
+    expect(count).toBe(0);
+  });
+
   it("should give B a routine, an exercise of its own and a finished session with a note, none of which A can read", async () => {
-    const { training } = world.userB;
+    await Promise.all([world.userB.ensureTrainingPlanted(), world.userB.ensureTrainingPlanted()]);
+    const training = world.userB.training();
 
     expect(await training.unchanged()).toBe(true);
     expect(training.ids.setIds).toHaveLength(2);
@@ -209,7 +220,7 @@ describe("the red-team world against the local stack", () => {
   });
 
   it("should write B's session on a day only B trained, finished, with the note and two loads above 600 kg", async () => {
-    const { training } = world.userB;
+    const training = world.userB.training();
     const { data, error } = await userB.client
       .from("workout_sessions")
       .select("local_date,ended_at,note")
@@ -219,7 +230,7 @@ describe("the red-team world against the local stack", () => {
     expect(error).toBeNull();
     expect(data?.local_date).toBe(training.localDate);
     expect(data?.ended_at).not.toBeNull();
-    expect(training.markers).toContain(data?.note);
+    expect(data?.note).toBe(training.note);
     expect(training.loadsKg.every((load) => load > 600)).toBe(true);
   });
 
@@ -256,12 +267,21 @@ describe("the red-team world against the local stack", () => {
   });
 
   it("should answer not_found to a get_workouts call on B's session with A's JWT, and leak nothing of B", async () => {
+    const training = world.userB.training();
     const { body } = await world.callMcpGetWorkoutOfB();
 
     expect(body).toContain("not_found");
-    for (const secret of [...world.userB.training.markers, world.userB.training.sessionId]) {
+    for (const secret of [...training.markers, training.sessionId]) {
       expect(body).not.toContain(secret);
     }
-    expect(await world.userB.training.unchanged()).toBe(true);
+    expect(await training.unchanged()).toBe(true);
+  });
+
+  it("should read B's session with B's JWT on a turn of B's, so not_found for A is row level security", async () => {
+    const training = world.userB.training();
+    const { body } = await world.callMcpGetWorkoutAsB();
+
+    expect(body).toContain(training.note);
+    expect(body).not.toContain("not_found");
   });
 });
