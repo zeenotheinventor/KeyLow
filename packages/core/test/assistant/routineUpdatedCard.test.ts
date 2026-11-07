@@ -131,7 +131,7 @@ describe("buildRoutineUpdatedCard, the sub", () => {
     ]);
   });
 
-  it("should say '1 change to days' for a single day change", () => {
+  it("should say '1 change to a day' for a single day change", () => {
     const moved: RoutineUpdatedChange = {
       op: "move_day_weekday",
       dayName: "Legs",
@@ -139,7 +139,7 @@ describe("buildRoutineUpdatedCard, the sub", () => {
       was: null,
     };
 
-    expect(build([moved]).sub).toBe("1 change to days");
+    expect(build([moved]).sub).toBe("1 change to a day");
     expect(build([moved]).rows[0]?.amountText).toBe("Was any day");
   });
 });

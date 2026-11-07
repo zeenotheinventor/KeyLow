@@ -693,6 +693,7 @@ const liveWithNotice = (notice: AssistantNotice): AssistantLiveTurn => ({
   confirm: null,
   answerMeta: null,
   link: null,
+  exerciseMuscles: [],
   askAgain: false,
   status: null,
   notice,

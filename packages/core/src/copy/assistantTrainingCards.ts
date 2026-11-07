@@ -2,11 +2,65 @@ import { describeSets } from "./bodyMap";
 import { describeRepRange } from "./routines";
 
 /*
- * The words of the assistant's training cards and refusals, from the approved canvas "Ki-Lo assistant
- * screens" (assistant-card routine-updated, assistant confirm-training, assistant workout-in-progress). A
- * string marked NOT ON THE CANVAS is a draft in the board's style that the designers have not drawn, and
- * waits for Zee's approval. A routine, a day and an exercise name are health data, so a sentence here only
- * repeats a name it was given and never logs one.
+ * The words of the assistant's training cards, from the approved canvas "Ki-Lo assistant screens"
+ * (assistant-card routine-active and routine-archived, assistant confirm-training). A string marked NOT ON
+ * THE CANVAS is a draft in the board's style that the designers have not drawn, and waits for Zee's
+ * approval. Each ticket keeps its own block under its own heading.
+ */
+
+// KEY-903: set_active_routine and archive_routine.
+
+/** The link under a routine card, which opens the routine in its editor. */
+export const OPEN_IN_ROUTINE_EDITOR = "Open in routine editor";
+
+/** "Push Pull Legs is your active routine". */
+export const describeRoutineActiveTitle = (name: string): string =>
+  `${name} is your active routine`;
+
+/** "Was Upper Lower · your week plans from it today", and with no routine active before, "Your week plans from it today". */
+export const describeRoutineActiveSub = (previousName: string | null): string =>
+  previousName === null
+    ? "Your week plans from it today"
+    : `Was ${previousName} · your week plans from it today`;
+
+/** NOT ON THE CANVAS: the fact the changes list shows for a routine made active, "was Upper Lower". */
+export const describeRoutineActiveChangeDetail = (previousName: string): string =>
+  `was ${previousName}`;
+
+/** The line under "Undone": "Upper Lower is your active routine again", or "No routine is active" when none was. */
+export const describeRoutineActiveUndone = (previousName: string | null): string =>
+  previousName === null ? "No routine is active" : `${previousName} is your active routine again`;
+
+/** NOT ON THE CANVAS: the title of the card after the active routine is cleared. */
+export const ROUTINE_CLEARED_TITLE = "No routine is active";
+
+/** NOT ON THE CANVAS: the line under that title, "Was Upper Lower". */
+export const describeRoutineClearedSub = (previousName: string): string => `Was ${previousName}`;
+
+/** "Archived routine Upper Lower". */
+export const describeRoutineArchivedTitle = (name: string): string => `Archived routine ${name}`;
+
+export const ROUTINE_ARCHIVED_SUB = "Sessions you logged with it stay in your history";
+
+/** "Upper Lower is back in your routines". */
+export const describeRoutineArchivedUndone = (name: string): string =>
+  `${name} is back in your routines`;
+
+/** The archive confirmation: the question is the model's own words, and these are its two buttons. */
+export const CONFIRM_ARCHIVE_ROUTINE_BUTTONS = {
+  confirm: "Archive routine",
+  cancel: "Keep it",
+};
+
+/** "Archive Upper Lower? It leaves your routine list. Sessions you logged with it stay in your history." */
+export const describeConfirmArchiveRoutineQuestion = (name: string): string =>
+  `Archive ${name}? It leaves your routine list. Sessions you logged with it stay in your history.`;
+
+// KEY-902: edit_routine, its card, its removal question and the refusals that follow a workout starting.
+
+/*
+ * A routine, a day and an exercise name are health data, so a sentence here only repeats a name it was
+ * given and never logs one.
  */
 
 const SEPARATOR = " · ";
@@ -40,13 +94,11 @@ export const describeRoutineUpdatedSubForDay = (dayName: string, count: number):
 
 /** "3 changes to days": every change is to the days themselves. */
 export const describeRoutineDayChangeCount = (count: number): string =>
-  count === 1 ? "1 change to days" : `${count} changes to days`;
+  count === 1 ? "1 change to a day" : `${count} changes to days`;
 
 /** The line under "Undone": "Put Push Pull Legs back as it was". */
 export const describeRoutineUpdatedUndone = (routineName: string): string =>
   `Put ${routineName} back as it was`;
-
-export const OPEN_IN_ROUTINE_EDITOR = "Open in routine editor";
 
 /** What a routine exercise is given, for the rows of a card. A null target RIR is one nobody set. */
 export type RoutineTargetWords = {

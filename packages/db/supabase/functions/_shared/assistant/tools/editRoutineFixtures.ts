@@ -114,6 +114,9 @@ export function routineWorld(options: RoutineWorldOptions = {}) {
   const saves: { name: string; days: Row[] }[] = [];
   let nextId = 1;
 
+  // After the next save lands, every read of a routine fails, as a connection lost between the write and the read.
+  let breakReadsAfterSave = false;
+
   const save = (args: Record<string, unknown>) => {
     const routine = tables["routines"]?.find((row) => row["id"] === args["p_routine_id"]);
     if (routine === undefined) {
@@ -144,6 +147,10 @@ export function routineWorld(options: RoutineWorldOptions = {}) {
         };
       }),
     }));
+    if (breakReadsAfterSave) {
+      breakReadsAfterSave = false;
+      data.failingTables = { routines: "57014" };
+    }
     return { data: routine["id"], error: null };
   };
 
@@ -189,6 +196,9 @@ export function routineWorld(options: RoutineWorldOptions = {}) {
     // For a call that asks nothing.
     ctx: contextOn(earlier, null),
     routine: () => tables["routines"]?.[0] ?? {},
+    breakReadsAfterNextSave: () => {
+      breakReadsAfterSave = true;
+    },
   };
 }
 

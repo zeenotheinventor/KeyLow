@@ -98,6 +98,38 @@ describe("useAssistantConversation", () => {
     expect(JSON.stringify(result.current.data?.items)).not.toContain("Sentinel routine 4471");
   });
 
+  it("should keep the object of an exercise's muscles when the conversation is read again", async () => {
+    const state = createAssistantFakeState();
+    state.messages = state.messages.map((row) =>
+      row.id === "m3"
+        ? {
+            ...row,
+            display: {
+              "call-1": {
+                exerciseMuscles: {
+                  exerciseName: "Seated Leg Curl",
+                  muscles: [{ muscle_id: "hamstrings", role: "primary" }],
+                },
+              },
+            },
+          }
+        : row,
+    );
+    installAssistantFake(server, state);
+    const { wrapper } = createWrapper();
+    const { result } = renderHook(() => useAssistantConversation(), { wrapper });
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+    const exercise = result.current.data?.items.find((item) => item.kind === "exercise_muscles");
+    expect(exercise).toBeDefined();
+
+    const read = await result.current.refetch();
+
+    // The cards are memoised on this object, so a read that changed nothing must not replace it.
+    expect(read.data?.items.find((item) => item.kind === "exercise_muscles")).toBe(exercise);
+  });
+
   it("should show the card as undone once every one of its actions is", async () => {
     const state = createAssistantFakeState();
     state.actions = state.actions.map((row) =>

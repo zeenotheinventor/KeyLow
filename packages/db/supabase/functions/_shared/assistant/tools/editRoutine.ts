@@ -17,12 +17,7 @@ import {
   exerciseTargetFor,
   routineFingerprint,
 } from "../../core.ts";
-import {
-  getCurrentTrainingGoals,
-  getRoutine,
-  readExercisesById,
-  saveRoutine,
-} from "../../repos.ts";
+import { getCurrentTrainingGoals, getRoutine, readExercisesById } from "../../repos.ts";
 import { notFound } from "./entryWrite.ts";
 
 import type {
@@ -210,8 +205,11 @@ const addNumbersNeedGoals = (index: number): WriteRunOutput =>
 
 const removeDayAnswer = (routineId: string): WriteRunOutput => ({
   data: {
+    applied: false,
     changed: false,
     reason: REMOVE_DAY_REFUSAL,
+    instruction:
+      "None of the changes in this call were applied. Tell the user, then send the other changes again without remove_day.",
   },
   structured: {
     link: {
@@ -351,7 +349,11 @@ async function planOf(ctx: ToolContext, input: EditRoutineInput): Promise<Plan> 
             { goal: goals.goal, experience: goals.experience, mechanic },
             GOAL_PRESETS_V1,
           );
-    if (preset === null && isPresetNeeded(change)) {
+    // With no goal there is no preset, and a target RIR may stay unset, so only the sets and the reps are needed.
+    if (
+      preset === null &&
+      (change.sets === null || change.rep_min === null || change.rep_max === null)
+    ) {
       return { ok: false, output: addNumbersNeedGoals(index) };
     }
     addedTargets.set(index, {
@@ -431,30 +433,76 @@ function cardChangesOf(plan: Extract<Plan, { ok: true }>, input: EditRoutineInpu
           targetRir: planned.target_rir,
         };
 
-  return input.changes.flatMap((change, index): RoutineUpdatedChange[] => {
+  // An exercise this call puts in (an add or a swap) can be changed, swapped or removed again by a later
+  // change of the same call. Its row is then folded into the one row of what ended up there, with the numbers
+  // the routine was saved with, so the card never says "Added, 3 sets" over 5 stored sets.
+  type PutIn = { dayKey: string | null; exerciseId: string };
+  type Entry = { row: RoutineUpdatedChange; putIn: PutIn | null };
+  const entries: Entry[] = [];
+  const latestPutIn = (dayKey: string | null, exerciseId: string | null): Entry | undefined =>
+    entries.findLast(
+      ({ putIn }) => putIn !== null && putIn.dayKey === dayKey && putIn.exerciseId === exerciseId,
+    );
+  const others = (row: RoutineUpdatedChange) => entries.push({ row, putIn: null });
+
+  for (const [index, change] of input.changes.entries()) {
     const dayName = dayNameOf(change.day_id);
     switch (change.op) {
       case "add": {
         const targets = addedTargets.get(index);
-        return targets === undefined
-          ? []
-          : [{ op: "add", dayName, exerciseName: nameOf(change.exercise_id), targets }];
+        if (targets !== undefined && change.exercise_id !== null) {
+          entries.push({
+            row: { op: "add", dayName, exerciseName: nameOf(change.exercise_id), targets },
+            putIn: { dayKey: change.day_id, exerciseId: change.exercise_id },
+          });
+        }
+        break;
       }
-      case "swap":
-        return change.exercise_id === change.new_exercise_id
-          ? []
-          : [
-              {
-                op: "swap",
-                dayName,
-                oldExerciseName: nameOf(change.exercise_id),
-                newExerciseName: nameOf(change.new_exercise_id),
-                targets: wordsOf(beforeExercise(change)),
-              },
-            ];
-      case "remove":
-        return [{ op: "remove", dayName, exerciseName: nameOf(change.exercise_id) }];
+      case "swap": {
+        const earlier = latestPutIn(change.day_id, change.exercise_id);
+        if (change.exercise_id === change.new_exercise_id || change.new_exercise_id === null) {
+          break;
+        }
+        if (earlier !== undefined && earlier.putIn !== null) {
+          // Added or swapped in by this call, and swapped again: one row for the exercise that ended up there.
+          earlier.putIn.exerciseId = change.new_exercise_id;
+          if (earlier.row.op === "add") {
+            earlier.row.exerciseName = nameOf(change.new_exercise_id);
+          } else if (earlier.row.op === "swap") {
+            earlier.row.newExerciseName = nameOf(change.new_exercise_id);
+          }
+          break;
+        }
+        entries.push({
+          row: {
+            op: "swap",
+            dayName,
+            oldExerciseName: nameOf(change.exercise_id),
+            newExerciseName: nameOf(change.new_exercise_id),
+            targets: wordsOf(beforeExercise(change)),
+          },
+          putIn: { dayKey: change.day_id, exerciseId: change.new_exercise_id },
+        });
+        break;
+      }
+      case "remove": {
+        const earlier = latestPutIn(change.day_id, change.exercise_id);
+        if (earlier === undefined) {
+          others({ op: "remove", dayName, exerciseName: nameOf(change.exercise_id) });
+        } else if (earlier.row.op === "add") {
+          // Added and removed in one call: nothing happened.
+          entries.splice(entries.indexOf(earlier), 1);
+        } else if (earlier.row.op === "swap") {
+          // Swapped in and removed in one call: the old exercise is what was removed.
+          earlier.row = { op: "remove", dayName, exerciseName: earlier.row.oldExerciseName };
+          earlier.putIn = null;
+        }
+        break;
+      }
       case "set_targets": {
+        if (latestPutIn(change.day_id, change.exercise_id) !== undefined) {
+          break;
+        }
         const was = wordsOf(beforeExercise(change));
         const now =
           was === null
@@ -472,30 +520,35 @@ function cardChangesOf(plan: Extract<Plan, { ok: true }>, input: EditRoutineInpu
           now.repMin === was.repMin &&
           now.repMax === was.repMax &&
           now.targetRir === was.targetRir;
-        return isUnchanged
-          ? []
-          : [{ op: "set_targets", dayName, exerciseName: nameOf(change.exercise_id), now, was }];
+        if (!isUnchanged) {
+          others({
+            op: "set_targets",
+            dayName,
+            exerciseName: nameOf(change.exercise_id),
+            now,
+            was,
+          });
+        }
+        break;
       }
       case "add_day": {
         const ref = change.day_ref;
-        return ref === null || change.name === null
-          ? []
-          : [
-              {
-                op: "add_day",
-                dayName: change.name,
-                weekday: change.weekday,
-                exerciseCount: input.changes.filter(
-                  (other) => other.op === "add" && other.day_id === ref,
-                ).length,
-              },
-            ];
+        if (ref !== null && change.name !== null) {
+          others({
+            op: "add_day",
+            dayName: change.name,
+            weekday: change.weekday,
+            exerciseCount: input.changes.filter(
+              (other) => other.op === "add" && other.day_id === ref,
+            ).length,
+          });
+        }
+        break;
       }
       case "update_day": {
         const current = beforeDay(change.day_id);
-        const rows: RoutineUpdatedChange[] = [];
         if (change.name !== null && change.name !== current?.name) {
-          rows.push({
+          others({
             op: "rename_day",
             oldName: current?.name ?? dayName,
             newName: change.name,
@@ -503,7 +556,7 @@ function cardChangesOf(plan: Extract<Plan, { ok: true }>, input: EditRoutineInpu
           });
         }
         if (change.weekday !== null && change.weekday !== current?.weekday) {
-          rows.push({
+          others({
             op: "move_day_weekday",
             dayName,
             weekday: change.weekday,
@@ -513,14 +566,63 @@ function cardChangesOf(plan: Extract<Plan, { ok: true }>, input: EditRoutineInpu
         const placeNow = after.days.findIndex((day) => day.id === change.day_id);
         const placeWas = before.days.findIndex((day) => day.id === change.day_id);
         if (change.position !== null && placeNow !== placeWas) {
-          rows.push({ op: "reorder_day", dayName, place: placeNow + 1 });
+          others({ op: "reorder_day", dayName, place: placeNow + 1 });
         }
-        return rows;
+        break;
       }
       case "remove_day":
-        return [];
+        break;
     }
+  }
+
+  // The numbers of an exercise put in are the ones in the routine as saved. The day of a day this call added has
+  // no id yet, so it is found by its name, and a number that cannot be found keeps the one the call resolved.
+  const savedNumbers = (put: PutIn) => {
+    const day = after.days.find((candidate) =>
+      put.dayKey !== null && candidate.id === put.dayKey
+        ? true
+        : candidate.id === null && candidate.name === addedDayNames.get(put.dayKey ?? ""),
+    );
+    return wordsOf(day?.exercises.find(({ exercise_id }) => exercise_id === put.exerciseId));
+  };
+  return entries.map(({ row, putIn }): RoutineUpdatedChange => {
+    const saved = putIn === null ? null : savedNumbers(putIn);
+    if (saved === null) {
+      return row;
+    }
+    if (row.op === "add") {
+      return { ...row, targets: saved };
+    }
+    return row.op === "swap" ? { ...row, targets: saved } : row;
   });
+}
+
+// Saves the draft through `save_routine`, which writes the routine, its days and their exercises or none of them,
+// and is the call the app's own editor makes. It is called here and not through the repo's `saveRoutine`, which
+// reads the routine back after the call: a read that fails after the write landed would answer `tool_failed`
+// for a write that is done, and the model would repeat it. A failed call means nothing was written, and a
+// refused one names the code only, because the message can quote the routine. The draft is what core's
+// `applyRoutineChanges` returned (names cleaned and every bound checked), or one this tool stored.
+async function saveDraft(ctx: ToolContext, routineId: string, draft: RoutineDraft): Promise<void> {
+  const { error } = await ctx.caller.rpc("save_routine", {
+    p_routine_id: routineId,
+    p_routine: { name: draft.name },
+    p_days: draft.days.map((day) => ({
+      id: day.id,
+      weekday: day.weekday,
+      name: day.name,
+      exercises: day.exercises.map((exercise) => ({
+        exercise_id: exercise.exercise_id,
+        target_sets: exercise.target_sets,
+        rep_min: exercise.rep_min,
+        rep_max: exercise.rep_max,
+        target_rir: exercise.target_rir,
+      })),
+    })),
+  });
+  if (error) {
+    throw new Error(`Could not save the routine (${error.code || "no code"})`);
+  }
 }
 
 // The previous draft as the store holds it, which is JSON the person's own routine was read from. Read
@@ -587,10 +689,13 @@ export const editRoutineTool: WriteToolDefinition<EditRoutineInput> = {
     `${maxChanges} changes in one call, applied in order, as one edit. Each change has an op. ` +
     "add puts exercise_id in a day (position null for the end), and when the user gave no sets, reps or " +
     "RIR leave them null and Ki-Lo uses its preset for their goal: send a number only when the user said it. " +
+    "If the user has no goal saved there is no preset: sets and reps are then needed, and the answer " +
+    "invalid_input with the rule numbers_need_goals means ask the user for them or point them to the Goal " +
+    "screen, while a null RIR is then left unset. " +
     "swap takes exercise_id out for new_exercise_id and keeps the old one's sets, reps and RIR. remove takes " +
     "an exercise out of a day. set_targets changes sets, rep_min, rep_max or target_rir, and a null keeps " +
-    "that number, so set_targets cannot clear a RIR: to clear one, remove the exercise and then add it " +
-    "again with a null target_rir at the old position. add_day adds a day with a day_ref of your own, a " +
+    "that number. A RIR cannot be cleared from here: set_targets keeps a null and an add with a null RIR " +
+    "takes the preset, so tell the user to clear it in the routine editor. add_day adds a day with a day_ref of your own, a " +
     "name and a weekday (0 Monday to 6 Sunday, null any day), and later changes in the same call can use " +
     "that day_ref as their day_id. update_day renames a day, moves it to a weekday, or moves it among the " +
     "days, and a null keeps that field, so update_day cannot clear a weekday. A day cannot be removed " +
@@ -601,7 +706,8 @@ export const editRoutineTool: WriteToolDefinition<EditRoutineInput> = {
     "(by its place in the list) and which rule, so correct that change and call again, or ask the user. " +
     "When a call removes more than one exercise it first answers needs_confirmation with a " +
     "confirmation_id: in the same response as the call, before it, write the question in your own words, " +
-    "naming the exercises, the day and the routine, and when they say yes call again with the same input " +
+    "naming the exercises, the day and the routine, and also name any other changes in the call, because the " +
+    "buttons name only the removals. When they say yes call again with the same input " +
     "and that confirmation_id. When they say no, do not call again. Removing one exercise, adding, " +
     "swapping, changing numbers and changing days ask nothing. If the answer is workout_in_progress " +
     "nothing was changed: tell the user their workout is in progress so nothing in their training can " +
@@ -648,29 +754,20 @@ export const editRoutineTool: WriteToolDefinition<EditRoutineInput> = {
     if (routineFingerprint(before) === fingerprintAfter || cardChanges.length === 0) {
       return { data: { changed: false }, target: null };
     }
-    try {
-      await saveRoutine(ctx.caller, { id: input.routine_id, draft: after });
-    } catch (caught) {
-      // A RangeError from the repo is a routine it refuses before any request. It quotes no value.
-      if (caught instanceof RangeError) {
-        return refused([{ index: null, rule: "routine_invalid" }]);
-      }
-      throw caught;
-    }
-    // The write has landed. Nothing below may throw, or the model would make the changes a second time.
+    // All of the answer is built before the write, from the draft this call already has, so nothing after the
+    // write can throw and make the model repeat it.
+    const card = buildRoutineUpdatedCard({
+      routineId: stored.id,
+      routineName: stored.name,
+      changes: cardChanges,
+    });
     const undo: JsonValue = JSON.parse(
       JSON.stringify({ previous: before, fingerprint: fingerprintAfter }),
     );
+    await saveDraft(ctx, input.routine_id, after);
     return {
       data: { updated: true, change_count: cardChanges.length },
-      structured: {
-        card: buildRoutineUpdatedCard({
-          routineId: stored.id,
-          routineName: stored.name,
-          changes: cardChanges,
-        }),
-        undo,
-      },
+      structured: { card, undo },
       target: { targetId: stored.id },
     };
   },
@@ -704,14 +801,7 @@ export const editRoutineTool: WriteToolDefinition<EditRoutineInput> = {
     if (await isLoggedFrom(ctx, addedDayIds)) {
       return { status: "unavailable", reason: "logged" };
     }
-    try {
-      await saveRoutine(ctx.caller, { id: targetId, draft: previous.data });
-    } catch (caught) {
-      if (caught instanceof RangeError) {
-        return "unavailable";
-      }
-      throw caught;
-    }
+    await saveDraft(ctx, targetId, previous.data);
     return "undone";
   },
 };

@@ -932,8 +932,9 @@ async function conclude(run: Run, reached: Ending): Promise<Ending> {
     if (citation !== null || estimate !== null) {
       emit(run, { type: "answer_meta", citation, estimate });
     }
-    // Once, however many writes of the turn were refused, and after the words that led to it.
-    if (run.askAgain) {
+    // Once, however many writes of the turn were refused, and after the words that led to it. Not when a write of
+    // the turn landed: sending the message again would repeat it, and the model's words say what waits.
+    if (run.askAgain && run.landedWrites === 0) {
       emit(run, { type: "ask_again" });
     }
   }

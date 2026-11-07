@@ -27,6 +27,8 @@ import { suggestNextSessionTool } from "./tools/suggestNextSession.ts";
 import { updateEntryTool } from "./tools/updateEntry.ts";
 import { updateRecipeTool } from "./tools/updateRecipe.ts";
 import { updateTargetsTool } from "./tools/updateTargets.ts";
+import { setActiveRoutineTool } from "./tools/setActiveRoutine.ts";
+import { archiveRoutineTool } from "./tools/archiveRoutine.ts";
 import { strictSchemaProblem } from "./tool.ts";
 
 import type { ToolDefinition, ToolRegistry } from "./tool.ts";
@@ -84,6 +86,8 @@ const toolDefinitions: readonly ToolDefinition[] = [
   getExerciseProgressTool,
   getMuscleStateTool,
   suggestNextSessionTool,
+  setActiveRoutineTool,
+  archiveRoutineTool,
   editRoutineTool,
   askUserTool,
 ];

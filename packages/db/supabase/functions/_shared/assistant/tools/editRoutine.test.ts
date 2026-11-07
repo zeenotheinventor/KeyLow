@@ -120,19 +120,34 @@ Deno.test(
 );
 
 Deno.test(
-  "the description says a null keeps a number, how a RIR is cleared, that a weekday cannot be, and what to say in a workout",
+  "the description says a null keeps a number, that a RIR and a weekday cannot be cleared from here, and what to say in a workout",
   () => {
     const { description } = editRoutineTool;
     assertStringIncludes(description, "a null keeps that number");
-    assertStringIncludes(description, "cannot clear a RIR");
-    assertStringIncludes(description, "remove the exercise and then add it again");
-    assertStringIncludes(description, "at the old position");
+    assertStringIncludes(description, "A RIR cannot be cleared from here");
     assertStringIncludes(description, "update_day cannot clear a weekday");
     assertStringIncludes(description, "routine editor");
     assertStringIncludes(description, "workout_in_progress");
     assertStringIncludes(description, "finish or discard it on the Train tab");
   },
 );
+
+Deno.test("the description no longer teaches a remove then an add to clear a RIR", () => {
+  const { description } = editRoutineTool;
+  assertFalse(description.includes("add it again"));
+  assertFalse(description.includes("at the old position"));
+});
+
+Deno.test(
+  "the description tells the model to name the other changes when it asks about removals",
+  () => {
+    assertStringIncludes(editRoutineTool.description, "also name any other changes in the call");
+  },
+);
+
+Deno.test("the description says what to do when there is no goal", () => {
+  assertStringIncludes(editRoutineTool.description, "Goal screen");
+});
 
 Deno.test("the schema asks for the routine and the changes, with the confirmation id", () => {
   const schema = toJsonSchema(editRoutineTool);
@@ -440,7 +455,13 @@ Deno.test(
     const result = await run(world, [change({ op: "remove_day", day_id: ids.legs })]);
 
     assert(result.status === "ok");
-    assertEquals(payloadOf(result), { changed: false, reason: REMOVE_DAY_REFUSAL });
+    assertEquals(payloadOf(result), {
+      applied: false,
+      changed: false,
+      reason: REMOVE_DAY_REFUSAL,
+      instruction:
+        "None of the changes in this call were applied. Tell the user, then send the other changes again without remove_day.",
+    });
     assertEquals(structuredOf(result), {
       link: {
         label: "Open in routine editor",
@@ -461,7 +482,13 @@ Deno.test("a call that asks for a day to go applies none of its other changes", 
     change({ op: "remove_day", day_id: ids.push }),
   ]);
 
-  assertEquals(payloadOf(result), { changed: false, reason: REMOVE_DAY_REFUSAL });
+  assertEquals(payloadOf(result), {
+    applied: false,
+    changed: false,
+    reason: REMOVE_DAY_REFUSAL,
+    instruction:
+      "None of the changes in this call were applied. Tell the user, then send the other changes again without remove_day.",
+  });
   assertEquals(world.saves.length, 0);
 });
 
@@ -869,3 +896,171 @@ Deno.test("a failed save answers tool_failed, releases the slot, and leaks no na
   assertFalse(result.text.includes("squat"));
   assertFalse(world.reported.some(({ caught }) => String(caught).includes("Barbell squat")));
 });
+
+Deno.test(
+  "a read that fails after the save landed still answers the card and the undo, and keeps the slot",
+  async () => {
+    const world = routineWorld();
+    world.breakReadsAfterNextSave();
+
+    const result = await run(world, boardChanges);
+
+    assert(result.status === "ok");
+    assertEquals(rowsOf(result).length, 4);
+    assertEquals(world.store.actions.length, 1);
+    assertEquals(world.saves.length, 1);
+    const { undo } = structuredOf(result);
+    assert(isRecord(undo) && typeof undo["fingerprint"] === "string");
+  },
+);
+
+Deno.test(
+  "a save that fails answers tool_failed with nothing written, because the read-back is gone",
+  async () => {
+    const world = routineWorld();
+    const before = world.saves.length;
+    const failing = {
+      ...world.ctx,
+      caller: new Proxy(world.ctx.caller, {
+        get: (target, key) =>
+          key === "rpc"
+            ? () => Promise.resolve({ data: null, error: { code: "XX000", message: "x" } })
+            : Reflect.get(target, key),
+      }),
+    };
+
+    const result = await executeTool(failing, "edit_routine", edit(boardChanges));
+
+    assertEquals(result.status === "error" ? result.code : "", "tool_failed");
+    assertEquals(world.saves.length, before);
+  },
+);
+
+Deno.test("an Undo whose read fails after the restore landed still answers undone", async () => {
+  const world = routineWorld();
+  const { actionId } = await editAndKeep(world, boardChanges);
+  world.breakReadsAfterNextSave();
+
+  const outcome = await undoAction(world.ctx, actionId);
+
+  assertEquals(outcome, { status: "undone", actionId });
+  assertEquals(world.saves.length, 2);
+});
+
+const exerciseLines = (world: World, dayNumber: number) => savedExercises(world, dayNumber);
+
+Deno.test(
+  "an exercise added and then changed in one call is one Added row with the numbers that were stored",
+  async () => {
+    const world = routineWorld();
+
+    const result = await run(world, [
+      change({ op: "add", day_id: ids.legs, exercise_id: ids.legExtension, ...withNumbers }),
+      change({ op: "set_targets", day_id: ids.legs, exercise_id: ids.legExtension, sets: 5 }),
+    ]);
+
+    assertEquals(rowsOf(result), [["Added Leg extension", "Legs · 5 sets, 8 to 12 reps, RIR 2"]]);
+    assertEquals(cardOf(result)["changeDetail"], "1 change");
+    assertEquals(cardOf(result)["sub"], "Legs · 1 change");
+    assertEquals(exerciseLines(world, 1).at(-1), [ids.legExtension, 5, 8, 12, 2]);
+  },
+);
+
+Deno.test(
+  "an exercise added and then swapped in one call is one Added row for the exercise that ended up there",
+  async () => {
+    const world = routineWorld();
+
+    const result = await run(world, [
+      change({ op: "add", day_id: ids.legs, exercise_id: ids.legExtension, ...withNumbers }),
+      change({
+        op: "swap",
+        day_id: ids.legs,
+        exercise_id: ids.legExtension,
+        new_exercise_id: ids.hackSquat,
+      }),
+    ]);
+
+    assertEquals(rowsOf(result), [["Added Hack squat", "Legs · 3 sets, 8 to 12 reps, RIR 2"]]);
+    assertEquals(exerciseLines(world, 1).at(-1)?.[0], ids.hackSquat);
+  },
+);
+
+Deno.test("an exercise added and then removed in one call leaves no row for either", async () => {
+  const world = routineWorld();
+
+  const result = await run(world, [
+    change({ op: "add", day_id: ids.legs, exercise_id: ids.legExtension, ...withNumbers }),
+    change({ op: "remove", day_id: ids.legs, exercise_id: ids.legExtension }),
+    change({ op: "update_day", day_id: ids.push, name: "Chest" }),
+  ]);
+
+  assertEquals(rowsOf(result), [["Renamed Push to Chest", "Monday"]]);
+  assertEquals(cardOf(result)["changeDetail"], "1 change");
+});
+
+Deno.test("a call that adds an exercise and removes it again changes nothing", async () => {
+  const world = routineWorld();
+
+  const result = await run(world, [
+    change({ op: "add", day_id: ids.legs, exercise_id: ids.legExtension, ...withNumbers }),
+    change({ op: "remove", day_id: ids.legs, exercise_id: ids.legExtension }),
+  ]);
+
+  assertEquals(payloadOf(result), { changed: false });
+  assertEquals(world.saves.length, 0);
+  assertEquals(world.store.actions.length, 0);
+});
+
+Deno.test("an added exercise with sets and reps and no goal is added with no RIR", async () => {
+  const world = routineWorld({ noGoals: true });
+
+  const result = await run(world, [
+    change({
+      op: "add",
+      day_id: ids.legs,
+      exercise_id: ids.legExtension,
+      sets: 3,
+      rep_min: 12,
+      rep_max: 12,
+    }),
+  ]);
+
+  assertEquals(result.status, "ok");
+  assertEquals(exerciseLines(world, 1).at(-1), [ids.legExtension, 3, 12, 12, null]);
+  assertEquals(rowsOf(result), [["Added Leg extension", "Legs · 3 sets, 12 reps"]]);
+});
+
+Deno.test(
+  "an added exercise with no sets or reps and no goal still answers numbers_need_goals",
+  async () => {
+    const world = routineWorld({ noGoals: true });
+
+    const missingReps = await run(world, [
+      change({
+        op: "add",
+        day_id: ids.legs,
+        exercise_id: ids.legExtension,
+        sets: 3,
+        target_rir: 1,
+      }),
+    ]);
+    const missingSets = await run(world, [
+      change({
+        op: "add",
+        day_id: ids.legs,
+        exercise_id: ids.legExtension,
+        rep_min: 8,
+        rep_max: 12,
+      }),
+    ]);
+
+    for (const result of [missingReps, missingSets]) {
+      assertEquals(payloadOf(result), {
+        error: "invalid_input",
+        problems: [{ index: 0, rule: "numbers_need_goals" }],
+      });
+    }
+    assertEquals(world.saves.length, 0);
+  },
+);

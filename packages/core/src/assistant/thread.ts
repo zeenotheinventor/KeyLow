@@ -1,11 +1,13 @@
 import { z } from "zod";
 
 import { assistantCardLinkSchema, assistantCardSchema } from "./card";
+import { assistantExerciseMusclesSchema } from "./exerciseMusclesCard";
 import { assistantNoticeSchema } from "./notice";
 import { undoStateOfActions } from "./undoState";
 import { ASSISTANT_CARD_KINDS_WITHOUT_UNDO, mergeAssistantCards } from "./writeToolWords";
 
 import type { AssistantCard, AssistantCardLink } from "./card";
+import type { AssistantExerciseMuscles } from "./exerciseMusclesCard";
 import type { AssistantNotice } from "./notice";
 import type { AssistantActionState } from "./undoState";
 
@@ -72,6 +74,8 @@ export type AssistantThreadItem =
   | { kind: "notice"; id: string; notice: AssistantNotice }
   /** A link on its own, under the words of an answer that changed nothing (`assistant-card · routine-updated`, Removing a day). */
   | { kind: "link"; id: string; link: AssistantCardLink }
+  /** The muscles an exercise works, drawn as a figure under the reply (`assistant-card · exercise-muscles`). One item for each exercise, in call order, never merged. */
+  | { kind: "exercise_muscles"; id: string; exercise: AssistantExerciseMuscles }
   /** The Ask again quick reply at the end of a turn (`assistant · workout-in-progress`). `answered` once a later turn exists, and then the chip is gone. */
   | { kind: "ask_again"; id: string; answered: boolean };
 
@@ -118,6 +122,8 @@ const displayEntrySchema = z.object({
     })
     .optional(),
   link: assistantCardLinkSchema.optional(),
+  // A non-strict object, so an older app reading a stored row drops this key and draws nothing.
+  exerciseMuscles: assistantExerciseMusclesSchema.optional(),
   askAgain: z.boolean().optional(),
   citation: z.string().min(1).nullish(),
   estimate: z.string().min(1).nullish(),
@@ -184,7 +190,9 @@ function itemsOfTurn(
   context: TurnContext,
 ): AssistantThreadItem[] {
   const items: DraftItem[] = [];
-  // A link and Ask again are drawn at the end of the turn, under its words, as the boards show them.
+  // The muscles of an exercise, a link and Ask again are drawn at the end of the turn, under its words, as
+  // the boards show them: the reply, the muscles, the link, a notice, then Ask again.
+  const exerciseMuscles: AssistantThreadItem[] = [];
   const links: AssistantThreadItem[] = [];
   const askAgains: AssistantThreadItem[] = [];
   const citations: (string | null | undefined)[] = [];
@@ -245,6 +253,13 @@ function itemsOfTurn(
         if (outcome.confirm !== undefined) {
           items.push({ kind: "confirm", id, ...outcome.confirm, answered: context.answered });
         }
+        if (outcome.exerciseMuscles !== undefined) {
+          exerciseMuscles.push({
+            kind: "exercise_muscles",
+            id: `${id}:exerciseMuscles`,
+            exercise: outcome.exerciseMuscles,
+          });
+        }
         if (outcome.link !== undefined) {
           links.push({ kind: "link", id: `${id}:link`, link: outcome.link });
         }
@@ -260,7 +275,7 @@ function itemsOfTurn(
     turn,
     context,
     { citation: distinct(citations), estimate: distinct(estimates) },
-    { links, askAgains },
+    { exerciseMuscles, links, askAgains },
   );
 }
 
@@ -269,7 +284,11 @@ function finishTurn(
   turn: readonly AssistantStoredMessage[],
   context: TurnContext,
   meta: AssistantAnswerMeta,
-  trailing: { links: AssistantThreadItem[]; askAgains: AssistantThreadItem[] },
+  trailing: {
+    exerciseMuscles: AssistantThreadItem[];
+    links: AssistantThreadItem[];
+    askAgains: AssistantThreadItem[];
+  },
 ): AssistantThreadItem[] {
   const status = turn[0]?.turnStatus;
   const items = drafts.map((item): AssistantThreadItem => {
@@ -295,11 +314,17 @@ function finishTurn(
       stopped: status === "stopped",
     };
   }
-  items.push(...trailing.links);
+  items.push(...trailing.exerciseMuscles, ...trailing.links);
   if (status === "failed" || status === "refused") {
     items.push({ kind: "notice", id: `${turn[0]?.turnId}:notice`, notice: failedTurnNotice });
   }
-  items.push(...trailing.askAgains);
+  // Ask again is a convenience for a turn that ended complete with nothing written: the live turn sends it
+  // only then, so a reopened turn draws it only then too. Sending the message again after a write landed
+  // would repeat that write, and a question or a failed turn has its own way on.
+  const wroteSomething = drafts.some((item) => item.kind === "draft_card");
+  if (status === "complete" && !wroteSomething) {
+    items.push(...trailing.askAgains);
+  }
   return items;
 }
 

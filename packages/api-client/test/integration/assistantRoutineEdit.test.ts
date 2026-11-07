@@ -1,4 +1,4 @@
-import { SUGGEST_PARAMS_V2 } from "@keylow/core/training";
+import { SUGGEST_PARAMS_V2, draftOfStoredRoutine, routineFingerprint } from "@keylow/core/training";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { dayIdsOf, saveExercise, saveRoutine as saveRoutineRows } from "./support/training";
@@ -173,5 +173,37 @@ describe("an accepted suggestion and a routine saved again", () => {
       params_version: SUGGEST_PARAMS_V2.version,
     });
     expect(read.suggestions[0]?.exercises[0]?.exercise_id).toBe(press.id);
+  });
+
+  it("should give the fingerprint of the draft the tool saved the same text as the fingerprint of the routine read back", async () => {
+    // What Undo depends on: `edit_routine` stores the fingerprint of the draft it saved, without reading the
+    // routine back, and Undo compares it to the fingerprint of the routine it reads later.
+    const stored = await getRoutine(owner.client, routineId);
+    const saved = {
+      name: stored?.name ?? "",
+      days: (stored?.days ?? []).map((day) => ({
+        id: day.id,
+        weekday: day.weekday,
+        name: day.name,
+        exercises: [
+          ...day.exercises.map((planned) => ({
+            exercise_id: planned.exercise_id,
+            target_sets: planned.target_sets,
+            rep_min: planned.rep_min,
+            rep_max: planned.rep_max,
+            target_rir: planned.target_rir,
+          })),
+          { exercise_id: curl.id, target_sets: 4, rep_min: 6, rep_max: 10, target_rir: null },
+        ],
+      })),
+    };
+
+    await saveRoutine(owner.client, { id: routineId, draft: saved });
+
+    const readBack = await getRoutine(owner.client, routineId);
+    expect(readBack).not.toBeNull();
+    expect(routineFingerprint(saved)).toBe(
+      routineFingerprint(draftOfStoredRoutine(readBack ?? { name: "", days: [] })),
+    );
   });
 });

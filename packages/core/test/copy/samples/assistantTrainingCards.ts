@@ -2,11 +2,28 @@ import * as copy from "../../../src/copy";
 
 // Every function `src/copy/assistantTrainingCards.ts` exports, called with representative arguments. The voice
 // test fails when a function has no row, so no sentence escapes the sweep.
+
 const targets = { sets: 3, repMin: 12, repMax: 15, targetRir: 1 };
 
 const rowWords = ({ name, detail }: { name: string; detail: string }): string[] => [name, detail];
 
 export const samples: Record<string, () => string[]> = {
+  describeRoutineActiveTitle: () => [copy.describeRoutineActiveTitle("Push Pull Legs")],
+  describeRoutineActiveSub: () => [
+    copy.describeRoutineActiveSub("Upper Lower"),
+    copy.describeRoutineActiveSub(null),
+  ],
+  describeRoutineActiveChangeDetail: () => [copy.describeRoutineActiveChangeDetail("Upper Lower")],
+  describeRoutineActiveUndone: () => [
+    copy.describeRoutineActiveUndone("Upper Lower"),
+    copy.describeRoutineActiveUndone(null),
+  ],
+  describeRoutineClearedSub: () => [copy.describeRoutineClearedSub("Upper Lower")],
+  describeRoutineArchivedTitle: () => [copy.describeRoutineArchivedTitle("Upper Lower")],
+  describeRoutineArchivedUndone: () => [copy.describeRoutineArchivedUndone("Upper Lower")],
+  describeConfirmArchiveRoutineQuestion: () => [
+    copy.describeConfirmArchiveRoutineQuestion("Upper Lower"),
+  ],
   describeRoutineWeekday: () => [copy.describeRoutineWeekday(4), copy.describeRoutineWeekday(null)],
   describeRoutineUpdatedTitle: () => [copy.describeRoutineUpdatedTitle("Push Pull Legs")],
   describeRoutineChangeCount: () => [

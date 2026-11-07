@@ -3657,6 +3657,41 @@ Deno.test(
   },
 );
 
+// Ask again sends the whole message again, so it is not offered once a write of the turn has landed.
+for (const [label, order] of [
+  ["a refusal then a write", ["refused", "landed"]],
+  ["a write then a refusal", ["landed", "refused"]],
+] as const) {
+  Deno.test(
+    `${label} in one turn send no Ask again live and draw none on a reopened turn, so the two agree`,
+    async () => {
+      const calls = order.map((kind, at) =>
+        kind === "refused"
+          ? { id: `r${at}`, name: "delete_entry", input: { ids: entryIds } }
+          : { id: `w${at}`, name: "log_entry", input: { food_id: "x" } },
+      );
+      await withHarness(
+        {
+          responses: [callTools(calls), reply("The eggs are logged and the swap waits.")],
+          answers: {
+            delete_entry: errorResult("delete_entry", "workout_in_progress"),
+            log_entry: loggedCall(actionA, "Egg", 144),
+          },
+        },
+        async (harness) => {
+          const result = await harness.take("Log 2 eggs and swap bench");
+
+          assertEquals(eventsOfType(result.events, "ask_again"), []);
+          assertEquals(result.events.at(-1), { type: "done", outcome: "complete" });
+          const kinds = threadFromMessages(result.rows, []).map((item) => item.kind);
+          assertEquals(kinds.includes("card"), true);
+          assertEquals(kinds.includes("ask_again"), false);
+        },
+      );
+    },
+  );
+}
+
 Deno.test("a turn with no refusal sends no Ask again and stores none", async () => {
   await withHarness({ responses: [reply("Hello.")] }, async (harness) => {
     const result = await harness.take("hi");
