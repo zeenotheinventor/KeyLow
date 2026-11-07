@@ -204,6 +204,11 @@ describe("parseReplyText", () => {
       ]);
     });
 
+    it("should keep the words and links around an address that holds a space", () => {
+      expect(parse("[a](b) [c](d e) [f](g)")).toEqual([line(plain("a [c](d e) f"))]);
+      expect(parse("[a](x [b](y) z")).toEqual([line(plain("[a](x b z"))]);
+    });
+
     it("should leave brackets with no address as typed", () => {
       expect(parse("see [1] and [2]")).toEqual([line(plain("see [1] and [2]"))]);
     });
@@ -465,6 +470,21 @@ describe("parseReplyText", () => {
     });
 
     it.each([
+      ["finished", finished],
+      ["partial", partial],
+    ])(
+      "should stop searching for an address that a far-off space ends, when %s",
+      (_name, options) => {
+        const hostile = `${"[a](".repeat(35_000)} z`;
+        const startedAt = performance.now();
+
+        parseReplyText(hostile, options);
+
+        expect(performance.now() - startedAt).toBeLessThan(1_000);
+      },
+    );
+
+    it.each([
       ["open brackets", "[a ".repeat(7_000)],
       ["open links", "[a](b ".repeat(4_000)],
       ["open code", "`a ".repeat(7_000)],
@@ -472,6 +492,8 @@ describe("parseReplyText", () => {
       ["open underscores", "_a ".repeat(7_000)],
       ["closed pairs", "*a* ".repeat(5_000)],
       ["open links with no space", "[a](b".repeat(4_000)],
+      ["open links ending in a space", `${"[a](".repeat(8_750)} z`],
+      ["open images ending in a space", `${"![a](".repeat(7_000)} z`],
       ["a backtick fence with a second run", `\`\`\`${"`a".repeat(30_000)}`],
     ])("should parse 20,000 characters of %s quickly", (_name, hostile) => {
       expect(parse(hostile).length).toBeGreaterThan(0);

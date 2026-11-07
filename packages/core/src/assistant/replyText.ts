@@ -138,6 +138,9 @@ function scanInline(scan: InlineScan, start: number, style: InlineStyle): ReplyS
   const failedOpeners = new Set<string>();
   let plainText = "";
   let isParenthesisMissing = false;
+  // Where a search for an address stopped at a space or tab. Nothing between an earlier address and that
+  // stop was a `)` or a space, so a later address that starts before it can go straight there.
+  let spaceStop = -1;
   let position = start;
 
   const flushPlain = () => {
@@ -247,7 +250,7 @@ function scanInline(scan: InlineScan, start: number, style: InlineStyle): ReplyS
       if (close !== -1 && hasWords) {
         if (content[close + 1] === "(" && close + 1 < end) {
           // The address ends at the first `)`. A space or tab before it means this is not a link.
-          let addressEnd = close + 2;
+          let addressEnd = close + 2 <= spaceStop ? spaceStop : close + 2;
           while (
             !isParenthesisMissing &&
             addressEnd < end &&
@@ -256,6 +259,9 @@ function scanInline(scan: InlineScan, start: number, style: InlineStyle): ReplyS
             content[addressEnd] !== "\t"
           ) {
             addressEnd += 1;
+          }
+          if (addressEnd < end && (content[addressEnd] === " " || content[addressEnd] === "\t")) {
+            spaceStop = addressEnd;
           }
           if (!isParenthesisMissing && addressEnd < end && content[addressEnd] === ")") {
             linkEnd = addressEnd + 1;
