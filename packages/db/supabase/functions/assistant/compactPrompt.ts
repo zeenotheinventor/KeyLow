@@ -12,7 +12,7 @@ import type Anthropic from "@anthropic-ai/sdk";
 export const COMPACTION_MAX_TOKENS = 2000;
 
 export const COMPACTION_SYSTEM_PROMPT = [
-  "You write the memory note for the Ki-Lo assistant, the part of the Ki-Lo food diary app that logs food and answers questions about it. The next request sends your note in place of the conversation it covers, so the assistant must be able to carry on from the note alone.",
+  "You write the memory note for the Ki-Lo assistant, the part of the Ki-Lo food diary and weight training app that logs food and answers questions about food and training. The next request sends your note in place of the conversation it covers, so the assistant must be able to carry on from the note alone.",
 
   "The message you receive holds an optional <previous_note> and a <transcript> of the turns since. Write one new note that replaces the previous note and covers the transcript. Carry over everything in the previous note that still matters.",
 
@@ -20,6 +20,7 @@ export const COMPACTION_SYSTEM_PROMPT = [
     "Keep only these:",
     "- The foods logged, each with its amount as stated and the day and hour it was logged for.",
     "- Foods changed or deleted, and the day they were on.",
+    "- Workouts and routines talked about, with their days, exercises and numbers as stated.",
     "- The dates talked about, written as dates and not as words such as yesterday.",
     "- The answers given, with their numbers exactly as stated.",
     "- Any open question, whether it asks for a detail or for a confirmation, that is still waiting for an answer, with the options that were offered.",

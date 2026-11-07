@@ -1,5 +1,6 @@
 import { KeyLowProvider, keys } from "@keylow/api-client";
 import {
+  ASSISTANT_SHEET,
   TRAIN_ERROR,
   TRAIN_FIRST_TIME,
   TRAIN_HOME,
@@ -18,8 +19,8 @@ import { ThemeProvider } from "../lib/theme";
 import { buttonsBesidesTheBodyMapCard } from "./support/bodyMapCardButtons";
 import { diaryBackend, createDiaryQueryClient } from "./support/diaryBackend";
 import { compileKitStyles } from "./support/kitStyles";
+import { expectAccessibleNamesInOrder } from "./support/namesInOrder";
 import { registerAppStyles } from "./support/nativeWindStyles";
-import { expectTextsInOrder } from "./support/textsInOrder";
 import {
   activeRoutine,
   loggedSession,
@@ -28,7 +29,6 @@ import {
   trainClient,
   trainRequestsTo,
 } from "./support/trainBackend";
-import { viewsDrawn } from "./support/viewsDrawn";
 
 import type { TrainScreenProps } from "../components/TrainScreen";
 import type { QueryClient } from "@tanstack/react-query";
@@ -90,6 +90,81 @@ describe("the Train screen", () => {
       onlineManager.setOnline(true);
     });
     queryClient.clear();
+  });
+
+  describe("the Assistant button in the header", () => {
+    it("should be drawn when a handler is given and call it when pressed", async () => {
+      const onOpenAssistant = jest.fn();
+      const user = userEvent.setup();
+      await renderTrain({ onOpenAssistant });
+
+      await user.press(await screen.findByRole("button", { name: ASSISTANT_SHEET.title }));
+
+      expect(onOpenAssistant).toHaveBeenCalledTimes(1);
+    });
+
+    it("should not be drawn without a handler, so it is never a dead control", async () => {
+      await renderTrain();
+
+      await screen.findByRole("heading", { name: TRAIN_FIRST_TIME.title });
+      expect(screen.queryByRole("button", { name: ASSISTANT_SHEET.title })).toBeNull();
+    });
+
+    it("should be drawn on the first visit, where Routines is not", async () => {
+      await renderTrain({ onOpenAssistant: jest.fn(), onOpenRoutines: jest.fn() });
+
+      await screen.findByRole("heading", { name: TRAIN_FIRST_TIME.title });
+      expect(screen.getByRole("button", { name: ASSISTANT_SHEET.title })).toBeOnTheScreen();
+    });
+
+    it("should be drawn while the home loads", async () => {
+      trainBackend.hungTables.add("routines");
+      await renderTrain({ onOpenAssistant: jest.fn() });
+      await screen.findByRole("status", { name: TRAIN_LOADING_NAME });
+
+      expect(screen.getByRole("button", { name: ASSISTANT_SHEET.title })).toBeOnTheScreen();
+    });
+
+    it("should not be drawn when the home fails to load, which keeps the title alone", async () => {
+      trainBackend.failingTables.add("routines");
+      await renderTrain({
+        onOpenAssistant: jest.fn(),
+        onOpenHistory: jest.fn(),
+        onOpenRoutines: jest.fn(),
+      });
+      await screen.findByText(TRAIN_ERROR.title);
+
+      expect(screen.queryByRole("button", { name: ASSISTANT_SHEET.title })).toBeNull();
+      expect(screen.queryByRole("button", { name: TRAIN_HOME.historyLink })).toBeNull();
+    });
+
+    it("should draw the three header buttons in the order Assistant, History, Routines", async () => {
+      trainBackend.routine = activeRoutine;
+      await renderTrain({
+        onOpenAssistant: jest.fn(),
+        onOpenHistory: jest.fn(),
+        onOpenRoutines: jest.fn(),
+      });
+      await screen.findByRole("button", { name: TRAIN_HOME.routinesLink });
+
+      expectAccessibleNamesInOrder(
+        screen.getAllByRole("button", { name: /^(Assistant|History|Routines)$/ }),
+        [ASSISTANT_SHEET.title, TRAIN_HOME.historyLink, TRAIN_HOME.routinesLink],
+      );
+    });
+
+    it("should draw no visible History or Routines words, which stay the buttons' names", async () => {
+      trainBackend.routine = activeRoutine;
+      await renderTrain({
+        onOpenAssistant: jest.fn(),
+        onOpenHistory: jest.fn(),
+        onOpenRoutines: jest.fn(),
+      });
+      await screen.findByRole("button", { name: TRAIN_HOME.routinesLink });
+
+      expect(screen.queryByText(TRAIN_HOME.historyLink)).toBeNull();
+      expect(screen.queryByText(TRAIN_HOME.routinesLink)).toBeNull();
+    });
   });
 
   describe("the History link in the header", () => {
@@ -243,25 +318,6 @@ describe("the Train screen", () => {
       await user.press(await screen.findByRole("button", routinesLink));
 
       expect(onOpenRoutines).toHaveBeenCalledTimes(1);
-    });
-
-    it("should draw it after History in the same header row when both are given", async () => {
-      trainBackend.routine = activeRoutine;
-      await renderTrain({ onOpenHistory: jest.fn(), onOpenRoutines: jest.fn() });
-
-      await screen.findByRole("button", { name: TRAIN_HOME.routinesLink });
-
-      expectTextsInOrder(screen.getAllByText(/^(History|Routines)$/), ["History", "Routines"]);
-    });
-
-    it("should cap the links' row at 70 percent of the header, so large text leaves the title room", async () => {
-      trainBackend.routine = activeRoutine;
-      await renderTrain({ onOpenHistory: jest.fn(), onOpenRoutines: jest.fn() });
-      await screen.findByRole("button", routinesLink);
-
-      expect(viewsDrawn({ maxWidth: "70%", flexWrap: "wrap", flexDirection: "row" })).toHaveLength(
-        1,
-      );
     });
 
     it("should draw it beside the title on the no routine card too", async () => {
