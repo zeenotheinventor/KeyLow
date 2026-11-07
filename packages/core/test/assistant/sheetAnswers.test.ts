@@ -36,6 +36,7 @@ const liveTurn = (overrides: Partial<AssistantSheetLiveTurn> = {}): AssistantShe
   status: null,
   stopped: false,
   notice: null,
+  outcome: null,
   ...overrides,
 });
 
@@ -135,11 +136,31 @@ describe("the lines under the answer being written", () => {
   });
 });
 
-describe("the working line while a recipe page is read", () => {
+describe("the working line", () => {
   const sent = { text: "Add this recipe: https://example.com/lemon-traybake", afterItemId: null };
   const status = { code: "reading_recipe", host: "example.com" } as const;
+  const thinking = { kind: "status", key: "sent:status", text: "Thinking" } as const;
 
-  it("should draw the line under your message, with no caret before any words", () => {
+  it("should draw Thinking under your message, with no assistant entry, before any event", () => {
+    const { entries } = build({ sent, live: liveTurn(), isStreaming: true });
+
+    expect(entries).toEqual([{ kind: "you", key: "sent:you", text: sent.text }, thinking]);
+  });
+
+  it("should draw Thinking, not a caret, while only a held-back marker has arrived", () => {
+    const { entries } = build({ sent, live: liveTurn({ text: "**" }), isStreaming: true });
+
+    expect(entries.map((entry) => entry.kind)).toEqual(["you", "status"]);
+  });
+
+  it("should draw the caret with the words and no line once words have arrived", () => {
+    const { entries } = build({ sent, live: liveTurn({ text: "**Log fo" }), isStreaming: true });
+
+    expect(entries.map((entry) => entry.kind)).toEqual(["you", "assistant"]);
+    expect(entries[1]).toMatchObject({ isStreaming: true });
+  });
+
+  it("should draw the recipe line under your message, with no caret before any words", () => {
     const { entries } = build({ sent, live: liveTurn({ status }), isStreaming: true });
 
     expect(entries).toEqual([
@@ -162,7 +183,19 @@ describe("the working line while a recipe page is read", () => {
     });
   });
 
-  it("should leave the caret off words that came before the page was read", () => {
+  it("should word a tool step from the tool and the food words", () => {
+    const { entries } = build({
+      sent,
+      live: liveTurn({
+        status: { code: "tool", tool: "search_foods", food: "toast", isConfirmed: false },
+      }),
+      isStreaming: true,
+    });
+
+    expect(entries.at(-1)).toEqual({ ...thinking, text: "Looking up toast" });
+  });
+
+  it("should leave the caret off words that came before a step, with the line under them", () => {
     const { entries } = build({
       sent,
       live: liveTurn({ text: "I'll read that page.", status }),
@@ -173,42 +206,89 @@ describe("the working line while a recipe page is read", () => {
     expect(entries[1]).toMatchObject({ isStreaming: false });
   });
 
-  it("should be gone once the next event clears the status", () => {
+  it("should leave the line under a card that has no words yet", () => {
     const { entries } = build({
       sent,
-      live: liveTurn({ status: null, cards: [recipeImportCard] }),
+      live: liveTurn({ cards: [recipeImportCard] }),
+      isStreaming: true,
+    });
+
+    expect(entries.map((entry) => entry.kind)).toEqual(["you", "card", "status"]);
+    expect(entries[2]).toEqual(thinking);
+  });
+
+  it("should be gone once words arrive after the card", () => {
+    const { entries } = build({
+      sent,
+      live: liveTurn({ text: "Added.", cards: [recipeImportCard] }),
       isStreaming: true,
     });
 
     expect(entries.map((entry) => entry.kind)).toEqual(["you", "card", "assistant"]);
   });
 
-  it("should not be drawn once the turn has ended", () => {
-    const { entries } = build({ sent, live: liveTurn({ status }), isStreaming: false });
+  it.each([
+    ["a question", { clarify: { question: "How much?", quickReplies: [], fieldHint: null } }],
+    [
+      "a confirmation",
+      {
+        confirm: {
+          question: "Delete it?",
+          confirmLabel: "Delete",
+          cancelLabel: "Keep",
+          tone: "danger",
+        },
+      },
+    ],
+    ["a notice", { notice: { code: "turn_failed" } }],
+    ["the end of the turn", { outcome: "complete" }],
+  ] satisfies [string, Partial<AssistantSheetLiveTurn>][])(
+    "should not stay under %s while the stream is still open",
+    (_name, overrides) => {
+      const { entries } = build({ sent, live: liveTurn(overrides), isStreaming: true });
 
-    expect(entries.map((entry) => entry.kind)).toEqual(["you"]);
+      expect(entries.map((entry) => entry.kind)).not.toContain("status");
+    },
+  );
+
+  it("should not be drawn once the turn has ended, with or without a step", () => {
+    for (const overrides of [{ status }, {}]) {
+      const { entries } = build({ sent, live: liveTurn(overrides), isStreaming: false });
+
+      expect(entries.map((entry) => entry.kind)).toEqual(["you"]);
+    }
+  });
+
+  it("should not be drawn for a stopped turn", () => {
+    const { entries } = build({
+      sent,
+      live: liveTurn({ stopped: true, text: "I'll read" }),
+      isStreaming: false,
+    });
+
+    expect(entries.map((entry) => entry.kind)).toEqual(["you", "assistant"]);
   });
 });
 
-describe("sending while a recipe page is read", () => {
+describe("sending while the assistant works", () => {
   const ready = {
     isStreaming: false,
     isOnline: true,
     isThreadKnown: true,
     isThreadFetching: false,
-    isReadingRecipe: false,
+    isWorking: false,
     access: { kind: "open" } satisfies AssistantSheetAccess,
   };
 
-  it("should not allow a message while the page is read", () => {
-    expect(canSendAssistantMessage({ ...ready, text: "Hello", isReadingRecipe: true })).toBe(false);
+  it("should not allow a message while a step is shown", () => {
+    expect(canSendAssistantMessage({ ...ready, text: "Hello", isWorking: true })).toBe(false);
   });
 
-  it("should not allow a quick reply or a confirm button while the page is read", () => {
-    expect(canAnswerAssistantQuestion({ ...ready, isReadingRecipe: true })).toBe(false);
+  it("should not allow a quick reply or a confirm button while a step is shown", () => {
+    expect(canAnswerAssistantQuestion({ ...ready, isWorking: true })).toBe(false);
   });
 
-  it("should allow a message again once the page has been read", () => {
+  it("should allow a message again once the step is over", () => {
     expect(canSendAssistantMessage({ ...ready, text: "Hello" })).toBe(true);
   });
 });

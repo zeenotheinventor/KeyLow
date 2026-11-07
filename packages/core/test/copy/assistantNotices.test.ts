@@ -9,6 +9,7 @@ import {
   describeAssistantNotice,
   describeAssistantStatus,
   describeResetTime,
+  foodWordsForStatus,
 } from "../../src/copy";
 
 // Checked by `tsc` (the package's typecheck script), not at runtime: the consent notice is not a notice,
@@ -114,11 +115,109 @@ describe("describeResetTime", () => {
   });
 });
 
+// One row per line of the approved words list: the tools that share a line, then the words before and
+// after the confirm button. A tool whose row has one set of words says it before and after.
+const toolWords: [string[], string, string][] = [
+  [["search_foods", "get_food"], "Looking up the food", "Looking up the food"],
+  [["get_day", "get_entries", "get_range_totals"], "Checking your diary", "Checking your diary"],
+  [["get_weigh_ins"], "Checking your weigh-ins", "Checking your weigh-ins"],
+  [["get_recipes"], "Checking your recipes", "Checking your recipes"],
+  [["log_entry"], "Logging your food", "Logging your food"],
+  [["update_entry"], "Updating your diary", "Updating your diary"],
+  [["set_day_complete"], "Marking the day complete", "Marking the day complete"],
+  [["create_custom_food"], "Saving the food", "Saving the food"],
+  [["create_recipe", "update_recipe"], "Saving the recipe", "Saving the recipe"],
+  [["delete_entry"], "Looking at the entry", "Removing the entry"],
+  [["copy_day"], "Looking at the day", "Copying the day"],
+  [["archive_recipe"], "Looking at the recipe", "Archiving the recipe"],
+  [["update_targets"], "Looking at your targets", "Changing your targets"],
+];
+
 describe("describeAssistantStatus", () => {
   it("should word reading a recipe as assistant · recipe-import (left) prints it", () => {
     expect(describeAssistantStatus({ code: "reading_recipe", host: "example.com" })).toBe(
       "Reading the recipe at example.com",
     );
+  });
+
+  it("should word the default step as Thinking", () => {
+    expect(describeAssistantStatus({ code: "thinking" })).toBe("Thinking");
+  });
+
+  describe.each(toolWords)("the tools %j", (tools, beforeConfirm, afterConfirm) => {
+    it.each(tools)("should word %s before the confirm button", (tool) => {
+      expect(describeAssistantStatus({ code: "tool", tool, food: null, isConfirmed: false })).toBe(
+        beforeConfirm,
+      );
+    });
+
+    it.each(tools)("should word %s after the confirm button", (tool) => {
+      expect(describeAssistantStatus({ code: "tool", tool, food: null, isConfirmed: true })).toBe(
+        afterConfirm,
+      );
+    });
+  });
+
+  it("should word a tool with food words as Looking up the food words", () => {
+    expect(
+      describeAssistantStatus({
+        code: "tool",
+        tool: "search_foods",
+        food: "toast",
+        isConfirmed: false,
+      }),
+    ).toBe("Looking up toast");
+  });
+
+  it.each(["ask_user", "import_recipe_from_url", "constructor", "toString", "future_tool"])(
+    "should word the tool %s, which has no row, as Thinking",
+    (tool) => {
+      expect(describeAssistantStatus({ code: "tool", tool, food: null, isConfirmed: false })).toBe(
+        "Thinking",
+      );
+    },
+  );
+});
+
+describe("foodWordsForStatus", () => {
+  it.each([[undefined], [null], [42], [{ food: "toast" }], [["toast"]]])(
+    "should give null for %j, which is not a string",
+    (input) => {
+      expect(foodWordsForStatus(input)).toBeNull();
+    },
+  );
+
+  it.each([[""], ["   "], ["\u0000\u001f\u007f"], ["\n\t \r"]])(
+    "should give null for %j, which holds no words",
+    (input) => {
+      expect(foodWordsForStatus(input)).toBeNull();
+    },
+  );
+
+  it("should keep plain words as they are", () => {
+    expect(foodWordsForStatus("wholemeal toast")).toBe("wholemeal toast");
+  });
+
+  it("should take control characters out", () => {
+    expect(foodWordsForStatus("toa\u0000st\u001b[31m")).toBe("toast[31m");
+  });
+
+  it("should collapse a newline and tabs to one space and trim the ends", () => {
+    expect(foodWordsForStatus("  peanut\n\t\tbutter\t ")).toBe("peanut butter");
+  });
+
+  it("should cut 61 emoji at 60 without breaking a pair", () => {
+    const words = foodWordsForStatus("🍞".repeat(61));
+
+    expect(words).toBe("🍞".repeat(60));
+  });
+
+  it("should leave 60 code points whole", () => {
+    expect(foodWordsForStatus("a".repeat(60))).toBe("a".repeat(60));
+  });
+
+  it("should not end on a space when the cut falls after one", () => {
+    expect(foodWordsForStatus(`${"a".repeat(59)} b`)).toBe("a".repeat(59));
   });
 });
 

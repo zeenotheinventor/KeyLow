@@ -486,14 +486,15 @@ describe("the assistant sheet", () => {
       expect(newConversationButton()).toBeDisabled();
     });
 
-    it("should draw the caret alone before the first words arrive", async () => {
+    it("should draw the working line, not a lone caret, before the first words arrive", async () => {
       loadedConversation([]);
       const rendered = await renderSheet();
       await sendFromSheet(rendered, question);
       mockAssistant.turn = { ...mockAssistant.turn, live: liveTurn(), isStreaming: true };
       await rendered.rerender(sheetTree());
 
-      expect(screen.getByLabelText("Assistant:")).toBeOnTheScreen();
+      expect(screen.getByRole("status", { name: "Thinking" })).toBeOnTheScreen();
+      expect(screen.queryByLabelText("Assistant:")).toBeNull();
     });
 
     it("should read the finished answer to a screen reader once on iOS, where a live region is ignored", async () => {

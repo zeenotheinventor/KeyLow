@@ -94,6 +94,61 @@ describe("applyAssistantEvent", () => {
     expect(afterwards.status).toBeNull();
   });
 
+  it("should hold the thinking status without its type", () => {
+    expect(applyAll([{ type: "status", code: "thinking" }]).status).toEqual({ code: "thinking" });
+  });
+
+  it("should hold a tool status with every field it sent, without its type", () => {
+    const live = applyAll([
+      { type: "status", code: "tool", tool: "search_foods", food: "toast", isConfirmed: false },
+    ]);
+
+    expect(live.status).toEqual({
+      code: "tool",
+      tool: "search_foods",
+      food: "toast",
+      isConfirmed: false,
+    });
+  });
+
+  describe.each<[string, AssistantStreamEvent]>([
+    ["reading the recipe", { type: "status", code: "reading_recipe", host: "example.com" }],
+    ["thinking", { type: "status", code: "thinking" }],
+    [
+      "a tool",
+      { type: "status", code: "tool", tool: "delete_entry", food: null, isConfirmed: true },
+    ],
+  ])("the %s status", (_name, status) => {
+    it.each<[string, AssistantStreamEvent]>([
+      ["a text piece", { type: "text", delta: "Yesterday" }],
+      ["a card", { type: "card", card: aCard("Logged toast") }],
+      ["a question", { type: "clarify", question: "How much?", quickReplies: [], fieldHint: null }],
+      [
+        "a confirmation",
+        {
+          type: "confirm",
+          confirmationId: TURN_ID,
+          question: "Delete it?",
+          confirmLabel: "Delete",
+          cancelLabel: "Keep",
+          tone: "danger",
+        },
+      ],
+      ["the answer meta", { type: "answer_meta", citation: null, estimate: null }],
+      ["a notice", { type: "notice", notice: { code: "plus" } }],
+      ["the end of the turn", { type: "done", outcome: "complete" }],
+    ])("should clear on %s", (_eventName, next) => {
+      expect(applyAssistantEvent(applyAll([status]), next).status).toBeNull();
+    });
+
+    it("should clear when the turn is stopped or fails", () => {
+      const live = applyAll([status]);
+
+      expect(stoppedTurn(live).status).toBeNull();
+      expect(failedTurn(live).status).toBeNull();
+    });
+  });
+
   it("should hold the notice and the outcome", () => {
     const live = applyAll([
       { type: "notice", notice: { code: "plus" } },

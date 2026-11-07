@@ -3,7 +3,7 @@ import { parseCalendarDay } from "../dates/calendarDay";
 import { isValidTimeZone } from "../dates/isValidTimeZone";
 import { readZonedClock } from "../dates/zonedClock";
 
-import type { AssistantNotice, AssistantStreamEvent } from "../assistant";
+import type { AssistantNotice, AssistantStatus } from "../assistant";
 
 /*
  * The words of the assistant's notices and states, as the approved mobile boards print them (canvas
@@ -110,11 +110,76 @@ export function describeAssistantNotice(
   }
 }
 
-/** The status line while no text arrives (`assistant · recipe-import`, left). */
-export function describeAssistantStatus(
-  status: Omit<Extract<AssistantStreamEvent, { type: "status" }>, "type">,
-): string {
-  return `Reading the recipe at ${status.host}`;
+const DEFAULT_STEP_WORDS = "Thinking";
+
+type ToolWords = { words: string; afterConfirm?: string };
+
+/*
+ * The words of each tool's step (`assistant · working`), keyed by the tool's name as the server sends it. A
+ * tool is one row here and nothing else: a name with no row shows the default step. `afterConfirm` is for a
+ * tool that may stop to ask. Before the press nothing can claim a change yet, so the words only look.
+ * `ask_user` has no row because the question arrives instead, and a recipe link is `reading_recipe`.
+ */
+const LOOKING_UP_THE_FOOD: ToolWords = { words: "Looking up the food" };
+const CHECKING_YOUR_DIARY: ToolWords = { words: "Checking your diary" };
+const SAVING_THE_RECIPE: ToolWords = { words: "Saving the recipe" };
+const TOOL_WORDS = new Map<string, ToolWords>([
+  ["search_foods", LOOKING_UP_THE_FOOD],
+  ["get_food", LOOKING_UP_THE_FOOD],
+  ["get_day", CHECKING_YOUR_DIARY],
+  ["get_entries", CHECKING_YOUR_DIARY],
+  ["get_range_totals", CHECKING_YOUR_DIARY],
+  ["get_weigh_ins", { words: "Checking your weigh-ins" }],
+  ["get_recipes", { words: "Checking your recipes" }],
+  ["log_entry", { words: "Logging your food" }],
+  ["update_entry", { words: "Updating your diary" }],
+  ["set_day_complete", { words: "Marking the day complete" }],
+  ["create_custom_food", { words: "Saving the food" }],
+  ["create_recipe", SAVING_THE_RECIPE],
+  ["update_recipe", SAVING_THE_RECIPE],
+  ["delete_entry", { words: "Looking at the entry", afterConfirm: "Removing the entry" }],
+  ["copy_day", { words: "Looking at the day", afterConfirm: "Copying the day" }],
+  ["archive_recipe", { words: "Looking at the recipe", afterConfirm: "Archiving the recipe" }],
+  ["update_targets", { words: "Looking at your targets", afterConfirm: "Changing your targets" }],
+]);
+
+/** The status line while no text arrives (`assistant · working`, `assistant · recipe-import`, left). */
+export function describeAssistantStatus(status: AssistantStatus): string {
+  switch (status.code) {
+    case "reading_recipe":
+      return `Reading the recipe at ${status.host}`;
+    case "thinking":
+      return DEFAULT_STEP_WORDS;
+    case "tool": {
+      if (status.food !== null) {
+        return `Looking up ${status.food}`;
+      }
+      const row = TOOL_WORDS.get(status.tool);
+      return (
+        (status.isConfirmed ? row?.afterConfirm : undefined) ?? row?.words ?? DEFAULT_STEP_WORDS
+      );
+    }
+  }
+}
+
+const MAX_FOOD_WORDS_CODE_POINTS = 60;
+
+/**
+ * The food words a search used, made safe to show on the working line, or null when nothing is left. The
+ * model chooses them, and on a recipe import they can come from a fetched page, so they are untrusted text:
+ * anything but a string is null, control characters go, whitespace collapses to one space, and the first 60
+ * code points stay, cut between whole characters so no emoji is split.
+ */
+export function foodWordsForStatus(input: unknown): string | null {
+  if (typeof input !== "string") {
+    return null;
+  }
+  const words = input
+    .replace(/\p{Cc}/gu, (character) => (/\s/u.test(character) ? " " : ""))
+    .replace(/\s+/gu, " ")
+    .trim();
+  const cut = Array.from(words).slice(0, MAX_FOOD_WORDS_CODE_POINTS).join("").trim();
+  return cut === "" ? null : cut;
 }
 
 /** Offline is the app's own state, with no notice code (`assistant · unavailable`, right). */

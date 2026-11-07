@@ -171,14 +171,15 @@ export function AssistantSheet({ open, onClose, localDate, describeAt }: Assista
     isOnline,
     isThreadKnown,
     isThreadFetching: conversation.isFetching,
-    // The turn's status clears with its next event, so the reading is over as soon as anything else arrives.
-    isReadingRecipe: (live?.status ?? null) !== null,
+    // The turn's step clears with its next event, so it is over as soon as anything else arrives.
+    isWorking: (live?.status ?? null) !== null,
     access,
   };
   const canSendWords = (words: string) => canSendAssistantMessage({ text: words, ...sendState });
 
   // The streaming message is not a live region (Android would read all of it again for each chunk, and iOS
   // ignores a live region), so a screen reader hears the finished answer once, on both, when it is complete.
+  // The working line before it announces itself, once, and is not a live region either.
   // An answer that was stopped by closing the sheet is not read, because the person closed it.
   const wasStreaming = useRef(false);
   useEffect(() => {
