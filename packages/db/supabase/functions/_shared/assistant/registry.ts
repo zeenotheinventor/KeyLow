@@ -80,8 +80,6 @@ const toolDefinitions: readonly ToolDefinition[] = [
   getRoutinesTool,
   getTrainingGoalsTool,
   getWorkoutsTool,
-  getMuscleStateTool,
-  suggestNextSessionTool,
   getExerciseProgressTool,
   getMuscleStateTool,
   suggestNextSessionTool,

@@ -103,8 +103,6 @@ Deno.test(
         ["get_routines", "read"],
         ["get_training_goals", "read"],
         ["get_workouts", "read"],
-        ["get_muscle_state", "read"],
-        ["suggest_next_session", "read"],
         ["get_exercise_progress", "read"],
         ["get_muscle_state", "read"],
         ["suggest_next_session", "read"],
