@@ -113,6 +113,8 @@ Deno.test(
         ["update_past_set", "write"],
         ["update_training_goals", "write"],
         ["create_routine", "write"],
+        ["save_custom_exercise", "write"],
+        ["archive_custom_exercise", "write"],
         ["delete_workout", "write"],
         ["ask_user", "read"],
       ],
@@ -222,6 +224,16 @@ Deno.test(
   "edit_routine opts out of strict mode, so it takes nothing from the strict budget",
   () => {
     assertEquals(toolRegistry.get("edit_routine")?.strict, false);
+  },
+);
+
+Deno.test(
+  "the custom exercise writes opt out of strict mode, so they take nothing from the strict budget",
+  () => {
+    for (const name of ["save_custom_exercise", "archive_custom_exercise"]) {
+      assertEquals(toolRegistry.get(name)?.strict, false, name);
+      assertEquals(toolRegistry.get(name)?.annotations.readOnlyHint, false, name);
+    }
   },
 );
 
