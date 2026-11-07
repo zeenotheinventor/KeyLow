@@ -348,3 +348,15 @@ Deno.test("a request to change training gets the general set", () => {
 Deno.test("a question that holds a change word falls to the general set", () => {
   assert(allowed("Should I add more sets?").includes("log_entry"));
 });
+
+Deno.test("a request to build a routine is not a read and reaches create_routine", () => {
+  const listed = [read("search_exercises"), write("create_routine"), read("ask_user")];
+  for (const text of ["Build me a push pull legs routine", "Can you make me a routine?"]) {
+    assert(
+      allowedToolsFor({ text, pendingConfirmationTool: null, tools: listed }).includes(
+        "create_routine",
+      ),
+      text,
+    );
+  }
+});
