@@ -42,3 +42,6 @@ export { buildSetUpdatedCard } from "./setUpdated";
 export type { SetUpdatedCardInput } from "./setUpdated";
 export { buildGoalsUpdatedCard } from "./goalsUpdated";
 export type { GoalAnswerGiven, GoalsUpdatedCardChange } from "./goalsUpdated";
+export { confirmDeleteWorkoutButtons, confirmDeleteWorkoutQuestion } from "./confirmDeleteWorkout";
+export type { DeleteWorkoutQuestionInput } from "./confirmDeleteWorkout";
+export { buildWorkoutDeletedCard } from "./workoutDeleted";

@@ -111,6 +111,7 @@ Deno.test(
         ["edit_routine", "write"],
         ["update_past_set", "write"],
         ["update_training_goals", "write"],
+        ["delete_workout", "write"],
         ["ask_user", "read"],
       ],
     );
@@ -397,5 +398,17 @@ Deno.test(
     assertEquals(goals?.kind, "write");
     assertEquals(goals?.strict, false);
     assertEquals(goals?.kind === "write" ? goals.refusesDuringWorkout : undefined, true);
+  },
+);
+
+Deno.test(
+  "delete_workout is a destructive write that opts out of strict, so the strict budget does not move",
+  () => {
+    const tool = toolRegistry.get("delete_workout");
+
+    assertEquals(tool?.kind, "write");
+    assertEquals(tool?.strict, false);
+    assertEquals(tool?.kind === "write" ? tool.refusesDuringWorkout : undefined, true);
+    assertEquals(tool?.annotations, { readOnlyHint: false, destructiveHint: true });
   },
 );

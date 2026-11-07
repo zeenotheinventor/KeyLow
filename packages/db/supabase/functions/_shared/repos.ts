@@ -85,4 +85,6 @@ export {
   closeTrainingGoals,
   listTrainingGoalsHistory,
   saveTrainingGoalsReturningId,
+  deleteSession,
+  restoreSession,
 } from "./repos/index.js";

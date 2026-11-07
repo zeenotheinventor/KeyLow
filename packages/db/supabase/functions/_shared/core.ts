@@ -224,4 +224,8 @@ export {
   MIN_DAYS_PER_WEEK,
   TRAINING_FOCUSES,
   TRAINING_GOALS,
+  buildWorkoutDeletedCard,
+  confirmDeleteWorkoutButtons,
+  confirmDeleteWorkoutQuestion,
+  planProgress,
 } from "./core/index.js";

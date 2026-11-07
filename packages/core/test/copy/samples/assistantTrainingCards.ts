@@ -124,4 +124,20 @@ export const samples: Record<string, () => string[]> = {
   ],
   describeGoalMinutesPutBack: () => [copy.describeGoalMinutesPutBack(45)],
   describeGoalAnswerPutBack: () => [copy.describeGoalAnswerPutBack("Goal", "Look better")],
+  describeConfirmDeleteWorkoutQuestion: () => [
+    copy.describeConfirmDeleteWorkoutQuestion("Legs", "2026-10-08", 16),
+    copy.describeConfirmDeleteWorkoutQuestion(null, "2026-10-08", 1),
+  ],
+  describeWorkoutDeletedTitle: () => [
+    copy.describeWorkoutDeletedTitle("Legs"),
+    copy.describeWorkoutDeletedTitle(null),
+  ],
+  describeWorkoutDeletedSub: () => [copy.describeWorkoutDeletedSub("2026-10-08", 16)],
+  describeWorkoutDeletedChangeDetail: () => [
+    copy.describeWorkoutDeletedChangeDetail("2026-10-08", 16),
+  ],
+  describeWorkoutDeletedUndone: () => [
+    copy.describeWorkoutDeletedUndone("Legs", "2026-10-08"),
+    copy.describeWorkoutDeletedUndone(null, "2026-10-08"),
+  ],
 };
