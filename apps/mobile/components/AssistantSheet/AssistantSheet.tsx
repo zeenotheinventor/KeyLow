@@ -11,6 +11,7 @@ import {
   canAnswerAssistantQuestion,
   canSendAssistantMessage,
   describeAssistantComposer,
+  isAssistantSheetOpening,
   isAssistantStatusKnown,
   isSentTurnStored,
   isStaleStreamGateNotice,
@@ -29,7 +30,16 @@ import { Composer } from "./Composer";
 import { ConsentCard } from "./ConsentCard";
 import { assistantCardHref } from "../../lib/assistantCardRoutes";
 import { useIsOnline } from "../../lib/connectivity";
-import { Badge, Banner, BottomSheet, SheetHeader, SheetScrollView, Text, useToast } from "../ui";
+import {
+  Badge,
+  Banner,
+  BottomSheet,
+  SheetHeader,
+  SheetScrollView,
+  Skeleton,
+  Text,
+  useToast,
+} from "../ui";
 
 import type { AssistantSheetProps } from "./types";
 import type { AssistantCardLink, AssistantSheetSent } from "@keylow/core";
@@ -248,12 +258,24 @@ export function AssistantSheet({ open, onClose, localDate, describeAt }: Assista
     );
   }
 
+  // The placeholder (`assistant · opening`) stands in until the status and the conversation are read, so
+  // the sheet is never blank. The composer shows under it with Send off, and New conversation is dimmed.
+  const isOpening = isAssistantSheetOpening({ access, isEmpty, isThreadKnown });
   const isNewDisabled =
-    isEmpty || isStreaming || !isOnline || newConversation.isPending || access.kind === "consent";
+    isEmpty ||
+    isOpening ||
+    isStreaming ||
+    !isOnline ||
+    newConversation.isPending ||
+    access.kind === "consent";
 
   function renderBody() {
-    if (access.kind === "checking") {
-      return null;
+    if (isOpening) {
+      return (
+        <View accessible aria-label={ASSISTANT_SHEET.openingLabel} role="status">
+          <Skeleton variant="assistantThread" />
+        </View>
+      );
     }
     if (access.kind === "consent") {
       return (
@@ -266,13 +288,13 @@ export function AssistantSheet({ open, onClose, localDate, describeAt }: Assista
       );
     }
     if (isEmpty) {
-      return isThreadKnown ? (
+      return (
         <AssistantEmpty
           describeAt={describeAt}
           isDisabled={!isOnline || conversation.isFetching}
           onStarterPress={sendMessage}
         />
-      ) : null;
+      );
     }
     return (
       <AssistantThread
@@ -319,7 +341,9 @@ export function AssistantSheet({ open, onClose, localDate, describeAt }: Assista
         <SheetScrollView
           className="flex-1"
           contentContainerClassName={
-            threadClassNames[isEmpty || access.kind === "consent" ? "empty" : "conversation"]
+            threadClassNames[
+              !isOpening && (isEmpty || access.kind === "consent") ? "empty" : "conversation"
+            ]
           }
           keyboardDismissMode="on-drag"
           keyboardShouldPersistTaps="handled"

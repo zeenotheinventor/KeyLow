@@ -305,6 +305,108 @@ describe("the assistant sheet", () => {
     });
   });
 
+  describe("opening, assistant · opening", () => {
+    // The conversation has not been read, and the status is known to be open (the status mock above).
+    const loadingStatus = () => screen.getByRole("status", { name: "Loading your conversation" });
+
+    it("should draw the loading placeholder with the field on, and no starters", async () => {
+      await renderSheet();
+
+      expect(loadingStatus()).toBeOnTheScreen();
+      expect(screen.getByLabelText("Message")).toBeEnabled();
+      expect(
+        screen.queryByRole("heading", { name: "Log food or ask about your diary" }),
+      ).not.toBeOnTheScreen();
+      expect(
+        screen.queryByRole("button", { name: "Copy yesterday to today" }),
+      ).not.toBeOnTheScreen();
+    });
+
+    it("should have Send and New conversation off, even with words typed", async () => {
+      await renderSheet();
+      await typeMessage("Log a banana");
+
+      expect(sendButton()).toBeDisabled();
+      expect(newConversationButton()).toBeDisabled();
+    });
+
+    it("should draw every word of the board and nothing the board does not", async () => {
+      await renderSheet();
+
+      expect(sheetWords()).toEqual([
+        "Assistant",
+        "New conversation",
+        "Assistant",
+        "Close",
+        "Loading your conversation",
+        "Message",
+        "Send",
+      ]);
+    });
+
+    it("should be replaced by the thread once the conversation is known", async () => {
+      const rendered = await renderSheet();
+      loadedConversation(earlierThread);
+
+      await rendered.rerender(sheetTree());
+
+      expect(
+        screen.queryByRole("status", { name: "Loading your conversation" }),
+      ).not.toBeOnTheScreen();
+      expect(screen.getByText("What's left for today?")).toBeOnTheScreen();
+    });
+
+    it("should not come back over a stored thread that is being read again", async () => {
+      loadedConversation(earlierThread);
+      mockAssistant.conversation.isFetching = true;
+      await renderSheet();
+
+      expect(
+        screen.queryByRole("status", { name: "Loading your conversation" }),
+      ).not.toBeOnTheScreen();
+      expect(screen.getByText("What's left for today?")).toBeOnTheScreen();
+    });
+
+    it("should go straight to the starters when the conversation has no messages", async () => {
+      const rendered = await renderSheet();
+      expect(loadingStatus()).toBeOnTheScreen();
+      loadedConversation([]);
+
+      await rendered.rerender(sheetTree());
+
+      expect(
+        screen.queryByRole("status", { name: "Loading your conversation" }),
+      ).not.toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Copy yesterday to today" })).toBeOnTheScreen();
+    });
+
+    it("should be replaced by the thread when the conversation could not be read", async () => {
+      mockAssistant.conversation = {
+        data: undefined,
+        isSuccess: false,
+        isError: true,
+        isFetching: false,
+      };
+      await renderSheet();
+
+      expect(
+        screen.queryByRole("status", { name: "Loading your conversation" }),
+      ).not.toBeOnTheScreen();
+    });
+
+    it("should show the offline banner over the field, still with the placeholder, while offline", async () => {
+      await renderSheet();
+
+      await act(() => {
+        onlineManager.setOnline(false);
+      });
+
+      expect(screen.getByText("You're offline")).toBeOnTheScreen();
+      expect(loadingStatus()).toBeOnTheScreen();
+      expect(screen.getByLabelText("Message")).toHaveProp("editable", false);
+    });
+  });
+
   describe("streaming, assistant · streaming (left)", () => {
     const question = "What did I eat yesterday?";
     const arrived =
