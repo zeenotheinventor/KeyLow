@@ -62,6 +62,9 @@ Deno.test(
       "corrections",
       "undos",
       "untrusted_data",
+      "weight training",
+      "workouts and routines",
+      "exercises and numbers as stated",
     ]) {
       assert(COMPACTION_SYSTEM_PROMPT.toLowerCase().includes(kept), kept);
     }

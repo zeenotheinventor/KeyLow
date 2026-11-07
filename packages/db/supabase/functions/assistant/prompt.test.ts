@@ -130,6 +130,98 @@ Deno.test("the system prompt holds the product rules the boards print", () => {
   }
 });
 
+Deno.test("the system prompt names training in what the assistant is and what it can read", () => {
+  for (const line of [
+    "the part of the Ki-Lo food diary and weight training app that logs food",
+    "weigh-ins, workouts, exercise progress, routines, training goals and muscle state",
+    "Only help with food, the diary, recipes, weigh-ins, weight training and targets in Ki-Lo.",
+  ]) {
+    assert(SYSTEM_PROMPT.includes(line), `the system prompt does not hold: ${line}`);
+  }
+});
+
+Deno.test("training numbers follow the same rule as food numbers", () => {
+  assert(
+    SYSTEM_PROMPT.includes(
+      "Training numbers follow the same rule: a load, a set count, a rep range and a recovery time come from a tool result, as given.",
+    ),
+  );
+});
+
+Deno.test("training advice comes from the three tools and never from the model", () => {
+  for (const rule of [
+    "Training advice\nWhat to train next comes only from suggest_next_session, volume and recovery only from get_muscle_state, and progress only from get_exercise_progress.",
+    "Never invent a weight, a set count, a rep range or a programme.",
+    "When the tools have no number for the question, say so and give what they do have, such as the last performance and the trend.",
+    "Ki-Lo has no figure for what to lift next",
+    "get_muscle_state reads the last 7 days, so never call it this week.",
+    "say at least that many weeks",
+    "Advice is fine during a workout.",
+  ]) {
+    assert(SYSTEM_PROMPT.includes(rule), `the system prompt does not hold: ${rule}`);
+  }
+});
+
+Deno.test(
+  "the system prompt names every marker of a suggestion and says where the button is",
+  () => {
+    for (const marker of [
+      "is_rest_day",
+      "done_today",
+      "in_progress",
+      "accepted",
+      "first_visit",
+      "needs_goal",
+      "limited_to",
+    ]) {
+      assert(SYSTEM_PROMPT.includes(marker), `the system prompt does not name: ${marker}`);
+    }
+    assert(SYSTEM_PROMPT.includes("cannot start a workout or accept a suggestion"));
+    assert(SYSTEM_PROMPT.includes("press Add to Thursday on the Train tab"));
+  },
+);
+
+Deno.test(
+  "the limits widen to training with no diagnosis, no rehab plan and a doctor or physio",
+  () => {
+    for (const rule of [
+      "no rehab plan for an injury or pain",
+      "suggest a doctor or a physio",
+      "A swap of an exercise, when the person asks for one, is still fine.",
+      "suggest asking a doctor or a dietitian",
+    ]) {
+      assert(SYSTEM_PROMPT.includes(rule), `the system prompt does not hold: ${rule}`);
+    }
+    assert(SYSTEM_PROMPT.includes("physio"));
+    assert(SYSTEM_PROMPT.includes("diagnos"));
+  },
+);
+
+Deno.test("a tool that fails still ends the turn's work, training reads included", () => {
+  for (const rule of [
+    "When a tool answers with an error, say in one short sentence that the step did not work and stop.",
+    "Never repeat a change that has failed.",
+  ]) {
+    assert(SYSTEM_PROMPT.includes(rule), `the system prompt does not hold: ${rule}`);
+  }
+});
+
+Deno.test("the system prompt promises no training edit, which the changes part adds", () => {
+  for (const tool of [
+    "edit_routine",
+    "set_active_routine",
+    "archive_routine",
+    "create_routine",
+    "update_training_goals",
+    "save_custom_exercise",
+    "archive_custom_exercise",
+    "update_past_set",
+    "delete_workout",
+  ]) {
+    assertEquals(SYSTEM_PROMPT.includes(tool), false, tool);
+  }
+});
+
 Deno.test("the system prompt gives no example of a reply that repeats the card", () => {
   assertEquals(SYSTEM_PROMPT.includes("Logged 2 large eggs"), false);
 });

@@ -303,3 +303,27 @@ Deno.test(
     assertEquals(readSet.includes("log_entry"), false);
   },
 );
+
+Deno.test("a training question gets the read set", () => {
+  for (const text of [
+    "What should I train today?",
+    "Why has my bench stalled?",
+    "Am I doing enough for my back?",
+  ]) {
+    assertEquals(allowed(text), ["search_foods", "get_food", "get_day", "ask_user"], text);
+  }
+});
+
+Deno.test("a request to change training gets the general set", () => {
+  for (const text of [
+    "Swap bench for incline",
+    "Make Push Pull Legs active",
+    "Delete yesterday's workout",
+  ]) {
+    assert(allowed(text).includes("log_entry"), text);
+  }
+});
+
+Deno.test("a question that holds a change word falls to the general set", () => {
+  assert(allowed("Should I add more sets?").includes("log_entry"));
+});
