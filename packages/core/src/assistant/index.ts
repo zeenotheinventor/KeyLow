@@ -1,5 +1,6 @@
 export * from "./card";
 export * from "./events";
+export * from "./exerciseMusclesCard";
 export * from "./notice";
 export * from "./consentVersion";
 export * from "./citations";
