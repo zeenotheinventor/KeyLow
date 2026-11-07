@@ -91,6 +91,9 @@ export type PreviousPendingConfirmation = { turnId: string; confirmation: Stored
 export const undoOutcomeSchema = z.object({ previous: z.json(), fingerprint: z.json() });
 const undoEntrySchema = undoOutcomeSchema.extend({ actionId: z.string() });
 
+// What `previousValueOf` answers: the tool's `previous` and `fingerprint`, as it stored them.
+export type StoredUndo = { previous: JsonValue; fingerprint: JsonValue };
+
 export type SlotRequest = {
   userId: string;
   conversationId: string;
@@ -111,11 +114,11 @@ export type ActionStore = {
   // True for the one caller that moved the action from not undone to undone.
   claimUndo(actionId: string, userId: string, undoneAt: string): Promise<boolean>;
   releaseUndoClaim(actionId: string, userId: string): Promise<void>;
-  // The `previous` the action's turn stored beside its card, or null when the turn is gone (the conversation
-  // was deleted and `turn_id` was set null), the entry is missing or it cannot be read. Filtered by the
-  // verified user id, so another person's action answers null. A previous value that is itself null cannot be
-  // told from a missing one, so a tool stores something else, such as an object.
-  previousValueOf(action: ActionRecord, userId: string): Promise<JsonValue | null>;
+  // The `previous` and `fingerprint` the action's turn stored beside its card, or null when the turn is gone (the
+  // conversation was deleted and `turn_id` was set null), the entry is missing or it cannot be read. Filtered by
+  // the verified user id, so another person's action answers null. A stored `previous` that is JSON null comes
+  // back as `{ previous: null, ... }`, so only the whole answer being null means there is nothing.
+  previousValueOf(action: ActionRecord, userId: string): Promise<StoredUndo | null>;
   previousPendingConfirmation(
     conversationId: string,
     userId: string,
@@ -279,7 +282,8 @@ export function createActionStore(client: SupabaseClient): ActionStore {
         for (const entry of entries.success ? Object.values(entries.data) : []) {
           const undo = z.looseObject({ undo: undoEntrySchema }).safeParse(entry);
           if (undo.success && undo.data.undo.actionId === action.id) {
-            return undo.data.undo.previous;
+            const { previous, fingerprint } = undo.data.undo;
+            return { previous, fingerprint };
           }
         }
       }

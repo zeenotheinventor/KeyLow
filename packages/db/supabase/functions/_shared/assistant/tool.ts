@@ -6,7 +6,7 @@ import { toJSONSchema } from "zod";
 import type { Database } from "../core/database.types.ts";
 import type { ReportError } from "../report.ts";
 import type { RecipeImportServices } from "./recipeParse.ts";
-import type { ActionRecord, ActionStore, ActionTarget } from "./store.ts";
+import type { ActionRecord, ActionStore, ActionTarget, StoredUndo } from "./store.ts";
 import type { JsonValue } from "./untrusted.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ZodType } from "zod";
@@ -34,9 +34,9 @@ export type ToolContext = {
   // The only holder of the service client: ids-only rows of `assistant_actions` and the turn's
   // pending confirmation.
   actions: ActionStore;
-  // The `previous` the write tool stored beside its card, for the action being undone, or null when it is gone.
-  // For an `inverse` only: an inverse that gets null answers `unavailable`. Scoped to `userId`.
-  previousValueOf(action: ActionRecord): Promise<JsonValue | null>;
+  // The `previous` and `fingerprint` the write tool stored beside its card, for the action being undone, or null
+  // when they are gone. For an `inverse` only: an inverse that gets null answers `unavailable`. Scoped to `userId`.
+  previousValueOf(action: ActionRecord): Promise<StoredUndo | null>;
   userId: string;
   turn: ToolTurn;
   registry: ToolRegistry;

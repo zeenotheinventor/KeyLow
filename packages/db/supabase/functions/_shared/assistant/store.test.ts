@@ -209,19 +209,39 @@ Deno.test("the previous value is the one stored beside the card of that action",
 
   const value = await createActionStore(client).previousValueOf(storedAction, userId);
 
-  assertEquals(value, previous);
+  assertEquals(value, { previous, fingerprint: "f-1" });
 });
 
-Deno.test("a stored string comes back exactly as it went in", async () => {
+Deno.test("stored strings come back exactly as they went in, in both fields", async () => {
   const deletedAt = "2026-11-03T08:10:00.123456+00:00";
+  const fingerprint = "fingerprint-with-trailing-space ";
   const { client } = messagesClient([
-    { turn_id: turnId, user_id: userId, display: undoDisplay(undoneActionId, { deletedAt }) },
+    {
+      turn_id: turnId,
+      user_id: userId,
+      display: {
+        "toolu-1": { undo: { actionId: undoneActionId, previous: { deletedAt }, fingerprint } },
+      },
+    },
   ]);
 
   const value = await createActionStore(client).previousValueOf(storedAction, userId);
 
-  assertEquals(value, { deletedAt });
+  assertEquals(value, { previous: { deletedAt }, fingerprint });
 });
+
+Deno.test(
+  "a previous value of JSON null comes back in the record and is not a missing one",
+  async () => {
+    const { client } = messagesClient([
+      { turn_id: turnId, user_id: userId, display: undoDisplay(undoneActionId, null) },
+    ]);
+
+    const value = await createActionStore(client).previousValueOf(storedAction, userId);
+
+    assertEquals(value, { previous: null, fingerprint: "f-1" });
+  },
+);
 
 Deno.test(
   "another person's action id answers null, whoever the row says owns the action",
