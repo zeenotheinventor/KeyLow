@@ -35,6 +35,44 @@ describe("parseAssistantEvent", () => {
     });
   });
 
+  it.each([
+    ['{"type":"status","code":"thinking"}', { type: "status", code: "thinking" }],
+    [
+      '{"type":"status","code":"tool","tool":"get_day","food":null,"isConfirmed":false}',
+      { type: "status", code: "tool", tool: "get_day", food: null, isConfirmed: false },
+    ],
+  ])("should parse the status %s", (line, event) => {
+    expect(parseAssistantEvent(line)).toEqual({ ok: true, event });
+  });
+
+  it.each([
+    ["an unknown code", '{"type":"status","code":"dreaming"}'],
+    [
+      "an extra key",
+      '{"type":"status","code":"tool","tool":"get_day","food":null,"isConfirmed":false,"n":1}',
+    ],
+    [
+      "a tool with no name",
+      '{"type":"status","code":"tool","tool":"","food":null,"isConfirmed":false}',
+    ],
+    ["a status with no code", '{"type":"status"}'],
+  ])(
+    "should read a status with %s as thinking, so an older app never fails a turn",
+    (_name, line) => {
+      expect(parseAssistantEvent(line)).toEqual({
+        ok: true,
+        event: { type: "status", code: "thinking" },
+      });
+    },
+  );
+
+  it("should still fail an unknown type that looks like a status", () => {
+    expect(parseAssistantEvent('{"type":"statuses","code":"thinking"}')).toMatchObject({
+      ok: false,
+      reason: "invalid_event",
+    });
+  });
+
   it("should name an extra key on the event, because a name is not a value", () => {
     expect(parseAssistantEvent('{"type":"done","outcome":"complete","userId":"abc"}')).toEqual({
       ok: false,

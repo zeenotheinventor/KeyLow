@@ -5,4 +5,6 @@ export const storyStates = [
   "Stopped",
   "WithCitation",
   "WithEstimate",
+  "Formatted",
+  "FormattedStreaming",
 ];

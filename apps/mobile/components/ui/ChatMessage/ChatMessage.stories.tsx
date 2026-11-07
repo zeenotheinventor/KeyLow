@@ -100,3 +100,32 @@ export const WithEstimate: Story = {
     />
   ),
 };
+
+// The words the model writes as markdown, which the message draws as bold, a bullet and a numbered item.
+const formattedReply =
+  "Two things I can do here:\n- **Log food:** say what you ate and when.\n- **Copy a day:** repeat one day onto another.\n\n## Steps\n1. Say it your way.\n2. Check the entry.";
+
+// The formatted board: bold lead-ins, bullets with a hanging indent, a numbered list and a heading at body size.
+export const Formatted: Story = {
+  render: () => (
+    <ChatMessage
+      paragraphs={formattedReply.split("\n\n")}
+      role="assistant"
+      speakerLabel={assistant}
+    />
+  ),
+};
+
+// The same reply cut short in the middle of a bold word: no asterisk shows and the caret stays after the last word.
+export const FormattedStreaming: Story = {
+  render: () => (
+    <ChatMessage
+      isStreaming
+      paragraphs={[
+        "Two things I can do here:\n- **Log food:** say what you ate and when.\n- **Copy a d",
+      ]}
+      role="assistant"
+      speakerLabel={assistant}
+    />
+  ),
+};

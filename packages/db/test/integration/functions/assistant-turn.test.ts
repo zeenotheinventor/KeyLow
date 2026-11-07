@@ -207,12 +207,16 @@ async function storedMessages(turn: FinishedTurn) {
 const textOf = (event: AssistantStreamEvent) => (event.type === "text" ? event.delta : "");
 
 describe("a turn that calls search_foods and then answers", () => {
-  it("streams events that all parse, in the order turn, text, done complete", () => {
+  it("streams events that all parse, in the order turn, the search step, thinking, text, done complete", () => {
     const { events } = searchTurn;
 
     expect(events[0]?.type).toBe("turn");
     expect(events.at(-1)).toEqual({ type: "done", outcome: "complete" });
-    expect(events.slice(1, -1).every(({ type }) => type === "text")).toBe(true);
+    expect(events.slice(1, 3)).toEqual([
+      { type: "status", code: "tool", tool: "search_foods", food: foodWord, isConfirmed: false },
+      { type: "status", code: "thinking" },
+    ]);
+    expect(events.slice(3, -1).every(({ type }) => type === "text")).toBe(true);
     expect(events.map(textOf).join("")).toBe("You have scrambled eggs saved.");
   });
 
@@ -305,12 +309,16 @@ describe("a turn that calls search_foods and then answers", () => {
 });
 
 describe("a turn that calls log_entry", () => {
-  it("streams a card event before the words, then done complete", () => {
+  it("streams the log step and thinking, then a card event before the words, then done complete", () => {
     const types = logTurn.events.map(({ type }) => type);
 
     expect(types[0]).toBe("turn");
-    expect(types[1]).toBe("card");
-    expect(types.slice(2, -1).every((type) => type === "text")).toBe(true);
+    expect(logTurn.events.slice(1, 3)).toEqual([
+      { type: "status", code: "tool", tool: "log_entry", food: null, isConfirmed: false },
+      { type: "status", code: "thinking" },
+    ]);
+    expect(types[3]).toBe("card");
+    expect(types.slice(4, -1).every((type) => type === "text")).toBe(true);
     expect(logTurn.events.at(-1)).toEqual({ type: "done", outcome: "complete" });
   });
 

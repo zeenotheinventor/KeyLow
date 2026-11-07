@@ -1,4 +1,9 @@
-import type { AssistantCard, AssistantNotice, AssistantStreamEvent } from "@keylow/core";
+import type {
+  AssistantCard,
+  AssistantNotice,
+  AssistantStatus,
+  AssistantStreamEvent,
+} from "@keylow/core";
 
 type EventOfType<Type extends AssistantStreamEvent["type"]> = Omit<
   Extract<AssistantStreamEvent, { type: Type }>,
@@ -8,8 +13,8 @@ type EventOfType<Type extends AssistantStreamEvent["type"]> = Omit<
 /**
  * The turn being written, as the assistant sheet draws it. Each field is what one board shows:
  * `text` grows with the reply (`assistant · streaming`), `cards` are the writes with their Undo, `clarify`
- * and `confirm` end the turn with a question, `answerMeta` sits under an answer, `status` is the recipe
- * page being read, `notice` is a gate or a failure, and `stopped` is set when the person closed the sheet
+ * and `confirm` end the turn with a question, `answerMeta` sits under an answer, `status` is the step the
+ * assistant is on, `notice` is a gate or a failure, and `stopped` is set when the person closed the sheet
  * before the end. `outcome` is how the turn ended, null while it is still going or when it was stopped.
  */
 export type AssistantLiveTurn = {
@@ -20,7 +25,7 @@ export type AssistantLiveTurn = {
   clarify: EventOfType<"clarify"> | null;
   confirm: EventOfType<"confirm"> | null;
   answerMeta: EventOfType<"answer_meta"> | null;
-  status: EventOfType<"status"> | null;
+  status: AssistantStatus | null;
   notice: AssistantNotice | null;
   stopped: boolean;
   outcome: EventOfType<"done">["outcome"] | null;
@@ -50,9 +55,13 @@ export function applyAssistantEvent(
   switch (event.type) {
     case "turn":
       return { ...live, turnId: event.turnId, conversationId: event.conversationId };
-    case "status":
-      return { ...live, status: { code: event.code, host: event.host } };
-    // The recipe page is read before the reply, so anything else arriving means the reading is over.
+    case "status": {
+      // The fields are copied whole, so a new status field needs nothing here.
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { type, ...status } = event;
+      return { ...live, status };
+    }
+    // A step comes before the reply, so anything else arriving means the step is over.
     case "text":
       return { ...live, status: null, text: live.text + event.delta };
     case "card":

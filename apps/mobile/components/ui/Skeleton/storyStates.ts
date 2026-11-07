@@ -17,4 +17,5 @@ export const storyStates = [
   "Weight",
   "Program",
   "BodyComposition",
+  "AssistantThread",
 ];

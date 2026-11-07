@@ -450,6 +450,38 @@ function SkeletonBodyComposition() {
   );
 }
 
+// The assistant sheet's conversation as its opening board draws it: your message as a bubble bone on the
+// right, then the reply as lines, twice. The classes are written out so Tailwind sees them.
+const assistantThreadMessages = [
+  { key: "first-you", kind: "you", widthClassNames: ["w-[62%]"] },
+  { key: "first-reply", kind: "reply", widthClassNames: ["w-[92%]", "w-[84%]", "w-[58%]"] },
+  { key: "second-you", kind: "you", widthClassNames: ["w-[44%]"] },
+  { key: "second-reply", kind: "reply", widthClassNames: ["w-[88%]", "w-[46%]"] },
+] as const;
+
+// A bubble bone is 46 points tall with the chat bubble's corners, small at the bottom right, and the reply's
+// lines are 14 points tall, 8 apart, and stop 16 points short of the right edge. The messages are 12 apart.
+function SkeletonAssistantThread() {
+  return (
+    <View className="gap-3" testID="skeleton-assistant-thread">
+      {assistantThreadMessages.map(({ key, kind, widthClassNames }) =>
+        kind === "you" ? (
+          <SkeletonBone
+            key={key}
+            className={`h-[46px] self-end rounded-medium rounded-br-small ${widthClassNames[0]}`}
+          />
+        ) : (
+          <View key={key} className="gap-2 pr-4" testID="skeleton-assistant-reply">
+            {widthClassNames.map((widthClassName) => (
+              <SkeletonBone key={widthClassName} className={`h-[14px] ${widthClassName}`} />
+            ))}
+          </View>
+        ),
+      )}
+    </View>
+  );
+}
+
 /**
  * What a list shows while it loads, shaped like the content that replaces it. It draws nothing for the
  * first 200 ms (`--skeleton-delay`), so a load that is quick never flickers, then fades in. It is hidden
@@ -475,6 +507,7 @@ export function Skeleton({ variant = "row", rows = 3 }: SkeletonProps) {
       {variant === "weight" ? <SkeletonWeight /> : null}
       {variant === "program" ? <SkeletonProgram /> : null}
       {variant === "bodyComposition" ? <SkeletonBodyComposition /> : null}
+      {variant === "assistantThread" ? <SkeletonAssistantThread /> : null}
       {variant === "favourites" ? <SkeletonFavourites /> : null}
       {variant === "row" ? <SkeletonRow index={0} /> : null}
       {variant === "recipeGroup" ? (

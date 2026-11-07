@@ -11,9 +11,11 @@ import {
   canAnswerAssistantQuestion,
   canSendAssistantMessage,
   describeAssistantComposer,
+  isAssistantSheetOpening,
   isAssistantStatusKnown,
   isSentTurnStored,
   isStaleStreamGateNotice,
+  replyWords,
   resolveAssistantSheetAccess,
   resolveAssistantTimeZone,
 } from "@keylow/core";
@@ -29,7 +31,16 @@ import { Composer } from "./Composer";
 import { ConsentCard } from "./ConsentCard";
 import { assistantCardHref } from "../../lib/assistantCardRoutes";
 import { useIsOnline } from "../../lib/connectivity";
-import { Badge, Banner, BottomSheet, SheetHeader, SheetScrollView, Text, useToast } from "../ui";
+import {
+  Badge,
+  Banner,
+  BottomSheet,
+  SheetHeader,
+  SheetScrollView,
+  Skeleton,
+  Text,
+  useToast,
+} from "../ui";
 
 import type { AssistantSheetProps } from "./types";
 import type { AssistantCardLink, AssistantSheetSent } from "@keylow/core";
@@ -160,19 +171,22 @@ export function AssistantSheet({ open, onClose, localDate, describeAt }: Assista
     isOnline,
     isThreadKnown,
     isThreadFetching: conversation.isFetching,
-    // The turn's status clears with its next event, so the reading is over as soon as anything else arrives.
-    isReadingRecipe: (live?.status ?? null) !== null,
+    // The turn's step clears with its next event, so it is over as soon as anything else arrives.
+    isWorking: (live?.status ?? null) !== null,
     access,
   };
   const canSendWords = (words: string) => canSendAssistantMessage({ text: words, ...sendState });
 
   // The streaming message is not a live region (Android would read all of it again for each chunk, and iOS
   // ignores a live region), so a screen reader hears the finished answer once, on both, when it is complete.
+  // The working line before it announces itself, once, and is not a live region either.
   // An answer that was stopped by closing the sheet is not read, because the person closed it.
   const wasStreaming = useRef(false);
   useEffect(() => {
     if (wasStreaming.current && !isStreaming) {
-      const answer = live === null || live.stopped ? "" : live.text.trim();
+      // It is read as the words without the markers the model wrote, as the message's own name is.
+      const answer =
+        live === null || live.stopped ? "" : replyWords(live.text.trim(), { isPartial: false });
       if (answer !== "") {
         AccessibilityInfo.announceForAccessibility(answer);
       }
@@ -248,12 +262,24 @@ export function AssistantSheet({ open, onClose, localDate, describeAt }: Assista
     );
   }
 
+  // The placeholder (`assistant · opening`) stands in until the status and the conversation are read, so
+  // the sheet is never blank. The composer shows under it with Send off, and New conversation is dimmed.
+  const isOpening = isAssistantSheetOpening({ access, isEmpty, isThreadKnown });
   const isNewDisabled =
-    isEmpty || isStreaming || !isOnline || newConversation.isPending || access.kind === "consent";
+    isEmpty ||
+    isOpening ||
+    isStreaming ||
+    !isOnline ||
+    newConversation.isPending ||
+    access.kind === "consent";
 
   function renderBody() {
-    if (access.kind === "checking") {
-      return null;
+    if (isOpening) {
+      return (
+        <View accessible aria-label={ASSISTANT_SHEET.openingLabel} role="status">
+          <Skeleton variant="assistantThread" />
+        </View>
+      );
     }
     if (access.kind === "consent") {
       return (
@@ -266,13 +292,13 @@ export function AssistantSheet({ open, onClose, localDate, describeAt }: Assista
       );
     }
     if (isEmpty) {
-      return isThreadKnown ? (
+      return (
         <AssistantEmpty
           describeAt={describeAt}
           isDisabled={!isOnline || conversation.isFetching}
           onStarterPress={sendMessage}
         />
-      ) : null;
+      );
     }
     return (
       <AssistantThread
@@ -319,7 +345,9 @@ export function AssistantSheet({ open, onClose, localDate, describeAt }: Assista
         <SheetScrollView
           className="flex-1"
           contentContainerClassName={
-            threadClassNames[isEmpty || access.kind === "consent" ? "empty" : "conversation"]
+            threadClassNames[
+              !isOpening && (isEmpty || access.kind === "consent") ? "empty" : "conversation"
+            ]
           }
           keyboardDismissMode="on-drag"
           keyboardShouldPersistTaps="handled"

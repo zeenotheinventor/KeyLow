@@ -6,6 +6,7 @@ import { toJsonSchema } from "../_shared/assistant/tool.ts";
 import {
   confirmDeleteButtons,
   confirmTargetsButtons,
+  describeAssistantStatus,
   threadFromMessages,
 } from "../_shared/core.ts";
 import { contextBlock, MODEL } from "./prompt.ts";
@@ -66,6 +67,9 @@ function eventsOfType<Type extends AssistantStreamEvent["type"]>(
 }
 
 const typesOf = (events: readonly AssistantStreamEvent[]) => events.map((event) => event.type);
+// For the tests of other behaviour, so a step on the working line does not have to be spelt out in each.
+const withoutStatus = (events: readonly AssistantStreamEvent[]) =>
+  events.filter((event) => event.type !== "status");
 const textOf = (events: readonly AssistantStreamEvent[]) =>
   eventsOfType(events, "text")
     .map((event) => event.delta)
@@ -240,7 +244,7 @@ Deno.test(
         const result = await harness.take("log an egg");
 
         assertEquals(
-          typesOf(result.events).filter((type) => type !== "text"),
+          typesOf(withoutStatus(result.events)).filter((type) => type !== "text"),
           ["turn", "card", "done"],
         );
         const [card] = eventsOfType(result.events, "card");
@@ -490,7 +494,7 @@ Deno.test(
         assertEquals(result.events.at(-1), { type: "done", outcome: "confirm" });
         // Nothing is written after the confirm but the done, and no answer meta.
         assertEquals(
-          typesOf(result.events).filter((type) => type !== "text"),
+          typesOf(withoutStatus(result.events)).filter((type) => type !== "text"),
           ["turn", "confirm", "done"],
         );
         assertEquals(harness.mock.bodies.length, 1);
@@ -1174,7 +1178,7 @@ Deno.test(
           ids: entryIds,
           confirmation_id: confirmationId,
         });
-        assertEquals(typesOf(result.events), ["turn", "card", "done"]);
+        assertEquals(typesOf(withoutStatus(result.events)), ["turn", "card", "done"]);
         assertEquals(result.events.at(-1), { type: "done", outcome: "complete" });
         assertEquals(turnStatuses(harness), ["confirm", "complete"]);
         assertEquals(harness.usageRows().length, 1);
@@ -1223,7 +1227,7 @@ Deno.test("any case and spaces around the button's words behave the same", async
 
     assertEquals(harness.mock.bodies.length, 1);
     assertEquals(pressedCalls(harness).length, 1);
-    assertEquals(typesOf(result.events), ["turn", "card", "done"]);
+    assertEquals(typesOf(withoutStatus(result.events)), ["turn", "card", "done"]);
   });
 });
 
@@ -1246,7 +1250,7 @@ for (const [label, answer, reportCount] of [
 
         const result = await harness.take(deleteLabel);
 
-        assertEquals(typesOf(result.events), ["turn", "notice", "done"]);
+        assertEquals(typesOf(withoutStatus(result.events)), ["turn", "notice", "done"]);
         assertEquals(result.events.slice(-2), [
           { type: "notice", notice: { code: "turn_failed" } },
           { type: "done", outcome: "failed" },
@@ -1288,7 +1292,7 @@ for (const [label, answer] of [
 
           const result = await harness.take(deleteLabel);
 
-          assertEquals(typesOf(result.events), ["turn", "done"]);
+          assertEquals(typesOf(withoutStatus(result.events)), ["turn", "done"]);
           assertEquals(result.events.at(-1), { type: "done", outcome: "complete" });
           assertEquals(turnStatuses(harness), ["confirm", "complete"]);
           assertEquals(harness.mock.bodies.length, 1);
@@ -1337,7 +1341,7 @@ Deno.test(
 
       const result = await harness.take(deleteLabel);
 
-      assertEquals(typesOf(result.events), ["turn", "confirm", "done"]);
+      assertEquals(typesOf(withoutStatus(result.events)), ["turn", "confirm", "done"]);
       assertEquals(eventsOfType(result.events, "confirm")[0]?.question, deleteQuestion);
       assertEquals(result.events.at(-1), { type: "done", outcome: "confirm" });
       assertEquals(turnStatuses(harness), ["confirm", "confirm"]);
@@ -2420,6 +2424,7 @@ Deno.test(
 
         assertEquals(eventsOfType(result.events, "status"), [
           { type: "status", code: "reading_recipe", host: "www.example.com" },
+          thinkingStatus,
         ]);
         assertStringIncludes(writtenBeforeTheCall[0] ?? "", '"code":"reading_recipe"');
       },
@@ -2451,11 +2456,341 @@ Deno.test(
 
         assertEquals(eventsOfType(result.events, "status"), [
           { type: "status", code: "reading_recipe", host: "example.com" },
+          thinkingStatus,
         ]);
       },
     );
   },
 );
+
+// ---- The steps of a turn, for the working line (KEY-917) ----
+
+const toolStatus = (tool: string, food: string | null, isConfirmed: boolean) =>
+  ({ type: "status", code: "tool", tool, food, isConfirmed }) as const;
+
+const thinkingStatus = { type: "status", code: "thinking" } as const;
+
+// The words of the food a person typed in the tests of what must never be logged or reported.
+const foodSentinel = "zanzibar loaf";
+
+Deno.test("a plain answer has no status at all", async () => {
+  await withHarness({ responses: [reply("Hello there")] }, async (harness) => {
+    const result = await harness.take("Hi");
+
+    assertEquals(
+      typesOf(result.events).filter((type) => type !== "text"),
+      ["turn", "done"],
+    );
+    assertEquals(eventsOfType(result.events, "status"), []);
+  });
+});
+
+Deno.test(
+  "a search is announced before its call with the food words, then thinking comes before the words",
+  async () => {
+    let harness: Harness | undefined;
+    const writtenBeforeTheCall: string[] = [];
+    await withHarness(
+      {
+        responses: [
+          callTools([{ id: "s1", name: "search_foods", input: { q: "toast" } }]),
+          reply("Toast is 80 kcal."),
+        ],
+        answers: {
+          search_foods: async () => {
+            // The reader of the stream runs a tick behind the writer.
+            await new Promise((resolve) => setTimeout(resolve, 5));
+            writtenBeforeTheCall.push(harness?.written.join("") ?? "");
+            return okResult({ name: "search_foods" });
+          },
+        },
+      },
+      async (created) => {
+        harness = created;
+        const result = await created.take("how much is toast");
+
+        assertEquals(eventsOfType(result.events, "status"), [
+          toolStatus("search_foods", "toast", false),
+          thinkingStatus,
+        ]);
+        assertStringIncludes(writtenBeforeTheCall[0] ?? "", '"code":"tool"');
+        assertEquals((writtenBeforeTheCall[0] ?? "").includes('"code":"thinking"'), false);
+        assertEquals(
+          typesOf(result.events).filter((type) => type !== "text"),
+          ["turn", "status", "status", "done"],
+        );
+        // The second call's words come after the thinking.
+        assertEquals(result.events.slice(1, 3), [
+          toolStatus("search_foods", "toast", false),
+          thinkingStatus,
+        ]);
+      },
+    );
+  },
+);
+
+Deno.test("get_food is announced with no food words, because its input is only an id", async () => {
+  await withHarness(
+    {
+      responses: [callTools([{ id: "g1", name: "get_food", input: { id: "f1" } }]), reply("Done.")],
+      tools: [...fakeTools, listed("get_food", true, { id: { type: "string" } })],
+    },
+    async (harness) => {
+      const result = await harness.take("how much is toast");
+
+      assertEquals(eventsOfType(result.events, "status")[0], toolStatus("get_food", null, false));
+    },
+  );
+});
+
+Deno.test("a search of newlines and 200 characters goes out cleaned and capped", async () => {
+  await withHarness(
+    {
+      responses: [
+        callTools([
+          {
+            id: "s1",
+            name: "search_foods",
+            input: { q: `toast\r\nwith butter\n${"a".repeat(200)}` },
+          },
+        ]),
+        reply("Found it."),
+      ],
+    },
+    async (harness) => {
+      const result = await harness.take("find toast");
+
+      assertEquals(
+        eventsOfType(result.events, "status")[0],
+        toolStatus("search_foods", `toast with butter ${"a".repeat(42)}`, false),
+      );
+      assertEquals(result.events.at(-1), { type: "done", outcome: "complete" });
+    },
+  );
+});
+
+Deno.test("a search with no usable words goes out with no food", async () => {
+  await withHarness(
+    {
+      responses: [
+        callTools([{ id: "s1", name: "search_foods", input: { q: " \n " } }]),
+        reply("Found it."),
+      ],
+    },
+    async (harness) => {
+      const result = await harness.take("find toast");
+
+      assertEquals(
+        eventsOfType(result.events, "status")[0],
+        toolStatus("search_foods", null, false),
+      );
+      assertEquals(result.events.at(-1), { type: "done", outcome: "complete" });
+    },
+  );
+});
+
+Deno.test(
+  "ask_user, a tool outside the allowlist and an input that is no record send no tool status",
+  async () => {
+    const cases: [string, ScriptedResponse, string][] = [
+      [
+        "ask_user",
+        callTools([
+          { id: "a1", name: "ask_user", input: { question: "How much rice?", quick_replies: [] } },
+        ]),
+        "log rice",
+      ],
+      [
+        "a tool outside the allowlist",
+        callTools([{ id: "d1", name: "delete_entry", input: { ids: entryIds } }]),
+        "Add this https://example.com/pasta/recipe please",
+      ],
+      [
+        "an input that is no record",
+        callTools([{ id: "s1", name: "search_foods", rawJson: "[1, 2]" }]),
+        "find an egg",
+      ],
+    ];
+    for (const [label, response, text] of cases) {
+      await withHarness({ responses: [response, reply("Sorry.")] }, async (harness) => {
+        const result = await harness.take(text);
+
+        assertEquals(
+          eventsOfType(result.events, "status").filter((event) => event.code === "tool"),
+          [],
+          label,
+        );
+      });
+    }
+  },
+);
+
+Deno.test(
+  "an import keeps its reading_recipe status and sends no tool status for the call",
+  async () => {
+    await withHarness(
+      {
+        responses: [
+          callTools([
+            {
+              id: "i1",
+              name: "import_recipe_from_url",
+              input: { url: "https://www.example.com/pasta/recipe" },
+            },
+          ]),
+          reply("Imported."),
+        ],
+      },
+      async (harness) => {
+        const result = await harness.take("Add https://www.example.com/pasta/recipe");
+
+        assertEquals(eventsOfType(result.events, "status"), [
+          { type: "status", code: "reading_recipe", host: "www.example.com" },
+          thinkingStatus,
+        ]);
+      },
+    );
+  },
+);
+
+Deno.test(
+  "an import whose host cannot be read sends no step, so the line stays on thinking",
+  async () => {
+    await withHarness(
+      {
+        responses: [
+          callTools([{ id: "i1", name: "import_recipe_from_url", input: { url: "" } }]),
+          reply("Sorry."),
+        ],
+      },
+      async (harness) => {
+        const result = await harness.take("Add https://www.example.com/pasta/recipe");
+
+        assertEquals(eventsOfType(result.events, "status"), [thinkingStatus]);
+      },
+    );
+  },
+);
+
+Deno.test(
+  "a model's delete that needs a confirmation sends the tool as not confirmed, then the question, with no thinking after it",
+  async () => {
+    await withHarness(askingOnly(), async (harness) => {
+      const result = await harness.take("delete my lunch");
+
+      assertEquals(
+        typesOf(result.events).filter((type) => type !== "text"),
+        ["turn", "status", "confirm", "done"],
+      );
+      assertEquals(eventsOfType(result.events, "status"), [
+        toolStatus("delete_entry", null, false),
+      ]);
+    });
+  },
+);
+
+Deno.test(
+  "the confirm press sends the tool as confirmed before the call, then the card, with no thinking and no model call",
+  async () => {
+    let harness: Harness | undefined;
+    const writtenBeforeThePress: string[] = [];
+    await withHarness(
+      askingOnly(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        writtenBeforeThePress.push(harness?.written.join("") ?? "");
+        return deletedCall();
+      }),
+      async (created) => {
+        harness = created;
+        await afterAskedDelete(created);
+
+        const result = await created.take(deleteLabel);
+
+        assertEquals(typesOf(result.events), ["turn", "status", "card", "done"]);
+        assertEquals(eventsOfType(result.events, "status"), [
+          toolStatus("delete_entry", null, true),
+        ]);
+        assertStringIncludes(writtenBeforeThePress[0] ?? "", '"isConfirmed":true');
+        assertEquals(created.mock.bodies.length, 1);
+      },
+    );
+  },
+);
+
+Deno.test("the steps change nothing the model reads and nothing that is stored", async () => {
+  await withHarness(
+    {
+      responses: [
+        callTools([{ id: "s1", name: "search_foods", input: { q: foodSentinel } }]),
+        reply("Found it."),
+      ],
+    },
+    async (harness) => {
+      await harness.take("find some bread");
+
+      for (const body of harness.mock.bodies) {
+        assertEquals(body.includes("isConfirmed"), false);
+        assertEquals(body.includes('"type":"status"'), false);
+        assertEquals(body.includes("Looking up"), false);
+      }
+      for (const text of [JSON.stringify(harness.rows()), JSON.stringify(harness.turnRows())]) {
+        assertEquals(text.includes("isConfirmed"), false);
+        assertEquals(text.includes('"code":"tool"'), false);
+        assertEquals(text.includes('"code":"thinking"'), false);
+      }
+    },
+  );
+});
+
+Deno.test("the food words reach no report and no log line, in a turn that also fails", async () => {
+  const spy = spyOnConsole();
+  try {
+    await withHarness(
+      {
+        responses: [callTools([{ id: "s1", name: "search_foods", input: { q: foodSentinel } }])],
+        answers: { search_foods: failingCall() },
+      },
+      async (harness) => {
+        const result = await harness.take("find some bread");
+
+        assertEquals(eventsOfType(result.events, "status"), [
+          toolStatus("search_foods", foodSentinel, false),
+        ]);
+        assertEquals(result.events.at(-1), { type: "done", outcome: "failed" });
+        assertEquals(harness.reports.length, 1);
+        for (const { caught } of harness.reports) {
+          assertEquals(String(caught).includes(foodSentinel), false);
+        }
+      },
+    );
+  } finally {
+    spy.restore();
+  }
+
+  assertEquals(spy.lines.length > 0, true);
+  for (const line of spy.lines) {
+    assertEquals(line.includes(foodSentinel), false, line);
+  }
+});
+
+// A tool added to the registry needs one line in the core table of words, or its step shows "Thinking". This is
+// the test that says so. `ask_user` sends a question instead, and a recipe link is `reading_recipe`.
+Deno.test("every tool in the registry has words for its step in the core table", () => {
+  const withoutRow = toolRegistry.list
+    .map((tool) => tool.name)
+    .filter((name) => name !== "ask_user" && name !== "import_recipe_from_url")
+    .filter(
+      (name) =>
+        describeAssistantStatus({ code: "tool", tool: name, food: null, isConfirmed: false }) ===
+        describeAssistantStatus({ code: "thinking" }),
+    );
+
+  assertEquals(
+    withoutRow,
+    [],
+    "A tool has no row in TOOL_WORDS in packages/core/src/copy/assistantNotices.ts: add one line to the table",
+  );
+});
 
 // ---- Configuration, logs ----
 

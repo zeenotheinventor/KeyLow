@@ -1,4 +1,5 @@
-import { cleanup, render, screen, userEvent } from "@testing-library/react-native";
+import { act, cleanup, render, screen, userEvent, within } from "@testing-library/react-native";
+import { AccessibilityInfo } from "react-native";
 import { setUpTests } from "react-native-reanimated";
 
 import { AssistantSheet } from "../components/AssistantSheet";
@@ -14,6 +15,7 @@ import { installVirtualClock } from "./support/virtualClock";
 
 import type { AssistantLiveTurn } from "@keylow/api-client";
 import type { AssistantThreadItem } from "@keylow/core";
+import type { TestInstance } from "test-renderer";
 
 jest.mock("@react-native-async-storage/async-storage", () => ({
   __esModule: true,
@@ -101,6 +103,7 @@ const TREND_ESTIMATE = "Trend weight is an estimate";
 const TREND_CITATION = "Based on 24 weigh-ins, 21 Sep to 18 Oct";
 const RECIPE_ASK = "Add a recipe from a link";
 const READING_LINE = "Reading the recipe at example.com";
+const LOG_STARTER = "Log 2 eggs and toast at 08:10";
 
 const userItem = (id: string, text: string): AssistantThreadItem => ({ kind: "user", id, text });
 const answerItem = (
@@ -145,6 +148,18 @@ function threadWords(firstWords: string): string[] {
   const words = screenWords();
   return words.slice(words.indexOf(`You: ${firstWords}`), words.lastIndexOf("Message"));
 }
+
+// The mark on a working line is decoration, so it has no role to find it by and is found by what it is
+// made of. The line draws the one Svg, at 20 points, hidden from a screen reader.
+function logoOn(line: TestInstance) {
+  return line.queryAll((node) => node.type === "RNSVGSvgView");
+}
+
+// Moves the fake clock, which is how the working line's minimum time passes.
+const advanceClock = (milliseconds: number) =>
+  act(async () => {
+    await jest.advanceTimersByTimeAsync(milliseconds);
+  });
 
 const userSetup = () => userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
 const button = (name: string) => screen.getByRole("button", { name });
@@ -210,6 +225,18 @@ describe("the answers and the working line in the assistant thread", () => {
 
       expect(threadWords(RECIPE_ASK)).toEqual([...youSaid(RECIPE_ASK), READING_LINE]);
       expect(screen.getByRole("status", { name: READING_LINE })).toBeOnTheScreen();
+    });
+
+    it("should draw the logo on the recipe line too, at 20 points and hidden", async () => {
+      await sendStarter(RECIPE_ASK);
+      mockAssistant.live = liveTurn({ status: { code: "reading_recipe", host: "example.com" } });
+      mockAssistant.isStreaming = true;
+      await screen.rerender(sheetTree());
+
+      const logos = logoOn(screen.getByRole("status", { name: READING_LINE }));
+
+      expect(logos).toHaveLength(1);
+      expect(logos[0]?.props).toMatchObject({ width: 20, height: 20, "aria-hidden": true });
     });
 
     it("should word the host the event names", async () => {
@@ -292,8 +319,210 @@ describe("the answers and the working line in the assistant thread", () => {
       await screen.rerender(sheetTree());
       mockAssistant.live = liveTurn({ cards: [recipeImportCard] });
       await screen.rerender(sheetTree());
+      // The line it hands over to waits out the minimum time first, and the card does not wait.
+      await advanceClock(700);
 
       expect(screen.queryByText(READING_LINE)).toBeNull();
+      expect(screen.getByRole("status", { name: "Thinking" })).toBeOnTheScreen();
+    });
+  });
+
+  describe("the working line, assistant · working", () => {
+    const toastStep = {
+      code: "tool",
+      tool: "search_foods",
+      food: "toast",
+      isConfirmed: false,
+    } as const;
+
+    // The turn is streaming from the press, and each call is the next event of it.
+    async function stream(overrides: Partial<AssistantLiveTurn> = {}) {
+      mockAssistant.live = liveTurn(overrides);
+      mockAssistant.isStreaming = true;
+      await screen.rerender(sheetTree());
+    }
+
+    it("should say Thinking from the press, with no caret, until the first event", async () => {
+      await sendStarter("What's left for today?");
+      await stream();
+
+      expect(screen.getByRole("status", { name: "Thinking" })).toBeOnTheScreen();
+      expect(threadWords("What's left for today?")).toEqual([
+        ...youSaid("What's left for today?"),
+        "Thinking",
+      ]);
+    });
+
+    it("should draw the logo at 20 points beside the words, adding no role or name to the line", async () => {
+      await sendStarter("What's left for today?");
+      await stream();
+
+      const line = screen.getByRole("status", { name: "Thinking" });
+      const logos = logoOn(line);
+
+      expect(logos).toHaveLength(1);
+      expect(logos[0]?.props).toMatchObject({ width: 20, height: 20, "aria-hidden": true });
+      expect(within(line).queryByRole("img")).toBeNull();
+      expect(screen.getAllByRole("status")).toHaveLength(1);
+    });
+
+    it("should be replaced by the words, with the line gone, once they arrive", async () => {
+      await sendStarter("What's left for today?");
+      await stream();
+      await stream({ text: "You have 1,693 kcal" });
+
+      expect(screen.queryByRole("status", { name: "Thinking" })).toBeNull();
+      expect(screen.getByText("You have 1,693 kcal")).toBeOnTheScreen();
+    });
+
+    it("should say a tool's step in its words once the minimum time has passed", async () => {
+      await sendStarter(LOG_STARTER);
+      await stream();
+      await advanceClock(100);
+      await stream({ status: toastStep });
+
+      expect(screen.getByRole("status", { name: "Thinking" })).toBeOnTheScreen();
+
+      await advanceClock(599);
+
+      expect(screen.getByRole("status", { name: "Thinking" })).toBeOnTheScreen();
+
+      await advanceClock(1);
+
+      expect(screen.getByRole("status", { name: "Looking up toast" })).toBeOnTheScreen();
+    });
+
+    it("should show new words at once when the current ones have been up for the minimum time", async () => {
+      await sendStarter(LOG_STARTER);
+      await stream();
+      await advanceClock(700);
+      await stream({ status: toastStep });
+
+      expect(screen.getByRole("status", { name: "Looking up toast" })).toBeOnTheScreen();
+    });
+
+    it("should skip to the last of three steps that come within the hold", async () => {
+      await sendStarter(LOG_STARTER);
+      await stream();
+      await advanceClock(100);
+      await stream({ status: toastStep });
+      await advanceClock(100);
+      await stream({
+        status: { code: "tool", tool: "get_day", food: null, isConfirmed: false },
+      });
+      await advanceClock(100);
+      await stream({
+        status: { code: "tool", tool: "log_entry", food: null, isConfirmed: false },
+      });
+      await advanceClock(700);
+
+      expect(screen.getByRole("status", { name: "Logging your food" })).toBeOnTheScreen();
+      expect(screen.queryByText("Looking up toast")).toBeNull();
+      expect(screen.queryByText("Checking your diary")).toBeNull();
+    });
+
+    it("should take the line away at once when words arrive during a hold", async () => {
+      await sendStarter(LOG_STARTER);
+      await stream();
+      await advanceClock(100);
+      await stream({ status: toastStep });
+      await stream({ text: "Logged your toast." });
+
+      expect(screen.queryByRole("status")).toBeNull();
+      expect(screen.getByText("Logged your toast.")).toBeOnTheScreen();
+    });
+
+    it("should show a card at once during a hold, with the line under it", async () => {
+      await sendStarter(LOG_STARTER);
+      await stream();
+      await advanceClock(100);
+      await stream({ cards: [recipeImportCard] });
+
+      expect(screen.getByText(recipeImportCard.title)).toBeOnTheScreen();
+      expect(screen.getByRole("status", { name: "Thinking" })).toBeOnTheScreen();
+    });
+
+    it("should leave no line under a question, a notice or the end of the turn", async () => {
+      await sendStarter(LOG_STARTER);
+      await stream();
+      await stream({
+        outcome: "clarify",
+        clarify: { question: "How much toast?", quickReplies: [], fieldHint: null },
+      });
+
+      expect(screen.queryByRole("status")).toBeNull();
+    });
+
+    it("should draw a long food name on one line, with nothing to press", async () => {
+      const food = "wholemeal seeded sourdough toast with extra crunchy peanut";
+      await sendStarter(LOG_STARTER);
+      await stream({ status: { ...toastStep, food } });
+      await advanceClock(700);
+      await stream({ status: { ...toastStep, food } });
+
+      const line = screen.getByRole("status", { name: `Looking up ${food}` });
+
+      expect(within(line).getByText(`Looking up ${food}`).props.numberOfLines).toBe(1);
+      expect(within(line).queryByRole("link")).toBeNull();
+      expect(within(line).queryByRole("button")).toBeNull();
+    });
+
+    it("should keep Send off while any step shows", async () => {
+      await sendStarter(LOG_STARTER);
+      mockAssistant.live = liveTurn({ status: toastStep });
+      mockAssistant.isStreaming = false;
+      await screen.rerender(sheetTree());
+      await userSetup().type(screen.getByLabelText("Message"), "Thanks");
+
+      expect(button("Send")).toBeDisabled();
+    });
+  });
+
+  describe("telling a screen reader about the working line", () => {
+    const announce = () => jest.spyOn(AccessibilityInfo, "announceForAccessibility");
+    const step = (tool: string) =>
+      ({ code: "tool", tool, food: null, isConfirmed: false }) as const;
+
+    async function stream(overrides: Partial<AssistantLiveTurn> = {}) {
+      mockAssistant.live = liveTurn(overrides);
+      mockAssistant.isStreaming = true;
+      await screen.rerender(sheetTree());
+    }
+
+    it("should announce the first line once", async () => {
+      const spy = announce().mockClear();
+      await sendStarter(LOG_STARTER);
+      await stream();
+
+      expect(spy).toHaveBeenCalledTimes(1);
+      expect(spy).toHaveBeenCalledWith("Thinking");
+    });
+
+    it("should not announce a change within 5 seconds", async () => {
+      const spy = announce().mockClear();
+      await sendStarter(LOG_STARTER);
+      await stream();
+      await advanceClock(700);
+      await stream({ status: step("get_day") });
+      await advanceClock(3000);
+      await stream({ status: step("log_entry") });
+      await advanceClock(700);
+
+      expect(screen.getByRole("status", { name: "Logging your food" })).toBeOnTheScreen();
+      expect(spy).toHaveBeenCalledTimes(1);
+    });
+
+    it("should announce the words shown once 5 seconds have passed, and not queue the ones skipped", async () => {
+      const spy = announce().mockClear();
+      await sendStarter(LOG_STARTER);
+      await stream();
+      await advanceClock(700);
+      await stream({ status: step("get_day") });
+      await advanceClock(5000);
+      await stream({ status: step("log_entry") });
+      await advanceClock(700);
+
+      expect(spy.mock.calls).toEqual([["Thinking"], ["Logging your food"]]);
     });
   });
 
