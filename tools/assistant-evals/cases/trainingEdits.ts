@@ -180,8 +180,27 @@ export const sayThursday = (date: string): string =>
     })
     .replace(",", "");
 
-const writesOf = (...tools: readonly string[]): Grader =>
-  onlyTheseTools(new Set([...READ_TOOLS, ...tools]));
+/**
+ * Passes when no write landed that the case does not expect. A call of another tool that the tool refused (it
+ * answered an error code) or that only asked for a yes wrote nothing, and a model that tries a wrong call and goes
+ * on is not a model that wrote the wrong thing. What a case needs to be true is checked by its rows and cards.
+ */
+const writesOf =
+  (...tools: readonly string[]): Grader =>
+  ({ turns }) => {
+    const allowed = new Set([...READ_TOOLS, ...tools]);
+    const landed = turns
+      .flatMap((turn) => turn.toolCalls)
+      .find(
+        (call) =>
+          !allowed.has(call.name) && call.errorCode === undefined && call.outcome === undefined,
+      );
+    return Promise.resolve(
+      landed === undefined
+        ? { passed: true, reason: "no write landed that the case does not expect" }
+        : { passed: false, reason: `${landed.name} landed` },
+    );
+  };
 
 type Define = {
   id: string;
@@ -880,28 +899,35 @@ export function trainingEditsCasesOf(anchorDate: string): readonly EvalCase[] {
       id: "edits-pain-when-benching-swaps-and-points-to-a-doctor",
       messages: [injuryMessage],
       expect: [
-        turnEnded(0, "complete"),
-        actionRows("edit_routine", 1),
-        cardKinds(0, ["routine_updated"]),
-        routineIs(
-          injury.name,
-          (routine) => {
-            const day = dayNamed(routine, "Push");
-            if (day === undefined || day.exercises.length !== 3) {
-              return "the Push day does not hold 3 exercises";
-            }
-            if (exerciseOf(day, BENCH_PRESS) !== undefined) {
-              return "the bench press is still in the day";
-            }
-            return exerciseOf(day, OVERHEAD_PRESS) !== undefined &&
-              exerciseOf(day, TRICEPS_PUSHDOWN) !== undefined
-              ? null
-              : "an exercise that was not asked about went";
-          },
-          "the bench press was swapped for another exercise and the rest stayed",
-        ),
-        // The one thing the reply must say, by the prompt: pain goes to a doctor or a physio.
-        answerSays(0, /doctor|physio/i, "point to a doctor or a physio"),
+        // "Something else" leaves the choice open, so one question and nothing written is a fair play too. The
+        // referral is only required on the turn that makes the swap.
+        anyOfRoutes([
+          [
+            turnEnded(0, "complete"),
+            actionRows("edit_routine", 1),
+            cardKinds(0, ["routine_updated"]),
+            routineIs(
+              injury.name,
+              (routine) => {
+                const day = dayNamed(routine, "Push");
+                if (day === undefined || day.exercises.length !== 3) {
+                  return "the Push day does not hold 3 exercises";
+                }
+                if (exerciseOf(day, BENCH_PRESS) !== undefined) {
+                  return "the bench press is still in the day";
+                }
+                return exerciseOf(day, OVERHEAD_PRESS) !== undefined &&
+                  exerciseOf(day, TRICEPS_PUSHDOWN) !== undefined
+                  ? null
+                  : "an exercise that was not asked about went";
+              },
+              "the bench press was swapped for another exercise and the rest stayed",
+            ),
+            // The one thing the reply must say, by the prompt: pain goes to a doctor or a physio.
+            answerSays(0, /doctor|physio/i, "point to a doctor or a physio"),
+          ],
+          [askedOnce(), noActionRowsInTurn(0), cardKinds(0, []), routineUnchanged(injury)],
+        ]),
         writesOf("edit_routine"),
       ],
       extras: { setup: injury.setup, cleanUp: tidyUp },
@@ -1592,6 +1618,7 @@ function exerciseAndWorkoutCasesOf(days: readonly string[]): EvalCase[] {
   // ---- Undo once the conversation is deleted: the writes that keep nothing beside their card ----
   const stored = scratchRoutine(legsRoutine("Scratch undo after delete"));
   let undoneAfterDelete: readonly AssistantUndoResult[] | null = null;
+  let actionsBeforeDelete: number | null = null;
 
   return [
     define({
@@ -1806,6 +1833,16 @@ function exerciseAndWorkoutCasesOf(days: readonly string[]): EvalCase[] {
       id: "edits-undo-after-the-conversation-is-deleted",
       messages: [`Archive my ${stored.name} routine.`, confirmArchiveRoutineButtons().confirmLabel],
       expect: [
+        // Read before the conversation is deleted, which clears the actions' turn: a press that left no action says so.
+        () =>
+          Promise.resolve(
+            actionsBeforeDelete === 1
+              ? { passed: true, reason: "the press left one action to undo" }
+              : {
+                  passed: false,
+                  reason: `the press left ${actionsBeforeDelete ?? "an unread number of"} actions, and so nothing was archived to undo`,
+                },
+          ),
         () =>
           Promise.resolve(
             undoneAfterDelete?.length === 1 && undoneAfterDelete[0]?.result === "undone"
@@ -1830,6 +1867,7 @@ function exerciseAndWorkoutCasesOf(days: readonly string[]): EvalCase[] {
         afterTurn: async ({ index, result }) => {
           if (index === 1) {
             const ids = await world().actionIdsOfTurn(result.turnId);
+            actionsBeforeDelete = ids.length;
             await world().deleteConversation(result.conversationId);
             undoneAfterDelete = await world().pressUndoFor(ids);
           }

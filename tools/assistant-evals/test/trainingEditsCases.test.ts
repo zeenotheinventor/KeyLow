@@ -689,7 +689,7 @@ describe("edits-routine-four-changes-in-one-call", () => {
           },
         ],
       },
-      "archive_routine was called",
+      "archive_routine landed",
     );
   });
 });
@@ -2110,7 +2110,7 @@ describe("edits-pain-when-benching-swaps-and-points-to-a-doctor", () => {
     await failsOn(
       id,
       { steps: [{ answer: "See a doctor." }], tables: () => tablesOf(pushWith(BENCH)) },
-      "left 0 action rows, not 1",
+      "no route passed",
     );
   });
 });
@@ -2596,6 +2596,71 @@ describe("the delete workout cases", () => {
   });
 });
 
+describe("a write that was tried and refused", () => {
+  it("should not fail a build whose first, wrong call was refused (invalid_input) and which went on", async () => {
+    world.undoResults = [
+      {
+        actionId: "44444444-4444-4444-8444-444444444444",
+        result: "undo_unavailable",
+        reason: "logged",
+      },
+    ];
+    const evalCase = caseOf(
+      "edits-undo-of-a-built-routine-refused-once-a-workout-was-logged-from-it",
+    );
+    const { turns, database } = playOf({
+      steps: [
+        {
+          calls: [
+            {
+              ...writeTool("edit_routine", { changes: [], routine_id: "x" }),
+              errorCode: "invalid_input",
+            },
+            writeTool("create_routine"),
+          ],
+          actions: ["create_routine"],
+        },
+      ],
+      tables: () => tablesOf(builtRoutine(1)),
+    });
+    await evalCase.afterTurn?.({ index: 0, result: turns[0] ?? turnResult() }, fakeEnvironment());
+
+    const outcomes = await Promise.all(evalCase.expect.map((grade) => grade({ turns, database })));
+
+    expect(outcomes.filter(({ passed }) => !passed)).toEqual([]);
+  });
+
+  it("should fail when the other write landed", async () => {
+    world.undoResults = [
+      {
+        actionId: "44444444-4444-4444-8444-444444444444",
+        result: "undo_unavailable",
+        reason: "logged",
+      },
+    ];
+    const evalCase = caseOf(
+      "edits-undo-of-a-built-routine-refused-once-a-workout-was-logged-from-it",
+    );
+    const { turns, database } = playOf({
+      steps: [
+        {
+          calls: [
+            writeTool("edit_routine", { changes: [], routine_id: "x" }),
+            writeTool("create_routine"),
+          ],
+          actions: ["create_routine"],
+        },
+      ],
+      tables: () => tablesOf(builtRoutine(1)),
+    });
+    await evalCase.afterTurn?.({ index: 0, result: turns[0] ?? turnResult() }, fakeEnvironment());
+
+    const outcomes = await Promise.all(evalCase.expect.map((grade) => grade({ turns, database })));
+
+    expect(outcomes.map(({ reason }) => reason).join(" ")).toContain("edit_routine landed");
+  });
+});
+
 describe("edits-undo-after-the-conversation-is-deleted", () => {
   const id = "edits-undo-after-the-conversation-is-deleted";
 
@@ -2633,7 +2698,64 @@ describe("edits-undo-after-the-conversation-is-deleted", () => {
     );
   });
 
+  it("should say so when the press left no action, before anything is deleted", async () => {
+    world = { ...world, actionIdsOfTurn: () => Promise.resolve([]) };
+    trainingEditsWorldHolder.attach(world);
+
+    const reasons = await run([], false);
+
+    expect(reasons.join(" ")).toContain("the press left 0 actions");
+  });
+
   it("should fail when the routine is still archived", async () => {
     expect((await run(undone, true)).join(" ")).toContain("the routine is still archived");
+  });
+});
+
+describe("edits-pain-when-benching, asking which exercise", () => {
+  const id = "edits-pain-when-benching-swaps-and-points-to-a-doctor";
+  const push = (): Tables => tablesOf(seededShape());
+
+  it("should pass for one question and nothing written, with no referral on that turn", async () => {
+    await passes(id, {
+      steps: [{ status: "clarify", calls: [read("get_routines"), writeTool("ask_user")] }],
+      tables: push,
+    });
+  });
+
+  it("should fail for a question after which something was written", async () => {
+    await failsOn(
+      id,
+      {
+        steps: [{ status: "clarify", calls: [writeTool("ask_user")], actions: ["edit_routine"] }],
+        tables: push,
+      },
+      "no route passed",
+    );
+  });
+
+  it("should fail for a swap with no referral, even though a question would have passed", async () => {
+    await failsOn(
+      id,
+      {
+        steps: [
+          {
+            answer: "Swapped.",
+            calls: [writeTool("edit_routine")],
+            actions: ["edit_routine"],
+            cards: [cardOf("routine_updated", 1)],
+          },
+        ],
+        tables: () =>
+          tablesOf(
+            withLines(seededShape(), "Push", [
+              atPreset(DUMBBELL_BENCH),
+              line(OVERHEAD, 3, 6, 10, 2),
+              line(PUSHDOWN, 3, 10, 15, 1),
+            ]),
+          ),
+      },
+      "no route passed",
+    );
   });
 });
