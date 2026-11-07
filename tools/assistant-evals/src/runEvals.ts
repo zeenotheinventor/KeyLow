@@ -16,6 +16,12 @@ export type CaseReport = Readonly<{
    */
   status: "passed" | "failed" | "error" | "not_run";
   failures: readonly string[];
+  /** True for a case whose miss fails its set whatever the percentage (`EvalCase.mustPass`). */
+  mustPass?: true;
+  /** True when a grader marked critical failed, which fails the case's set whatever the percentage. */
+  critical?: true;
+  /** True when the case failed only on soft graders, so it is a miss of the percentage and no missed must-pass. */
+  softOnly?: true;
   /** The tokens the budget counts, for this case. */
   tokens: number;
 }>;
@@ -46,6 +52,14 @@ export type RunReport = Readonly<{
 
 export const DEFAULT_CASE_TIMEOUT_MS = 120_000;
 
+// How long the prepare of a case may take. It is slow work shared by later cases, such as a history written one
+// request at a time, so the ceiling is generous, but a request that hangs must not stall the run.
+export const DEFAULT_PREPARE_TIMEOUT_MS = 600_000;
+
+// How long a case that hit its ceiling is given to finish its cleanUp before the next case starts. The turn in
+// flight cannot be cancelled, so it may never come back, and the run must not wait for ever.
+export const DEFAULT_CLEAN_UP_GRACE_MS = 60_000;
+
 type RunInput = Readonly<{
   cases: readonly EvalCase[];
   driver: TurnDriver;
@@ -55,6 +69,10 @@ type RunInput = Readonly<{
   budgetTokens: number;
   /** The wall-clock ceiling of one case. A hung stream fails the case, not the job. */
   caseTimeoutMs?: number;
+  /** How long a case that hit its ceiling may take to clean up before the next case starts. */
+  cleanUpGraceMs?: number;
+  /** The ceiling of a case's `prepare`. A case whose prepare took longer is reported as not prepared. */
+  prepareTimeoutMs?: number;
 }>;
 
 /**
@@ -98,7 +116,7 @@ const messageOf = (error: unknown): string =>
 class CaseStopped extends Error {}
 class CaseError extends Error {}
 
-type Outcome = Pick<CaseReport, "status" | "failures">;
+type Outcome = Pick<CaseReport, "status" | "failures" | "critical" | "softOnly">;
 
 function afterCeiling<Result>(
   work: Promise<Result>,
@@ -161,7 +179,11 @@ export async function runEvals(input: RunInput): Promise<RunReport> {
     environment,
     budgetTokens,
     caseTimeoutMs = DEFAULT_CASE_TIMEOUT_MS,
+    cleanUpGraceMs = DEFAULT_CLEAN_UP_GRACE_MS,
+    prepareTimeoutMs = DEFAULT_PREPARE_TIMEOUT_MS,
   } = input;
+  // The prepares that hung. Cases that share one are not tried again, so a hung request is waited for once.
+  const hungPrepares = new Set<() => Promise<void>>();
   const reports: CaseReport[] = [];
   // What the eval user has used so far, as the last read of `assistant_usage` saw it. Null before the first read.
   const spend: { latest: TurnUsage | null } = { latest: null };
@@ -234,7 +256,16 @@ export async function runEvals(input: RunInput): Promise<RunReport> {
         evalCase.expect.map((grade) => grade({ turns, database })),
       );
       const failures = outcomes.filter(({ passed }) => !passed).map(({ reason }) => reason);
-      outcome = { status: failures.length === 0 ? "passed" : "failed", failures };
+      outcome = {
+        status: failures.length === 0 ? "passed" : "failed",
+        failures,
+        ...(outcomes.some(({ passed, critical }) => !passed && critical === true)
+          ? { critical: true as const }
+          : {}),
+        ...(failures.length > 0 && outcomes.every(({ passed, soft }) => passed || soft === true)
+          ? { softOnly: true as const }
+          : {}),
+      };
     } catch (error) {
       thrown = error;
     }
@@ -264,19 +295,61 @@ export async function runEvals(input: RunInput): Promise<RunReport> {
     return {
       status: outcome.status === "passed" ? "error" : outcome.status,
       failures: [...outcome.failures, cleanUpFailure],
+      ...(outcome.critical === true ? { critical: true as const } : {}),
     };
   }
 
   async function runCase(evalCase: EvalCase): Promise<Outcome> {
     try {
+      // Slow shared work runs first and outside the ceiling, so a long history write is not a timed out case. It
+      // has a ceiling of its own, so a request that hangs is a case that was not prepared.
+      const { prepare } = evalCase;
+      if (prepare !== undefined) {
+        if (hungPrepares.has(prepare)) {
+          throw new CaseError("the case could not be prepared: an earlier case's prepare hung");
+        }
+        let timer: NodeJS.Timeout | undefined;
+        try {
+          await Promise.race([
+            prepare(),
+            new Promise<never>((_resolve, reject) => {
+              timer = setTimeout(() => {
+                hungPrepares.add(prepare);
+                reject(new Error(`took longer than ${prepareTimeoutMs} ms`));
+              }, prepareTimeoutMs);
+            }),
+          ]);
+        } catch (error) {
+          throw new CaseError(`the case could not be prepared: ${messageOf(error)}`);
+        } finally {
+          clearTimeout(timer);
+        }
+      }
       const abandoned = { value: false };
-      return await afterCeiling(
-        playCase(evalCase, () => abandoned.value),
-        caseTimeoutMs,
-        () => {
+      const work = playCase(evalCase, () => abandoned.value);
+      try {
+        return await afterCeiling(work, caseTimeoutMs, () => {
           abandoned.value = true;
-        },
-      );
+        });
+      } catch (error) {
+        // An abandoned case still runs its cleanUp when its turn comes back, and that must not overlap the next
+        // case, which could be waiting on the same rows. It is waited for, up to the grace.
+        if (abandoned.value) {
+          let timer: NodeJS.Timeout | undefined;
+          await Promise.race([
+            work.then(
+              () => undefined,
+              () => undefined,
+            ),
+            new Promise<void>((resolve) => {
+              timer = setTimeout(resolve, cleanUpGraceMs);
+            }),
+          ]).finally(() => {
+            clearTimeout(timer);
+          });
+        }
+        throw error;
+      }
     } catch (error) {
       if (error instanceof CaseStopped) {
         return { status: "not_run", failures: [error.message] };
@@ -291,7 +364,14 @@ export async function runEvals(input: RunInput): Promise<RunReport> {
     const { id, set } = evalCase;
     if (stopReason !== null || countedSoFar() + largestCaseTokens > budgetTokens) {
       stopReason ??= "budget";
-      reports.push({ id, set, status: "not_run", failures: [], tokens: 0 });
+      reports.push({
+        id,
+        set,
+        status: "not_run",
+        failures: [],
+        tokens: 0,
+        ...(evalCase.mustPass === true ? { mustPass: true as const } : {}),
+      });
       continue;
     }
 
@@ -308,7 +388,16 @@ export async function runEvals(input: RunInput): Promise<RunReport> {
       failures = [...failures, "assistant_usage could not be read"];
     }
     const tokens = countedSoFar() - before;
-    reports.push({ id, set, status, failures, tokens });
+    reports.push({
+      id,
+      set,
+      status,
+      failures,
+      tokens,
+      ...(evalCase.mustPass === true ? { mustPass: true as const } : {}),
+      ...(outcome.critical === true ? { critical: true as const } : {}),
+      ...(outcome.softOnly === true ? { softOnly: true as const } : {}),
+    });
     largestCaseTokens = Math.max(largestCaseTokens, tokens);
   }
 

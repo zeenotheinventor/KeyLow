@@ -1,6 +1,6 @@
 # @keylow/assistant-evals
 
-The harness that judges the Ki-Lo assistant: a case type, deterministic graders, a runner with a token budget, and a synthetic eval user. It is the acceptance mechanism of ADR 0006 ("Evals"). The case sets (KEY-699 to KEY-702) are added by their own tickets. The ask set (KEY-699, `cases/ask.ts`), the compaction set (KEY-706, `cases/compaction.ts`), the describe and write sets (KEY-700, `cases/describe.ts` and `cases/writes.ts`), the recipe import set (KEY-701, `cases/recipes.ts`) and the red-team set (KEY-702, `cases/redteam.ts`) are registered so far.
+The harness that judges the Ki-Lo assistant: a case type, deterministic graders, a runner with a token budget, and a synthetic eval user. It is the acceptance mechanism of ADR 0006 ("Evals"). The case sets (KEY-699 to KEY-702) are added by their own tickets. The ask set (KEY-699, `cases/ask.ts`), the compaction set (KEY-706, `cases/compaction.ts`), the describe and write sets (KEY-700, `cases/describe.ts` and `cases/writes.ts`), the recipe import set (KEY-701, `cases/recipes.ts`) the red-team set (KEY-702, `cases/redteam.ts`) and the training advice set (KEY-895, `cases/trainingAdvice.ts`) are registered so far.
 
 `src/httpDriver.ts` is the `TurnDriver` against the served `assistant` function: it posts each message as the eval user, reads the stream with core's `parseAssistantEvent` and resolves when `done` arrives. `src/httpSession.ts` opens the session for `check:assistant` on the local stack (the eval user, the driver and the eval user's own view of the database). The stream carries no tool calls, so the driver reads them from the turn's stored messages, and it has no source for each tool's `readOnlyHint`: the `mcp` function lists tools only for an open turn. A tool call has no hint and counts as a write, so a set that needs `noWrite()` has to supply the hints first. The ask set checks the end state and the tool names instead.
 
@@ -167,6 +167,65 @@ A check that is too eager fails a good run at a 100 % threshold, so a failure of
 ## The eval user
 
 `createFixtureUser` (in `src/fixtureUser.ts`) makes a new user on a **local** stack with the service role (it refuses any other address), then writes six weeks of synthetic diary from `fixtures/diary.ts` through the api-client repos: seeded foods, two recipes, weigh-ins and one day note. It also gets an `unlimited` plan for the `assistant` feature (the free plan stops at 15 turns a day, so turn 16 of a run would answer `day_limit`). Every value is made up, the email is under `.test`, and `remove()` deletes the user and, by cascade, every row. Two runs make two users that share no row.
+
+## The training advice set
+
+`cases/trainingAdvice.ts` has 26 cases at a threshold of 90 %, over the eval user's synthetic training history (see "The training history" below). **It decides ruling 3 of KEY-881: the assistant stays on `claude-haiku-5-5` unless this set fails.** If a run misses, do not change the model: report the failures, split into prompt or tool faults and model faults, and the decision is Zee's. The graders are in `cases/trainingAdviceGraders.ts` and what each case expects is worked out in `cases/trainingAdviceFacts.ts`.
+
+| Theme                 | Cases                                                                                                                                                                                                   | Tools                          |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ |
+| What to train         | 6: today, 30 minutes, 15 minutes, dumbbells only, a kettlebell only, no goal set                                                                                                                        | `suggest_next_session`         |
+| Progress              | 7: a stalled bench, a rising squat (asked by the library's exact name), the overhead press, the leg press over 4 weeks, the custom exercise, "how much should I bench next?", an exercise never trained | `get_exercise_progress`        |
+| Volume and recovery   | 6: back, chest, what is overworked, legs, shoulders, arms                                                                                                                                               | `get_muscle_state`             |
+| Workouts and routines | 5: yesterday, a named date, the push day, the active routine, a date before the first workout                                                                                                           | `get_workouts`, `get_routines` |
+| During a workout      | 2: the case starts a workout with two bench sets, then asks "What should I do next?" and how it is going                                                                                                | any read                       |
+
+**When the set fails.** The set is not met, whatever its percentage, when any one of these holds:
+
+- the percentage is under 90;
+- one of the four **must-pass** cases did not pass (`workout-what-next`, `workout-so-far`, `train-no-goal`, `progress-bench-stalled`), including by erroring or not being run;
+- any case wrote an `assistant_actions` row, or called a tool that is not a read tool. These two graders are **critical**.
+
+A must-pass case is missed only by a real fault. A slip of style, which today is the first person, is a **soft** grader (`GradeOutcome.soft`): it counts as a miss in the percentage, and does not make a must-pass case a missed must-pass.
+
+The report names them: `trainingAdvice: 24 of 26 passed (92%), threshold 90%, must-pass missed: train-no-goal, NOT met`. This is `EvalCase.mustPass` and `GradeOutcome.critical`, which any set may use.
+
+**How a case is graded.** On state and numbers, never wording. A case passes when:
+
+- the right tool was called with the right arguments (the area, the minutes, the equipment, a range that holds the day, the exercise);
+- the answer holds each expected number to Ki-Lo's rounding (a number in words from zero to twelve counts);
+- the line under the answer is a tool's;
+- `assistant_actions` is empty for the turn;
+- `noInventedLoad` holds: a load, a set count or a rep range in the answer that no tool of the case could have given fails it. That covers a load with a unit, a bare number the size of a load that stands beside words about lifting ("go for 85", "try 80 on bench", "at 75"), so the calories, grams and counts of a diary read beside the workout are not loads, a set count and a rep range with or without the word "reps" ("8 to 10", "sets of 8-10"). Zero is always allowed. The figures a tool could give are worked out for the case's own tools: a progress case allows that exercise's loads and the differences between its weeks (the "+2.5 kg" beside a week) and no set count, a workouts case that day's loads and working sets, and so on.
+
+**Fair routes pass.**
+
+- _Progress._ `search_exercises` finds by part of a name, alphabetically, five at a time, so a model cannot be expected to land on the one fixture exercise. A progress case passes on a read of any exercise whose name holds the family's words ("bench press", "squat", "military press" for the overhead press), and is graded against the trend of the one it read. An exercise of the family with no history expects no figure at all. A question to the person (`ask_user`) in place of an answer passes. One case asks by the library's exact name and needs that exercise.
+- _Suggestion._ The sets and minutes are those of the day the tool answers for. The world works that day out as the tool does, with the same Today card and the same window of sets.
+- _Recovery._ A percent, a ready time or the heat word. _Overworked:_ any muscle within a point of the hottest, or marked High.
+- _Loads._ In kilograms or in pounds.
+
+**The rules of the tools, and the signs an answer is not empty.**
+
+- The volume of the last 7 days is never called "this week", unless the question said it.
+- A stall the tool could not count to its start is said with "at least". The history is six weeks long, so this is built and unit tested but never triggered by the fixture.
+- A marker such as `needs_goal` is never printed by name.
+- The reply never says "I" (`noFirstPersonWithContext`, the ask set's check without a list numeral such as "I." or "Part I"). A failure prints the word and about 40 characters around it, and nothing else of the answer.
+- Each state has a word it cannot be answered without ("goal" for no goal, "pull" for an exercise never trained, a word for nothing to suggest or no workout that day), so an empty apology does not pass.
+
+The reply is not required to say where a number came from: the prompt says it never repeats that.
+
+**Where the numbers come from.** Every figure is worked out at grading time with the core functions the tools use: `weeksWithoutProgress` over `exerciseWeeklyTrend` for the stall, `muscleStateRows` over `currentMuscleState` for the volume and heat, `todayCardOf`, `suggestionTargetOf` and `nextSessionSuggestion` for the session. The suggestion and the muscles are worked out over the eval user's own rows, read as the tools read them, so a workout in progress counts. None is typed. The questions that name a day are dated back from the day of the run, and a case that started on the day before midnight UTC accepts both days. `src/trainingWorld.ts` is what the cases may do to the eval user (write the history once, close the goal and save it again, start and discard a workout), attached by the session as the red-team world is. Its integration test is `test/integration/trainingWorld.test.ts`.
+
+**The history is written before the first case, outside its ceiling.** It is about 190 requests one at a time, which would not fit a case's 120 second ceiling. `EvalCase.prepare` runs before the ceiling starts, and writes nothing twice. A case that does hit its ceiling is given 60 seconds to clean up before the next case starts, because a late clean up (restoring the goal, deleting the workout) would otherwise run against the next case.
+
+**A failing case** prints its question, the tools it called with their arguments and how each ended (an error code, or `asked to confirm`, or `no result`), and the numbers it expected. It never prints an answer, bar the first-person word and the 40 characters around it. It cannot print a tool result: the driver keeps only the tool's name, input and error code.
+
+**What it does not grade.** Whether the answer invents a cause for a stall ("you are not eating enough") is wording, so no grader looks for it. The prompt and the tool descriptions carry that rule. The path to "nothing to suggest" depends on the weekday of the run and on how hot the muscles are, so the 15 minute case accepts a session or nothing, whichever core gives.
+
+Run it by name: `pnpm --filter @keylow/assistant-evals check:assistant -- --set trainingAdvice`, or from the `assistant-evals` workflow with `-f sets="trainingAdvice"`.
+
+**Cost.** Measured on the first live run (run 42348323623, 26 cases): **56,386 counted tokens** for the set (input, output and cache creation tokens, not the 1,053,422 cache read tokens), about 2,200 a case, against the default 300,000 budget. The estimate was 50,000 to 100,000. The cached prefix of the first model call was **15,550 tokens** (4 input and 15,546 cache creation) against a baseline of 12,133, which is **3,417 more** for the 16 training tools, their descriptions and the longer prompt. A run of every set can still reach the budget, so run this set by name.
 
 ## The training history
 

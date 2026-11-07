@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { fakeEnvironment } from "./fakeEnvironment.ts";
 import { costing, readTool, scriptedStack, turnResult, writeTool } from "./helpers.ts";
 import {
   cacheReadOnSecondTurn,
@@ -50,6 +51,49 @@ describe("runEvals", () => {
 
     expect(report.cases).toEqual([
       { id: "reads", set: "ask", status: "passed", failures: [], tokens: 40 },
+    ]);
+  });
+
+  it("should flag a case that is must-pass and a case whose critical grader failed", async () => {
+    const { report } = await run(
+      [
+        simpleCase("important", {
+          mustPass: true,
+          expect: [() => Promise.resolve({ passed: true, reason: "fine" })],
+        }),
+        simpleCase("wrote", {
+          expect: [() => Promise.resolve({ passed: false, reason: "wrote", critical: true })],
+        }),
+        simpleCase("ordinary", {
+          expect: [() => Promise.resolve({ passed: false, reason: "missed" })],
+        }),
+      ],
+      [costing(1), costing(1), costing(1)],
+    );
+
+    expect(report.cases.map(({ id, mustPass, critical }) => [id, mustPass, critical])).toEqual([
+      ["important", true, undefined],
+      ["wrote", undefined, true],
+      ["ordinary", undefined, undefined],
+    ]);
+  });
+
+  it("should mark a case that failed on soft graders only, and not one that also failed on another", async () => {
+    const soft = () => Promise.resolve({ passed: false, reason: "style", soft: true as const });
+    const hard = () => Promise.resolve({ passed: false, reason: "wrong" });
+    const { report } = await run(
+      [
+        simpleCase("slip", { mustPass: true, expect: [soft] }),
+        simpleCase("slip-and-wrong", { mustPass: true, expect: [soft, hard] }),
+        simpleCase("wrong", { expect: [hard] }),
+      ],
+      [costing(1), costing(1), costing(1)],
+    );
+
+    expect(report.cases.map(({ id, status, softOnly }) => [id, status, softOnly])).toEqual([
+      ["slip", "failed", true],
+      ["slip-and-wrong", "failed", undefined],
+      ["wrong", "failed", undefined],
     ]);
   });
 
@@ -377,6 +421,113 @@ describe("runEvals", () => {
       expect(report.cases[1]?.tokens).toBe(7);
     });
 
+    it("should wait for the clean up of a case that hit its ceiling before the next case starts", async () => {
+      const events: string[] = [];
+      const stack = scriptedStack([{ ...costing(5), delayMs: 60 }, costing(7)]);
+
+      const report = await runEvals({
+        cases: [
+          simpleCase("slow", {
+            setup: () => {
+              events.push("slow setup");
+              return Promise.resolve(null);
+            },
+            cleanUp: async () => {
+              await new Promise((resolve) => setTimeout(resolve, 20));
+              events.push("slow clean up");
+            },
+          }),
+          simpleCase("next", {
+            setup: () => {
+              events.push("next setup");
+              return Promise.resolve(null);
+            },
+          }),
+        ],
+        ...stack,
+        environment: fakeEnvironment(),
+        budgetTokens: 1_000,
+        caseTimeoutMs: 30,
+      });
+
+      expect(events).toEqual(["slow setup", "slow clean up", "next setup"]);
+      expect(report.cases.map(({ id, status }) => [id, status])).toEqual([
+        ["slow", "error"],
+        ["next", "passed"],
+      ]);
+    });
+
+    it("should not wait for ever for a case that never comes back", async () => {
+      const stack = scriptedStack([{ ...costing(5), hangs: true }, costing(7)]);
+
+      const report = await runEvals({
+        cases: [simpleCase("hung"), simpleCase("next")],
+        ...stack,
+        budgetTokens: 1_000,
+        caseTimeoutMs: 20,
+        cleanUpGraceMs: 20,
+      });
+
+      expect(report.cases.map(({ status }) => status)).toEqual(["error", "passed"]);
+    });
+
+    it("should run the prepare of a case outside its ceiling", async () => {
+      const stack = scriptedStack([costing(5)]);
+
+      const report = await runEvals({
+        cases: [
+          simpleCase("prepared", {
+            prepare: () => new Promise((resolve) => setTimeout(resolve, 80)),
+          }),
+        ],
+        ...stack,
+        budgetTokens: 1_000,
+        caseTimeoutMs: 30,
+      });
+
+      expect(report.cases.map(({ status }) => status)).toEqual(["passed"]);
+    });
+
+    it("should end a case in error when its prepare hangs, and not wait for it again for the next case", async () => {
+      const stack = scriptedStack([costing(5), costing(5)]);
+      let attempts = 0;
+      const prepare = () => {
+        attempts += 1;
+        return new Promise<void>(() => undefined);
+      };
+
+      const report = await runEvals({
+        cases: [simpleCase("first", { prepare }), simpleCase("second", { prepare })],
+        ...stack,
+        budgetTokens: 1_000,
+        prepareTimeoutMs: 20,
+      });
+
+      expect(report.cases.map(({ status }) => status)).toEqual(["error", "error"]);
+      expect(report.cases[0]?.failures).toEqual([
+        "the case could not be prepared: took longer than 20 ms",
+      ]);
+      expect(report.cases[1]?.failures[0]).toContain("an earlier case's prepare hung");
+      expect(attempts).toBe(1);
+      expect(stack.driver.sent).toEqual([]);
+    });
+
+    it("should end a case in error when its prepare fails, and send nothing", async () => {
+      const stack = scriptedStack([costing(5)]);
+
+      const report = await runEvals({
+        cases: [simpleCase("unprepared", { prepare: () => Promise.reject(new Error("no stack")) })],
+        ...stack,
+        budgetTokens: 1_000,
+      });
+
+      expect(report.cases[0]).toMatchObject({
+        status: "error",
+        failures: ["the case could not be prepared: no stack"],
+      });
+      expect(stack.driver.sent).toEqual([]);
+    });
+
     it("should record a driver error as an error, not a failure, and carry on", async () => {
       const { report } = await run(
         [simpleCase("broken"), simpleCase("fine")],
@@ -442,6 +593,7 @@ describe("runEvals", () => {
         ...stack,
         budgetTokens: 1_000,
         caseTimeoutMs: 30,
+        cleanUpGraceMs: 10,
       });
 
       expect(report.cases.map(({ id, status }) => [id, status])).toEqual([

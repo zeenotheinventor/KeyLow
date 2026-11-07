@@ -11,6 +11,9 @@ export type SetSummary = Readonly<{
   errored: number;
   passRate: number;
   thresholdPercent: number;
+  /** The cases whose miss fails the set whatever the percentage: a must-pass case not passed, or a critical failure. */
+  mustPassMissed: readonly string[];
+  /** True when the percentage is reached and no must-pass case or critical grader missed. */
   met: boolean;
 }>;
 
@@ -27,6 +30,12 @@ export function summariseSets(report: RunReport): SetSummary[] {
     }
     const passed = cases.filter(({ status }) => status === "passed").length;
     const thresholdPercent = THRESHOLD_PERCENT[set];
+    const mustPassMissed = cases
+      .filter(
+        ({ status, mustPass, critical, softOnly }) =>
+          (mustPass === true && status !== "passed" && softOnly !== true) || critical === true,
+      )
+      .map(({ id }) => id);
     return [
       {
         set,
@@ -36,8 +45,9 @@ export function summariseSets(report: RunReport): SetSummary[] {
         errored: cases.filter(({ status }) => status === "error").length,
         passRate: passed / cases.length,
         thresholdPercent,
+        mustPassMissed,
         // Whole numbers on both sides, so the boundary is exact.
-        met: passed * 100 >= thresholdPercent * cases.length,
+        met: passed * 100 >= thresholdPercent * cases.length && mustPassMissed.length === 0,
       },
     ];
   });
@@ -70,7 +80,11 @@ export function formatReport(
       return `${set}: no cases`;
     }
     const errors = summary.errored === 0 ? "" : `, ${summary.errored} errored`;
-    return `${set}: ${summary.passed} of ${summary.total} passed (${percent(summary.passRate)})${errors}, threshold ${summary.thresholdPercent}%, ${summary.met ? "met" : "NOT met"}`;
+    const missed =
+      summary.mustPassMissed.length === 0
+        ? ""
+        : `, must-pass missed: ${summary.mustPassMissed.join(", ")}`;
+    return `${set}: ${summary.passed} of ${summary.total} passed (${percent(summary.passRate)})${errors}, threshold ${summary.thresholdPercent}%${missed}, ${summary.met ? "met" : "NOT met"}`;
   });
   const listed = (status: "failed" | "error") =>
     report.cases

@@ -7,6 +7,8 @@ import { createFixtureUser } from "./fixtureUser.ts";
 import { createHttpDriver } from "./httpDriver.ts";
 import { stopPageServer } from "./pageServerHolder.ts";
 import { attachRedTeamWorld } from "./redTeamSession.ts";
+import { createTrainingWorld } from "./trainingWorld.ts";
+import { trainingWorldHolder } from "./trainingWorldHolder.ts";
 import { createUndoTurn } from "./undoTurn.ts";
 import { readSupabaseStatus } from "../../../packages/db/scripts/supabaseStatus.ts";
 import { writeAskExtras } from "../fixtures/askExtras.ts";
@@ -101,12 +103,13 @@ async function timeZoneOf(user: FixtureUser): Promise<string | null> {
 }
 
 /**
- * Closes what a session holds, each step whatever the others do: the red-team world (user B), the page server and
- * the eval user. The first failure is thrown once all three have been tried.
+ * Closes what a session holds, each step whatever the others do: the training world, the red-team world (user B), the
+ * page server and the eval user. The first failure is thrown once all three have been tried.
  */
 const closeEverything = (user: FixtureUser) => async (): Promise<void> => {
   const failures: unknown[] = [];
   for (const step of [
+    () => trainingWorldHolder.detach(),
     () => redTeamWorldHolder.detach(),
     () => stopPageServer(),
     () => user.remove(),
@@ -135,6 +138,8 @@ export async function openLocalHttpSession(): Promise<EvalSession> {
     await setAssistantConsent(user.client, user.id, true);
     // The targets the ask set's "what is left" and "days at target" cases are worked out against.
     await writeAskExtras(user);
+    // The training advice cases write the user's history when the first of them is played (KEY-895).
+    trainingWorldHolder.attach(createTrainingWorld(user));
     const timeZone = await timeZoneOf(user);
     const getAccessToken = async () => {
       const { data } = await user.client.auth.getSession();
