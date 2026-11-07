@@ -197,7 +197,8 @@ export async function finishSession(
 
 /**
  * Deletes a session and its sets with one `delete_workout_session` call, which soft deletes them
- * together, so the heat read no longer counts them. There is no Undo. A session that does not exist, is
+ * together, so the heat read no longer counts them. The app's own delete keeps no Undo, and
+ * `restoreSession` is the way back for a caller that holds the stamp. A session that does not exist, is
  * not the caller's or is already deleted fails with the code P0002, the same in all three cases. An id
  * that is not a UUID throws a `RangeError` before any request.
  */
@@ -210,5 +211,76 @@ export async function deleteSession(client: SupabaseClient<Database>, id: string
 
   if (error) {
     throw repoError("delete the session", error);
+  }
+}
+
+export type SessionRestore = {
+  /** The `deleted_at` of the deleted session exactly as the database stored it, microseconds included. */
+  deletedAt: string;
+};
+
+/**
+ * Brings back a session deleted by `deleteSession`, and the sets that delete took with it, and resolves
+ * to it as stored. `deletedAt` is the session's stored `deleted_at`, passed back untouched (a `Date`
+ * would drop its microseconds). Two writes, in this order because the database refuses to revive a set
+ * behind a deleted session: the session is made live only if its `deleted_at` still equals `deletedAt`,
+ * then the sets that carry the same `deletedAt` are. A set removed on its own before the delete has
+ * another stamp and stays removed. A retry after a failure between the two is safe: the session is
+ * already live, which is not an error, and the second write finds the sets by the stamp. A second call
+ * changes nothing. A session that does not exist, is not the caller's or was deleted again with another
+ * stamp fails with the code PGRST116. An id that is not a UUID and a stamp that is not a timestamp throw
+ * a `RangeError` naming the rule, before any request. Restoring a session that was still in progress when
+ * it was deleted, while the user has started another, fails with the code 23505, from the index that
+ * allows one open session per user.
+ */
+export async function restoreSession(
+  client: SupabaseClient<Database>,
+  id: string,
+  { deletedAt }: SessionRestore,
+): Promise<SessionWithSets> {
+  assertSessionId(id);
+  assertValidDate(new Date(deletedAt), "A session delete stamp must be a timestamp");
+
+  const { data: made, error: sessionError } = await client
+    .from("workout_sessions")
+    .update({ deleted_at: null })
+    .eq("id", id)
+    .eq("deleted_at", deletedAt)
+    .select("id");
+  if (sessionError) {
+    throw repoError("restore the session", sessionError);
+  }
+  if (made.length === 0) {
+    await assertLive(client, id);
+  }
+
+  const { error: setsError } = await client
+    .from("workout_sets")
+    .update({ deleted_at: null })
+    .eq("session_id", id)
+    .eq("deleted_at", deletedAt);
+  if (setsError) {
+    throw repoError("restore the session", setsError);
+  }
+
+  const stored = await getSession(client, id);
+  if (stored === null) {
+    throw repoError("restore the session", { code: NO_ROW });
+  }
+  return stored;
+}
+
+/** Passes for a session that is live, which is how a retry finds it. Anything else fails as a missing row. */
+async function assertLive(client: SupabaseClient<Database>, id: string): Promise<void> {
+  const { data, error } = await client
+    .from("workout_sessions")
+    .select("deleted_at")
+    .eq("id", id)
+    .single();
+  if (error) {
+    throw repoError("restore the session", error);
+  }
+  if (data.deleted_at !== null) {
+    throw repoError("restore the session", { code: NO_ROW });
   }
 }

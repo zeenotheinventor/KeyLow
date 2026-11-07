@@ -128,8 +128,8 @@ export type { ListRoutinesOptions } from "./routines";
 export { saveRoutine, setActiveRoutine, setRoutineArchived } from "./routineWrites";
 export type { RoutineSave } from "./routineWrites";
 export type { RoutineDetail, RoutineListEntry, RoutineRecord } from "./routineSchemas";
-export { deleteSession, finishSession, startSession } from "./sessionWrites";
-export type { SessionFinish, SessionStart } from "./sessionWrites";
+export { deleteSession, finishSession, restoreSession, startSession } from "./sessionWrites";
+export type { SessionFinish, SessionRestore, SessionStart } from "./sessionWrites";
 export { addSet, removeSet, reorderSets, restoreSet, updateSet } from "./setWrites";
 export type { SetAdd, SetPatch } from "./setWrites";
 export { findPreviousSessionWeek, listSessionsInWeek } from "./trainingHistory";
@@ -154,7 +154,7 @@ export type {
   AcceptedSuggestionsRead,
   SkippedAcceptedSuggestion,
 } from "./acceptedSuggestions";
-export { archiveExercise, saveExercise } from "./exerciseWrites";
+export { archiveExercise, restoreExercise, saveExercise } from "./exerciseWrites";
 export type { ExerciseSave } from "./exerciseWrites";
 export {
   getMyProgramSummary,

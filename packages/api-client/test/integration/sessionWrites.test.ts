@@ -2,7 +2,14 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { dayIdsOf, findGlobalExercise, logSets, present, saveRoutine } from "./support/training";
 import { createTestUser, deleteCreatedTestUsers } from "./support/users";
-import { deleteSession, finishSession, startSession } from "../../src/repos/sessionWrites";
+import {
+  deleteSession,
+  finishSession,
+  restoreSession,
+  startSession,
+} from "../../src/repos/sessionWrites";
+import { removeSet } from "../../src/repos/setWrites";
+import { readMuscleState } from "../../src/repos/trainingReads";
 import { getSession } from "../../src/repos/trainingSessions";
 
 import type { SavedExercise } from "./support/training";
@@ -353,5 +360,166 @@ describe("deleteSession", () => {
     const error = await rejectionOf(deleteSession(owner.client, NOT_A_SESSION));
 
     expect(error?.message).toBe("Could not delete the session (P0002)");
+  });
+});
+
+describe("restoreSession", () => {
+  const startedAt = new Date("2026-10-18T09:00:00Z");
+  const heatNow = "2026-10-18T10:00:00Z";
+
+  /** A finished session with three sets, one of them removed on its own before the delete, then deleted. */
+  async function deletedSessionWithAnEarlierRemovedSet(owner: TestUser) {
+    const { id } = await startSession(owner.client, { now: startedAt, tz: "UTC" });
+    const loggedIds = await logSets(owner, id, globalExercise, [
+      { performedAt: "2026-10-18T09:10:00Z" },
+      { performedAt: "2026-10-18T09:20:00Z" },
+      { performedAt: "2026-10-18T09:30:00Z" },
+    ]);
+    const keptSetIds = [
+      present(loggedIds[0], "a logged set"),
+      present(loggedIds[2], "a logged set"),
+    ];
+    const removedEarlier = present(loggedIds[1], "a logged set");
+    await finishSession(owner.client, id, {
+      endedAt: new Date("2026-10-18T09:45:00Z"),
+      note: null,
+    });
+    await removeSet(owner.client, removedEarlier);
+    await deleteSession(owner.client, id);
+    const deletedAt = present((await storedSession(owner, id)).deleted_at, "the delete stamp");
+    return { id, keptSetIds, removedEarlier, deletedAt };
+  }
+
+  async function storedSetStamps(owner: TestUser, setIds: string[]) {
+    const { data, error } = await owner.client
+      .from("workout_sets")
+      .select("id,deleted_at")
+      .in("id", setIds);
+    if (error) {
+      throw new Error(`Could not read the test sets (${error.code})`);
+    }
+    return Object.fromEntries(data.map((set) => [set.id, set.deleted_at]));
+  }
+
+  const weeklySetsOfChest = async (owner: TestUser) =>
+    (await readMuscleState(owner.client, { now: heatNow, timeZone: "UTC" })).chest_lower.weeklySets;
+
+  it("should bring back the session and exactly the sets it had, and leave an earlier removed set removed", async () => {
+    const owner = await freshUser();
+    const { id, keptSetIds, removedEarlier, deletedAt } =
+      await deletedSessionWithAnEarlierRemovedSet(owner);
+
+    const restored = await restoreSession(owner.client, id, { deletedAt });
+
+    expect(restored.id).toBe(id);
+    expect(restored.sets.map((set) => set.id).sort()).toEqual([...keptSetIds].sort());
+    expect((await storedSession(owner, id)).deleted_at).toBeNull();
+    const stamps = await storedSetStamps(owner, [...keptSetIds, removedEarlier]);
+    expect(keptSetIds.map((setId) => stamps[setId])).toEqual([null, null]);
+    expect(stamps[removedEarlier]).not.toBeNull();
+    expect(stamps[removedEarlier]).not.toBe(deletedAt);
+    expect(await getSession(owner.client, id)).toEqual(restored);
+  });
+
+  it("should make heat count the sets again", async () => {
+    const owner = await freshUser();
+    const { id } = await startSession(owner.client, { now: startedAt, tz: "UTC" });
+    await logSets(owner, id, globalExercise, [
+      { performedAt: "2026-10-18T09:10:00Z" },
+      { performedAt: "2026-10-18T09:20:00Z" },
+    ]);
+    const counted = await weeklySetsOfChest(owner);
+    await deleteSession(owner.client, id);
+    const deletedAt = present((await storedSession(owner, id)).deleted_at, "the delete stamp");
+    const whileDeleted = await weeklySetsOfChest(owner);
+
+    await restoreSession(owner.client, id, { deletedAt });
+
+    expect(counted).toBeGreaterThan(0);
+    expect(whileDeleted).toBe(0);
+    expect(await weeklySetsOfChest(owner)).toBe(counted);
+  });
+
+  it("should change nothing when it is called a second time", async () => {
+    const owner = await freshUser();
+    const { id, keptSetIds, removedEarlier, deletedAt } =
+      await deletedSessionWithAnEarlierRemovedSet(owner);
+    const first = await restoreSession(owner.client, id, { deletedAt });
+    const stampsAfterFirst = await storedSetStamps(owner, [...keptSetIds, removedEarlier]);
+
+    const second = await restoreSession(owner.client, id, { deletedAt });
+
+    expect(second).toEqual(first);
+    expect(await storedSetStamps(owner, [...keptSetIds, removedEarlier])).toEqual(stampsAfterFirst);
+  });
+
+  it("should finish the job when it is run from its second step alone, as after a failure between the two", async () => {
+    const owner = await freshUser();
+    const { id, keptSetIds, deletedAt } = await deletedSessionWithAnEarlierRemovedSet(owner);
+    // The first step done and the second not: the session is live, its sets still carry the stamp.
+    const { error } = await owner.client
+      .from("workout_sessions")
+      .update({ deleted_at: null })
+      .eq("id", id);
+    expect(error).toBeNull();
+    expect(await getSession(owner.client, id)).toMatchObject({ sets: [] });
+
+    const restored = await restoreSession(owner.client, id, { deletedAt });
+
+    expect(restored.sets.map((set) => set.id).sort()).toEqual([...keptSetIds].sort());
+  });
+
+  it("should fail for the session of another user and touch no row", async () => {
+    const owner = await freshUser();
+    const stranger = await freshUser();
+    const { id, keptSetIds, removedEarlier, deletedAt } =
+      await deletedSessionWithAnEarlierRemovedSet(owner);
+    const stampsBefore = await storedSetStamps(owner, [...keptSetIds, removedEarlier]);
+
+    const error = await rejectionOf(restoreSession(stranger.client, id, { deletedAt }));
+
+    expect(error?.message).toBe("Could not restore the session (PGRST116)");
+    expect(error?.cause).toEqual({ code: "PGRST116" });
+    expect((await storedSession(owner, id)).deleted_at).toBe(deletedAt);
+    expect(await storedSetStamps(owner, [...keptSetIds, removedEarlier])).toEqual(stampsBefore);
+  });
+
+  it("should fail with the same code for a session that does not exist", async () => {
+    const owner = await freshUser();
+
+    const error = await rejectionOf(
+      restoreSession(owner.client, NOT_A_SESSION, { deletedAt: "2026-10-18T09:00:00+00:00" }),
+    );
+
+    expect(error?.message).toBe("Could not restore the session (PGRST116)");
+  });
+
+  it("should leave a session alone that was deleted again with another stamp", async () => {
+    const owner = await freshUser();
+    const { id, keptSetIds, deletedAt } = await deletedSessionWithAnEarlierRemovedSet(owner);
+
+    const error = await rejectionOf(
+      restoreSession(owner.client, id, { deletedAt: "2026-10-18T09:00:00+00:00" }),
+    );
+
+    expect(error?.message).toBe("Could not restore the session (PGRST116)");
+    expect((await storedSession(owner, id)).deleted_at).toBe(deletedAt);
+    expect(Object.values(await storedSetStamps(owner, keptSetIds)).every(Boolean)).toBe(true);
+  });
+
+  it("should refuse an id that is not a UUID and a stamp that is not a time, before any request", async () => {
+    const owner = await freshUser();
+
+    const badId = await rejectionOf(
+      restoreSession(owner.client, "not-a-uuid", { deletedAt: "2026-10-18T09:00:00+00:00" }),
+    );
+    const badStamp = await rejectionOf(
+      restoreSession(owner.client, NOT_A_SESSION, { deletedAt: "yesterday-ish" }),
+    );
+
+    expect(badId).toBeInstanceOf(RangeError);
+    expect(badId?.message).toBe("A session id must be a UUID");
+    expect(badStamp).toBeInstanceOf(RangeError);
+    expect(badStamp?.message).toBe("A session delete stamp must be a timestamp");
   });
 });
