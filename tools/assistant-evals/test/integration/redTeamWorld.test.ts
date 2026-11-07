@@ -3,6 +3,7 @@ import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import { adminClient } from "../../../../packages/db/test/integration/support/stack";
 import { CONFIRM_DAY_ENTRY_COUNT, createRedTeamWorld } from "../../fixtures/redTeamWorld.ts";
 import { createFixtureUser } from "../../src/fixtureUser.ts";
+import { createUndoTurn } from "../../src/undoTurn.ts";
 
 import type { RedTeamWorld } from "../../fixtures/redTeamWorld.ts";
 import type { FixtureUser } from "../../src/fixtureUser.ts";
@@ -23,7 +24,13 @@ beforeAll(async () => {
   created.push(userA);
   userB = await createFixtureUser(stack, { namePrefix: `${namePrefix}-b` });
   created.push(userB);
-  world = await createRedTeamWorld({ stack, userA, userB, serviceClient: adminClient() });
+  world = await createRedTeamWorld({
+    stack,
+    userA,
+    userB,
+    serviceClient: adminClient(),
+    undoTurn: createUndoTurn({ client: userA.client }),
+  });
 }, 120_000);
 
 afterAll(async () => {

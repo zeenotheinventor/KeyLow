@@ -114,7 +114,7 @@ Deno.test(
   () => {
     for (const rule of [
       `Replies\nStart with the thing itself, as in "Your bench has stayed at the same weight."`,
-      'For a limit, write "Starting a workout is done on the Train tab." For a search that finds nothing, write "No exercise called glorp curl is in the library."',
+      'For a limit, write "Starting a workout is done on the Train tab." For nothing found, write "No overhead press sets are logged."',
       'For an offer to look at something else, ask a question or name the next step, as in "Ask about shoulder press to see that one." A question about a clear change never stands in for the change.',
       "Answer only the question asked, and add no offer the person did not ask for, such as logging food, except the offer to make a built routine active.",
     ]) {

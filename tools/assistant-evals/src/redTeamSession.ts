@@ -1,4 +1,5 @@
 import { createFixtureUser } from "./fixtureUser.ts";
+import { createUndoTurn } from "./undoTurn.ts";
 import { createRedTeamWorld, redTeamWorldHolder } from "../fixtures/redTeamWorld.ts";
 
 import type { FixtureUser, StackConfig } from "./fixtureUser.ts";
@@ -27,7 +28,13 @@ export async function attachRedTeamWorld({ stack, userA, serviceClient }: Option
       namePrefix: "assistant-eval-b",
       anchorDate: userA.anchorDate,
     });
-    const world = await createRedTeamWorld({ stack, userA, userB, serviceClient });
+    const world = await createRedTeamWorld({
+      stack,
+      userA,
+      userB,
+      serviceClient,
+      undoTurn: createUndoTurn({ client: userA.client }),
+    });
     redTeamWorldHolder.attach(world, userB.remove);
   } catch (error) {
     console.warn(
