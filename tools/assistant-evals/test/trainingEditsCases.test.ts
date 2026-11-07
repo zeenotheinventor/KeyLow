@@ -9,6 +9,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fakeEnvironment } from "./fakeEnvironment.ts";
 import { fakeDatabase, readTool, turnResult, writeTool } from "./helpers.ts";
+import { storedRows } from "./storedTurnRows.ts";
 import { sayThursday, thursdayOf, trainingEditsCasesOf } from "../cases/trainingEdits.ts";
 import { namesDay } from "../cases/trainingEditsGraders.ts";
 import { ACTIVE_ROUTINE, CURRENT_GOAL } from "../fixtures/training.ts";
@@ -368,16 +369,42 @@ function playOf(play: Play): { turns: TurnResult[]; database: EvalDatabase } {
       })),
     ),
     assistant_messages: play.steps.flatMap((step, index) => {
-      const display: Record<string, unknown> = {};
+      const turn = turns[index];
+      if (turn === undefined) {
+        return [];
+      }
       if (step.askAgain === true) {
-        display["tool-1"] = { askAgain: true };
+        return storedRows(turn, (step.cards ?? []).length > 0);
       }
-      if (step.linkTo !== undefined) {
-        display["tool-2"] = {
-          link: { label: "Open", target: { screen: "routine_editor", routineId: step.linkTo } },
-        };
-      }
-      return [{ turn_id: turns[index]?.turnId, display }];
+      const link =
+        step.linkTo === undefined
+          ? null
+          : {
+              "tool-2": {
+                link: {
+                  label: "Open",
+                  target: { screen: "routine_editor", routineId: step.linkTo },
+                },
+              },
+            };
+      return [
+        {
+          id: `user-${index}`,
+          turn_id: turn.turnId,
+          seq: 1,
+          role: "user",
+          content: "Message",
+          display: null,
+        },
+        {
+          id: `reply-${index}`,
+          turn_id: turn.turnId,
+          seq: 2,
+          role: "assistant",
+          content: "Reply",
+          display: link,
+        },
+      ];
     }),
     assistant_turns: turns.map((turn) => ({
       id: turn.turnId,
@@ -1998,7 +2025,7 @@ describe("edits-swap-during-a-workout-writes-nothing-offers-ask-again-and-a-ques
         ...right,
         steps: [{ ...(right.steps[0] ?? {}), askAgain: false }, ...right.steps.slice(1)],
       },
-      "Ask again is not offered",
+      "the thread shows no Ask again",
     );
   });
 
@@ -2039,7 +2066,7 @@ describe("the Ask again rule", () => {
       tables: () => tablesOf(seededShape()),
     });
 
-    expect(reasons.join(" ")).toContain("Ask again is not offered");
+    expect(reasons.join(" ")).toContain("the thread shows no Ask again");
   });
 });
 

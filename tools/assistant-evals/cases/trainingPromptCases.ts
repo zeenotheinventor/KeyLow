@@ -56,7 +56,7 @@ const roleOf = (value: unknown): "user" | "assistant" | null =>
  * (pressing it would send the whole message again and could log twice, KEY-902), and a turn that only
  * refused shows one.
  */
-function askAgainShown(turnIndex: number, shown: boolean): Grader {
+export function askAgainShown(turnIndex: number, shown: boolean): Grader {
   return async ({ turns, database }) => {
     const turn = turns[turnIndex];
     if (turn === undefined) {

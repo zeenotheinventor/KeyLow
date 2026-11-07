@@ -49,7 +49,6 @@ import {
   withContext,
 } from "./entryGraders.ts";
 import {
-  askAgainOffered,
   cardKinds,
   cardRowCount,
   currentGoalIs,
@@ -74,6 +73,7 @@ import {
   toolWasCalled,
   workoutDeleted,
 } from "./trainingEditsGraders.ts";
+import { askAgainShown } from "./trainingPromptCases.ts";
 import { ACTIVE_ROUTINE, CURRENT_GOAL, LIBRARY_EXERCISES } from "../fixtures/training.ts";
 import { answerContainsNumber } from "../src/case.ts";
 import { trainingEditsWorldHolder } from "../src/trainingEditsWorld.ts";
@@ -843,11 +843,11 @@ export function trainingEditsCasesOf(anchorDate: string): readonly EvalCase[] {
         cardKinds(0, []),
         routineUnchanged(swapDuringWorkout),
         // Stored on the refusal, drawn because nothing landed. The live `ask_again` event is sent on the same rule.
-        askAgainOffered(0, true),
+        askAgainShown(0, true),
         answerSaysFinishOrDiscard(0),
         turnEnded(1, "complete"),
         noActionRowsInTurn(1),
-        askAgainOffered(1, false),
+        askAgainShown(1, false),
         answerContainsNumber(112.5),
         writesOf("edit_routine"),
       ],

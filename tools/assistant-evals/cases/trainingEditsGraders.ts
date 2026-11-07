@@ -308,34 +308,6 @@ export function linkToRoutineEditor(turnIndex: number, routineIdOf: () => string
   };
 }
 
-/**
- * Whether the person is offered Ask again for the turn, as the app draws it: the turn stored the flag (the
- * executor stores it on the first write a workout refused), ended complete, and drew no card. The app never offers
- * it after a write landed, because pressing it would send the whole message again and repeat that write, and the
- * live turn sends no `ask_again` event then either. The flag can be stored on a turn that also wrote, so the stored
- * flag alone is not what the person sees.
- */
-export function askAgainOffered(turnIndex: number, expected: boolean): Grader {
-  return async ({ turns, database }) => {
-    const turn = turns[turnIndex];
-    if (turn === undefined) {
-      return fail(`the case has no turn ${turnIndex + 1}`);
-    }
-    const stored = entriesOf(await displaysOfTurn(database, turn.turnId)).some(
-      (entry) => entry["askAgain"] === true,
-    );
-    const wroteSomething = (turn.cards ?? []).length > 0;
-    const offered = stored && turn.status === "complete" && !wroteSomething;
-    return offered === expected
-      ? pass(expected ? "Ask again is offered" : "no Ask again is offered")
-      : fail(
-          expected
-            ? "Ask again is not offered for a turn a workout refused"
-            : "Ask again is offered after a write landed or a question",
-        );
-  };
-}
-
 /** Passes when a call of the tool answered with this error code (the code the stored result carried). */
 export function toolAnswered(tool: string, errorCode: string): Grader {
   return ({ turns }) =>
