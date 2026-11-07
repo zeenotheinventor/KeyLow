@@ -47,7 +47,7 @@ describe("describeAssistantConsentCaption", () => {
 
   it("should say where to open the assistant from once it is on", () => {
     expect(describeAssistantConsentCaption(true)).toBe(
-      "On. Open it from the Diary header or Describe in Log food.",
+      "On. Open it from the Diary header, the Train header or Describe in Log food.",
     );
   });
 });

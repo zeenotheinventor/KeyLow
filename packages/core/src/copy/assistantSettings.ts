@@ -29,7 +29,7 @@ export function describeAssistantMoreRow(isOn: boolean | undefined): {
 /** The caption under the "Use the assistant" switch. */
 export function describeAssistantConsentCaption(isOn: boolean): string {
   return isOn
-    ? "On. Open it from the Diary header or Describe in Log food."
+    ? "On. Open it from the Diary header, the Train header or Describe in Log food."
     : "Off until you turn it on.";
 }
 
