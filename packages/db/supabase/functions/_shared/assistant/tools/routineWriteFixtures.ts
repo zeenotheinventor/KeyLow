@@ -63,10 +63,11 @@ export const setActiveRoutineRpc: RpcHandler = (args, tables) => {
 export function routineContext(
   tools: readonly ToolDefinition[],
   rows: Record<string, unknown>[] = routineRows(),
+  setActive: RpcHandler = setActiveRoutineRpc,
 ) {
   return writeContext(tools, {
     rows: { routines: rows },
-    rpc: { set_active_routine: setActiveRoutineRpc },
+    rpc: { set_active_routine: setActive },
   });
 }
 

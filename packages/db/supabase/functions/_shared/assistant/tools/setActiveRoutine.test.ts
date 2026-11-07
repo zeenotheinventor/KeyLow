@@ -340,3 +340,121 @@ Deno.test("an input without a routine_id is invalid", async () => {
 
   assertObjectMatch(result, { status: "error", code: "invalid_input" });
 });
+
+Deno.test(
+  "a read-back that fails after the activation landed still gives the card and an Undo",
+  async () => {
+    const made = routineContext(tools);
+    // The first read of the routines is the tool's own, and the second is the one after the activation.
+    made.stub.failNextReadFrom("routines", 1);
+
+    const result = await executeTool(made.ctx, "set_active_routine", {
+      routine_id: pushPullLegsId,
+    });
+    assert(result.status === "ok" && result.actionId !== null);
+    storeUndoOf(made.store, result);
+
+    assertEquals(payloadOf(result), { routine_id: pushPullLegsId, is_active: true, changed: true });
+    assertObjectMatch(structuredOf(result), {
+      card: {
+        kind: "routine_active",
+        title: "Push Pull Legs is your active routine",
+        undo: "available",
+      },
+      undo: { previous: upperLowerId },
+    });
+    assertEquals(made.store.actions.length, 1);
+    assertEquals(activeIdsOf(made.stub), [pushPullLegsId]);
+    // The failed read is reported, by its code and with no routine in it.
+    assertEquals(
+      made.reported.map(({ code }) => code),
+      ["internal_error"],
+    );
+
+    const undone = await undoAction(made.ctx, result.actionId);
+
+    assertEquals(undone, { status: "undone", actionId: result.actionId });
+    assertEquals(activeIdsOf(made.stub), [upperLowerId]);
+  },
+);
+
+Deno.test(
+  "an Undo from a write whose stamp was not read still sees that another routine is active",
+  async () => {
+    const made = routineContext(tools);
+    made.stub.failNextReadFrom("routines", 1);
+    const result = await executeTool(made.ctx, "set_active_routine", {
+      routine_id: pushPullLegsId,
+    });
+    assert(result.status === "ok" && result.actionId !== null);
+    storeUndoOf(made.store, result);
+    setActiveRoutineRpc({ p_routine_id: fullBodyId }, made.stub.tables);
+
+    const undone = await undoAction(made.ctx, result.actionId);
+
+    assertEquals(undone, { status: "error", code: "undo_unavailable", reason: "changed" });
+    assertEquals(activeIdsOf(made.stub), [fullBodyId]);
+  },
+);
+
+Deno.test("an activation the database refuses is tool_failed and leaves no action", async () => {
+  const made = routineContext(tools, routineRows(), () => ({
+    data: null,
+    error: { code: "XX000", message: "unavailable" },
+  }));
+
+  const result = await executeTool(made.ctx, "set_active_routine", { routine_id: pushPullLegsId });
+
+  assertObjectMatch(result, { status: "error", code: "tool_failed" });
+  assertEquals(made.store.actions.length, 0);
+  assertEquals(activeIdsOf(made.stub), [upperLowerId]);
+  assertFalse(
+    JSON.stringify(made.reported.map((failure) => String(failure.caught))).includes("Push"),
+  );
+});
+
+Deno.test(
+  "pressing Undo again after a changed answer answers changed again, not already_undone",
+  async () => {
+    const { ctx, result, stub } = await activate(pushPullLegsId);
+    assert(result.actionId !== null);
+    setActiveRoutineRpc({ p_routine_id: fullBodyId }, stub.tables);
+    const changed = { status: "error", code: "undo_unavailable", reason: "changed" };
+
+    const first = await undoAction(ctx, result.actionId);
+    const second = await undoAction(ctx, result.actionId);
+
+    assertEquals([first, second], [changed, changed]);
+    assertEquals(activeIdsOf(stub), [fullBodyId]);
+  },
+);
+
+Deno.test(
+  "pressing Undo again after a failed read undoes it, and a third press is already_undone",
+  async () => {
+    const { ctx, result, stub } = await activate(pushPullLegsId);
+    assert(result.actionId !== null);
+    stub.failNextReadFrom("routines");
+
+    const failed = await undoAction(ctx, result.actionId);
+    const retried = await undoAction(ctx, result.actionId);
+    const third = await undoAction(ctx, result.actionId);
+
+    assertEquals(failed, { status: "error", code: "undo_failed" });
+    assertEquals(retried, { status: "undone", actionId: result.actionId });
+    assertEquals(third, { status: "error", code: "already_undone" });
+    assertEquals(activeIdsOf(stub), [upperLowerId]);
+  },
+);
+
+Deno.test("a read that fails after Undo landed does not turn the Undo into a failure", async () => {
+  const { ctx, result, stub } = await activate(pushPullLegsId);
+  assert(result.actionId !== null);
+  // The first read is the inverse's own. Nothing reads after the activation.
+  stub.failNextReadFrom("routines", 1);
+
+  const undone = await undoAction(ctx, result.actionId);
+
+  assertEquals(undone, { status: "undone", actionId: result.actionId });
+  assertEquals(activeIdsOf(stub), [upperLowerId]);
+});

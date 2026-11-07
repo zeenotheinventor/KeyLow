@@ -6,6 +6,7 @@ import {
   assertStringIncludes,
 } from "@std/assert";
 
+import { ARCHIVE_ACTIVE_REFUSAL } from "../../core.ts";
 import { confirmWordsFor } from "../../../assistant/confirmWords.ts";
 import { executeTool } from "../executor.ts";
 import { createFakeActionStore, createFakeContext, turnsOfConversation } from "../testing.ts";
@@ -18,6 +19,7 @@ import {
   pushPullLegsId,
   routineContext,
   routineRows,
+  setActiveRoutineRpc,
   upperLowerId,
 } from "./routineWriteFixtures.ts";
 import { payloadOf, stubCaller } from "./testing.ts";
@@ -333,5 +335,61 @@ Deno.test(
     assertStringIncludes(description, "When they say no, do not call again.");
     assertStringIncludes(description, "routine_is_active");
     assertFalse(description.includes("ask the user"));
+  },
+);
+
+Deno.test(
+  "a confirming call on a routine that became active after the question is refused and archives nothing",
+  async () => {
+    const { asking, confirming, stub, store } = archiveContexts();
+    const confirmationId = confirmationIdOf(
+      await executeTool(asking, "archive_routine", { routine_id: pushPullLegsId }),
+    );
+    setActiveRoutineRpc({ p_routine_id: pushPullLegsId }, stub.tables);
+
+    const result = await executeTool(confirming, "archive_routine", {
+      routine_id: pushPullLegsId,
+      confirmation_id: confirmationId,
+    });
+
+    assertEquals(result.status, "ok");
+    assertEquals(payloadOf(result), {
+      error: "routine_is_active",
+      say: ARCHIVE_ACTIVE_REFUSAL,
+    });
+    assertEquals(archivedIdsOf(stub), []);
+    assertEquals(store.actions.length, 0);
+    assertFalse(stub.calls.some((call) => call.method === "update"));
+  },
+);
+
+Deno.test(
+  "pressing Undo again after a restore in the app answers unavailable again, not already_undone",
+  async () => {
+    const { confirming, actionId, stub } = await archived();
+    Object.assign((stub.tables["routines"] ?? [])[1] ?? {}, { is_archived: false });
+    const unavailable = { status: "error", code: "undo_unavailable" };
+
+    const first = await undoAction(confirming, actionId);
+    const second = await undoAction(confirming, actionId);
+
+    assertEquals([first, second], [unavailable, unavailable]);
+  },
+);
+
+Deno.test(
+  "pressing Undo again after a failed read restores it, and a third press is already_undone",
+  async () => {
+    const { confirming, actionId, stub } = await archived();
+    stub.failNextReadFrom("routines");
+
+    const failed = await undoAction(confirming, actionId);
+    const retried = await undoAction(confirming, actionId);
+    const third = await undoAction(confirming, actionId);
+
+    assertEquals(failed, { status: "error", code: "undo_failed" });
+    assertEquals(retried, { status: "undone", actionId });
+    assertEquals(third, { status: "error", code: "already_undone" });
+    assertEquals(archivedIdsOf(stub), []);
   },
 );

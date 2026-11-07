@@ -6,7 +6,7 @@ import { buildRoutineActiveCard, buildRoutineClearedCard } from "../../core.ts";
 import { listRoutines, setActiveRoutine } from "../../repos.ts";
 import { notFound } from "./entryWrite.ts";
 
-import type { InverseOutcome, WriteRunOutput, WriteToolDefinition } from "../tool.ts";
+import type { InverseOutcome, ToolContext, WriteRunOutput, WriteToolDefinition } from "../tool.ts";
 
 const setActiveRoutineInput = z.strictObject({
   routine_id: z
@@ -23,6 +23,43 @@ type SetActiveRoutineInput = z.infer<typeof setActiveRoutineInput>;
 // The stamp is kept exactly as the database gave it, and never reformatted.
 const stateOf = (active: { id: string; activated_at: string | null } | null): string =>
   active === null ? "none" : `${active.id} ${active.activated_at ?? ""}`;
+
+// The fingerprint of a write whose stamp could not be read after it landed. Undo then compares the routine's
+// id alone, so it cannot tell that the same routine was made active again in the app, and it still tells that
+// another routine, or none, is active.
+const unknownStamp = "unknown";
+
+// Makes the routine active with the database call itself. The repo helper writes and then reads the routine
+// back, and a throw from either looks the same. A throw after the write landed would lose the card and Undo
+// of a write, and the model would retry into `unchanged`, so this has no read-back. Null clears, and the repo
+// helper has no read-back for that.
+async function activateRoutine(ctx: ToolContext, routineId: string | null): Promise<void> {
+  if (routineId === null) {
+    await setActiveRoutine(ctx.caller, null);
+    return;
+  }
+  const { error } = await ctx.caller.rpc("set_active_routine", { p_routine_id: routineId });
+  if (error) {
+    // The code only. The message can quote the routine.
+    throw new Error(`Could not make the routine active (${error.code || "no code"})`);
+  }
+}
+
+// When the routine became active, as the database stamped it, or null when it cannot be read. It must not throw,
+// because the activation has landed.
+async function activationStampOf(ctx: ToolContext, routineId: string): Promise<string | null> {
+  try {
+    const routines = await listRoutines(ctx.caller, { archived: true });
+    return routines.find(({ id }) => id === routineId)?.activated_at ?? null;
+  } catch (caught) {
+    try {
+      ctx.reportError("assistant tool set_active_routine", "internal_error", caught);
+    } catch {
+      // Reporting is a side channel.
+    }
+    return null;
+  }
+}
 
 const previousRoutineId = z.guid().nullable();
 
@@ -61,7 +98,7 @@ export const setActiveRoutineTool: WriteToolDefinition<SetActiveRoutineInput> = 
       if (active === null) {
         return unchanged(false);
       }
-      await setActiveRoutine(ctx.caller, null);
+      await activateRoutine(ctx, null);
       return {
         data: { is_active: false, changed: true },
         structured: {
@@ -81,7 +118,8 @@ export const setActiveRoutineTool: WriteToolDefinition<SetActiveRoutineInput> = 
     if (routine.is_active) {
       return unchanged(true, routine_id);
     }
-    const stored = await setActiveRoutine(ctx.caller, routine_id);
+    await activateRoutine(ctx, routine_id);
+    const stamp = await activationStampOf(ctx, routine_id);
     return {
       data: { routine_id, is_active: true, changed: true },
       structured: {
@@ -92,7 +130,10 @@ export const setActiveRoutineTool: WriteToolDefinition<SetActiveRoutineInput> = 
         }),
         undo: {
           previous: active === null ? null : active.id,
-          fingerprint: stateOf({ id: routine_id, activated_at: stored?.activated_at ?? null }),
+          fingerprint:
+            stamp === null
+              ? `${routine_id} ${unknownStamp}`
+              : stateOf({ id: routine_id, activated_at: stamp }),
         },
       },
       target: { targetId: routine_id },
@@ -109,7 +150,10 @@ export const setActiveRoutineTool: WriteToolDefinition<SetActiveRoutineInput> = 
     }
     const routines = await listRoutines(ctx.caller, { archived: true });
     const active = routines.find((routine) => routine.is_active) ?? null;
-    if (stateOf(active) !== stored.fingerprint) {
+    const isLeftAsWritten =
+      stateOf(active) === stored.fingerprint ||
+      (active !== null && stored.fingerprint === `${active.id} ${unknownStamp}`);
+    if (!isLeftAsWritten) {
       return changedBySince;
     }
     if (previous.data !== null) {
@@ -118,7 +162,7 @@ export const setActiveRoutineTool: WriteToolDefinition<SetActiveRoutineInput> = 
         return changedBySince;
       }
     }
-    await setActiveRoutine(ctx.caller, previous.data);
+    await activateRoutine(ctx, previous.data);
     return "undone";
   },
 };
