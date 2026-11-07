@@ -123,6 +123,7 @@ type ToolWords = { words: string; afterConfirm?: string };
 const LOOKING_UP_THE_FOOD: ToolWords = { words: "Looking up the food" };
 const CHECKING_YOUR_DIARY: ToolWords = { words: "Checking your diary" };
 const SAVING_THE_RECIPE: ToolWords = { words: "Saving the recipe" };
+const LOOKING_AT_THE_ROUTINE = "Looking at the routine";
 const TOOL_WORDS = new Map<string, ToolWords>([
   ["search_foods", LOOKING_UP_THE_FOOD],
   ["get_food", LOOKING_UP_THE_FOOD],
@@ -141,6 +142,25 @@ const TOOL_WORDS = new Map<string, ToolWords>([
   ["copy_day", { words: "Looking at the day", afterConfirm: "Copying the day" }],
   ["archive_recipe", { words: "Looking at the recipe", afterConfirm: "Archiving the recipe" }],
   ["update_targets", { words: "Looking at your targets", afterConfirm: "Changing your targets" }],
+  ["search_exercises", { words: "Looking up exercises" }],
+  ["get_workouts", { words: "Checking your workouts" }],
+  ["get_exercise_progress", { words: "Checking your progress" }],
+  ["get_routines", { words: "Checking your routines" }],
+  ["get_training_goals", { words: "Checking your goals" }],
+  ["get_muscle_state", { words: "Checking your recovery" }],
+  ["suggest_next_session", { words: "Working out what to train" }],
+  ["edit_routine", { words: LOOKING_AT_THE_ROUTINE, afterConfirm: "Changing the routine" }],
+  ["set_active_routine", { words: "Changing your active routine" }],
+  ["archive_routine", { words: LOOKING_AT_THE_ROUTINE, afterConfirm: "Archiving the routine" }],
+  ["create_routine", { words: "Building your routine" }],
+  ["update_training_goals", { words: "Saving your goals" }],
+  ["save_custom_exercise", { words: "Saving the exercise" }],
+  [
+    "archive_custom_exercise",
+    { words: "Looking at the exercise", afterConfirm: "Archiving the exercise" },
+  ],
+  ["update_past_set", { words: "Updating the set" }],
+  ["delete_workout", { words: "Looking at the workout", afterConfirm: "Removing the workout" }],
 ]);
 
 /** The status line while no text arrives (`assistant · working`, `assistant · recipe-import`, left). */
