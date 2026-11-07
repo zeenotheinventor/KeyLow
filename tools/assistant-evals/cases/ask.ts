@@ -80,7 +80,7 @@ export function noFirstPerson(): Grader {
 
 // The read tools of the diary, which the ask set may use. The driver gives no `readOnlyHint` yet, so
 // `noWrite()` would count every call as a write. `noActionRows()` checks the end state; this checks the names.
-export const READ_TOOLS: ReadonlySet<string> = new Set([
+export const DIARY_READ_TOOLS: ReadonlySet<string> = new Set([
   "ask_user",
   "get_day",
   "get_range_totals",
@@ -89,6 +89,13 @@ export const READ_TOOLS: ReadonlySet<string> = new Set([
   "get_food",
   "get_recipes",
   "search_foods",
+]);
+
+// Every read tool of the registry. A case about the diary does not accept the training reads, because a
+// model that reaches for one when asked about food has chosen the wrong tool, so the graders of the diary
+// cases use `DIARY_READ_TOOLS`.
+export const READ_TOOLS: ReadonlySet<string> = new Set([
+  ...DIARY_READ_TOOLS,
   "search_exercises",
   "get_routines",
   "get_training_goals",
@@ -96,12 +103,12 @@ export const READ_TOOLS: ReadonlySet<string> = new Set([
   "suggest_next_session",
 ]);
 
-/** Passes when every tool called is a read tool. */
+/** Passes when every tool called is a read tool of the diary. */
 export function onlyReadTools(): Grader {
   return (context) => {
     const other = context.turns
       .flatMap((turn) => turn.toolCalls)
-      .find((call) => !READ_TOOLS.has(call.name));
+      .find((call) => !DIARY_READ_TOOLS.has(call.name));
     return Promise.resolve(
       other === undefined
         ? pass("only read tools were called")

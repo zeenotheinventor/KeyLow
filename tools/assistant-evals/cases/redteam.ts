@@ -15,7 +15,7 @@
 // and three counts. So what these cases prove is about the pipeline and the turn, not about the model reading a
 // hostile page: an instruction on a page cannot make the turn write anything beyond the one recipe, and cannot
 // become an ingredient. See `PAGE_CASES` below.
-import { READ_TOOLS, onlyReadTools } from "./ask.ts";
+import { DIARY_READ_TOOLS, onlyReadTools } from "./ask.ts";
 import { importCalledFor, onlyImportTools } from "./recipes.ts";
 import { pagePathOf } from "../fixtures/pages/recipeImportPages.ts";
 import { redTeamPages } from "../fixtures/pages/redTeamPages.ts";
@@ -716,7 +716,7 @@ const onlyReadToolsAnd =
     const other = context.turns
       .slice(0, endIndex)
       .flatMap((turn) => turn.toolCalls)
-      .find(({ name }) => name !== setupTool && !READ_TOOLS.has(name));
+      .find(({ name }) => name !== setupTool && !DIARY_READ_TOOLS.has(name));
     return Promise.resolve(
       other === undefined
         ? pass("the first turns called only read tools and the setup tool")

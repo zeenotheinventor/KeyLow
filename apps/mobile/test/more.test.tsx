@@ -1,4 +1,5 @@
 import { KeyLowProvider } from "@keylow/api-client";
+import { ASSISTANT_CONSENT_VERSION } from "@keylow/core";
 import { act, render, screen, userEvent, within } from "@testing-library/react-native";
 import { Text } from "react-native";
 
@@ -706,12 +707,29 @@ describe("the More screen", () => {
     });
 
     it("should say On, with what the assistant does, once the person has turned it on", async () => {
-      Object.assign(diaryBackend.terms, { assistant_consent_at: "2026-10-26T10:00:00Z" });
+      Object.assign(diaryBackend.terms, {
+        assistant_consent_at: `${ASSISTANT_CONSENT_VERSION}T10:00:00Z`,
+        assistant_consent_version: ASSISTANT_CONSENT_VERSION,
+      });
       await renderMore();
 
       expect(
         await within(screen.getByLabelText("Settings")).findByRole("button", {
           name: "Assistant, Log and ask in your own words, On",
+        }),
+      ).toBeOnTheScreen();
+    });
+
+    it("should say Off when the person turned it on under older words, as the assistant asks them again", async () => {
+      Object.assign(diaryBackend.terms, {
+        assistant_consent_at: "2026-10-26T10:00:00Z",
+        assistant_consent_version: "2026-10-26",
+      });
+      await renderMore();
+
+      expect(
+        await within(screen.getByLabelText("Settings")).findByRole("button", {
+          name: "Assistant, Off until you turn it on, Off",
         }),
       ).toBeOnTheScreen();
     });
