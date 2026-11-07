@@ -769,6 +769,133 @@ describe("what fails the set whatever the percentage", () => {
   });
 });
 
+describe("the shapes of the first live run", () => {
+  const readDay = (localDate: string) => readTool("get_day", { local_date: localDate });
+  const withDay = (id: string) => [...specOf(id).calls.map(callFor), readDay(ANCHOR)];
+
+  it("should not take the figures of a diary read beside the workout for loads", async () => {
+    const answer =
+      "Squat 112.5, leg press 190, deadlift 90. Food: calories 1,306, protein 114, carbs 145, fat 80. " +
+      "You ate 1,306 kcal, 114 g protein and 150 g carbs, with 1300 kcal as the target.";
+
+    expect(
+      await run("workouts-yesterday", { answer, toolCalls: withDay("workouts-yesterday") }),
+    ).toEqual([]);
+  });
+
+  it("should still catch a load to try beside those figures", async () => {
+    for (const phrase of [
+      "Try 80 on bench.",
+      "Go for 85.",
+      "Try 77.5 kg.",
+      "Aim for 85 next time.",
+    ]) {
+      const failures = await run("workouts-yesterday", {
+        answer: `Squat 112.5, leg press 190, deadlift 90. Calories 1,306. ${phrase}`,
+        toolCalls: withDay("workouts-yesterday"),
+      });
+
+      expect(failures).toEqual([expect.stringContaining("which no tool gave")]);
+    }
+  });
+
+  it("should take the diary's line beside the workout's, joined as the turn joins them", async () => {
+    for (const citation of [
+      "No entries on 8 Sep \u00b7 No workouts, 8 Sep",
+      "Based on 4 entries yesterday and your targets \u00b7 Based on 1 workout, 6 Nov",
+    ]) {
+      const id = citation.includes("No workouts")
+        ? "workouts-before-the-first"
+        : "workouts-yesterday";
+      const { turn } = await turnOf(id, {
+        toolCalls: withDay(id),
+        answerMeta: { citation, estimate: null },
+      });
+
+      expect(await failuresOf(caseOf(id), turn)).toEqual([]);
+    }
+  });
+
+  it("should still need a line of the tool the case is about", async () => {
+    const { turn } = await turnOf("workouts-yesterday", {
+      toolCalls: withDay("workouts-yesterday"),
+      answerMeta: { citation: "Based on 4 entries yesterday and your targets", estimate: null },
+    });
+
+    expect(await failuresOf(caseOf("workouts-yesterday"), turn)).toEqual([
+      expect.stringContaining("not the tool's for these figures"),
+    ]);
+  });
+
+  it("should take a question about which pull-up exercise as a fair answer", async () => {
+    const { turn } = await turnOf("progress-untrained", {
+      status: "clarify",
+      toolCalls: [
+        readTool("search_exercises", { query: "pull-up", limit: 5, equipment: null }),
+        readTool("search_exercises", { query: "pull up", limit: 10, equipment: null }),
+        readTool("ask_user", { question: "Which one?", quick_replies: ["Weighted Pull Ups"] }),
+      ],
+      answer: "Which exercise should be checked?",
+      answerMeta: undefined,
+    });
+
+    expect(await failuresOf(caseOf("progress-untrained"), turn)).toEqual([]);
+  });
+});
+
+describe("the first person", () => {
+  const first = async (answer: string) => {
+    const { spec, turn } = await turnOf("train-today", {
+      answer: `Squat, leg press, deadlift. ${answer}`,
+    });
+    return (await outcomesOf(caseOf(spec.id), turn)).filter(({ passed }) => !passed);
+  };
+
+  it("should say the word and about 40 characters around it, and no more of the answer", async () => {
+    const [failure] = await first(
+      "This is a long sentence that comes before the word, and then I think you should rest, or maybe not at all today.",
+    );
+
+    expect(failure?.reason).toContain('the reply speaks in the first person: "');
+    expect(failure?.reason).toContain("[I]");
+    expect(failure?.reason).toContain("word, and then [I] think you should");
+    expect(failure?.reason).not.toContain("This is a long sentence");
+    expect(failure?.reason).not.toContain("maybe not at all today");
+  });
+
+  it("should catch the contractions", async () => {
+    for (const answer of ["I'm sure.", "I've seen it.", "I'll check.", "I\u2019d go lighter."]) {
+      expect((await first(answer))[0]?.reason).toContain("first person");
+    }
+  });
+
+  it("should not take a list numeral, a roman numeral or a letter for the pronoun", async () => {
+    for (const answer of [
+      "I. Squat first.",
+      "Part I covers it.",
+      "Type I sets.",
+      "ISO standards and an iPad.",
+    ]) {
+      expect(await first(answer)).toEqual([]);
+    }
+  });
+
+  it("should mark the slip soft, so it counts in the percentage and is no missed must-pass", async () => {
+    const [failure] = await first("I would start with squats.");
+
+    expect(failure?.soft).toBe(true);
+    expect(failure?.critical).toBeUndefined();
+  });
+
+  it("should not mark any other grader soft", async () => {
+    const { turn } = await turnOf("train-today", { answer: "Nothing useful, 9 sets." });
+    const outcomes = await outcomesOf(caseOf("train-today"), turn);
+
+    expect(outcomes.some(({ passed, soft }) => !passed && soft === undefined)).toBe(true);
+    expect(outcomes.some(({ soft }) => soft === true)).toBe(false);
+  });
+});
+
 describe("the failure line", () => {
   it("should print the question and the tools with their arguments and how they ended, and never the answer", async () => {
     const failures = await run("progress-bench-stalled", {
@@ -831,8 +958,8 @@ describe("the rules of the tools", () => {
   it("should take the numbers the case expects for bare numbers", async () => {
     const allowed = { loads: [], setCounts: [], repRanges: [] };
 
-    expect((await noInventedLoad(allowed, [62])(answerContext("Heat is 62"))).passed).toBe(true);
-    expect((await noInventedLoad(allowed)(answerContext("Heat is 62"))).passed).toBe(false);
+    expect((await noInventedLoad(allowed, [62])(answerContext("Heat at 62"))).passed).toBe(true);
+    expect((await noInventedLoad(allowed)(answerContext("Heat at 62"))).passed).toBe(false);
   });
 });
 

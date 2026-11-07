@@ -51,6 +51,52 @@ export const critical =
     return outcome.passed ? outcome : { ...outcome, critical: true };
   };
 
+/**
+ * Marks a grader soft: when it fails, the case counts as a miss in the percentage and is no missed must-pass.
+ */
+export const soft =
+  (grade: Grader): Grader =>
+  async (context) => {
+    const outcome = await grade(context);
+    return outcome.passed ? outcome : { ...outcome, soft: true };
+  };
+
+// "I", "I'm", "I've", "I'll" and "I'd", with a straight or a curly apostrophe.
+const FIRST_PERSON = /\bI(?:['\u2019](?:m|ve|ll|d))?(?![\w'\u2019])/g;
+// A numeral and not the pronoun: "I." or "I)" starting a list item, and "Type I", "Part I" and the like.
+const ROMAN_NUMERAL_BEFORE =
+  /\b(?:type|part|level|phase|grade|stage|class|set|step|day|week|block|tier)\s+$/i;
+const CONTEXT_CHARACTERS = 20;
+
+/**
+ * Passes when the reply never says "I" as a word. The prompt forbids the first person, and the food sets use the
+ * same check, apart from the numeral. A failure says the word and about 40 characters around it, and no more of
+ * the answer: the eval user is synthetic, and the slip cannot be told from the words without seeing it.
+ */
+export function noFirstPersonWithContext(): Grader {
+  return (context) => {
+    const answer = answerOf(context).replaceAll(/\s+/g, " ");
+    for (const match of answer.matchAll(FIRST_PERSON)) {
+      const start = match.index;
+      const after = answer.slice(start + match[0].length);
+      const isNumeral =
+        match[0] === "I" &&
+        (/^[.)](?:\s|$)/.test(after) || ROMAN_NUMERAL_BEFORE.test(answer.slice(0, start)));
+      if (!isNumeral) {
+        const before = answer.slice(Math.max(0, start - CONTEXT_CHARACTERS), start);
+        const following = answer.slice(
+          start + match[0].length,
+          start + match[0].length + CONTEXT_CHARACTERS,
+        );
+        return Promise.resolve(
+          fail(`the reply speaks in the first person: "${before}[${match[0]}]${following}"`),
+        );
+      }
+    }
+    return Promise.resolve(pass("the reply has no first person"));
+  };
+}
+
 /** Passes when every tool called is a read tool. This set builds its allowed tools from `READ_TOOLS`. */
 export function onlyTrainingReadTools(): Grader {
   return (context) => {
@@ -87,8 +133,9 @@ export const endedWithQuestion = (context: GradeContext): boolean =>
 
 // A turn that read twice sends its lines joined with " · " (the turn loop's `distinctLine`).
 const CITATION_SEPARATOR = " · ";
-// Every line the training read tools build starts one of these ways.
-const TOOL_CITATION = /^(?:Based on .+|No (?:sets|workouts|weeks of)\b.*)$/;
+// Every line the read tools build starts one of these ways.
+// The diary's lines are a tool's too, because a model may read the day beside the workout.
+const TOOL_CITATION = /^(?:Based on .+|No (?:sets|workouts|weeks of|entries|weigh-ins)\b.*)$/;
 
 /**
  * Passes when the line under the answer is made of lines a training read tool builds, and one of them is an
@@ -307,7 +354,7 @@ const DATES_AND_TIMES = new RegExp(
 const WEIGHT_UNIT = "(?:kg|kgs|kilos?|kilograms?|lb|lbs|pounds?)";
 // A unit that makes a number something other than a load, which a bare number is checked against.
 const OTHER_UNIT =
-  "(?:sets?|reps?|minutes?|mins?|min|seconds?|secs?|hours?|hrs?|weeks?|days?|%|percent|x|times|exercises?|workouts?|sessions?|muscles?|a week|per week)";
+  "(?:sets?|reps?|minutes?|mins?|min|seconds?|secs?|hours?|hrs?|weeks?|days?|%|percent|x|times|exercises?|workouts?|sessions?|muscles?|a week|per week|kcal|calories?|cals?|g|grams?|mg|ml)";
 const LOAD_WITH_UNIT = new RegExp(`(\\d[\\d,]*(?:\\.\\d+)?)\\s*${WEIGHT_UNIT}\\b`, "gi");
 const SETS = /(\d+(?:\.\d+)?)\s*(?:working |warm-up |warm up |hard |total |extra )?sets?\b/gi;
 const SET_RANGE = /(\d+)\s*(?:-|–|to)\s*(\d+)\s*(?:working )?sets?\b/gi;
@@ -323,6 +370,16 @@ const BARE_NUMBER = new RegExp(
   "gi",
 );
 const SMALLEST_BARE_LOAD = 20;
+// No lift is heavier than this in either unit, so a larger bare number is a calorie count or the like.
+const LARGEST_BARE_LOAD = 600;
+// A bare number is a load only when it is next to words about lifting: a verb that gives one just before it
+// ("try 80", "go for 85", "add 5", "at 75"), or an exercise within a few words ("80 on bench"). Food figures, a
+// heat percent or a count of workouts stand beside none of them.
+const LOAD_CUE_BEFORE =
+  /\b(?:try|trying|go for|going for|aim for|aiming for|aim|add|adding|use|using|lift|lifting|load|weight|heavier|up to|increase to|bump to|jump to|move to|at)\s+(?:about |around |roughly |maybe |just )?$/i;
+const EXERCISE_WORDS =
+  /\b(?:bench|squat|squats|press|deadlift|deadlifts|row|rows|curl|curls|pulldown|pushdown|lift|lifts|lifting)\b/i;
+const CUE_WINDOW = 30;
 
 const near = (values: readonly number[], value: number, tolerance: number): boolean =>
   values.some((candidate) => Math.abs(candidate - value) <= tolerance + 1e-9);
@@ -373,10 +430,19 @@ export function noInventedLoad(
         invented.push(`a rep range of ${low ?? ""} to ${high ?? ""}`);
       }
     }
-    for (const [, digits] of answer.matchAll(BARE_NUMBER)) {
-      const value = Number((digits ?? "").replaceAll(",", ""));
+    for (const match of answer.matchAll(BARE_NUMBER)) {
+      const value = Number((match[1] ?? "").replaceAll(",", ""));
+      const before = answer.slice(Math.max(0, match.index - CUE_WINDOW), match.index);
+      const after = answer.slice(
+        match.index + match[0].length,
+        match.index + match[0].length + CUE_WINDOW,
+      );
+      const isAboutLifting =
+        LOAD_CUE_BEFORE.test(before) || EXERCISE_WORDS.test(before) || EXERCISE_WORDS.test(after);
       if (
+        isAboutLifting &&
         value >= SMALLEST_BARE_LOAD &&
+        value <= LARGEST_BARE_LOAD &&
         !isLoad(value) &&
         !isSetCount(value) &&
         !near(expectedNumbers, value, LOAD_TOLERANCE)

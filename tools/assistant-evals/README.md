@@ -162,6 +162,8 @@ User A is the run's eval user (the budget counts A's usage). User B is a second 
 - one of the four **must-pass** cases did not pass (`workout-what-next`, `workout-so-far`, `train-no-goal`, `progress-bench-stalled`), including by erroring or not being run;
 - any case wrote an `assistant_actions` row, or called a tool that is not a read tool. These two graders are **critical**.
 
+A must-pass case is missed only by a real fault. A slip of style, which today is the first person, is a **soft** grader (`GradeOutcome.soft`): it counts as a miss in the percentage, and does not make a must-pass case a missed must-pass.
+
 The report names them: `trainingAdvice: 24 of 26 passed (92%), threshold 90%, must-pass missed: train-no-goal, NOT met`. This is `EvalCase.mustPass` and `GradeOutcome.critical`, which any set may use.
 
 **How a case is graded.** On state and numbers, never wording. A case passes when:
@@ -170,7 +172,7 @@ The report names them: `trainingAdvice: 24 of 26 passed (92%), threshold 90%, mu
 - the answer holds each expected number to Ki-Lo's rounding (a number in words from zero to twelve counts);
 - the line under the answer is a tool's;
 - `assistant_actions` is empty for the turn;
-- `noInventedLoad` holds: a load, a set count or a rep range in the answer that no tool of the case could have given fails it. That covers a load with a unit, a bare number the size of a load ("go for 85"), a set count and a rep range with or without the word "reps" ("8 to 10", "sets of 8-10"). Zero is always allowed. The figures a tool could give are worked out for the case's own tools: a progress case allows that exercise's loads and the differences between its weeks (the "+2.5 kg" beside a week) and no set count, a workouts case that day's loads and working sets, and so on.
+- `noInventedLoad` holds: a load, a set count or a rep range in the answer that no tool of the case could have given fails it. That covers a load with a unit, a bare number the size of a load that stands beside words about lifting ("go for 85", "try 80 on bench", "at 75"), so the calories, grams and counts of a diary read beside the workout are not loads, a set count and a rep range with or without the word "reps" ("8 to 10", "sets of 8-10"). Zero is always allowed. The figures a tool could give are worked out for the case's own tools: a progress case allows that exercise's loads and the differences between its weeks (the "+2.5 kg" beside a week) and no set count, a workouts case that day's loads and working sets, and so on.
 
 **Fair routes pass.**
 
@@ -184,6 +186,7 @@ The report names them: `trainingAdvice: 24 of 26 passed (92%), threshold 90%, mu
 - The volume of the last 7 days is never called "this week", unless the question said it.
 - A stall the tool could not count to its start is said with "at least". The history is six weeks long, so this is built and unit tested but never triggered by the fixture.
 - A marker such as `needs_goal` is never printed by name.
+- The reply never says "I" (`noFirstPersonWithContext`, the ask set's check without a list numeral such as "I." or "Part I"). A failure prints the word and about 40 characters around it, and nothing else of the answer.
 - Each state has a word it cannot be answered without ("goal" for no goal, "pull" for an exercise never trained, a word for nothing to suggest or no workout that day), so an empty apology does not pass.
 
 The reply is not required to say where a number came from: the prompt says it never repeats that.
@@ -192,13 +195,13 @@ The reply is not required to say where a number came from: the prompt says it ne
 
 **The history is written before the first case, outside its ceiling.** It is about 190 requests one at a time, which would not fit a case's 120 second ceiling. `EvalCase.prepare` runs before the ceiling starts, and writes nothing twice. A case that does hit its ceiling is given 60 seconds to clean up before the next case starts, because a late clean up (restoring the goal, deleting the workout) would otherwise run against the next case.
 
-**A failing case** prints its question, the tools it called with their arguments and how each ended (an error code, or `asked to confirm`, or `no result`), and the numbers it expected. It never prints an answer. It cannot print a tool result: the driver keeps only the tool's name, input and error code.
+**A failing case** prints its question, the tools it called with their arguments and how each ended (an error code, or `asked to confirm`, or `no result`), and the numbers it expected. It never prints an answer, bar the first-person word and the 40 characters around it. It cannot print a tool result: the driver keeps only the tool's name, input and error code.
 
 **What it does not grade.** Whether the answer invents a cause for a stall ("you are not eating enough") is wording, so no grader looks for it. The prompt and the tool descriptions carry that rule. The path to "nothing to suggest" depends on the weekday of the run and on how hot the muscles are, so the 15 minute case accepts a session or nothing, whichever core gives.
 
 Run it by name: `pnpm --filter @keylow/assistant-evals check:assistant -- --set trainingAdvice`, or from the `assistant-evals` workflow with `-f sets="trainingAdvice"`.
 
-**Cost.** Not yet measured: the set has had no live run. An estimate from the ask set's measured 1.5k tokens a case: each case here is two to four model calls (the question, one or two tool reads, the answer), so about 2k to 4k counted tokens a case and **50,000 to 100,000 for the set**, against the default 300,000 budget. A run of every set can reach that budget (the ask set alone is about 60,000, compaction 55,000 to 65,000, describe and writes 150,000 or more), so run this set by name. The first live run gives the figure, and this paragraph should then be replaced by it.
+**Cost.** Measured on the first live run (run 42348323623, 26 cases): **56,386 counted tokens** for the set (input, output and cache creation tokens, not the 1,053,422 cache read tokens), about 2,200 a case, against the default 300,000 budget. The estimate was 50,000 to 100,000. The cached prefix of the first model call was **15,550 tokens** (4 input and 15,546 cache creation) against a baseline of 12,133, which is **3,417 more** for the 16 training tools, their descriptions and the longer prompt. A run of every set can still reach the budget, so run this set by name.
 
 ## The training history
 

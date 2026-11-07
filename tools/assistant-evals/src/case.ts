@@ -6,6 +6,11 @@ export type GradeOutcome = Readonly<{
   reason: string;
   /** A failed critical outcome fails its whole set, whatever the set's percentage (see `EvalCase.mustPass`). */
   critical?: true;
+  /**
+   * A failed soft outcome counts as a miss in the set's percentage, and does not make a must-pass case a missed
+   * must-pass. It is for a rule of style, such as the first person, whose slip harms nobody.
+   */
+  soft?: true;
 }>;
 
 /** What a grader reads: the turns of one case, in order, and the database as the eval user. */

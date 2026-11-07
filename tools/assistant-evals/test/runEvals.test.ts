@@ -78,6 +78,25 @@ describe("runEvals", () => {
     ]);
   });
 
+  it("should mark a case that failed on soft graders only, and not one that also failed on another", async () => {
+    const soft = () => Promise.resolve({ passed: false, reason: "style", soft: true as const });
+    const hard = () => Promise.resolve({ passed: false, reason: "wrong" });
+    const { report } = await run(
+      [
+        simpleCase("slip", { mustPass: true, expect: [soft] }),
+        simpleCase("slip-and-wrong", { mustPass: true, expect: [soft, hard] }),
+        simpleCase("wrong", { expect: [hard] }),
+      ],
+      [costing(1), costing(1), costing(1)],
+    );
+
+    expect(report.cases.map(({ id, status, softOnly }) => [id, status, softOnly])).toEqual([
+      ["slip", "failed", true],
+      ["slip-and-wrong", "failed", undefined],
+      ["wrong", "failed", undefined],
+    ]);
+  });
+
   it("should fail a case with the reason of each grader that failed", async () => {
     const { report } = await run(
       [

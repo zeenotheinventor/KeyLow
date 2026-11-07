@@ -20,6 +20,8 @@ export type CaseReport = Readonly<{
   mustPass?: true;
   /** True when a grader marked critical failed, which fails the case's set whatever the percentage. */
   critical?: true;
+  /** True when the case failed only on soft graders, so it is a miss of the percentage and no missed must-pass. */
+  softOnly?: true;
   /** The tokens the budget counts, for this case. */
   tokens: number;
 }>;
@@ -114,7 +116,7 @@ const messageOf = (error: unknown): string =>
 class CaseStopped extends Error {}
 class CaseError extends Error {}
 
-type Outcome = Pick<CaseReport, "status" | "failures" | "critical">;
+type Outcome = Pick<CaseReport, "status" | "failures" | "critical" | "softOnly">;
 
 function afterCeiling<Result>(
   work: Promise<Result>,
@@ -260,6 +262,9 @@ export async function runEvals(input: RunInput): Promise<RunReport> {
         ...(outcomes.some(({ passed, critical }) => !passed && critical === true)
           ? { critical: true as const }
           : {}),
+        ...(failures.length > 0 && outcomes.every(({ passed, soft }) => passed || soft === true)
+          ? { softOnly: true as const }
+          : {}),
       };
     } catch (error) {
       thrown = error;
@@ -288,9 +293,9 @@ export async function runEvals(input: RunInput): Promise<RunReport> {
       return outcome;
     }
     return {
-      ...outcome,
       status: outcome.status === "passed" ? "error" : outcome.status,
       failures: [...outcome.failures, cleanUpFailure],
+      ...(outcome.critical === true ? { critical: true as const } : {}),
     };
   }
 
@@ -391,6 +396,7 @@ export async function runEvals(input: RunInput): Promise<RunReport> {
       tokens,
       ...(evalCase.mustPass === true ? { mustPass: true as const } : {}),
       ...(outcome.critical === true ? { critical: true as const } : {}),
+      ...(outcome.softOnly === true ? { softOnly: true as const } : {}),
     });
     largestCaseTokens = Math.max(largestCaseTokens, tokens);
   }

@@ -32,8 +32,8 @@ export function summariseSets(report: RunReport): SetSummary[] {
     const thresholdPercent = THRESHOLD_PERCENT[set];
     const mustPassMissed = cases
       .filter(
-        ({ status, mustPass, critical }) =>
-          (mustPass === true && status !== "passed") || critical === true,
+        ({ status, mustPass, critical, softOnly }) =>
+          (mustPass === true && status !== "passed" && softOnly !== true) || critical === true,
       )
       .map(({ id }) => id);
     return [

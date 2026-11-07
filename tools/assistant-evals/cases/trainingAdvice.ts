@@ -14,7 +14,6 @@
 //
 // A failing case prints its question, the tools it called with their arguments and how each ended, and the numbers
 // it expected. It never prints an answer, which is the person's training.
-import { noFirstPerson } from "./ask.ts";
 import {
   ADVICE_THEMES,
   expectedNumbersOf,
@@ -36,11 +35,13 @@ import {
   isRecord,
   neverSaysThisWeek,
   noInventedLoad,
+  noFirstPersonWithContext,
   noMarkerNames,
   noWriteRows,
   onlyTrainingReadTools,
   pass,
   saysAtLeast,
+  soft,
   withContext,
   workoutUntouched,
 } from "./trainingAdviceGraders.ts";
@@ -224,7 +225,8 @@ function gradersOf(spec: AdviceSpec, world: () => TrainingWorld, clock: Clock): 
     critical(onlyTrainingReadTools()),
     critical(noWriteRows()),
     noMarkerNames(),
-    noFirstPerson(),
+    // A slip of style: it counts in the percentage and is no missed must-pass.
+    soft(noFirstPersonWithContext()),
     // The question's own "this week" may be echoed back.
     ...(spec.rollingWindow && !/this week/i.test(spec.messages.at(-1) ?? "")
       ? [neverSaysThisWeek()]
@@ -362,6 +364,8 @@ export function adviceSpecs(anchorDate: string): readonly AdviceSpec[] {
       "How are my pull-ups progressing?",
       [{ anyOf: ["search_exercises", "get_exercise_progress"] }],
       { kind: "untrained" },
+      // Several pull-up exercises exist, and asking which one is a fair way to answer.
+      { mayClarify: true },
     ),
 
     // Volume and recovery.

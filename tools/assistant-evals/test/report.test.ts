@@ -356,4 +356,21 @@ describe("the must-pass cases of a set", () => {
       "trainingAdvice: 19 of 20 passed (95%), threshold 90%, must-pass missed: important, NOT met",
     );
   });
+
+  it("should count a must-pass case that failed on soft graders only in the percentage, not as missed", () => {
+    const report = trainingRun([
+      caseReport("trainingAdvice", "failed", { id: "important", mustPass: true, softOnly: true }),
+    ]);
+
+    expect(summariseSets(report)[0]).toMatchObject({ passed: 19, total: 20, mustPassMissed: [] });
+    expect(summariseSets(report)[0]?.met).toBe(true);
+  });
+
+  it("should still count a must-pass case that errored with soft failures as missed", () => {
+    const report = trainingRun([
+      caseReport("trainingAdvice", "error", { id: "important", mustPass: true }),
+    ]);
+
+    expect(summariseSets(report)[0]?.mustPassMissed).toEqual(["important"]);
+  });
 });
