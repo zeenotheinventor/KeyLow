@@ -12,7 +12,6 @@ import {
   SEARCH_IDLE,
   SEARCH_STATUS,
   YOUR_FOODS_EMPTY,
-  describeSeeMore,
 } from "../../src/copy";
 
 describe("search group headings", () => {
@@ -36,16 +35,6 @@ describe("search group headings", () => {
         label: "Open Food Facts results",
       },
     });
-  });
-});
-
-describe("describeSeeMore", () => {
-  it.each([
-    [1, "See 1 more"],
-    [2, "See 2 more"],
-    [18, "See 18 more"],
-  ])("should write %s hidden rows as %s", (hiddenCount, expected) => {
-    expect(describeSeeMore(hiddenCount)).toBe(expected);
   });
 });
 

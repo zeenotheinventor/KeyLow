@@ -64,3 +64,37 @@ export const groupFoodSearchResults = <Row extends { source: FoodSource }>(
     return [{ key, visibleRows, hiddenCount: rows.length - visibleRows.length }];
   });
 };
+
+/** How many rows the mobile search asks for: the most `search_foods` returns. */
+export const FOOD_SEARCH_FETCH_LIMIT = 50;
+
+/** How many rows the mobile search shows at first, and how many more each scroll to the end reveals. */
+export const FOOD_SEARCH_REVEAL_BATCH = 15;
+
+/**
+ * Limits the rows of groups that hold all of their rows to one running budget in display order: Your
+ * foods first, then Common foods, then Branded foods. Only the last group that gets any budget is cut,
+ * a group with no budget is left out, and `hiddenCount` is corrected to what each group holds back. So
+ * revealing more only ever appends rows at the bottom. Throws a `RangeError` for a count that is not a
+ * whole number of at least 1.
+ */
+export const revealFoodSearchGroups = <Row>(
+  groups: readonly FoodSearchGroup<Row>[],
+  visibleCount: number,
+): FoodSearchGroup<Row>[] => {
+  if (!Number.isInteger(visibleCount) || visibleCount < 1) {
+    throw new RangeError(`Count must be a whole number of at least 1, received ${visibleCount}`);
+  }
+
+  let budget = visibleCount;
+  return groups.flatMap((group) => {
+    if (budget === 0) {
+      return [];
+    }
+    const visibleRows = group.visibleRows.slice(0, budget);
+    budget -= visibleRows.length;
+    return [
+      { key: group.key, visibleRows, hiddenCount: group.visibleRows.length - visibleRows.length },
+    ];
+  });
+};

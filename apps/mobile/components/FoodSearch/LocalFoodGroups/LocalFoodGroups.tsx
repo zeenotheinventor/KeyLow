@@ -18,24 +18,13 @@ export function LocalFoodGroups({
   query,
   logRows,
   choosesAmount = false,
-  onSeeMore,
   onOpenFood,
 }: LocalFoodGroupsProps) {
   const foodGroups = groups.map((group) => {
     const { title, caption } = SEARCH_GROUP_HEADINGS[group.key];
 
     return (
-      <GroupedList
-        key={group.key}
-        seeMore={{
-          hiddenCount: group.hiddenCount,
-          onPress: () => {
-            onSeeMore(group.key);
-          },
-        }}
-        source={caption}
-        title={title}
-      >
+      <GroupedList key={group.key} source={caption} title={title}>
         {group.visibleRows.map((food) => {
           const open = () => {
             onOpenFood(food.id);

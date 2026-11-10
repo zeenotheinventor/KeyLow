@@ -6,7 +6,7 @@ import {
 } from "@keylow/core/copy";
 import { vars } from "nativewind";
 import { useCallback, useState } from "react";
-import { ScrollView, View } from "react-native";
+import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { IngredientSearchResults } from "./IngredientSearchResults";
@@ -15,6 +15,7 @@ import { LogPlateStrip } from "./LogPlateStrip";
 import { LogSearchResults } from "./LogSearchResults";
 import { OwnFoodResults } from "./OwnFoodResults";
 import { PlateSheet, PlateSheetChip } from "./PlateSheet";
+import { ScrollingResults } from "./ScrollingResults";
 import { SearchResults } from "./SearchResults";
 import { IconButton, SearchField, SheetHeader } from "../ui";
 
@@ -77,42 +78,44 @@ export function FoodSearch(props: FoodSearchProps) {
       />
       {logging === undefined ? null : <LogPlateStrip day={logging.context.day} />}
       {props.ingredient !== undefined ? (
-        <ScrollView
-          className="flex-1"
-          contentContainerClassName="grow gap-4 px-4 pb-4 pt-1"
-          keyboardShouldPersistTaps="handled"
-        >
-          <IngredientSearchResults
-            query={query}
-            onOpenFood={onOpenFood}
-            onOpenRecent={props.ingredient.onOpenRecent}
-          />
-        </ScrollView>
+        <ScrollingResults query={query}>
+          {(visibleRowCount, onMoreRowsChange) => (
+            <IngredientSearchResults
+              query={query}
+              visibleRowCount={visibleRowCount}
+              onMoreRowsChange={onMoreRowsChange}
+              onOpenFood={onOpenFood}
+              onOpenRecent={props.ingredient.onOpenRecent}
+            />
+          )}
+        </ScrollingResults>
       ) : scope === "own" ? (
         // The list scrolls itself, so it can load the next page when the end is reached.
         <OwnFoodResults query={query} onCreateFood={props.onCreateFood} onOpenFood={onOpenFood} />
       ) : (
-        <ScrollView
-          className="flex-1"
-          contentContainerClassName="grow gap-4 px-4 pb-4 pt-1"
-          keyboardShouldPersistTaps="handled"
-        >
-          {logging === undefined ? (
-            <SearchResults
-              query={query}
-              onCreateFood={props.onCreateFood}
-              onOpenFood={onOpenFood}
-            />
-          ) : (
-            <LogSearchResults
-              logging={logging}
-              query={query}
-              onCreateFood={props.onCreateFood}
-              onOpenFood={onOpenFood}
-              onPlateAdded={clearQuery}
-            />
-          )}
-        </ScrollView>
+        <ScrollingResults query={query}>
+          {(visibleRowCount, onMoreRowsChange) =>
+            logging === undefined ? (
+              <SearchResults
+                query={query}
+                visibleRowCount={visibleRowCount}
+                onMoreRowsChange={onMoreRowsChange}
+                onCreateFood={props.onCreateFood}
+                onOpenFood={onOpenFood}
+              />
+            ) : (
+              <LogSearchResults
+                logging={logging}
+                query={query}
+                visibleRowCount={visibleRowCount}
+                onMoreRowsChange={onMoreRowsChange}
+                onCreateFood={props.onCreateFood}
+                onOpenFood={onOpenFood}
+                onPlateAdded={clearQuery}
+              />
+            )
+          }
+        </ScrollingResults>
       )}
       <SearchField
         autoFocus={autoFocus}

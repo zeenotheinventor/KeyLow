@@ -1,16 +1,13 @@
-import { describeSeeMore } from "@keylow/core/copy";
 import { View } from "react-native";
 
 import { Card } from "../Card";
 import { Text } from "../Text";
 import { GroupedRowPositionContext, positionedRows } from "./rowPosition";
-import { SeeMoreButton } from "./SeeMoreButton";
 
 import type { GroupedListProps } from "./types";
 
 /**
- * A titled group of rows on a card, with the group's source beside the title and, when the group has
- * more rows than it shows, a "See N more" button. A notice about the group, such as a failed add, sits
+ * A titled group of rows on a card, with the group's source beside the title. A notice about the group, such as a failed add, sits
  * between the heading and the card, which is the kit's `Card`.
  */
 export function GroupedList({
@@ -18,7 +15,6 @@ export function GroupedList({
   hidesTitle = false,
   label,
   source,
-  seeMore,
   notice,
   children,
 }: GroupedListProps) {
@@ -27,7 +23,7 @@ export function GroupedList({
   return (
     <View className="gap-2">
       {hidesTitle ? null : (
-        // The title shrinks and wraps at large text, so See more is never pushed off the edge.
+        // The title shrinks and wraps at large text.
         <View className="min-h-[32px] flex-row items-center justify-between gap-2 px-1">
           <Text className="shrink" role="heading" variant="body-strong">
             {title}
@@ -37,13 +33,6 @@ export function GroupedList({
               </Text>
             )}
           </Text>
-          {seeMore === undefined || seeMore.hiddenCount <= 0 ? null : (
-            <SeeMoreButton
-              label={`${describeSeeMore(seeMore.hiddenCount)} in ${title}`}
-              text={describeSeeMore(seeMore.hiddenCount)}
-              onPress={seeMore.onPress}
-            />
-          )}
         </View>
       )}
       {notice}
