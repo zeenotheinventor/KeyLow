@@ -38,7 +38,7 @@ On 2026-11-10 an honest, identified client got `403 Access Denied` from `www.mcd
 
 ## Search
 
-A plain "sausage roll" search now leads with the Greggs sausage roll, because its name is exactly the query. A CoFID or USDA sausage roll is still in the first 5 results, and `restaurant_foods_wave1.test.sql` asserts both. Ranking was not changed.
+A plain "sausage roll" search now leads with the Greggs sausage roll, because its name is exactly the query, and `restaurant_foods_wave1.test.sql` asserts it. Ranking was not changed. The test does not assert that a CoFID or USDA sausage roll follows, because the seeds the test database loads hold none. The full CoFID import has one, so that part holds only on a database that has run it.
 
 ## Reviewer's sample
 

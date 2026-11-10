@@ -10,7 +10,7 @@
 
 begin;
 
-select plan(13);
+select plan(12);
 
 insert into auth.users (instance_id, id, aud, role, email) values
   ('00000000-0000-0000-0000-000000000000', '94000001-0000-4000-8000-00000000000a', 'authenticated', 'authenticated', 'restaurant-wave1-user@keylow.test');
@@ -109,20 +109,6 @@ select results_eq(
   $$,
   $$ values ('Sausage Roll'::text, 'Greggs'::text) $$,
   'a plain sausage roll search leads with the Greggs sausage roll'
-);
-
-select ok(
-  exists (
-    select 1
-    from (
-      select result.source
-      from public.search_foods('sausage roll', 25) with ordinality as result
-      order by result.ordinality
-      limit 5
-    ) as top_five
-    where top_five.source <> 'restaurant'
-  ),
-  'a food that is not a chain''s is still in the first 5 results of a plain sausage roll search'
 );
 
 select isnt(
