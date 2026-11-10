@@ -20,15 +20,16 @@ export function offFreshness(fetchedAt: string | Date, now: Date): OffFreshness 
 }
 
 /**
- * When the current portion rules (the pack portion of KEY-518 and the borrowed natural units of KEY-520)
- * went live in production: the Deploy Supabase run for KEY-520 completed at this instant. Products
+ * When the current portion rules (the pack portion of KEY-518, the borrowed natural units of KEY-520 and
+ * the serving or natural unit default of KEY-930)
+ * went live in production: the Deploy Supabase run for KEY-930 completed at this instant. Products
  * stored from Open Food Facts before it lack those portions.
  *
  * Bump this date whenever the portion rules change and stored products should be re-derived. Set it to
  * the moment the new rules are live in production, never earlier, or a lookup in between would store
  * the old rules' portions and not be refreshed again.
  */
-export const OFF_PORTION_RULES_FROM = "2026-10-23T02:16:15Z";
+export const OFF_PORTION_RULES_FROM = "2026-11-10T16:25:42Z";
 
 /**
  * True when a food was fetched before `OFF_PORTION_RULES_FROM`, so its portions were derived under older

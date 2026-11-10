@@ -25,7 +25,7 @@ import type { Food } from "@keylow/core/schemas";
 const server = setupServer();
 
 const BEFORE_THE_RULES = "2026-10-20T10:00:00.000000+00:00";
-const AFTER_THE_RULES = "2026-10-24T10:00:00.000000+00:00";
+const AFTER_THE_RULES = "2026-11-11T10:00:00.000000+00:00";
 const OLD_PORTION_ID = "55555555-5555-4555-8555-555555555555";
 const NEW_PORTION_ID = "66666666-6666-4666-8666-666666666666";
 
@@ -115,10 +115,54 @@ describe("useRefreshOutdatedOffFood", () => {
       );
     });
 
+    it("should mark the food searches stale once the refreshed product is in the caches", async () => {
+      answerWithRefreshedProduct();
+      const { queryClient, wrapper } = createWrapper();
+      const searchKey = keys.foods.search("cola");
+      queryClient.setQueryData(searchKey, []);
+
+      renderHook(
+        () => {
+          useRefreshOutdatedOffFood(oldFood());
+        },
+        { wrapper },
+      );
+
+      await waitFor(() => {
+        expect(queryClient.getQueryState(searchKey)?.isInvalidated).toBe(true);
+      });
+    });
+
+    it("should leave the Open Food Facts searches alone", async () => {
+      answerWithRefreshedProduct();
+      const { queryClient, wrapper } = createWrapper();
+      const offSearchKey = keys.foods.offSearch("cola");
+      queryClient.setQueryData(offSearchKey, []);
+
+      renderHook(
+        () => {
+          useRefreshOutdatedOffFood(oldFood());
+        },
+        { wrapper },
+      );
+      await waitFor(() => {
+        expect(offProductBodies).toHaveLength(1);
+      });
+      await flush();
+
+      expect(queryClient.getQueryState(offSearchKey)?.isInvalidated).toBe(false);
+    });
+
     it("should not let a read of the portions that started before the refresh put the old ones back", async () => {
       answerWithRefreshedProduct();
+      let reads = 0;
       server.use(
         http.get(`${REST_URL}/food_portions`, async ({ request }) => {
+          reads += 1;
+          // The first read is the slow one in flight before the refresh. The database holds the new portions once `off-product` has answered.
+          if (reads > 1) {
+            return postgrestRows(request, refreshedResponse().portions);
+          }
           await new Promise((resolve) => setTimeout(resolve, 30));
           return postgrestRows(request, [globalPortionRow({ id: OLD_PORTION_ID })]);
         }),
@@ -305,6 +349,25 @@ describe("useRefreshOutdatedOffFood", () => {
       await flush();
 
       expect(queryClient.getQueryData(keys.foods.portions(GLOBAL_FOOD_ID))).toEqual(oldPortions);
+    });
+
+    it("should not mark the food searches stale on a rate limit", async () => {
+      server.use(
+        http.post(OFF_PRODUCT_URL, () => edgeErrorResponse(429, "rate_limited", "Slow down", 20)),
+      );
+      const { queryClient, wrapper } = createWrapper();
+      const searchKey = keys.foods.search("cola");
+      queryClient.setQueryData(searchKey, []);
+
+      renderHook(
+        () => {
+          useRefreshOutdatedOffFood(oldFood());
+        },
+        { wrapper },
+      );
+      await flush();
+
+      expect(queryClient.getQueryState(searchKey)?.isInvalidated).toBe(false);
     });
 
     it("should leave the caches alone when the server answers with an error", async () => {

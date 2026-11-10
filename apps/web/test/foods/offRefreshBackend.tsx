@@ -12,7 +12,7 @@ import { ToastProvider } from "@/components/ui/Toast";
 /** A time before `OFF_PORTION_RULES_FROM`, so a food fetched then is asked for again. */
 export const FETCHED_BEFORE_THE_RULES = "2026-10-20T10:00:00.000000+00:00";
 /** A time after `OFF_PORTION_RULES_FROM`, so a food fetched then needs nothing. */
-export const FETCHED_AFTER_THE_RULES = "2026-10-24T10:00:00.000000+00:00";
+export const FETCHED_AFTER_THE_RULES = "2026-11-11T10:00:00.000000+00:00";
 
 export const BRANDED_FOOD_ID = "66666666-6666-4666-8666-666666666666";
 export const BRANDED_CODE = "5449000000996";
@@ -191,6 +191,10 @@ async function answerOffProduct(request: Request): Promise<Response> {
   if (offRefreshBackend.refreshFails === "serverError" || offRefreshBackend.product === undefined) {
     return jsonResponse({ message: "RAW ROW Cola 42 kcal" }, 500);
   }
+  // `off-product` stores what it answers, so a read of the foods tables after it sees the refreshed food.
+  const { food, portions } = offRefreshBackend.product;
+  offRefreshBackend.foods.set(food.id, food);
+  offRefreshBackend.portions.set(food.id, portions);
   return jsonResponse(offRefreshBackend.product);
 }
 

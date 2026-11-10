@@ -1,6 +1,7 @@
 import { isBeforePortionRules } from "@keylow/core/foods";
 import { skipToken, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { invalidateFoodQueries } from "../invalidateFoodQueries";
 import { useSupabase } from "../KeyLowProvider";
 import { keys } from "../queryKeys";
 import { fetchOffProduct } from "../repos/off";
@@ -24,7 +25,9 @@ function outdatedOffCodeOf(food: Food | null | undefined): string | undefined {
 /**
  * Asks `off-product` for a branded food that was stored before the current portion rules, so its new
  * portions appear on the screen that shows it. The answer is put in the food's detail and portions caches
- * (`seedOffProduct`), and the screen follows them with no spinner and no message. A food from anywhere
+ * (`seedOffProduct`), and the screen follows them with no spinner and no message. The food searches are then
+ * marked stale, so a list already on screen shows the new serving, and the Open Food Facts searches are left
+ * alone. A food from anywhere
  * else, one fetched since the rules, and one without a source reference are left alone.
  *
  * Each food is asked for once while the app runs: a screen opened again, a foods invalidation and a
@@ -48,6 +51,8 @@ export function useRefreshOutdatedOffFood(food: Food | null | undefined): void {
               // A read of the food that is still on its way started before the refresh and would put the old portions back.
               await queryClient.cancelQueries({ queryKey: keys.foods.detail(product.food.id) });
               seedOffProduct(queryClient, product);
+              // A search list already on screen still holds the old serving and macros.
+              void invalidateFoodQueries(queryClient);
             }
             // The answer is in the caches. What the query holds is only that the food was asked for.
             return product !== null;

@@ -54,6 +54,10 @@ export const ACCOUNT_EXPORT_COVERAGE: Record<
   exercise_import_runs: { notExported: "Import plumbing with no grant for the app." },
   exercise_source_data: { notExported: "Import plumbing with no grant for the app." },
   rate_limits: { notExported: "Closed to every API role. Counters, not account data." },
+  off_search_results: {
+    notExported:
+      "Closed to every API role. A shared cache of search results with no user id, not account data.",
+  },
   day_totals: { notExported: "A view derived from the food log rows, which the export holds." },
   assistant_usage_daily: {
     notExported: "A view derived from the assistant usage rows, which the export holds.",

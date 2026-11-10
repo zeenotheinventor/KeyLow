@@ -4,7 +4,7 @@ import { planCachedLookup } from "./cachedLookupPlan.ts";
 import { isBeforePortionRules } from "./core.ts";
 
 const millisecondsPerDay = 24 * 60 * 60 * 1000;
-const rulesFrom = new Date("2026-10-23T02:16:15Z").getTime();
+const rulesFrom = new Date("2026-11-10T16:25:42Z").getTime();
 
 function isoAt(milliseconds: number): string {
   return new Date(milliseconds).toISOString();
