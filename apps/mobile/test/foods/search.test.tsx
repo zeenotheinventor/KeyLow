@@ -947,12 +947,12 @@ describe("food search sheet", () => {
       expect(screen.queryByText(/socket hang up/)).not.toBeOnTheScreen();
     });
 
-    it("should say how long to wait when Open Food Facts is rate limited", async () => {
+    it("should say how long to wait when the search is rate limited", async () => {
       await failToAdd(new RateLimitedError("slow down", 20, new Error("429")));
 
       expect(
         await screen.findByRole("alert", {
-          name: "Open Food Facts is busy. Try again in 20 seconds.",
+          name: "Too many lookups just now. Try again in 20 seconds.",
         }),
       ).toBeOnTheScreen();
     });
@@ -962,7 +962,7 @@ describe("food search sheet", () => {
 
       expect(
         await screen.findByRole("alert", {
-          name: "Open Food Facts is busy. Try again in 1 second.",
+          name: "Too many lookups just now. Try again in 1 second.",
         }),
       ).toBeOnTheScreen();
     });
@@ -972,7 +972,7 @@ describe("food search sheet", () => {
 
       expect(
         await screen.findByRole("alert", {
-          name: "Open Food Facts is busy. Try again in a moment.",
+          name: "Too many lookups just now. Try again in a moment.",
         }),
       ).toBeOnTheScreen();
     });
@@ -1043,7 +1043,9 @@ describe("food search sheet", () => {
       await renderSearch();
 
       expect(
-        screen.getByRole("status", { name: "Open Food Facts is busy. Try again in 30 seconds." }),
+        screen.getByRole("status", {
+          name: "Too many searches just now. Try again in 30 seconds.",
+        }),
       ).toBeOnTheScreen();
       expect(screen.queryByRole("button", { name: /try again|retry/i })).not.toBeOnTheScreen();
       expect(screen.getByRole("button", { name: ownRowName })).toBeOnTheScreen();
@@ -1055,7 +1057,7 @@ describe("food search sheet", () => {
       await renderSearch();
 
       expect(
-        screen.getByRole("status", { name: "Open Food Facts is busy. Try again in 1 second." }),
+        screen.getByRole("status", { name: "Too many searches just now. Try again in 1 second." }),
       ).toBeOnTheScreen();
     });
 
@@ -1065,7 +1067,7 @@ describe("food search sheet", () => {
       await renderSearch();
 
       expect(
-        screen.getByRole("status", { name: "Open Food Facts is busy. Try again in a moment." }),
+        screen.getByRole("status", { name: "Too many searches just now. Try again in a moment." }),
       ).toBeOnTheScreen();
     });
   });
@@ -1106,6 +1108,15 @@ describe("food search sheet", () => {
       await renderSearch();
 
       expect(screen.queryByRole("heading", { name: "No foods found" })).not.toBeOnTheScreen();
+    });
+
+    it("should say Open Food Facts is being searched, not that no foods were found, while it waits to be asked", async () => {
+      Object.assign(searchResult, { isLoadingOff: true, isDebouncing: false });
+
+      await renderSearch("zzqx");
+
+      expect(screen.queryByRole("heading", { name: "No foods found" })).not.toBeOnTheScreen();
+      expect(screen.getByText("Searching Open Food Facts")).toBeOnTheScreen();
     });
 
     it("should not say so while the search is still waiting to start", async () => {

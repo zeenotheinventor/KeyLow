@@ -66,6 +66,7 @@ afterAll(() => {
 });
 
 const DEBOUNCE_MS = 250;
+const OFF_DEBOUNCE_MS = 750;
 
 // shouldAdvanceTime lets real time seep into the fake clock, so a process that stalls for a few
 // milliseconds can carry a check at DEBOUNCE_MS - 1 past the boundary. A test that asserts the
@@ -530,6 +531,132 @@ describe("useFoodSearch", () => {
       });
       expect(result.current.off).toEqual([]);
       expect(result.current.isLoadingOff).toBe(false);
+    });
+
+    describe("the Open Food Facts debounce", () => {
+      it("should search Open Food Facts once, for the final query, no earlier than 750 ms after the last key", async () => {
+        answerRpc(() => []);
+        answerOff(() => [offCandidate()]);
+        const { rerender } = renderSearch("c");
+
+        for (const query of ["ch", "chi", "chic"]) {
+          await act(async () => {
+            await vi.advanceTimersByTimeAsync(300);
+          });
+          rerender({ query });
+        }
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(OFF_DEBOUNCE_MS - 1);
+        });
+        expect(offSearchBodies).toEqual([]);
+
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(1);
+        });
+        await waitFor(() => {
+          expect(offSearchBodies).toEqual([{ q: "chic" }]);
+        });
+        expect(searchFoodsBodies.length).toBeLessThanOrEqual(4);
+      });
+
+      it("should say Open Food Facts is loading from the end of the local debounce, so a screen does not say no foods", async () => {
+        answerRpc(() => []);
+        answerOff(() => [offCandidate()]);
+        const { result, search } = renderSearch("c");
+        await search("chic");
+        await waitFor(() => {
+          expect(result.current.isLoadingLocal).toBe(false);
+        });
+        stopRealTimeAdvancingTheClock();
+
+        expect(result.current.isDebouncing).toBe(false);
+        expect(result.current.isLoadingOff).toBe(true);
+        expect(offSearchBodies).toEqual([]);
+      });
+
+      it("should keep the candidates of the previous query in view during the wait", async () => {
+        answerRpc(() => searchHitRows(2));
+        answerOff(() => [offCandidate()]);
+        const { result, search } = renderSearch("chick");
+        await waitFor(() => {
+          expect(result.current.off).toEqual([offCandidate()]);
+        });
+
+        await search("chicken");
+        await waitFor(() => {
+          expect(result.current.isLoadingLocal).toBe(false);
+        });
+        stopRealTimeAdvancingTheClock();
+
+        expect(result.current.off).toEqual([offCandidate()]);
+        expect(result.current.isLoadingOff).toBe(true);
+        expect(offSearchBodies).toEqual([{ q: "chick" }]);
+      });
+
+      it("should not say Open Food Facts is loading for a query that will never be sent to it", async () => {
+        let releaseSecond: () => void = () => undefined;
+        const secondMayAnswer = new Promise<void>((resolve) => {
+          releaseSecond = resolve;
+        });
+        server.use(
+          http.post<never, SearchFoodsBody>(SEARCH_FOODS_URL, async ({ request }) => {
+            const { q } = await request.clone().json();
+            if (q === "chickens") {
+              await secondMayAnswer;
+            }
+            return HttpResponse.json(searchHitRows(8));
+          }),
+        );
+        answerOff(() => [offCandidate()]);
+        const { result, search } = renderSearch("chicken");
+        await waitFor(() => {
+          expect(result.current.local).toHaveLength(8);
+        });
+
+        await search("chickens");
+        await waitFor(() => {
+          expect(result.current.isLoadingLocal).toBe(true);
+        });
+
+        expect(result.current.isLoadingOff).toBe(false);
+        releaseSecond();
+      });
+
+      it("should not say Open Food Facts is loading when the result for the query is already cached", async () => {
+        answerRpc(() => searchHitRows(2));
+        answerOff(() => [offCandidate()]);
+        const { result, search } = renderSearch("chic");
+        await waitFor(() => {
+          expect(result.current.off).toEqual([offCandidate()]);
+        });
+        await search("chicken");
+        await waitFor(() => {
+          expect(offSearchBodies.map(({ q }) => q)).toEqual(["chic", "chicken"]);
+        });
+
+        await search("chic");
+        await waitFor(() => {
+          expect(result.current.isLoadingLocal).toBe(false);
+        });
+        stopRealTimeAdvancingTheClock();
+
+        expect(result.current.off).toEqual([offCandidate()]);
+        expect(result.current.isLoadingOff).toBe(false);
+        expect(offSearchBodies).toHaveLength(2);
+      });
+
+      it("should not wait the extra time when offDebounceMs is 0", async () => {
+        answerRpc(() => []);
+        answerOff(() => [offCandidate()]);
+        const { result, search } = renderSearch("c", { offDebounceMs: 0 });
+
+        await search("chic");
+
+        await waitFor(() => {
+          expect(result.current.off).toEqual([offCandidate()]);
+        });
+        expect(offSearchBodies).toEqual([{ q: "chic" }]);
+      });
     });
 
     describe("when Open Food Facts refuses or fails", () => {

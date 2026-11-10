@@ -1,5 +1,3 @@
-import { describeRateLimit } from "./errors";
-
 import type { BarcodeInvalidReason } from "../foods/barcode";
 
 /** Under the web barcode field, where the user typed the code. A typing mistake, so it says what to check. */
@@ -79,6 +77,5 @@ export const BARCODE_LOOKUP_FAILED = {
   body: "The barcode could not be looked up. Check your connection and try again.",
 };
 
-/** The body of the "Open Food Facts is busy" notice on the barcode screens. */
-export const describeBarcodeRateLimit = (retryAfterSeconds: number | undefined): string =>
-  `Too many lookups just now. ${describeRateLimit(retryAfterSeconds)}`;
+/** The title of the notice shown when a barcode lookup is rate limited. The body is `describeRateLimit`. */
+export const LOOKUP_RATE_LIMITED = "Too many lookups just now";

@@ -25,7 +25,7 @@ export const describeRateLimit = (retryAfterSeconds: number | undefined): string
 const EDGE_ERROR_SENTENCES: Readonly<Record<EdgeErrorCode, string>> = {
   not_found:
     "Open Food Facts no longer has this product. Search again, or create the food yourself.",
-  rate_limited: `Open Food Facts is busy. ${describeRateLimit(undefined)}`,
+  rate_limited: `Too many requests just now. ${describeRateLimit(undefined)}`,
   upstream_error: "Open Food Facts did not answer. Try again in a moment.",
   invalid_request: "That request was not valid. Check what you entered and try again.",
   unauthorized: "Your session has ended. Sign in again.",

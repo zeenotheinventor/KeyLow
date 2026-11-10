@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   ADD_PRODUCT_FAILED,
   ADD_PRODUCT_NOT_FOUND,
-  OPEN_FOOD_FACTS_BUSY,
+  SEARCH_RATE_LIMITED,
   OPEN_FOOD_FACTS_SEARCH_FAILED,
   SEARCH_EMPTY,
   SEARCH_FAILED_MOBILE,
@@ -84,7 +84,7 @@ describe("search sheet sentences", () => {
   });
 
   it("should pin the Open Food Facts notices", () => {
-    expect(OPEN_FOOD_FACTS_BUSY).toBe("Open Food Facts is busy");
+    expect(SEARCH_RATE_LIMITED).toBe("Too many searches just now");
     expect(OPEN_FOOD_FACTS_SEARCH_FAILED).toEqual({
       title: "Open Food Facts could not be searched right now",
       body: "Your own results still work. Change your search to try again.",

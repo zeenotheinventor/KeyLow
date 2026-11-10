@@ -6,15 +6,16 @@ import {
 import {
   ADD_PRODUCT_FAILED,
   ADD_PRODUCT_NOT_FOUND,
+  LOOKUP_RATE_LIMITED,
   SEARCH_GROUP_HEADINGS,
   SEARCH_STATUS,
+  describeRateLimit,
 } from "@keylow/core/copy";
 import { describeFoodRow } from "@keylow/core/search";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useRef, useState } from "react";
 
 import { Banner, FoodRow, GroupedList } from "../../ui";
-import { openFoodFactsBusyTitle } from "../openFoodFactsBusyTitle";
 
 import type { OpenFoodFactsGroupProps } from "./types";
 
@@ -23,7 +24,12 @@ type AddFailure = { query: string; error: unknown };
 
 function AddFailureBanner({ error }: { error: unknown }) {
   if (error instanceof RateLimitedError) {
-    return <Banner title={openFoodFactsBusyTitle(error.retryAfterSeconds)} variant="error" />;
+    return (
+      <Banner
+        title={`${LOOKUP_RATE_LIMITED}. ${describeRateLimit(error.retryAfterSeconds)}`}
+        variant="error"
+      />
+    );
   }
 
   if (error instanceof OffProductNotFoundError) {

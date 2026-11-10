@@ -449,7 +449,7 @@ describe("scan screen", () => {
 
       expect(
         screen.getByRole("status", {
-          name: "Open Food Facts is busy Too many lookups just now. Try again in 30 seconds.",
+          name: "Too many lookups just now Try again in 30 seconds.",
         }),
       ).toBeOnTheScreen();
       expect(screen.getByRole("button", { name: "Scan again" })).toBeOnTheScreen();
@@ -461,9 +461,7 @@ describe("scan screen", () => {
 
       await scan("ean13", cola);
 
-      expect(
-        screen.getByText("Too many lookups just now. Try again in a moment."),
-      ).toBeOnTheScreen();
+      expect(screen.getByText("Try again in a moment.")).toBeOnTheScreen();
     });
 
     it("should give a generic retry message when the lookup failed", async () => {

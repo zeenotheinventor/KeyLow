@@ -9,7 +9,7 @@ import {
   CAMERA_PERMISSION,
   SCANNED_BARCODE_PROBLEMS,
   TYPED_BARCODE_PROBLEMS,
-  describeBarcodeRateLimit,
+  LOOKUP_RATE_LIMITED,
 } from "../../src/copy";
 
 import type { BarcodeInvalidReason } from "../../src/foods";
@@ -100,21 +100,9 @@ describe("barcode lookup sentences", () => {
   });
 });
 
-describe("describeBarcodeRateLimit", () => {
-  it("should pin the drawn sentence", () => {
-    expect(describeBarcodeRateLimit(30)).toBe(
-      "Too many lookups just now. Try again in 30 seconds.",
-    );
-  });
-
-  it("should say 1 second for one second", () => {
-    expect(describeBarcodeRateLimit(1)).toBe("Too many lookups just now. Try again in 1 second.");
-  });
-
-  it("should say a moment when no time is known", () => {
-    expect(describeBarcodeRateLimit(undefined)).toBe(
-      "Too many lookups just now. Try again in a moment.",
-    );
+describe("LOOKUP_RATE_LIMITED", () => {
+  it("should pin the title of the lookup rate limit notice", () => {
+    expect(LOOKUP_RATE_LIMITED).toBe("Too many lookups just now");
   });
 });
 
