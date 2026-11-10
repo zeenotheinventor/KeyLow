@@ -7,6 +7,7 @@ import {
   describeMissingValuesBeforeLogging,
 } from "@keylow/core/copy";
 import { missingFieldsOf } from "@keylow/core/diary";
+import { canBeCopiedToYourFoods } from "@keylow/core/foods";
 import { SearchX } from "lucide-react";
 
 import { BackToResults } from "../BackToResults";
@@ -87,15 +88,17 @@ export function PortionStep({
               <Banner
                 tone="review"
                 title={FOOD_REVIEW_BANNER.title}
-                action={
-                  opensReviewInNewTab
-                    ? {
-                        label: FOOD_REVIEW_ACTION_IN_NEW_TAB,
-                        href: `/foods/new?from=${food.id}`,
-                        newTab: true,
-                      }
-                    : { label: FOOD_REVIEW_BANNER.action, href: `/foods/new?from=${food.id}` }
-                }
+                {...(canBeCopiedToYourFoods(food)
+                  ? {
+                      action: opensReviewInNewTab
+                        ? {
+                            label: FOOD_REVIEW_ACTION_IN_NEW_TAB,
+                            href: `/foods/new?from=${food.id}`,
+                            newTab: true,
+                          }
+                        : { label: FOOD_REVIEW_BANNER.action, href: `/foods/new?from=${food.id}` },
+                    }
+                  : {})}
               >
                 {describeMissingValuesBeforeLogging(
                   missingFieldsOf(food),

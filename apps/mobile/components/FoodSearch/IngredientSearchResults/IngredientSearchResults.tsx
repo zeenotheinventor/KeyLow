@@ -20,7 +20,7 @@ export function IngredientSearchResults({
   return (
     <SearchResults
       choosesAmount
-      idleContent={<RecentFoods onOpen={onOpenRecent} />}
+      idleContent={<RecentFoods forRecipeIngredient onOpen={onOpenRecent} />}
       query={query}
       visibleRowCount={visibleRowCount}
       onMoreRowsChange={onMoreRowsChange}

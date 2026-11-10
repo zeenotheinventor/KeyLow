@@ -6,7 +6,10 @@ import { undoAction } from "../undo.ts";
 import { logEntryTool } from "./logEntry.ts";
 import { payloadOf } from "./testing.ts";
 import {
+  bucketId,
+  bucketPortionId,
   deletedFoodId,
+  dietWithBucket,
   eggId,
   largeEggId,
   sliceId,
@@ -177,6 +180,45 @@ Deno.test(
     assertObjectMatch(grams ?? {}, { unit: "g", quantity: 60, portion_id: null });
     assertObjectMatch(quick ?? {}, { item_type: "quick", logged_at: "2026-11-03T07:30:00.000Z" });
     assertObjectMatch(quick?.["nutrients"] ?? {}, { kcal: 300, protein_g: null });
+  },
+);
+
+Deno.test(
+  "a count of a bucket with no published weight is logged as portions, with no grams",
+  async () => {
+    const { ctx, stub } = writeContext([logEntryTool], { rows: dietWithBucket() });
+
+    const result = await executeTool(ctx, "log_entry", {
+      ...none,
+      kind: "portion",
+      food_id: bucketId,
+      portion_id: bucketPortionId,
+      count: 1.5,
+    });
+
+    assertEquals(result.status, "ok");
+    const [row] = stub.tables["food_log_entries"] ?? [];
+    assertObjectMatch(row ?? {}, { unit: "portion", quantity: 1.5, resolved_grams: 0 });
+    assertObjectMatch(row?.["nutrients"] ?? {}, { kcal: 750 });
+    assertFalse(JSON.stringify(payloadOf(result)).includes("100 g"));
+  },
+);
+
+Deno.test(
+  "a bucket with no published weight logged in grams is refused as invalid_input",
+  async () => {
+    const { ctx, stub, store } = writeContext([logEntryTool], { rows: dietWithBucket() });
+
+    const result = await executeTool(ctx, "log_entry", {
+      ...none,
+      kind: "grams",
+      food_id: bucketId,
+      grams: 400,
+    });
+
+    assertEquals(payloadOf(result), { error: "invalid_input", fields: ["grams"] });
+    assertEquals(stub.tables["food_log_entries"] ?? [], []);
+    assertEquals(store.actions.length, 0);
   },
 );
 

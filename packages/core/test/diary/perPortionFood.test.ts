@@ -5,10 +5,15 @@ import { buildFoodSnapshot } from "../../src/diary/buildFoodSnapshot";
 import { buildLogEntry } from "../../src/diary/buildLogEntry";
 import { entryQuantityChange } from "../../src/diary/entryQuantityChange";
 import { foodChangedSinceLogged } from "../../src/diary/foodChangedSinceLogged";
+import { pickerChoices } from "../../src/diary/pickerChoices";
 import { previewAmount } from "../../src/diary/previewAmount";
 import { recomputeEntry, refreshEntryFromFood } from "../../src/diary/recomputeEntry";
 import { foodSnapshotSchema, logEntryInsertSchema } from "../../src/diary/schemas";
-import { snapshotAmountStart, snapshotAsFood } from "../../src/diary/snapshotAmount";
+import {
+  entryPickerChoices,
+  snapshotAmountStart,
+  snapshotAsFood,
+} from "../../src/diary/snapshotAmount";
 import { nutrientsOfSnapshot } from "../../src/diary/snapshotQuantity";
 import { startingAmount } from "../../src/diary/startingAmount";
 import { scaleNutrients } from "../../src/nutrition/scale";
@@ -249,6 +254,39 @@ describe("a per portion food", () => {
   });
 
   describe("the picker", () => {
+    it("should offer only the portion chip, with no g or ml chip", () => {
+      expect(pickerChoices(bucket, [bucketPortion]).options).toEqual([
+        { value: bucketPortion.id, label: "1 bucket" },
+      ]);
+    });
+
+    it("should offer no volume chips even when the food group has a density estimate", () => {
+      const dairy = { ...bucket, food_group: "milk" };
+
+      expect(pickerChoices(dairy, [bucketPortion]).options).toEqual([
+        { value: bucketPortion.id, label: "1 bucket" },
+      ]);
+    });
+
+    it("should offer only the portion chip on the edit screen, from the snapshot alone", () => {
+      const { snapshot } = loggedBucket(1.5);
+
+      expect(entryPickerChoices(snapshot).options).toEqual([
+        { value: "snapshot-portion", label: "1 bucket" },
+      ]);
+    });
+
+    it("should offer only the portion chip on the edit screen with the live portions", () => {
+      const { snapshot } = loggedBucket(1.5);
+
+      expect(
+        entryPickerChoices(snapshot, {
+          portions: [bucketPortion],
+          loggedPortionId: bucketPortion.id,
+        }).options,
+      ).toEqual([{ value: "snapshot-portion", label: "1 bucket" }]);
+    });
+
     it("should start at one of the default portion", () => {
       expect(startingAmount(bucket, [bucketPortion])).toEqual({
         quantity: "1",

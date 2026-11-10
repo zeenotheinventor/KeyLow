@@ -4,17 +4,20 @@ import type { MissingValuesReviewProps } from "./types";
 
 import { Banner } from "@/components/ui/Banner";
 
-/** Warns that a shared food is missing values, and offers the one way out: a copy the user completes. */
+/** Warns that a shared food is missing values, and offers the one way out, a copy the user completes, unless the food cannot be copied. */
 export function MissingValuesReview({
   foodId,
   fieldsMissing,
+  canCopy,
   carbsConvention,
 }: MissingValuesReviewProps) {
   return (
     <Banner
       tone="review"
       title={FOOD_REVIEW_BANNER.title}
-      action={{ label: FOOD_REVIEW_BANNER.action, href: `/foods/new?from=${foodId}` }}
+      {...(canCopy
+        ? { action: { label: FOOD_REVIEW_BANNER.action, href: `/foods/new?from=${foodId}` } }
+        : {})}
     >
       {describeMissingValues(fieldsMissing, carbsConvention)}
     </Banner>

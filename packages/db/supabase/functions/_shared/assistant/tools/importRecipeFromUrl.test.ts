@@ -34,7 +34,7 @@ import {
   traybakeUrl,
 } from "./importFixtures.ts";
 import { payloadOf } from "./testing.ts";
-import { structuredOf } from "./writeFixtures.ts";
+import { bucketId, bucketPortionRow, bucketRow, structuredOf } from "./writeFixtures.ts";
 
 import type { RecipePageResult } from "../../recipePage.ts";
 import type { FoodPickLine, FoodPickOutcome, ParsedRecipe } from "../recipeParse.ts";
@@ -341,6 +341,26 @@ Deno.test("a guess is cut to the cap before it is saved and counted", async () =
     rowsOf(result).at(-1)?.["matchedFood"],
     "Milk, semi-skimmed · 100 ml (a splash, estimated) · UK CoFID",
   );
+});
+
+Deno.test("a food with no published weight is never matched to an ingredient", async () => {
+  const { services } = traybakeWithMilk();
+  const { ctx, stub } = importContext(tool, {
+    services,
+    search: { ...traybakeSearch, milk: [{ foodId: bucketId, score: 2.5 }] },
+  });
+  stub.tables["foods"]?.push(bucketRow);
+  stub.tables["food_portions"]?.push(bucketPortionRow);
+
+  const result = await executeTool(ctx, "import_recipe_from_url", input);
+
+  assertEquals(rowsOf(result).at(-1)?.["match"], "unresolved");
+  const ingredients = (recipesOf(stub)[0]?.["recipe_ingredients"] ?? []) as Record<
+    string,
+    unknown
+  >[];
+  assertEquals(ingredients.length, 5);
+  assertFalse(ingredients.some((ingredient) => ingredient["food_id"] === bucketId));
 });
 
 Deno.test("a vague line with no guess is not counted, and is never invented", async () => {

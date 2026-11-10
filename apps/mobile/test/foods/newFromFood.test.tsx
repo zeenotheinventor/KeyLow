@@ -1,4 +1,5 @@
 import { FoodsPartialWriteError } from "@keylow/api-client";
+import { buildFood, buildFoodPortion } from "@keylow/core/testing";
 import { render, screen, userEvent } from "@testing-library/react-native";
 
 import {
@@ -671,5 +672,32 @@ describe("new food screen, copying a food with the from parameter", () => {
         expect(createdInput()).not.toHaveProperty(key);
       }
     });
+  });
+});
+
+describe("new food screen, copying a food with no published weight", () => {
+  beforeEach(() => {
+    resetRouterMock();
+    resetApiClientMock();
+    routerMock.searchParams = { from: savedFoodId };
+  });
+
+  it("should say it cannot be copied, instead of throwing", async () => {
+    Object.assign(foodQuery, {
+      data: buildFood({
+        id: savedFoodId,
+        source: "restaurant",
+        owner_id: null,
+        basis: "per_portion",
+      }),
+    });
+    Object.assign(portionsQuery, {
+      data: [buildFoodPortion({ food_id: savedFoodId, label: "1 bucket", grams: null, ml: null })],
+    });
+
+    await renderCopy();
+
+    expect(screen.getByText("Cannot edit this food")).toBeOnTheScreen();
+    expect(screen.queryByLabelText("Name")).not.toBeOnTheScreen();
   });
 });

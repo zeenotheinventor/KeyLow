@@ -1,5 +1,9 @@
 import { FOOD_DETAIL, FOOD_REVIEW_BANNER, describeMissingValues } from "@keylow/core/copy";
-import { requiresConfirmation } from "@keylow/core/foods";
+import {
+  canBeCopiedToYourFoods,
+  portionLabelOfFoodPerPortion,
+  requiresConfirmation,
+} from "@keylow/core/foods";
 import { vars } from "nativewind";
 import { ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -28,6 +32,7 @@ export function FoodDetail({ food, portions, onEdit, onCopy }: FoodDetailProps) 
   const { source } = food;
   const insets = useSafeAreaInsets();
   const favouriteHeart = useFavouriteFoodHeart(food);
+  const portionLabel = portionLabelOfFoodPerPortion(food, portions);
 
   return (
     <FoodFormScreen extraControl={favouriteHeart} isTitleHeading={false} title={FOOD_DETAIL.title}>
@@ -41,7 +46,7 @@ export function FoodDetail({ food, portions, onEdit, onCopy }: FoodDetailProps) 
           contentContainerClassName="gap-4 px-4 pb-[var(--content-bottom)] pt-1"
         >
           <FoodHeader food={food} />
-          <MacroHero food={food} />
+          <MacroHero food={food} portionLabel={portionLabel} />
 
           {source === "user" ? (
             <Button fullWidth icon="Pencil" variant="secondary" onPress={onEdit}>
@@ -51,7 +56,11 @@ export function FoodDetail({ food, portions, onEdit, onCopy }: FoodDetailProps) 
 
           {requiresConfirmation(food) ? (
             <Banner
-              action={{ label: FOOD_REVIEW_BANNER.action, onPress: onCopy }}
+              action={
+                canBeCopiedToYourFoods(food)
+                  ? { label: FOOD_REVIEW_BANNER.action, onPress: onCopy }
+                  : undefined
+              }
               body={describeMissingValues(
                 food.quality.fields_missing ?? [],
                 food.quality.carbs_convention,
@@ -63,6 +72,7 @@ export function FoodDetail({ food, portions, onEdit, onCopy }: FoodDetailProps) 
 
           <NutrientTable
             food={food}
+            portionLabel={portionLabel}
             note={
               food.quality.carbs_convention === "us_total" ? FOOD_DETAIL.usCarbsNote : undefined
             }
