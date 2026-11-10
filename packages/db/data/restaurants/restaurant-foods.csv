@@ -1,0 +1,31 @@
+ref,wave,chain,name,portion_label,portion_grams,weight_basis,kcal,protein_g,fat_g,sat_fat_g,carbs_g,sugars_g,fibre_g,salt_g,published_kcal_per_100g,source_url,retrieved_on
+greggs-gb:sausage-roll,1,Greggs,Sausage Roll,1 sausage roll,103,published,347,9.1,24,11,24,0,1.5,1.5,337,https://www.greggs.co.uk/nutrition,2026-11-10
+greggs-gb:steak-bake,1,Greggs,Steak Bake,1 steak bake,136.4,published,411,15,26,13,29,0,1.5,1.4,301,https://www.greggs.co.uk/nutrition,2026-11-10
+greggs-gb:chicken-bake,1,Greggs,Chicken Bake,1 chicken bake,150.4,published,420,13,27,14,30,1.2,1.5,1.8,279,https://www.greggs.co.uk/nutrition,2026-11-10
+greggs-gb:cheese-and-onion-bake,1,Greggs,Cheese & Onion Bake,1 cheese and onion bake,141.4,published,436,8.6,30,16,33,1.4,2,1.6,308,https://www.greggs.co.uk/nutrition,2026-11-10
+greggs-gb:vegetable-bake,1,Greggs,Vegetable Bake,1 vegetable bake,150.4,published,430,8.9,29,15,33,2.6,2.4,1.5,286,https://www.greggs.co.uk/nutrition,2026-11-10
+greggs-gb:sausage-bean-and-cheese-melt,1,Greggs,"Sausage, Bean & Cheese Melt",1 melt,149.4,published,456,11,28,14,37,3,3.9,1.6,305,https://www.greggs.co.uk/nutrition,2026-11-10
+greggs-gb:sausage-breakfast-roll,1,Greggs,Sausage Breakfast Roll,1 breakfast roll,154,published,377,17,15,5.1,42,5.9,2.5,1.8,245,https://www.greggs.co.uk/nutrition,2026-11-10
+greggs-gb:bacon-breakfast-roll,1,Greggs,Bacon Breakfast Roll,1 breakfast roll,119.5,published,321,19,12,4.3,33,5.3,1.7,1.9,269,https://www.greggs.co.uk/nutrition,2026-11-10
+greggs-gb:pepperoni-pizza,1,Greggs,Pepperoni Pizza,1 pizza,172,published,640,21,33,13,64,4.5,3.6,1.4,372,https://www.greggs.co.uk/nutrition,2026-11-10
+greggs-gb:southern-fried-chicken-baguette,1,Greggs,Southern Fried Chicken Baguette,1 baguette,223.68,published,557,25,13,6.5,83,16,4.2,2,249,https://www.greggs.co.uk/nutrition,2026-11-10
+greggs-gb:ham-and-cheese-toastie,1,Greggs,Ham and Cheese Toastie,1 toastie,207.36,published,543,31,20,11,58,6.2,3.3,2.5,262,https://www.greggs.co.uk/nutrition,2026-11-10
+greggs-gb:all-butter-croissant,1,Greggs,All Butter Croissant,1 croissant,79,published,292,7.1,13,8.7,35,4.4,2.1,0.79,370,https://www.greggs.co.uk/nutrition,2026-11-10
+pret-gb:prets-sausage-roll,1,Pret A Manger,Pret's Sausage Roll,1 sausage roll,110,published,384,13.7,26,13.4,22.4,2.7,3,1.24,349,https://www.pret.co.uk/en-GB/products/categories/hot-food/hot-pastries,2026-11-10
+pret-gb:all-butter-croissant,1,Pret A Manger,All Butter Croissant,1 croissant,71,published,291,6.5,16.8,11.5,27.5,4.5,1.6,0.68,409,https://www.pret.co.uk/en-GB/products/categories/breakfast/breakfast-pastries,2026-11-10
+pret-gb:chocolate-croissant,1,Pret A Manger,Chocolate Croissant,1 croissant,86,published,350,5.9,20.6,12.3,33.4,15.6,3.7,0.41,407,https://www.pret.co.uk/en-GB/products/categories/breakfast/breakfast-pastries,2026-11-10
+pret-gb:ham-and-cheese-croissant,1,Pret A Manger,Ham & Cheese Croissant,1 croissant,98,published,312,13.5,19.4,9.8,19.9,3.2,1.9,1.19,318,https://www.pret.co.uk/en-GB/products/categories/breakfast/breakfast-pastries,2026-11-10
+pret-gb:free-range-egg-mayo,1,Pret A Manger,Free-Range Egg Mayo,1 sandwich,169,published,367,18.4,15.6,3.2,35.7,1.9,5.1,1.46,217,https://www.pret.co.uk/en-GB/products/categories/sandwiches-baguettes-wraps-and-flatbreads/sandwiches,2026-11-10
+pret-gb:classic-super-club,1,Pret A Manger,Classic Super Club,1 sandwich,227.1,published,516,27.9,27.8,4.7,35.9,3.7,5.4,2.69,227,https://www.pret.co.uk/en-GB/products/categories/sandwiches-baguettes-wraps-and-flatbreads/sandwiches,2026-11-10
+pret-gb:ham-and-cheese,1,Pret A Manger,Ham & Cheese,1 sandwich,188.62,published,519,31.1,27.1,16.2,35.1,2.3,5.2,3.55,275,https://www.pret.co.uk/en-GB/products/categories/sandwiches-baguettes-wraps-and-flatbreads/sandwiches,2026-11-10
+pret-gb:mature-cheddar-and-pret-pickle,1,Pret A Manger,Mature Cheddar & Pret Pickle,1 sandwich,218.1,published,496,19.3,24.2,9.8,47.1,12.7,6,2.09,227,https://www.pret.co.uk/en-GB/products/categories/sandwiches-baguettes-wraps-and-flatbreads/sandwiches,2026-11-10
+pret-gb:classic-cheese-bloomer-toastie,1,Pret A Manger,Classic Cheese Bloomer Toastie,1 toastie,198.5,published,647,26.9,34.8,14.3,54,2.9,4.9,2.17,326,https://www.pret.co.uk/en-GB/products/categories/hot-food/toasted-sandwiches-wraps-and-baguettes,2026-11-10
+pret-gb:ham-and-cheese-bloomer-toastie,1,Pret A Manger,Ham & Cheese Bloomer Toastie,1 toastie,212,published,601,31.9,27.7,10.8,53.4,2.6,5.2,3.79,283,https://www.pret.co.uk/en-GB/products/categories/hot-food/toasted-sandwiches-wraps-and-baguettes,2026-11-10
+subway-gb:italian-bmt,1,Subway,Italian B.M.T. Sub,1 six-inch sub,139,published,386,20,16,5.2,41,4.8,2.5,2.5,278,https://www.subway.com/en-gb/menunutrition/nutrition,2026-11-10
+subway-gb:meatball-marinara,1,Subway,Meatball Marinara Sub,1 six-inch sub,243,published,447,23,16,5.7,51,12,5.2,1.9,184,https://www.subway.com/en-gb/menunutrition/nutrition,2026-11-10
+subway-gb:spicy-italian,1,Subway,Spicy Italian Sub,1 six-inch sub,186,published,498,22,27,10,43,5.7,2.7,3.2,268,https://www.subway.com/en-gb/menunutrition/nutrition,2026-11-10
+subway-gb:chicken-tikka,1,Subway,Chicken Tikka Sub,1 six-inch sub,197,published,345,28,7.1,2.9,43,6.4,3.5,1.5,175,https://www.subway.com/en-gb/menunutrition/nutrition,2026-11-10
+subway-gb:chicken-breast,1,Subway,Chicken Breast Sub,1 six-inch sub,198,published,340,26,6.8,3.1,42,7,2.4,1.8,172,https://www.subway.com/en-gb/menunutrition/nutrition,2026-11-10
+subway-gb:tuna-mayo,1,Subway,Tuna Mayo Sub,1 six-inch sub,200,published,400,22,16,3.4,43,6.6,2.4,1.8,200,https://www.subway.com/en-gb/menunutrition/nutrition,2026-11-10
+subway-gb:veggie-delite,1,Subway,Veggie Delite Sub,1 six-inch sub,163,published,227,8.3,2.4,0.5,42,6.6,3.2,0.6,139,https://www.subway.com/en-gb/menunutrition/nutrition,2026-11-10
+subway-gb:ham,1,Subway,Ham Sub,1 six-inch sub,182,published,324,21,7.9,3.2,42,6.4,3,1.8,178,https://www.subway.com/en-gb/menunutrition/nutrition,2026-11-10

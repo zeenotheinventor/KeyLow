@@ -269,6 +269,18 @@ pnpm --filter @keylow/db import:usda emit-migration --csv data/usda/usda-sr-lega
 
 It writes the file without connecting to any database, and refuses a path that holds a file already. Commit the result. Each migration holds every food in the CSV, so the newest `*_usda_foods.sql` always carries the whole file. A unit test regenerates it from the CSV and fails when the two differ (it passes while there is no such file), and the integration test `usda-foods-migration.test.ts` applies a rendered migration to the running stack inside a transaction that is rolled back and checks the foods, their portions, applying it twice, a renamed food, a moved default and `search_foods`. A food that leaves the CSV, or whose portion is relabelled (the label is part of its id), stays until a migration of its own removes it.
 
+### Restaurant foods
+
+Restaurant chains publish nutrition for their own menus, and Ki-Lo copies the facts. `packages/db/data/restaurants/restaurant-foods.csv` holds one row per food: its ref (`greggs-gb:sausage-roll`), the wave, the chain, the item name, the standard portion's label and weight, how the weight is known (`published`, `derived` or `none`), the nutrients of one portion as the chain publishes them, the chain's own per 100 g energy where it publishes one, the page it was read from and the date. `data/restaurants/VERIFICATION.md` records each chain's source, the method and the reviewer's sample. The CSV holds facts only: no marketing text, images or copied pages, and only the chain's own UK figures.
+
+The generator picks the shape of each food (ADR 0003 Amendment 18). A row with a weight becomes a `per_100g` food, with each figure scaled to 100 g and rounded to two decimals, and one default portion such as "1 burger" with its grams. A row with no weight becomes a `per_portion` food that keeps the published figures, with a count portion that has no grams. The `wave` column decides what ships: a migration holds every row up to its wave, and wave 1 holds weight rows only. The foods reach production through a generated migration, as the USDA foods do, and it writes one `import_runs` row (`source 'restaurant'`), upserts each food on `(source, source_ref)` under a version 5 UUID over `restaurant:<ref>`, upserts the CSV row as the food's source data and upserts the default portion after clearing any other shared default. It only adds and updates. Generate it from the repository root:
+
+```sh
+pnpm --filter @keylow/db import:restaurant emit-migration --wave 1 --out supabase/migrations/<timestamp>_restaurant_foods.sql
+```
+
+It writes the file without connecting to any database, and refuses a path that holds a file already. A corrected figure or a later wave is a new migration with a later timestamp. A unit test regenerates the newest `*_restaurant_foods.sql` from the CSV and its wave and fails when the two differ, and it fails when that migration holds a `per_portion` food, until the foods per portion ship (KEY-943). Apply it to the local stack with `pnpm --filter @keylow/db migration:up`.
+
 ### Edge Functions
 
 Edge Functions live in `packages/db/supabase/functions/` and run under Deno. The Node tools (ESLint, `tsc`) ignore that folder, and Deno checks it instead. Shared helpers are in `_shared/`, and each function is a folder with an `index.ts`. A folder whose name starts with an underscore is never deployed as a function.
