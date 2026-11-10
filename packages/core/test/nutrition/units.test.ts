@@ -192,13 +192,15 @@ describe("resolveQuantity input validation", () => {
   });
 });
 
-const dimensionOfBasis: Record<NutrientBasis, "mass" | "volume"> = {
+type WeighedBasis = Exclude<NutrientBasis, "per_portion">;
+
+const dimensionOfBasis: Record<WeighedBasis, "mass" | "volume"> = {
   per_100g: "mass",
   per_100ml: "volume",
 };
 
 const unitArbitrary = fc.constantFrom<QuantityUnit>("g", "ml", "oz", "fl_oz", "portion");
-const basisArbitrary = fc.constantFrom<NutrientBasis>("per_100g", "per_100ml");
+const basisArbitrary = fc.constantFrom<WeighedBasis>("per_100g", "per_100ml");
 const portionArbitrary = fc.oneof(
   fc.double({ min: 0.1, max: 1000, noNaN: true }).map((grams) => ({ grams, ml: null })),
   fc.double({ min: 0.1, max: 1000, noNaN: true }).map((ml) => ({ grams: null, ml })),

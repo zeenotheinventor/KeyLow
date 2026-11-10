@@ -146,6 +146,14 @@ describe("FoodForm", () => {
       );
     });
 
+    it("should offer no per portion basis, which only a restaurant food has", () => {
+      renderForm();
+
+      const basis = screen.getByRole("radiogroup", { name: "Basis" });
+
+      expect(within(basis).getAllByRole("radio")).toHaveLength(2);
+    });
+
     it("should follow the basis in the Nutrition heading", () => {
       renderForm();
 

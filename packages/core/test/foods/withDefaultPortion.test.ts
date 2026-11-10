@@ -7,6 +7,10 @@ const solidFood = { basis: "per_100g", kcal: 400 } as const;
 const drinkFood = { basis: "per_100ml", kcal: 40 } as const;
 
 describe("withDefaultPortion", () => {
+  it("should never give a food per portion an estimate, which it has no weight to size", () => {
+    expect(() => withDefaultPortion({ basis: "per_portion", kcal: 1250 }, [])).toThrow(RangeError);
+  });
+
   it("should give a food with no portions one typical serving from its energy", () => {
     const estimate = estimatedPortion({ basis: "per_100g", kcal: 400 });
 

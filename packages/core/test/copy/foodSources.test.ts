@@ -7,13 +7,16 @@ describe("describeFoodSource", () => {
     ["off", "Open Food Facts"],
     ["cofid", "UK CoFID"],
     ["usda", "USDA"],
+    ["restaurant", "Restaurant"],
     ["user", "Yours"],
   ] as const)("should name the %s source plainly as %s", (source, expected) => {
     expect(describeFoodSource(source)).toBe(expected);
   });
 
   it("should not use the old labels Own food or CoFID alone", () => {
-    const labels = (["off", "cofid", "usda", "user"] as const).map(describeFoodSource);
+    const labels = (["off", "cofid", "usda", "restaurant", "user"] as const).map(
+      describeFoodSource,
+    );
 
     expect(labels).not.toContain("Own food");
     expect(labels).not.toContain("CoFID");

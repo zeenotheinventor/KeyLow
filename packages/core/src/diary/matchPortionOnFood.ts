@@ -23,8 +23,12 @@ export type MatchedAmount =
  * point to it), and finally a direct amount in the unit of the old portion (grams for a gram portion,
  * millilitres for a millilitre portion), so the logged amount is kept exactly. A portion is a spoon only
  * when it is in millilitres and has the spoon's label and size, so a gram portion that merely shares a
- * spoon's label keeps its grams. The count of portions is kept for the first three. The food's default
+ * spoon's label keeps its grams. The count of portions is kept for the first three. A portion with no size
+ * (the count portion of a food per portion) that no link or label finds lands on the food's one such
+ * portion, because that food has no other. The food's default
  * portion is deliberately not a step, because it could be a different size and silently change what was logged.
+ *
+ * Throws a `RangeError` for a portion with no size when the food has no portion without a size either.
  */
 export const matchPortionOnFood = (
   previous: LoggedPortion,
@@ -40,7 +44,15 @@ export const matchPortionOnFood = (
   if (spoon !== undefined) {
     return { quantity: previous.quantity, unit: "portion", portion: spoon };
   }
-  return "grams" in previous.portion
-    ? { quantity: previous.quantity * previous.portion.grams, unit: "g" }
-    : { quantity: previous.quantity * previous.portion.ml, unit: "ml" };
+  if ("grams" in previous.portion) {
+    return { quantity: previous.quantity * previous.portion.grams, unit: "g" };
+  }
+  if ("ml" in previous.portion) {
+    return { quantity: previous.quantity * previous.portion.ml, unit: "ml" };
+  }
+  const countPortion = portions.find((portion) => portion.grams === null && portion.ml === null);
+  if (countPortion === undefined) {
+    throw new RangeError("The food has no portion without a size to land on");
+  }
+  return { quantity: previous.quantity, unit: "portion", portion: countPortion };
 };

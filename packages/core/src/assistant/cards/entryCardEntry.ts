@@ -104,13 +104,16 @@ export function describeCardAmount({ entry }: CardEntry): string {
       portion,
     });
   }
+  // A portion with no size is the count portion of a food per portion, so nothing goes in brackets.
   const size =
     "grams" in portion
-      ? `${formatGrams(entry.quantity * portion.grams)} g`
-      : `${formatGrams(entry.quantity * portion.ml)} ml`;
+      ? ` (${formatGrams(entry.quantity * portion.grams)} g)`
+      : "ml" in portion
+        ? ` (${formatGrams(entry.quantity * portion.ml)} ml)`
+        : "";
   return entry.quantity === 1
-    ? `1 ${portion.label} (${size})`
-    : `${formatGrams(entry.quantity)} ${pluralOf(portion.label)} (${size})`;
+    ? `1 ${portion.label}${size}`
+    : `${formatGrams(entry.quantity)} ${pluralOf(portion.label)}${size}`;
 }
 
 export function cardRowOf(card: CardEntry): AssistantCardRow {

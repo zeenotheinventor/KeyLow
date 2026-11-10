@@ -16,7 +16,7 @@ export const quantityUnitSchema = z.enum(["g", "ml", "oz", "fl_oz", "portion"]);
 export type QuantityUnit = z.infer<typeof quantityUnitSchema>;
 
 export type ResolvedQuantity = {
-  /** The logged quantity in the food's own basis unit: grams for `per_100g`, millilitres for `per_100ml`. */
+  /** The logged quantity in the food's own basis unit: grams for `per_100g`, millilitres for `per_100ml`, portions for `per_portion`. */
   amount: number;
   basis: NutrientBasis;
   /** True when the food has no density and 1.0 g/ml was assumed to cross between mass and volume. */
@@ -28,9 +28,24 @@ type Measurement = { dimension: Dimension; value: number };
 
 const ASSUMED_DENSITY_G_PER_ML = 1;
 
-const dimensionOfBasis: Record<NutrientBasis, Dimension> = {
+const dimensionOfWeighedBasis: Record<Exclude<NutrientBasis, "per_portion">, Dimension> = {
   per_100g: "mass",
   per_100ml: "volume",
+};
+
+/** A food per portion is logged only as a count of its one portion, which has no size to convert from. */
+const resolveCountOfPortions = (
+  quantity: number,
+  unit: QuantityUnit,
+  portion: Pick<FoodPortion, "grams" | "ml"> | undefined,
+): ResolvedQuantity => {
+  if (unit !== "portion") {
+    throw new RangeError("A food per portion is logged only as a count of portions");
+  }
+  if (portion === undefined || portion.grams !== null || portion.ml !== null) {
+    throw new RangeError("The portion of a food per portion has no size");
+  }
+  return { amount: quantity, basis: "per_portion", densityAssumed: false };
 };
 
 const measurePortion = (
@@ -73,6 +88,9 @@ const measure = (
  * Density is used only when the unit and the basis disagree on mass versus volume. A food with no
  * density is treated as 1.0 g/ml and the result is flagged with `densityAssumed`.
  *
+ * A food per portion accepts only the `portion` unit, with a portion that has no size, and the amount is
+ * the count. Any other unit throws, because there is nothing to convert it from.
+ *
  * Throws a `RangeError` for a negative or non-finite quantity, for the `portion` unit without a
  * portion, for a portion that does not have exactly one of `grams` and `ml`, and for a density that
  * is not greater than 0 when the unit and the basis disagree and the density is therefore read.
@@ -86,8 +104,11 @@ export const resolveQuantity = (
   if (!Number.isFinite(quantity) || quantity < 0) {
     throw new RangeError(`Quantity must be a finite number of at least 0, received ${quantity}`);
   }
+  if (item.basis === "per_portion") {
+    return resolveCountOfPortions(quantity, unit, portion);
+  }
   const measurement = measure(quantity, unit, portion);
-  if (measurement.dimension === dimensionOfBasis[item.basis]) {
+  if (measurement.dimension === dimensionOfWeighedBasis[item.basis]) {
     return { amount: measurement.value, basis: item.basis, densityAssumed: false };
   }
   const densityAssumed = item.density_g_per_ml === null;

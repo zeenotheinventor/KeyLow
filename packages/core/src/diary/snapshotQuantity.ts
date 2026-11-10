@@ -19,30 +19,47 @@ export type SnapshotQuantity = {
   portion?: SnapshotPortion | null;
 };
 
-const asMeasurablePortion = (portion: SnapshotPortion) =>
-  "grams" in portion ? { grams: portion.grams, ml: null } : { grams: null, ml: portion.ml };
+const asMeasurablePortion = (portion: SnapshotPortion) => ({
+  grams: "grams" in portion ? portion.grams : null,
+  ml: "ml" in portion ? portion.ml : null,
+});
 
-/**
- * The only place a quantity becomes grams: it resolves the quantity against the frozen food, as a
- * per 100 g food so the answer is always grams, using the snapshot's own density.
- *
- * Throws a `RangeError` for a negative quantity or a `portion` unit without a portion.
- */
-export const withQuantity = (food: FrozenFood, change: SnapshotQuantity): FoodSnapshot => {
-  const portion = change.unit === "portion" ? (change.portion ?? null) : null;
-  const measurablePortion = portion === null ? undefined : asMeasurablePortion(portion);
-  const { amount: resolvedGrams } = resolveQuantity(
-    { basis: "per_100g", density_g_per_ml: food.density },
+// The grams a quantity comes to, and 0 for a food per portion: it has no weight, and only a count of its
+// portion is a quantity (`resolveQuantity` refuses the rest).
+const gramsOf = (
+  food: FrozenFood,
+  change: SnapshotQuantity,
+  measurablePortion: ReturnType<typeof asMeasurablePortion> | undefined,
+): number => {
+  const { amount } = resolveQuantity(
+    {
+      basis: food.basis === "per_portion" ? "per_portion" : "per_100g",
+      density_g_per_ml: food.density,
+    },
     change.quantity,
     change.unit,
     measurablePortion,
   );
+  return food.basis === "per_portion" ? 0 : amount;
+};
+
+/**
+ * The only place a quantity becomes grams: it resolves the quantity against the frozen food, as a
+ * per 100 g food so the answer is always grams, using the snapshot's own density. A food per portion has
+ * no weight, so its grams are 0.
+ *
+ * Throws a `RangeError` for a negative quantity or a `portion` unit without a portion, and for a food per
+ * portion for any unit but `portion`.
+ */
+export const withQuantity = (food: FrozenFood, change: SnapshotQuantity): FoodSnapshot => {
+  const portion = change.unit === "portion" ? (change.portion ?? null) : null;
+  const measurablePortion = portion === null ? undefined : asMeasurablePortion(portion);
   return {
     ...food,
     quantity: change.quantity,
     unit: change.unit,
     portion,
-    resolvedGrams,
+    resolvedGrams: gramsOf(food, change, measurablePortion),
     engineVersion: NUTRITION_ENGINE_VERSION,
   };
 };
@@ -59,5 +76,5 @@ export const nutrientsOfSnapshot = (snapshot: FoodSnapshot): NullableNutrients =
     snapshot.unit,
     snapshot.portion === null ? undefined : asMeasurablePortion(snapshot.portion),
   );
-  return scaleNutrients(snapshot.per100, amount);
+  return scaleNutrients(snapshot.per100, amount, snapshot.basis);
 };

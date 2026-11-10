@@ -29,9 +29,11 @@ export function plateFoodAmount(
       quantity,
       portionId: unit.portionId,
       portion:
-        unit.size.unit === "g"
-          ? { label: unit.label, grams: unit.size.amount }
-          : { label: unit.label, ml: unit.size.amount },
+        unit.size === undefined
+          ? { label: unit.label }
+          : unit.size.unit === "g"
+            ? { label: unit.label, grams: unit.size.amount }
+            : { label: unit.label, ml: unit.size.amount },
     },
     portions,
   );

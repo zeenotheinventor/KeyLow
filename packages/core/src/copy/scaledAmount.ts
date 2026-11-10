@@ -48,6 +48,16 @@ export const describeScaledAmount = (amount: LoggedAmount): string => {
 
     return `${writeCount(amount.quantity)} ${describePortionUnit(spoon.label, amount.quantity)} (${volume})`;
   }
+  // A portion with no size and no weight is the count portion of a food per portion: nothing goes in brackets.
+  if (
+    amount.resolvedGrams === 0 &&
+    amount.portion.grams === undefined &&
+    amount.portion.ml === undefined
+  ) {
+    const count = writeCount(amount.quantity);
+
+    return count === "1" ? amount.portion.label : `${count} × ${amount.portion.label}`;
+  }
   const measure = measureOfLoggedPortion({ ...amount, portion: amount.portion });
   // A label that already says its size, such as "30 g", is not given it twice.
   const labelSaysItsSize =

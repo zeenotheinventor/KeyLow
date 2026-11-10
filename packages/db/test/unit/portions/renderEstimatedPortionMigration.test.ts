@@ -164,6 +164,13 @@ describe("renderEstimatedPortionMigration", () => {
       expect(insert).toContain("case when food.basis = 'per_100ml'");
     });
 
+    it("should never give an estimate to a food per portion, which has a count portion of its own", () => {
+      const energy = statementsOf(migration).find((block) => block.includes("band (basis"));
+
+      expect(energy).toContain("where food.basis <> 'per_portion' and not exists");
+      expect(renderGiveFoodsDefaultPortionsMigration()).toContain("food.basis <> 'per_portion'");
+    });
+
     it("should put the portion after the existing ones", () => {
       expect(migration).toContain(
         "coalesce((select max(existing.position) + 1 from public.food_portions existing",

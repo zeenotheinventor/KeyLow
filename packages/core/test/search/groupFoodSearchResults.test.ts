@@ -62,6 +62,15 @@ describe("groupFoodSearchResults", () => {
     ).toEqual(["c1", "u1", "c2"]);
   });
 
+  it("should put a restaurant row in Common foods, after a higher ranked CoFID row", () => {
+    const groups = groupFoodSearchResults([row("c1", "cofid"), row("r1", "restaurant")], {
+      limit: 5,
+    });
+
+    expect(groups.map((group) => group.key)).toEqual(["common"]);
+    expect(groups[0]?.visibleRows.map((item) => item.id)).toEqual(["c1", "r1"]);
+  });
+
   it("should omit a group that has no rows", () => {
     const groups = groupFoodSearchResults([row("c1", "cofid"), row("o1", "off")], { limit: 5 });
 
@@ -232,7 +241,7 @@ describe("revealFoodSearchGroups", () => {
   });
 
   it("should only ever show a prefix of the rows in display order", () => {
-    const sources: FoodSource[] = ["user", "cofid", "usda", "off"];
+    const sources: FoodSource[] = ["user", "cofid", "usda", "restaurant", "off"];
     fc.assert(
       fc.property(
         fc.array(fc.constantFrom(...sources), { maxLength: 40 }),

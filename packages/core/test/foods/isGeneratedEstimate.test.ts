@@ -16,6 +16,18 @@ const storedEstimate = (overrides = {}) =>
   });
 
 describe("isGeneratedEstimate", () => {
+  it("should never take the count portion of a food per portion for an estimate", () => {
+    const bucket = buildFood({ source: "restaurant", basis: "per_portion", kcal: 1250 });
+    const countPortion = buildFoodPortion({
+      label: "1 typical serving",
+      grams: null,
+      ml: null,
+      is_default: true,
+    });
+
+    expect(isGeneratedEstimate(bucket, [countPortion])).toBe(false);
+  });
+
   it("should recognise the one portion withDefaultPortion would generate for the food", () => {
     expect(isGeneratedEstimate(food, [storedEstimate()])).toBe(true);
   });

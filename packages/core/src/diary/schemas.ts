@@ -8,13 +8,28 @@ import { nutrientsSchema } from "../schemas/nutrients";
 const rowIdSchema = z.guid();
 
 /**
- * The portion a food was logged with, as stored in a snapshot (ADR 0003, Amendment 2): a label and
- * exactly one of `grams` and `ml`, with the other key absent.
+ * The portion a food was logged with, as stored in a snapshot (ADR 0003, Amendments 2 and 17): a label and
+ * one of `grams` or `ml`, with the other key absent, or the label alone for the count portion of a food per
+ * portion, which has no size.
  */
 export const snapshotPortionSchema = z.union([
   z.strictObject({ label: z.string().min(1), grams: z.number().positive() }),
   z.strictObject({ label: z.string().min(1), ml: z.number().positive() }),
+  z.strictObject({ label: z.string().min(1) }),
 ]);
+
+const isCountPortion = (portion: unknown): boolean =>
+  typeof portion === "object" && portion !== null && !("grams" in portion) && !("ml" in portion);
+
+// A food per portion is logged as a count of its one portion, and only such a food has a portion with no size.
+const hasCountPortionExactlyWhenPerPortion = (snapshot: {
+  basis: string;
+  unit: string;
+  portion: unknown;
+}): boolean =>
+  snapshot.basis === "per_portion"
+    ? snapshot.unit === "portion" && isCountPortion(snapshot.portion)
+    : !isCountPortion(snapshot.portion);
 
 const hasPortionExactlyWhenUnitIsPortion = (snapshot: {
   unit: string;
@@ -23,7 +38,9 @@ const hasPortionExactlyWhenUnitIsPortion = (snapshot: {
 
 /**
  * What a food looked like when it was logged, so the entry never changes when the food does.
- * `portion` is non-null exactly when `unit` is `portion`. There are no micronutrients.
+ * `portion` is non-null exactly when `unit` is `portion`. There are no micronutrients. For the basis
+ * `per_portion`, `per100` holds the values of one portion, `resolvedGrams` is 0 and means "no weight", and
+ * the portion is the label alone (ADR 0003, Amendment 17).
  *
  * When SNAPSHOT_VERSION moves to 2, this must become a union of the known versions with an upgrade
  * step, so that stored v1 snapshots still parse.
@@ -46,6 +63,10 @@ export const foodSnapshotSchema = z
   })
   .refine(hasPortionExactlyWhenUnitIsPortion, {
     message: "The portion must be set exactly when the unit is portion",
+    path: ["portion"],
+  })
+  .refine(hasCountPortionExactlyWhenPerPortion, {
+    message: "A food per portion is logged as a count of its portion, and no other food has one",
     path: ["portion"],
   });
 

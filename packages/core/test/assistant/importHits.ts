@@ -9,6 +9,7 @@ export type CapturedHit = {
   brand: null;
   score: number;
   source: "cofid" | "usda" | "off";
+  basis: "per_100g";
   inSubset: boolean;
 };
 
@@ -2837,5 +2838,6 @@ export const capturedHitsOf = (word: string): readonly CapturedHit[] | null =>
     brand: null,
     score,
     source,
+    basis: "per_100g",
     inSubset,
   })) ?? null;

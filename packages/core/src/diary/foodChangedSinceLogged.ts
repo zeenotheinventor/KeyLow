@@ -28,6 +28,16 @@ const sameNutrients = (first: NullableNutrients, second: NullableNutrients): boo
 const densityChanged = (food: Food, current: FoodSnapshot, snapshot: FoodSnapshot): boolean =>
   snapshot.density === null ? food.density_g_per_ml !== null : current.density !== snapshot.density;
 
+// The unit the live food is frozen in to be compared: any will do, since the quantity is not compared. A food
+// per portion has only its count of portions, so it is frozen on the portion the snapshot was logged with.
+const unitToFreezeWith = (food: Food, snapshot: FoodSnapshot) =>
+  food.basis === "per_portion"
+    ? ({
+        unit: "portion",
+        portion: { label: snapshot.portion?.label ?? "", grams: null, ml: null },
+      } as const)
+    : ({ unit: food.basis === "per_100ml" ? "ml" : "g" } as const);
+
 /**
  * Whether the live food differs from what an entry's snapshot froze: its name, basis, density or any
  * nutrient the snapshot keeps. What a snapshot never keeps (brand, barcode, quality flags, micronutrients,
@@ -45,7 +55,7 @@ export const foodChangedSinceLogged = (
 ): boolean => {
   const current = buildFoodSnapshot(food, {
     quantity: 1,
-    unit: food.basis === "per_100ml" ? "ml" : "g",
+    ...unitToFreezeWith(food, snapshot),
     foodPortions: portions,
   });
 

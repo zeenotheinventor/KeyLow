@@ -1836,13 +1836,13 @@ export type Database = {
       exercise_mechanic: "compound" | "isolation";
       exercise_source: "free_exercise_db" | "user";
       experience_level: "beginner" | "intermediate" | "advanced";
-      food_source: "off" | "cofid" | "user" | "usda";
+      food_source: "off" | "cofid" | "user" | "usda" | "restaurant";
       goal_type: "lose" | "maintain" | "gain";
       log_item_type: "food" | "recipe" | "quick";
       muscle_group: "chest" | "shoulders" | "back" | "arms" | "core" | "legs" | "neck";
       muscle_role: "primary" | "secondary" | "stabiliser";
       muscle_size_class: "small" | "medium" | "large";
-      nutrient_basis: "per_100g" | "per_100ml";
+      nutrient_basis: "per_100g" | "per_100ml" | "per_portion";
       set_type: "warmup" | "working" | "drop" | "failure";
       training_goal: "aesthetic" | "strength" | "hybrid";
       weigh_in_source: "manual" | "healthkit" | "health_connect" | "import";
@@ -1987,13 +1987,13 @@ export const Constants = {
       exercise_mechanic: ["compound", "isolation"],
       exercise_source: ["free_exercise_db", "user"],
       experience_level: ["beginner", "intermediate", "advanced"],
-      food_source: ["off", "cofid", "user", "usda"],
+      food_source: ["off", "cofid", "user", "usda", "restaurant"],
       goal_type: ["lose", "maintain", "gain"],
       log_item_type: ["food", "recipe", "quick"],
       muscle_group: ["chest", "shoulders", "back", "arms", "core", "legs", "neck"],
       muscle_role: ["primary", "secondary", "stabiliser"],
       muscle_size_class: ["small", "medium", "large"],
-      nutrient_basis: ["per_100g", "per_100ml"],
+      nutrient_basis: ["per_100g", "per_100ml", "per_portion"],
       set_type: ["warmup", "working", "drop", "failure"],
       training_goal: ["aesthetic", "strength", "hybrid"],
       weigh_in_source: ["manual", "healthkit", "health_connect", "import"],

@@ -1,20 +1,28 @@
+import { scaleOfBasis } from "./basisScale";
+
+import type { NutrientBasis } from "../schemas/food";
 import type { NullableNutrients } from "../schemas/nutrients";
 
 const optionalKeys = ["sat_fat_g", "sugars_g", "salt_g"] as const;
 
 /**
- * Scales per 100 values to a logged amount: every present nutrient is multiplied by `amount / 100`.
- * The amount is already in the food's basis unit, as returned by `resolveQuantity`. No rounding
+ * Scales a food's values to a logged amount: every present nutrient is multiplied by `scaleOfBasis`, which
+ * is `amount / 100` for a food per 100 g or per 100 ml and the count of portions for a food
+ * per portion. The amount is already in the food's basis unit, as returned by `resolveQuantity`. No rounding
  * happens here, the full float is kept and only the UI rounds. A null stays null (unknown is not
  * zero) and an absent optional key stays absent.
  *
  * Throws a `RangeError` for a negative or non-finite amount.
  */
-export const scaleNutrients = (per100: NullableNutrients, amount: number): NullableNutrients => {
+export const scaleNutrients = (
+  per100: NullableNutrients,
+  amount: number,
+  basis: NutrientBasis,
+): NullableNutrients => {
   if (!Number.isFinite(amount) || amount < 0) {
     throw new RangeError(`Amount must be a finite number of at least 0, received ${amount}`);
   }
-  const factor = amount / 100;
+  const factor = scaleOfBasis(basis, amount);
   const scaleValue = (value: number | null) => (value === null ? null : value * factor);
   const scaled: NullableNutrients = {
     kcal: scaleValue(per100.kcal),
