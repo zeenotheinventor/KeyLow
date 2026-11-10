@@ -5,6 +5,7 @@ import {
   PORTION_PICKER,
   describeAmountBasis,
   describeLastLogged,
+  describeSizeOfPortion,
   describePer100Heading,
   describePortionCount,
   describePortionNoun,
@@ -277,5 +278,54 @@ describe("describePortionUnit", () => {
     expect(describePortionUnit("6 nuggets", 1)).toBe("portion");
     expect(describePortionUnit("6 nuggets", 2)).toBe("portions");
     expect(describePortionUnit("1/2 pizza", 1)).toBe("portion");
+  });
+});
+
+describe("an estimated portion", () => {
+  it("should say about before the size of one typical serving", () => {
+    expect(describePortionWithSize("1 typical serving", { amount: 150, unit: "g" })).toBe(
+      "1 typical serving (about 150 g)",
+    );
+  });
+
+  it("should say about for a drink in millilitres", () => {
+    expect(describePortionWithSize("1 typical glass", { amount: 200, unit: "ml" })).toBe(
+      "1 typical glass (about 200 ml)",
+    );
+  });
+
+  it("should say about in the hero for one", () => {
+    expect(
+      describeAmountBasis({
+        unit: "portion",
+        quantity: 1,
+        portionLabel: "1 typical serving",
+        portionSize: { amount: 150, unit: "g" },
+      }),
+    ).toBe("For 1 typical serving (about 150 g)");
+  });
+
+  it("should say about in the hero for several", () => {
+    expect(
+      describeAmountBasis({
+        unit: "portion",
+        quantity: 2,
+        portionLabel: "1 typical serving",
+        portionSize: { amount: 150, unit: "g" },
+      }),
+    ).toBe("For 2 × 1 typical serving (about 300 g)");
+  });
+
+  it("should not say about for a portion that is not an estimate", () => {
+    expect(describePortionWithSize("1 serving", { amount: 150, unit: "g" })).toBe(
+      "1 serving (150 g)",
+    );
+  });
+});
+
+describe("describeSizeOfPortion", () => {
+  it("should say about before the size of an estimate only", () => {
+    expect(describeSizeOfPortion("1 typical serving", "150 g")).toBe("about 150 g");
+    expect(describeSizeOfPortion("1 serving", "150 g")).toBe("150 g");
   });
 });

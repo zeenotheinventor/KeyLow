@@ -613,3 +613,19 @@ describe("describeDateInWords", () => {
     expect(describeDateInWords("2026-03-01")).toBe("Sunday 1 March");
   });
 });
+
+describe("describeLoggedAmount of an estimated portion", () => {
+  const typical = { label: "1 typical serving", grams: 150 };
+
+  it("should say about before the grams after logging", () => {
+    expect(
+      describeLoggedAmount({ unit: "portion", quantity: 1, resolvedGrams: 150, portion: typical }),
+    ).toBe("1 typical serving (about 150 g)");
+  });
+
+  it("should say about for several", () => {
+    expect(
+      describeLoggedAmount({ unit: "portion", quantity: 2, resolvedGrams: 300, portion: typical }),
+    ).toBe("2 × 1 typical serving (about 300 g)");
+  });
+});

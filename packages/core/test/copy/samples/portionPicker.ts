@@ -47,6 +47,10 @@ export const samples: Record<string, () => string[]> = {
     copy.describePortionWithSize("1 medium", { amount: 100, unit: "g" }),
     copy.describePortionWithSize("30 g", { amount: 30, unit: "g" }),
   ],
+  describeSizeOfPortion: () => [
+    copy.describeSizeOfPortion("1 typical serving", "150 g"),
+    copy.describeSizeOfPortion("1 serving", "150 g"),
+  ],
   describeLastLogged: () => [
     copy.describeLastLogged("50 g", 0, "Thu 15 Oct"),
     copy.describeLastLogged("50 g", 1, "Wed 14 Oct"),

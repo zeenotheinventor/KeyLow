@@ -224,10 +224,23 @@ describe("packPortion", () => {
       ["en:bars", "bar"],
       ["en:chocolate-bars", "bar"],
       ["en:sliced-breads", "loaf"],
+      ["en:hamburgers", "burger"],
+      ["en:sandwiches", "sandwich"],
+      ["en:pizzas", "pizza"],
+      ["en:wraps", "wrap"],
       ["en:yogurts", "pot"],
       ["en:canned-foods", "can"],
     ])("should name the pack from the category %s as a %s", (tag, noun) => {
       expect(packFor({ quantity: "400 g", categories_tags: [tag] })?.label).toBe(`1 ${noun}`);
+    });
+
+    it("should name a pack that is both a sandwich and a hamburger a burger", () => {
+      expect(
+        packFor({ quantity: "232 g", categories_tags: ["en:sandwiches", "en:hamburgers"] })?.label,
+      ).toBe("1 burger");
+      expect(
+        packFor({ quantity: "232 g", categories_tags: ["en:hamburgers", "en:sandwiches"] })?.label,
+      ).toBe("1 burger");
     });
 
     it.each([

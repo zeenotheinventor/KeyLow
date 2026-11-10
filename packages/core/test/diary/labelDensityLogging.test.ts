@@ -202,7 +202,7 @@ describe("a branded food whose serving is in spoons", () => {
   });
 
   it("should freeze the label's density for a drink measured per 100 ml, which the grams then use", () => {
-    const drink = cachedSauce("100 ml (103 g)", 100);
+    const drink = cachedSauce("200 ml (206 g)", 200);
 
     expect(drink.food.basis).toBe("per_100ml");
     expect(densityForLogging(drink.food, drink.portions)).toBeCloseTo(1.03, 10);
@@ -211,8 +211,8 @@ describe("a branded food whose serving is in spoons", () => {
 
 describe("editing an entry that froze no density, on a food that now has a serving label", () => {
   // A drink logged before the label density existed: its snapshot froze none, and its food now has a
-  // "100 ml (103 g)" serving. Saving uses only the snapshot, so the hero must not read the label either.
-  const drink = cachedSauce("100 ml (103 g)", 100);
+  // "200 ml (206 g)" serving. Saving uses only the snapshot, so the hero must not read the label either.
+  const drink = cachedSauce("200 ml (206 g)", 200);
   const old = buildLogEntry({ food: drink.food, quantity: 100, unit: "ml", ...when });
   const servedPortions = [
     ...drink.portions.map(({ id, label, grams, ml }) => ({ id, label, grams, ml })),

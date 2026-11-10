@@ -9,7 +9,7 @@ import type { FoodPortion } from "../schemas/food";
  * The amount to log a plate row against the food as it is now. A portion is found by its id, else by its
  * label, else (a spoon being the one portion that is no row of the food) as the spoon, else as the same weight in
  * grams or volume in millilitres from the size the row stored, so the amount eaten is kept. This is core's
- * `matchPortionOnFood`, the rule "log again" follows, and it is the same idea as `servingOfHit`'s fallback.
+ * `matchPortionOnFood`, the rule "log again" follows.
  * Undefined while the row's amount is not valid: nothing is logged for it.
  */
 export function plateFoodAmount(

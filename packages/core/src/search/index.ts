@@ -22,5 +22,3 @@ export { highlightMatch } from "./highlightMatch";
 export type { HighlightSegment } from "./highlightMatch";
 export { servingOfSearchHit } from "./servingOfSearchHit";
 export type { SearchServing, ServingSource } from "./servingOfSearchHit";
-export { servingOfHit } from "./servingOfHit";
-export type { HitServing } from "./servingOfHit";
