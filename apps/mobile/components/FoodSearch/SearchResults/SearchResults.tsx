@@ -5,6 +5,7 @@ import {
   SEARCH_IDLE,
   SEARCH_STATUS,
   VALUES_PER_100_G_NOTE,
+  describeLiveGroupNote,
 } from "@keylow/core/copy";
 import {
   FOOD_SEARCH_FETCH_LIMIT,
@@ -107,11 +108,11 @@ export function SearchResults({
           />
           {off.length > 0 && (
             <>
-              {/* A live row with no serving to show stays per 100 g, so where the rows above show servings the
-                  note stands above them. */}
-              {showsServings && hasPer100Rows && (
+              {/* Where the rows show servings, a live row's serving is confirmed when the product is opened, and a
+                  live row with no serving to show stays per 100 g, so the note stands above the group. */}
+              {showsServings && (
                 <Text className="-mb-2" tone="muted" variant="caption">
-                  {VALUES_PER_100_G_NOTE}
+                  {describeLiveGroupNote(hasPer100Rows)}
                 </Text>
               )}
               <OpenFoodFactsGroup

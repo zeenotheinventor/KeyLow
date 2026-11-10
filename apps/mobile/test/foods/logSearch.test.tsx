@@ -482,12 +482,16 @@ describe("food search sheet in log mode", () => {
   });
 
   describe("Open Food Facts results", () => {
-    it("should keep the per 100 g note above them, because their rows stay per 100 g", async () => {
+    it("should keep the per 100 g note above them, and say servings are confirmed on open", async () => {
       Object.assign(searchResult, { local: [banana], off: [offCandidateFixture] });
       await renderLogSearch();
       await type("oat");
 
-      expect(screen.getByText("Values per 100 g unless marked")).toBeOnTheScreen();
+      expect(
+        screen.getByText(
+          "Values per 100 g unless marked, and servings are confirmed when you open a product",
+        ),
+      ).toBeOnTheScreen();
     });
 
     describe("with the serving they will open on", () => {
@@ -534,12 +538,15 @@ describe("food search sheet in log mode", () => {
         ).toBeOnTheScreen();
       });
 
-      it("should leave the per 100 g note out, because every live row shows a serving", async () => {
+      it("should say servings are confirmed on open, and leave the per 100 g note out", async () => {
         showLive(bigMac);
         await renderLogSearch();
         await type("big");
 
-        expect(screen.queryByText("Values per 100 g unless marked")).not.toBeOnTheScreen();
+        expect(
+          screen.getByText("Servings are confirmed when you open a product"),
+        ).toBeOnTheScreen();
+        expect(screen.queryByText(/Values per 100 g/)).not.toBeOnTheScreen();
       });
 
       it("should keep the note, when a live row from an older answer is still per 100 g", async () => {
@@ -547,7 +554,11 @@ describe("food search sheet in log mode", () => {
         await renderLogSearch();
         await type("big");
 
-        expect(screen.getByText("Values per 100 g unless marked")).toBeOnTheScreen();
+        expect(
+          screen.getByText(
+            "Values per 100 g unless marked, and servings are confirmed when you open a product",
+          ),
+        ).toBeOnTheScreen();
         expect(screen.getByRole("button", { name: /^Oat drink, Oatly/ })).toBeOnTheScreen();
       });
 

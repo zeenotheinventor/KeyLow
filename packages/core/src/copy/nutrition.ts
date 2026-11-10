@@ -8,6 +8,18 @@ export const NOT_GIVEN = "not given";
 export const ENERGY_NOT_GIVEN = "Energy not given";
 
 export const VALUES_PER_100_G_NOTE = "Values per 100 g unless marked";
+const SERVINGS_CONFIRMED_ON_OPEN = "servings are confirmed when you open a product";
+
+/**
+ * The note above the live Open Food Facts group of a search that shows servings. A live row's serving
+ * is a first guess, so the note says it is confirmed on open, and adds the per 100 g fact when some
+ * rows are still drawn per 100 g.
+ */
+export const describeLiveGroupNote = (hasPer100Rows: boolean): string =>
+  hasPer100Rows
+    ? `${VALUES_PER_100_G_NOTE}, and ${SERVINGS_CONFIRMED_ON_OPEN}`
+    : "Servings are confirmed when you open a product";
+
 export const SHARES_OF_ENERGY_ARE_ESTIMATES = "Shares of energy are estimates";
 
 const BASIS_LABELS: Readonly<Record<NutrientBasis, string>> = {
