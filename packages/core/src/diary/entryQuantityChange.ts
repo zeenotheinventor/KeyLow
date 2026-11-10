@@ -10,7 +10,8 @@ import type { EntryQuantityChange } from "./recomputeEntry";
  * A spoon is not a database row, so it is written by its label and millilitres with no link. Any other
  * portion is one of the food's: its label and size, and its id as the link.
  *
- * Throws a `RangeError` for a portion with neither grams nor millilitres.
+ * A portion with neither grams nor millilitres is the count portion of a food per portion, written by its
+ * label and its link.
  */
 export function entryQuantityChange(amount: ChosenAmount): EntryQuantityChange {
   const { quantity, unit } = amount;
@@ -39,6 +40,5 @@ export function entryQuantityChange(amount: ChosenAmount): EntryQuantityChange {
     };
   }
 
-  // The schema forbids this; the message names no value, since the amount is health data.
-  throw new RangeError("A portion needs a size in grams or millilitres");
+  return { quantity, unit, portion: { label: portion.label }, portionId: portion.id };
 }

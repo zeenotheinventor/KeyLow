@@ -237,7 +237,8 @@ const MEASURED_UNIT_NAMES = { g: "g", ml: "ml", oz: "oz", fl_oz: "fl oz" } as co
  * How much of a food an entry holds, as a diary row writes it after the time: "50 g", "200 ml" or, for a
  * portion, its label and the size it came to ("1 medium (100 g)", "1 can (330 ml)" for a portion measured in
  * millilitres, "1 typical glass (about 200 ml)" for an estimate). Several portions read "2 × 1 pot
- * (340 g)". A spoon reads its count and its volume only, "2 tbsp (30 ml)", as a drink reads "200 ml".
+ * (340 g)". A portion with no size, as a food per portion has, reads "1 bucket" and "2 × 1 bucket". A spoon
+ * reads its count and its volume only, "2 tbsp (30 ml)", as a drink reads "200 ml".
  * A quick add (null) reads "Quick add".
  */
 export const describeLoggedAmount = (amount: LoggedAmount | null): string => {
@@ -247,6 +248,17 @@ export const describeLoggedAmount = (amount: LoggedAmount | null): string => {
   if (amount.unit !== "portion" || amount.portion === null) {
     const unit = amount.unit === "portion" ? "g" : MEASURED_UNIT_NAMES[amount.unit];
     return `${formatGrams(amount.quantity)} ${unit}`;
+  }
+  // A portion with no size and no weight is the count portion of a food per portion (`resolvedGrams` of 0 means
+  // "no weight"), so there is nothing to put in brackets.
+  if (
+    amount.resolvedGrams === 0 &&
+    amount.portion.grams === undefined &&
+    amount.portion.ml === undefined
+  ) {
+    return amount.quantity === 1
+      ? amount.portion.label
+      : `${formatGrams(amount.quantity)} × ${amount.portion.label}`;
   }
   const spoon = spoonPortionOf(amount.portion);
   if (spoon !== undefined) {

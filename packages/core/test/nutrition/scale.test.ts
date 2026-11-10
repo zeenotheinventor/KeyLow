@@ -27,7 +27,7 @@ const allKeys = ["kcal", "protein_g", "fat_g", "carbs_g", "fibre_g", ...optional
 
 describe("scaleNutrients", () => {
   it("should multiply every nutrient by amount / 100", () => {
-    expect(scaleNutrients(bread, 50)).toEqual({
+    expect(scaleNutrients(bread, 50, "per_100g")).toEqual({
       kcal: 125,
       protein_g: 6.25,
       fat_g: 4,
@@ -37,11 +37,11 @@ describe("scaleNutrients", () => {
   });
 
   it("should return the per 100 values unchanged for an amount of 100", () => {
-    expect(scaleNutrients(bread, 100)).toEqual(bread);
+    expect(scaleNutrients(bread, 100, "per_100g")).toEqual(bread);
   });
 
   it("should return zeros for an amount of zero", () => {
-    expect(scaleNutrients(bread, 0)).toEqual({
+    expect(scaleNutrients(bread, 0, "per_100g")).toEqual({
       kcal: 0,
       protein_g: 0,
       fat_g: 0,
@@ -52,7 +52,7 @@ describe("scaleNutrients", () => {
 
   it("should scale the optional nutrients when they are present", () => {
     const full = { ...bread, sat_fat_g: 2, sugars_g: 5, salt_g: 1 };
-    expect(scaleNutrients(full, 200)).toEqual({
+    expect(scaleNutrients(full, 200, "per_100g")).toEqual({
       kcal: 500,
       protein_g: 25,
       fat_g: 16,
@@ -65,7 +65,7 @@ describe("scaleNutrients", () => {
   });
 
   it("should leave a null nutrient null, because unknown is not zero", () => {
-    expect(scaleNutrients({ ...bread, fibre_g: null, salt_g: null }, 50)).toEqual({
+    expect(scaleNutrients({ ...bread, fibre_g: null, salt_g: null }, 50, "per_100g")).toEqual({
       kcal: 125,
       protein_g: 6.25,
       fat_g: 4,
@@ -76,26 +76,28 @@ describe("scaleNutrients", () => {
   });
 
   it("should leave an absent optional nutrient absent", () => {
-    const scaled = scaleNutrients(bread, 50);
+    const scaled = scaleNutrients(bread, 50, "per_100g");
     expect(Object.keys(scaled)).not.toContain("sat_fat_g");
     expect(Object.keys(scaled)).not.toContain("sugars_g");
     expect(Object.keys(scaled)).not.toContain("salt_g");
   });
 
   it("should not round, so the full float is kept", () => {
-    expect(scaleNutrients({ ...bread, kcal: 1 }, 33.333333).kcal).toBe(1 * (33.333333 / 100));
+    expect(scaleNutrients({ ...bread, kcal: 1 }, 33.333333, "per_100g").kcal).toBe(
+      1 * (33.333333 / 100),
+    );
   });
 
   it("should not mutate its input", () => {
     const input = { ...bread };
-    scaleNutrients(input, 50);
+    scaleNutrients(input, 50, "per_100g");
     expect(input).toEqual(bread);
   });
 
   it.each([-1, Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY])(
     "should throw a RangeError for the amount %s",
     (amount) => {
-      expect(() => scaleNutrients(bread, amount)).toThrow(RangeError);
+      expect(() => scaleNutrients(bread, amount, "per_100g")).toThrow(RangeError);
     },
   );
 });
@@ -177,7 +179,7 @@ describe("the document goldens, resolved then scaled", () => {
       grams: 35,
       ml: null,
     });
-    expect(scaleNutrients(bread, resolved.amount).kcal).toBeCloseTo(175, 9);
+    expect(scaleNutrients(bread, resolved.amount, "per_100g").kcal).toBeCloseTo(175, 9);
   });
 
   const milkPer100 = { ...bread, kcal: 64 };
@@ -185,12 +187,12 @@ describe("the document goldens, resolved then scaled", () => {
 
   it("should give 160 kcal for 250 ml of milk at 64 kcal per 100 ml", () => {
     const resolved = resolveQuantity(milk, 250, "ml");
-    expect(scaleNutrients(milkPer100, resolved.amount).kcal).toBeCloseTo(160, 9);
+    expect(scaleNutrients(milkPer100, resolved.amount, "per_100g").kcal).toBeCloseTo(160, 9);
   });
 
   it("should give 155.34 kcal for 250 g of milk at a density of 1.03", () => {
     const resolved = resolveQuantity(milk, 250, "g");
-    const kcal = scaleNutrients(milkPer100, resolved.amount).kcal;
+    const kcal = scaleNutrients(milkPer100, resolved.amount, "per_100g").kcal;
     expect(kcal).toBeCloseTo(155.34, 2);
     expect(kcal).toBeCloseTo(155.339805825, 8);
   });
@@ -201,7 +203,10 @@ describe("the document goldens, resolved then scaled", () => {
       grams: null,
       ml: 15,
     });
-    expect(scaleNutrients({ ...bread, kcal: 884 }, resolved.amount).kcal).toBeCloseTo(120.666, 9);
+    expect(scaleNutrients({ ...bread, kcal: 884 }, resolved.amount, "per_100g").kcal).toBeCloseTo(
+      120.666,
+      9,
+    );
   });
 });
 
@@ -259,10 +264,13 @@ describe("scaleNutrients properties", () => {
         nutrientAmount,
         (per100, first, second) => {
           const separately = sumNutrients([
-            scaleNutrients(per100, first),
-            scaleNutrients(per100, second),
+            scaleNutrients(per100, first, "per_100g"),
+            scaleNutrients(per100, second, "per_100g"),
           ]);
-          expectNutrientsCloseRelative(separately, scaleNutrients(per100, first + second));
+          expectNutrientsCloseRelative(
+            separately,
+            scaleNutrients(per100, first + second, "per_100g"),
+          );
         },
       ),
     );
@@ -271,7 +279,7 @@ describe("scaleNutrients properties", () => {
   it("should keep every null null and every absent key absent", () => {
     fc.assert(
       fc.property(nullableNutrientsArbitrary, nutrientAmount, (per100, amount) => {
-        const scaled = scaleNutrients(per100, amount);
+        const scaled = scaleNutrients(per100, amount, "per_100g");
         for (const key of allKeys) {
           if (per100[key] === null) {
             expect(scaled[key]).toBeNull();

@@ -17,9 +17,9 @@ import { PortionCard } from "./PortionCard";
 import type { FoodFormErrors, KeyedFoodFormValues } from "./mapIssuesToErrors";
 import type { NutrientFieldName, TextFieldName } from "./nutrientFields";
 import type { FoodFormProps, SaveNotice } from "./types";
-import type { NutrientBasis } from "@keylow/core/schemas";
+import type { CustomFoodBasis } from "@keylow/core/schemas";
 
-const BASIS_OPTIONS: readonly { value: NutrientBasis; label: string }[] = [
+const BASIS_OPTIONS: readonly { value: CustomFoodBasis; label: string }[] = [
   { value: "per_100g", label: FOOD_FORM.basisOptions.per_100g },
   { value: "per_100ml", label: FOOD_FORM.basisOptions.per_100ml },
 ];

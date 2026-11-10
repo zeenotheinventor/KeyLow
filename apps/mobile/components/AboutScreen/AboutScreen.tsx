@@ -79,6 +79,7 @@ export function AboutScreen() {
           text={dataSources.usda.text}
           url={dataSources.usda.url}
         />
+        <DataSourceCredit name={dataSources.restaurant.name} text={dataSources.restaurant.text} />
         <DataSourceCredit
           name={dataSources.off.name}
           text={dataSources.off.text}

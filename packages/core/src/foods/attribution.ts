@@ -1,10 +1,11 @@
 import type { FoodSource } from "../schemas/food";
 
+/** A source's credit. The licence and the address are left out where no single publisher is the source. */
 type DataSourceAttributionEntry = {
   readonly name: string;
-  readonly licence: string;
+  readonly licence?: string;
   readonly text: string;
-  readonly url: string;
+  readonly url?: string;
 };
 
 /** Credit lines the apps must show wherever data from these sources is displayed. */
@@ -26,5 +27,9 @@ export const DATA_SOURCE_ATTRIBUTION = {
     licence: "CC0 1.0 Universal (public domain)",
     text: "Data from USDA FoodData Central, U.S. Department of Agriculture, Agricultural Research Service, released into the public domain under CC0 1.0. Natural portions and some foods come from its SR Legacy release (April 2018).",
     url: "https://fdc.nal.usda.gov",
+  },
+  restaurant: {
+    name: "Restaurant chains' published nutrition",
+    text: "Nutrition for restaurant food comes from each chain's own published figures.",
   },
 } as const satisfies Readonly<Record<Exclude<FoodSource, "user">, DataSourceAttributionEntry>>;

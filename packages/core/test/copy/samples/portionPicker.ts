@@ -6,6 +6,8 @@ export const samples: Record<string, () => string[]> = {
   describePer100Heading: () => [
     copy.describePer100Heading("per_100g"),
     copy.describePer100Heading("per_100ml"),
+    copy.describePer100Heading("per_portion"),
+    copy.describePer100Heading("per_portion", "1 bucket"),
   ],
   describeScannedCode: () => [copy.describeScannedCode("5201054013410")],
   describeAmountBasis: () => [
@@ -16,6 +18,7 @@ export const samples: Record<string, () => string[]> = {
       portionLabel: "1 bar",
       portionSize: { amount: 45, unit: "g" },
     }),
+    copy.describeAmountBasis({ unit: "portion", quantity: 2, portionLabel: "1 bucket" }),
   ],
   describeVolumeBasis: () => [
     copy.describeVolumeBasis({ unit: "ml", quantity: 250, weightInGrams: 258 }),

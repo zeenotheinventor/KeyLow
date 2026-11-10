@@ -127,6 +127,36 @@ describe("buildLoggedCard", () => {
     expect(card.undoneSub).toBe("Removed white rice from 13:00");
   });
 
+  it.each([
+    ["Bucket", 1, "1 Bucket"],
+    ["Bucket", 2, "2 Buckets"],
+    ["1 bucket", 1, "1 bucket"],
+    ["1 bucket", 2, "2 × 1 bucket"],
+  ])(
+    "should word a count of the portion '%s' with no size when the food is per portion",
+    (label, quantity, expected) => {
+      const bucket = buildFood({
+        id: "00000000-0000-4000-8000-0000000000a9",
+        source: "restaurant",
+        name: "Bargain bucket",
+        basis: "per_portion",
+        kcal: 500,
+      });
+      const row = stored(
+        "00000000-0000-4000-8000-0000000000c9",
+        buildLogEntry({
+          food: bucket,
+          quantity,
+          unit: "portion",
+          portion: buildFoodPortion({ label, grams: null, ml: null }),
+          ...timing("13:00"),
+        }),
+      );
+
+      expect(buildLoggedCard([mustEntry(row, London)]).rows[0]?.amountText).toBe(expected);
+    },
+  );
+
   it("should leave the time out of the title when the entries are at different times", () => {
     const later = mustEntry(
       stored(

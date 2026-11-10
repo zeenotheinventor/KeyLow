@@ -17,10 +17,17 @@ export type PlateHit = ServingSource & { id: string; name: string };
 
 const NO_VALUES: PlateValues = { kcal: 0, protein_g: 0, carbs_g: 0, fat_g: 0 };
 
-const sizeOf = (portion: AmountPortion): { amount: number; unit: "g" | "ml" } =>
-  portion.grams === null
-    ? { amount: portion.ml ?? 0, unit: "ml" }
-    : { amount: portion.grams, unit: "g" };
+type PortionSize = { amount: number; unit: "g" | "ml" };
+
+// The size as an optional key, so the count portion of a food per portion has none.
+const sizeOf = (grams: number | null, ml: number | null): { size?: PortionSize } => {
+  if (grams !== null) {
+    return { size: { amount: grams, unit: "g" } };
+  }
+  return ml === null ? {} : { size: { amount: ml, unit: "ml" } };
+};
+
+const sizeOfPortion = (portion: AmountPortion) => sizeOf(portion.grams, portion.ml);
 
 function foodItem(
   key: string,
@@ -53,18 +60,14 @@ export function plateItemOfHit(key: string, hit: PlateHit): PlateFoodItem {
     carbs_g: perServing.carbs_g / serving.quantity,
     fat_g: perServing.fat_g / serving.quantity,
   };
-  // A serving is a portion only when the hit has the whole of one, which is one of grams and millilitres.
-  const portionSize =
-    hit.default_portion_grams === null
-      ? { amount: hit.default_portion_ml ?? 0, unit: "ml" as const }
-      : { amount: hit.default_portion_grams, unit: "g" as const };
+  // A serving is a portion only when the hit has the whole of one: one of grams and millilitres, or neither for a food per portion.
   const unit: PlateFoodUnit =
     serving.unit === "portion" && serving.portionId !== null && hit.default_portion_label !== null
       ? {
           kind: "portion",
           portionId: serving.portionId,
           label: hit.default_portion_label,
-          size: portionSize,
+          ...sizeOf(hit.default_portion_grams, hit.default_portion_ml),
         }
       : { kind: serving.unit === "ml" ? "ml" : "g" };
 
@@ -96,10 +99,7 @@ function lastLoggedAmount({ snapshot, portionId }: PlateRecent): {
         kind: "portion",
         portionId,
         label: portion.label,
-        size:
-          "grams" in portion
-            ? { amount: portion.grams, unit: "g" }
-            : { amount: portion.ml, unit: "ml" },
+        ...sizeOf("grams" in portion ? portion.grams : null, "ml" in portion ? portion.ml : null),
       },
     };
   }
@@ -150,7 +150,7 @@ export function plateItemOfPickedFood({
           kind: "portion",
           portionId: amount.portion.id,
           label: amount.portion.label,
-          size: sizeOf(amount.portion),
+          ...sizeOfPortion(amount.portion),
         }
       : { kind: amount.unit };
 

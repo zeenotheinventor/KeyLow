@@ -14,8 +14,8 @@ function isSamePortion(
 
   return (
     first.label === second.label &&
-    first.size.amount === second.size.amount &&
-    first.size.unit === second.size.unit
+    first.size?.amount === second.size?.amount &&
+    first.size?.unit === second.size?.unit
   );
 }
 

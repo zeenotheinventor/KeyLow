@@ -232,6 +232,10 @@ describe("customFoodInputFrom", () => {
 });
 
 describe("foodToFormFields", () => {
+  it("should refuse a food per portion, which no form can hold and no person can create", () => {
+    expect(() => foodToFormFields(buildFood({ basis: "per_portion" }))).toThrow(RangeError);
+  });
+
   it("should turn a food row into the text the form shows, keyed as the schema is", () => {
     const food = buildFood({
       name: "Oat bar",

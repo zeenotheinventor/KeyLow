@@ -109,7 +109,7 @@ const refuse = (error: string, extra: Record<string, string> = {}): WriteRunOutp
 
 type Resolution = {
   ingredient: RecipeIngredient;
-  food: { name: string; source: "off" | "cofid" | "usda" | "user" };
+  food: { name: string; source: "off" | "cofid" | "usda" | "restaurant" | "user" };
   guess: { amount: number; unit: "g" | "ml" } | null;
 };
 

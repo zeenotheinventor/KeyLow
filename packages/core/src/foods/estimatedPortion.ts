@@ -158,6 +158,9 @@ function sizeFromEnergy(basis: NutrientBasis, kcal: number | null): number {
  * other than grams. It is always the default and always reads "1 typical <noun>". The size is in the food's
  * own basis, so 1 g is never counted as 1 ml. A category row decides first (an OFF tag, or the first two
  * letters of the CoFID group), then the energy, then 100 g or 100 ml when the energy is unknown.
+ *
+ * Throws a `RangeError` for a food per portion, which has a count portion of its own and no weight to size an
+ * estimate from (ADR 0003, Amendment 18).
  */
 export function estimatedPortion(input: {
   basis: NutrientBasis;
@@ -165,6 +168,9 @@ export function estimatedPortion(input: {
   categoriesTags?: readonly string[] | undefined;
   foodGroup?: string | undefined;
 }): OffPortionInput {
+  if (input.basis === "per_portion") {
+    throw new RangeError("A food per portion has a portion of its own and is never estimated");
+  }
   const tags = input.categoriesTags ?? [];
   const group = groupOf(input.foodGroup);
   const row = ESTIMATE_CATEGORY_ROWS.find(
@@ -197,13 +203,14 @@ const isSameEstimate = (portion: PortionOfEstimate, estimate: OffPortionInput): 
  * person typed. It is the food's only portion, it is the default, and its label and size equal what
  * `estimatedPortion` gives for the food's basis and energy (and, for a food with a group, its group). A label
  * test alone would take a portion the person named "1 typical slice", hide it and delete it on the next save.
+ * The count portion of a food per portion is never an estimate.
  */
 export function isGeneratedEstimate(
   food: Pick<Food, "basis" | "kcal" | "food_group">,
   portions: readonly PortionOfEstimate[],
 ): boolean {
   const [only] = portions;
-  if (only === undefined || portions.length !== 1) {
+  if (only === undefined || portions.length !== 1 || food.basis === "per_portion") {
     return false;
   }
   const { basis, kcal } = food;
@@ -221,14 +228,14 @@ export function isGeneratedEstimate(
  * Open Food Facts, CoFID, USDA) is never typed by a person, so its "1 typical" wording is enough, which also
  * covers an estimate beside other portions and one that came from a category the food no longer holds. A
  * person's own portion is ours only when it is the single one the app generates for the food, so "1 typical
- * slice" typed by a person stays theirs.
+ * slice" typed by a person stays theirs. The count portion of a food per portion is never an estimate.
  */
 export function isOurEstimate(
   food: Pick<Food, "basis" | "kcal" | "food_group">,
   portion: PortionWithOwner,
   portions: readonly PortionOfEstimate[],
 ): boolean {
-  if (!isEstimatedPortion(portion.label)) {
+  if (food.basis === "per_portion" || !isEstimatedPortion(portion.label)) {
     return false;
   }
   return portion.owner_id === null || isGeneratedEstimate(food, portions);

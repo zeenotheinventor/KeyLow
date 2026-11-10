@@ -70,7 +70,7 @@ const goldenCustomFood = {
 };
 
 describe("foodSourceSchema", () => {
-  it.each(["off", "cofid", "usda", "user"])("should accept %s", (source) => {
+  it.each(["off", "cofid", "usda", "user", "restaurant"])("should accept %s", (source) => {
     expect(foodSourceSchema.parse(source)).toBe(source);
   });
 
@@ -80,7 +80,7 @@ describe("foodSourceSchema", () => {
 });
 
 describe("nutrientBasisSchema", () => {
-  it.each(["per_100g", "per_100ml"])("should accept %s", (basis) => {
+  it.each(["per_100g", "per_100ml", "per_portion"])("should accept %s", (basis) => {
     expect(nutrientBasisSchema.parse(basis)).toBe(basis);
   });
 
@@ -326,8 +326,9 @@ describe("foodPortionSchema", () => {
     expect(foodPortionSchema.safeParse({ ...goldenPortion, ml: 100 }).success).toBe(false);
   });
 
-  it("should reject a portion with neither grams nor ml", () => {
-    expect(foodPortionSchema.safeParse({ ...goldenPortion, grams: null }).success).toBe(false);
+  it("should parse a count portion with neither grams nor ml, the only portion of a per portion food", () => {
+    const countPortion = { ...goldenPortion, label: "1 bucket", grams: null, ml: null };
+    expect(foodPortionSchema.parse(countPortion)).toEqual(countPortion);
   });
 
   it("should reject zero grams", () => {
@@ -346,6 +347,12 @@ describe("foodPortionSchema", () => {
 });
 
 describe("customFoodInputSchema", () => {
+  it("should reject the per portion basis, which only a restaurant food has", () => {
+    expect(
+      customFoodInputSchema.safeParse({ ...goldenCustomFood, basis: "per_portion" }).success,
+    ).toBe(false);
+  });
+
   it("should parse a golden input", () => {
     expect(customFoodInputSchema.parse(goldenCustomFood)).toEqual(goldenCustomFood);
   });

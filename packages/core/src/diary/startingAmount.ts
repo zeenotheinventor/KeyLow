@@ -40,7 +40,7 @@ export function startingAmount(
   return { quantity: String(serving.quantity), unitValue: serving.portionId ?? serving.unit };
 }
 
-// The picker offers g always, a portion when it is on the list, and ml for a food measured by volume, which is
+// The picker offers g always (but for a food per portion, which has no weight), a portion when it is on the list, and ml for a food measured by volume, which is
 // a food per 100 ml or one whose spoons are on the list (see `pickerChoices`).
 function isOffered(
   amount: ChosenAmount,
@@ -49,7 +49,7 @@ function isOffered(
 ): boolean {
   switch (amount.unit) {
     case "g":
-      return true;
+      return food.basis !== "per_portion";
     case "ml":
       return food.basis === "per_100ml" || portions.some((portion) => isSpoonPortionId(portion.id));
     case "portion":

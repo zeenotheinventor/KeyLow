@@ -1,8 +1,8 @@
 import type { FormErrors, PortionFormValues } from "../types";
-import type { NutrientBasis } from "@keylow/core/schemas";
+import type { CustomFoodBasis } from "@keylow/core/schemas";
 
 export type PortionsCardProps = {
-  basis: NutrientBasis;
+  basis: CustomFoodBasis;
   portions: PortionFormValues[];
   errors: FormErrors["portions"];
   /** Makes each row's field ids unique within the page. */

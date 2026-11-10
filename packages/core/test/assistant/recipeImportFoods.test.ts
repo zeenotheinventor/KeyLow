@@ -16,6 +16,7 @@ const hit = (name: string, overrides: Partial<CapturedHit> = {}): CapturedHit =>
   brand: null,
   score: 2,
   source: "cofid",
+  basis: "per_100g",
   inSubset: true,
   ...overrides,
 });
@@ -57,6 +58,17 @@ describe("importSearchWords", () => {
 });
 
 describe("importFoodCandidates", () => {
+  it("should never offer a food per portion, which has no weight to be an ingredient", () => {
+    const bucket = {
+      id: "restaurant:bucket",
+      name: "Chicken bucket",
+      basis: "per_portion",
+    } as const;
+    const chicken = { id: "cofid:chicken", name: "Chicken, roast", basis: "per_100g" } as const;
+
+    expect(importFoodCandidates("chicken", [[bucket, chicken]])).toEqual([chicken]);
+  });
+
   it("should join the lists in order and drop a food found twice", () => {
     const rings = hit("Potato rings");
     const crisps = hit("Potato crisps");

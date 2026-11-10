@@ -3,6 +3,6 @@ export type DataSourceCreditProps = {
   name: string;
   /** The statement the source's licence asks to be shown. */
   text: string;
-  /** Where the source is published, shown as a link that opens in the browser. */
-  url: string;
+  /** Where the source is published, shown as a link that opens in the browser. Left out where no single publisher is the source, and the credit then has no link. */
+  url?: string;
 };

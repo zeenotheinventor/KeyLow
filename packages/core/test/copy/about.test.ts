@@ -40,6 +40,15 @@ describe("the About screen copy", () => {
     expect(ABOUT_SCREEN.dataSources.usda.url).toBe("https://fdc.nal.usda.gov");
   });
 
+  it("should carry the restaurant credit after USDA, with its one sentence and no address", () => {
+    expect(ABOUT_SCREEN.dataSources.restaurant).toEqual({
+      name: "Restaurant chains' published nutrition",
+      text: "Nutrition for restaurant food comes from each chain's own published figures.",
+    });
+    const order = Object.keys(ABOUT_SCREEN.dataSources);
+    expect(order.indexOf("restaurant")).toBe(order.indexOf("usda") + 1);
+  });
+
   it("should carry the BodyParts3D attribution line exactly, then one plain sentence, and its address", () => {
     expect(ABOUT_SCREEN.dataSources.bodyParts3d.name).toBe("BodyParts3D");
     expect(ABOUT_SCREEN.dataSources.bodyParts3d.text).toBe(
@@ -62,5 +71,6 @@ describe("the About screen copy", () => {
     expect(ABOUT_SCREEN.dataSources.cofid).toBe(DATA_SOURCE_ATTRIBUTION.cofid);
     expect(ABOUT_SCREEN.dataSources.off).toBe(DATA_SOURCE_ATTRIBUTION.off);
     expect(ABOUT_SCREEN.dataSources.usda).toBe(DATA_SOURCE_ATTRIBUTION.usda);
+    expect(ABOUT_SCREEN.dataSources.restaurant).toBe(DATA_SOURCE_ATTRIBUTION.restaurant);
   });
 });

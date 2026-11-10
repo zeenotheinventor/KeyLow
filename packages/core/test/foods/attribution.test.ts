@@ -33,8 +33,24 @@ describe("DATA_SOURCE_ATTRIBUTION", () => {
     });
   });
 
-  it("should have exactly the off, cofid and usda entries", () => {
-    expect(Object.keys(DATA_SOURCE_ATTRIBUTION).sort()).toEqual(["cofid", "off", "usda"]);
+  it("should credit the restaurant chains' own published figures, with no licence and no address", () => {
+    expect(DATA_SOURCE_ATTRIBUTION.restaurant).toEqual({
+      name: "Restaurant chains' published nutrition",
+      text: "Nutrition for restaurant food comes from each chain's own published figures.",
+    });
+  });
+
+  it("should not say Ki-Lo is unconnected with the chains, which Zee ruled out", () => {
+    expect(DATA_SOURCE_ATTRIBUTION.restaurant.text).not.toMatch(/connect|affiliat|endors/i);
+  });
+
+  it("should have exactly the off, cofid, usda and restaurant entries", () => {
+    expect(Object.keys(DATA_SOURCE_ATTRIBUTION).sort()).toEqual([
+      "cofid",
+      "off",
+      "restaurant",
+      "usda",
+    ]);
   });
 
   it("should be importable from the package root", () => {

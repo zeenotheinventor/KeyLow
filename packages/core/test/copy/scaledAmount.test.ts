@@ -123,6 +123,19 @@ describe("describeScaledAmount of the frittata", () => {
   });
 });
 
+describe("describeScaledAmount of a portion with no size", () => {
+  it("should write the count and the label with no weight in brackets", () => {
+    expect(
+      describeScaledAmount({
+        unit: "portion",
+        quantity: 2,
+        resolvedGrams: 0,
+        portion: { label: "1 bucket" },
+      }),
+    ).toBe("2 × 1 bucket");
+  });
+});
+
 describe("describeScaledAmount counts", () => {
   it("should write 1.33 of a medium onion for 4 servings out of 3", () => {
     expect(scaledTo(asPortions(1, 110, mediumOnion), 4, 3)).toBe("1.33 × 1 medium (147 g)");

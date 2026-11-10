@@ -31,6 +31,7 @@ describe("Badge", () => {
     ["off", "Open Food Facts"],
     ["cofid", "UK CoFID"],
     ["usda", "USDA"],
+    ["restaurant", "Restaurant"],
     ["user", "Yours"],
   ] as const)("should name the %s source plainly", (source, name) => {
     render(<Badge kind="source" source={source} />);

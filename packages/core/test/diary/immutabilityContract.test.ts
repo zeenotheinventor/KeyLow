@@ -53,7 +53,7 @@ describe("the immutability contract", () => {
       snapshot.portion === null ? undefined : { grams: null, ml: null, ...snapshot.portion },
     );
 
-    expectBitForBitEqual(scaleNutrients(snapshot.per100, amount), built.nutrients);
+    expectBitForBitEqual(scaleNutrients(snapshot.per100, amount, "per_100g"), built.nutrients);
     expectBitForBitEqual(stored.nutrients, built.nutrients);
   });
 

@@ -1,3 +1,4 @@
+import { describeBasis } from "./nutrition";
 import { isEstimatedPortion } from "../foods/estimatedPortion";
 import { formatGrams } from "../format/numbers";
 
@@ -26,9 +27,15 @@ export const LOG_SEARCH = {
   },
 };
 
-/** The heading of the per 100 list under the hero: "Per 100 g", or "Per 100 ml" for a drink. */
-export const describePer100Heading = (basis: NutrientBasis): string =>
-  basis === "per_100g" ? "Per 100 g" : "Per 100 ml";
+/**
+ * The heading of the per 100 list under the hero: "Per 100 g", or "Per 100 ml" for a drink, and for a food per
+ * portion the name of its portion, "Per bucket" (`portionLabel` is read only for that basis).
+ */
+export const describePer100Heading = (basis: NutrientBasis, portionLabel?: string): string => {
+  const heading = describeBasis(basis, portionLabel);
+
+  return `${heading.charAt(0).toUpperCase()}${heading.slice(1)}`;
+};
 
 /** The line under the hero of a food found by barcode: "Scanned 5201054013410". */
 export const describeScannedCode = (code: string): string => `Scanned ${code}`;
@@ -40,8 +47,8 @@ export type AmountBasisInput =
       quantity: number;
       /** The portion as the food names it, such as "1 medium". */
       portionLabel: string;
-      /** The size of one portion, in grams or millilitres. */
-      portionSize: { amount: number; unit: "g" | "ml" };
+      /** The size of one portion, in grams or millilitres. Left out for a food per portion, whose portion has none. */
+      portionSize?: { amount: number; unit: "g" | "ml" };
     };
 
 const squash = (text: string): string => text.replace(/\s+/g, "").toLowerCase();
@@ -75,13 +82,19 @@ export const describePortionWithSize = (
 /**
  * The hero's caption for the chosen amount: "For 150 g", "For 1 medium (100 g)" for one portion and
  * "For 2 × 1 medium (200 g)" for more. The portion's size is the whole amount, so it is the
- * portion's size times the quantity.
+ * portion's size times the quantity. A portion with no size, as a food per portion has, is written with
+ * no brackets: "For 1 bucket", "For 2 × 1 bucket".
  */
 export const describeAmountBasis = (input: AmountBasisInput): string => {
   if (input.unit !== "portion") {
     return `For ${formatGrams(input.quantity)} ${input.unit}`;
   }
   const { quantity, portionLabel, portionSize } = input;
+  if (portionSize === undefined) {
+    return quantity === 1
+      ? `For ${portionLabel}`
+      : `For ${formatGrams(quantity)} × ${portionLabel}`;
+  }
   if (quantity === 1) {
     return `For ${describePortionWithSize(portionLabel, portionSize)}`;
   }

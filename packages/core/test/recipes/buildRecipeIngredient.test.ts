@@ -27,6 +27,18 @@ const slice = buildFoodPortion({
 });
 
 describe("buildRecipeIngredient", () => {
+  it("should refuse a food per portion, which has no weight to be an ingredient", () => {
+    const bucket = buildFood({ source: "restaurant", basis: "per_portion", kcal: 500 });
+
+    expect(() =>
+      buildRecipeIngredient(bucket, {
+        quantity: 1,
+        unit: "portion",
+        portion: { id: "p", label: "1 bucket", grams: null, ml: null },
+      }),
+    ).toThrow(new RangeError("A food per portion has no weight, so it cannot be an ingredient"));
+  });
+
   describe("in grams", () => {
     const ingredient = buildRecipeIngredient(oil, { quantity: 20, unit: "g" });
 

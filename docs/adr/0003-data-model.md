@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted, 2026-09-22. Amendment 1 appended 2026-10-07. Amendment 2 appended 2026-10-15. Amendment 3 appended 2026-10-15. Amendment 4 appended 2026-10-15. Amendment 5 appended 2026-10-15. Amendment 6 appended 2026-10-15. Amendment 7 appended 2026-10-15. Amendment 8 appended 2026-10-16. Amendment 9 appended 2026-10-18. Amendment 10 appended 2026-10-23. Amendment 11 appended 2026-10-23. Amendment 12 appended 2026-10-23. Amendment 13 appended 2026-10-23. Amendment 14 appended 2026-10-26, with addenda of 2026-11-03 and 2026-11-07. Amendment 15 appended 2026-10-29. Amendment 16 appended 2026-11-10. Amendment 17 appended 2026-11-10.
+Accepted, 2026-09-22. Amendment 1 appended 2026-10-07. Amendment 2 appended 2026-10-15. Amendment 3 appended 2026-10-15. Amendment 4 appended 2026-10-15. Amendment 5 appended 2026-10-15. Amendment 6 appended 2026-10-15. Amendment 7 appended 2026-10-15. Amendment 8 appended 2026-10-16. Amendment 9 appended 2026-10-18. Amendment 10 appended 2026-10-23. Amendment 11 appended 2026-10-23. Amendment 12 appended 2026-10-23. Amendment 13 appended 2026-10-23. Amendment 14 appended 2026-10-26, with addenda of 2026-11-03 and 2026-11-07. Amendment 15 appended 2026-10-29. Amendment 16 appended 2026-11-10. Amendment 17 appended 2026-11-10. Amendment 18 appended 2026-11-10.
 
 ## Context
 
@@ -2339,3 +2339,78 @@ It now also refuses, with `22023` and the message "store_off_product needs a def
 ### Consequences of Amendment 17
 
 Two migrations add the three functions and replace `store_off_product`. They insert no row, so they are safe on live data, and existing foods are already defaulted by KEY-934. Nothing runs `give_foods_default_portions()` at deploy time. `packages/db/src/types.gen.ts` gains the three functions. A caller outside this repository that sends `store_off_product` an empty portions list is refused from this migration on.
+
+## Amendment 18 (Restaurant foods: the restaurant source and the per portion basis, 2026-11-10)
+
+### Status
+
+Recorded on 2026-11-10 under KEY-939 for Zee's rulings of the same day. On a note that each restaurant food should not need a line saying Ki-Lo is not connected with the chains: "You don't need to add a 'not connected to these companies' line." On the default: "You have to launch with it. I don't care if fast food etc has 100g, you always eat the standard portions so it's more important that everything has standard default portions. 100g means nothing and shouldn't be the default."
+
+So KFC, Burger King and Nando's are in, every restaurant food opens on its standard portion, and where a chain publishes no weight, none is invented.
+
+The frozen Decision names no restaurant source and only two bases, so by the rule at the top of this ADR the enums need an amendment before the migrations that change them. The two food shapes, the five rules and the reading of the snapshot below are interpretations. Zee confirms them by approving the pull request that implements this amendment.
+
+The frozen Decision and Amendments 1 to 17 are unchanged except where "What this supersedes" says so.
+
+### The enums
+
+- `food_source` gains `restaurant`. It already holds `usda`, which KEY-757 added in `20261029000000_food_source_usda.sql` without an amendment, so this amendment records it too. The type reads `off`, `cofid`, `user`, `usda`, `restaurant`.
+- `nutrient_basis` gains `per_portion`. It reads `per_100g`, `per_100ml`, `per_portion`.
+
+Both values are added by their own migration, `20261111000000_restaurant_enums.sql`, which holds nothing else, because a new enum value cannot be used in the transaction that adds it. A client that does not know a value fails every search that returns it, because `foodSourceSchema` and `nutrientBasisSchema` are closed enums. So web must be deployed and the mobile update published before any restaurant row exists.
+
+### The two shapes
+
+A restaurant food is stored in one of two shapes.
+
+| The chain publishes a weight | `basis`       | Nutrient columns                                                          | Default portion                                       |
+| ---------------------------- | ------------- | ------------------------------------------------------------------------- | ----------------------------------------------------- |
+| Yes                          | `per_100g`    | Per 100 g, worked out from the chain's per portion figures and the weight | "1 burger", with its grams                            |
+| No                           | `per_portion` | The values of exactly one portion, as the chain publishes them            | "1 bucket", with no grams and no ml (a count portion) |
+
+Both open on the portion. Only the second needs anything new.
+
+Rejected: a nominal 100 g portion that carries per portion values under `per_100g`, because it stores a weight that is false and every caption, gram chip and recipe yield would then show it or hide it. An estimated weight, because Zee ruled it out and the repository holds only facts. `per_portion` for every restaurant food, because it would lose the gram chip and recipe use for the foods that have a real weight, for no gain.
+
+### The rules for `per_portion`
+
+1. The nutrient columns of a `per_portion` food are the values of one default portion.
+2. Only a restaurant food may be `per_portion`. The check `foods_per_portion_only_restaurant` is `basis <> 'per_portion' or source = 'restaurant'`. A person cannot create one, because the column grants and policies already allow only `source = 'user'` rows, and this check refuses the basis for those. Widening it later is a new amendment.
+3. Its only portion is a count portion: one `food_portions` row, the default, with `grams` and `ml` both null. The table's check is now `food_portions_at_most_one_of_grams_ml`, `num_nonnulls(grams, ml) <= 1`, replacing `food_portions_exactly_one_of_grams_ml`, whose name would no longer be true. A trigger, `food_portions_size_matches_basis`, on `food_portions` insert and update, refuses a portion with neither on a food that is not `per_portion` and a portion with either on one that is. Row level security lets a person write portions on their own foods, so a check alone would let them store a weightless portion. The trigger runs as the caller, so it binds the service role as well. It holds no `execute` privilege for anyone, as firing a trigger needs none.
+4. It is logged only as a count of portions: the unit `portion` and a quantity such as 0.5, 1 or 2. Never g, ml, oz or fl oz, because there is nothing to convert from. Core's `resolveQuantity` throws a `RangeError` for any other unit.
+5. It is never a recipe ingredient. A recipe's weight and yield are sums of grams, and `recipe_ingredients.resolved_grams > 0` already refuses it in the database. Core's `canBeRecipeIngredient` is false for it, so the ingredient search and the assistant's recipe import leave it out and nobody reaches the database error. This rule is temporary. Zee ruled on 2026-11-10 that a per portion food may later be an ingredient counted in portions, with such a recipe logged by servings only. That is KEY-944, and it needs its own amendment and lifts both the check and `canBeRecipeIngredient`, which is the one place in core that holds the filter.
+6. `day_totals` needs no change. It sums each entry's `nutrients`, which core computes at write time as it does now.
+
+### The snapshot
+
+The snapshot stays version 1. The change is additive, so a stored v1 snapshot of any existing shape parses unchanged, no logged entry changes, and `NUTRITION_ENGINE_VERSION` stays.
+
+- `basis` may be `"per_portion"`. `per100` then holds the values of one portion. The field name is loose for this basis. Renaming it would be a version 2 snapshot with an upgrade step, which is not worth it for one basis.
+- `snapshotPortionSchema` gains a third member, `{ label }` with no `grams` and no `ml`. It is valid only for this basis, and this basis allows only it, with the unit `portion`.
+- `resolvedGrams` is `0` and means "no weight". No copy shows it for this basis, and a logged entry's `resolved_grams` column repeats it.
+- `density` is null.
+
+Core computes the numbers through one helper, the scale of a basis: the amount over 100 for `per_100g` and `per_100ml`, and the count for `per_portion`. `scaleNutrients` and everything that calls it use it.
+
+### What this supersedes
+
+- Amendment 1's `food_portions` check `num_nonnulls(grams, ml) = 1`, as rule 3 above says. A portion has exactly one of `grams` and `ml` unless its food is `per_portion`.
+- Amendment 2's statement that a snapshot `portion` is `{ label, grams }` or `{ label, ml }`, and the check it mirrors. A snapshot `portion` may also be `{ label }`, for the basis `per_portion` only.
+
+### The default portion
+
+Amendment 17's invariant, that every food has exactly one default portion, holds for a `per_portion` food through its count portion, which is its default. The statements that give a food a default (the generated estimated portions migration, the seed and `give_foods_default_portions`) never give a `per_portion` food an estimate, because it has no weight to size one from. Promoting the first portion of a food that has portions and no default still applies to it, and the relabel of a measure only default cannot match a count portion. The estimate statement for a food with no portions at all now carries `food.basis <> 'per_portion'`. By Amendment 17's own rule that a change to the estimate generator is a new generated migration, this is `20261111000200_estimated_portions.sql`, with `20261111000300_give_foods_default_portions.sql` replacing the function and the seed regenerated. In core, `estimatedPortion` throws for the basis, and `isGeneratedEstimate` and `isOurEstimate` never take its count portion for an estimate, so the assistant never marks it as one.
+
+### Data sources credit
+
+The About screen credits restaurant food as one more data source, "Restaurant chains' published nutrition", with the sentence "Nutrition for restaurant food comes from each chain's own published figures." It has no licence and no address, because no single chain is the source. There is no line saying Ki-Lo is not connected with the chains, by Zee's ruling above.
+
+### Implemented by
+
+- The migrations `20261111000000_restaurant_enums.sql` and `20261111000100_restaurant_data_model.sql` (the check, the relaxed check and the trigger), then the generated `20261111000200_estimated_portions.sql` and `20261111000300_give_foods_default_portions.sql` and the regenerated seed `90_estimated_portions.sql` (see "The default portion"), with pgTAP in `restaurant_data_model.test.sql` and the regenerated `packages/db/src/types.gen.ts`.
+- Core: the two enums, the count portion in `foodPortionSchema` and `snapshotPortionSchema`, `scaleOfBasis`, `resolveQuantity`, the snapshot builders, the serving of a search hit, the picker's amount and its starting amount, "log again", the wording of the basis and of a portion with no size, `describeFoodSource` and the Common foods group, and `canBeRecipeIngredient`.
+- The credit in `DATA_SOURCE_ATTRIBUTION`, drawn by the About screens on mobile and web.
+
+### Consequences of Amendment 18
+
+No row of either new value exists until the restaurant foods ticket (KEY-940) loads them, so the migrations cope with any database and a reset is not needed. The screens that show and log a per portion food, and the assistant's reading of one, are KEY-942. Any further deviation from the frozen Decision, from Amendments 1 to 17 or from this amendment needs an Amendment 19 before the migration or code that implements it lands.

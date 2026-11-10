@@ -103,7 +103,7 @@ join (values
 where food.source = 'cofid' and not exists (select 1 from public.food_portions existing where existing.food_id = food.id and existing.is_default)
 on conflict (food_id) where is_default do nothing;
 
--- 4. Any food with no portions at all, of any source and including a person's own, gets the row for its energy. The size is in grams or millilitres by the food's basis.
+-- 4. Any food with no portions at all, of any source and including a person's own, gets the row for its energy. The size is in grams or millilitres by the food's basis. A food per portion is the exception, because it has a count portion of its own.
 insert into public.food_portions (food_id, owner_id, label, grams, ml, is_default, position)
 select food.id, food.owner_id, '1 typical serving', case when food.basis = 'per_100g' then coalesce(band.size, 100) end, case when food.basis = 'per_100ml' then coalesce(band.size, 100) end, true, coalesce((select max(existing.position) + 1 from public.food_portions existing where existing.food_id = food.id), 0)
 from public.foods food
@@ -123,6 +123,6 @@ left join lateral (
   where band.basis = food.basis::text and food.kcal >= band.lower_bound
   order by band.lower_bound desc limit 1
 ) band on true
-where not exists (select 1 from public.food_portions existing where existing.food_id = food.id and existing.is_default)
+where food.basis <> 'per_portion' and not exists (select 1 from public.food_portions existing where existing.food_id = food.id and existing.is_default)
 on conflict (food_id) where is_default do nothing;
 commit;

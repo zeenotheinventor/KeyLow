@@ -90,16 +90,19 @@ describe("entryQuantityChange", () => {
     });
   });
 
-  it("should refuse a portion that has neither grams nor millilitres, with no value in the message", () => {
+  it("should write a portion that has neither grams nor millilitres by its label, with its link", () => {
     const sizeless = buildFoodPortion({
-      id: "portion-bad",
-      label: "1 mystery",
+      id: "portion-count",
+      label: "1 bucket",
       grams: null,
       ml: null,
     });
 
-    expect(() => entryQuantityChange({ unit: "portion", quantity: 3, portion: sizeless })).toThrow(
-      new RangeError("A portion needs a size in grams or millilitres"),
-    );
+    expect(entryQuantityChange({ unit: "portion", quantity: 3, portion: sizeless })).toEqual({
+      quantity: 3,
+      unit: "portion",
+      portion: { label: "1 bucket" },
+      portionId: "portion-count",
+    });
   });
 });

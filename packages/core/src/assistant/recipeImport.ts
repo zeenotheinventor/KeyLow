@@ -1,5 +1,6 @@
 import { isOurEstimate } from "../foods/estimatedPortion";
 import { canMeasureByVolume, spoonPortionWithLabel } from "../nutrition";
+import { canBeRecipeIngredient } from "../recipes/canBeRecipeIngredient";
 
 import type { RecipeIngredientInput } from "../recipes";
 import type { Food, FoodPortion } from "../schemas/food";
@@ -117,7 +118,7 @@ function onePerKindInTurn<Food extends CandidateFood>(foods: readonly Food[]): F
   ).flat();
 }
 
-type CandidateFood = { id: string; name: string };
+type CandidateFood = { id: string; name: string; basis: Food["basis"] };
 
 /**
  * The foods to offer the model for a line. The lists of `importSearchWords` are joined in order and a food
@@ -125,7 +126,8 @@ type CandidateFood = { id: string; name: string };
  * first ("Potatoes, old, raw" for "potato", where a dish such as "Potato rings" ties with it on score), taken
  * one of each kind in turn (the part after the first comma), the rest keep their order, and the list is cut at
  * `IMPORT_CANDIDATES_MAX`. The order is only a way to put the likely foods inside the cut. The model chooses,
- * so there is no list of dish or cooking words here.
+ * so there is no list of dish or cooking words here. A food per portion is never offered, because a recipe's
+ * weight is a sum of grams.
  */
 export function importFoodCandidates<Food extends CandidateFood>(
   foodWord: string,
@@ -137,6 +139,10 @@ export function importFoodCandidates<Food extends CandidateFood>(
   );
   const seen = new Set<string>();
   const joined = hitLists.flat().filter((food) => {
+    // A food per portion has no weight, so it cannot be an ingredient.
+    if (!canBeRecipeIngredient(food)) {
+      return false;
+    }
     if (seen.has(food.id)) {
       return false;
     }

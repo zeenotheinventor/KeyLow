@@ -49,11 +49,19 @@ export type AmountPreview<Portion extends AmountPortion = AmountPortion> = {
   hero: AmountSummary;
 };
 
-function sizeOf(portion: AmountPortion): { amount: number; unit: "g" | "ml" } {
-  return portion.grams === null
-    ? { amount: portion.ml ?? 0, unit: "ml" }
-    : { amount: portion.grams, unit: "g" };
+// The size of a portion, or undefined for a count portion, which has none.
+function sizeOf(portion: AmountPortion): { amount: number; unit: "g" | "ml" } | undefined {
+  if (portion.grams !== null) {
+    return { amount: portion.grams, unit: "g" };
+  }
+  return portion.ml === null ? undefined : { amount: portion.ml, unit: "ml" };
 }
+
+// The size as an optional key, so a count portion has none and the caption puts nothing in brackets.
+const sizeOrNone = (portion: AmountPortion) => {
+  const portionSize = sizeOf(portion);
+  return portionSize === undefined ? {} : { portionSize };
+};
 
 function amountOf<Portion extends AmountPortion>(
   unitValue: string,
@@ -118,7 +126,7 @@ function captionOf(amount: ChosenAmount, density: number | null): string {
     unit: "portion",
     quantity: amount.quantity,
     portionLabel: amount.portion.label,
-    portionSize: sizeOf(amount.portion),
+    ...sizeOrNone(amount.portion),
   });
 }
 
@@ -162,6 +170,7 @@ export function previewAmount<Portion extends AmountPortion>(
         fibre_g: food.fibre_g,
       },
       inBasisUnit,
+      food.basis,
     );
 
     return {
