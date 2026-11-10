@@ -126,6 +126,66 @@ Deno.test("a per 100 g label is saved with no portion and the card says Per 100 
   });
 });
 
+Deno.test(
+  "a per 100 g label opens on a typical serving, and the answer does not say the person gave it",
+  async () => {
+    const { ctx, stub } = contextWith();
+
+    const result = await executeTool(ctx, "create_custom_food", {
+      ...proteinBar,
+      per: "per_100g",
+      portion_label: null,
+      portion_grams: null,
+      kcal: 400,
+      protein_g: 30,
+      carbs_g: 40,
+      fat_g: 13,
+    });
+
+    const [food] = ownFoods(stub);
+    assertObjectMatch(stub.tables["food_portions"]?.at(-1) ?? {}, {
+      food_id: food?.["id"],
+      label: "1 typical serving",
+      grams: 40,
+      is_default: true,
+    });
+    assertObjectMatch(payloadOf(result) as Record<string, unknown>, {
+      created: { portion_id: null },
+    });
+  },
+);
+
+Deno.test(
+  "a per portion label gives the portion's id, because the person gave that portion",
+  async () => {
+    const { ctx, stub } = contextWith();
+
+    const result = await executeTool(ctx, "create_custom_food", proteinBar);
+
+    const portion = stub.tables["food_portions"]?.at(-1);
+    assertObjectMatch(payloadOf(result) as Record<string, unknown>, {
+      created: { portion_id: portion?.["id"] },
+    });
+  },
+);
+
+Deno.test(
+  "a per portion label worded like an estimate is the person's own portion, so its id is given",
+  async () => {
+    const { ctx, stub } = contextWith();
+
+    const result = await executeTool(ctx, "create_custom_food", {
+      ...proteinBar,
+      portion_label: "1 typical bar",
+    });
+
+    const portion = stub.tables["food_portions"]?.at(-1);
+    assertObjectMatch(payloadOf(result) as Record<string, unknown>, {
+      created: { portion_id: portion?.["id"] },
+    });
+  },
+);
+
 Deno.test("one action row holds the food's id and no value", async () => {
   const { ctx, stub, store } = contextWith();
 

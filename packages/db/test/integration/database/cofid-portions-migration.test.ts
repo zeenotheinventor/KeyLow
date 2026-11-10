@@ -467,3 +467,24 @@ describe("the CoFID portions migration, applied to a database that lacks a food"
     expect(lines).toEqual(["0", "3"]);
   });
 });
+
+// KEY-934: cod had its 1 fillet as a portion but not as the default, so it opened on 100 g.
+describe("the CoFID portions migration, applied to cod", () => {
+  it("should open cod, raw and baked, on 1 fillet", () => {
+    const codes = ["16-372", "16-373"];
+    const lines = runRolledBack(
+      `${deletePortionsOf(codes)}\n${migrationSql}\n${listPortionsOf(codes)}`,
+    );
+
+    expect(lines).toEqual(["16-372|1 fillet|231|t|0", "16-373|1 fillet|180|t|0"]);
+  });
+
+  it("should move the default to 1 fillet when the fillet is there but is not the default", () => {
+    const codes = ["16-372"];
+    const lines = runRolledBack(
+      `${migrationSql}\nupdate public.food_portions portion set is_default = false from public.foods food where food.id = portion.food_id and food.source = 'cofid' and food.source_ref = '16-372' and portion.owner_id is null;\n${migrationSql}\n${listPortionsOf(codes)}`,
+    );
+
+    expect(lines).toEqual(["16-372|1 fillet|231|t|0"]);
+  });
+});

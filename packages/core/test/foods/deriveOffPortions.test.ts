@@ -13,7 +13,7 @@ import {
   yogurtPot,
   type CapturedProduct,
 } from "./offPackFixtures";
-import { deriveOffPortions } from "../../src/foods/deriveOffPortions";
+import { MEASURE_ONLY_PORTION_LABEL, deriveOffPortions } from "../../src/foods/deriveOffPortions";
 import { isEstimatedPortion } from "../../src/foods/estimatedPortion";
 import { inferBasis } from "../../src/foods/offRules";
 
@@ -737,4 +737,17 @@ describe("any product", () => {
       }),
     );
   });
+});
+
+describe("MEASURE_ONLY_PORTION_LABEL", () => {
+  it.each(["240 g", "30g", "~250 ml", "5 oz", "1.5 l"])("should match the measure %s", (label) => {
+    expect(MEASURE_ONLY_PORTION_LABEL.test(label)).toBe(true);
+  });
+
+  it.each(["1 serving", "1 burger", "1 typical serving", "2 x 30 g", "1 bar (30 g)"])(
+    "should not match %s",
+    (label) => {
+      expect(MEASURE_ONLY_PORTION_LABEL.test(label)).toBe(false);
+    },
+  );
 });

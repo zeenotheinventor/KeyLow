@@ -1,3 +1,5 @@
+import { isGeneratedEstimate } from "./estimatedPortion";
+
 import type { Food, FoodPortion, NutrientBasis } from "../schemas/food";
 
 const PLAIN_DECIMAL = /^-?(\d+\.?\d*|\.\d+)$/;
@@ -116,6 +118,18 @@ export function portionToFormFields(portion: FoodPortion): PortionFormFields {
     amount: numberToText(portion.grams ?? portion.ml),
     isDefault: portion.is_default,
   };
+}
+
+/**
+ * Fills the portion rows of the form from a stored food's portions, leaving out the estimate the app
+ * generated. The estimate is not something the person typed, so the form shows only their own portions
+ * and saving derives it again. A portion the person named like an estimate is theirs and stays.
+ */
+export function portionsToFormFields(
+  food: Pick<Food, "basis" | "kcal" | "food_group">,
+  portions: readonly FoodPortion[],
+): PortionFormFields[] {
+  return isGeneratedEstimate(food, portions) ? [] : portions.map(portionToFormFields);
 }
 
 export type CopyFormStart = {

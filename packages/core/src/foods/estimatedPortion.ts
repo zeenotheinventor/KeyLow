@@ -1,5 +1,5 @@
 import type { OffPortionInput } from "./offRules";
-import type { NutrientBasis } from "../schemas/food";
+import type { Food, FoodPortion, NutrientBasis } from "../schemas/food";
 
 // Every figure in this file is an uncited editorial estimate, chosen by the tech lead for a typical
 // portion. None of them comes from a source, so none may be attributed to one. They are what a food
@@ -180,4 +180,34 @@ export function estimatedPortion(input: {
     ml: input.basis === "per_100ml" ? size : null,
     isDefault: true,
   };
+}
+
+const isSameEstimate = (portion: FoodPortion, estimate: OffPortionInput): boolean =>
+  portion.is_default &&
+  portion.label === estimate.label &&
+  portion.grams === estimate.grams &&
+  portion.ml === estimate.ml;
+
+/**
+ * Whether the food's portions are exactly the one estimate the app generates, so it is not something the
+ * person typed. It is the food's only portion, it is the default, and its label and size equal what
+ * `estimatedPortion` gives for the food's basis and energy (and, for a food with a group, its group). A label
+ * test alone would take a portion the person named "1 typical slice", hide it and delete it on the next save.
+ */
+export function isGeneratedEstimate(
+  food: Pick<Food, "basis" | "kcal" | "food_group">,
+  portions: readonly FoodPortion[],
+): boolean {
+  const [only] = portions;
+  if (only === undefined || portions.length !== 1) {
+    return false;
+  }
+  const { basis, kcal } = food;
+  const candidates = [
+    estimatedPortion({ basis, kcal }),
+    ...(food.food_group === null
+      ? []
+      : [estimatedPortion({ basis, kcal, foodGroup: food.food_group })]),
+  ];
+  return candidates.some((estimate) => isSameEstimate(only, estimate));
 }

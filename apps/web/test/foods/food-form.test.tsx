@@ -1,4 +1,5 @@
 import { CustomFoodValidationError, FoodsPartialWriteError } from "@keylow/api-client";
+import { estimatedPortion } from "@keylow/core/foods";
 import { customFoodInputSchema } from "@keylow/core/schemas";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -731,6 +732,32 @@ describe("FoodForm", () => {
   });
 
   describe("portions", () => {
+    it("should not show the generated estimate when editing, so the form holds only what the person typed", () => {
+      const food = makeFood();
+      const generated = estimatedPortion({ basis: food.basis, kcal: food.kcal });
+      const estimate = makePortion({
+        label: generated.label,
+        grams: generated.grams,
+        ml: generated.ml,
+        is_default: true,
+      });
+
+      renderForm({ existing: { food, portions: [estimate] } });
+
+      expect(screen.queryByRole("textbox", { name: "Portion 1 label" })).toBeNull();
+    });
+
+    it("should keep a portion the person typed as 1 typical slice", () => {
+      const typed = makePortion({ label: "1 typical slice", grams: 35, is_default: true });
+
+      renderForm({ existing: { food: makeFood(), portions: [typed] } });
+
+      expect(screen.getByRole("textbox", { name: "Portion 1 label" })).toHaveProperty(
+        "value",
+        "1 typical slice",
+      );
+    });
+
     it("should add a portion with its own labelled fields", () => {
       renderForm();
 

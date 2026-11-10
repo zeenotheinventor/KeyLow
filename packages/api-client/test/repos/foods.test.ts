@@ -1,3 +1,4 @@
+import { estimatedPortion } from "@keylow/core/foods";
 import { customFoodInputSchema } from "@keylow/core/schemas";
 import { http } from "msw";
 import { setupServer } from "msw/node";
@@ -326,12 +327,12 @@ describe("createFood", () => {
     expect(request?.body).toMatchObject({ sat_fat_g: 0, sugars_g: 0, salt_g: 0 });
   });
 
-  it("should return the created food with no portions when none were given", async () => {
+  it("should return the created food with the portion the database stored when none were given", async () => {
     respondToInserts();
 
     const created = await createFood(createTestClient(), SIGNED_IN_USER_ID, customFoodInput());
 
-    expect(created).toEqual({ food: foodRow(), portions: [] });
+    expect(created).toEqual({ food: foodRow(), portions: [portionRow()] });
   });
 
   it("should return the created food with the portions the database stored", async () => {
@@ -374,12 +375,62 @@ describe("createFood", () => {
     ]);
   });
 
-  it("should not call the portions endpoint when there are no portions", async () => {
+  it("should insert one typical serving, sized from the energy, as the default when there are no portions", async () => {
     respondToInserts();
+    const estimate = estimatedPortion({ basis: "per_100g", kcal: foodRow().kcal });
 
     await createFood(createTestClient(), SIGNED_IN_USER_ID, customFoodInput());
 
-    expect(requestsTo("POST", "food_portions")).toEqual([]);
+    const [request] = requestsTo("POST", "food_portions");
+    expect(request?.body).toEqual([
+      {
+        owner_id: SIGNED_IN_USER_ID,
+        food_id: FOOD_ID,
+        label: estimate.label,
+        grams: estimate.grams,
+        ml: null,
+        is_default: true,
+        position: 0,
+      },
+    ]);
+  });
+
+  it("should make the first portion the default when none of them is", async () => {
+    respondToInserts();
+
+    await createFood(
+      createTestClient(),
+      SIGNED_IN_USER_ID,
+      customFoodInput([
+        { label: "1 bar", grams: 60, isDefault: false },
+        { label: "1 cup", ml: 250, isDefault: false },
+      ]),
+    );
+
+    const [request] = requestsTo("POST", "food_portions");
+    expect(request?.body).toMatchObject([
+      { label: "1 bar", is_default: true },
+      { label: "1 cup", is_default: false },
+    ]);
+  });
+
+  it("should keep the default the person chose", async () => {
+    respondToInserts();
+
+    await createFood(
+      createTestClient(),
+      SIGNED_IN_USER_ID,
+      customFoodInput([
+        { label: "1 bar", grams: 60, isDefault: false },
+        { label: "1 cup", ml: 250, isDefault: true },
+      ]),
+    );
+
+    const [request] = requestsTo("POST", "food_portions");
+    expect(request?.body).toMatchObject([
+      { label: "1 bar", is_default: false },
+      { label: "1 cup", is_default: true },
+    ]);
   });
 
   it("should throw an error whose cause is the database error code and skip the portions when the food insert fails", async () => {
@@ -663,6 +714,44 @@ describe("updateFood", () => {
     expect(requestsTo("POST", "food_portions")[0]?.body).toMatchObject([
       { owner_id: SIGNED_IN_USER_ID, food_id: FOOD_ID, label: "1 bar", position: 0 },
       { owner_id: SIGNED_IN_USER_ID, food_id: FOOD_ID, label: "1 cup", position: 1 },
+    ]);
+  });
+
+  it("should replace the portions with one typical serving when the form has none", async () => {
+    respondToUpdate();
+    const estimate = estimatedPortion({ basis: "per_100g", kcal: foodRow().kcal });
+
+    await updateFood(createTestClient(), FOOD_ID, customFoodInput());
+
+    expect(recorded.map((request) => request.method)).toEqual(["PATCH", "DELETE", "POST"]);
+    expect(requestsTo("POST", "food_portions")[0]?.body).toEqual([
+      {
+        owner_id: SIGNED_IN_USER_ID,
+        food_id: FOOD_ID,
+        label: estimate.label,
+        grams: estimate.grams,
+        ml: null,
+        is_default: true,
+        position: 0,
+      },
+    ]);
+  });
+
+  it("should leave exactly one default after saving portions with none chosen", async () => {
+    respondToUpdate();
+
+    await updateFood(
+      createTestClient(),
+      FOOD_ID,
+      customFoodInput([
+        { label: "1 bar", grams: 60, isDefault: false },
+        { label: "1 cup", ml: 250, isDefault: false },
+      ]),
+    );
+
+    expect(requestsTo("POST", "food_portions")[0]?.body).toMatchObject([
+      { label: "1 bar", is_default: true },
+      { label: "1 cup", is_default: false },
     ]);
   });
 

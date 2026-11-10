@@ -4,7 +4,12 @@
 // foods and leaves any diary entry logged from it alone, because an entry keeps its own snapshot.
 import { z } from "zod";
 
-import { buildFoodCreatedCard, labelFoodInput, roundCalories } from "../../core.ts";
+import {
+  buildFoodCreatedCard,
+  isGeneratedEstimate,
+  labelFoodInput,
+  roundCalories,
+} from "../../core.ts";
 import { FoodsPartialWriteError, createFood, getFood, softDeleteFood } from "../../repos.ts";
 
 import type { WriteRunOutput, WriteToolDefinition } from "../tool.ts";
@@ -102,7 +107,9 @@ export const createCustomFoodTool: WriteToolDefinition<CreateCustomFoodInput> = 
     }
 
     // The write has landed. Nothing below may throw, or the model would save the food a second time.
-    const [portion] = created.portions;
+    // The estimate the app generated is not a portion the person gave, so the model is not handed its id to
+    // log. A portion the person gave stays, even one they worded like an estimate.
+    const [portion] = isGeneratedEstimate(created.food, created.portions) ? [] : created.portions;
     return {
       data: {
         created: {

@@ -1,3 +1,4 @@
+import { estimatedPortion } from "@keylow/core/foods";
 import { customFoodInputSchema } from "@keylow/core/schemas";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -226,7 +227,18 @@ describe("custom foods against the local stack with real user JWTs", () => {
         density_g_per_ml: null,
         fibre_g: null,
       });
-      expect(await listFoodPortions(userA.client, foodOfA.id)).toEqual([]);
+      // Saving with no portion leaves the one estimate, so the food never opens on 100 g.
+      const estimate = estimatedPortion({ basis: "per_100g", kcal: 410 });
+      expect(await listFoodPortions(userA.client, foodOfA.id)).toMatchObject([
+        {
+          label: estimate.label,
+          grams: estimate.grams,
+          ml: null,
+          is_default: true,
+          position: 0,
+          owner_id: userA.id,
+        },
+      ]);
     });
   });
 });
