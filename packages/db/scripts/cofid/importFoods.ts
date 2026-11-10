@@ -11,8 +11,18 @@ import type { MappedCofidFood } from "./mapRow";
 export type ImportStore = {
   /** Inserts the `import_runs` row and returns its id. */
   startRun(run: { label: string; fileSha256: string }): Promise<string>;
-  /** Upserts the foods on `(source, source_ref)` and their source data, which point at the run. */
-  writeBatch(runId: string, batch: readonly MappedCofidFood[]): Promise<void>;
+  /**
+   * Upserts the foods on `(source, source_ref)` and their source data, which point at the run. Resolves to the
+   * ids of the foods it wrote, which a store that writes no database leaves empty.
+   */
+  writeBatch(runId: string, batch: readonly MappedCofidFood[]): Promise<readonly string[]>;
+  /**
+   * Gives each of these foods a default portion if it has none, by running the generated estimate statements
+   * (`public.give_foods_default_portions`). It is called with the ids of the batch just written, so an import never
+   * leaves a food that opens on a silent 100 g and never touches a food it did not write. It only adds a default
+   * where there is none, so calling it again is safe.
+   */
+  giveDefaultPortions(foodIds: readonly string[]): Promise<void>;
   /** Sets `finished_at` and `row_count`. A run with `finished_at` null is therefore an incomplete one. */
   finishRun(runId: string, result: { rowCount: number }): Promise<void>;
   /** Sets `row_count` only, for a run that failed part way. `finished_at` stays null. */
@@ -150,8 +160,12 @@ export async function importCofid(
   try {
     for (let start = 0; start < foods.length; start += batchSize) {
       const batch = foods.slice(start, start + batchSize);
-      await store.writeBatch(runId, batch);
+      const foodIds = await store.writeBatch(runId, batch);
       written += batch.length;
+      // Right after each batch, so a failure later in the run still leaves the foods already written on a default.
+      if (foodIds.length > 0) {
+        await store.giveDefaultPortions(foodIds);
+      }
       log(`Imported ${written} of ${foods.length} foods`);
     }
   } catch (error) {

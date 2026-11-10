@@ -169,8 +169,8 @@ describe("custom foods against the local stack with real user JWTs", () => {
     });
 
     it("should not be able to replace user A's portions, which stay unchanged", async () => {
-      const failure = await replaceFoodPortions(userB.client, foodOfA.id, userB.id, [
-        { label: "Sneaky", grams: 1, isDefault: false },
+      const failure = await replaceFoodPortions(userB.client, foodOfA.id, [
+        { label: "Sneaky", grams: 1, isDefault: true },
       ]).catch((error: unknown) => error);
 
       expect(failure).toBeInstanceOf(Error);
@@ -239,6 +239,66 @@ describe("custom foods against the local stack with real user JWTs", () => {
           owner_id: userA.id,
         },
       ]);
+    });
+  });
+  describe("atomic portion writes", () => {
+    // A portion with both grams and ml passes the function's own checks and fails the table's, after the old
+    // portions were deleted, which is exactly the failure that used to leave a food with none.
+    const breakingPortions = [
+      { label: "fine", grams: 10, ml: null, is_default: true },
+      { label: "both", grams: 5, ml: 5, is_default: false },
+    ];
+
+    it("should keep the food's previous portions when a replace fails part way", async () => {
+      const { food } = await createFood(userA.client, userA.id, customFood());
+      const before = await listFoodPortions(userA.client, food.id);
+
+      const { error } = await userA.client.rpc("replace_food_portions", {
+        p_food_id: food.id,
+        p_portions: breakingPortions,
+      });
+
+      expect(error).toMatchObject({ code: "23514" });
+      expect(await listFoodPortions(userA.client, food.id)).toEqual(before);
+    });
+
+    it("should leave no food behind when a create fails on its portions", async () => {
+      const name = "Atomic create that fails";
+
+      const { error } = await userA.client.rpc("create_food", {
+        p_food: {
+          source: "user",
+          owner_id: userA.id,
+          name,
+          basis: "per_100g",
+          kcal: 1,
+          protein_g: 1,
+          fat_g: 1,
+          carbs_g: 1,
+        },
+        p_portions: breakingPortions,
+      });
+
+      expect(error).toMatchObject({ code: "23514" });
+      const { data, error: readError } = await userA.client
+        .from("foods")
+        .select("id")
+        .eq("name", name);
+      expect(readError).toBeNull();
+      expect(data).toEqual([]);
+    });
+
+    it("should refuse an empty list of portions and keep the old ones", async () => {
+      const { food } = await createFood(userA.client, userA.id, customFood());
+      const before = await listFoodPortions(userA.client, food.id);
+
+      const { error } = await userA.client.rpc("replace_food_portions", {
+        p_food_id: food.id,
+        p_portions: [],
+      });
+
+      expect(error).toMatchObject({ code: "22023" });
+      expect(await listFoodPortions(userA.client, food.id)).toEqual(before);
     });
   });
 });

@@ -1,8 +1,9 @@
 import { estimatedPortion } from "@keylow/core/foods";
 import { customFoodInputSchema } from "@keylow/core/schemas";
-import { http } from "msw";
+import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { z } from "zod";
 
 import {
   FoodsPartialWriteError,
@@ -198,38 +199,54 @@ describe("listFoodPortions", () => {
   });
 });
 
+const rpcRequests = (name: string) =>
+  recorded.filter(
+    (request) => request.method === "POST" && request.url.pathname === `/rest/v1/rpc/${name}`,
+  );
+
+const rpcBodySchema = z.object({
+  p_food: z.record(z.string(), z.unknown()).optional(),
+  p_food_id: z.string().optional(),
+  p_portions: z.array(z.record(z.string(), z.unknown())),
+});
+
+/** The arguments of the first call to a database function, parsed so a test reads them without a cast. */
+const rpcArguments = (name: string) => rpcBodySchema.parse(rpcRequests(name)[0]?.body);
+
 describe("createFood", () => {
-  const respondToInserts = () => {
+  const respondToCreate = () => {
     server.use(
-      http.post(`${REST_URL}/foods`, async ({ request }) => {
+      http.post(`${REST_URL}/rpc/create_food`, async ({ request }) => {
         await record(request);
-        return postgrestRows(request, [foodRow()], 201);
-      }),
-      http.post(`${REST_URL}/food_portions`, async ({ request }) => {
-        await record(request);
-        return postgrestRows(request, [portionRow()], 201);
+        return HttpResponse.json({ food: foodRow(), portions: [portionRow()] });
       }),
     );
   };
 
-  it("should insert only columns that the authenticated role may write", async () => {
-    respondToInserts();
+  it("should create the food and its portions in one call to the database, never in separate writes", async () => {
+    respondToCreate();
+
+    await createFood(createTestClient(), SIGNED_IN_USER_ID, customFoodInput(twoPortions));
+
+    expect(recorded.map((request) => request.url.pathname)).toEqual(["/rest/v1/rpc/create_food"]);
+  });
+
+  it("should send only columns that the authenticated role may write", async () => {
+    respondToCreate();
 
     await createFood(createTestClient(), SIGNED_IN_USER_ID, customFoodInput());
 
-    const [request] = requestsTo("POST", "foods");
-    const written = Object.keys(request?.body ?? {});
+    const written = Object.keys(rpcArguments("create_food").p_food ?? {});
     expect(written.length).toBeGreaterThan(0);
     expect(written.filter((column) => !INSERTABLE_FOOD_COLUMNS.includes(column))).toEqual([]);
   });
 
   it("should write a user food owned by the given user with empty micros", async () => {
-    respondToInserts();
+    respondToCreate();
 
     await createFood(createTestClient(), SIGNED_IN_USER_ID, customFoodInput());
 
-    const [request] = requestsTo("POST", "foods");
-    expect(request?.body).toMatchObject({
+    expect(rpcArguments("create_food").p_food).toMatchObject({
       source: "user",
       owner_id: SIGNED_IN_USER_ID,
       micros: {},
@@ -237,12 +254,11 @@ describe("createFood", () => {
   });
 
   it("should write the canonical, trimmed values from the input", async () => {
-    respondToInserts();
+    respondToCreate();
 
     await createFood(createTestClient(), SIGNED_IN_USER_ID, customFoodInput());
 
-    const [request] = requestsTo("POST", "foods");
-    expect(request?.body).toMatchObject({
+    expect(rpcArguments("create_food").p_food).toMatchObject({
       name: "Protein flapjack",
       brand: "Home made",
       barcode: "0036000291452",
@@ -257,7 +273,7 @@ describe("createFood", () => {
   });
 
   it("should write null for optional values the input leaves out", async () => {
-    respondToInserts();
+    respondToCreate();
     const input = customFoodInputSchema.parse({
       name: "Plain",
       basis: "per_100g",
@@ -270,8 +286,7 @@ describe("createFood", () => {
 
     await createFood(createTestClient(), SIGNED_IN_USER_ID, input);
 
-    const [request] = requestsTo("POST", "foods");
-    expect(request?.body).toMatchObject({
+    expect(rpcArguments("create_food").p_food).toMatchObject({
       brand: null,
       barcode: null,
       density_g_per_ml: null,
@@ -280,12 +295,11 @@ describe("createFood", () => {
   });
 
   it("should write saturated fat, sugars and salt when the input carries them", async () => {
-    respondToInserts();
+    respondToCreate();
 
     await createFood(createTestClient(), SIGNED_IN_USER_ID, carryingInput());
 
-    const [request] = requestsTo("POST", "foods");
-    expect(request?.body).toEqual({
+    expect(rpcArguments("create_food").p_food).toEqual({
       name: "Protein flapjack",
       brand: "Home made",
       barcode: "0036000291452",
@@ -306,16 +320,19 @@ describe("createFood", () => {
   });
 
   it("should write null for saturated fat, sugars and salt the input leaves out", async () => {
-    respondToInserts();
+    respondToCreate();
 
     await createFood(createTestClient(), SIGNED_IN_USER_ID, customFoodInput());
 
-    const [request] = requestsTo("POST", "foods");
-    expect(request?.body).toMatchObject({ sat_fat_g: null, sugars_g: null, salt_g: null });
+    expect(rpcArguments("create_food").p_food).toMatchObject({
+      sat_fat_g: null,
+      sugars_g: null,
+      salt_g: null,
+    });
   });
 
   it("should write a carried zero as zero, not as null", async () => {
-    respondToInserts();
+    respondToCreate();
 
     await createFood(
       createTestClient(),
@@ -323,20 +340,15 @@ describe("createFood", () => {
       customFoodInputSchema.parse({ ...carryingInputValues, sat_fat_g: 0, sugars_g: 0, salt_g: 0 }),
     );
 
-    const [request] = requestsTo("POST", "foods");
-    expect(request?.body).toMatchObject({ sat_fat_g: 0, sugars_g: 0, salt_g: 0 });
-  });
-
-  it("should return the created food with the portion the database stored when none were given", async () => {
-    respondToInserts();
-
-    const created = await createFood(createTestClient(), SIGNED_IN_USER_ID, customFoodInput());
-
-    expect(created).toEqual({ food: foodRow(), portions: [portionRow()] });
+    expect(rpcArguments("create_food").p_food).toMatchObject({
+      sat_fat_g: 0,
+      sugars_g: 0,
+      salt_g: 0,
+    });
   });
 
   it("should return the created food with the portions the database stored", async () => {
-    respondToInserts();
+    respondToCreate();
 
     const created = await createFood(
       createTestClient(),
@@ -347,56 +359,30 @@ describe("createFood", () => {
     expect(created).toEqual({ food: foodRow(), portions: [portionRow()] });
   });
 
-  it("should insert the portions with the owner, the food id and their position", async () => {
-    respondToInserts();
+  it("should send the portions in order, with a default, as rows the database function reads", async () => {
+    respondToCreate();
 
     await createFood(createTestClient(), SIGNED_IN_USER_ID, customFoodInput(twoPortions));
 
-    const [request] = requestsTo("POST", "food_portions");
-    expect(request?.body).toEqual([
-      {
-        owner_id: SIGNED_IN_USER_ID,
-        food_id: FOOD_ID,
-        label: "1 bar",
-        grams: 60,
-        ml: null,
-        is_default: true,
-        position: 0,
-      },
-      {
-        owner_id: SIGNED_IN_USER_ID,
-        food_id: FOOD_ID,
-        label: "1 cup",
-        grams: null,
-        ml: 250,
-        is_default: false,
-        position: 1,
-      },
+    expect(rpcArguments("create_food").p_portions).toEqual([
+      { label: "1 bar", grams: 60, ml: null, is_default: true },
+      { label: "1 cup", grams: null, ml: 250, is_default: false },
     ]);
   });
 
-  it("should insert one typical serving, sized from the energy, as the default when there are no portions", async () => {
-    respondToInserts();
+  it("should send one typical serving, sized from the energy, as the default when there are no portions", async () => {
+    respondToCreate();
     const estimate = estimatedPortion({ basis: "per_100g", kcal: foodRow().kcal });
 
     await createFood(createTestClient(), SIGNED_IN_USER_ID, customFoodInput());
 
-    const [request] = requestsTo("POST", "food_portions");
-    expect(request?.body).toEqual([
-      {
-        owner_id: SIGNED_IN_USER_ID,
-        food_id: FOOD_ID,
-        label: estimate.label,
-        grams: estimate.grams,
-        ml: null,
-        is_default: true,
-        position: 0,
-      },
+    expect(rpcArguments("create_food").p_portions).toEqual([
+      { label: estimate.label, grams: estimate.grams, ml: null, is_default: true },
     ]);
   });
 
   it("should make the first portion the default when none of them is", async () => {
-    respondToInserts();
+    respondToCreate();
 
     await createFood(
       createTestClient(),
@@ -407,15 +393,14 @@ describe("createFood", () => {
       ]),
     );
 
-    const [request] = requestsTo("POST", "food_portions");
-    expect(request?.body).toMatchObject([
+    expect(rpcArguments("create_food").p_portions).toMatchObject([
       { label: "1 bar", is_default: true },
       { label: "1 cup", is_default: false },
     ]);
   });
 
   it("should keep the default the person chose", async () => {
-    respondToInserts();
+    respondToCreate();
 
     await createFood(
       createTestClient(),
@@ -426,40 +411,16 @@ describe("createFood", () => {
       ]),
     );
 
-    const [request] = requestsTo("POST", "food_portions");
-    expect(request?.body).toMatchObject([
+    expect(rpcArguments("create_food").p_portions).toMatchObject([
       { label: "1 bar", is_default: false },
       { label: "1 cup", is_default: true },
     ]);
   });
 
-  it("should throw an error whose cause is the database error code and skip the portions when the food insert fails", async () => {
+  it("should throw with the action and the database error code, and no partial write, when the database refuses the create", async () => {
     server.use(
-      http.post(`${REST_URL}/foods`, async ({ request }) => {
-        await record(request);
-        return postgrestError(403, "42501", "permission denied for table foods");
-      }),
-      http.post(`${REST_URL}/food_portions`, async ({ request }) => {
-        await record(request);
-        return postgrestRows(request, [portionRow()], 201);
-      }),
-    );
-
-    const failure = await createFood(
-      createTestClient(),
-      SIGNED_IN_USER_ID,
-      customFoodInput(twoPortions),
-    ).catch((error: unknown) => error);
-
-    expect(failure).toHaveProperty("cause.code", "42501");
-    expect(requestsTo("POST", "food_portions")).toEqual([]);
-  });
-
-  it("should say the food was created but its portions were not, naming the food id, when the portions insert fails", async () => {
-    server.use(
-      http.post(`${REST_URL}/foods`, ({ request }) => postgrestRows(request, [foodRow()], 201)),
-      http.post(`${REST_URL}/food_portions`, () =>
-        postgrestError(403, "42501", "new row violates row-level security policy"),
+      http.post(`${REST_URL}/rpc/create_food`, () =>
+        postgrestError(403, "42501", "new row violates row-level security policy for foods"),
       ),
     );
 
@@ -469,15 +430,17 @@ describe("createFood", () => {
       customFoodInput(twoPortions),
     ).catch((error: unknown) => error);
 
-    expect(failure).toBeInstanceOf(FoodsPartialWriteError);
-    expect(failure).toMatchObject({ foodId: FOOD_ID, stage: "portions" });
-    expect(failure).toHaveProperty("message", expect.stringContaining(FOOD_ID));
-    expect(failure).toHaveProperty("message", expect.stringMatching(/created.*portions.*not/i));
-    expect(failure).toHaveProperty("cause.code", "42501");
+    expect(failure).toHaveProperty("message", "Could not create the food (42501)");
+    expect(failure).toHaveProperty("cause", { code: "42501" });
+    expect(failure).not.toBeInstanceOf(FoodsPartialWriteError);
   });
 
-  it("should not report a partial write when the food insert itself fails", async () => {
-    server.use(http.post(`${REST_URL}/foods`, () => postgrestError(403, "42501", "denied")));
+  it("should never put the database message in the error", async () => {
+    server.use(
+      http.post(`${REST_URL}/rpc/create_food`, () =>
+        postgrestError(400, "23514", "Failing row contains (Protein flapjack, 410)"),
+      ),
+    );
 
     const failure = await createFood(
       createTestClient(),
@@ -485,111 +448,92 @@ describe("createFood", () => {
       customFoodInput(twoPortions),
     ).catch((error: unknown) => error);
 
-    expect(failure).not.toBeInstanceOf(FoodsPartialWriteError);
+    expect(String(failure)).not.toContain("flapjack");
+  });
+
+  it("should reject an answer that does not match the food schema", async () => {
+    server.use(
+      http.post(`${REST_URL}/rpc/create_food`, () =>
+        HttpResponse.json({ food: { ...foodRow(), kcal: "lots" }, portions: [] }),
+      ),
+    );
+
+    await expect(
+      createFood(createTestClient(), SIGNED_IN_USER_ID, customFoodInput(twoPortions)),
+    ).rejects.toThrow();
   });
 });
 
 describe("replaceFoodPortions", () => {
-  const respondToPortionWrites = () => {
+  const respondToReplace = () => {
     server.use(
-      http.delete(`${REST_URL}/food_portions`, async ({ request }) => {
+      http.post(`${REST_URL}/rpc/replace_food_portions`, async ({ request }) => {
         await record(request);
-        return new Response(null, { status: 204 });
-      }),
-      http.post(`${REST_URL}/food_portions`, async ({ request }) => {
-        await record(request);
-        return postgrestRows(request, [portionRow()], 201);
+        return HttpResponse.json([portionRow()]);
       }),
     );
   };
 
-  it("should delete the food's portions before inserting the new ones", async () => {
-    respondToPortionWrites();
+  it("should replace the portions in one call to the database, never a delete and then an insert", async () => {
+    respondToReplace();
 
-    await replaceFoodPortions(createTestClient(), FOOD_ID, SIGNED_IN_USER_ID, twoPortions);
+    await replaceFoodPortions(createTestClient(), FOOD_ID, twoPortions);
 
-    expect(recorded.map((request) => request.method)).toEqual(["DELETE", "POST"]);
-    expect(recorded[0]?.url.searchParams.get("food_id")).toBe(`eq.${FOOD_ID}`);
+    expect(recorded.map((request) => `${request.method} ${request.url.pathname}`)).toEqual([
+      "POST /rest/v1/rpc/replace_food_portions",
+    ]);
   });
 
-  it("should only delete when the new list is empty", async () => {
-    respondToPortionWrites();
+  it("should send the food id and the portions in order as rows the database function reads", async () => {
+    respondToReplace();
 
-    const portions = await replaceFoodPortions(createTestClient(), FOOD_ID, SIGNED_IN_USER_ID, []);
+    await replaceFoodPortions(createTestClient(), FOOD_ID, twoPortions);
 
-    expect(portions).toEqual([]);
-    expect(recorded.map((request) => request.method)).toEqual(["DELETE"]);
+    expect(rpcArguments("replace_food_portions")).toEqual({
+      p_food_id: FOOD_ID,
+      p_portions: [
+        { label: "1 bar", grams: 60, ml: null, is_default: true },
+        { label: "1 cup", grams: null, ml: 250, is_default: false },
+      ],
+    });
   });
 
-  it("should return the inserted portions", async () => {
-    respondToPortionWrites();
+  it("should return the stored portions", async () => {
+    respondToReplace();
 
-    const portions = await replaceFoodPortions(
-      createTestClient(),
-      FOOD_ID,
-      SIGNED_IN_USER_ID,
-      twoPortions,
-    );
-
-    expect(portions).toEqual([portionRow()]);
+    expect(await replaceFoodPortions(createTestClient(), FOOD_ID, twoPortions)).toEqual([
+      portionRow(),
+    ]);
   });
 
-  it("should throw an error whose cause is the database error code and skip the insert when the delete fails", async () => {
+  it("should throw with the action, the food and the database error code when the database refuses, and report no partial write", async () => {
     server.use(
-      http.delete(`${REST_URL}/food_portions`, () =>
-        postgrestError(500, "XX000", "database unavailable"),
-      ),
-      http.post(`${REST_URL}/food_portions`, async ({ request }) => {
-        await record(request);
-        return postgrestRows(request, [portionRow()], 201);
-      }),
-    );
-
-    const failure = await replaceFoodPortions(
-      createTestClient(),
-      FOOD_ID,
-      SIGNED_IN_USER_ID,
-      twoPortions,
-    ).catch((error: unknown) => error);
-
-    expect(failure).toHaveProperty("cause", { code: "XX000" });
-    expect(failure).toHaveProperty("message", expect.stringContaining(FOOD_ID));
-    expect(failure).not.toBeInstanceOf(FoodsPartialWriteError);
-    expect(requestsTo("POST", "food_portions")).toEqual([]);
-  });
-
-  it("should report a partial write naming the food and what was left behind when the insert fails", async () => {
-    server.use(
-      http.delete(`${REST_URL}/food_portions`, () => new Response(null, { status: 204 })),
-      http.post(`${REST_URL}/food_portions`, () =>
-        postgrestError(403, "42501", "new row violates row-level security policy"),
+      http.post(`${REST_URL}/rpc/replace_food_portions`, () =>
+        postgrestError(400, "23514", "Failing row contains (1 bar, 60)"),
       ),
     );
 
-    const failure = await replaceFoodPortions(
-      createTestClient(),
-      FOOD_ID,
-      SIGNED_IN_USER_ID,
-      twoPortions,
-    ).catch((error: unknown) => error);
+    const failure = await replaceFoodPortions(createTestClient(), FOOD_ID, twoPortions).catch(
+      (error: unknown) => error,
+    );
 
-    expect(failure).toBeInstanceOf(FoodsPartialWriteError);
-    expect(failure).toMatchObject({ foodId: FOOD_ID, stage: "portions" });
-    expect(failure).toHaveProperty("message", expect.stringContaining(FOOD_ID));
     expect(failure).toHaveProperty(
       "message",
-      expect.stringMatching(/old portions.*removed.*new portions.*not saved/i),
+      `Could not replace the portions of the food ${FOOD_ID} (23514)`,
     );
-    expect(failure).toHaveProperty("cause.code", "42501");
+    expect(failure).toHaveProperty("cause", { code: "23514" });
+    expect(failure).not.toBeInstanceOf(FoodsPartialWriteError);
+    expect(String(failure)).not.toContain("1 bar");
   });
 
-  it("should delete nothing and return no portions for a food the caller cannot edit", async () => {
-    // RLS filters the delete silently, so it reports success with no rows, and the empty list ends there.
-    respondToPortionWrites();
-
-    expect(await replaceFoodPortions(createTestClient(), FOOD_ID, SIGNED_IN_USER_ID, [])).toEqual(
-      [],
+  it("should reject an answer that does not match the portion schema", async () => {
+    server.use(
+      http.post(`${REST_URL}/rpc/replace_food_portions`, () =>
+        HttpResponse.json([{ ...portionRow(), grams: "heavy" }]),
+      ),
     );
+
+    await expect(replaceFoodPortions(createTestClient(), FOOD_ID, twoPortions)).rejects.toThrow();
   });
 });
 
@@ -600,13 +544,9 @@ describe("updateFood", () => {
         await record(request);
         return postgrestRows(request, [foodRow()]);
       }),
-      http.delete(`${REST_URL}/food_portions`, async ({ request }) => {
+      http.post(`${REST_URL}/rpc/replace_food_portions`, async ({ request }) => {
         await record(request);
-        return new Response(null, { status: 204 });
-      }),
-      http.post(`${REST_URL}/food_portions`, async ({ request }) => {
-        await record(request);
-        return postgrestRows(request, [portionRow()], 201);
+        return HttpResponse.json([portionRow()]);
       }),
     );
   };
@@ -705,16 +645,22 @@ describe("updateFood", () => {
     expect(request?.body).not.toHaveProperty("sugars_g");
   });
 
-  it("should replace the portions with the owner of the updated food", async () => {
+  it("should replace the portions of the updated food in one call after the update", async () => {
     respondToUpdate();
 
     await updateFood(createTestClient(), FOOD_ID, customFoodInput(twoPortions));
 
-    expect(recorded.map((request) => request.method)).toEqual(["PATCH", "DELETE", "POST"]);
-    expect(requestsTo("POST", "food_portions")[0]?.body).toMatchObject([
-      { owner_id: SIGNED_IN_USER_ID, food_id: FOOD_ID, label: "1 bar", position: 0 },
-      { owner_id: SIGNED_IN_USER_ID, food_id: FOOD_ID, label: "1 cup", position: 1 },
+    expect(recorded.map((request) => `${request.method} ${request.url.pathname}`)).toEqual([
+      "PATCH /rest/v1/foods",
+      "POST /rest/v1/rpc/replace_food_portions",
     ]);
+    expect(rpcArguments("replace_food_portions")).toEqual({
+      p_food_id: FOOD_ID,
+      p_portions: [
+        { label: "1 bar", grams: 60, ml: null, is_default: true },
+        { label: "1 cup", grams: null, ml: 250, is_default: false },
+      ],
+    });
   });
 
   it("should replace the portions with one typical serving when the form has none", async () => {
@@ -723,17 +669,8 @@ describe("updateFood", () => {
 
     await updateFood(createTestClient(), FOOD_ID, customFoodInput());
 
-    expect(recorded.map((request) => request.method)).toEqual(["PATCH", "DELETE", "POST"]);
-    expect(requestsTo("POST", "food_portions")[0]?.body).toEqual([
-      {
-        owner_id: SIGNED_IN_USER_ID,
-        food_id: FOOD_ID,
-        label: estimate.label,
-        grams: estimate.grams,
-        ml: null,
-        is_default: true,
-        position: 0,
-      },
+    expect(rpcArguments("replace_food_portions").p_portions).toEqual([
+      { label: estimate.label, grams: estimate.grams, ml: null, is_default: true },
     ]);
   });
 
@@ -749,7 +686,7 @@ describe("updateFood", () => {
       ]),
     );
 
-    expect(requestsTo("POST", "food_portions")[0]?.body).toMatchObject([
+    expect(rpcArguments("replace_food_portions").p_portions).toMatchObject([
       { label: "1 bar", is_default: true },
       { label: "1 cup", is_default: false },
     ]);
@@ -764,24 +701,23 @@ describe("updateFood", () => {
   it("should throw and leave the portions alone when no row was updated", async () => {
     server.use(
       http.patch(`${REST_URL}/foods`, ({ request }) => postgrestRows(request, [])),
-      http.delete(`${REST_URL}/food_portions`, async ({ request }) => {
+      http.post(`${REST_URL}/rpc/replace_food_portions`, async ({ request }) => {
         await record(request);
-        return new Response(null, { status: 204 });
+        return HttpResponse.json([]);
       }),
     );
 
     await expect(
       updateFood(createTestClient(), FOOD_ID, customFoodInput(twoPortions)),
     ).rejects.toThrow(FOOD_ID);
-    expect(requestsTo("DELETE", "food_portions")).toEqual([]);
+    expect(rpcRequests("replace_food_portions")).toEqual([]);
   });
 
-  it("should report a partial write naming the food when the new portions are not saved", async () => {
+  it("should report a partial write naming the food, and say the previous portions were kept, when the portions are not replaced", async () => {
     server.use(
       http.patch(`${REST_URL}/foods`, ({ request }) => postgrestRows(request, [foodRow()])),
-      http.delete(`${REST_URL}/food_portions`, () => new Response(null, { status: 204 })),
-      http.post(`${REST_URL}/food_portions`, () =>
-        postgrestError(403, "42501", "new row violates row-level security policy"),
+      http.post(`${REST_URL}/rpc/replace_food_portions`, () =>
+        postgrestError(400, "23514", "Failing row contains (1 bar, 60)"),
       ),
     );
 
@@ -796,29 +732,10 @@ describe("updateFood", () => {
     expect(failure).toHaveProperty("message", expect.stringContaining(FOOD_ID));
     expect(failure).toHaveProperty(
       "message",
-      expect.stringMatching(/updated.*old portions.*removed/i),
+      expect.stringMatching(/updated.*portions.*not replaced.*previous portions.*kept/i),
     );
-  });
-
-  it("should report a partial write when the old portions cannot be removed after the food was updated", async () => {
-    server.use(
-      http.patch(`${REST_URL}/foods`, ({ request }) => postgrestRows(request, [foodRow()])),
-      http.delete(`${REST_URL}/food_portions`, () =>
-        postgrestError(500, "XX000", "database unavailable"),
-      ),
-    );
-
-    const failure = await updateFood(
-      createTestClient(),
-      FOOD_ID,
-      customFoodInput(twoPortions),
-    ).catch((error: unknown) => error);
-
-    expect(failure).toBeInstanceOf(FoodsPartialWriteError);
-    expect(failure).toHaveProperty(
-      "message",
-      expect.stringMatching(/updated.*portions.*not replaced/i),
-    );
+    expect(failure).toHaveProperty("cause.cause", { code: "23514" });
+    expect(String(failure)).not.toContain("1 bar");
   });
 
   it("should not report a partial write when the update itself fails", async () => {
@@ -838,16 +755,16 @@ describe("updateFood", () => {
       http.patch(`${REST_URL}/foods`, ({ request }) =>
         postgrestRows(request, [foodRow({ source: "cofid", owner_id: null, source_ref: "1-1" })]),
       ),
-      http.delete(`${REST_URL}/food_portions`, async ({ request }) => {
+      http.post(`${REST_URL}/rpc/replace_food_portions`, async ({ request }) => {
         await record(request);
-        return new Response(null, { status: 204 });
+        return HttpResponse.json([]);
       }),
     );
 
     await expect(
       updateFood(createTestClient(), FOOD_ID, customFoodInput(twoPortions)),
     ).rejects.toThrow(/not a custom food/);
-    expect(requestsTo("DELETE", "food_portions")).toEqual([]);
+    expect(rpcRequests("replace_food_portions")).toEqual([]);
   });
 
   it("should throw an error whose cause is the database error code when the update fails", async () => {

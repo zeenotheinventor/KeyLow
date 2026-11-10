@@ -1,4 +1,6 @@
 // The foods, portions and context the diary write tools' tests share. Nothing in production imports this.
+import { z } from "zod";
+
 import { createFakeContext, userId } from "../testing.ts";
 import { writeStub } from "./writeStub.ts";
 
@@ -44,6 +46,38 @@ export const portionRow = (id: string, foodId: string, label: string, grams: num
   position: 0,
   created_at: "2026-10-07T10:00:00+00:00",
 });
+
+const createFoodPayloadSchema = z.object({
+  p_food: z.record(z.string(), z.unknown()),
+  p_portions: z.array(
+    z.object({
+      label: z.string(),
+      grams: z.number().nullable(),
+      ml: z.number().nullable(),
+      is_default: z.boolean(),
+    }),
+  ),
+});
+
+// `create_food` as the database runs it: the food and its portions are written together, owned by the
+// person, and answered as { food, portions }. A test that needs the create to fail passes a handler that
+// answers an error and writes nothing, which is what the transaction does.
+export const createFoodRpc: RpcHandler = (args, tables) => {
+  const { p_food, p_portions } = createFoodPayloadSchema.parse(args);
+  const foodId = crypto.randomUUID();
+  const food = foodRow({ ...p_food, id: foodId });
+  const portions = p_portions.map((portion, position) => ({
+    ...portion,
+    id: crypto.randomUUID(),
+    food_id: foodId,
+    owner_id: food.owner_id,
+    position,
+    created_at: "2026-10-07T10:00:00+00:00",
+  }));
+  (tables["foods"] ??= []).push(food);
+  (tables["food_portions"] ??= []).push(...portions);
+  return { data: { food, portions }, error: null };
+};
 
 // The figures are per 100 g, chosen so two large eggs and a slice of toast are the board's 144 and 88 kcal.
 export const dietRows = () => ({
@@ -94,7 +128,7 @@ export function writeContext(
     { ...dietRows(), ...options.rows },
     {
       callerUserId: userId,
-      ...(options.rpc === undefined ? {} : { rpc: options.rpc }),
+      rpc: { create_food: createFoodRpc, ...options.rpc },
       // What the database fills in on a new food that the repo does not send.
       insertDefaults: {
         foods: { source_ref: null, food_group: null, quality: {}, fetched_at: null },

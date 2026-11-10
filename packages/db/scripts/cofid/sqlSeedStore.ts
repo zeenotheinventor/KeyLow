@@ -96,6 +96,12 @@ export function createSqlSeedStore(): SqlSeedStore {
 
     writeBatch(_runId, batch) {
       foods.push(...batch);
+      return Promise.resolve([]);
+    },
+
+    // A seed writes no defaults itself. Seed 90 gives every food one after all the seeds have loaded, because
+    // the curated natural portions of seed 30 bring their own default and the table allows one per food.
+    giveDefaultPortions() {
       return Promise.resolve();
     },
 

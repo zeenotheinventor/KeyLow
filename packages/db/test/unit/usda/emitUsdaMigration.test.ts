@@ -18,12 +18,16 @@ function setUp(): { csvPath: string; outputPath: string } {
 }
 
 describe("emitUsdaMigration", () => {
-  it("should write the migration the CSV renders", () => {
+  it("should write the migration the CSV renders, ending on a call that gives every food a default", () => {
     const { csvPath, outputPath } = setUp();
 
     emitUsdaMigration({ csvPath, outputPath });
 
-    expect(readFileSync(outputPath, "utf8")).toBe(renderUsdaMigration(csv));
+    const written = readFileSync(outputPath, "utf8");
+    expect(written.startsWith(renderUsdaMigration(csv))).toBe(true);
+    expect(written.slice(renderUsdaMigration(csv).length)).toBe(
+      "\n-- Every food ends on one default portion, whichever source or import wrote it (KEY-946). Foods that already have a default keep it.\nselect public.give_foods_default_portions();\n",
+    );
   });
 
   it("should refuse a path that holds a file already, and leave that file as it was", () => {

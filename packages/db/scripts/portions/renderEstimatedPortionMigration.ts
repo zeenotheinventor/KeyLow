@@ -30,6 +30,12 @@ const INSERT_COLUMNS =
   "insert into public.food_portions (food_id, owner_id, label, grams, ml, is_default, position)";
 const ON_CONFLICT = "on conflict (food_id) where is_default do nothing;";
 
+// The function that wraps the statements takes an optional list of food ids, so a bulk import can give defaults to
+// the foods it wrote and nothing else. A null list means every food, which is what the migration and the seed do.
+// The migration and the seed are written without it, and the function with it.
+const scope = (scoped: boolean, column: string): string =>
+  scoped ? ` and (p_food_ids is null or ${column} = any (p_food_ids))` : "";
+
 const tuple = (values: readonly unknown[]): string => `(${values.map(sqlLiteral).join(", ")})`;
 
 const sizeByBasis = (size: string): string =>
@@ -67,27 +73,27 @@ function bandTuples(): string[] {
 // A food with portions and no default opens on its first portion, the way `withDefaultPortion` chooses it:
 // the lowest position, then the lowest id. One row per food is chosen from the foods that have no default,
 // so no food gets two and the one-default index cannot be hit by this statement.
-const promoteFirstPortionStatement = (): string =>
+const promoteFirstPortionStatement = (scoped: boolean): string =>
   [
     "update public.food_portions portion",
     "set is_default = true",
     "from (",
     "  select distinct on (candidate.food_id) candidate.id",
     "  from public.food_portions candidate",
-    "  where not exists (select 1 from public.food_portions existing where existing.food_id = candidate.food_id and existing.is_default)",
+    `  where not exists (select 1 from public.food_portions existing where existing.food_id = candidate.food_id and existing.is_default)${scope(scoped, "candidate.food_id")}`,
     "  order by candidate.food_id, candidate.position, candidate.id",
     ") first_portion",
     "where portion.id = first_portion.id;",
   ].join("\n");
 
-const relabelStatement = (): string =>
+const relabelStatement = (scoped: boolean): string =>
   [
     "update public.food_portions",
     `set label = ${sqlLiteral(SERVING_LABEL)}`,
-    `where owner_id is null and is_default and label ${MEASURE_ONLY_PORTION_LABEL.flags.includes("i") ? "~*" : "~"} ${sqlLiteral(MEASURE_ONLY_PORTION_LABEL.source)};`,
+    `where owner_id is null and is_default and label ${MEASURE_ONLY_PORTION_LABEL.flags.includes("i") ? "~*" : "~"} ${sqlLiteral(MEASURE_ONLY_PORTION_LABEL.source)}${scope(scoped, "food_id")};`,
   ].join("\n");
 
-const categoryStatement = (): string =>
+const categoryStatement = (scoped: boolean): string =>
   [
     INSERT_COLUMNS,
     `select food.id, food.owner_id, estimate.label, ${sizeByBasis(`case when food.kcal >= ${String(ESTIMATE_DRY_KCAL_PER_100)} then estimate.dry_size else estimate.cooked_size end`)}, true, ${POSITION_AFTER_EXISTING}`,
@@ -95,11 +101,11 @@ const categoryStatement = (): string =>
     "join (values",
     `  ${categoryTuples().join(",\n  ")}`,
     `) as estimate (food_group, label, dry_size, cooked_size) on estimate.food_group = ${CODE_OF_GROUP}`,
-    `where food.source = 'cofid' and ${HAS_NO_DEFAULT}`,
+    `where food.source = 'cofid' and ${HAS_NO_DEFAULT}${scope(scoped, "food.id")}`,
     ON_CONFLICT,
   ].join("\n");
 
-function energyStatement(): string {
+function energyStatement(scoped: boolean): string {
   const unknown = estimatedPortion({ basis: "per_100g", kcal: null });
   const size = `coalesce(band.size, ${String(unknown.grams)})`;
   return [
@@ -113,26 +119,26 @@ function energyStatement(): string {
     "  where band.basis = food.basis::text and food.kcal >= band.lower_bound",
     "  order by band.lower_bound desc limit 1",
     ") band on true",
-    `where ${HAS_NO_DEFAULT}`,
+    `where ${HAS_NO_DEFAULT}${scope(scoped, "food.id")}`,
     ON_CONFLICT,
   ].join("\n");
 }
 
 // The numbered statements, with the comment above each. The migration and the seed both hold exactly this text,
 // so a fresh stack (which runs seeds after migrations, when no CoFID food exists yet) ends where production does.
-const estimatedPortionStatements = (): string =>
+const estimatedPortionStatements = (scoped = false): string =>
   [
     "-- 1. A food of any source that has portions and no default opens on its first portion, the one with the lowest position. It gets no extra row.",
-    promoteFirstPortionStatement(),
+    promoteFirstPortionStatement(scoped),
     "",
     "-- 2. A shared default whose label is only a measure, such as 240 g, reads as 1 serving. The size is unchanged and a person's own label is left alone.",
-    relabelStatement(),
+    relabelStatement(scoped),
     "",
     "-- 3. A CoFID food with no default gets the row of its food group. The group is its first one or two letters, matched exactly.",
-    categoryStatement(),
+    categoryStatement(scoped),
     "",
     "-- 4. Any food with no portions at all, of any source and including a person's own, gets the row for its energy. The size is in grams or millilitres by the food's basis.",
-    energyStatement(),
+    energyStatement(scoped),
   ].join("\n");
 
 /**
@@ -166,5 +172,35 @@ export function renderEstimatedPortionSeed(): string {
     "begin;",
     estimatedPortionStatements(),
     "commit;",
+  ].join("\n")}\n`;
+}
+
+/**
+ * The migration that wraps the same four statements in a function, so a bulk import can call them after it
+ * inserts foods and every food ends on a default (KEY-946). The body is `estimatedPortionStatements()`, so
+ * the function cannot differ from the migration that gave every existing food a default. A change to the
+ * estimate table is a new migration that replaces the function. It is security definer, because the
+ * statements write global portions that no signed in role may, and only the service role may run it.
+ */
+export function renderGiveFoodsDefaultPortionsMigration(): string {
+  return `${[
+    "-- Generated by packages/db/scripts/emit-estimated-portions.ts --function from the estimate table in @keylow/core. Do not edit by hand.",
+    "-- Regenerate with: pnpm --filter @keylow/db emit:estimated-portions --function supabase/migrations/<timestamp>_give_foods_default_portions.sql",
+    "-- A change to the estimate table is a new generated migration that replaces this function, and an applied migration is never edited.",
+    "-- The function runs the statements of the estimated portions migration. A bulk import calls it with the ids of the foods it wrote, so each ends on exactly one default and no other food is touched. With no ids it covers every food. A food that already has a default keeps it, and nothing is deleted.",
+    "create or replace function public.give_foods_default_portions(p_food_ids uuid[] default null)",
+    "returns void",
+    "language plpgsql",
+    "security definer",
+    "set search_path = ''",
+    "set row_security = off",
+    "as $body$",
+    "begin",
+    estimatedPortionStatements(true),
+    "end;",
+    "$body$;",
+    "",
+    "revoke execute on function public.give_foods_default_portions(uuid[]) from public, anon, authenticated;",
+    "grant execute on function public.give_foods_default_portions(uuid[]) to service_role;",
   ].join("\n")}\n`;
 }

@@ -7,6 +7,8 @@ import { createCustomFoodTool } from "./createCustomFood.ts";
 import { payloadOf } from "./testing.ts";
 import { foodRow, structuredOf, writeContext } from "./writeFixtures.ts";
 
+import type { RpcHandler } from "./writeStub.ts";
+
 const proteinBar = {
   name: "My protein bar",
   brand: null,
@@ -19,8 +21,11 @@ const proteinBar = {
   fat_g: 6,
 };
 
-const contextWith = () => {
-  const { ctx, stub, store } = writeContext([createCustomFoodTool]);
+const contextWith = (rpc?: Record<string, RpcHandler>) => {
+  const { ctx, stub, store } = writeContext(
+    [createCustomFoodTool],
+    rpc === undefined ? {} : { rpc },
+  );
   return { ctx, stub, store };
 };
 
@@ -202,17 +207,21 @@ Deno.test("one action row holds the food's id and no value", async () => {
 });
 
 Deno.test(
-  "a failed portion write hides the food and fails the call without quoting the row",
+  "a failed create leaves no food behind and fails the call without quoting the row",
   async () => {
-    const { ctx, stub, store } = contextWith();
-    stub.failNextWriteTo("food_portions");
+    const { ctx, stub, store } = contextWith({
+      create_food: () => ({
+        data: null,
+        error: { code: "23514", message: "Failing row contains (My protein bar, 350)" },
+      }),
+    });
 
     const result = await executeTool(ctx, "create_custom_food", proteinBar);
 
     assertEquals(result.status, "error");
     assertEquals(result.status === "error" && result.code, "tool_failed");
     assertEquals(store.actions.length, 0);
-    assert(ownFoods(stub).every((food) => food["deleted_at"] !== null));
+    assertEquals(ownFoods(stub), []);
     assert(!JSON.stringify(result).includes("My protein bar"));
   },
 );

@@ -225,4 +225,24 @@ describe("the CoFID import", () => {
       expect((await readFoods(codes)).map((food) => food.source_ref)).toEqual([codes[0]]);
     });
   });
+  it("should leave every imported food on exactly one default portion, and keep it when imported again", async () => {
+    await withTestRun(async ({ label, codes, csvWith }) => {
+      await importInto(csvWith("100", "200"), label);
+      await importInto(csvWith("111", "222"), label);
+
+      const foodIds = (await readFoods(codes)).map((food) => food.id);
+      const { data: portions, error } = await adminClient()
+        .from("food_portions")
+        .select("food_id, label, is_default")
+        .in("food_id", foodIds);
+
+      expect(error).toBeNull();
+      for (const foodId of foodIds) {
+        const defaults = (portions ?? []).filter(
+          (portion) => portion.food_id === foodId && portion.is_default,
+        );
+        expect(defaults).toHaveLength(1);
+      }
+    });
+  });
 });

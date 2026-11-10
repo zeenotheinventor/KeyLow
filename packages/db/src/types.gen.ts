@@ -1721,8 +1721,13 @@ export type Database = {
           retry_after_seconds: number;
         }[];
       };
+      create_food: { Args: { p_food: Json; p_portions: Json }; Returns: Json };
       delete_workout_session: {
         Args: { p_session_id: string };
+        Returns: undefined;
+      };
+      give_foods_default_portions: {
+        Args: { p_food_ids?: string[] };
         Returns: undefined;
       };
       has_entitlement: {
@@ -1755,6 +1760,10 @@ export type Database = {
           p_user_id: string;
         };
         Returns: string;
+      };
+      replace_food_portions: {
+        Args: { p_food_id: string; p_portions: Json };
+        Returns: Json;
       };
       save_exercise: {
         Args: { p_exercise: Json; p_exercise_id: string; p_muscles: Json };

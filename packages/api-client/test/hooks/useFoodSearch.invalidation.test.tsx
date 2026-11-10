@@ -11,7 +11,6 @@ import {
   SIGNED_IN_USER_ID,
   foodRow,
   portionRow,
-  postgrestRows,
   signInAs,
 } from "../support/postgrest";
 import { OFF_SEARCH_URL, SEARCH_FOODS_URL, offCandidate, searchHitRows } from "../support/search";
@@ -32,9 +31,8 @@ beforeEach(() => {
     http.get(AUTH_USER_URL, () =>
       HttpResponse.json({ id: SIGNED_IN_USER_ID, aud: "authenticated", role: "authenticated" }),
     ),
-    http.post(`${REST_URL}/foods`, ({ request }) => postgrestRows(request, [foodRow()], 201)),
-    http.post(`${REST_URL}/food_portions`, ({ request }) =>
-      postgrestRows(request, [portionRow()], 201),
+    http.post(`${REST_URL}/rpc/create_food`, () =>
+      HttpResponse.json({ food: foodRow(), portions: [portionRow()] }),
     ),
     http.post(SEARCH_FOODS_URL, () => {
       searchFoodsCalls += 1;

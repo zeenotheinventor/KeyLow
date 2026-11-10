@@ -14,6 +14,7 @@ import { describe, expect, it } from "vitest";
 import {
   renderEstimatedPortionMigration,
   renderEstimatedPortionSeed,
+  renderGiveFoodsDefaultPortionsMigration,
 } from "../../../scripts/portions/renderEstimatedPortionMigration";
 
 const migration = renderEstimatedPortionMigration();
@@ -246,6 +247,81 @@ describe("the estimated portions seed", () => {
     expect(
       committed === seed,
       "core's estimate table changed: regenerate the seed with emit:estimated-portions --seed",
+    ).toBe(true);
+  });
+});
+
+describe("renderGiveFoodsDefaultPortionsMigration", () => {
+  const functionMigration = renderGiveFoodsDefaultPortionsMigration();
+  const functionBody = functionMigration.slice(
+    functionMigration.indexOf("-- 1."),
+    functionMigration.indexOf("end;\n$body$"),
+  );
+
+  it("should create a security definer function with an optional list of food ids, an empty search path and row security off", () => {
+    expect(functionMigration).toMatch(
+      /create or replace function public\.give_foods_default_portions\(p_food_ids uuid\[\] default null\)\nreturns void\nlanguage plpgsql\nsecurity definer\nset search_path = ''\nset row_security = off\nas \$body\$/,
+    );
+  });
+
+  it("should hold exactly the four statements of the estimated portions migration once the food filter is taken out, so the function cannot differ from them", () => {
+    const withoutFilter = functionBody.replaceAll(
+      / and \(p_food_ids is null or [a-z_.]+ = any \(p_food_ids\)\)/g,
+      "",
+    );
+    const statements = migration.slice(migration.indexOf("-- 1."));
+
+    expect(withoutFilter.trimEnd()).toBe(statements.trimEnd());
+  });
+
+  it("should filter every one of the four statements by the ids, and treat null as every food", () => {
+    const filters = functionBody.match(
+      / and \(p_food_ids is null or [a-z_.]+ = any \(p_food_ids\)\)/g,
+    );
+
+    expect(filters).toEqual([
+      " and (p_food_ids is null or candidate.food_id = any (p_food_ids))",
+      " and (p_food_ids is null or food_id = any (p_food_ids))",
+      " and (p_food_ids is null or food.id = any (p_food_ids))",
+      " and (p_food_ids is null or food.id = any (p_food_ids))",
+    ]);
+  });
+
+  it("should leave the migration and the seed without a filter, because they run on every food", () => {
+    expect(migration).not.toContain("p_food_ids");
+    expect(renderEstimatedPortionSeed()).not.toContain("p_food_ids");
+  });
+
+  it("should let only the service role and the migration runner execute it", () => {
+    expect(functionMigration).toContain(
+      "revoke execute on function public.give_foods_default_portions(uuid[]) from public, anon, authenticated;",
+    );
+    expect(functionMigration).toContain(
+      "grant execute on function public.give_foods_default_portions(uuid[]) to service_role;",
+    );
+  });
+
+  it("should not use an em dash, a double hyphen separator or a semicolon joining clauses in its comments", () => {
+    const comments = functionMigration.split("\n").filter((line) => line.startsWith("--"));
+
+    expect(comments.join("\n")).not.toMatch(/—| -- |;/);
+  });
+});
+
+describe("the committed give foods default portions migration", () => {
+  it("should be what the core constants render, so the function cannot drift from core", () => {
+    const migrationsUrl = new URL("../../../supabase/migrations/", import.meta.url);
+    const newestName = readdirSync(migrationsUrl)
+      .filter((fileName) => fileName.endsWith("_give_foods_default_portions.sql"))
+      .sort()
+      .at(-1);
+    expect(newestName, "there is no *_give_foods_default_portions.sql migration").toBeDefined();
+
+    const committed = readFileSync(new URL(newestName ?? "", migrationsUrl), "utf8");
+
+    expect(
+      committed === renderGiveFoodsDefaultPortionsMigration(),
+      "core's estimate table changed: generate a new migration with emit:estimated-portions --function, and never edit an applied one",
     ).toBe(true);
   });
 });

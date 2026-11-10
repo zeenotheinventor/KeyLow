@@ -13,7 +13,7 @@
 
 begin;
 
-select plan(45);
+select plan(47);
 
 -- The food payload the Edge Function sends: the columns the normaliser fills, plus source and
 -- source_ref. fetched_at is the database's to set.
@@ -252,22 +252,43 @@ select is(
   'the result of a refresh carries only the new portions'
 );
 
--- A product with no serving has no portions, and a refresh clears the old ones.
-select lives_ok(
+-- A product whose portions have no default is refused, because a food with no default opens on a silent
+-- 100 g (KEY-946). That covers no portions at all and portions none of which is the default.
+select throws_ok(
   $$ select public.store_off_product(pg_temp.off_food('50600000000010', 'Oat crunch, new recipe'), '[]', '{"code": "50600000000010"}') $$,
-  'a refresh with no portions is accepted'
+  '22023',
+  'store_off_product needs a default portion',
+  'a refresh with no portions is refused'
+);
+
+select throws_ok(
+  $$ select public.store_off_product(
+       pg_temp.off_food('50600000000010', 'Oat crunch, new recipe'),
+       '[{"label": "20 g", "grams": 20, "ml": null, "is_default": false}]',
+       '{}') $$,
+  '22023',
+  'store_off_product needs a default portion',
+  'portions with no default are refused'
 );
 
 select is(
-  (select count(*)::int from public.food_portions where food_id = (select id from public.foods where source_ref = '50600000000010')),
+  (select pg_catalog.jsonb_agg(label order by position) from public.food_portions
+   where food_id = (select id from public.foods where source_ref = '50600000000010')),
+  '["50 g"]'::jsonb,
+  'a refused refresh leaves the stored portions as they were'
+);
+
+select throws_ok(
+  $$ select public.store_off_product(pg_temp.off_food('50600000000011', 'Bare product'), '[]', '{}') $$,
+  '22023',
+  'store_off_product needs a default portion',
+  'a first store with no portions is refused'
+);
+
+select is(
+  (select count(*)::int from public.foods where source_ref = '50600000000011'),
   0,
-  'a refresh with no portions leaves the food with none'
-);
-
-select is(
-  (select public.store_off_product(pg_temp.off_food('50600000000011', 'Bare product'), '[]', '{}') -> 'portions'),
-  '[]'::jsonb,
-  'a fresh store with no portions returns an empty list, never null'
+  'a refused first store leaves no food behind'
 );
 
 -- A failure partway rolls everything back. The payloads below pass the function's own checks and fail
