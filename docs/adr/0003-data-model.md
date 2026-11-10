@@ -1216,7 +1216,7 @@ Recorded on 2026-10-23 under KEY-521, part of KEY-516. It adds a rule to the `of
 
 ### The rule
 
-Portions are written when an Open Food Facts product is stored, so a product stored before the pack portion (KEY-518) and the borrowed natural units (KEY-520) lacks them. Core exports `OFF_PORTION_RULES_FROM`, an ISO instant, and `isBeforePortionRules(fetchedAt)`, which is true when the fetch time is before it or cannot be parsed. The constant is `2026-10-23T02:16:15Z`: the moment the Deploy Supabase run for KEY-520, which also carried KEY-518, completed in production.
+Portions are written when an Open Food Facts product is stored, so a product stored before the pack portion (KEY-518) and the borrowed natural units (KEY-520) lacks them. Core exports `OFF_PORTION_RULES_FROM`, an ISO instant, and `isBeforePortionRules(fetchedAt)`, which is true when the fetch time is before it or cannot be parsed. The constant is `2026-10-23T02:16:15Z`: the moment the Deploy Supabase run for KEY-520, which also carried KEY-518, completed in production. It was moved to `2026-11-10T16:25:42Z` under KEY-932, the moment the Deploy Supabase run for KEY-930 completed, as "Changing the portion rules" below describes.
 
 When `off-product` finds a cached food with `isBeforePortionRules(fetched_at)`, it fetches and stores the product inline, with the same call a first lookup makes, and charges the user and the global bucket as a first lookup does. The response carries the new portions and the new `fetched_at`. The store sets `fetched_at` from the database clock, which is after the constant, so each product is fetched again once. Re-requesting the product also brings its `packaging_tags`, so a refreshed product gets the best pack name.
 
