@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted, 2026-09-22. Amendment 1 appended 2026-10-07. Amendment 2 appended 2026-10-15. Amendment 3 appended 2026-10-15. Amendment 4 appended 2026-10-15. Amendment 5 appended 2026-10-15. Amendment 6 appended 2026-10-15. Amendment 7 appended 2026-10-15. Amendment 8 appended 2026-10-16. Amendment 9 appended 2026-10-18. Amendment 10 appended 2026-10-23. Amendment 11 appended 2026-10-23. Amendment 12 appended 2026-10-23. Amendment 13 appended 2026-10-23. Amendment 14 appended 2026-10-26, with addenda of 2026-11-03 and 2026-11-07. Amendment 15 appended 2026-10-29.
+Accepted, 2026-09-22. Amendment 1 appended 2026-10-07. Amendment 2 appended 2026-10-15. Amendment 3 appended 2026-10-15. Amendment 4 appended 2026-10-15. Amendment 5 appended 2026-10-15. Amendment 6 appended 2026-10-15. Amendment 7 appended 2026-10-15. Amendment 8 appended 2026-10-16. Amendment 9 appended 2026-10-18. Amendment 10 appended 2026-10-23. Amendment 11 appended 2026-10-23. Amendment 12 appended 2026-10-23. Amendment 13 appended 2026-10-23. Amendment 14 appended 2026-10-26, with addenda of 2026-11-03 and 2026-11-07. Amendment 15 appended 2026-10-29. Amendment 16 appended 2026-11-10.
 
 ## Context
 
@@ -51,11 +51,12 @@ Every new table carries these two columns, with these exact definitions:
 - `id uuid primary key default gen_random_uuid()`
 - `created_at timestamptz not null default now()`
 
-There are three exceptions (the third was added with the diary migration, KEY-181):
+There are four exceptions (the third was added with the diary migration, KEY-181, and the fourth with the Open Food Facts search store, Amendment 16):
 
 - `food_source_data` is keyed by `food_id` and has no `id`.
 - `rate_limits` has the composite primary key `(bucket, window_start)` and has neither `id` nor `created_at`.
 - `day_logs` has the frozen primary key `(user_id, local_date)` and so has no `id`. It keeps `created_at`.
+- `off_search_results` has the natural key `query_key` and has neither `id` nor `created_at` (Amendment 16).
 
 There is no `updated_at` on any table, matching `profiles`.
 
@@ -218,12 +219,12 @@ New function `public.consume_rate_limit(p_bucket text, p_max integer, p_window_s
 
 Limits are not stored in the database. They live in Edge Function environment variables with defaults in code, so they can be retuned without a migration (decision Q7):
 
-| Environment variable           | Default per minute |
-| ------------------------------ | ------------------ |
-| `OFF_SEARCH_PER_USER_PER_MIN`  | 4                  |
-| `OFF_SEARCH_GLOBAL_PER_MIN`    | 8                  |
-| `OFF_PRODUCT_PER_USER_PER_MIN` | 30                 |
-| `OFF_PRODUCT_GLOBAL_PER_MIN`   | 80                 |
+| Environment variable           | Default per minute        |
+| ------------------------------ | ------------------------- |
+| `OFF_SEARCH_PER_USER_PER_MIN`  | 30 (was 4, Amendment 16)  |
+| `OFF_SEARCH_GLOBAL_PER_MIN`    | 120 (was 8, Amendment 16) |
+| `OFF_PRODUCT_PER_USER_PER_MIN` | 30                        |
+| `OFF_PRODUCT_GLOBAL_PER_MIN`   | 80                        |
 
 ### Migration file naming and the schema lane
 
@@ -2172,3 +2173,120 @@ The list holds nothing the Privacy Policy does not already cover for recipes. Th
 ### Consequences of Amendment 15
 
 The migration creates the table, the checks, the indexes, the grants, the policies and the function, and `packages/db/src/types.gen.ts` gains them. It inserts no row, so it copes with any database. Any further deviation from the frozen Decision, from Amendments 1 to 14 or from this amendment needs an Amendment 16 before the migration or code that implements it lands.
+
+## Amendment 16 (A shared store of Open Food Facts search results, 2026-11-10)
+
+### Status
+
+Recorded on 2026-11-10 under KEY-937. Until now `off-search` wrote nothing: every search that passed the limiter called Open Food Facts, and most of the "Open Food Facts is busy" notices were Ki-Lo's own limiter answering `rate_limited`. This amendment adds one table, `off_search_results`, and one function, `store_off_search_results`, so that a search someone else already made costs nothing, and so that a stored answer is served when Open Food Facts fails or the limiter refuses. The frozen Decision names no such table, so by the rule at the top of this ADR it needs an amendment before its migration. The details are interpretations made for implementation, and Zee confirms them by approving the pull request that carries this amendment. They are, in full:
+
+- that the table is a fourth exception to Amendment 1's `id` and `created_at` columns, because it is a keyed cache row that is replaced whole.
+- that the row holds no user id, ever, and that the result is shared across people on purpose.
+- that a row holds normalised candidates and not upstream hits.
+- that the key is the cleaned search text (`normaliseOffSearchTerms`), and that text which cleans to fewer than 2 or more than 100 characters is neither read nor stored.
+- that the table is bounded by a 14 day horizon, enforced by the writer in the same call and not by a scheduled job.
+- the ages in "When a row can be served", the rule that a row exactly at a boundary counts as the older state, and the absence of a version column.
+- that an empty row is reused for an hour and is never served as stale.
+- that a row that does not parse is a miss.
+- that a read or store failure never fails a search, and is reported once.
+- the order of the steps in "How `off-search` uses the store", including that only a search that reaches Open Food Facts spends a limit.
+- the new limit defaults of 30 and 120.
+- that the stored search words are not personal data once detached from every person, so the table is not exported, is not touched by account deletion and changes no Privacy Policy copy.
+
+The frozen Decision and Amendments 1 to 15 are unchanged, except that the two `off-search` rows of Amendment 1's limits table now carry the new defaults and say so. Amendment 1's `id` and `created_at` columns apply to every table but the exceptions it lists, and this table is now one of them.
+
+### `off_search_results`
+
+| Column       | Type                                                    |
+| ------------ | ------------------------------------------------------- |
+| `query_key`  | `text` primary key, with a check of 2 to 100 characters |
+| `candidates` | `jsonb not null`, with a check that it is an array      |
+| `fetched_at` | `timestamptz not null default now()`                    |
+
+There is a plain index on `fetched_at`, which serves the horizon delete.
+
+- **Why no `id` or `created_at`.** Like `rate_limits` and `food_source_data`, the row has a natural key. It is never edited, only replaced whole by the next successful search for the same words, so `fetched_at` is the only time that means anything and a surrogate key would be unused.
+- **No user id, ever.** A row says only that someone in the world searched these words. Nothing links it to a person, a session or a device, and no later column may. The answer is shared across people on purpose, which is the point of the table. Until this amendment `off-search` wrote nothing, so this is the first time the function stores anything.
+- **Normalised candidates.** The row holds what the function answers with: the list of candidates in the `offSearchResponseSchema` shape, at most 20. It is about 10 KB a row, and the row is ready to answer with and needs no second normalisation. Upstream hits are not stored.
+- **The key.** It is the output of `normaliseOffSearchTerms`, so `Oat  Milk` and `(oat milk` share a row. Text that cleans to fewer than 2 characters would fail the check, and text that Unicode normalisation grew past 100 would too. Rather than let the store fail on those, the function neither reads nor stores them and searches as it did before. The length is counted in characters and not in UTF-16 units, as Postgres counts it.
+- **Size.** The worst case is on the order of 150 MB, at 500 distinct queries a day held for 14 days. The real figure is far lower, because most days repeat most queries.
+
+### Privileges and row level security
+
+In the style of Amendments 9, 12 and 13: `revoke all` from `anon`, `authenticated` and `service_role`, then explicit grants. RLS is enabled with no policies.
+
+- `anon` and `authenticated` hold no privilege on the table or the function.
+- `service_role` holds `select` on the table and nothing else, so it cannot insert, update or delete a row directly. Every write goes through the function.
+
+### `store_off_search_results(p_query_key text, p_candidates jsonb, p_keep_seconds integer)`
+
+- `security definer`, `set search_path = ''`, `volatile`. `execute` is revoked from `public`, `anon` and `authenticated` and granted to `service_role` only, like `consume_rate_limit`. A caller able to execute it could fill the store with chosen answers.
+- It upserts the row for `p_query_key` with `candidates = p_candidates` and `fetched_at = now()`, so a repeat store moves `fetched_at`.
+- In the same call it deletes at most 100 rows whose `fetched_at` is older than `p_keep_seconds` before now, oldest first. There is no `pg_cron` in this project, and `consume_rate_limit` already cleans up after itself in the same way. A backlog is therefore cleared 100 rows a store, which is far faster than rows arrive.
+- It refuses, with `22023` and a message that quotes no value, a `p_candidates` that is not a JSON array and a `p_keep_seconds` below 1. A null or out of range key fails the table's own checks.
+- The horizon is not in the database. The function passes it from core (`OFF_SEARCH_KEEP_SECONDS`, 14 days), so it can move without a migration.
+
+### When a row can be served
+
+These are pure functions of the row's age and its candidate count, in `packages/core/src/foods/offSearchStore.ts`. The caller passes `now`, because core never reads the clock.
+
+| Row            | Age                 | State      |
+| -------------- | ------------------- | ---------- |
+| Has candidates | under 24 hours      | fresh      |
+| Has candidates | 24 hours to 14 days | stale      |
+| Empty          | under 1 hour        | fresh      |
+| Empty          | 1 hour or more      | not usable |
+| Anything       | 14 days or more     | not usable |
+
+- A row exactly at a boundary counts as the older state, as `offFreshness` does at 90 days. A `fetched_at` that cannot be read is not usable.
+- A day matches the proposal in KEY-132, and it is short enough that a change to the normaliser or the candidate shape reaches every row by itself. So there is no version column.
+- An empty row is never served as stale, because "no results" in place of a failure would be a lie. A fresh empty row is a real answer for an hour, because Open Food Facts did answer.
+- Every row read is checked with `offSearchResponseSchema.safeParse`. A row that does not parse is a miss and never a 500, which is what lets the candidate schema change later.
+
+### How `off-search` uses the store
+
+In this order:
+
+1. Authenticate and validate. Clean the words. Words that clean to nothing answer `{candidates: []}`, with nothing read, charged or called.
+2. Read the row. A read failure is reported once and treated as a miss. It never fails the search.
+3. A fresh row is answered. No limit is charged and Open Food Facts is not called.
+4. Charge the limits. If a charge is refused and a stale row exists, answer the stale row with 200. If none exists, answer the 429 as before.
+5. Call Open Food Facts, with the one short retry of KEY-936.
+6. On success, store, then answer. A store failure is reported once and the search still answers. A failure is never stored, so a failed search leaves the old row and its `fetched_at` as they were.
+7. On failure with a stale row, answer the stale row with 200. `reportError` has already fired for the failure, so outages stay visible in Sentry. With no stale row, answer the error as before.
+
+The response contract is unchanged. A stale answer looks like any other answer.
+
+### Limits
+
+Only a search that reaches Open Food Facts is charged now, so the defaults rise and the table in Amendment 1's `rate_limits` section carries them:
+
+| Environment variable          | Default per minute |
+| ----------------------------- | ------------------ |
+| `OFF_SEARCH_PER_USER_PER_MIN` | 30                 |
+| `OFF_SEARCH_GLOBAL_PER_MIN`   | 120                |
+
+30 means a new, uncached, settled search every two seconds for a whole minute, which typing does not do, and it stays out of reach while the client still searches after 250 ms of quiet. 120 is two a second to Open Food Facts. The limits were not raised before KEY-936 moved the search to Search-a-licious, because `/cgi/search.pl` allows 10 requests a minute per IP. Both stay environment variables. The test configuration keeps its small per-user value.
+
+### Health data
+
+Search words are not health data on their own, and here they are detached from every person. No log or report written by Ki-Lo carries the words: not a log line, an error message, a Sentry event or an analytics event. The function reports a failure by its name and code, never by the words or the database's message. The platform's own request log does carry them, because the function reads a row with a PostgREST `GET` filtered on `query_key`, so the read URL holds the words. That is no new exposure, since the same words already go to Open Food Facts.
+
+### Export and account deletion
+
+- **Export.** The table is not part of the whole-account export (KEY-707 and KEY-708), because no row belongs to an account.
+- **Account deletion** does not touch it, for the same reason.
+
+### Terms
+
+The store holds words typed into a food search, with nothing that identifies who typed them. This amendment changes no copy and no constant, and Zee's approval of it also confirms that the Privacy Policy needs no change.
+
+### Implemented by
+
+- The migration `20261110120000_off_search_results.sql`: the table, its checks and index, the grants and `store_off_search_results`, with pgTAP in `off_search_results.test.sql` and the regenerated `packages/db/src/types.gen.ts`.
+- Core, `packages/core/src/foods/offSearchStore.ts`: the ages, `offSearchRowState`, `readStoredOffSearch` and `offSearchQueryKey`, with tests at both sides of every boundary.
+- The `off-search` function: reading, charging only misses, storing and the stale fallbacks.
+
+### Consequences of Amendment 16
+
+The migration creates the table, the index, the grants and the function, and `packages/db/src/types.gen.ts` gains them. It inserts no row, so it copes with any database and needs no reset. Deploying it does nothing until the limits in production are removed or raised, so the deploy check is to list the secret names with `supabase secrets list` and remove `OFF_BASE_URL`, and remove or raise `OFF_SEARCH_PER_USER_PER_MIN` and `OFF_SEARCH_GLOBAL_PER_MIN`, if any is set. Any further deviation from the frozen Decision, from Amendments 1 to 15 or from this amendment needs a later amendment before the migration or code that implements it lands.

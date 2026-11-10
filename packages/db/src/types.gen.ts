@@ -939,6 +939,24 @@ export type Database = {
         };
         Relationships: [];
       };
+      off_search_results: {
+        Row: {
+          candidates: Json;
+          fetched_at: string;
+          query_key: string;
+        };
+        Insert: {
+          candidates: Json;
+          fetched_at?: string;
+          query_key: string;
+        };
+        Update: {
+          candidates?: Json;
+          fetched_at?: string;
+          query_key?: string;
+        };
+        Relationships: [];
+      };
       profiles: {
         Row: {
           activity: Database["public"]["Enums"]["activity_level"] | null;
@@ -1781,6 +1799,14 @@ export type Database = {
       store_off_product: {
         Args: { p_food: Json; p_portions: Json; p_raw: Json };
         Returns: Json;
+      };
+      store_off_search_results: {
+        Args: {
+          p_candidates: Json;
+          p_keep_seconds: number;
+          p_query_key: string;
+        };
+        Returns: undefined;
       };
       training_focus_is_valid: { Args: { focus: string[] }; Returns: boolean };
     };
