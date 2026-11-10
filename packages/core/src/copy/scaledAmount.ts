@@ -1,4 +1,8 @@
-import { describePortionUnit, describePortionWithSize } from "./portionPicker";
+import {
+  describePortionUnit,
+  describePortionWithSize,
+  describeSizeOfPortion,
+} from "./portionPicker";
 import { formatGroupedGrams } from "../format/groupedGrams";
 import { formatScaledCount } from "../format/scaledCount";
 import { spoonPortionOf } from "../nutrition/volume";
@@ -52,7 +56,7 @@ export const describeScaledAmount = (amount: LoggedAmount): string => {
     }) === amount.portion.label;
   const portion = labelSaysItsSize
     ? amount.portion.label
-    : `${amount.portion.label} (${writeGrams(amount.resolvedGrams)} g)`;
+    : `${amount.portion.label} (${describeSizeOfPortion(amount.portion.label, `${writeGrams(amount.resolvedGrams)} g`)})`;
   const count = writeCount(amount.quantity);
 
   return count === "1" ? portion : `${count} × ${portion}`;

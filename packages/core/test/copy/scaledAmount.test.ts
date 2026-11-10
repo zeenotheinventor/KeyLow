@@ -352,3 +352,16 @@ describe("describeScaledAmount properties", () => {
     );
   });
 });
+
+describe("describeScaledAmount of an estimated portion", () => {
+  it("should say about before the grams", () => {
+    expect(
+      describeScaledAmount({
+        unit: "portion",
+        quantity: 2,
+        resolvedGrams: 300,
+        portion: { label: "1 typical serving", grams: 150 },
+      }),
+    ).toBe("2 × 1 typical serving (about 300 g)");
+  });
+});

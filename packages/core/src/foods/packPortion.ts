@@ -1,9 +1,11 @@
 import { readPackSize } from "./packSize";
 
 import type { OffPortionInput } from "./offRules";
+import type { PackSize } from "./packSize";
 import type { NutrientBasis } from "../schemas/food";
 
-const GENERIC_NOUN = "pack";
+/** The noun of a pack nothing names. A default pack with this noun reads "1 serving" instead. */
+export const GENERIC_PACK_NOUN = "pack";
 // One item of a multipack, when nothing says what the item is: "pack" would read as the whole multipack.
 const GENERIC_MULTIPACK_NOUN = "item";
 
@@ -39,11 +41,20 @@ const MULTIPACK_ITEM_NOUNS: ReadonlyMap<string, string> = new Map(
 // and only categories whose descendants keep the shape are listed:
 //   en:bars and en:chocolate-bars: cereal, nut, protein, candy, chocolate and frozen bars (en:ice-cream-bars is not under them).
 //   en:sliced-breads: sliced loaves. en:breads is not listed, its 156 descendants include rolls, naans, crumbs and croutons.
-const FOOD_SHAPE_NOUNS: ReadonlyMap<string, string> = new Map([
-  ["en:bars", "bar"],
-  ["en:chocolate-bars", "bar"],
-  ["en:sliced-breads", "loaf"],
-]);
+//   en:hamburgers, en:sandwiches, en:pizzas and en:wraps: checked on 2026-11-10. A Big Mac carries both
+//   en:sandwiches and en:hamburgers, so the shapes are in tiers. The first tier with a tag present decides,
+//   and a burger beats a sandwich.
+const FOOD_SHAPE_NOUN_TIERS: readonly ReadonlyMap<string, string>[] = [
+  new Map([["en:hamburgers", "burger"]]),
+  new Map([
+    ["en:bars", "bar"],
+    ["en:chocolate-bars", "bar"],
+    ["en:sliced-breads", "loaf"],
+    ["en:sandwiches", "sandwich"],
+    ["en:pizzas", "pizza"],
+    ["en:wraps", "wrap"],
+  ]),
+];
 
 // Categories whose meaning is the pack, used only when the packaging names nothing. Same taxonomy, same
 // descendant rule:
@@ -81,12 +92,19 @@ function singleNoun(
   return found.size === 1 ? noun : undefined;
 }
 
+// The shape of the food itself. The tags of one tier that name two different nouns name none, and a
+// tier with no tag present leaves the decision to the next one.
+function foodShapeNoun(categoriesTags: readonly string[]): string | undefined {
+  const tier = FOOD_SHAPE_NOUN_TIERS.find((nouns) => categoriesTags.some((tag) => nouns.has(tag)));
+  return tier === undefined ? undefined : singleNoun(categoriesTags, tier);
+}
+
 function nameThePack(
   packagingTags: readonly string[],
   categoriesTags: readonly string[],
   isMultipack: boolean,
 ): string {
-  const foodShape = singleNoun(categoriesTags, FOOD_SHAPE_NOUNS);
+  const foodShape = foodShapeNoun(categoriesTags);
   if (foodShape !== undefined) {
     return foodShape;
   }
@@ -100,14 +118,56 @@ function nameThePack(
   const fromCategory = categoriesTags.some((tag) => NEVER_NAMED_FROM_A_CATEGORY.has(tag))
     ? undefined
     : singleNoun(categoriesTags, PACK_CATEGORY_NOUNS);
-  return fromCategory ?? (isMultipack ? GENERIC_MULTIPACK_NOUN : GENERIC_NOUN);
+  return fromCategory ?? (isMultipack ? GENERIC_MULTIPACK_NOUN : GENERIC_PACK_NOUN);
+}
+
+export type PackDetails = {
+  size: PackSize;
+  noun: string;
+  /** True for "pack" and "item", the nouns nothing in the product's tags gave. */
+  isGenericNoun: boolean;
+};
+
+/** The size of one item of the pack and what it is called, or null when the quantity is not a pack size. */
+export function readPackDetails(input: {
+  quantity: string | undefined;
+  basis: NutrientBasis;
+  packagingTags: readonly string[] | undefined;
+  categoriesTags: readonly string[] | undefined;
+}): PackDetails | null {
+  const size = readPackSize(input.quantity, input.basis);
+  if (size === null) {
+    return null;
+  }
+  const noun = nameThePack(
+    input.packagingTags ?? [],
+    input.categoriesTags ?? [],
+    size.itemCount > 1,
+  );
+  return {
+    size,
+    noun,
+    isGenericNoun: noun === GENERIC_PACK_NOUN || noun === GENERIC_MULTIPACK_NOUN,
+  };
+}
+
+/** The pack as a chip: "1 can", never the default, with the size of one item. */
+export function portionOfPack(details: PackDetails): OffPortionInput {
+  const { size, noun } = details;
+  return {
+    label: `1 ${noun}`,
+    grams: size.unit === "g" ? size.itemAmount : null,
+    ml: size.unit === "ml" ? size.itemAmount : null,
+    isDefault: false,
+  };
 }
 
 /**
  * The pack as a portion ("1 can", "1 bar", "1 pack", "1 item" for a multipack), or null when the quantity is not a pack size
  * `readPackSize` reads. A multipack gives one item, never the whole multipack. The label is the words
  * only, with no digit but the leading 1, because the picker shows the size beside it and
- * `parseServingLabel` must not read a density from it. It is never the default.
+ * `parseServingLabel` must not read a density from it. It is not the default here: `deriveOffPortions`
+ * decides that.
  */
 export function packPortion(input: {
   quantity: string | undefined;
@@ -115,14 +175,6 @@ export function packPortion(input: {
   packagingTags: readonly string[] | undefined;
   categoriesTags: readonly string[] | undefined;
 }): OffPortionInput | null {
-  const size = readPackSize(input.quantity, input.basis);
-  if (size === null) {
-    return null;
-  }
-  return {
-    label: `1 ${nameThePack(input.packagingTags ?? [], input.categoriesTags ?? [], size.itemCount > 1)}`,
-    grams: size.unit === "g" ? size.itemAmount : null,
-    ml: size.unit === "ml" ? size.itemAmount : null,
-    isDefault: false,
-  };
+  const details = readPackDetails(input);
+  return details === null ? null : portionOfPack(details);
 }

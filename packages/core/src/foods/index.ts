@@ -41,6 +41,18 @@ export type { NormaliseOffResult, OffFoodInput, OffPortionInput, OffProductPaylo
 export { deriveOffPortions } from "./deriveOffPortions";
 export { NATURAL_UNIT_PROCESSED_TAGS, NATURAL_UNIT_TYPES, naturalUnitsFor } from "./naturalUnits";
 export type { NaturalUnitPortion, NaturalUnitType } from "./naturalUnits";
+export {
+  ESTIMATE_CATEGORY_ROWS,
+  ESTIMATE_DRY_KCAL_PER_100,
+  ESTIMATE_ENERGY_BANDS_PER_100G,
+  ESTIMATE_ENERGY_BANDS_PER_100ML,
+  ESTIMATE_GENERIC_NOUN,
+  ESTIMATE_UNKNOWN_ENERGY_SIZE,
+  estimatedPortion,
+  estimatedPortionLabel,
+  isEstimatedPortion,
+} from "./estimatedPortion";
+export type { EnergyBand, EstimateCategoryRow, EstimateSize } from "./estimatedPortion";
 export { readPackSize } from "./packSize";
 export type { PackSize } from "./packSize";
 export { packPortion } from "./packPortion";

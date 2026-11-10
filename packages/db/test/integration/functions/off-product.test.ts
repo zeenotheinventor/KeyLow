@@ -148,12 +148,12 @@ describe("off-product", () => {
         protein_g: 9.5,
       });
       expect(food.fetched_at).not.toBeNull();
-      // The fixture's serving is 40 g and its quantity is 500 g with no packaging or pack category.
+      // The fixture's serving is 40 g, which reads as "1 serving", and its quantity is 500 g with no packaging or pack category, so the pack is a chip.
       expect(portions).toEqual([
         expect.objectContaining({
           food_id: food.id,
           owner_id: null,
-          label: "40 g",
+          label: "1 serving",
           grams: 40,
           ml: null,
           is_default: true,
@@ -255,7 +255,7 @@ describe("off-product", () => {
         .order("position");
       expect(error).toBeNull();
       expect(portions).toEqual([
-        { label: "40 g", grams: 40, ml: null, is_default: true, position: 0 },
+        { label: "1 serving", grams: 40, ml: null, is_default: true, position: 0 },
         { label: "1 pack", grams: 500, ml: null, is_default: false, position: 1 },
       ]);
     });
@@ -458,7 +458,7 @@ describe("off-product", () => {
         portionRulesFromMilliseconds,
       );
       expect(portions.map(({ label, grams, is_default }) => [label, grams, is_default])).toEqual([
-        ["40 g", 40, true],
+        ["1 serving", 40, true],
         ["1 pack", 500, false],
       ]);
       expect(await offMock.calls(code)).toHaveLength(2);
@@ -477,7 +477,7 @@ describe("off-product", () => {
       expect(response.status).toBe(200);
       const again = offProductResponseSchema.parse(response.body);
       expect(again.food.fetched_at).toBe(refreshed.food.fetched_at);
-      expect(again.portions.map(({ label }) => label)).toEqual(["40 g", "1 pack"]);
+      expect(again.portions.map(({ label }) => label)).toEqual(["1 serving", "1 pack"]);
       expect(await offMock.calls(code)).toHaveLength(2);
     });
 
@@ -492,7 +492,7 @@ describe("off-product", () => {
       expect(response.status).toBe(200);
       const { food, portions } = offProductResponseSchema.parse(response.body);
       expect(food.name).toBe("Test Oat Crunch");
-      expect(portions.map(({ label }) => label)).toEqual(["40 g"]);
+      expect(portions.map(({ label }) => label)).toEqual(["1 serving"]);
       expect(await offMock.calls(code)).toHaveLength(2);
       expect(await readFetchedAt(code)).toBe(new Date(storedFetchedAt).getTime());
     });
@@ -508,7 +508,7 @@ describe("off-product", () => {
       expect(response.status).toBe(200);
       const { food, portions } = offProductResponseSchema.parse(response.body);
       expect(food.name).toBe("Test Oat Crunch");
-      expect(portions.map(({ label }) => label)).toEqual(["40 g"]);
+      expect(portions.map(({ label }) => label)).toEqual(["1 serving"]);
       expect(await readFetchedAt(code)).toBe(new Date(storedFetchedAt).getTime());
     });
 
@@ -539,7 +539,7 @@ describe("off-product", () => {
 
       expect(response.status).toBe(200);
       const { portions } = offProductResponseSchema.parse(response.body);
-      expect(portions.map(({ label }) => label)).toEqual(["40 g"]);
+      expect(portions.map(({ label }) => label)).toEqual(["1 serving"]);
       expect(await offMock.calls(code)).toHaveLength(1);
     });
 
@@ -559,7 +559,7 @@ describe("off-product", () => {
       expect(response.status).toBe(200);
       expect(
         offProductResponseSchema.parse(response.body).portions.map(({ label }) => label),
-      ).toEqual(["40 g"]);
+      ).toEqual(["1 serving"]);
       expect(await offMock.calls(code)).toHaveLength(1);
     });
   });

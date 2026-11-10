@@ -2,8 +2,6 @@ export { compareEntriesByTime } from "./compareEntriesByTime";
 export type { TimelineEntry } from "./compareEntriesByTime";
 export { defaultLoggedAt } from "./defaultLoggedAt";
 export type { DefaultLoggedAt, DefaultLoggedAtInput } from "./defaultLoggedAt";
-export { defaultServing } from "./defaultServing";
-export type { Serving } from "./defaultServing";
 export { groupEntriesByHour } from "./groupEntriesByHour";
 export type { HourGroup } from "./groupEntriesByHour";
 export { incompleteDaysThisWeek } from "./incompleteDaysThisWeek";
