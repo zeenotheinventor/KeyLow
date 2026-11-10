@@ -265,3 +265,44 @@ describe("edgeErrorSchema", () => {
     expect(edgeErrorSchema.safeParse({ error: { code: "not_found" } }).success).toBe(false);
   });
 });
+
+describe("offCandidateSchema default portion", () => {
+  const burger = { label: "1 burger", grams: 240, ml: null };
+
+  it("should parse a candidate with a default portion", () => {
+    const candidate = { ...goldenCandidate, default_portion: burger };
+
+    expect(offCandidateSchema.parse(candidate)).toEqual(candidate);
+  });
+
+  it("should parse a candidate whose default portion is null", () => {
+    const candidate = { ...goldenCandidate, default_portion: null };
+
+    expect(offCandidateSchema.parse(candidate)).toEqual(candidate);
+  });
+
+  it("should parse a candidate with no default portion at all, as an older function or app sends", () => {
+    const parsed = offCandidateSchema.parse(goldenCandidate);
+
+    expect(parsed).toEqual(goldenCandidate);
+    expect(parsed).not.toHaveProperty("default_portion");
+  });
+
+  it("should reject a default portion with no label", () => {
+    expect(
+      offCandidateSchema.safeParse({
+        ...goldenCandidate,
+        default_portion: { grams: 240, ml: null },
+      }).success,
+    ).toBe(false);
+  });
+
+  it("should reject a default portion that weighs less than nothing", () => {
+    expect(
+      offCandidateSchema.safeParse({
+        ...goldenCandidate,
+        default_portion: { label: "1 burger", grams: -1, ml: null },
+      }).success,
+    ).toBe(false);
+  });
+});

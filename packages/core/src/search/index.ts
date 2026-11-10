@@ -1,5 +1,7 @@
 export { describeFoodRow } from "./describeFoodRow";
 export type { FoodRowDescription, FoodRowSource } from "./describeFoodRow";
+export { describeLiveFoodRow, liveRowShowsServing } from "./describeLiveFoodRow";
+export type { LiveFoodRowDescription } from "./describeLiveFoodRow";
 export { describeMacros } from "./describeMacros";
 export type { MacroDescription } from "./describeMacros";
 export { energyShares } from "./energyShares";
@@ -20,5 +22,5 @@ export type {
 } from "./groupFoodSearchResults";
 export { highlightMatch } from "./highlightMatch";
 export type { HighlightSegment } from "./highlightMatch";
-export { servingOfSearchHit } from "./servingOfSearchHit";
+export { servingOfCandidate, servingOfSearchHit } from "./servingOfSearchHit";
 export type { SearchServing, ServingSource } from "./servingOfSearchHit";

@@ -167,7 +167,8 @@ export function normaliseOffCandidate(raw: unknown): OffCandidate | null {
   if (!result.ok) {
     return null;
   }
-  const { food } = result;
+  const { food, portions } = result;
+  const defaultPortion = portions.find((portion) => portion.isDefault);
   return {
     code: food.barcode,
     name: food.name,
@@ -179,5 +180,9 @@ export function normaliseOffCandidate(raw: unknown): OffCandidate | null {
     carbs_g: food.carbs_g,
     fibre_g: food.fibre_g,
     quality: food.quality,
+    default_portion:
+      defaultPortion === undefined
+        ? null
+        : { label: defaultPortion.label, grams: defaultPortion.grams, ml: defaultPortion.ml },
   };
 }

@@ -9,6 +9,7 @@ import {
 import {
   FOOD_SEARCH_FETCH_LIMIT,
   groupFoodSearchResults,
+  liveRowShowsServing,
   revealFoodSearchGroups,
 } from "@keylow/core/search";
 import { useEffect } from "react";
@@ -70,8 +71,10 @@ export function SearchResults({
   }
 
   const hasRows = local.length > 0 || off.length > 0 || recipeRows.length > 0;
-  // Rows that show a serving say where the values are per 100 g only for the live Open Food Facts ones.
+  // Rows that show a serving say where the values are per 100 g only for a live Open Food Facts row that
+  // cannot show one, which is one from an answer stored before candidates carried their serving.
   const showsServings = logRows !== undefined || choosesAmount;
+  const hasPer100Rows = off.some((candidate) => !liveRowShowsServing(candidate));
   // Rows are shown on one running budget in display order, so more rows only ever join at the bottom.
   const groups = revealFoodSearchGroups(
     groupFoodSearchResults(local, { limit: local.length }),
@@ -104,9 +107,9 @@ export function SearchResults({
           />
           {off.length > 0 && (
             <>
-              {/* The live Open Food Facts rows stay per 100 g, so in the log search, where the rows above show
-                  servings, the note stands above them. */}
-              {showsServings && (
+              {/* A live row with no serving to show stays per 100 g, so where the rows above show servings the
+                  note stands above them. */}
+              {showsServings && hasPer100Rows && (
                 <Text className="-mb-2" tone="muted" variant="caption">
                   {VALUES_PER_100_G_NOTE}
                 </Text>
@@ -115,6 +118,7 @@ export function SearchResults({
                 candidates={off}
                 query={trimmedQuery}
                 releasesOnOpen={choosesAmount}
+                showsServings={showsServings}
                 onOpenFood={onOpenFood}
               />
             </>

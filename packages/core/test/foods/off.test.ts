@@ -628,7 +628,7 @@ describe("offProductPayloadSchema", () => {
 
 describe("normaliseOffCandidate", () => {
   it("should give the search preview of a product", () => {
-    expect(normaliseOffCandidate(fixtures.kcalPresent)).toEqual({
+    expect(normaliseOffCandidate(fixtures.kcalPresent)).toMatchObject({
       code: "5000000010011",
       name: "Test Oat Crunch",
       brand: "Northfield Mills",
@@ -639,6 +639,41 @@ describe("normaliseOffCandidate", () => {
       carbs_g: 62,
       fibre_g: 8,
       quality: {},
+    });
+  });
+
+  it("should carry the default portion the product would be stored with", () => {
+    const raw = {
+      ...fixtures.kcalPresent,
+      serving_size: "1 burger (240 g)",
+      serving_quantity: 240,
+    };
+
+    expect(normaliseOffCandidate(raw)?.default_portion).toEqual({
+      label: "1 burger (240 g)",
+      grams: 240,
+      ml: null,
+    });
+  });
+
+  it("should carry an estimate when the product has nothing to size it by", () => {
+    const candidate = normaliseOffCandidate({
+      code: "5000000010011",
+      product_name: "Test Oat Crunch",
+      nutriments: { "energy-kcal_100g": 380 },
+    });
+
+    expect(candidate?.default_portion?.label).toBe("1 typical serving");
+  });
+
+  it("should carry the same portion as the one normaliseOffProduct marks as the default", () => {
+    const result = normaliseOffProduct(fixtures.liquidMl);
+    const defaultPortion = result.ok ? result.portions.find((portion) => portion.isDefault) : null;
+
+    expect(normaliseOffCandidate(fixtures.liquidMl)?.default_portion).toEqual({
+      label: defaultPortion?.label,
+      grams: defaultPortion?.grams,
+      ml: defaultPortion?.ml,
     });
   });
 
