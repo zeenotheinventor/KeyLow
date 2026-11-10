@@ -479,6 +479,66 @@ describe("describeLoggedAmount and describeEntryCaption", () => {
     ).toBe("2 × 1 pot (340 g)");
   });
 
+  describe("a portion measured in millilitres that is not a spoon", () => {
+    it("should write an estimated portion in millilitres, with about", () => {
+      expect(
+        describeLoggedAmount({
+          unit: "portion",
+          quantity: 1,
+          resolvedGrams: 206,
+          portion: { label: "1 typical glass", ml: 200 },
+        }),
+      ).toBe("1 typical glass (about 200 ml)");
+    });
+
+    it.each([
+      [330, "1 can (330 ml)"],
+      [330.4, "1 can (330 ml)"],
+    ])("should write a can of %s ml in millilitres whatever its weight", (ml, text) => {
+      expect(
+        describeLoggedAmount({
+          unit: "portion",
+          quantity: 1,
+          resolvedGrams: 340,
+          portion: { label: "1 can", ml },
+        }),
+      ).toBe(text);
+    });
+
+    it("should write the total volume of several portions", () => {
+      expect(
+        describeLoggedAmount({
+          unit: "portion",
+          quantity: 2,
+          resolvedGrams: 660,
+          portion: { label: "1 can", ml: 330 },
+        }),
+      ).toBe("2 × 1 can (660 ml)");
+    });
+
+    it("should not write the size twice when the label already says it", () => {
+      expect(
+        describeLoggedAmount({
+          unit: "portion",
+          quantity: 1,
+          resolvedGrams: 250,
+          portion: { label: "250 ml", ml: 250 },
+        }),
+      ).toBe("250 ml");
+    });
+
+    it("should still write a portion with no millilitres in grams", () => {
+      expect(
+        describeLoggedAmount({
+          unit: "portion",
+          quantity: 1,
+          resolvedGrams: 206,
+          portion: { label: "1 typical glass", grams: 206 },
+        }),
+      ).toBe("1 typical glass (about 206 g)");
+    });
+  });
+
   describe("a spoon entry", () => {
     const tablespoon = { label: "1 tbsp", ml: 15 };
 
@@ -550,7 +610,7 @@ describe("describeLoggedAmount and describeEntryCaption", () => {
       ).toBe("2 × 1 tbsp (28 g)");
     });
 
-    it("should leave a millilitre portion that is not a spoon as it is", () => {
+    it("should write a millilitre portion that is not a spoon in millilitres", () => {
       expect(
         describeLoggedAmount({
           unit: "portion",
@@ -558,10 +618,10 @@ describe("describeLoggedAmount and describeEntryCaption", () => {
           resolvedGrams: 206,
           portion: { label: "1 glass", ml: 200 },
         }),
-      ).toBe("1 glass (206 g)");
+      ).toBe("1 glass (200 ml)");
     });
 
-    it("should leave a spoon-labelled millilitre portion of another size as it is", () => {
+    it("should write a spoon-labelled millilitre portion of another size in millilitres", () => {
       expect(
         describeLoggedAmount({
           unit: "portion",
@@ -569,7 +629,7 @@ describe("describeLoggedAmount and describeEntryCaption", () => {
           resolvedGrams: 12,
           portion: { label: "1 tbsp", ml: 12 },
         }),
-      ).toBe("1 tbsp (12 g)");
+      ).toBe("1 tbsp (12 ml)");
     });
 
     it("should still compile and read for a caller that gives the label alone", () => {

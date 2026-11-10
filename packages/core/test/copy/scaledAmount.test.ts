@@ -365,3 +365,49 @@ describe("describeScaledAmount of an estimated portion", () => {
     ).toBe("2 × 1 typical serving (about 300 g)");
   });
 });
+
+describe("describeScaledAmount of a portion measured in millilitres that is not a spoon", () => {
+  it("should write an estimated portion in millilitres, with about", () => {
+    expect(
+      describeScaledAmount({
+        unit: "portion",
+        quantity: 1,
+        resolvedGrams: 206,
+        portion: { label: "1 typical glass", ml: 200 },
+      }),
+    ).toBe("1 typical glass (about 200 ml)");
+  });
+
+  it("should write the scaled volume of several cans with a thousands separator", () => {
+    expect(
+      describeScaledAmount({
+        unit: "portion",
+        quantity: 4,
+        resolvedGrams: 1360,
+        portion: { label: "1 can", ml: 330 },
+      }),
+    ).toBe("4 × 1 can (1,320 ml)");
+  });
+
+  it("should not write the size twice when the label already says it", () => {
+    expect(
+      describeScaledAmount({
+        unit: "portion",
+        quantity: 1,
+        resolvedGrams: 250,
+        portion: { label: "250 ml", ml: 250 },
+      }),
+    ).toBe("250 ml");
+  });
+
+  it("should read as the diary row does", () => {
+    const amount: LoggedAmount = {
+      unit: "portion",
+      quantity: 2,
+      resolvedGrams: 660,
+      portion: { label: "1 can", ml: 330 },
+    };
+
+    expect(describeScaledAmount(amount)).toBe(describeLoggedAmount(amount));
+  });
+});
