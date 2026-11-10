@@ -413,7 +413,7 @@ Deno.test(
   "a tool that asks with a note adds it to the result and to the text the model reads, and not to the stored confirmation",
   async () => {
     const write = fakeWriteTool({
-      needsConfirmation: () => ({ ...fakeAsk, note: "A line about 118 g." }),
+      needsConfirmation: () => ({ ...fakeAsk, note: "A line about 118 g of oats." }),
     });
 
     const { store, confirmationId, asked } = await ask(write, [later]);
@@ -423,12 +423,12 @@ Deno.test(
       confirmationId,
       text: asked.text,
       question: fakeAsk.question,
-      note: "A line about 118 g.",
+      note: "A line about 118 g of oats.",
     });
     assertEquals(payloadOf(asked), {
       status: "needs_confirmation",
       confirmation_id: confirmationId,
-      note: "A line about 118 g.",
+      note: "A line about 118 g of oats.",
     });
     assertEquals(Object.keys(store.turns.find((turn) => turn.id === earlier)?.pending ?? {}), [
       "id",
@@ -436,7 +436,7 @@ Deno.test(
       "inputHash",
       "confirmLabel",
     ]);
-    assertFalse(JSON.stringify(store.turns).includes("118"));
+    assertFalse(JSON.stringify(store.turns).includes("oats"));
   },
 );
 
