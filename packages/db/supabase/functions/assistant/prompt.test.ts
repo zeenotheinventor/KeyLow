@@ -278,6 +278,22 @@ Deno.test(
   },
 );
 
+Deno.test(
+  "an estimated portion is used only for a serving with no amount, and said with about",
+  () => {
+    for (const rule of [
+      "A portion marked estimated is Ki-Lo's own guess at a typical serving.",
+      "Use it only when the person said a serving or the like and gave no amount",
+      'Write it with its words and "about" in the brackets, as in "1 typical serving (about 150 g)"',
+      "This is the one exception to never describing an amount as an estimate.",
+      "Otherwise ask for grams as above",
+    ]) {
+      assert(SYSTEM_PROMPT.includes(rule), `the system prompt does not hold: ${rule}`);
+    }
+    assert(SYSTEM_PROMPT.includes("except as set out under Amounts"));
+  },
+);
+
 Deno.test("an unclear exercise is asked about, with exercise names as quick replies", () => {
   for (const rule of [
     "When an amount, a food, an exercise or a day is unclear",

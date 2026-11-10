@@ -4,7 +4,13 @@ import { z } from "zod";
 
 import { listFoodPortions, searchFoods } from "../../repos.ts";
 import { foodView } from "./foodView.ts";
-import { dataNotice, resultLimitSchema, searchTextSchema, unknownNotice } from "./shared.ts";
+import {
+  dataNotice,
+  estimatedNotice,
+  resultLimitSchema,
+  searchTextSchema,
+  unknownNotice,
+} from "./shared.ts";
 
 import type { ReadToolDefinition } from "../tool.ts";
 
@@ -22,6 +28,7 @@ export const searchFoodsTool: ReadToolDefinition<z.infer<typeof searchFoodsInput
     `portions of the first ${resultsWithPortions} results, each with its id for logging, its label ` +
     "and its grams or ml. For portions, [] means the food has no portions, so ask the user for " +
     "grams, and null means not looked up, so call get_food. " +
+    `${estimatedNotice} ` +
     `${unknownNotice} ${dataNotice}`,
   kind: "read",
   input: searchFoodsInput,

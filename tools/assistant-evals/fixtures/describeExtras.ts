@@ -8,6 +8,12 @@
 import { FIXTURE_FOODS, FIXTURE_FOOD_CODES } from "./diary.ts";
 import { dayEntries } from "./diaryTotals.ts";
 
+// The portions here are the ones the seed files give. A food with none (the chicken, the rice, the oats, the
+// milk) is also given one default estimate ("1 typical serving") by `seeds/90_estimated_portions.sql` (KEY-934's
+// statements, run after the other seeds because the migration finds no food on a fresh stack), so in the
+// database it never opens on grams. `portionsOf` stays the seed's, because a case that expects a
+// count of "a portion" for such a food is graded against the rows the database holds.
+
 export type SeededPortion = Readonly<{ label: string; grams: number; isDefault: boolean }>;
 
 export type SeededFood = Readonly<{

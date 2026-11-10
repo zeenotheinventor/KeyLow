@@ -19,6 +19,7 @@ import { DIARY_READ_TOOLS, onlyReadTools } from "./ask.ts";
 import {
   actionRows,
   anyOfRoutes,
+  answerSaysAbout,
   askedAboutFoodOrAmount,
   askedAboutSize,
   askedOnce,
@@ -67,7 +68,19 @@ type ClarifySpec = Readonly<{
 /** The milestone's own sentence, whose butter and flat white have no portion: portions only, or one question. */
 type BriefSpec = Readonly<{ id: string; kind: "brief"; message: string }>;
 
-export type DescribeSpec = LogSpec | ClarifySpec | BriefSpec;
+/**
+ * A message that says a serving and no amount, for a food whose only portion is the estimate Ki-Lo generates
+ * (KEY-933). It is logged in that portion, and the reply says "about" beside it. Asking is not a fair route:
+ * the person said a serving, which is the one thing that allows the estimate.
+ */
+type EstimateSpec = Readonly<{
+  id: string;
+  kind: "estimate";
+  message: string;
+  item: ExpectedItem;
+}>;
+
+export type DescribeSpec = LogSpec | ClarifySpec | BriefSpec | EstimateSpec;
 
 const WRITE_AND_READ_TOOLS: ReadonlySet<string> = new Set([...DIARY_READ_TOOLS, "log_entry"]);
 
@@ -190,6 +203,9 @@ export function describeSpecs(anchorDate: string): readonly DescribeSpec[] {
     // Too vague to log: one question, nothing written.
     clarify("describe-some-chicken-and-rice", "I had some chicken and rice."),
     clarify("describe-some-rice", "I had some rice.", { asksAboutFoodOrAmount: true }),
+    // No serving said and no amount: every food now has a portion, and one that is only an estimate must not
+    // be logged on the person's behalf. The chicken has the estimate and no portion of its own.
+    clarify("describe-some-chicken", "I had some chicken.", { asksAboutFoodOrAmount: true }),
     clarify("describe-a-bowl-of-pasta", "I had a bowl of pasta.", { asksAboutFoodOrAmount: true }),
     clarify("describe-some-cheese", "I had some cheese.", {
       mayLog: { codes: FOOD_ROUTES.cheeseSlice, amount: { portion: true } },
@@ -197,6 +213,14 @@ export function describeSpecs(anchorDate: string): readonly DescribeSpec[] {
     // The amount is clear but the matches differ in calories: the breast with skin, without skin, and meat and
     // skin are three foods in the seed, so "which one?" is the right answer and logging the first is a guess.
     clarify("describe-chicken-breast-skin-unsaid", "I had 150 g of grilled chicken breast."),
+
+    // A serving said, and the food's only portion is Ki-Lo's estimate: it is logged and written with "about".
+    {
+      id: "describe-a-serving-of-chicken",
+      kind: "estimate",
+      message: "I had a serving of grilled chicken breast without skin.",
+      item: { codes: FOOD_ROUTES.chickenBreastWithoutSkin, amount: { portion: true } },
+    },
 
     // The milestone's own sentence. Butter and a flat white have no portion in the seed, so a weight for
     // either would be a guess: the assistant logs portions of the real foods, or asks once.
@@ -258,6 +282,8 @@ function gradersOf(spec: DescribeSpec, anchorDate: string): Grader[] {
           ? asking
           : [anyOfRoutes([asking, logged([spec.mayLog], anchorDate)])];
       }
+      case "estimate":
+        return [...logged([spec.item], anchorDate), answerSaysAbout()];
       case "brief": {
         // Two eggs and the toast have portions, and the message gave no count for the toast. Butter and a flat
         // white have none, so a weight for either is a guess. A question must be about the food or the amount,

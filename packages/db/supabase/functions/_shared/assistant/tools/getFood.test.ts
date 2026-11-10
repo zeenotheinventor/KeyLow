@@ -52,6 +52,13 @@ const portionRow = (label: string, grams: number | null, position: number) => ({
   created_at: "2026-10-07T10:00:00+00:00",
 });
 
+const portionsOf = (result: Parameters<typeof payloadOf>[0]) => {
+  const payload = payloadOf(result);
+  return typeof payload === "object" && payload !== null && "portions" in payload
+    ? payload.portions
+    : undefined;
+};
+
 async function fetchFood(data: StubData, rawInput: unknown) {
   const { caller, calls } = stubCaller(data);
   const { ctx } = createFakeContext([getFoodTool]);
@@ -62,6 +69,36 @@ async function fetchFood(data: StubData, rawInput: unknown) {
 Deno.test("get_food is a read tool that says it is read-only", () => {
   assertEquals(getFoodTool.kind, "read");
   assertEquals(getFoodTool.annotations, { readOnlyHint: true });
+});
+
+Deno.test(
+  "get_food says what an estimated portion is and keeps the empty case for no portions",
+  () => {
+    assertStringIncludes(getFoodTool.description, "estimated: true");
+    assertStringIncludes(getFoodTool.description, "Ki-Lo's own guess");
+    assertStringIncludes(
+      getFoodTool.description,
+      "Never log it unless the person said a serving or the like and gave no amount",
+    );
+    assertStringIncludes(getFoodTool.description, '"1 typical serving (about 150 g)"');
+    assertStringIncludes(getFoodTool.description, "empty portions list means the food has none");
+  },
+);
+
+Deno.test("get_food marks the portion the app generated as estimated", async () => {
+  const { result } = await fetchFood(
+    {
+      tables: {
+        foods: [foodRow({ kcal: 400, food_group: null })],
+        food_portions: [portionRow("1 typical serving", 40, 0)],
+      },
+    },
+    { id: foodId },
+  );
+
+  assertEquals(portionsOf(result), [
+    { id: portionIdOf(0), label: "1 typical serving", grams: 40, ml: null, estimated: true },
+  ]);
 });
 
 Deno.test("get_food tells the model that results are data and names are content", () => {

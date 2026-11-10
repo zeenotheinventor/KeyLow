@@ -1,3 +1,4 @@
+import { isOurEstimate } from "../foods/estimatedPortion";
 import { canMeasureByVolume, spoonPortionWithLabel } from "../nutrition";
 
 import type { RecipeIngredientInput } from "../recipes";
@@ -184,8 +185,14 @@ export type ImportedAmount = {
   guess: { amount: number; unit: "g" | "ml" } | null;
 };
 
-type VolumeFood = Pick<Food, "basis" | "source" | "source_ref" | "food_group" | "density_g_per_ml">;
-type PortionOfFood = Pick<FoodPortion, "id" | "label" | "grams" | "ml" | "is_default" | "position">;
+type VolumeFood = Pick<
+  Food,
+  "basis" | "source" | "source_ref" | "food_group" | "kcal" | "density_g_per_ml"
+>;
+type PortionOfFood = Pick<
+  FoodPortion,
+  "id" | "label" | "grams" | "ml" | "is_default" | "position" | "owner_id"
+>;
 
 // How each unit a page writes is saved. A spoon or a cup is the app's own spoon portion.
 type UnitRule =
@@ -241,8 +248,12 @@ function measuredBy(
 ): ImportedAmount["input"] | null {
   if (unit === null || unit.trim() === "") {
     // A count ("4 garlic cloves", "1 lemon") is a count of a portion that names the thing. A food whose only
-    // portions are measures ("100 g") would make "3 onions" 300 g, which is a guess and not a count.
-    const things = portions.filter(namesAThing);
+    // portions are measures ("100 g") would make "3 onions" 300 g, which is a guess and not a count. The same
+    // goes for an estimate Ki-Lo generated ("1 typical serving"), which nobody chose. A portion the person
+    // typed with the same words is theirs, so it is our estimate that is ruled out and not the wording.
+    const things = portions.filter(
+      (portion) => namesAThing(portion) && !isOurEstimate(food, portion, portions),
+    );
     const own =
       things.find((candidate) => candidate.is_default) ??
       [...things].sort((first, second) => first.position - second.position)[0];

@@ -2,6 +2,8 @@
 // bundle behind it is written by `bundle-core-for-deno` and typed by the @ts-self-types pragma in
 // it, so a missing or stale bundle fails `deno check` here. Export what a function needs.
 export type {
+  Food,
+  FoodPortion,
   ImportCandidate,
   AssistantCard,
   AssistantExerciseMuscles,
@@ -145,6 +147,7 @@ export {
   GOAL_OPTIONS,
   formatClockTime,
   isGeneratedEstimate,
+  isOurEstimate,
   isTrendSettling,
   isValidTimeZone,
   labelFoodInput,

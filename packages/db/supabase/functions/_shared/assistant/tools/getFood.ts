@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { getFood, listFoodPortions } from "../../repos.ts";
 import { foodView } from "./foodView.ts";
-import { dataNotice, unknownNotice } from "./shared.ts";
+import { dataNotice, estimatedNotice, unknownNotice } from "./shared.ts";
 
 import type { ReadToolDefinition } from "../tool.ts";
 
@@ -15,6 +15,7 @@ export const getFoodTool: ReadToolDefinition<z.infer<typeof getFoodInput>> = {
     "Gets one food by id: its name, brand, source, basis (per 100 g or per 100 ml), kcal, protein, " +
     "fat, carbs and fibre per 100, and all of its portions, each with its id for logging, its label " +
     "and its grams or ml. An empty portions list means the food has none, so ask the user for grams. " +
+    `${estimatedNotice} ` +
     "Answers error not_found for a food that does not exist, was deleted, or is not the user's to " +
     `see. ${unknownNotice} ${dataNotice}`,
   kind: "read",

@@ -1,4 +1,5 @@
 import { getFood, logFood, searchFoods, updateMyTargets } from "@keylow/api-client";
+import { isEstimatedPortion } from "@keylow/core";
 import { createClient } from "@supabase/supabase-js";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 
@@ -56,13 +57,20 @@ describe("the seeded foods the describe and write sets expect", () => {
 
       const held = seededFood(code);
       expect(foods?.[0]?.name).toBe(held.name);
-      expect(
-        portions?.map(({ label, grams, is_default }) => ({
-          label,
-          grams: Number(grams),
-          isDefault: is_default,
-        })),
-      ).toEqual(held.portions);
+      const stored = portions?.map(({ label, grams, is_default }) => ({
+        label,
+        grams: Number(grams),
+        isDefault: is_default,
+      }));
+      if (held.portions.length === 0) {
+        // The seed gives the food no portion, and `seeds/90_estimated_portions.sql` (KEY-934's statements) then
+        // gives it one default estimate, so it never opens on grams. Its size is the migration's, not this fixture's.
+        expect(stored).toHaveLength(1);
+        expect(stored?.[0]?.isDefault).toBe(true);
+        expect(isEstimatedPortion(stored?.[0]?.label ?? "")).toBe(true);
+      } else {
+        expect(stored).toEqual(held.portions);
+      }
     },
   );
 });

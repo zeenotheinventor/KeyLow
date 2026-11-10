@@ -497,6 +497,21 @@ export const askedAboutFoodOrAmount = (): Grader =>
 /** Passes when the question, or a quick reply, asks about the size of the food. */
 export const askedAboutSize = (): Grader => askedAbout(SIZE, "the size");
 
+/**
+ * Passes when the last reply gives "about" with a number and a unit, as an estimated portion must be written
+ * ("1 typical serving (about 150 g)"), so a stray "about" does not count. It is the one reply the harness reads for a word, because the rule is about the words themselves.
+ */
+export function answerSaysAbout(): Grader {
+  return ({ turns }) =>
+    Promise.resolve(
+      /\babout\s+\d+(?:\.\d+)?\s?(?:g|ml)\b/i.test(turns.at(-1)?.answer ?? "")
+        ? pass('the reply gives the estimate with "about" and a size')
+        : fail(
+            'the reply does not give "about" with a number and a unit beside the estimated portion',
+          ),
+    );
+}
+
 /** Passes when every `log_entry` call is for a portion of a food, so no weight was guessed. */
 export function noGuessedAmounts(): Grader {
   return ({ turns }) => {

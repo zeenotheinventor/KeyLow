@@ -70,6 +70,7 @@ export {
   estimatedPortionLabel,
   isEstimatedPortion,
   isGeneratedEstimate,
+  isOurEstimate,
 } from "./estimatedPortion";
 export type { EnergyBand, EstimateCategoryRow, EstimateSize } from "./estimatedPortion";
 export { readPackSize } from "./packSize";

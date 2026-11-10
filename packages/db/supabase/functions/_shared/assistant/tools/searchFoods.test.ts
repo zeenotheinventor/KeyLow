@@ -105,6 +105,13 @@ Deno.test(
     assertStringIncludes(searchFoodsTool.description, "for logging");
     assertStringIncludes(searchFoodsTool.description, "[] means the food has no portions");
     assertStringIncludes(searchFoodsTool.description, "null means not looked up");
+    assertStringIncludes(searchFoodsTool.description, "estimated: true");
+    assertStringIncludes(searchFoodsTool.description, "Ki-Lo's own guess");
+    assertStringIncludes(
+      searchFoodsTool.description,
+      "Never log it unless the person said a serving or the like and gave no amount",
+    );
+    assertStringIncludes(searchFoodsTool.description, '"1 typical serving (about 150 g)"');
     assertStringIncludes(searchFoodsTool.description, "unknown, never zero");
   },
 );
@@ -166,6 +173,35 @@ Deno.test("search_foods adds the portions of the first five results and no more"
     [1, 2, 3, 4, 5].map(idOf),
   );
 });
+
+Deno.test(
+  "search_foods marks a shared estimate beside a pack chip, and not a portion the person typed",
+  async () => {
+    const typed = { ...portion(2, "1 typical slice", 35, 0), owner_id: idOf(9) };
+    const { result } = await search(
+      {
+        rpc: { search_foods: [hit(1), hit(2)] },
+        tables: {
+          food_portions: [
+            portion(1, "1 typical serving", 75, 0),
+            portion(1, "1 bag", 2000, 1),
+            typed,
+          ],
+        },
+      },
+      { q: "rice", limit: 5 },
+    );
+
+    const foods = listOf(result, "foods");
+    assertEquals(foods[0]?.["portions"], [
+      { id: idOf(510), label: "1 typical serving", grams: 75, ml: null, estimated: true },
+      { id: idOf(511), label: "1 bag", grams: 2000, ml: null },
+    ]);
+    assertEquals(foods[1]?.["portions"], [
+      { id: idOf(520), label: "1 typical slice", grams: 35, ml: null },
+    ]);
+  },
+);
 
 Deno.test("search_foods answers an empty list when nothing matches", async () => {
   const { result } = await search({ rpc: { search_foods: [] } }, { q: "zzzz", limit: 5 });
