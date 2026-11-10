@@ -266,3 +266,29 @@ Deno.test("search_foods accepts the edges of both ranges", async () => {
     assertEquals(result.status, "ok", JSON.stringify(input));
   }
 });
+
+Deno.test(
+  "search_foods reports a bucket with no published weight by its count portion, with no grams",
+  async () => {
+    const bucket = hit(7, {
+      source: "restaurant",
+      name: "Bargain bucket",
+      basis: "per_portion",
+      kcal: 500,
+      default_portion_label: "1 bucket",
+      default_portion_grams: null,
+    });
+    const bucketPortion = { ...portion(7, "1 bucket", null, 0), ml: null };
+
+    const { result } = await search(
+      { rpc: { search_foods: [bucket] }, tables: { food_portions: [bucketPortion] } },
+      { q: "bucket", limit: 5 },
+    );
+
+    const [food] = listOf(result, "foods");
+    assertEquals(food?.["basis"], "per_portion");
+    assertEquals(food?.["portions"], [
+      { id: bucketPortion.id, label: "1 bucket", grams: null, ml: null },
+    ]);
+  },
+);

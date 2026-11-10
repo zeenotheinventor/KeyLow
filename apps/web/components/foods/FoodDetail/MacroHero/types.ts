@@ -55,7 +55,11 @@ export type MacroHeroRegionProps = {
   amount: MacroHeroAmount & { region: MacroHeroRegion };
 };
 
-export type MacroHeroProps =
+export type MacroHeroProps = (
   | { food: MacroHeroFood; amount?: undefined }
   | { food?: MacroHeroFood | undefined; amount: MacroHeroAmount }
-  | MacroHeroRegionProps;
+  | MacroHeroRegionProps
+) & {
+  /** The label of the one portion of a food per portion, "1 bucket", so its basis reads "per bucket". Read only for that basis. */
+  portionLabel?: string | undefined;
+};

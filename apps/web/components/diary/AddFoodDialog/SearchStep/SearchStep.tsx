@@ -12,6 +12,7 @@ import {
 } from "@keylow/core/copy";
 import { foodNeedsReview } from "@keylow/core/diary";
 import { formatCalories } from "@keylow/core/format";
+import { canBeRecipeIngredient } from "@keylow/core/recipes";
 import {
   FOOD_SEARCH_GROUP_LIMITS,
   describeFoodRow,
@@ -100,10 +101,11 @@ function SearchStepView(props: SearchStepProps & RecipeResults) {
   const isLogging = props.mode !== "ingredient" && props.isLogging;
   const isOnline = useIsOnline();
   const trimmedQuery = query.trim();
-  const { local, isLoadingLocal, isDebouncing, localError } = useFoodSearch(
-    trimmedQuery,
-    LOCAL_ONLY,
-  );
+  const search = useFoodSearch(trimmedQuery, LOCAL_ONLY);
+  const { isLoadingLocal, isDebouncing, localError } = search;
+  // An ingredient search lists only what a recipe can hold.
+  const local =
+    props.mode === "ingredient" ? search.local.filter(canBeRecipeIngredient) : search.local;
   const [expansion, setExpansion] = useState<Expansion>({ query: "", groups: [] });
 
   const isSearchable = trimmedQuery.length >= MIN_SEARCH_LENGTH;
@@ -141,6 +143,7 @@ function SearchStepView(props: SearchStepProps & RecipeResults) {
           )}
           <RecentFoods
             addDisabled={isLogging}
+            forRecipeIngredient={props.mode === "ingredient"}
             onOpen={props.onOpenRecent}
             onAdd={props.mode === "ingredient" ? undefined : props.onAddRecent}
           />

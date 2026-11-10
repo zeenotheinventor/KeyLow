@@ -61,6 +61,25 @@ describe("NewFoodScreen", () => {
     cleanup();
   });
 
+  it("should say a food with no published weight cannot be copied, instead of throwing", () => {
+    searchParameters.current = new URLSearchParams({ from: SOURCE_FOOD_ID });
+    useFoodWithPortions.mockReturnValue({
+      status: "ready",
+      food: makeFood({
+        id: SOURCE_FOOD_ID,
+        source: "restaurant",
+        owner_id: null,
+        basis: "per_portion",
+      }),
+      portions: [makePortion({ label: "1 bucket", grams: null, ml: null })],
+    });
+
+    render(<NewFoodScreen />);
+
+    expect(screen.getByRole("heading", { level: 1, name: "Cannot edit this food" })).toBeTruthy();
+    expect(screen.queryByRole("textbox", { name: "Name" })).toBeNull();
+  });
+
   it("should show an empty create form under a heading", () => {
     render(<NewFoodScreen />);
 

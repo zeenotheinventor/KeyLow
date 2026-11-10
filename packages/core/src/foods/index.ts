@@ -76,6 +76,8 @@ export type { EnergyBand, EstimateCategoryRow, EstimateSize } from "./estimatedP
 export { readPackSize } from "./packSize";
 export type { PackSize } from "./packSize";
 export { packPortion } from "./packPortion";
+export { canBeCopiedToYourFoods } from "./canBeCopiedToYourFoods";
+export { portionLabelOfFoodPerPortion } from "./portionLabelOfFoodPerPortion";
 export { requiresConfirmation } from "./quality";
 export { resolveCarbs } from "./offRules";
 export { LABEL_KCAL_TOLERANCE, labelFoodInput, macroKcalOf } from "./labelFood";

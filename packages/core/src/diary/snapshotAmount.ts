@@ -114,7 +114,10 @@ export function entryPickerChoices(snapshot: FoodSnapshot, live?: LiveFoodPortio
           (portion) => spoon === undefined || !isSameLabel(portion.label, spoon.label),
         );
 
-  return withoutRepeatedSpoons(choicesFor(ownPortions, isMeasuredByVolume), ownPortions);
+  return withoutRepeatedSpoons(
+    choicesFor(ownPortions, { isWeighable: snapshot.basis !== "per_portion", isMeasuredByVolume }),
+    ownPortions,
+  );
 }
 
 /**

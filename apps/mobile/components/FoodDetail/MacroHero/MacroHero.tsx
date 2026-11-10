@@ -29,7 +29,10 @@ export function MacroHero(props: MacroHeroProps) {
   const shares = energyShares(
     values ?? { kcal: null, protein_g: null, carbs_g: null, fat_g: null },
   );
-  const basis = props.amount === undefined ? describeBasis(props.food.basis) : props.amount.caption;
+  const basis =
+    props.amount === undefined
+      ? describeBasis(props.food.basis, props.portionLabel)
+      : props.amount.caption;
   const region = amount?.region;
   // The caption only explains the shares, so it goes when none is drawn.
   const hasShares = Object.values(shares).some((share) => share !== null);

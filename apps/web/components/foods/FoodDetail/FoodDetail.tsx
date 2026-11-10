@@ -2,7 +2,11 @@
 
 import { useFoodWithPortions, useRefreshOutdatedOffFood } from "@keylow/api-client";
 import { FOOD_DETAIL, describeNutritionHeading, nutrientRows } from "@keylow/core/copy";
-import { requiresConfirmation } from "@keylow/core/foods";
+import {
+  canBeCopiedToYourFoods,
+  portionLabelOfFoodPerPortion,
+  requiresConfirmation,
+} from "@keylow/core/foods";
 
 import { BackToFoodsLink } from "./BackToFoodsLink";
 import { FoodHeader } from "./FoodHeader";
@@ -19,6 +23,8 @@ export function FoodDetail({ id }: FoodDetailProps) {
   const state = useFoodWithPortions(id);
   // An old branded food asks for its refresh, so the portions it has gained since appear on this page.
   useRefreshOutdatedOffFood(state.status === "ready" ? state.food : undefined);
+  const portionLabel =
+    state.status === "ready" ? portionLabelOfFoodPerPortion(state.food, state.portions) : undefined;
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
@@ -29,14 +35,15 @@ export function FoodDetail({ id }: FoodDetailProps) {
           {requiresConfirmation(state.food) && (
             <MissingValuesReview
               foodId={state.food.id}
+              canCopy={canBeCopiedToYourFoods(state.food)}
               fieldsMissing={state.food.quality.fields_missing ?? []}
               carbsConvention={state.food.quality.carbs_convention}
             />
           )}
-          <MacroHero food={state.food} />
+          <MacroHero food={state.food} portionLabel={portionLabel} />
           <div className="flex flex-col gap-2">
             <NutrientTable
-              caption={describeNutritionHeading(state.food.basis)}
+              caption={describeNutritionHeading(state.food.basis, portionLabel)}
               rows={nutrientRows(state.food)}
             />
             {state.food.quality.carbs_convention === "us_total" && (

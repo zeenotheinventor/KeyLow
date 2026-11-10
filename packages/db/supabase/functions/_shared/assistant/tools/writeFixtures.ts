@@ -115,6 +115,38 @@ export const dietRows = () => ({
   profiles: [{ timezone: "Europe/London" }],
 });
 
+export const bucketId = "00000000-0000-4000-8000-0000000000b1";
+export const bucketPortionId = "00000000-0000-4000-8000-0000000000b2";
+
+// A restaurant food whose chain publishes no weight: its figures are for one bucket, and its one portion has
+// neither grams nor millilitres.
+export const bucketRow = foodRow({
+  id: bucketId,
+  source: "restaurant",
+  owner_id: null,
+  name: "Bargain bucket",
+  basis: "per_portion",
+  kcal: 500,
+  protein_g: 40,
+  fat_g: 30,
+  carbs_g: 20,
+});
+
+export const bucketPortionRow = {
+  ...portionRow(bucketPortionId, bucketId, "1 bucket", 0),
+  grams: null,
+  is_default: true,
+};
+
+// The diet with the bucket added, for the rows option of `writeContext`.
+export const dietWithBucket = () => {
+  const diet = dietRows();
+  return {
+    foods: [...diet.foods, bucketRow],
+    food_portions: [...diet.food_portions, bucketPortionRow],
+  };
+};
+
 // A context for the tools in one registry whose caller is the in-memory diary, in the turn of 3 November.
 export function writeContext(
   tools: readonly ToolDefinition[],
