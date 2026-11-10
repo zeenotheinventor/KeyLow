@@ -7,6 +7,7 @@ import {
   VALUES_PER_100_G_NOTE,
   describeBasis,
   describeEnergy,
+  describeLiveGroupNote,
   describeShareOfEnergy,
   describeSpokenBasis,
 } from "../../src/copy";
@@ -68,5 +69,17 @@ describe("describeEnergy", () => {
 describe("describeShareOfEnergy", () => {
   it("should write the share the way the tiles show it", () => {
     expect(describeShareOfEnergy(32)).toBe("32 % of energy");
+  });
+});
+
+describe("describeLiveGroupNote", () => {
+  it("should say servings are confirmed on open when every live row shows a serving", () => {
+    expect(describeLiveGroupNote(false)).toBe("Servings are confirmed when you open a product");
+  });
+
+  it("should also say values are per 100 g unless marked when some live rows are per 100 g", () => {
+    expect(describeLiveGroupNote(true)).toBe(
+      "Values per 100 g unless marked, and servings are confirmed when you open a product",
+    );
   });
 });

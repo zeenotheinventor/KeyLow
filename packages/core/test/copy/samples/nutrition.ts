@@ -6,5 +6,6 @@ export const samples: Record<string, () => string[]> = {
   describeBasis: () => (["per_100g", "per_100ml"] as const).map(copy.describeBasis),
   describeSpokenBasis: () => (["per_100g", "per_100ml"] as const).map(copy.describeSpokenBasis),
   describeEnergy: () => [0, 1, 148, 2480, null].map(copy.describeEnergy),
+  describeLiveGroupNote: () => [false, true].map(copy.describeLiveGroupNote),
   describeShareOfEnergy: () => [0, 32, 100].map(copy.describeShareOfEnergy),
 };

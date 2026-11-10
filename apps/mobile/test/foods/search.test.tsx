@@ -848,6 +848,14 @@ describe("food search sheet", () => {
         expect(screen.queryByText("Values per 100 g unless marked")).not.toBeOnTheScreen();
       });
 
+      it("should say servings are confirmed when a product is opened", async () => {
+        await renderIngredientSearch();
+
+        expect(
+          screen.getByText("Servings are confirmed when you open a product"),
+        ).toBeOnTheScreen();
+      });
+
       it("should have no plus", async () => {
         await renderIngredientSearch();
 
