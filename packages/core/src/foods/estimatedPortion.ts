@@ -182,7 +182,11 @@ export function estimatedPortion(input: {
   };
 }
 
-const isSameEstimate = (portion: FoodPortion, estimate: OffPortionInput): boolean =>
+type PortionOfEstimate = Pick<FoodPortion, "label" | "grams" | "ml" | "is_default">;
+
+type PortionWithOwner = PortionOfEstimate & Pick<FoodPortion, "owner_id">;
+
+const isSameEstimate = (portion: PortionOfEstimate, estimate: OffPortionInput): boolean =>
   portion.is_default &&
   portion.label === estimate.label &&
   portion.grams === estimate.grams &&
@@ -196,7 +200,7 @@ const isSameEstimate = (portion: FoodPortion, estimate: OffPortionInput): boolea
  */
 export function isGeneratedEstimate(
   food: Pick<Food, "basis" | "kcal" | "food_group">,
-  portions: readonly FoodPortion[],
+  portions: readonly PortionOfEstimate[],
 ): boolean {
   const [only] = portions;
   if (only === undefined || portions.length !== 1) {
@@ -210,4 +214,22 @@ export function isGeneratedEstimate(
       : [estimatedPortion({ basis, kcal, foodGroup: food.food_group })]),
   ];
   return candidates.some((estimate) => isSameEstimate(only, estimate));
+}
+
+/**
+ * Whether one portion is Ki-Lo's own guess and not something a person chose. A shared portion (no owner:
+ * Open Food Facts, CoFID, USDA) is never typed by a person, so its "1 typical" wording is enough, which also
+ * covers an estimate beside other portions and one that came from a category the food no longer holds. A
+ * person's own portion is ours only when it is the single one the app generates for the food, so "1 typical
+ * slice" typed by a person stays theirs.
+ */
+export function isOurEstimate(
+  food: Pick<Food, "basis" | "kcal" | "food_group">,
+  portion: PortionWithOwner,
+  portions: readonly PortionOfEstimate[],
+): boolean {
+  if (!isEstimatedPortion(portion.label)) {
+    return false;
+  }
+  return portion.owner_id === null || isGeneratedEstimate(food, portions);
 }

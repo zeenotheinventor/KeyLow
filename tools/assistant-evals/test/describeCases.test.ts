@@ -19,6 +19,7 @@ const cases = describeCasesOf(ANCHOR);
 
 type LogSpec = Extract<DescribeSpec, { kind: "log" }>;
 type ClarifySpec = Extract<DescribeSpec, { kind: "clarify" }>;
+type EstimateSpec = Extract<DescribeSpec, { kind: "estimate" }>;
 
 const logSpecs = specs.filter((spec): spec is LogSpec => spec.kind === "log");
 const clarifySpecs = specs.filter((spec): spec is ClarifySpec => spec.kind === "clarify");
@@ -139,10 +140,11 @@ const asking = (question: string, replies: string[] = []) =>
   });
 
 describe("the describe set", () => {
-  it("should have 22 cases: 16 that log, 5 that ask and the milestone's own sentence", () => {
-    expect(cases).toHaveLength(22);
+  it("should have 24 cases: 16 that log, 6 that ask, 1 estimated serving and the milestone's own sentence", () => {
+    expect(cases).toHaveLength(24);
     expect(logSpecs).toHaveLength(16);
-    expect(clarifySpecs).toHaveLength(5);
+    expect(clarifySpecs).toHaveLength(6);
+    expect(specs.filter(({ kind }) => kind === "estimate")).toHaveLength(1);
     expect(specs.filter(({ kind }) => kind === "brief")).toHaveLength(1);
   });
 
@@ -152,8 +154,8 @@ describe("the describe set", () => {
   });
 
   it("should give every case its own id and its own message, and send one message", () => {
-    expect(new Set(cases.map(({ id }) => id)).size).toBe(22);
-    expect(new Set(cases.flatMap(({ messages }) => messages)).size).toBe(22);
+    expect(new Set(cases.map(({ id }) => id)).size).toBe(24);
+    expect(new Set(cases.flatMap(({ messages }) => messages)).size).toBe(24);
     expect(cases.every(({ messages }) => messages.length === 1)).toBe(true);
   });
 
@@ -174,7 +176,7 @@ describe("the describe set", () => {
       .map(({ message }) => message)
       .filter((message) => /chicken breast/.test(message));
 
-    expect(chickenMessages).toHaveLength(2);
+    expect(chickenMessages).toHaveLength(3);
     for (const message of chickenMessages) {
       expect(message).toMatch(/without skin/);
     }
@@ -208,7 +210,7 @@ describe("the describe set", () => {
   it("should ask about the food or the amount where the food has no portion and no amount was given", () => {
     expect(
       clarifySpecs.filter(({ asksAboutFoodOrAmount }) => asksAboutFoodOrAmount).map(({ id }) => id),
-    ).toEqual(["describe-some-rice", "describe-a-bowl-of-pasta"]);
+    ).toEqual(["describe-some-rice", "describe-some-chicken", "describe-a-bowl-of-pasta"]);
   });
 
   it("should let every food that comes in sizes, given no size, be answered with one question about the size", () => {
@@ -675,6 +677,116 @@ describe("a clarify case", () => {
     await caseOf("describe-some-rice").cleanUp?.([turnResult()], environment);
 
     expect(environment.calls).toHaveLength(1);
+  });
+});
+
+describe("the some chicken case", () => {
+  it("should be the plain words, with no serving and no amount", () => {
+    expect(clarifySpecs.find(({ id }) => id === "describe-some-chicken")?.message).toBe(
+      "I had some chicken.",
+    );
+  });
+
+  it("should fail when the estimated serving was logged without asking", async () => {
+    const turn = turnResult({
+      answer: "Logged 1 typical serving (about 150 g).",
+      toolCalls: [writeTool("log_entry", { kind: "portion", count: 1 })],
+    });
+    const database = rowDatabase({
+      assistant_actions: [{ turn_id: turn.turnId, tool: "log_entry" }],
+    });
+
+    const failures = await failuresOf(caseOf("describe-some-chicken"), turn, database);
+
+    expect(failures.length).toBeGreaterThan(0);
+  });
+});
+
+describe("the estimated serving case", () => {
+  const spec = specs.find((candidate): candidate is EstimateSpec => candidate.kind === "estimate");
+  const [code] = spec?.item.codes ?? [];
+
+  const perfect = (answer: string) => {
+    const turn = turnResult({
+      answer,
+      toolCalls: [
+        readTool("search_foods", { q: "grilled chicken breast without skin", limit: 5 }),
+        writeTool("log_entry", {
+          kind: "portion",
+          food_id: `food-${code}`,
+          portion_id: `portion-${code}`,
+          count: 1,
+          grams: null,
+          ml: null,
+          local_date: null,
+          time: null,
+        }),
+      ],
+      cards: [card("logged")],
+    });
+    const database = rowDatabase({
+      foods: [{ id: `food-${code}`, source: "cofid", source_ref: code }],
+      food_portions: [{ id: `portion-${code}`, food_id: `food-${code}` }],
+      assistant_actions: [
+        { turn_id: turn.turnId, tool: "log_entry", target_id: `entry-${turn.turnId}` },
+      ],
+      food_log_entries: [
+        {
+          id: `entry-${turn.turnId}`,
+          food_id: `food-${code}`,
+          portion_id: `portion-${code}`,
+          unit: "portion",
+          quantity: 1,
+          local_date: ANCHOR,
+          deleted_at: null,
+        },
+      ],
+    });
+    return { turn, database };
+  };
+
+  it("should ask for a serving of a food whose only portion is an estimate", () => {
+    expect(spec?.message).toBe("I had a serving of grilled chicken breast without skin.");
+  });
+
+  it("should pass the serving logged and written with its words and about", async () => {
+    const { turn, database } = perfect("Logged 1 typical serving (about 150 g) of chicken breast.");
+
+    expect(await failuresOf(caseOf("describe-a-serving-of-chicken"), turn, database)).toEqual([]);
+  });
+
+  it("should fail a reply that logs the estimate and never says about", async () => {
+    const { turn, database } = perfect("Logged 1 typical serving (150 g) of chicken breast.");
+
+    const failures = await failuresOf(caseOf("describe-a-serving-of-chicken"), turn, database);
+
+    expect(failures.some((reason) => reason.includes("about"))).toBe(true);
+  });
+
+  it("should fail a reply whose only about is not beside a size", async () => {
+    const { turn, database } = perfect("Logged 1 typical serving. Ask me anything about it.");
+
+    const failures = await failuresOf(caseOf("describe-a-serving-of-chicken"), turn, database);
+
+    expect(failures.some((reason) => reason.includes("about"))).toBe(true);
+  });
+
+  it("should pass about with millilitres or a decimal size", async () => {
+    const { turn, database } = perfect("Logged 1 typical glass (about 187.5 ml).");
+
+    expect(await failuresOf(caseOf("describe-a-serving-of-chicken"), turn, database)).toEqual([]);
+  });
+
+  it("should fail a question in place of the log, because a serving was said", async () => {
+    const turn = asking("How many grams was it?", ["100 g", "150 g"]);
+
+    const failures = await failuresOf(
+      caseOf("describe-a-serving-of-chicken"),
+      turn,
+      rowDatabase({}),
+    );
+
+    expect(failures.length).toBeGreaterThan(0);
   });
 });
 

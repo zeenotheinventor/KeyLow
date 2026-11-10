@@ -9,6 +9,7 @@ const food = (overrides: Record<string, unknown> = {}) => ({
   source: "cofid" as const,
   source_ref: null,
   food_group: null,
+  kcal: 400 as number | null,
   density_g_per_ml: null as number | null,
   ...overrides,
 });
@@ -20,6 +21,7 @@ const portion = (id: string, label: string, grams: number, isDefault = false, po
   ml: null,
   is_default: isDefault,
   position,
+  owner_id: null as string | null,
 });
 
 const measure = (overrides: Partial<ImportedLineMeasure> = {}): ImportedLineMeasure => ({
@@ -125,6 +127,32 @@ describe("importedAmountOf", () => {
       importedAmountOf(measure({ quantity: 2 }), food(), [portion("p2", "1 medium", 60, false, 1)])
         ?.input,
     ).toMatchObject({ portion: { id: "p2" } });
+  });
+
+  it("should not count in an estimate Ki-Lo generated, because 3 onions would become 3 guessed servings", () => {
+    // 400 kcal per 100 g is in the 300 kcal band, so the app's own estimate is 40 g.
+    const estimate = portion("p0", "1 typical serving", 40, true, 0);
+
+    expect(importedAmountOf(measure({ quantity: 3 }), food(), [estimate])).toBeNull();
+  });
+
+  it("should count in the pack chip and not the estimate that sits beside it", () => {
+    const estimate = portion("p0", "1 typical serving", 75, true, 0);
+    const bag = portion("p1", "1 bag", 2000, false, 1);
+
+    expect(
+      importedAmountOf(measure({ quantity: 3 }), food(), [estimate, bag])?.input,
+    ).toMatchObject({ portion: { id: "p1" } });
+  });
+
+  it("should count in a portion the person typed, even when it starts 1 typical", () => {
+    const typed = { ...portion("p0", "1 typical slice", 35, true, 0), owner_id: "person-1" };
+
+    expect(importedAmountOf(measure({ quantity: 3 }), food(), [typed])?.input).toMatchObject({
+      quantity: 3,
+      unit: "portion",
+      portion: { id: "p0" },
+    });
   });
 
   it("should count only in a portion whose label names the thing, never in a measure like 100 g", () => {
