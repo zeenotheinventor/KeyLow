@@ -484,17 +484,20 @@ describe("off-search", () => {
 
     it("charges the limit once for a search that took two attempts", async () => {
       const user = await newUser();
-      const searchTerms = uniqueSearchTerms();
-      await offMock.registerSearch({
-        searchTerms,
-        status: 500,
-        body: { error: "down" },
-        followedBy: [recoveredAnswer],
-      });
+      // Every search needs its own words, or the store answers the repeats and spends nothing.
+      const searches = Array.from({ length: perUserLimit }, uniqueSearchTerms);
+      for (const searchTerms of searches) {
+        await offMock.registerSearch({
+          searchTerms,
+          status: 500,
+          body: { error: "down" },
+          followedBy: [recoveredAnswer],
+        });
+      }
       await waitForFreshRateLimitWindow();
 
       const statuses: number[] = [];
-      for (let attempt = 0; attempt < perUserLimit; attempt += 1) {
+      for (const searchTerms of searches) {
         statuses.push((await search(searchTerms, user.accessToken)).status);
       }
 
@@ -565,41 +568,194 @@ describe("off-search", () => {
   });
 
   describe("rate limits", () => {
+    // Every search needs its own words, or the store answers the repeats and spends nothing.
+    async function registerSearches(count: number): Promise<string[]> {
+      const searches = Array.from({ length: count }, uniqueSearchTerms);
+      for (const searchTerms of searches) {
+        await offMock.registerSearch({ searchTerms, products: [] });
+      }
+      return searches;
+    }
+
     it("answers 429 with Retry-After once a user is over the per-user limit, and does not call OFF for it", async () => {
       const user = await newUser();
-      const searchTerms = uniqueSearchTerms();
-      await offMock.registerSearch({ searchTerms, products: [] });
+      const searches = await registerSearches(perUserLimit + 1);
+      const refusedSearch = searches.pop() ?? "";
 
       await waitForFreshRateLimitWindow();
-      for (let attempt = 0; attempt < perUserLimit; attempt += 1) {
+      for (const searchTerms of searches) {
         const allowed = await search(searchTerms, user.accessToken);
         expect(allowed.status).toBe(200);
       }
-      const refused = await search(searchTerms, user.accessToken);
+      const refused = await search(refusedSearch, user.accessToken);
 
       expect(refused.status).toBe(429);
       const { error } = edgeErrorSchema.parse(refused.body);
       expect(error.code).toBe("rate_limited");
       expect(Number(refused.headers.get("Retry-After"))).toBeGreaterThanOrEqual(1);
       expect(error.retryAfterSeconds).toBe(Number(refused.headers.get("Retry-After")));
-      expect(await offMock.searchCalls(searchTerms)).toHaveLength(perUserLimit);
+      expect(await offMock.searchCalls(refusedSearch)).toEqual([]);
     });
 
     it("limits each user on their own", async () => {
       const busyUser = await newUser();
       const freshUser = await newUser();
-      const searchTerms = uniqueSearchTerms();
-      await offMock.registerSearch({ searchTerms, products: [] });
+      const searches = await registerSearches(perUserLimit + 2);
+      const freshUserSearch = searches.pop() ?? "";
       await waitForFreshRateLimitWindow();
       const busy: number[] = [];
-      for (let attempt = 0; attempt <= perUserLimit; attempt += 1) {
+      for (const searchTerms of searches) {
         busy.push((await search(searchTerms, busyUser.accessToken)).status);
       }
 
-      const response = await search(searchTerms, freshUser.accessToken);
+      const response = await search(freshUserSearch, freshUser.accessToken);
 
       expect(busy.at(-1)).toBe(429);
       expect(response.status).toBe(200);
+    });
+  });
+
+  describe("the shared store of results", () => {
+    async function readRow(searchTerms: string) {
+      const { data, error } = await adminClient()
+        .from("off_search_results")
+        .select("*")
+        .eq("query_key", searchTerms)
+        .maybeSingle();
+      if (error) {
+        throw new Error("Could not read the stored search", { cause: error });
+      }
+      return data;
+    }
+
+    async function spendLimit(accessToken: string, count: number) {
+      for (const searchTerms of Array.from({ length: count }, uniqueSearchTerms)) {
+        await offMock.registerSearch({ searchTerms, products: [] });
+        expect((await search(searchTerms, accessToken)).status).toBe(200);
+      }
+    }
+
+    it("answers a second search for the same words from the store: one call to OFF in total", async () => {
+      const user = await newUser();
+      const searchTerms = uniqueSearchTerms();
+      const code = generateBarcode();
+      await offMock.registerSearch({ searchTerms, products: [{ code, fixture: "kcal-present" }] });
+
+      const first = await search(searchTerms, user.accessToken);
+      const second = await search(searchTerms, user.accessToken);
+
+      expect(second.status).toBe(200);
+      expect(second.body).toEqual(first.body);
+      expect(offSearchResponseSchema.parse(second.body).candidates[0]?.code).toBe(code);
+      expect(await offMock.searchCalls(searchTerms)).toHaveLength(1);
+    });
+
+    it("treats words that differ only in case and spacing as the same search, and spends one limit", async () => {
+      const user = await newUser();
+      const searchTerms = uniqueSearchTerms();
+      await offMock.registerSearch({ searchTerms, products: [] });
+      await waitForFreshRateLimitWindow();
+
+      await search(searchTerms, user.accessToken);
+      const again = await search(
+        `  (${searchTerms.toUpperCase().replace(" ", "   ")}  `,
+        user.accessToken,
+      );
+      // One limit is spent, so the rest of the allowance is still there for other searches.
+      await spendLimit(user.accessToken, perUserLimit - 1);
+      const overTheLimit = uniqueSearchTerms();
+      await offMock.registerSearch({ searchTerms: overTheLimit, products: [] });
+      const refused = await search(overTheLimit, user.accessToken);
+
+      expect(again.status).toBe(200);
+      expect(await offMock.searchCalls(searchTerms)).toHaveLength(1);
+      expect(refused.status).toBe(429);
+    });
+
+    it("shares a result between people: a second user's search for the same words makes no call", async () => {
+      const firstUser = await newUser();
+      const secondUser = await newUser();
+      const searchTerms = uniqueSearchTerms();
+      await offMock.registerSearch({
+        searchTerms,
+        products: [{ code: generateBarcode(), fixture: "kcal-present" }],
+      });
+
+      await search(searchTerms, firstUser.accessToken);
+      const response = await search(searchTerms, secondUser.accessToken);
+
+      expect(response.status).toBe(200);
+      expect(offSearchResponseSchema.parse(response.body).candidates).toHaveLength(1);
+      expect(await offMock.searchCalls(searchTerms)).toHaveLength(1);
+    });
+
+    it("still answers a stored search with 200, and spends nothing, for a user at their limit", async () => {
+      const user = await newUser();
+      const storedSearch = uniqueSearchTerms();
+      await offMock.registerSearch({
+        searchTerms: storedSearch,
+        products: [{ code: generateBarcode(), fixture: "kcal-present" }],
+      });
+      await waitForFreshRateLimitWindow();
+      await search(storedSearch, user.accessToken);
+      await spendLimit(user.accessToken, perUserLimit - 1);
+      const newSearch = uniqueSearchTerms();
+      await offMock.registerSearch({ searchTerms: newSearch, products: [] });
+      expect((await search(newSearch, user.accessToken)).status).toBe(429);
+
+      const response = await search(storedSearch, user.accessToken);
+
+      expect(response.status).toBe(200);
+      expect(offSearchResponseSchema.parse(response.body).candidates).toHaveLength(1);
+      expect(await offMock.searchCalls(storedSearch)).toHaveLength(1);
+    });
+
+    it("reuses an empty result, because OFF did answer", async () => {
+      const user = await newUser();
+      const searchTerms = uniqueSearchTerms();
+      await offMock.registerSearch({ searchTerms, products: [] });
+
+      await search(searchTerms, user.accessToken);
+      const second = await search(searchTerms, user.accessToken);
+
+      expect(second.body).toEqual({ candidates: [] });
+      expect(await offMock.searchCalls(searchTerms)).toHaveLength(1);
+      expect((await readRow(searchTerms))?.candidates).toEqual([]);
+    });
+
+    it("stores nothing for a failed search, so the next search asks OFF again", async () => {
+      const user = await newUser();
+      const searchTerms = uniqueSearchTerms();
+      await offMock.registerSearch({
+        searchTerms,
+        status: 500,
+        body: { error: "down" },
+        followedBy: [{ status: 500, body: { error: "down" } }, { products: [] }],
+      });
+
+      const failed = await search(searchTerms, user.accessToken);
+      const rowAfterFailure = await readRow(searchTerms);
+      const recovered = await search(searchTerms, user.accessToken);
+
+      expect(failed.status).toBe(502);
+      expect(rowAfterFailure).toBeNull();
+      expect(recovered.status).toBe(200);
+      expect(await offMock.searchCalls(searchTerms)).toHaveLength(3);
+      expect(await readRow(searchTerms)).not.toBeNull();
+    });
+
+    it("holds the normalised candidates and no user id, under the cleaned words", async () => {
+      const user = await newUser();
+      const searchTerms = uniqueSearchTerms();
+      const code = generateBarcode();
+      await offMock.registerSearch({ searchTerms, products: [{ code, fixture: "kcal-present" }] });
+
+      const response = await search(searchTerms.toUpperCase(), user.accessToken);
+
+      const row = await readRow(searchTerms);
+      expect(Object.keys(row ?? {}).sort()).toEqual(["candidates", "fetched_at", "query_key"]);
+      expect(row?.candidates).toEqual(offSearchResponseSchema.parse(response.body).candidates);
+      expect(JSON.stringify(row)).not.toContain(user.id);
     });
   });
 });

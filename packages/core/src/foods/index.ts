@@ -44,6 +44,16 @@ export {
   normaliseOffSearchHit,
   normaliseOffSearchTerms,
 } from "./offSearchHit";
+export {
+  OFF_SEARCH_EMPTY_FRESH_MS,
+  OFF_SEARCH_FRESH_MS,
+  OFF_SEARCH_KEEP_MS,
+  OFF_SEARCH_KEEP_SECONDS,
+  offSearchQueryKey,
+  offSearchRowState,
+  readStoredOffSearch,
+} from "./offSearchStore";
+export type { OffSearchRowState, StoredOffSearch } from "./offSearchStore";
 export { deriveOffPortions } from "./deriveOffPortions";
 export { NATURAL_UNIT_PROCESSED_TAGS, NATURAL_UNIT_TYPES, naturalUnitsFor } from "./naturalUnits";
 export type { NaturalUnitPortion, NaturalUnitType } from "./naturalUnits";
