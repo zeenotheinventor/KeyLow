@@ -24,11 +24,12 @@ afterAll(async () => {
   await server?.close();
 });
 
+// The `q` the function sends: the words, then the filter clauses the mock leaves out of searchTerms.
+const filterClauses = 'countries_tags:"en:united-kingdom" nutriments:*';
+
 async function getSearch(searchTerms: string, headers: Record<string, string> = {}) {
-  const response = await fetch(
-    `${baseUrl}/cgi/search.pl?search_terms=${encodeURIComponent(searchTerms)}&json=1&page_size=20`,
-    { headers },
-  );
+  const q = encodeURIComponent(`${searchTerms} ${filterClauses}`);
+  const response = await fetch(`${baseUrl}/search?q=${q}&page_size=20`, { headers });
   const text = await response.text();
   return { status: response.status, contentType: response.headers.get("content-type"), text };
 }
@@ -160,7 +161,7 @@ describe("the OFF mock server", () => {
   });
 
   describe("search", () => {
-    it("serves the registered products from their fixtures, under their codes, in the search envelope", async () => {
+    it("serves the registered products from their fixtures, under their codes, as hits in the search envelope", async () => {
       await client.registerSearch({
         searchTerms: "oat crunch",
         products: [
@@ -179,10 +180,24 @@ describe("the OFF mock server", () => {
       expect(JSON.parse(text)).toMatchObject({
         count: 2,
         page: 1,
-        products: [
+        timed_out: false,
+        hits: [
           { code: "2000000000102", product_name_en: "Test Oat Crunch" },
           { code: "2000000000119", product_name: "Renamed Bar" },
         ],
+      });
+    });
+
+    it("serves brands as an array, like Search-a-licious", async () => {
+      await client.registerSearch({
+        searchTerms: "brands array",
+        products: [{ code: "2000000000133", fixture: "kcal-present" }],
+      });
+
+      const { text } = await getSearch("brands array");
+
+      expect(JSON.parse(text)).toMatchObject({
+        hits: [{ brands: ["Northfield Mills", "Other Brand"] }],
       });
     });
 
@@ -190,7 +205,7 @@ describe("the OFF mock server", () => {
       const { status, text } = await getSearch("nothing registered for this");
 
       expect(status).toBe(200);
-      expect(JSON.parse(text)).toMatchObject({ count: 0, products: [] });
+      expect(JSON.parse(text)).toMatchObject({ count: 0, hits: [] });
     });
 
     it("serves a raw body with its status, and a raw text body verbatim as HTML", async () => {
@@ -220,7 +235,24 @@ describe("the OFF mock server", () => {
       expect(Date.now() - started).toBeGreaterThanOrEqual(280);
     });
 
-    it("records each search with its full URL and headers, per search terms", async () => {
+    it("answers the repeats of a search with the answers registered to follow, the last one repeating", async () => {
+      await client.registerSearch({
+        searchTerms: "flaky",
+        status: 500,
+        body: { error: "down" },
+        followedBy: [{ products: [{ code: "2000000000140", fixture: "kcal-present" }] }],
+      });
+
+      const first = await getSearch("flaky");
+      const second = await getSearch("flaky");
+      const third = await getSearch("flaky");
+
+      expect(first.status).toBe(500);
+      expect(JSON.parse(second.text)).toMatchObject({ count: 1 });
+      expect(JSON.parse(third.text)).toMatchObject({ count: 1 });
+    });
+
+    it("records each search with its full URL and headers, per search terms without the filter clauses", async () => {
       await client.registerSearch({ searchTerms: "recorded", products: [] });
       await getSearch("recorded", { "User-Agent": "mock-test/2.0" });
       await getSearch("another");
@@ -228,7 +260,10 @@ describe("the OFF mock server", () => {
       const calls = await client.searchCalls("recorded");
 
       expect(calls).toHaveLength(1);
-      expect(calls[0]?.url).toBe("/cgi/search.pl?search_terms=recorded&json=1&page_size=20");
+      expect(calls[0]?.url).toBe(
+        `/search?q=${encodeURIComponent(`recorded ${filterClauses}`)}&page_size=20`,
+      );
+      expect(calls[0]?.query["q"]).toBe(`recorded ${filterClauses}`);
       expect(calls[0]?.query["page_size"]).toBe("20");
       expect(calls[0]?.headers["user-agent"]).toBe("mock-test/2.0");
       expect(await client.searchCalls("another")).toHaveLength(1);
@@ -243,7 +278,7 @@ describe("the OFF mock server", () => {
       await client.reset();
 
       expect(await client.searchCalls("forgotten")).toEqual([]);
-      expect(JSON.parse((await getSearch("forgotten")).text)).toMatchObject({ products: [] });
+      expect(JSON.parse((await getSearch("forgotten")).text)).toMatchObject({ hits: [] });
     });
 
     it("rejects a search registration whose product fixture is not a plain file name", async () => {

@@ -6,13 +6,14 @@
 //
 // Control endpoints, used by the test side (offMock.ts):
 //   POST /__mock/register          register what a code answers
-//   POST /__mock/register-search   register what a search for some words answers
+//   POST /__mock/register-search   register what a search for some words answers, and what the
+//                                  repeats of that search answer after it
 //   GET  /__mock/calls             the requests recorded for ?code= (product lookups) or
 //                                  ?searchTerms= (searches)
 //   POST /__mock/reset             forget every registration and call
 // Endpoints the functions call:
 //   GET  /api/v2/product/<code>
-//   GET  /cgi/search.pl?search_terms=<words>
+//   GET  /search?q=<words> countries_tags:"..." nutriments:*   Search-a-licious, answering {hits}
 //   POST /anthropic/v1/messages    the Messages API, streamed, from a script a test registers
 // Control endpoints for the Messages API, used by the test side (anthropicMock.ts). A script is keyed by
 // a marker the test puts in its user text, so parallel suites never mix. `reset` leaves them alone,
@@ -34,6 +35,7 @@ import type {
   RecordedSearchCall,
   RegisterProduct,
   RegisterSearch,
+  RegisterSearchAnswer,
   RegisterSearchProduct,
 } from "./offMock";
 import type { IncomingMessage, Server, ServerResponse } from "node:http";
@@ -41,7 +43,9 @@ import type { IncomingMessage, Server, ServerResponse } from "node:http";
 const fixtureDirectory = new URL("../../../../core/test/fixtures/off/", import.meta.url);
 const plainFileName = /^[a-z0-9-]+$/;
 const productPath = /^\/api\/v2\/product\/([^/]+)$/;
-const searchPath = "/cgi/search.pl";
+const searchPath = "/search";
+// The clauses the function adds to the typed words, which a test's searchTerms leave out.
+const searchFilterClauses = /\s*countries_tags:"[^"]*"|\s*nutriments:\*/g;
 
 // `rawText` is sent verbatim as HTML instead of `body` as JSON.
 type Answer = { status: number; body: unknown; delayMilliseconds: number; rawText?: string };
@@ -90,12 +94,27 @@ function buildProduct(
   };
 }
 
-// The envelope `/cgi/search.pl?json=1` wraps its products in.
-function searchEnvelope(products: Record<string, unknown>[]): Record<string, unknown> {
-  return { count: products.length, page: 1, page_count: products.length, page_size: 20, products };
+// The envelope Search-a-licious wraps its hits in.
+function searchEnvelope(hits: Record<string, unknown>[]): Record<string, unknown> {
+  return {
+    hits,
+    count: hits.length,
+    page: 1,
+    page_size: 20,
+    page_count: hits.length === 0 ? 0 : 1,
+    timed_out: false,
+  };
 }
 
-function searchAnswerFor(registration: RegisterSearch): Answer {
+// Search-a-licious sends `brands` as an array, where a product fixture has the string v2 sends.
+function toHit(product: Record<string, unknown>): Record<string, unknown> {
+  const { brands } = product;
+  return typeof brands === "string"
+    ? { ...product, brands: brands.split(",").map((brand) => brand.trim()) }
+    : product;
+}
+
+function searchAnswerFor(registration: RegisterSearchAnswer): Answer {
   const status = registration.status ?? 200;
   const delayMilliseconds = registration.delayMilliseconds ?? 0;
   if (registration.rawBody !== undefined) {
@@ -104,8 +123,8 @@ function searchAnswerFor(registration: RegisterSearch): Answer {
   if (registration.body !== undefined) {
     return { status, body: registration.body, delayMilliseconds };
   }
-  const products = (registration.products ?? []).map((product) => buildProduct(product));
-  return { status, body: searchEnvelope(products), delayMilliseconds };
+  const hits = (registration.products ?? []).map((product) => toHit(buildProduct(product)));
+  return { status, body: searchEnvelope(hits), delayMilliseconds };
 }
 
 function emptySearchAnswer(): Answer {
@@ -170,12 +189,8 @@ function toSearchProduct(body: unknown): RegisterSearchProduct {
   return { code, fixture, ...(productOverrides === undefined ? {} : { productOverrides }) };
 }
 
-function toSearchRegistration(body: unknown): RegisterSearch {
-  if (!isRecord(body) || typeof body["searchTerms"] !== "string") {
-    throw new Error("A search registration needs string searchTerms");
-  }
+function toSearchAnswer(body: Record<string, unknown>): RegisterSearchAnswer {
   return {
-    searchTerms: body["searchTerms"],
     ...(Array.isArray(body["products"]) ? { products: body["products"].map(toSearchProduct) } : {}),
     ...(body["body"] === undefined ? {} : { body: body["body"] }),
     ...(typeof body["rawBody"] === "string" ? { rawBody: body["rawBody"] } : {}),
@@ -183,6 +198,25 @@ function toSearchRegistration(body: unknown): RegisterSearch {
     ...(typeof body["delayMilliseconds"] === "number"
       ? { delayMilliseconds: body["delayMilliseconds"] }
       : {}),
+  };
+}
+
+function toSearchRegistration(body: unknown): RegisterSearch {
+  if (!isRecord(body) || typeof body["searchTerms"] !== "string") {
+    throw new Error("A search registration needs string searchTerms");
+  }
+  const followedBy = Array.isArray(body["followedBy"])
+    ? body["followedBy"].map((answer: unknown) => {
+        if (!isRecord(answer)) {
+          throw new Error("Each followedBy answer must be an object");
+        }
+        return toSearchAnswer(answer);
+      })
+    : undefined;
+  return {
+    searchTerms: body["searchTerms"],
+    ...toSearchAnswer(body),
+    ...(followedBy === undefined ? {} : { followedBy }),
   };
 }
 
@@ -250,7 +284,7 @@ function listeningPort(server: Server): number {
  */
 export function startOffMock(port: number): Promise<OffMockServer> {
   const answers = new Map<string, Answer>();
-  const searchAnswers = new Map<string, Answer>();
+  const searchAnswers = new Map<string, Answer[]>();
   const calls: RecordedCall[] = [];
   const searchCalls: RecordedSearchCall[] = [];
   const modelScripts = new Map<string, ScriptedReply[]>();
@@ -304,7 +338,10 @@ export function startOffMock(port: number): Promise<OffMockServer> {
     }
     if (request.method === "POST" && url.pathname === "/__mock/register-search") {
       const registration = toSearchRegistration(await readJson(request));
-      searchAnswers.set(registration.searchTerms, searchAnswerFor(registration));
+      searchAnswers.set(registration.searchTerms, [
+        searchAnswerFor(registration),
+        ...(registration.followedBy ?? []).map(searchAnswerFor),
+      ]);
       send(response, 204, null);
       return;
     }
@@ -358,14 +395,17 @@ export function startOffMock(port: number): Promise<OffMockServer> {
     }
 
     if (request.method === "GET" && url.pathname === searchPath) {
-      const searchTerms = url.searchParams.get("search_terms") ?? "";
+      const searchTerms = (url.searchParams.get("q") ?? "").replace(searchFilterClauses, "").trim();
+      const earlierCalls = searchCalls.filter((call) => call.searchTerms === searchTerms).length;
       searchCalls.push({
         searchTerms,
         url: `${url.pathname}${url.search}`,
         query: Object.fromEntries(url.searchParams),
         headers: readHeaders(request),
       });
-      const answer = searchAnswers.get(searchTerms) ?? emptySearchAnswer();
+      const registered = searchAnswers.get(searchTerms);
+      const answer =
+        registered?.[Math.min(earlierCalls, registered.length - 1)] ?? emptySearchAnswer();
       await delay(answer.delayMilliseconds);
       sendAnswer(response, answer);
       return;
