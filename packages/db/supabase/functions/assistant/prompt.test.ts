@@ -209,20 +209,90 @@ Deno.test("the system prompt names training in what the assistant is and what it
   }
 });
 
-Deno.test("training numbers follow the same rule as food numbers", () => {
+Deno.test(
+  "numbers about the person's own training come from a tool, general guidance is the one exception",
+  () => {
+    for (const rule of [
+      "Numbers about the person's own training follow the same rule: a load, a set count, a rep range or a recovery time from their data comes from a tool result, as given.",
+      "The one exception is the general guidance under Training questions, which is never given as the person's data.",
+    ]) {
+      assert(SYSTEM_PROMPT.includes(rule), `the system prompt does not hold: ${rule}`);
+    }
+    assertEquals(SYSTEM_PROMPT.includes("Training numbers follow the same rule"), false);
+  },
+);
+
+// The food sections as they stood before KEY-952, copied byte for byte. A training change must not move them.
+const READ_BEFORE_YOU_WRITE_SECTION =
+  'Read before you write\nBefore any call that changes the diary, read what the call needs. Never log from memory. Find the food with search_foods, read its portions with get_food, and use the ids those results give. Never invent a food, an id or a portion. When search_foods finds nothing, search once more with other words, a simpler or more general name (for example "semi skimmed milk" becomes "milk"), before asking the person. When that finds nothing either, ask with ask_user. Never guess a food. A training change reads first too: exercise ids come from search_exercises or get_routines, set ids from get_workouts, and none is invented.';
+const NUMBERS_FOOD_SENTENCES =
+  'Numbers\nEvery number in a reply comes from a tool result. Never add up, average, convert or work out a change yourself, and never fill in a number from memory. When a result gives a total, a trend or a rate, quote it as given. A value of null means unknown, never zero. State an amount exactly as the tool gives it, without "about" or "roughly", except as set out under Amounts. The one thing described as an estimate is a trend weight, and only as the tool describes it.';
+const AMOUNTS_SECTION =
+  'Amounts\nPrefer the food\'s own portions. Pick one portion from the food\'s portions, each of which has a label and grams, and a count, and say it like "2 large eggs (100 g)", with the grams in brackets. The grams come from the portion in the read tool\'s result or from the write result, never from multiplying in your head. When no portion fits, use the grams the person said, like "150 g rice". When the person gives grams, log those grams and do not convert them to a portion. When the person gave no amount and no portion fits, ask for grams with ask_user. A portion marked estimated is Ki-Lo\'s own guess at a typical serving. Use it only when the person said a serving or the like and gave no amount. Write it with its words and "about" in the brackets, as in "1 typical serving (about 150 g)". This is the one exception to never describing an amount as an estimate. Otherwise ask for grams as above. Never use hand measures such as a fist, a palm, a cupped hand or a thumb, and never describe an amount as an estimate.';
+
+Deno.test("the food grounding rules are byte-identical to the ones before KEY-952", () => {
+  const sections = SYSTEM_PROMPT.split("\n\n");
+
+  assertEquals(
+    sections.find((section) => section.startsWith("Read before you write")),
+    READ_BEFORE_YOU_WRITE_SECTION,
+  );
+  assertEquals(
+    sections.find((section) => section.startsWith("Amounts\n")),
+    AMOUNTS_SECTION,
+  );
+  const numbers = sections.find((section) => section.startsWith("Numbers\n")) ?? "";
+  assert(numbers.startsWith(NUMBERS_FOOD_SENTENCES), "the food sentences of Numbers changed");
+});
+
+Deno.test("Training questions is one section, between Training advice and One question", () => {
+  const titles = SYSTEM_PROMPT.split("\n\n").map((section) => section.split("\n")[0]);
+  const position = titles.indexOf("Training questions");
+  assertEquals(titles[position - 1], "Training advice");
+  assertEquals(titles[position + 1], "One question, never a guess");
+  assertEquals(SYSTEM_PROMPT.split("Training questions\n").length, 2);
+});
+
+Deno.test("a general training question is answered from general knowledge, briefly", () => {
+  for (const rule of [
+    "A general weight training question, such as rep ranges, sets, form, progression, rest, exercise choice, warm-ups or tempo, is answered from general training knowledge, with no tool call needed.",
+    "Answer first, in at most 3 short sentences or bullets.",
+    "A general range, such as most people use 10 to 15 reps on flyes, is worded as general guidance, never as the person's data or a Ki-Lo figure.",
+    "Never refuse a general training question because Ki-Lo holds no figure for it.",
+  ]) {
+    assert(SYSTEM_PROMPT.includes(rule), `the system prompt does not hold: ${rule}`);
+  }
+});
+
+Deno.test("the tools-cannot rule leaves general training questions to Training questions", () => {
   assert(
     SYSTEM_PROMPT.includes(
-      "Training numbers follow the same rule: a load, a set count, a rep range and a recovery time come from a tool result, as given.",
+      "When the tools cannot do what was asked, say so in one short sentence and do not try another way. A general weight training question is answered under Training questions.",
     ),
   );
+});
+
+Deno.test("Training questions covers training only, never food", () => {
+  assert(SYSTEM_PROMPT.includes("This covers training only, never food, calories or protein."));
+});
+
+Deno.test("a general answer keeps the data, the muscles and the injury rules", () => {
+  for (const rule of [
+    "Numbers about the person's own training still come only from tools.",
+    "Tailor an answer only from what a read tool returned in the same turn, and claim nothing about their training that was not read.",
+    "Never contradict show_exercise_muscles or say one exercise works a muscle more than another.",
+    "Pain or an injury follows Limits, with no training advice.",
+  ]) {
+    assert(SYSTEM_PROMPT.includes(rule), `the system prompt does not hold: ${rule}`);
+  }
 });
 
 Deno.test("training advice comes from the three tools and never from the model", () => {
   for (const rule of [
     "Training advice\nWhat to train next comes only from suggest_next_session, volume and recovery, and anything overworked or undertrained, only from get_muscle_state, and progress only from get_exercise_progress.",
     "Their volume is of the last 7 days, never called this week.",
-    "Never invent a weight, a set count or a rep range.",
-    "When the tools have no number for the question, say so and give what they do have, such as the last performance and the trend.",
+    "Never invent a weight, a set count or a rep range for the person's own training.",
+    "When the tools have no number for a question about the person's own training, say so and give what they do have, such as the last performance and the trend.",
     "A suggestion can carry a marker such as first_visit (nothing logged yet, so nothing to suggest). Say what a marker means in plain words and never print its name.",
   ]) {
     assert(SYSTEM_PROMPT.includes(rule), `the system prompt does not hold: ${rule}`);
