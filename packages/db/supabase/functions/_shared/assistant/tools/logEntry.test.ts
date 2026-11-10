@@ -132,7 +132,7 @@ Deno.test(
       targetUpdatedAt: row?.["updated_at"],
     });
     assertFalse(JSON.stringify(store.actions).includes("Egg"));
-    assertFalse(JSON.stringify(store.actions).includes("144"));
+    assertFalse(JSON.stringify(store.actions).includes("kcal"));
   },
 );
 
@@ -224,7 +224,7 @@ Deno.test("no name and no nutrient reaches a log line", async () => {
 
   const lines = spy.lines.join("\n");
   assertFalse(lines.includes("Egg"));
-  assertFalse(lines.includes("144"));
+  assertFalse(lines.includes("kcal"));
 });
 
 Deno.test("a failed stamp read still lands the entry, but the card offers no Undo", async () => {
