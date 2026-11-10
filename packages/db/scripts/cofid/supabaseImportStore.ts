@@ -53,6 +53,14 @@ export function createSupabaseImportStore(client: SupabaseClient<Database>): Imp
         .from("food_source_data")
         .upsert(sourceData, { onConflict: "food_id" });
       raiseOnFailure(sourceDataError, "upsert the source data");
+      return [...idsBySourceRef.values()];
+    },
+
+    async giveDefaultPortions(foodIds) {
+      const { error } = await client.rpc("give_foods_default_portions", {
+        p_food_ids: [...foodIds],
+      });
+      raiseOnFailure(error, "give the foods a default portion");
     },
 
     async finishRun(runId, { rowCount }) {

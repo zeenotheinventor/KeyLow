@@ -1,5 +1,5 @@
 import { act, renderHook } from "@testing-library/react";
-import { http } from "msw";
+import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -23,13 +23,9 @@ beforeEach(() => {
       requests.push("PATCH foods");
       return postgrestRows(request, [foodRow({ name: "Renamed flapjack" })]);
     }),
-    http.delete(`${REST_URL}/food_portions`, () => {
-      requests.push("DELETE food_portions");
-      return new Response(null, { status: 204 });
-    }),
-    http.post(`${REST_URL}/food_portions`, ({ request }) => {
-      requests.push("POST food_portions");
-      return postgrestRows(request, [portionRow()], 201);
+    http.post(`${REST_URL}/rpc/replace_food_portions`, () => {
+      requests.push("RPC replace_food_portions");
+      return HttpResponse.json([portionRow()]);
     }),
   );
 });
@@ -65,7 +61,7 @@ describe("useUpdateFood", () => {
     const food = await act(() => result.current.mutateAsync({ id: FOOD_ID, input: validInput }));
 
     expect(food.name).toBe("Renamed flapjack");
-    expect(requests).toEqual(["PATCH foods", "DELETE food_portions", "POST food_portions"]);
+    expect(requests).toEqual(["PATCH foods", "RPC replace_food_portions"]);
   });
 
   it("should reject invalid input with a validation error and never call the network", async () => {
@@ -93,7 +89,7 @@ describe("useUpdateFood", () => {
 
   it("should invalidate every foods query and name the food when only the portions were not saved", async () => {
     server.use(
-      http.post(`${REST_URL}/food_portions`, () =>
+      http.post(`${REST_URL}/rpc/replace_food_portions`, () =>
         postgrestError(403, "42501", "new row violates row-level security policy"),
       ),
     );
@@ -107,7 +103,7 @@ describe("useUpdateFood", () => {
     );
 
     expect(failure).toHaveProperty("message", expect.stringContaining(FOOD_ID));
-    expect(requests).toEqual(["PATCH foods", "DELETE food_portions"]);
+    expect(requests).toEqual(["PATCH foods"]);
     expect(invalidate).toHaveBeenCalledTimes(1);
     expect(invalidate.mock.calls[0]?.[0]).toHaveProperty("queryKey", keys.foods.all);
   });

@@ -4,12 +4,13 @@ import { parseCustomFoodInput } from "../customFoodInput";
 import { invalidateFoodQueries } from "../invalidateFoodQueries";
 import { useSupabase } from "../KeyLowProvider";
 import { keys } from "../queryKeys";
-import { FoodsPartialWriteError, createFood } from "../repos/foods";
+import { createFood } from "../repos/foods";
 
 /**
  * Creates a custom food for the signed in user. The input is validated before any request is made.
- * Once the food exists in the database, whether or not its portions were saved, every foods query
- * is invalidated, except the Open Food Facts searches. A successful create also seeds the new food's detail and portions caches.
+ * The food and its portions are written together, so a failed create wrote nothing and no cache is touched.
+ * A successful create invalidates every foods query, except the Open Food Facts searches, and seeds the new
+ * food's detail and portions caches.
  */
 export function useCreateFood() {
   const client = useSupabase();
@@ -26,19 +27,12 @@ export function useCreateFood() {
 
       return createFood(client, data.user.id, input);
     },
-    onSettled: async (created, error) => {
-      // A failed food insert wrote nothing, so there is nothing to refresh.
-      if (error !== null && !(error instanceof FoodsPartialWriteError)) {
-        return;
-      }
-
+    onSuccess: async (created) => {
       // One invalidation of the root key covers the detail, portions, search and barcode keys.
       await invalidateFoodQueries(queryClient);
 
-      if (created) {
-        queryClient.setQueryData(keys.foods.detail(created.food.id), created.food);
-        queryClient.setQueryData(keys.foods.portions(created.food.id), created.portions);
-      }
+      queryClient.setQueryData(keys.foods.detail(created.food.id), created.food);
+      queryClient.setQueryData(keys.foods.portions(created.food.id), created.portions);
     },
   });
 }

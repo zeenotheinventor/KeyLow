@@ -10,7 +10,7 @@ import {
   labelFoodInput,
   roundCalories,
 } from "../../core.ts";
-import { FoodsPartialWriteError, createFood, getFood, softDeleteFood } from "../../repos.ts";
+import { createFood, getFood, softDeleteFood } from "../../repos.ts";
 
 import type { WriteRunOutput, WriteToolDefinition } from "../tool.ts";
 
@@ -93,16 +93,9 @@ export const createCustomFoodTool: WriteToolDefinition<CreateCustomFoodInput> = 
     let created;
     try {
       created = await createFood(ctx.caller, ctx.userId, label.food);
-    } catch (caught) {
-      // The food was written and its portion was not. The food cannot be deleted, so it is hidden, and the
-      // model may try again. The repo's message can quote the row, so it is not passed on.
-      if (caught instanceof FoodsPartialWriteError) {
-        try {
-          await softDeleteFood(ctx.caller, caught.foodId);
-        } catch (cleanup) {
-          ctx.reportError("assistant tool create_custom_food", "internal_error", cleanup);
-        }
-      }
+    } catch {
+      // The food and its portions are written in one transaction, so a failure leaves nothing to clean up, and
+      // the model may try again. The repo's message can quote the row, so it is not passed on.
       throw new Error("create_custom_food could not save the food");
     }
 

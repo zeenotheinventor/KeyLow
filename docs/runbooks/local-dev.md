@@ -231,6 +231,14 @@ pnpm --filter @keylow/db emit:estimated-portions supabase/migrations/<timestamp>
 
 It writes the file without connecting to any database and refuses a path that holds a file already. A unit test regenerates the newest `*_estimated_portions.sql` from core and fails when the two differ. The integration test `estimated-portions-migration.test.ts` creates its own uniquely named foods, runs the statements inside a transaction that is rolled back and checks only those rows. On a fresh stack the migrations run before the seeds, so the seeded CoFID foods do not exist when the migration runs, which is why the test makes its own rows and why `seeds/90_estimated_portions.sql` exists: it holds the same statements, written by the same generator (`pnpm --filter @keylow/db emit:estimated-portions --seed supabase/seeds/90_estimated_portions.sql`), and runs after the other seeds so a fresh stack matches production. A unit test regenerates it from core and fails when it differs. Production already holds the foods, so the migration writes their rows when Deploy Supabase applies it.
 
+#### Keeping every food on a default (KEY-946)
+
+Three things keep the rule true after the one-off migration:
+
+- A person's own food and its portions are written in one transaction. `createFood` calls the `create_food` database function and `replaceFoodPortions` calls `replace_food_portions`. Both are security invoker, so row-level security applies as it does to a direct write. A failed create leaves nothing behind, and a failed edit leaves the food's previous portions in place. `replace_food_portions` refuses a list with no default or with two, so a food is never left with none. When `updateFood` changes the food and then cannot replace its portions, it throws `FoodsPartialWriteError`, and the previous portions are kept.
+- `store_off_product` refuses a product whose portions have no default, as well as one with two.
+- `public.give_foods_default_portions(p_food_ids uuid[] default null)` runs the four statements above, for the given foods or for every food when it gets no ids, and is callable by the service role only. The migration `*_give_foods_default_portions.sql` is generated from core with `pnpm --filter @keylow/db emit:estimated-portions --function supabase/migrations/<timestamp>_give_foods_default_portions.sql`, and a change to the estimate table is a new migration that replaces the function. `pnpm --filter @keylow/db import:cofid import` (against a database) calls it with the ids of each batch it wrote, and `import:usda emit-migration` ends its migration with a call with no ids. The CoFID `--emit-sql` seed does not, because the natural portions of seed 30 bring their own default and the table allows one per food, so seed 90 gives the rest after every seed has loaded.
+
 ### USDA foods
 
 Some foods have no CoFID entry, so they come from the USDA FoodData Central SR Legacy release of April 2018 (public domain under CC0). Two files hold them:

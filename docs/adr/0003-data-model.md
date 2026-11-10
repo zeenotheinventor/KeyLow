@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted, 2026-09-22. Amendment 1 appended 2026-10-07. Amendment 2 appended 2026-10-15. Amendment 3 appended 2026-10-15. Amendment 4 appended 2026-10-15. Amendment 5 appended 2026-10-15. Amendment 6 appended 2026-10-15. Amendment 7 appended 2026-10-15. Amendment 8 appended 2026-10-16. Amendment 9 appended 2026-10-18. Amendment 10 appended 2026-10-23. Amendment 11 appended 2026-10-23. Amendment 12 appended 2026-10-23. Amendment 13 appended 2026-10-23. Amendment 14 appended 2026-10-26, with addenda of 2026-11-03 and 2026-11-07. Amendment 15 appended 2026-10-29. Amendment 16 appended 2026-11-10.
+Accepted, 2026-09-22. Amendment 1 appended 2026-10-07. Amendment 2 appended 2026-10-15. Amendment 3 appended 2026-10-15. Amendment 4 appended 2026-10-15. Amendment 5 appended 2026-10-15. Amendment 6 appended 2026-10-15. Amendment 7 appended 2026-10-15. Amendment 8 appended 2026-10-16. Amendment 9 appended 2026-10-18. Amendment 10 appended 2026-10-23. Amendment 11 appended 2026-10-23. Amendment 12 appended 2026-10-23. Amendment 13 appended 2026-10-23. Amendment 14 appended 2026-10-26, with addenda of 2026-11-03 and 2026-11-07. Amendment 15 appended 2026-10-29. Amendment 16 appended 2026-11-10. Amendment 17 appended 2026-11-10.
 
 ## Context
 
@@ -554,7 +554,7 @@ Recorded on 2026-10-15 under KEY-60. It replaces the three separate writes the `
 - that the database, not the caller, sets `fetched_at`, and from the statement clock (`clock_timestamp()`), not the transaction start;
 - that the writers of one barcode are serialised by the row lock of the food upsert, with no advisory lock, and that the portions are replaced by delete and insert and not by a diff;
 - that a payload which is not an object, is not an `off` food, has an owner, has no `source_ref` or has more than one default portion is refused with `22023` before anything is written, and that every other bad value is left to the table's own check;
-- that an empty portions array is valid and clears the food's portions, and a null one is refused;
+- that an empty portions array is valid and clears the food's portions, and a null one is refused (superseded by Amendment 17: an empty array, or one with no default, is refused too);
 - that `execute` is held by `service_role` alone;
 - that the stale-refresh claim stays in the Edge Function.
 
@@ -2290,3 +2290,52 @@ The store holds words typed into a food search, with nothing that identifies who
 ### Consequences of Amendment 16
 
 The migration creates the table, the index, the grants and the function, and `packages/db/src/types.gen.ts` gains them. It inserts no row, so it copes with any database and needs no reset. Deploying it does nothing until the limits in production are removed or raised, so the deploy check is to list the secret names with `supabase secrets list` and remove `OFF_BASE_URL`, and remove or raise `OFF_SEARCH_PER_USER_PER_MIN` and `OFF_SEARCH_GLOBAL_PER_MIN`, if any is set. Any further deviation from the frozen Decision, from Amendments 1 to 15 or from this amendment needs a later amendment before the migration or code that implements it lands.
+
+## Amendment 17 (Every food keeps one default portion: atomic portion writes, 2026-11-10)
+
+### Status
+
+Recorded on 2026-11-10 under KEY-946, which came from the close-out review of KEY-935. KEY-934 gave every existing food a default portion through a generated migration, and nothing kept it that way. A food with no default opens on a silent 100 g. Four gaps remained: `createFood` wrote the food and then its portions as separate requests, so a failed portions insert left a food with none. `replaceFoodPortions` deleted and then inserted as separate requests, so a failed insert left a healthy food with none. `store_off_product` refused a second default but not none. A bulk import inserted foods and nothing else. This amendment adds
+
+- that a person's own food and its portions are written in one transaction, by two security invoker functions.
+- that `store_off_product` refuses a portions list with no default.
+- the invariant that every food, of any source, has exactly one default portion, and how it is kept.
+- one service role function that gives a default to every food that has none, which the food imports call.
+
+The frozen Decision and Amendments 1 to 16 are unchanged, except for one pointer in Amendment 7. Its statement that an empty portions array is valid is superseded by this amendment. No table, column, index, policy or grant changes. The remaining details are interpretations made for implementation. They are the error codes, the choice of `P0002` for a food that is not visible, and the choice to answer another person's food and a missing food the same way. Zee confirms them by approving the PR that carries this amendment.
+
+### The invariant
+
+Every row of `foods`, whatever its `source`, has exactly one `food_portions` row with `is_default`. The one-per-food half is the partial unique index of Amendment 1. The at-least-one half was a one-off backfill (KEY-934) and is now kept by the writers below. The database does not enforce the at-least-one half with a constraint, because a food is inserted before its portions and a deferred constraint trigger would add a cost to every food write. The functions and the import step enforce it instead, and a pgTAP test creates its own foods of every source and asserts it.
+
+### `replace_food_portions(p_food_id uuid, p_portions jsonb)`
+
+- `security invoker`, `set search_path = ''`, `volatile`, returning `jsonb`, the stored portions in order as an array of `food_portions` rows. `execute` is revoked from `public` and `anon` and granted to `authenticated`. Row level security and the `delete` and `insert` grants of Amendment 1 apply exactly as they did to the two requests it replaces.
+- `p_portions` is an array of `{ label, grams, ml, is_default }`, stored in the order sent, with `position` set from that order and `owner_id` set from the food. It must hold exactly one default, so an empty list and a list with no default are refused with `22023`, as is one that is not an array.
+- A food the caller cannot see is `P0002`. Another person's food and a missing food answer the same way. A food with no owner is `42501`. Anything a table refuses, such as a portion with both grams and ml, is the table's own error.
+- It deletes the food's portions and inserts the new ones in one transaction, so a failed insert rolls the delete back and the old portions stay. This is the delete and reinsert pattern of Amendment 1 and Amendment 2, so every portion still comes back with a new id and `portion_id` on a log entry still clears through `on delete set null`.
+
+### `create_food(p_food jsonb, p_portions jsonb)`
+
+- `security invoker`, `set search_path = ''`, `volatile`, returning `jsonb`. The grants are those of `replace_food_portions`.
+- `p_food` carries the columns the form writes plus `source` and `owner_id`. The insert lists a subset of the columns Amendment 1 grants to `authenticated`: the ones the form writes, plus `source`, `owner_id` and `micros`. It leaves out `food_group` and `deleted_at`, and no other key of `p_food` is read. Row level security decides who may write the food, so a source other than `user` or another person's `owner_id` is `42501`. `micros` defaults to `{}`.
+- It then calls `replace_food_portions`, so the same rules apply to the portions. It returns `{ food, portions }`, the stored food without the generated `search` column and its portions in order.
+- A failure anywhere rolls back the whole call. A failed create leaves nothing behind, neither a food nor a food with no portions.
+
+`FoodsPartialWriteError` stays for `updateFood`, which still changes the food row and then replaces its portions as two calls. It now means the food was updated and its previous portions were kept, never that portions are missing. `createFood` no longer throws it.
+
+### `store_off_product`
+
+It now also refuses, with `22023` and the message "store_off_product needs a default portion", a portions list that has no default, an empty list included. It still refuses more than one default. This supersedes the part of Amendment 7 that said an empty array is valid and clears the food's portions. The refusal happens before anything is written, so a refused refresh leaves the stored product as it was. The `off-product` function always sends one default, because `deriveOffPortions` in core ends on an estimate.
+
+### `give_foods_default_portions(p_food_ids uuid[] default null)`
+
+- `security definer`, `set search_path = ''`, `set row_security = off`, returning `void`. `execute` is revoked from `public`, `anon` and `authenticated` and granted to `service_role` only. It writes global portions, which no signed in role may. `replace_food_portions` and `create_food` are also granted to `service_role` explicitly, so no privilege check relies on default privileges.
+- `p_food_ids` limits it to those foods, and null means every food. Each of the four statements carries the same filter, `p_food_ids is null or <food id> = any (p_food_ids)`. A bulk import passes the ids it wrote, so it never gives a default to a food it did not write, which matters on a stack shared by several test suites. The estimated portions migration and seed carry no filter, because they run on every food.
+- Its body is the four statements of `20261110210000_estimated_portions.sql`, generated from the estimate table in `@keylow/core` by `emit-estimated-portions.ts --function`. A food of any source that has portions and no default promotes its first portion, a shared default that is only a measure is relabelled, a CoFID food with no default gets the row of its food group, and any food with no portions gets the row for its energy. A food that already has a default keeps it, nothing is deleted and running it twice changes nothing.
+- A change to the estimate table is a new generated migration that replaces the function. A unit test regenerates the newest one from core and fails when they differ.
+- `pnpm --filter @keylow/db import:cofid import` against a database calls it with the ids of each batch right after that batch is written, so the foods of a run that later fails are already defaulted, and a failure of the call leaves the run unfinished. `import:usda emit-migration` ends the migration it writes with a call with no ids. The CoFID `--emit-sql` seed does not call it, because the curated portions of seed 30 bring their own default and the table allows one per food, so seed 90 gives the rest after every seed has loaded.
+
+### Consequences of Amendment 17
+
+Two migrations add the three functions and replace `store_off_product`. They insert no row, so they are safe on live data, and existing foods are already defaulted by KEY-934. Nothing runs `give_foods_default_portions()` at deploy time. `packages/db/src/types.gen.ts` gains the three functions. A caller outside this repository that sends `store_off_product` an empty portions list is refused from this migration on.

@@ -210,52 +210,34 @@ describe("a food read or write that the database refuses", () => {
     expectOnlyTheCode(error, "delete the food", CODE);
   });
 
-  it("should name the food and the code only when the old portions cannot be removed", async () => {
-    server.use(http.delete(`${REST_URL}/food_portions`, () => databaseErrorQuotingTheRow()));
-
-    const error = await errorThrownBy(() =>
-      replaceFoodPortions(createTestClient(), FOOD_ID, SIGNED_IN_USER_ID, input.portions),
-    );
-
-    expectOnlyTheCode(error, `remove the old portions of the food ${FOOD_ID}`, CODE);
-  });
-
-  it("should keep the database's text out of the partial write error when the new portions are not saved", async () => {
+  it("should name the food and the code only when the portions cannot be replaced", async () => {
     server.use(
-      http.delete(`${REST_URL}/food_portions`, () => new Response(null, { status: 204 })),
-      http.post(`${REST_URL}/food_portions`, () => databaseErrorQuotingTheRow()),
+      http.post(`${REST_URL}/rpc/replace_food_portions`, () => databaseErrorQuotingTheRow()),
     );
 
     const error = await errorThrownBy(() =>
-      replaceFoodPortions(createTestClient(), FOOD_ID, SIGNED_IN_USER_ID, input.portions),
+      replaceFoodPortions(createTestClient(), FOOD_ID, input.portions),
     );
 
-    expect(error).toBeInstanceOf(FoodsPartialWriteError);
-    expectNoQuotedText(error);
-    expect(error.message).toContain(`(${CODE})`);
-    expect(error.cause).toStrictEqual({ code: CODE });
+    expect(error).not.toBeInstanceOf(FoodsPartialWriteError);
+    expectOnlyTheCode(error, `replace the portions of the food ${FOOD_ID}`, CODE);
   });
 
-  it("should keep the database's text out of the partial write error when a created food loses its portions", async () => {
-    server.use(
-      http.post(`${REST_URL}/foods`, ({ request }) => postgrestRows(request, [foodRow()], 201)),
-      http.post(`${REST_URL}/food_portions`, () => databaseErrorQuotingTheRow()),
-    );
+  it("should name the action and the code only when a created food is refused", async () => {
+    server.use(http.post(`${REST_URL}/rpc/create_food`, () => databaseErrorQuotingTheRow()));
 
     const error = await errorThrownBy(() =>
       createFood(createTestClient(), SIGNED_IN_USER_ID, input),
     );
 
-    expect(error).toBeInstanceOf(FoodsPartialWriteError);
-    expectNoQuotedText(error);
-    expect(error.message).toContain(`(${CODE})`);
-    expect(error.cause).toStrictEqual({ code: CODE });
+    expect(error).not.toBeInstanceOf(FoodsPartialWriteError);
+    expectOnlyTheCode(error, "create the food", CODE);
   });
 
-  it("should keep the database's text out of the partial write error when an updated food loses its portions", async () => {
+  it("should keep the database's text out of the partial write error when an updated food keeps its old portions", async () => {
     server.use(
       http.patch(`${REST_URL}/foods`, ({ request }) => postgrestRows(request, [foodRow()])),
-      http.delete(`${REST_URL}/food_portions`, () => databaseErrorQuotingTheRow("XX000")),
+      http.post(`${REST_URL}/rpc/replace_food_portions`, () => databaseErrorQuotingTheRow("XX000")),
     );
 
     const error = await errorThrownBy(() => updateFood(createTestClient(), FOOD_ID, input));
