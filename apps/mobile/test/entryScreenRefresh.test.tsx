@@ -41,7 +41,7 @@ const CHICKEN_INDEX = 3;
 const FOOD_ID = "22222222-2222-4222-8222-222222222222";
 const BARCODE = "5012345678900";
 const OLD_FETCH = "2026-10-20T10:00:00+00:00";
-const NEW_FETCH = "2026-10-24T10:00:00+00:00";
+const NEW_FETCH = "2026-11-11T10:00:00+00:00";
 
 const brandedFood = (fetchedAt: string): Food =>
   buildFood({

@@ -56,7 +56,7 @@ const oldPortion: FoodPortion = buildFoodPortion({
   is_default: true,
   position: 0,
 });
-const refreshedFood: Food = { ...oldFood, fetched_at: "2026-10-24T10:00:00+00:00" };
+const refreshedFood: Food = { ...oldFood, fetched_at: "2026-11-11T10:00:00+00:00" };
 const refreshedPortions: FoodPortion[] = [
   { ...oldPortion, id: "33333333-3333-4333-8333-333333333333" },
   buildFoodPortion({

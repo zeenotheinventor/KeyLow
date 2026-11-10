@@ -70,9 +70,19 @@ async function entryFetch(input: string | URL | Request, init?: RequestInit): Pr
     entryBackend.offProductCodes.push(String(code));
     await entryBackend.offProductHeldUntil;
 
-    return entryBackend.offProduct === null
-      ? jsonResponse({ error: { code: "not_found", message: "No such product" } }, 404)
-      : jsonResponse(entryBackend.offProduct);
+    if (entryBackend.offProduct === null) {
+      return jsonResponse({ error: { code: "not_found", message: "No such product" } }, 404);
+    }
+    // `off-product` stores what it answers, so a read of the tables after it sees the refreshed food.
+    const { food, portions } = entryBackend.offProduct;
+    entryBackend.foods = entryBackend.foods.map((stored) =>
+      stored.id === food.id ? food : stored,
+    );
+    entryBackend.foodPortions = [
+      ...entryBackend.foodPortions.filter((portion) => portion.food_id !== food.id),
+      ...portions,
+    ];
+    return jsonResponse(entryBackend.offProduct);
   }
   if (method === "GET" && table === "foods") {
     const food = entryBackend.foods.find((candidate) => candidate.id === idOf(searchParams, "id"));
