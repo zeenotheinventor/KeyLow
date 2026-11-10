@@ -1,11 +1,10 @@
 import { elevation } from "@keylow/tokens";
-import { act, fireEvent, render, screen, userEvent, within } from "@testing-library/react-native";
+import { render, screen, within } from "@testing-library/react-native";
 import { AccessibilityInfo, Text } from "react-native";
 import { setUpTests } from "react-native-reanimated";
 
 import { GroupedList, ListRow } from "../../components/ui";
 import { ThemeProvider } from "../../lib/theme";
-import { animatedScale } from "../support/animatedStyle";
 import { compileKitStyles } from "../support/kitStyles";
 import { registerAppStyles } from "../support/nativeWindStyles";
 import { resolvedColor } from "../support/themeColor";
@@ -25,9 +24,6 @@ const pressableRows = ["Chicken breast", "Chicken thigh", "Chicken liver"].map((
   <ListRow key={title} title={title} onPress={() => undefined} />
 ));
 
-// Rows that go nowhere have no press feedback of their own, so a test of the See more press sees only its own.
-const staticRows = [<ListRow key="only" title="Chicken breast" />];
-
 function renderList(
   props: Partial<GroupedListProps> = {},
   scheme: ThemeScheme = "dark",
@@ -44,12 +40,6 @@ function renderList(
 
 function setReduceMotion(isEnabled: boolean): void {
   jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(isEnabled);
-}
-
-async function advance(milliseconds: number) {
-  await act(() => {
-    jest.advanceTimersByTime(milliseconds);
-  });
 }
 
 describe("GroupedList", () => {
@@ -85,16 +75,11 @@ describe("GroupedList", () => {
       expect(screen.queryByText(/UK CoFID/)).not.toBeOnTheScreen();
     });
 
-    it("should let the heading wrap, so See more stays on the screen at large text", async () => {
-      await renderList({ seeMore: { hiddenCount: 8, onPress: () => undefined } });
+    it("should let the heading wrap at large text", async () => {
+      await renderList();
 
-      // The title shrinks and wraps when the row is short of room, and See more keeps its width.
+      // The title shrinks and wraps when the row is short of room.
       expect(screen.getByRole("heading", { name: "Common foods · UK CoFID" })).toHaveStyle({
-        flexShrink: 1,
-      });
-      expect(
-        screen.getByRole("button", { name: "See 8 more in Common foods" }).parent,
-      ).not.toHaveStyle({
         flexShrink: 1,
       });
     });
@@ -260,83 +245,6 @@ describe("GroupedList", () => {
     );
   });
 
-  describe("See more", () => {
-    it("should offer the rows that are not shown, saying how many and in which group", async () => {
-      await renderList({ seeMore: { hiddenCount: 2, onPress: () => undefined } });
-
-      expect(screen.getByRole("button", { name: "See 2 more in Common foods" })).toBeOnTheScreen();
-      expect(screen.getByText("See 2 more")).toBeOnTheScreen();
-    });
-
-    it("should call its callback when pressed", async () => {
-      const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-      const onPress = jest.fn();
-      await renderList({ seeMore: { hiddenCount: 2, onPress } });
-
-      await user.press(screen.getByRole("button", { name: "See 2 more in Common foods" }));
-
-      expect(onPress).toHaveBeenCalledTimes(1);
-    });
-
-    it("should offer nothing when no row is hidden", async () => {
-      await renderList({ seeMore: { hiddenCount: 0, onPress: () => undefined } });
-
-      expect(screen.queryByText(/See/)).not.toBeOnTheScreen();
-    });
-
-    it("should offer nothing unless asked to", async () => {
-      await renderList();
-
-      expect(screen.queryByText(/See/)).not.toBeOnTheScreen();
-    });
-
-    it("should reach a 44 point touch target from its 20 point line, 4 points wider each side", async () => {
-      await renderList({ seeMore: { hiddenCount: 2, onPress: () => undefined } });
-
-      expect(screen.getByRole("button", { name: "See 2 more in Common foods" })).toHaveProp(
-        "hitSlop",
-        { top: 12, bottom: 12, left: 4, right: 4 },
-      );
-    });
-
-    it("should compress, show the overlay and spring back, as every pressable does", async () => {
-      await renderList(
-        { seeMore: { hiddenCount: 2, onPress: () => undefined } },
-        "dark",
-        staticRows,
-      );
-      const seeMore = screen.getByRole("button", { name: "See 2 more in Common foods" });
-
-      await fireEvent(seeMore, "pressIn");
-      await advance(1000);
-      expect(animatedScale(screen.getByTestId("press-scale"))).toBeCloseTo(0.96, 3);
-      expect(screen.getByTestId("press-overlay")).toBeOnTheScreen();
-
-      await fireEvent(seeMore, "pressOut");
-      await advance(1000);
-      expect(animatedScale(screen.getByTestId("press-scale"))).toBeCloseTo(1, 3);
-    });
-
-    it("should not compress when the user has reduced motion on, and still show the overlay", async () => {
-      setReduceMotion(true);
-      await renderList(
-        { seeMore: { hiddenCount: 2, onPress: () => undefined } },
-        "dark",
-        staticRows,
-      );
-      await advance(100);
-
-      await fireEvent(
-        screen.getByRole("button", { name: "See 2 more in Common foods" }),
-        "pressIn",
-      );
-      await advance(1000);
-
-      expect(animatedScale(screen.getByTestId("press-scale"))).toBe(1);
-      expect(screen.getByTestId("press-overlay")).toBeOnTheScreen();
-    });
-  });
-
   describe("typography in the dark scheme", () => {
     it("should write the title as body strong in the primary text colour", async () => {
       await renderList({}, "dark");
@@ -357,17 +265,6 @@ describe("GroupedList", () => {
         fontFamily: "Geist-Medium",
         fontSize: 12,
         lineHeight: 16,
-      });
-    });
-
-    it("should write See more at 14 over 20, semibold, in the secondary text colour", async () => {
-      await renderList({ seeMore: { hiddenCount: 2, onPress: () => undefined } }, "dark");
-
-      expect(await screen.findByText("See 2 more")).toHaveStyle({
-        color: resolvedColor("dark", "text-secondary"),
-        fontFamily: "Geist-SemiBold",
-        fontSize: 14,
-        lineHeight: 20,
       });
     });
   });

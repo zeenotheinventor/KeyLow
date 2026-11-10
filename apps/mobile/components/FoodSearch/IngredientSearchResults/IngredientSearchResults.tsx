@@ -12,6 +12,8 @@ import type { IngredientSearchResultsProps } from "./types";
  */
 export function IngredientSearchResults({
   query,
+  visibleRowCount,
+  onMoreRowsChange,
   onOpenFood,
   onOpenRecent,
 }: IngredientSearchResultsProps) {
@@ -20,6 +22,8 @@ export function IngredientSearchResults({
       choosesAmount
       idleContent={<RecentFoods onOpen={onOpenRecent} />}
       query={query}
+      visibleRowCount={visibleRowCount}
+      onMoreRowsChange={onMoreRowsChange}
       onOpenFood={onOpenFood}
     />
   );

@@ -29,8 +29,6 @@ export const SEARCH_GROUP_HEADINGS: Readonly<Record<SearchGroupKey, SearchGroupH
   },
 };
 
-export const describeSeeMore = (hiddenCount: number): string => `See ${hiddenCount} more`;
-
 /** The name of the control that empties a search field once it holds text. */
 export const SEARCH_CLEAR_LABEL = "Clear search";
 

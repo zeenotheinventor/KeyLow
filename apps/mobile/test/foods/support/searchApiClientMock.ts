@@ -7,6 +7,7 @@ import type {
   FoodSearchResult,
   LogEntriesItem,
   RecipeSearchResult,
+  UseFoodSearchOptions,
   UseRecipeSearchOptions,
 } from "@keylow/api-client";
 import type { Food, OffCandidate } from "@keylow/core/schemas";
@@ -54,7 +55,7 @@ type OwnFoodsState =
   | ({ isPending: false; isError: false; data: Food[] } & Partial<OwnFoodsPaging>);
 
 export const mockMaterialiseOffProduct = jest.fn<Promise<Food>, [{ code: string }]>();
-export const mockUseFoodSearch = jest.fn<FoodSearchResult, [string]>();
+export const mockUseFoodSearch = jest.fn<FoodSearchResult, [string, UseFoodSearchOptions?]>();
 export const mockUseOwnFoods = jest.fn<OwnFoodsState, []>();
 export const mockLogEntries = jest.fn<Promise<unknown[]>, [readonly LogEntriesItem[]]>();
 export const mockQuickAdd = jest.fn<Promise<unknown>, [unknown]>();

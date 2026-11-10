@@ -6,7 +6,13 @@ export { energyShares } from "./energyShares";
 export type { EnergyShares } from "./energyShares";
 export { filterOwnFoods } from "./filterOwnFoods";
 export { filterRecipesByName } from "./filterRecipesByName";
-export { FOOD_SEARCH_GROUP_LIMITS, groupFoodSearchResults } from "./groupFoodSearchResults";
+export {
+  FOOD_SEARCH_FETCH_LIMIT,
+  FOOD_SEARCH_GROUP_LIMITS,
+  FOOD_SEARCH_REVEAL_BATCH,
+  groupFoodSearchResults,
+  revealFoodSearchGroups,
+} from "./groupFoodSearchResults";
 export type {
   FoodSearchGroup,
   FoodSearchGroupKey,

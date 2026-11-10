@@ -6,8 +6,12 @@ import {
   SEARCH_STATUS,
   VALUES_PER_100_G_NOTE,
 } from "@keylow/core/copy";
-import { FOOD_SEARCH_GROUP_LIMITS, groupFoodSearchResults } from "@keylow/core/search";
-import { useState } from "react";
+import {
+  FOOD_SEARCH_FETCH_LIMIT,
+  groupFoodSearchResults,
+  revealFoodSearchGroups,
+} from "@keylow/core/search";
+import { useEffect } from "react";
 import { View } from "react-native";
 
 import { EmptyState, ErrorState, Skeleton, Text } from "../../ui";
@@ -16,20 +20,9 @@ import { OpenFoodFactsGroup } from "../OpenFoodFactsGroup";
 import { OpenFoodFactsNotice } from "../OpenFoodFactsNotice";
 import { SearchStatus } from "../SearchStatus";
 
-import type { Expansion, SearchResultsProps } from "./types";
-import type { FoodSearchGroupKey, FoodSearchGroupLimits } from "@keylow/core/search";
+import type { SearchResultsProps } from "./types";
 
-// A group the user has opened shows every row the search returned.
-function limitsFor(
-  expanded: readonly FoodSearchGroupKey[],
-  rowCount: number,
-): FoodSearchGroupLimits {
-  return {
-    yours: expanded.includes("yours") ? rowCount : FOOD_SEARCH_GROUP_LIMITS.yours,
-    common: expanded.includes("common") ? rowCount : FOOD_SEARCH_GROUP_LIMITS.common,
-    branded: expanded.includes("branded") ? rowCount : FOOD_SEARCH_GROUP_LIMITS.branded,
-  };
-}
+const SEARCH_OPTIONS = { limit: FOOD_SEARCH_FETCH_LIMIT };
 
 /**
  * What the food search found for the text typed so far, drawn as the boards draw each state. The
@@ -39,6 +32,8 @@ function limitsFor(
  */
 export function SearchResults({
   query,
+  visibleRowCount,
+  onMoreRowsChange,
   onOpenFood,
   onCreateFood,
   idleContent,
@@ -47,8 +42,21 @@ export function SearchResults({
 }: SearchResultsProps) {
   const trimmedQuery = query.trim();
   const { local, off, isLoadingLocal, isLoadingOff, isDebouncing, offError, localError } =
-    useFoodSearch(trimmedQuery);
-  const [expansion, setExpansion] = useState<Expansion>({ query: "", groups: [] });
+    useFoodSearch(trimmedQuery, SEARCH_OPTIONS);
+
+  // The recipes of the log search are looked for beside the foods, and count as results and as searching.
+  const recipeRows = logRows?.recipes?.rows ?? [];
+  const isSearching = isDebouncing || isLoadingLocal || (logRows?.recipes?.isSearching ?? false);
+  // Rows are left to reveal only once the answer for a typed query is in, so the list reveals nothing
+  // while a skeleton or an idle state stands in for the results.
+  const hasMoreRows =
+    trimmedQuery.length >= MIN_SEARCH_LENGTH &&
+    localError === null &&
+    !isSearching &&
+    local.length > visibleRowCount;
+  useEffect(() => {
+    onMoreRowsChange(hasMoreRows);
+  }, [hasMoreRows, visibleRowCount, onMoreRowsChange]);
 
   if (trimmedQuery.length < MIN_SEARCH_LENGTH) {
     if (idleContent !== undefined) {
@@ -61,14 +69,14 @@ export function SearchResults({
     return <ErrorState body={SEARCH_FAILED_MOBILE.body} title={SEARCH_FAILED_MOBILE.title} />;
   }
 
-  // The recipes of the log search are looked for beside the foods, and count as results and as searching.
-  const recipeRows = logRows?.recipes?.rows ?? [];
-  const isSearching = isDebouncing || isLoadingLocal || (logRows?.recipes?.isSearching ?? false);
   const hasRows = local.length > 0 || off.length > 0 || recipeRows.length > 0;
   // Rows that show a serving say where the values are per 100 g only for the live Open Food Facts ones.
   const showsServings = logRows !== undefined || choosesAmount;
-  const expanded = expansion.query === trimmedQuery ? expansion.groups : [];
-  const groups = groupFoodSearchResults(local, { limit: limitsFor(expanded, local.length) });
+  // Rows are shown on one running budget in display order, so more rows only ever join at the bottom.
+  const groups = revealFoodSearchGroups(
+    groupFoodSearchResults(local, { limit: local.length }),
+    visibleRowCount,
+  );
 
   return (
     <>
@@ -93,9 +101,6 @@ export function SearchResults({
             logRows={logRows}
             query={trimmedQuery}
             onOpenFood={onOpenFood}
-            onSeeMore={(key) => {
-              setExpansion({ query: trimmedQuery, groups: [...expanded, key] });
-            }}
           />
           {off.length > 0 && (
             <>
