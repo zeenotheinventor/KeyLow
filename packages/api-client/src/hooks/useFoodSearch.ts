@@ -13,9 +13,11 @@ import type { FoodSearchHit } from "../repos/foods";
 import type { OffCandidate } from "@keylow/core/schemas";
 
 const LOCAL_STALE_TIME_MS = 30 * 1000;
-// Open Food Facts allows few searches a minute, so a repeated query is served from the cache for
-// this long. The cache entry must outlive its stale time, or it would be dropped before it counts.
+// A repeated Open Food Facts query is served from the cache for this long, which keeps a repeat cheap.
+// The cache entry must outlive its stale time, or it would be dropped before it counts.
 const OFF_CACHE_TIME_MS = 10 * 60 * 1000;
+/** How long the query must stay unchanged before Open Food Facts is searched, so a pause inside a word costs nothing. */
+export const OFF_SEARCH_DEBOUNCE_MS = 750;
 const NO_CANDIDATES: OffCandidate[] = [];
 
 export type UseFoodSearchOptions = {
@@ -25,6 +27,11 @@ export type UseFoodSearchOptions = {
   offThreshold?: number;
   /** How long the query must stay unchanged before it is searched. Defaults to 250. */
   debounceMs?: number;
+  /**
+   * How long the query must stay unchanged, measured from the last keystroke, before Open Food Facts is
+   * searched. Defaults to `OFF_SEARCH_DEBOUNCE_MS` (750). The local search is not affected.
+   */
+  offDebounceMs?: number;
   /** Set to false to make no request at all. Defaults to true. */
   enabled?: boolean;
 };
@@ -61,9 +68,10 @@ export type FoodSearchResult = {
   /** True until the first local results arrive, and while the next query replaces the ones on show. */
   isLoadingLocal: boolean;
   /**
-   * True while Open Food Facts is being searched for the current query, and while the candidates of
-   * the previous query are on show until the next local search settles. False while the local search
-   * is still loading and Open Food Facts has never been asked.
+   * True while Open Food Facts is being searched for the current query, while it waits out
+   * `offDebounceMs` before being asked, and while the candidates of the previous query are on show
+   * until the next local search settles. False while the local search is still loading and Open Food
+   * Facts has never been asked.
    */
   isLoadingOff: boolean;
   /**
@@ -99,10 +107,17 @@ export function toOffError(error: Error | null): FoodSearchOffError | null {
  * view while the next one loads. `limit` is part of no cache key, so keep it stable per screen.
  */
 export function useFoodSearch(query: string, options: UseFoodSearchOptions = {}): FoodSearchResult {
-  const { limit = 25, offThreshold = 5, debounceMs = 250, enabled = true } = options;
+  const {
+    limit = 25,
+    offThreshold = 5,
+    debounceMs = 250,
+    offDebounceMs = OFF_SEARCH_DEBOUNCE_MS,
+    enabled = true,
+  } = options;
   const client = useSupabase();
   const trimmedQuery = query.trim();
   const debouncedQuery = useDebouncedValue(trimmedQuery, debounceMs);
+  const offDebouncedQuery = useDebouncedValue(trimmedQuery, offDebounceMs);
   const isDebouncing = enabled && trimmedQuery !== debouncedQuery;
   const isSearchable = enabled && debouncedQuery.length >= MIN_SEARCH_LENGTH;
 
@@ -116,7 +131,10 @@ export function useFoodSearch(query: string, options: UseFoodSearchOptions = {})
 
   // While the data is a placeholder the local query for this exact string has not settled yet.
   const isLocalSettled = localQuery.isSuccess && !localQuery.isPlaceholderData;
-  const isOffSearchNeeded = isSearchable && isLocalSettled && localQuery.data.length < offThreshold;
+  // Wanted: this query would be searched. Due: it has also stayed unchanged for `offDebounceMs`.
+  // The candidates on show and the error follow wanted, so the wait does not make them vanish.
+  const isOffSearchWanted = isSearchable && isLocalSettled && localQuery.data.length < offThreshold;
+  const isOffSearchDue = isOffSearchWanted && offDebouncedQuery === debouncedQuery;
 
   // The candidates now on show. They stand in for the next query's while it loads, and only then:
   // once they go out of view they are forgotten, so they cannot come back two queries later.
@@ -125,12 +143,12 @@ export function useFoodSearch(query: string, options: UseFoodSearchOptions = {})
   const offQuery = useQuery({
     queryKey: keys.foods.offSearch(debouncedQuery),
     queryFn: () => searchOff(client, debouncedQuery),
-    enabled: isOffSearchNeeded,
+    enabled: isOffSearchDue,
     staleTime: OFF_CACHE_TIME_MS,
     gcTime: OFF_CACHE_TIME_MS,
     placeholderData: () => (candidatesOnShow.length > 0 ? candidatesOnShow : undefined),
-    // Each attempt spends the user's few searches a minute, and a rate limit will not pass by retrying,
-    // so a failed search is not retried and is not repeated when the window regains focus or the network returns.
+    // A rate limit will not pass by retrying, and the function retries for itself, so a failed search is
+    // not retried and is not repeated when the window regains focus or the network returns.
     retry: false,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
@@ -138,8 +156,13 @@ export function useFoodSearch(query: string, options: UseFoodSearchOptions = {})
 
   // The candidates of the previous query stay visible while the local search for the next one is
   // loading, but are dropped once that search settles with enough local foods.
-  const isOffInView = isSearchable && (isOffSearchNeeded || localQuery.isPlaceholderData);
+  const isOffInView = isSearchable && (isOffSearchWanted || localQuery.isPlaceholderData);
   const off = isOffInView ? (offQuery.data ?? NO_CANDIDATES) : NO_CANDIDATES;
+
+  // Wanted but not yet due counts as loading, or "No foods found" would show between the two debounces.
+  // A settled result for this exact query (not the placeholder) needs no wait, so a cached one is not loading.
+  const isOffSettled = offQuery.isSuccess && !offQuery.isPlaceholderData;
+  const isWaitingToAskOff = isOffSearchWanted && !isOffSearchDue && !isOffSettled;
 
   if (off !== candidatesOnShow) {
     setCandidatesOnShow(off);
@@ -161,9 +184,10 @@ export function useFoodSearch(query: string, options: UseFoodSearchOptions = {})
     local: localQuery.data ?? [],
     off,
     isLoadingLocal: localQuery.isLoading || localQuery.isPlaceholderData,
-    isLoadingOff: isOffInView && (offQuery.isLoading || offQuery.isPlaceholderData),
+    isLoadingOff:
+      isOffInView && (isWaitingToAskOff || offQuery.isLoading || offQuery.isPlaceholderData),
     isDebouncing,
-    offError: isOffSearchNeeded ? toOffError(offQuery.error) : null,
+    offError: isOffSearchWanted ? toOffError(offQuery.error) : null,
     localError:
       localQuery.error === null ? null : { kind: "failed", debugMessage: localQuery.error.message },
   };

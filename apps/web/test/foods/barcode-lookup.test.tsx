@@ -491,7 +491,7 @@ describe("BarcodeLookup", () => {
       expect(screen.queryByRole("link", { name: "Create food with this barcode" })).toBeNull();
     });
 
-    it("should say Open Food Facts is busy, and when to try again, when it is rate limited", () => {
+    it("should say there were too many lookups, and when to try again, when it is rate limited", () => {
       useFoodByBarcode.mockReturnValue({
         result: undefined,
         isLoading: false,
@@ -502,8 +502,8 @@ describe("BarcodeLookup", () => {
       lookUp(VALID_EAN_13);
 
       const alert = screen.getByRole("alert");
-      expect(alert.textContent).toContain("Open Food Facts is busy");
-      expect(alert.textContent).toContain("Too many lookups just now.");
+      expect(alert.textContent).toContain("Too many lookups just now");
+      expect(alert.textContent).not.toContain("Open Food Facts");
       expect(alert.textContent).toContain("Try again in 30 seconds.");
     });
 

@@ -3,8 +3,8 @@ import {
   BARCODE_LOOKUP_PROGRESS,
   BARCODE_NOT_FOUND,
   INGREDIENT_BARCODE,
-  OPEN_FOOD_FACTS_BUSY,
-  describeBarcodeRateLimit,
+  LOOKUP_RATE_LIMITED,
+  describeRateLimit,
 } from "@keylow/core/copy";
 import Link from "next/link";
 
@@ -27,8 +27,8 @@ export function BarcodeResult({
 
   if (error !== null) {
     return error.kind === "rate_limited" ? (
-      <Banner tone="error" title={OPEN_FOOD_FACTS_BUSY}>
-        {describeBarcodeRateLimit(error.retryAfterSeconds)}
+      <Banner tone="error" title={LOOKUP_RATE_LIMITED}>
+        {describeRateLimit(error.retryAfterSeconds)}
       </Banner>
     ) : (
       <Banner tone="error" title={BARCODE_LOOKUP_FAILED.title}>

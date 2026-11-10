@@ -4,9 +4,9 @@ import {
   BARCODE_NOT_FOUND,
   BARCODE_NOT_RECOGNISED_TITLE,
   BARCODE_SCAN,
-  OPEN_FOOD_FACTS_BUSY,
+  LOOKUP_RATE_LIMITED,
   SCANNED_BARCODE_PROBLEMS,
-  describeBarcodeRateLimit,
+  describeRateLimit,
 } from "@keylow/core/copy";
 import { View } from "react-native";
 
@@ -42,9 +42,9 @@ function renderOutcome(outcome: ScanOutcome, canCreateFood: boolean) {
     case "rate_limited":
       return (
         <Banner
-          body={describeBarcodeRateLimit(outcome.retryAfterSeconds)}
+          body={describeRateLimit(outcome.retryAfterSeconds)}
           icon="Clock"
-          title={OPEN_FOOD_FACTS_BUSY}
+          title={LOOKUP_RATE_LIMITED}
         />
       );
     case "failed":

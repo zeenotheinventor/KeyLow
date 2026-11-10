@@ -463,7 +463,7 @@ describe("FoodSearch", () => {
       search("stock cubes");
 
       const alert = screen.getByRole("alert");
-      expect(alert.textContent).toContain("Open Food Facts is busy");
+      expect(alert.textContent).toContain("Too many lookups just now");
       expect(alert.textContent).toContain("Try again in 30 seconds.");
     });
 
@@ -588,7 +588,7 @@ describe("FoodSearch", () => {
 
       search("chicken");
 
-      expect(screen.getByText("Open Food Facts is busy")).toBeTruthy();
+      expect(screen.getByText("Too many searches just now")).toBeTruthy();
       expect(screen.getByText("Try again in 45 seconds.")).toBeTruthy();
     });
 
@@ -664,6 +664,16 @@ describe("FoodSearch", () => {
       search("zzqx");
 
       expect(screen.queryByText("No foods found")).toBeNull();
+    });
+
+    it("should say Open Food Facts is being searched, not that no foods were found, while it waits to be asked", () => {
+      useFoodSearch.mockReturnValue(resultWith({ isLoadingOff: true, isDebouncing: false }));
+      render(<FoodSearch />);
+
+      search("zzqx");
+
+      expect(screen.getByText("Searching Open Food Facts")).toBeTruthy();
+      expect(screen.queryByRole("heading", { name: "No foods found" })).toBeNull();
     });
 
     it("should say the search failed in an alert, without the raw text, and not claim no results", () => {

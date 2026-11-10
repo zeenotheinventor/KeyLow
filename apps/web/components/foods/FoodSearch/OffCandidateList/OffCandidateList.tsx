@@ -8,7 +8,7 @@ import {
 import {
   ADD_PRODUCT_FAILED,
   ADD_PRODUCT_NOT_FOUND,
-  OPEN_FOOD_FACTS_BUSY,
+  LOOKUP_RATE_LIMITED,
   SEARCH_GROUP_HEADINGS,
   SEARCH_STATUS,
   describeRateLimit,
@@ -66,7 +66,7 @@ export function OffCandidateList({ candidates, query }: OffCandidateListProps) {
       source={caption}
       notice={
         failure === null ? undefined : failure instanceof RateLimitedError ? (
-          <Banner tone="error" title={OPEN_FOOD_FACTS_BUSY}>
+          <Banner tone="error" title={LOOKUP_RATE_LIMITED}>
             {describeRateLimit(failure.retryAfterSeconds)}
           </Banner>
         ) : failure instanceof OffProductNotFoundError ? (

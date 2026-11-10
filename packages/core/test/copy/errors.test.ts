@@ -80,7 +80,7 @@ describe("describeEdgeError", () => {
       "Open Food Facts no longer has this product. Search again, or create the food yourself.",
     );
     expect(describeEdgeError("rate_limited")).toBe(
-      "Open Food Facts is busy. Try again in a moment.",
+      "Too many requests just now. Try again in a moment.",
     );
   });
 });

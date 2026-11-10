@@ -1,7 +1,7 @@
 import { OPEN_FOOD_FACTS_SEARCH_FAILED } from "@keylow/core/copy";
 
 import { Banner } from "../../ui";
-import { openFoodFactsBusyTitle } from "../openFoodFactsBusyTitle";
+import { searchRateLimitedTitle } from "../searchRateLimitedTitle";
 
 import type { OpenFoodFactsNoticeProps } from "./types";
 
@@ -11,7 +11,7 @@ import type { OpenFoodFactsNoticeProps } from "./types";
  */
 export function OpenFoodFactsNotice({ error }: OpenFoodFactsNoticeProps) {
   if (error.kind === "rate_limited") {
-    return <Banner icon="Clock" title={openFoodFactsBusyTitle(error.retryAfterSeconds)} />;
+    return <Banner icon="Clock" title={searchRateLimitedTitle(error.retryAfterSeconds)} />;
   }
 
   return (
