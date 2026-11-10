@@ -1801,7 +1801,11 @@ export type Database = {
         Returns: Json;
       };
       store_off_search_results: {
-        Args: { p_candidates: Json; p_keep_seconds: number; p_query_key: string };
+        Args: {
+          p_candidates: Json;
+          p_keep_seconds: number;
+          p_query_key: string;
+        };
         Returns: undefined;
       };
       training_focus_is_valid: { Args: { focus: string[] }; Returns: boolean };
