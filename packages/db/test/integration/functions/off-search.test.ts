@@ -1,4 +1,4 @@
-import { edgeErrorSchema, offSearchResponseSchema } from "@keylow/core";
+import { OFF_SEARCH_FIELDS, edgeErrorSchema, offSearchResponseSchema } from "@keylow/core";
 import { afterAll, describe, expect, it } from "vitest";
 
 import { generateBarcode } from "../support/barcodes";
@@ -90,6 +90,45 @@ describe("off-search", () => {
 
       const { candidates } = offSearchResponseSchema.parse(response.body);
       expect(candidates[0]?.kcal).toBeCloseTo(1046 / 4.184, 5);
+    });
+
+    it("takes the brand from the brands array Search-a-licious sends", async () => {
+      const user = await newUser();
+      const searchTerms = uniqueSearchTerms();
+      const code = generateBarcode();
+      await offMock.registerSearch({
+        searchTerms,
+        products: [
+          {
+            code,
+            fixture: "kcal-present",
+            productOverrides: { brands: ["Aldi", "Cowbelle"] },
+          },
+        ],
+      });
+
+      const response = await search(searchTerms, user.accessToken);
+
+      const { candidates } = offSearchResponseSchema.parse(response.body);
+      expect(candidates[0]?.brand).toBe("Aldi");
+    });
+
+    it("drops a hit with no energy and no macros, and keeps the others", async () => {
+      const user = await newUser();
+      const searchTerms = uniqueSearchTerms();
+      const [emptyCode, keptCode] = [generateBarcode(), generateBarcode()];
+      await offMock.registerSearch({
+        searchTerms,
+        products: [
+          { code: emptyCode, fixture: "empty-nutriments" },
+          { code: keptCode, fixture: "kcal-present" },
+        ],
+      });
+
+      const response = await search(searchTerms, user.accessToken);
+
+      const { candidates } = offSearchResponseSchema.parse(response.body);
+      expect(candidates.map(({ code }) => code)).toEqual([keptCode]);
     });
 
     it("flags a product missing its protein as suspect, with protein_g null", async () => {
@@ -230,7 +269,7 @@ describe("off-search", () => {
   });
 
   describe("the request to Open Food Facts", () => {
-    it("is a UK-only text search with the configured User-Agent and a page of 20", async () => {
+    it("is a UK-only food search of Search-a-licious with the configured User-Agent and a page of 20", async () => {
       const user = await newUser();
       const searchTerms = uniqueSearchTerms();
       await offMock.registerSearch({ searchTerms, products: [] });
@@ -239,21 +278,15 @@ describe("off-search", () => {
 
       const calls = await offMock.searchCalls(searchTerms);
       expect(calls).toHaveLength(1);
-      expect(calls[0]?.url).toMatch(/^\/cgi\/search\.pl\?/);
+      expect(calls[0]?.url).toMatch(/^\/search\?/);
       expect(calls[0]?.headers["user-agent"]).toBe(configuredUserAgent);
       expect(calls[0]?.query).toMatchObject({
-        search_terms: searchTerms,
-        search_simple: "1",
-        action: "process",
-        json: "1",
+        q: `${searchTerms} countries_tags:"en:united-kingdom" nutriments:*`,
         page_size: "20",
-        tagtype_0: "countries",
-        tag_contains_0: "contains",
-        tag_0: "united-kingdom",
       });
     });
 
-    it("asks only for the fields the normaliser reads", async () => {
+    it("asks for exactly the fields the index holds and a candidate reads", async () => {
       const user = await newUser();
       const searchTerms = uniqueSearchTerms();
       await offMock.registerSearch({ searchTerms, products: [] });
@@ -261,11 +294,7 @@ describe("off-search", () => {
       await search(searchTerms, user.accessToken);
 
       const [call] = await offMock.searchCalls(searchTerms);
-      const fields = call?.query["fields"]?.split(",") ?? [];
-      expect(fields).toEqual(
-        expect.arrayContaining(["code", "product_name", "product_name_en", "brands", "nutriments"]),
-      );
-      expect(fields).not.toContain("images");
+      expect(call?.query["fields"]?.split(",")).toEqual([...OFF_SEARCH_FIELDS]);
     });
 
     it("searches for the trimmed words", async () => {
@@ -278,21 +307,116 @@ describe("off-search", () => {
       expect(response.status).toBe(200);
       expect(await offMock.searchCalls(searchTerms)).toHaveLength(1);
     });
+
+    it("cleans the typed words, so a stray bracket and capitals search for the plain words", async () => {
+      const user = await newUser();
+      const searchTerms = uniqueSearchTerms();
+      await offMock.registerSearch({ searchTerms, products: [] });
+
+      const response = await search(
+        `(${searchTerms.toUpperCase().replace(" ", "  ")}`,
+        user.accessToken,
+      );
+
+      expect(response.status).toBe(200);
+      expect(await offMock.searchCalls(searchTerms)).toHaveLength(1);
+    });
+
+    it("answers no candidates, with no call and no limit spent, for words that clean to nothing", async () => {
+      const user = await newUser();
+      const searchTerms = uniqueSearchTerms();
+      await offMock.registerSearch({ searchTerms, products: [] });
+
+      for (let attempt = 0; attempt <= perUserLimit; attempt += 1) {
+        const response = await search("!!", user.accessToken);
+        expect(response.status).toBe(200);
+        expect(response.body).toEqual({ candidates: [] });
+      }
+      const allowed = await search(searchTerms, user.accessToken);
+
+      expect(allowed.status).toBe(200);
+      expect(await offMock.searchCalls("")).toEqual([]);
+    });
   });
 
   describe("when Open Food Facts fails", () => {
-    it("answers 502 upstream_error when OFF answers 500", async () => {
+    // The answer a retry gets when OFF has recovered.
+    const recoveredAnswer = {
+      products: [{ code: generateBarcode(), fixture: "kcal-present" }],
+    };
+
+    function expectUpstreamError(response: Awaited<ReturnType<typeof search>>) {
+      expect(response.status).toBe(502);
+      expect(edgeErrorSchema.parse(response.body).error.code).toBe("upstream_error");
+    }
+
+    it("answers 200 after two calls when OFF answers 500 and then recovers", async () => {
+      const user = await newUser();
+      const searchTerms = uniqueSearchTerms();
+      await offMock.registerSearch({
+        searchTerms,
+        status: 500,
+        body: { error: "down" },
+        followedBy: [recoveredAnswer],
+      });
+
+      const response = await search(searchTerms, user.accessToken);
+
+      expect(response.status).toBe(200);
+      expect(offSearchResponseSchema.parse(response.body).candidates).toHaveLength(1);
+      expect(await offMock.searchCalls(searchTerms)).toHaveLength(2);
+    });
+
+    it("answers 502 upstream_error after two calls when OFF answers 500 both times", async () => {
       const user = await newUser();
       const searchTerms = uniqueSearchTerms();
       await offMock.registerSearch({ searchTerms, status: 500, body: { error: "down" } });
 
       const response = await search(searchTerms, user.accessToken);
 
-      expect(response.status).toBe(502);
-      expect(edgeErrorSchema.parse(response.body).error.code).toBe("upstream_error");
+      expectUpstreamError(response);
+      expect(await offMock.searchCalls(searchTerms)).toHaveLength(2);
     });
 
-    it("answers 502 upstream_error when OFF answers 200 with a page that is not JSON", async () => {
+    it("answers 429 rate_limited after one call when OFF answers 429, and does not retry", async () => {
+      const user = await newUser();
+      const searchTerms = uniqueSearchTerms();
+      await offMock.registerSearch({ searchTerms, status: 429, body: { error: "slow down" } });
+
+      const response = await search(searchTerms, user.accessToken);
+
+      expect(response.status).toBe(429);
+      expect(edgeErrorSchema.parse(response.body).error.code).toBe("rate_limited");
+      expect(await offMock.searchCalls(searchTerms)).toHaveLength(1);
+    });
+
+    it("answers 502 upstream_error after one call when OFF answers another 4xx", async () => {
+      const user = await newUser();
+      const searchTerms = uniqueSearchTerms();
+      await offMock.registerSearch({ searchTerms, status: 422, body: { error: "bad query" } });
+
+      const response = await search(searchTerms, user.accessToken);
+
+      expectUpstreamError(response);
+      expect(await offMock.searchCalls(searchTerms)).toHaveLength(1);
+    });
+
+    it("retries a 200 with a page that is not JSON, and answers 200 when the retry is good", async () => {
+      const user = await newUser();
+      const searchTerms = uniqueSearchTerms();
+      await offMock.registerSearch({
+        searchTerms,
+        rawBody: "<!DOCTYPE html><title>Page temporarily unavailable</title>",
+        followedBy: [recoveredAnswer],
+      });
+
+      const response = await search(searchTerms, user.accessToken);
+
+      expect(response.status).toBe(200);
+      expect(await offMock.searchCalls(searchTerms)).toHaveLength(2);
+    });
+
+    it("answers 502 upstream_error when OFF answers 200 with a page that is not JSON both times", async () => {
       const user = await newUser();
       const searchTerms = uniqueSearchTerms();
       await offMock.registerSearch({
@@ -302,30 +426,79 @@ describe("off-search", () => {
 
       const response = await search(searchTerms, user.accessToken);
 
-      expect(response.status).toBe(502);
-      expect(edgeErrorSchema.parse(response.body).error.code).toBe("upstream_error");
+      expectUpstreamError(response);
+      expect(await offMock.searchCalls(searchTerms)).toHaveLength(2);
     });
 
-    it("answers 502 upstream_error when OFF answers 200 with JSON that has no products list", async () => {
+    it("answers 502 upstream_error when OFF answers 200 with JSON that has no hits list", async () => {
       const user = await newUser();
       const searchTerms = uniqueSearchTerms();
-      await offMock.registerSearch({ searchTerms, body: { count: 0, products: "none" } });
+      await offMock.registerSearch({ searchTerms, body: { count: 0, hits: "none" } });
 
       const response = await search(searchTerms, user.accessToken);
 
-      expect(response.status).toBe(502);
-      expect(edgeErrorSchema.parse(response.body).error.code).toBe("upstream_error");
+      expectUpstreamError(response);
     });
 
-    it("answers 502 upstream_error when OFF takes too long", async () => {
+    it("treats timed_out: true as a failure, and retries it", async () => {
       const user = await newUser();
       const searchTerms = uniqueSearchTerms();
-      await offMock.registerSearch({ searchTerms, products: [], delayMilliseconds: 6500 });
+      await offMock.registerSearch({
+        searchTerms,
+        body: { hits: [], count: 0, timed_out: true },
+        followedBy: [recoveredAnswer],
+      });
 
       const response = await search(searchTerms, user.accessToken);
 
-      expect(response.status).toBe(502);
-      expect(edgeErrorSchema.parse(response.body).error.code).toBe("upstream_error");
+      expect(response.status).toBe(200);
+      expect(await offMock.searchCalls(searchTerms)).toHaveLength(2);
+    });
+
+    it("answers 502 upstream_error after two calls when OFF takes too long both times", async () => {
+      const user = await newUser();
+      const searchTerms = uniqueSearchTerms();
+      await offMock.registerSearch({ searchTerms, products: [], delayMilliseconds: 3500 });
+
+      const response = await search(searchTerms, user.accessToken);
+
+      expectUpstreamError(response);
+      expect(await offMock.searchCalls(searchTerms)).toHaveLength(2);
+    });
+
+    it("retries a timeout, and answers 200 when the retry is quick", async () => {
+      const user = await newUser();
+      const searchTerms = uniqueSearchTerms();
+      await offMock.registerSearch({
+        searchTerms,
+        products: [],
+        delayMilliseconds: 3500,
+        followedBy: [{ ...recoveredAnswer, delayMilliseconds: 0 }],
+      });
+
+      const response = await search(searchTerms, user.accessToken);
+
+      expect(response.status).toBe(200);
+      expect(await offMock.searchCalls(searchTerms)).toHaveLength(2);
+    });
+
+    it("charges the limit once for a search that took two attempts", async () => {
+      const user = await newUser();
+      const searchTerms = uniqueSearchTerms();
+      await offMock.registerSearch({
+        searchTerms,
+        status: 500,
+        body: { error: "down" },
+        followedBy: [recoveredAnswer],
+      });
+      await waitForFreshRateLimitWindow();
+
+      const statuses: number[] = [];
+      for (let attempt = 0; attempt < perUserLimit; attempt += 1) {
+        statuses.push((await search(searchTerms, user.accessToken)).status);
+      }
+
+      expect(statuses).toEqual(Array<number>(perUserLimit).fill(200));
     });
   });
 
