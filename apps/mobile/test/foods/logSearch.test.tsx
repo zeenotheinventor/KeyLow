@@ -1,5 +1,5 @@
 import { SNAPSHOT_VERSION, buildLogEntry } from "@keylow/core/diary";
-import { buildFood } from "@keylow/core/testing";
+import { buildFood, buildOffCandidate } from "@keylow/core/testing";
 import { onlineManager } from "@tanstack/react-query";
 import { act, fireEvent, render, screen, userEvent } from "@testing-library/react-native";
 import { AccessibilityInfo } from "react-native";
@@ -18,6 +18,7 @@ import {
 } from "./support/apiClientMock";
 import { compileFoodSearchStyles } from "./support/foodSearchStyles";
 import {
+  mockMaterialiseOffProduct,
   offCandidateFixture,
   resetSearchApiClientMock,
   searchResult,
@@ -487,6 +488,90 @@ describe("food search sheet in log mode", () => {
       await type("oat");
 
       expect(screen.getByText("Values per 100 g unless marked")).toBeOnTheScreen();
+    });
+
+    describe("with the serving they will open on", () => {
+      const bigMac = buildOffCandidate({
+        code: "5000168009999",
+        name: "Big Mac",
+        brand: "McDonald's",
+        kcal: 250,
+        protein_g: 13,
+        fat_g: 12,
+        carbs_g: 25,
+        default_portion: { label: "1 burger", grams: 240, ml: null },
+      });
+
+      const showLive = (...off: ReturnType<typeof buildOffCandidate>[]) => {
+        Object.assign(searchResult, { local: [banana], off });
+      };
+
+      it("should name the serving and give the values for it, not per 100 g", async () => {
+        showLive(bigMac);
+        await renderLogSearch();
+        await type("big");
+
+        // 240 g of a food with 250 kcal for 100 g.
+        expect(
+          screen.getByRole("button", {
+            name: /^Big Mac, McDonald's, 1 burger \(240 g\), 600 kilocalories, protein 31 grams/,
+          }),
+        ).toBeOnTheScreen();
+      });
+
+      it("should say an estimate is about its size", async () => {
+        showLive({
+          ...bigMac,
+          default_portion: { label: "1 typical serving", grams: 150, ml: null },
+        });
+        await renderLogSearch();
+        await type("big");
+
+        expect(
+          screen.getByRole("button", {
+            name: /^Big Mac, McDonald's, 1 typical serving \(about 150 g\)/,
+          }),
+        ).toBeOnTheScreen();
+      });
+
+      it("should leave the per 100 g note out, because every live row shows a serving", async () => {
+        showLive(bigMac);
+        await renderLogSearch();
+        await type("big");
+
+        expect(screen.queryByText("Values per 100 g unless marked")).not.toBeOnTheScreen();
+      });
+
+      it("should keep the note, when a live row from an older answer is still per 100 g", async () => {
+        showLive(bigMac, offCandidateFixture);
+        await renderLogSearch();
+        await type("big");
+
+        expect(screen.getByText("Values per 100 g unless marked")).toBeOnTheScreen();
+        expect(screen.getByRole("button", { name: /^Oat drink, Oatly/ })).toBeOnTheScreen();
+      });
+
+      it("should have no plus, because a live row is not stored yet", async () => {
+        showLive(bigMac);
+        await renderLogSearch();
+        await type("big");
+
+        expect(screen.queryByRole("button", { name: /^Add Big Mac/ })).not.toBeOnTheScreen();
+      });
+
+      it("should save the product and open it when the row is pressed", async () => {
+        showLive(bigMac);
+        mockMaterialiseOffProduct.mockResolvedValue({ ...foodFixture, id: "saved-food-id" });
+        const user = await renderLogSearch();
+        await type("big");
+
+        await user.press(screen.getByRole("button", { name: /^Big Mac, McDonald's, 1 burger/ }));
+
+        expect(mockMaterialiseOffProduct).toHaveBeenCalledWith({ code: "5000168009999" });
+        expect(routerMock.push).toHaveBeenCalledWith(
+          "/foods/saved-food-id/log?day=2026-10-14&time=12%3A00",
+        );
+      });
     });
 
     it("should leave the note out when there are only servings", async () => {

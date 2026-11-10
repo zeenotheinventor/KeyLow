@@ -11,7 +11,7 @@ import {
   SEARCH_STATUS,
   describeRateLimit,
 } from "@keylow/core/copy";
-import { describeFoodRow } from "@keylow/core/search";
+import { describeLiveFoodRow } from "@keylow/core/search";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useRef, useState } from "react";
 
@@ -41,12 +41,15 @@ function AddFailureBanner({ error }: { error: unknown }) {
 
 /**
  * The live Open Food Facts results. Choosing one saves it as a food, once, and opens the food. While
- * it is saved its row is busy and the others wait. A failure is said in the group, above the rows.
+ * it is saved its row is busy and the others wait. A failure is said in the group, above the rows. When the
+ * search shows servings, a row shows the serving its product will open on, with no plus because it is not
+ * stored yet.
  */
 export function OpenFoodFactsGroup({
   candidates,
   query,
   releasesOnOpen = false,
+  showsServings = false,
   onOpenFood,
 }: OpenFoodFactsGroupProps) {
   const materialiseOffProduct = useMaterialiseOffProduct();
@@ -98,17 +101,25 @@ export function OpenFoodFactsGroup({
       source={caption}
       title={title}
     >
-      {candidates.map((candidate) => (
-        <FoodRow
-          key={candidate.code}
-          {...describeFoodRow(candidate, query)}
-          busyLabel={candidate.code === pendingCode ? SEARCH_STATUS.addingProduct : undefined}
-          disabled={pendingCode !== undefined && candidate.code !== pendingCode}
-          onPress={() => {
-            void addCandidate(candidate.code);
-          }}
-        />
-      ))}
+      {candidates.map((candidate) => {
+        const { caption, ...description } = describeLiveFoodRow(candidate, query, {
+          showsServings,
+        });
+
+        return (
+          <FoodRow
+            key={candidate.code}
+            {...description}
+            busyLabel={candidate.code === pendingCode ? SEARCH_STATUS.addingProduct : undefined}
+            caption={caption}
+            disabled={pendingCode !== undefined && candidate.code !== pendingCode}
+            layout={caption === undefined ? undefined : "search"}
+            onPress={() => {
+              void addCandidate(candidate.code);
+            }}
+          />
+        );
+      })}
     </GroupedList>
   );
 }

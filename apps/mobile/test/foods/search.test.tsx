@@ -810,6 +810,51 @@ describe("food search sheet", () => {
       expect(routerMock.push).toHaveBeenCalledWith(`/foods/${materialisedFoodId}`);
     });
 
+    describe("in the ingredient search", () => {
+      const burger = buildOffCandidate({
+        code: "5000168009999",
+        name: "Big Mac",
+        brand: "McDonald's",
+        kcal: 250,
+        protein_g: 13,
+        fat_g: 12,
+        carbs_g: 25,
+        default_portion: { label: "1 burger", grams: 240, ml: null },
+      });
+
+      async function renderIngredientSearch() {
+        Object.assign(searchResult, { off: [burger] });
+        await render(
+          <ThemeProvider fixedPreference="dark">
+            <FoodSearch
+              ingredient={{ onOpenRecent: jest.fn() }}
+              onClose={jest.fn()}
+              onOpenFood={jest.fn()}
+              onScanBarcode={jest.fn()}
+            />
+          </ThemeProvider>,
+        );
+        await fireEvent.changeText(field(), "big");
+      }
+
+      it("should show the serving the product opens on, with its values", async () => {
+        await renderIngredientSearch();
+
+        expect(
+          screen.getByRole("button", {
+            name: /^Big Mac, McDonald's, 1 burger \(240 g\), 600 kilocalories, protein 31 grams/,
+          }),
+        ).toBeOnTheScreen();
+        expect(screen.queryByText("Values per 100 g unless marked")).not.toBeOnTheScreen();
+      });
+
+      it("should have no plus", async () => {
+        await renderIngredientSearch();
+
+        expect(screen.queryByRole("button", { name: /^Add Big Mac/ })).not.toBeOnTheScreen();
+      });
+    });
+
     it("should hold back a second press that lands before the first has settled", async () => {
       Object.assign(searchResult, { off: [offCandidateFixture] });
       mockMaterialiseOffProduct.mockReturnValue(new Promise(() => undefined));

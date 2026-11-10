@@ -43,6 +43,7 @@ export type {
   EdgeError,
   EdgeErrorCode,
   OffCandidate,
+  OffCandidatePortion,
   OffProductRequest,
   OffProductResponse,
   OffSearchRequest,

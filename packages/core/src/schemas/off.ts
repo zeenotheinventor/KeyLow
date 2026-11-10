@@ -13,7 +13,18 @@ export const offSearchRequestSchema = z.object({
   q: z.string().trim().min(2).max(100),
 });
 
-/** A normalised preview of an OFF product, shown in search results before it becomes a food row. */
+/** The portion a product would open on once it is stored: its label and its size in grams or millilitres. */
+const offCandidatePortionSchema = z.object({
+  label: z.string(),
+  grams: z.number().positive().nullable(),
+  ml: z.number().positive().nullable(),
+});
+
+/**
+ * A normalised preview of an OFF product, shown in search results before it becomes a food row.
+ * `default_portion` is optional so an app and a function on different updates keep working together:
+ * a candidate without one is drawn per 100 g.
+ */
 export const offCandidateSchema = z.object({
   code: barcodeDigitsSchema,
   name: z.string(),
@@ -25,6 +36,7 @@ export const offCandidateSchema = z.object({
   carbs_g: nullableNutrientAmountSchema,
   fibre_g: nullableNutrientAmountSchema,
   quality: foodQualitySchema,
+  default_portion: offCandidatePortionSchema.nullable().optional(),
 });
 
 /** Response body of the `off-search` Edge Function. */
@@ -69,6 +81,7 @@ export const edgeErrorSchema = z.object({
 });
 
 export type OffSearchRequest = z.infer<typeof offSearchRequestSchema>;
+export type OffCandidatePortion = z.infer<typeof offCandidatePortionSchema>;
 export type OffCandidate = z.infer<typeof offCandidateSchema>;
 export type OffSearchResponse = z.infer<typeof offSearchResponseSchema>;
 export type OffProductRequest = z.infer<typeof offProductRequestSchema>;

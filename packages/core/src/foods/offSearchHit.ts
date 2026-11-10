@@ -62,7 +62,8 @@ function withBrandsAsText(hit: Record<string, unknown>): Record<string, unknown>
 
 /**
  * A search hit as a candidate, or null when it cannot be one: no name, no usable code, or no energy
- * once macros and kilojoules are tried. A hit carries no serving, so no portion is read from it.
+ * once macros and kilojoules are tried. A hit carries no serving, so its default portion comes from the
+ * pack size and the categories alone, and the stored product may open on a serving the hit could not show.
  */
 export function normaliseOffSearchHit(hit: unknown): OffCandidate | null {
   if (!isRecord(hit)) {

@@ -167,6 +167,28 @@ Deno.test(
   },
 );
 
+Deno.test(
+  "a candidate found by a search carries the portion it would open on, and is stored with it",
+  async () => {
+    const { response, stored } = await run("oat milk", {
+      outcome: { ok: true, hits: [hit("5000000010011")] },
+    });
+
+    const [answered] = (await candidatesOf(response)) as { default_portion?: { label: string } }[];
+    assertEquals(answered?.default_portion?.label, "1 typical serving");
+    assertEquals(stored[0]?.candidates, [answered]);
+  },
+);
+
+Deno.test(
+  "a fresh row stored before candidates carried a portion is answered as it was stored",
+  async () => {
+    const { response } = await run("oat milk", { row: rowOf([candidate("5000000010011")], hour) });
+
+    assertEquals(await candidatesOf(response), [candidate("5000000010011")]);
+  },
+);
+
 Deno.test("an empty result is stored, so it is reused", async () => {
   const { response, stored } = await run("oat milk", { outcome: { ok: true, hits: [] } });
 

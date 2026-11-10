@@ -10,5 +10,7 @@ export type OpenFoodFactsGroupProps = {
    * step over itself, so the sheet never loses focus and nothing else would release the rows.
    */
   releasesOnOpen?: boolean | undefined;
+  /** Draws each row with the serving its product opens on, as the log and ingredient searches do. Leave it out for per 100 g. */
+  showsServings?: boolean | undefined;
   onOpenFood: (foodId: string) => void;
 };

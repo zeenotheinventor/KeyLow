@@ -76,6 +76,23 @@ describe("readStoredOffSearch", () => {
     ).toEqual({ state: "fresh", candidates: [candidate] });
   });
 
+  it("reads a row stored before candidates carried a default portion, with none added", () => {
+    const read = readStoredOffSearch(
+      { candidates: [candidate], fetched_at: ago(2 * day).toISOString() },
+      now,
+    );
+
+    expect(read?.candidates[0]).not.toHaveProperty("default_portion");
+  });
+
+  it("keeps the default portion of a candidate stored with one", () => {
+    const withPortion = { ...candidate, default_portion: { label: "1 bar", grams: 45, ml: null } };
+
+    expect(
+      readStoredOffSearch({ candidates: [withPortion], fetched_at: ago(hour).toISOString() }, now),
+    ).toEqual({ state: "fresh", candidates: [withPortion] });
+  });
+
   it("returns a stale row's candidates", () => {
     expect(
       readStoredOffSearch({ candidates: [candidate], fetched_at: ago(2 * day).toISOString() }, now),
