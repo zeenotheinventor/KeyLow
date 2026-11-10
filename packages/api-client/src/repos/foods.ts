@@ -1,3 +1,4 @@
+import { withDefaultPortion } from "@keylow/core/foods";
 import { foodPortionSchema, foodRowSchema } from "@keylow/core/schemas";
 import { z } from "zod";
 
@@ -260,7 +261,8 @@ export async function replaceFoodPortions(
 }
 
 /**
- * Creates a custom food and then its portions. There is no delete grant on `foods`, so when the
+ * Creates a custom food and then its portions, which always include a default: the person's own, or
+ * one estimate when they gave none (see `withDefaultPortion`). There is no delete grant on `foods`, so when the
  * portions insert fails the food cannot be rolled back, and a `FoodsPartialWriteError` says so.
  */
 export async function createFood(
@@ -289,13 +291,9 @@ export async function createFood(
 
   const food = foodRowSchema.parse(data);
 
-  if (input.portions.length === 0) {
-    return { food, portions: [] };
-  }
-
   const { data: portionData, error: portionsError } = await client
     .from("food_portions")
-    .insert(portionRows(food.id, ownerId, input.portions))
+    .insert(portionRows(food.id, ownerId, withDefaultPortion(food, input.portions)))
     .select("*")
     .order("position", { ascending: true });
 
@@ -311,7 +309,8 @@ export async function createFood(
 }
 
 /**
- * Updates a custom food's columns and then replaces its portions. Throws when the food is not
+ * Updates a custom food's columns and then replaces its portions, deriving the default again as
+ * `createFood` does. Throws when the food is not
  * visible to the caller or is not theirs to edit, before touching the portions. If replacing the
  * portions fails, the food stays updated and a `FoodsPartialWriteError` says so.
  */
@@ -342,7 +341,7 @@ export async function updateFood(
   }
 
   try {
-    await replaceFoodPortions(client, id, food.owner_id, input.portions);
+    await replaceFoodPortions(client, id, food.owner_id, withDefaultPortion(food, input.portions));
   } catch (cause) {
     const detail = cause instanceof Error ? cause.message : String(cause);
     throw new FoodsPartialWriteError(

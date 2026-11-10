@@ -1,3 +1,4 @@
+import { estimatedPortion } from "@keylow/core/foods";
 import { customFoodInputSchema } from "@keylow/core/schemas";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -88,7 +89,7 @@ describe("searchFoods against the local stack with real user JWTs", () => {
     expect(hits[0]?.score).toBeGreaterThan(0);
   });
 
-  it("should return a food's default portion, and nulls for a food that has none", async () => {
+  it("should return a food's default portion, and the typical serving for a food saved with no portion", async () => {
     const { food: foodWithPortion } = await createFood(
       userA.client,
       userA.id,
@@ -110,10 +111,13 @@ describe("searchFoods against the local stack with real user JWTs", () => {
       default_portion_grams: 60,
       default_portion_ml: null,
     });
-    expect(hits.find((hit) => hit.id === foodOfA.id)).toMatchObject({
-      default_portion_id: null,
-      default_portion_label: null,
-      default_portion_grams: null,
+    // A food saved with no portion is stored with one estimate, so a search row never says 100 g.
+    const estimate = estimatedPortion({ basis: "per_100g", kcal: 410 });
+    const hit = hits.find((candidate) => candidate.id === foodOfA.id);
+    expect(hit?.default_portion_id).not.toBeNull();
+    expect(hit).toMatchObject({
+      default_portion_label: estimate.label,
+      default_portion_grams: estimate.grams,
       default_portion_ml: null,
     });
   });

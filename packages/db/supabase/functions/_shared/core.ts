@@ -143,6 +143,7 @@ export {
   FOCUS_OPTIONS,
   GOAL_OPTIONS,
   formatClockTime,
+  isGeneratedEstimate,
   isTrendSettling,
   isValidTimeZone,
   labelFoodInput,

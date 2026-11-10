@@ -49,7 +49,8 @@ const NEVER_A_SINGLE_ITEM_TAGS: ReadonlySet<string> = new Set([
 ]);
 
 // A serving that is only a measure ("240 g", "30g", "5 oz"): it says nothing a person would call the food.
-const MEASURE_ONLY =
+// Exported so the migration that relabels stored defaults is generated from this same pattern.
+export const MEASURE_ONLY_PORTION_LABEL =
   /^~?\s*\d+(?:[.,]\d+)?\s*(?:kgs?|mgs?|g|gr|grm|grs|grms|gm|gms|grams?|grammes?|ml|mls|cl|dl|l|ltr|litres?|liters?|oz|fl\.?\s?oz)\.?\s*$/i;
 
 const SERVING_WORD = "1 serving";
@@ -82,7 +83,7 @@ function wordedServing(
   serving: OffPortionInput,
   pack: { portion: OffPortionInput; details: PackDetails } | null,
 ): OffPortionInput {
-  if (!MEASURE_ONLY.test(serving.label)) {
+  if (!MEASURE_ONLY_PORTION_LABEL.test(serving.label)) {
     return serving;
   }
   const namesTheServing =

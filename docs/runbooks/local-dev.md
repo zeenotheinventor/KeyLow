@@ -189,7 +189,7 @@ The file is one transaction and every row has a fixed id, so running it again mo
 
 ### CoFID portions
 
-The natural portions in `packages/db/data/portions/cofid-portions.csv` (156 rows for 91 CoFID foods, such as 1 garlic clove, the three celery stalks, the fruit batch of KEY-523, the vegetable batch of KEY-524, the bakery, dairy and eggs batch of KEY-525 and the store cupboard batch of KEY-526) reach production through generated migrations: `20261023120000_cofid_portions.sql` carried the first 86 rows, `20261023130000_cofid_portions.sql` the first 111, `20261023140000_cofid_portions.sql` the first 131, `20261023150000_cofid_portions.sql` the first 148 and `20261023160000_cofid_portions.sql` carries all 156, so the newest `*_cofid_portions.sql` always holds the whole file. Deploy Supabase runs `supabase db push` when it lands on `main`, so production gets the portions on that deploy and nobody runs anything, and nobody holds the service role key for it. Each row is upserted under the same id the seed and the loader use (made from the food code and label), so a row an earlier load wrote is updated, never duplicated. Each row is selected from the CoFID food with its code, so a database that lacks a food gets no row for it and the migration does not fail. It clears and sets defaults in an order that never leaves two defaults on a food, touches only shared portions (`owner_id is null`) and never deletes anything. The migration does not import foods: the portions attach to the CoFID foods production is expected to have already, and a missing food is skipped.
+The natural portions in `packages/db/data/portions/cofid-portions.csv` (156 rows for 91 CoFID foods, such as 1 garlic clove, the three celery stalks, the fruit batch of KEY-523, the vegetable batch of KEY-524, the bakery, dairy and eggs batch of KEY-525 and the store cupboard batch of KEY-526) reach production through generated migrations: `20261023120000_cofid_portions.sql` carried the first 86 rows, `20261023130000_cofid_portions.sql` the first 111, `20261023140000_cofid_portions.sql` the first 131, `20261023150000_cofid_portions.sql` the first 148 and `20261023160000_cofid_portions.sql` carried all 156, and `20261110100000_cofid_portions.sql` carries the same 156 with `1 fillet` as the default of both cods (KEY-934), so the newest `*_cofid_portions.sql` always holds the whole file. Deploy Supabase runs `supabase db push` when it lands on `main`, so production gets the portions on that deploy and nobody runs anything, and nobody holds the service role key for it. Each row is upserted under the same id the seed and the loader use (made from the food code and label), so a row an earlier load wrote is updated, never duplicated. Each row is selected from the CoFID food with its code, so a database that lacks a food gets no row for it and the migration does not fail. It clears and sets defaults in an order that never leaves two defaults on a food, touches only shared portions (`owner_id is null`) and never deletes anything. The migration does not import foods: the portions attach to the CoFID foods production is expected to have already, and a missing food is skipped.
 
 On a fresh local `supabase db reset` the migrations run before the seeds, so the CoFID foods are not there yet and the migration writes nothing. `30_cofid_portions.sql` then loads the portions. The migration matters for a database that already holds the foods, which is production.
 
@@ -209,6 +209,25 @@ pnpm --filter @keylow/db import:portions --file data/portions/cofid-portions.csv
 ```
 
 It targets the local stack unless `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are set, and `--strict` makes it exit 1 when a food code in the file is not in the database.
+
+### Estimated portions
+
+Every food opens on a serving or a natural unit, never on 100 g (KEY-934). A curated or stored portion is used when there is one. For every other food the migration `20261110110000_estimated_portions.sql` adds one stored default row, such as "1 typical burger" or "1 typical serving", sized from the estimate table in `packages/core/src/foods/estimatedPortion.ts` (the same table KEY-930 uses for a new Open Food Facts product). The file is generated from that table and from `estimatedPortion` itself, so no rule is written by hand in SQL. It does four things in this order, each idempotent:
+
+- A food of any source that has portions and no default gets its first portion (lowest position, then lowest id) as the default, the way `withDefaultPortion` does for a person's own food. It gets no extra row, and the statement picks one row per food from foods with no default, so it cannot meet the one-default-per-food index.
+- A shared default whose label is only a measure ("240 g") is relabelled "1 serving". The size stays, and a person's own label is left alone.
+- A CoFID food with no default gets the row of its food group. The group is its first one or two letters, matched exactly, so a single letter row such as `F` only matches the group `F`. Only a food with no portions reaches this and the next step.
+- Any food with no portions at all, of any source and including a person's own, gets the row for its energy band. `owner_id` is copied from the food and the row goes after its existing portions. The size is in `grams` or `ml` by the food's basis.
+
+A food that already has a default keeps it, and a logged entry keeps its own snapshot, so no entry changes. A stored Open Food Facts food gets an estimate here, and the refresh of KEY-932 replaces it with the real serving or pack the first time the food is opened.
+
+A change to the estimate table ships as a new generated migration with a later timestamp. An applied migration is never edited, and never regenerated over. Generate it from the repository root:
+
+```sh
+pnpm --filter @keylow/db emit:estimated-portions supabase/migrations/<timestamp>_estimated_portions.sql
+```
+
+It writes the file without connecting to any database and refuses a path that holds a file already. A unit test regenerates the newest `*_estimated_portions.sql` from core and fails when the two differ. The integration test `estimated-portions-migration.test.ts` creates its own uniquely named foods, runs the statements inside a transaction that is rolled back and checks only those rows. On a fresh stack the migrations run before the seeds, so the seeded CoFID foods do not exist when the migration runs, which is why the test makes its own rows. Production already holds the foods, so the migration writes their rows when Deploy Supabase applies it.
 
 ### USDA foods
 

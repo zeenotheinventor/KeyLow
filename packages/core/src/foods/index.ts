@@ -19,6 +19,7 @@ export {
   parseFormNumber,
   portionAmountKey,
   portionToFormFields,
+  portionsToFormFields,
 } from "./foodForm";
 export type {
   CopyFormStart,
@@ -44,7 +45,8 @@ export {
   normaliseOffSearchHit,
   normaliseOffSearchTerms,
 } from "./offSearchHit";
-export { deriveOffPortions } from "./deriveOffPortions";
+export { MEASURE_ONLY_PORTION_LABEL, deriveOffPortions } from "./deriveOffPortions";
+export { withDefaultPortion } from "./withDefaultPortion";
 export { NATURAL_UNIT_PROCESSED_TAGS, NATURAL_UNIT_TYPES, naturalUnitsFor } from "./naturalUnits";
 export type { NaturalUnitPortion, NaturalUnitType } from "./naturalUnits";
 export {
@@ -57,6 +59,7 @@ export {
   estimatedPortion,
   estimatedPortionLabel,
   isEstimatedPortion,
+  isGeneratedEstimate,
 } from "./estimatedPortion";
 export type { EnergyBand, EstimateCategoryRow, EstimateSize } from "./estimatedPortion";
 export { readPackSize } from "./packSize";

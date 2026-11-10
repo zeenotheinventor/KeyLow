@@ -1,4 +1,4 @@
-import { foodToFormFields, portionToFormFields } from "@keylow/core/foods";
+import { foodToFormFields, portionsToFormFields } from "@keylow/core/foods";
 
 import type { FoodFormValues } from "./types";
 import type { Food, FoodPortion } from "@keylow/core/schemas";
@@ -21,6 +21,6 @@ export function foodToFormValues(food: Food, portions: FoodPortion[]): FoodFormV
   return {
     ...foodToFormFields(food),
     ...(food.density_g_per_ml === null ? {} : { densityGramsPerMillilitre: food.density_g_per_ml }),
-    portions: portions.map(portionToFormFields),
+    portions: portionsToFormFields(food, portions),
   };
 }
