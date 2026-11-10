@@ -36,6 +36,10 @@ On 2026-11-10 an honest, identified client got `403 Access Denied` from `www.mcd
 - Subway items are the rows of the Subs table, so they are the six-inch subs.
 - Subway's six-inch figures cover bread, protein and vegetables only, with no cheese or sauce.
 
+## Search
+
+A plain "sausage roll" search now leads with the Greggs sausage roll, because its name is exactly the query. A CoFID or USDA sausage roll is still in the first 5 results, and `restaurant_foods_wave1.test.sql` asserts both. Ranking was not changed.
+
 ## Reviewer's sample
 
 To be filled in by the reviewer, independently of the engineer: every McDonald's burger (none in this wave) and a random 20% of the rest, at least 3 per chain, each re-read from its source and compared with the CSV.
