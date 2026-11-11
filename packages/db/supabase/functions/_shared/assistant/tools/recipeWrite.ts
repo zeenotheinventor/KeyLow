@@ -25,9 +25,7 @@ const ingredientInput = z
     food_id: z.guid().describe("The food's id from search_foods or get_food."),
     unit: z
       .enum(["portion", "g", "ml"])
-      .describe(
-        "portion: a count of one of the food's own portions, such as 2 tbsp. g: grams the user said. ml: millilitres the user said.",
-      ),
+      .describe("portion: a count of the food's own portions. g or ml: an amount the user said."),
     amount: z
       .number()
       .positive()

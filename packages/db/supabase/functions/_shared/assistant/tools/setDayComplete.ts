@@ -12,7 +12,7 @@ import type { WriteRunOutput, WriteToolDefinition } from "../tool.ts";
 
 const setDayCompleteInput = z.strictObject({
   local_date: localDateSchema.describe("The diary day, YYYY-MM-DD."),
-  complete: z.boolean().describe("True to mark the day complete, false to mark it not complete."),
+  complete: z.boolean(),
 });
 
 type SetDayCompleteInput = z.infer<typeof setDayCompleteInput>;

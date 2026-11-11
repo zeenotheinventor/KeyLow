@@ -7,7 +7,7 @@ import { dataNotice, estimatedNotice, unknownNotice } from "./shared.ts";
 
 import type { ReadToolDefinition } from "../tool.ts";
 
-const getFoodInput = z.strictObject({ id: z.guid().describe("The id of a food.") });
+const getFoodInput = z.strictObject({ id: z.guid() });
 
 export const getFoodTool: ReadToolDefinition<z.infer<typeof getFoodInput>> = {
   name: "get_food",

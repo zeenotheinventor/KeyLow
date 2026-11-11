@@ -189,8 +189,7 @@ export const getWorkoutsTool: ReadToolDefinition<z.infer<typeof getWorkoutsInput
     "with its working sets and best set. With a session_id it reads that workout: its note and its " +
     `sets in order, at most ${maxListedSets}, each with id, exercise, set_type (warmup, working, drop ` +
     "or failure), reps, load in the user's unit (null none), rir and rpe (null none). from and to are " +
-    "ignored when a session_id is given. truncated is true when more exist, so ask for a shorter " +
-    "range. The citation is printed under your answer. Ids come from here, never invent one. " +
+    "ignored when a session_id is given. truncated is true when more exist, so ask for a shorter range. The citation is printed under your answer. Ids come from here, never invent one. " +
     dataNotice,
   kind: "read",
   input: getWorkoutsInput,

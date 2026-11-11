@@ -76,7 +76,7 @@ export const getEntriesTool: ReadToolDefinition<z.infer<typeof getEntriesInput>>
     "24-hour HH:MM, applied to every day of the range, or null for no limit) and say the window " +
     "aloud, for example lunch as 12:00 to 14:00. A window cannot cross midnight, so a late-night " +
     "window such as 22:00 to 02:00 needs two calls, one up to 23:59 and one from 00:00. The nutrients are already rounded as the Diary " +
-    "rounds them. The citation is the line the app prints under your answer. " +
+    "rounds them. The citation is printed under your answer. " +
     `${unknownNotice} ${dataNotice}`,
   kind: "read",
   input: getEntriesInput,

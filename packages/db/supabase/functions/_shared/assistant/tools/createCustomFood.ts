@@ -17,7 +17,7 @@ import type { WriteRunOutput, WriteToolDefinition } from "../tool.ts";
 const gramsOfLabel = z.number().min(0).max(1000);
 
 const createCustomFoodInput = z.strictObject({
-  name: z.string().trim().min(1).max(200).describe("The food's name, as the user said it."),
+  name: z.string().trim().min(1).max(200),
   brand: z
     .string()
     .trim()
@@ -25,27 +25,21 @@ const createCustomFoodInput = z.strictObject({
     .max(200)
     .nullable()
     .describe("The brand, only when the user gave one. Otherwise null."),
-  per: z
-    .enum(["per_portion", "per_100g"])
-    .describe(
-      "per_portion when the label's figures are for one bar, slice or cup, per_100g when they are for 100 g.",
-    ),
+  per: z.enum(["per_portion", "per_100g"]),
   portion_label: z
     .string()
     .trim()
     .min(1)
     .max(60)
     .nullable()
-    .describe(
-      "The portion in the user's words with its count, such as 1 bar. Only for per_portion. Otherwise null.",
-    ),
+    .describe("The portion with its count, such as 1 bar. Only for per_portion, otherwise null."),
   portion_grams: z
     .number()
     .positive()
     .max(5000)
     .nullable()
     .describe(
-      "What that portion weighs in grams. Only for per_portion. Otherwise null. If the user did not say, ask with ask_user.",
+      "The portion's weight in grams. Only for per_portion, otherwise null. If the user did not say, ask with ask_user.",
     ),
   kcal: z
     .number()

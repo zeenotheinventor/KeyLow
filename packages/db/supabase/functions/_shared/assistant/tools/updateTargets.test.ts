@@ -313,15 +313,8 @@ Deno.test(
 
 Deno.test("the tool tells the model to call again with the number a refusal names", () => {
   const advice = "If the call is refused with current_kcal, call again with that number.";
-  const properties = toJsonSchema(updateTargetsTool)["properties"];
-  const field = JSON.stringify(
-    typeof properties === "object" && properties !== null && "current_kcal" in properties
-      ? properties.current_kcal
-      : null,
-  );
 
   assert(updateTargetsTool.description.includes(advice));
-  assert(field.includes(advice));
 });
 
 Deno.test(

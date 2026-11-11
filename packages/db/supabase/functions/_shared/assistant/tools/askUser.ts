@@ -10,17 +10,15 @@ const askUserInput = z.strictObject({
   quick_replies: z
     .array(z.string().min(1))
     .max(3)
-    .describe(
-      "Up to 3 answers the user can tap, each one a portion of the food, an amount in grams, an exercise name or a goal with experience. An empty list when none fits.",
-    ),
+    .describe("Up to 3 answers the user can tap. An empty list when none fits."),
 });
 
 export const askUserTool: ReadToolDefinition<z.infer<typeof askUserInput>> = {
   name: "ask_user",
   description:
     "Asks the user one question when an amount, a food or a day is unclear, instead of guessing. " +
-    "Ask only one question at a time. The quick replies are the food's own portions or an amount in " +
-    'grams, written as the user would say it, for example "1 chicken breast" or "150 g rice", never a ' +
+    "Ask only one question at a time. The quick replies are the food's own portions, an amount in grams or an " +
+    'exercise name, written as the user would say it, for example "1 chicken breast" or "150 g rice", never a ' +
     "hand measure such as a fist, a palm or a thumb. For a training goal, each reply gives the goal and " +
     'the experience together, such as "Look better, intermediate". ' +
     "The user's answer arrives as their next message, " +

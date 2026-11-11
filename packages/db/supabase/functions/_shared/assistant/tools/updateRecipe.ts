@@ -30,11 +30,9 @@ const updateRecipeInput = z
     ingredients: recipeIngredients
       .nullable()
       .describe(
-        `All of the recipe's ingredients as they should now be, 1 to ${maxIngredients}, replacing the old list. Null to keep them.`,
+        `The full new list, 1 to ${maxIngredients}, replacing the old one. Null to keep it.`,
       ),
-    steps: recipeSteps
-      .nullable()
-      .describe("All of the recipe's steps as they should now be, in order. Null to keep them."),
+    steps: recipeSteps.nullable().describe("The full new list in order. Null to keep it."),
   })
   .refine(
     ({ name, servings, ingredients, steps }) =>
@@ -48,10 +46,10 @@ export const updateRecipeTool: WriteToolDefinition<UpdateRecipeInput> = {
   name: "update_recipe",
   description:
     "Changes one of the user's recipes: its name, servings, ingredients or steps. Take the id from " +
-    "get_recipes. No tool shows you a recipe's ingredients or steps, so send ingredients or steps only " +
+    "get_recipes. No tool shows a recipe's ingredients or steps, so send ingredients or steps only " +
     "when the whole current list is in this conversation, for example a recipe you just created. They " +
-    "replace the old list as a whole, so send every line the recipe should have, and build each " +
-    "ingredient as create_recipe does. A line you send unchanged keeps the values it was saved with. " +
+    "replace the old list, so send every line the recipe should have, built as " +
+    "create_recipe does. A line you send unchanged keeps the values it was saved with. " +
     "Otherwise change the name or the servings only, set the rest to null, and tell the user to change " +
     "ingredients and steps in the recipe editor. This cannot be undone from the card, so tell the user " +
     "they can change it again in the recipe editor.",

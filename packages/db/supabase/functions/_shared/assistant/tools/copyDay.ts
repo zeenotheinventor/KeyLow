@@ -40,7 +40,7 @@ const copyDayInput = z.strictObject({
     .int()
     .min(1)
     .describe(
-      `How many entries the day you copy from has, counted from get_day, at most ${maxEntriesPerDay}. The user is shown this number, so it must be the day's own.`,
+      `The entry count of the day you copy from, from get_day, at most ${maxEntriesPerDay}. The user is shown this number, so it must be the day's own.`,
     ),
 });
 

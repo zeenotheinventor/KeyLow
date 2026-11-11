@@ -39,42 +39,27 @@ const updateTrainingGoalsInput = z.strictObject({
   goal: z
     .enum(TRAINING_GOALS)
     .nullable()
-    .describe(
-      "aesthetic is Look better, strength is Get stronger, hybrid is Both. Null to leave it as it is.",
-    ),
+    .describe("aesthetic is Look better, strength is Get stronger, hybrid is Both."),
   focus: z
     .array(z.enum(TRAINING_FOCUSES))
     .refine(hasNoRepeats)
     .nullable()
-    .describe(
-      "The areas to focus on, each at most once, or an empty list for none. Null to leave it as it is.",
-    ),
-  days_per_week: z
-    .number()
-    .int()
-    .min(MIN_DAYS_PER_WEEK)
-    .max(MAX_DAYS_PER_WEEK)
-    .nullable()
-    .describe("The days a week the user can train. Null to leave it as it is."),
+    .describe("The areas to focus on, each at most once, or an empty list for none."),
+  days_per_week: z.number().int().min(MIN_DAYS_PER_WEEK).max(MAX_DAYS_PER_WEEK).nullable(),
   session_minutes: z
     .number()
     .int()
     .min(MIN_SESSION_MINUTES)
     .max(MAX_SESSION_MINUTES)
     .nullable()
-    .describe("How long a session is, in minutes. Null to leave it as it is."),
+    .describe("How long a session is, in minutes."),
   equipment: z
     .array(z.enum(EQUIPMENT))
     .min(1)
     .refine(hasNoRepeats)
     .nullable()
-    .describe(
-      "What the user can use, at least one. A full gym is every value but other. Null to leave it as it is.",
-    ),
-  experience: z
-    .enum(EXPERIENCE_LEVELS)
-    .nullable()
-    .describe("How long the user has trained. Null to leave it as it is."),
+    .describe("What the user can use, at least one. A full gym is every value but other."),
+  experience: z.enum(EXPERIENCE_LEVELS).nullable(),
 });
 
 type UpdateTrainingGoalsInput = z.infer<typeof updateTrainingGoalsInput>;
