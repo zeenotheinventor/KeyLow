@@ -383,11 +383,13 @@ export { getCurrentTrainingGoals, listTrainingGoalsHistory, saveTrainingGoals } 
 export {
   useArchiveExercise,
   useExercise,
+  useExerciseFormMedia,
   useExerciseMuscles,
   useExerciseSearch,
   useSaveExercise,
 } from "./hooks";
 export type {
+  ExerciseFormMediaState,
   ExerciseMusclesState,
   ExerciseSearchError,
   ExerciseSearchResult,
@@ -415,6 +417,7 @@ export {
   archiveExercise,
   exerciseHitOf,
   getExercise,
+  getExerciseFormMedia,
   saveExercise,
   searchExercises,
 } from "./repos";

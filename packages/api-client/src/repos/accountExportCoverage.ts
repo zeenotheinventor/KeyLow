@@ -53,6 +53,9 @@ export const ACCOUNT_EXPORT_COVERAGE: Record<
   import_runs: { notExported: "Import plumbing with no grant for the app." },
   exercise_import_runs: { notExported: "Import plumbing with no grant for the app." },
   exercise_source_data: { notExported: "Import plumbing with no grant for the app." },
+  exercise_form_videos: {
+    notExported: "Shared reference data, the same for everyone. No row belongs to the account.",
+  },
   rate_limits: { notExported: "Closed to every API role. Counters, not account data." },
   off_search_results: {
     notExported:
