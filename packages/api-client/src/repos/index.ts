@@ -149,6 +149,7 @@ export type {
   ExerciseSearchHit,
   ExerciseSearchOptions,
 } from "./exercises";
+export { getExerciseFormMedia } from "./exerciseFormMedia";
 export { listSuggestionLibrary } from "./suggestionLibrary";
 export type { SuggestionLibraryOptions } from "./suggestionLibrary";
 export {

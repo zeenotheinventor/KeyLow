@@ -407,6 +407,41 @@ export type Database = {
         };
         Relationships: [];
       };
+      exercise_form_videos: {
+        Row: {
+          channel: string;
+          created_at: string;
+          exercise_id: string;
+          title: string;
+          verified_on: string;
+          youtube_video_id: string;
+        };
+        Insert: {
+          channel: string;
+          created_at?: string;
+          exercise_id: string;
+          title: string;
+          verified_on: string;
+          youtube_video_id: string;
+        };
+        Update: {
+          channel?: string;
+          created_at?: string;
+          exercise_id?: string;
+          title?: string;
+          verified_on?: string;
+          youtube_video_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "exercise_form_videos_exercise_id_fkey";
+            columns: ["exercise_id"];
+            isOneToOne: true;
+            referencedRelation: "exercises";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       exercise_import_runs: {
         Row: {
           created_at: string;
@@ -1725,6 +1760,15 @@ export type Database = {
       delete_workout_session: {
         Args: { p_session_id: string };
         Returns: undefined;
+      };
+      exercise_form_media: {
+        Args: { p_exercise_id: string };
+        Returns: {
+          image_paths: string[];
+          video_channel: string;
+          video_id: string;
+          video_title: string;
+        }[];
       };
       give_foods_default_portions: {
         Args: { p_food_ids?: string[] };

@@ -198,6 +198,12 @@ export const keys = {
      * id is the only thing the key carries besides fixed words.
      */
     exercise: (id: string) => ["training", "exercise", id] as const,
+    /**
+     * What one exercise shows for its form: the curated video, its two photos or nothing. Never
+     * persisted: it is read only while a sheet, the routine editor or a chat card is open, which needs
+     * a connection. An exercise id is the only thing the key carries besides fixed words.
+     */
+    exerciseFormMedia: (id: string) => ["training", "exercise-form-media", id] as const,
     /** The prefix of every `suggestionLibrary` key, to refresh them all when an exercise is saved or archived. */
     suggestionLibraryAll: ["training", "suggestion-library"] as const,
     /**

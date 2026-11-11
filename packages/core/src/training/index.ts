@@ -462,3 +462,19 @@ export {
 export type { GoalDraft, GoalDraftAction, GoalDraftAnswers } from "./goalDraft";
 export { priorityFigureValues } from "./priorityFigureValues";
 export { sessionHeatReadingTime } from "./sessionProgress";
+export {
+  FREE_EXERCISE_DB_COMMIT,
+  exerciseFormMediaDisplayOf,
+  exerciseFormMediaOf,
+  freeExerciseDbImagePathSchema,
+  freeExerciseDbImageUrl,
+  shownExerciseFormMediaSchema,
+  youtubeThumbnailUrl,
+  youtubeVideoIdSchema,
+  youtubeWatchUrl,
+} from "./formMedia";
+export type {
+  ExerciseFormMedia,
+  ExerciseFormMediaDisplay,
+  ExerciseFormMediaRow,
+} from "./formMedia";

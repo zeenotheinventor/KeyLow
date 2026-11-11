@@ -226,6 +226,8 @@ export { useTrainingGoals } from "./useTrainingGoals";
 export { useTrainingGoalsHistory } from "./useTrainingGoalsHistory";
 export { useExercise } from "./useExercise";
 export type { ExerciseState } from "./useExercise";
+export { useExerciseFormMedia } from "./useExerciseFormMedia";
+export type { ExerciseFormMediaState } from "./useExerciseFormMedia";
 export { useExerciseMuscles } from "./useExerciseMuscles";
 export type { ExerciseMusclesState } from "./useExerciseMuscles";
 export { useExerciseSearch } from "./useExerciseSearch";
