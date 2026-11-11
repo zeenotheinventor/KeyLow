@@ -70,3 +70,4 @@ export * from "./assistantTargetCards";
 export * from "./assistantTrainingCards";
 export * from "./widgets";
 export * from "./accountExport";
+export * from "./exerciseForm";
