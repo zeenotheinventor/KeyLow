@@ -2,7 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import { deriveFood } from "../../../scripts/restaurant/deriveFood";
 import { parseRestaurantCsv } from "../../../scripts/restaurant/restaurantFoodsCsv";
-import { testBurger, restaurantCsvOf, testBucket } from "../../support/restaurantCsv";
+import {
+  testBurger,
+  restaurantCsvOf,
+  testBucket,
+  testNandosDish,
+} from "../../support/restaurantCsv";
 
 const rowOf = (cells: typeof testBurger) => {
   const [row] = parseRestaurantCsv(restaurantCsvOf(cells));
@@ -70,5 +75,16 @@ describe("deriveFood", () => {
     expect(() => deriveFood(rowOf({ ...testBucket, weight_basis: "published" }))).toThrow(
       "otherchain-gb:test-bucket: the weight basis published does not match the grams none",
     );
+  });
+
+  describe("quality", () => {
+    it("should mark a Nando's food as having estimated macros", () => {
+      expect(deriveFood(rowOf(testNandosDish)).quality).toEqual({ macros_estimated: true });
+    });
+
+    it("should leave the quality of a food whose chain publishes every figure empty", () => {
+      expect(deriveFood(rowOf(testBurger)).quality).toEqual({});
+      expect(deriveFood(rowOf(testBucket)).quality).toEqual({});
+    });
   });
 });

@@ -21,6 +21,8 @@ export const customFoodBasisSchema = z.enum(["per_100g", "per_100ml"]);
  * `carbs_convention` describes the stored `carbs_g`, `us_total` only when it could not be converted.
  * For OFF rows an explicit `eu` means the value was converted from a US-style label, absent means no
  * conversion happened, and `us_total` means the label was US-style and could not be converted.
+ * `macros_estimated` marks a restaurant food whose energy is published but whose protein, fat, carbohydrate
+ * and the rest were estimated from the dish's ingredients (Amendment 20).
  */
 export const foodQualitySchema = z.object({
   kcal_derived: z.boolean().optional(),
@@ -30,6 +32,7 @@ export const foodQualitySchema = z.object({
   trace_fields: z.array(z.string()).optional(),
   per_serving_converted: z.boolean().optional(),
   carbs_convention: z.enum(["eu", "us_total"]).optional(),
+  macros_estimated: z.boolean().optional(),
 });
 
 // z.guid() rather than z.uuid(): seed files use fixed literal ids that are not RFC 4122 variants.

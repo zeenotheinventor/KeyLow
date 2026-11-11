@@ -103,8 +103,17 @@ describe("foodQualitySchema", () => {
       trace_fields: ["fat_g"],
       per_serving_converted: true,
       carbs_convention: "us_total",
+      macros_estimated: true,
     };
     expect(foodQualitySchema.parse(full)).toEqual(full);
+  });
+
+  it("should accept macros_estimated, the mark of macros worked out from a dish's ingredients", () => {
+    expect(foodQualitySchema.parse({ macros_estimated: true })).toEqual({ macros_estimated: true });
+  });
+
+  it("should reject a macros_estimated that is not a boolean", () => {
+    expect(foodQualitySchema.safeParse({ macros_estimated: "yes" }).success).toBe(false);
   });
 
   it("should leave absent keys absent rather than defaulting them", () => {

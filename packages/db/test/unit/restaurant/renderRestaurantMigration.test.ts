@@ -4,7 +4,12 @@ import { sha256Hex } from "../../../scripts/cofid/checksum";
 import { portionId } from "../../../scripts/portions/portionId";
 import { renderRestaurantMigration } from "../../../scripts/restaurant/renderRestaurantMigration";
 import { restaurantFoodId } from "../../../scripts/restaurant/restaurantFoodId";
-import { testBurger, restaurantCsvOf, testBucket } from "../../support/restaurantCsv";
+import {
+  testBurger,
+  restaurantCsvOf,
+  testBucket,
+  testNandosDish,
+} from "../../support/restaurantCsv";
 
 const csv = restaurantCsvOf(testBurger, testBucket);
 const sql = renderRestaurantMigration(csv, 1);
@@ -178,5 +183,24 @@ describe("restaurantFoodId", () => {
     expect(restaurantFoodId("testchain-gb:test-burger")).not.toBe(
       restaurantFoodId("greggs-gb:sausage-roll"),
     );
+  });
+
+  describe("a food whose macros are estimated", () => {
+    const estimatedSql = renderRestaurantMigration(restaurantCsvOf(testBurger, testNandosDish), 4);
+    const dishId = restaurantFoodId("nandos-gb:test-dish");
+
+    it("should insert the quality mark with the food, and refresh it on conflict", () => {
+      const statement = statementWith(`'${dishId}'`, estimatedSql);
+
+      expect(statement).toContain("quality) values");
+      expect(statement).toContain(`'{"macros_estimated":true}'`);
+      expect(statement).toContain("quality = excluded.quality");
+    });
+
+    it("should leave the other foods' statements without a quality column", () => {
+      const statement = statementWith(`'${testBurgerFoodId}'`, estimatedSql);
+
+      expect(statement).not.toContain("quality");
+    });
   });
 });

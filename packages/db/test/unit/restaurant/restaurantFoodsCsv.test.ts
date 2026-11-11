@@ -20,6 +20,7 @@ const CHAIN_DOMAINS: Readonly<Record<string, string>> = {
   Greggs: "greggs.co.uk",
   "Pret A Manger": "pret.co.uk",
   Subway: "subway.com",
+  "Nando's": "nandos.co.uk",
 };
 
 const isOnDomain = (url: URL, domain: string): boolean =>
@@ -115,12 +116,12 @@ describe("restaurant-foods.csv", () => {
   describe("where no weight is published", () => {
     const rowsWithoutWeight = rows.filter((row) => row.weight_basis === "none");
 
-    it("should hold McDonald's and KFC, in wave 2", () => {
+    it("should hold McDonald's and KFC in wave 2, and Nando's in wave 4", () => {
       expect(new Set(rowsWithoutWeight.map((row) => row.chain))).toEqual(
-        new Set(["McDonald's", "KFC"]),
+        new Set(["McDonald's", "KFC", "Nando's"]),
       );
       for (const row of rowsWithoutWeight) {
-        expect(row.wave, row.ref).toBe(2);
+        expect(row.wave, row.ref).toBe(row.chain === "Nando's" ? 4 : 2);
       }
     });
 

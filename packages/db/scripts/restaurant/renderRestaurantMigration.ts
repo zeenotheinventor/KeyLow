@@ -6,7 +6,7 @@ import { deriveFood } from "./deriveFood";
 import { RESTAURANT_ID_NAMESPACE, restaurantFoodId } from "./restaurantFoodId";
 import { parseRestaurantCsv, type RestaurantFoodRow } from "./restaurantFoodsCsv";
 
-/** The `foods` columns the migration inserts. barcode, density, micros, quality, food_group and fetched_at keep their defaults, and deleted_at is never written. */
+/** The `foods` columns the migration inserts. barcode, density, micros, food_group and fetched_at keep their defaults, quality is added for a food whose macros are estimated, and deleted_at is never written. */
 const FOOD_COLUMNS = [
   "id",
   "source",
@@ -24,9 +24,7 @@ const FOOD_COLUMNS = [
   "fibre_g",
   "salt_g",
 ] as const;
-const UPDATED_FOOD_COLUMNS = FOOD_COLUMNS.filter(
-  (column) => !["id", "source", "source_ref", "owner_id"].includes(column),
-);
+const IMMUTABLE_FOOD_COLUMNS = ["id", "source", "source_ref", "owner_id"];
 
 const updateAll = (columns: readonly string[]): string =>
   columns.map((column) => `${column} = excluded.${column}`).join(", ");
@@ -46,6 +44,9 @@ function insertRunStatement(
 
 function insertFoodStatement(row: RestaurantFoodRow): string {
   const food = deriveFood(row);
+  // quality is written only for a food that has a mark, so the statements of every other food are unchanged.
+  const hasQuality = Object.keys(food.quality).length > 0;
+  const columns = hasQuality ? [...FOOD_COLUMNS, "quality"] : FOOD_COLUMNS;
   const values = [
     sqlLiteral(restaurantFoodId(row.ref)),
     "'restaurant'",
@@ -55,8 +56,10 @@ function insertFoodStatement(row: RestaurantFoodRow): string {
     sqlLiteral(row.chain),
     sqlLiteral(food.basis),
     ...Object.values(food.nutrients).map(sqlLiteral),
+    ...(hasQuality ? [sqlLiteral(food.quality)] : []),
   ];
-  return `insert into public.foods (${FOOD_COLUMNS.join(", ")}) values (${values.join(", ")}) on conflict (source, source_ref) do update set ${updateAll(UPDATED_FOOD_COLUMNS)};`;
+  const updated = columns.filter((column) => !IMMUTABLE_FOOD_COLUMNS.includes(column));
+  return `insert into public.foods (${columns.join(", ")}) values (${values.join(", ")}) on conflict (source, source_ref) do update set ${updateAll(updated)};`;
 }
 
 const insertSourceDataStatement = (row: RestaurantFoodRow, runId: string): string =>

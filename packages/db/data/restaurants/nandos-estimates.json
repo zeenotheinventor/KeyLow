@@ -1,0 +1,406 @@
+{
+  "retrieved_on": "2026-11-11",
+  "kcal_source_url": "https://www.nandos.co.uk/food/menu",
+  "items": [
+    {
+      "ref": "nandos-gb:quarter-chicken",
+      "name": "1/4 Chicken",
+      "portion_label": "1 quarter chicken",
+      "published_kcal": 289,
+      "components": [
+        {
+          "name": "Breast, grilled, meat and skin (half of a 150 g breast quarter)",
+          "cofid_code": "18-325",
+          "grams": 75
+        },
+        {
+          "name": "Leg quarter, roasted, meat and skin (half of a 125 g leg quarter)",
+          "cofid_code": "18-337",
+          "grams": 62.5
+        },
+        {
+          "name": "Rapeseed oil in the marinade and basting",
+          "cofid_code": "17-041",
+          "grams": 3
+        },
+        {
+          "name": "Salt in the marinade and spice",
+          "cofid_code": "17-367",
+          "grams": 0.8
+        }
+      ],
+      "ingredients_url": "https://www.nandos.co.uk/allergens/nandos-chicken-quarter-half",
+      "scale_factor": 0.95
+    },
+    {
+      "ref": "nandos-gb:whole-chicken",
+      "name": "Whole Chicken",
+      "portion_label": "1 whole chicken",
+      "published_kcal": 1159,
+      "components": [
+        {
+          "name": "Two breasts, grilled, meat and skin (2 x 150 g)",
+          "cofid_code": "18-325",
+          "grams": 300
+        },
+        {
+          "name": "Two leg quarters, roasted, meat and skin (2 x 125 g)",
+          "cofid_code": "18-337",
+          "grams": 250
+        },
+        {
+          "name": "Rapeseed oil in the marinade and basting",
+          "cofid_code": "17-041",
+          "grams": 10
+        },
+        {
+          "name": "Salt in the marinade and spice",
+          "cofid_code": "17-367",
+          "grams": 3
+        }
+      ],
+      "ingredients_url": "https://www.nandos.co.uk/allergens/nandos-whole",
+      "scale_factor": 0.9667
+    },
+    {
+      "ref": "nandos-gb:chicken-butterfly",
+      "name": "Chicken Butterfly",
+      "portion_label": "1 chicken butterfly",
+      "published_kcal": 332,
+      "components": [
+        {
+          "name": "Two breasts joined by skin, grilled, meat and skin",
+          "cofid_code": "18-325",
+          "grams": 175
+        },
+        {
+          "name": "Rapeseed oil in the marinade and basting",
+          "cofid_code": "17-041",
+          "grams": 3
+        },
+        {
+          "name": "Salt in the marinade and spice",
+          "cofid_code": "17-367",
+          "grams": 1
+        }
+      ],
+      "ingredients_url": "https://www.nandos.co.uk/allergens/nandos-chicken-butterfly",
+      "scale_factor": 1.0069
+    },
+    {
+      "ref": "nandos-gb:3-chicken-wings",
+      "name": "3 Chicken Wings",
+      "portion_label": "1 portion of 3 wings",
+      "published_kcal": 236,
+      "components": [
+        {
+          "name": "Chicken wing quarter, roasted, meat and skin (3 wings at 32 g)",
+          "cofid_code": "18-339",
+          "grams": 96
+        },
+        {
+          "name": "Rapeseed oil in the marinade and basting",
+          "cofid_code": "17-041",
+          "grams": 3
+        },
+        {
+          "name": "Salt in the marinade and spice",
+          "cofid_code": "17-367",
+          "grams": 0.8999999999999999
+        }
+      ],
+      "ingredients_url": "https://www.nandos.co.uk/allergens/nandos-chicken-wings",
+      "scale_factor": 0.9675
+    },
+    {
+      "ref": "nandos-gb:5-chicken-wings",
+      "name": "5 Chicken Wings",
+      "portion_label": "1 portion of 5 wings",
+      "published_kcal": 393,
+      "components": [
+        {
+          "name": "Chicken wing quarter, roasted, meat and skin (5 wings at 32 g)",
+          "cofid_code": "18-339",
+          "grams": 160
+        },
+        {
+          "name": "Rapeseed oil in the marinade and basting",
+          "cofid_code": "17-041",
+          "grams": 5
+        },
+        {
+          "name": "Salt in the marinade and spice",
+          "cofid_code": "17-367",
+          "grams": 1.5
+        }
+      ],
+      "ingredients_url": "https://www.nandos.co.uk/allergens/nandos-chicken-wings",
+      "scale_factor": 0.9667
+    },
+    {
+      "ref": "nandos-gb:10-chicken-wings",
+      "name": "10 Chicken Wings",
+      "portion_label": "1 portion of 10 wings",
+      "published_kcal": 786,
+      "components": [
+        {
+          "name": "Chicken wing quarter, roasted, meat and skin (10 wings at 32 g)",
+          "cofid_code": "18-339",
+          "grams": 320
+        },
+        {
+          "name": "Rapeseed oil in the marinade and basting",
+          "cofid_code": "17-041",
+          "grams": 10
+        },
+        {
+          "name": "Salt in the marinade and spice",
+          "cofid_code": "17-367",
+          "grams": 3
+        }
+      ],
+      "ingredients_url": "https://www.nandos.co.uk/allergens/nandos-chicken-wings",
+      "scale_factor": 0.9667
+    },
+    {
+      "ref": "nandos-gb:grilled-chicken-wrap",
+      "name": "Grilled Chicken Wrap",
+      "portion_label": "1 wrap",
+      "published_kcal": 514,
+      "components": [
+        {
+          "name": "Wheat tortilla (Nando's prints 275 kcal for its Tortilla Wrap)",
+          "cofid_code": "11-925",
+          "grams": 96
+        },
+        {
+          "name": "Chicken breast fillet, grilled, no skin (Nando's prints 138 kcal for its Grilled Chicken Breast)",
+          "cofid_code": "18-323",
+          "grams": 95
+        },
+        {
+          "name": "Lettuce",
+          "cofid_code": "13-520",
+          "grams": 15
+        },
+        {
+          "name": "Mayonnaise, standing in for the yoghurt mayo",
+          "cofid_code": "17-654",
+          "grams": 7
+        },
+        {
+          "name": "Greek style yoghurt, in the yoghurt mayo",
+          "cofid_code": "12-555",
+          "grams": 10
+        },
+        {
+          "name": "White sugar, standing in for the chilli jam",
+          "cofid_code": "17-063",
+          "grams": 8
+        },
+        {
+          "name": "Tomato puree, in the chilli jam",
+          "cofid_code": "13-531",
+          "grams": 5
+        },
+        {
+          "name": "Rapeseed oil in the marinade and basting",
+          "cofid_code": "17-041",
+          "grams": 2
+        },
+        {
+          "name": "Salt in the marinade and spice",
+          "cofid_code": "17-367",
+          "grams": 0.5
+        }
+      ],
+      "ingredients_url": "https://www.nandos.co.uk/allergens/grilled-chicken-wrap",
+      "scale_factor": 0.9698
+    },
+    {
+      "ref": "nandos-gb:grilled-chicken-pitta",
+      "name": "Grilled Chicken Pitta",
+      "portion_label": "1 pitta",
+      "published_kcal": 508,
+      "components": [
+        {
+          "name": "White pitta bread (Nando's prints 246 kcal for its Toasted Pitta)",
+          "cofid_code": "11-974",
+          "grams": 96
+        },
+        {
+          "name": "Chicken breast fillet, grilled, no skin (Nando's prints 138 kcal for its Grilled Chicken Breast)",
+          "cofid_code": "18-323",
+          "grams": 95
+        },
+        {
+          "name": "Retail coleslaw, standing in for the rainbow slaw",
+          "cofid_code": "15-635",
+          "grams": 25
+        },
+        {
+          "name": "Mayonnaise, standing in for the lemon and herb mayo",
+          "cofid_code": "17-654",
+          "grams": 10
+        },
+        {
+          "name": "Rapeseed oil in the marinade and basting",
+          "cofid_code": "17-041",
+          "grams": 2
+        },
+        {
+          "name": "Salt in the marinade and spice",
+          "cofid_code": "17-367",
+          "grams": 0.5
+        }
+      ],
+      "ingredients_url": "https://www.nandos.co.uk/allergens/grilled-chicken-pitta",
+      "scale_factor": 0.986
+    },
+    {
+      "ref": "nandos-gb:regular-peri-salted-chips",
+      "name": "Regular PERi-Salted Chips",
+      "portion_label": "1 regular PERi-Salted Chips",
+      "published_kcal": 498,
+      "components": [
+        {
+          "name": "Potato chips, straight cut, frozen, fried in corn oil",
+          "cofid_code": "13-025",
+          "grams": 175
+        },
+        {
+          "name": "Salt, standing in for the PERi-Salt",
+          "cofid_code": "17-367",
+          "grams": 1.5
+        }
+      ],
+      "ingredients_url": "https://www.nandos.co.uk/allergens/peri-salted-chips",
+      "scale_factor": 1.0424
+    },
+    {
+      "ref": "nandos-gb:regular-spicy-rice",
+      "name": "Regular Spicy Rice",
+      "portion_label": "1 regular spicy rice",
+      "published_kcal": 246,
+      "components": [
+        {
+          "name": "Rice, white, long grain, boiled in unsalted water",
+          "cofid_code": "11-862",
+          "grams": 150
+        },
+        {
+          "name": "Rapeseed oil",
+          "cofid_code": "17-041",
+          "grams": 4
+        },
+        {
+          "name": "Green pepper",
+          "cofid_code": "13-318",
+          "grams": 20
+        },
+        {
+          "name": "Red pepper",
+          "cofid_code": "13-524",
+          "grams": 10
+        },
+        {
+          "name": "Onion",
+          "cofid_code": "13-499",
+          "grams": 15
+        },
+        {
+          "name": "Tomato",
+          "cofid_code": "13-517",
+          "grams": 15
+        },
+        {
+          "name": "Salt",
+          "cofid_code": "17-367",
+          "grams": 1
+        }
+      ],
+      "ingredients_url": "https://www.nandos.co.uk/allergens/spicy-rice",
+      "scale_factor": 1.0045
+    },
+    {
+      "ref": "nandos-gb:regular-macho-peas",
+      "name": "Regular Macho Peas",
+      "portion_label": "1 regular macho peas",
+      "published_kcal": 155,
+      "components": [
+        {
+          "name": "Peas, frozen, boiled in unsalted water",
+          "cofid_code": "13-536",
+          "grams": 160
+        },
+        {
+          "name": "Olive oil",
+          "cofid_code": "17-038",
+          "grams": 4
+        },
+        {
+          "name": "Mint, fresh",
+          "cofid_code": "13-836",
+          "grams": 3
+        },
+        {
+          "name": "Parsley, fresh",
+          "cofid_code": "13-844",
+          "grams": 2
+        },
+        {
+          "name": "Salt",
+          "cofid_code": "17-367",
+          "grams": 0.8
+        }
+      ],
+      "ingredients_url": "https://www.nandos.co.uk/allergens/macho-peas",
+      "scale_factor": 1.0338
+    },
+    {
+      "ref": "nandos-gb:regular-corn-on-the-cob",
+      "name": "Regular Corn on the Cob",
+      "portion_label": "1 regular corn on the cob",
+      "published_kcal": 142,
+      "components": [
+        {
+          "name": "Sweetcorn on the cob, boiled, weighed with core",
+          "cofid_code": "13-606",
+          "grams": 200
+        },
+        {
+          "name": "Butter, salted, the butter portion it is served with",
+          "cofid_code": "17-685",
+          "grams": 8
+        }
+      ],
+      "ingredients_url": "https://www.nandos.co.uk/allergens/corn-on-the-cob",
+      "scale_factor": 1.0326
+    },
+    {
+      "ref": "nandos-gb:regular-garlic-bread",
+      "name": "Regular Garlic Bread",
+      "portion_label": "1 regular garlic bread",
+      "published_kcal": 372,
+      "components": [
+        {
+          "name": "Bread, white, average, standing in for the Portuguese roll",
+          "cofid_code": "11-1145",
+          "grams": 90
+        },
+        {
+          "name": "Fat spread (62-75% fat), standing in for the garlic and chilli spread",
+          "cofid_code": "12-506",
+          "grams": 20
+        },
+        {
+          "name": "Garlic, raw",
+          "cofid_code": "13-244",
+          "grams": 3
+        }
+      ],
+      "ingredients_url": "https://www.nandos.co.uk/allergens/garlic-bread",
+      "scale_factor": 1.071
+    }
+  ]
+}
