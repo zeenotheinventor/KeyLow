@@ -592,7 +592,7 @@ describe("READ_TOOLS", () => {
     }
   });
 
-  it("should give the diary cases every read tool but the training reads", () => {
+  it("should give the diary cases every read tool but the training reads and estimate_portions", () => {
     const trainingReads = [
       "search_exercises",
       "get_routines",
@@ -603,6 +603,7 @@ describe("READ_TOOLS", () => {
       "get_exercise_progress",
       "show_exercise_muscles",
       "show_exercise_form",
+      "estimate_portions",
     ];
 
     expect([...DIARY_READ_TOOLS].sort()).toEqual(

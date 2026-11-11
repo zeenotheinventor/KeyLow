@@ -76,7 +76,7 @@ Deno.test("a name that is not lower snake case is refused", () => {
 });
 
 Deno.test(
-  "the real registry lists the food reads, the diary reads, the diary, day, recipe, food, targets and recipe import writes, the training reads and then ask_user in order",
+  "the real registry lists the food reads, the diary reads, the diary, day, recipe, food, targets and recipe import writes, the training reads, estimate_portions and then ask_user in order",
   () => {
     assertEquals(
       toolRegistry.list.map((tool) => [tool.name, tool.kind]),
@@ -117,6 +117,7 @@ Deno.test(
         ["archive_custom_exercise", "write"],
         ["delete_workout", "write"],
         ["show_exercise_form", "read"],
+        ["estimate_portions", "read"],
         ["ask_user", "read"],
       ],
     );

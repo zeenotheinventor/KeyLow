@@ -8,6 +8,7 @@ import { createRoutineTool } from "./tools/createRoutine.ts";
 import { deleteEntryTool } from "./tools/deleteEntry.ts";
 import { editRoutineTool } from "./tools/editRoutine.ts";
 import { askUserTool } from "./tools/askUser.ts";
+import { estimatePortionsTool } from "./tools/estimatePortions.ts";
 import { getDayTool } from "./tools/getDay.ts";
 import { getEntriesTool } from "./tools/getEntries.ts";
 import { getExerciseProgressTool } from "./tools/getExerciseProgress.ts";
@@ -105,6 +106,7 @@ const toolDefinitions: readonly ToolDefinition[] = [
   archiveCustomExerciseTool,
   deleteWorkoutTool,
   showExerciseFormTool,
+  estimatePortionsTool,
   askUserTool,
 ];
 

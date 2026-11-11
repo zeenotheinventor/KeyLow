@@ -82,3 +82,23 @@ export { requiresConfirmation } from "./quality";
 export { resolveCarbs } from "./offRules";
 export { LABEL_KCAL_TOLERANCE, labelFoodInput, macroKcalOf } from "./labelFood";
 export type { LabelFoodResult, LabelFoodValues } from "./labelFood";
+export {
+  PORTION_ESTIMATE_BOWLS,
+  PORTION_ESTIMATE_CONTAINERS,
+  PORTION_ESTIMATE_FILLS,
+  PORTION_ESTIMATE_FOOD_TYPES,
+  PORTION_ESTIMATE_PLATES,
+  estimatePortions,
+  portionEstimateProblems,
+} from "./portionEstimate";
+export type {
+  PortionEstimateContainer,
+  PortionEstimateFill,
+  PortionEstimateFoodType,
+  PortionEstimateInput,
+  PortionEstimateItemError,
+  PortionEstimateItemInput,
+  PortionEstimateItemResult,
+  PortionEstimateNutrients,
+  PortionEstimateResult,
+} from "./portionEstimate";

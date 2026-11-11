@@ -3,6 +3,7 @@
 // it, so a missing or stale bundle fails `deno check` here. Export what a function needs.
 export type {
   Food,
+  PortionEstimateItemResult,
   FoodPortion,
   ImportCandidate,
   AssistantCard,
@@ -149,6 +150,11 @@ export {
   formatClockTime,
   isGeneratedEstimate,
   isOurEstimate,
+  estimatePortions,
+  portionEstimateProblems,
+  PORTION_ESTIMATE_CONTAINERS,
+  PORTION_ESTIMATE_FILLS,
+  PORTION_ESTIMATE_FOOD_TYPES,
   isTrendSettling,
   isValidTimeZone,
   labelFoodInput,

@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted when the pull request that carries it merges. Written on 2026-10-26 under KEY-662, part of KEY-185 (the M8 brief). The tables, columns and functions it needs are in ADR 0003, Amendment 14. Every M8 migration waits for both documents. Amended on 2026-11-07 under KEY-883, part of KEY-881 (the brief for weight training): see Amendment 1 at the end. Two decisions in it were taken by the orchestrator while Zee was away, for his review, and are marked as such.
+Accepted when the pull request that carries it merges. Written on 2026-10-26 under KEY-662, part of KEY-185 (the M8 brief). The tables, columns and functions it needs are in ADR 0003, Amendment 14. Every M8 migration waits for both documents. Amended on 2026-11-07 under KEY-883, part of KEY-881 (the brief for weight training): see Amendment 1 and Amendment 2 at the end. Two decisions in it were taken by the orchestrator while Zee was away, for his review, and are marked as such.
 
 ## Context
 
@@ -326,3 +326,59 @@ Haiku 5.5 (`claude-haiku-5-5`) stays for chat and compaction. Zee's condition: i
 - KEY-884, the baseline of every existing eval set. KEY-885, the consent words and accepting again. KEY-910, the working line's words for the 16 tools, after KEY-916 and KEY-917.
 - Part 1, advice: KEY-886 (the suggestion and muscle reads leave the hooks), KEY-887 (the eval user's history), KEY-890, KEY-891, KEY-892 and KEY-893 (the seven reads), KEY-894 (the prompt and the compaction note), KEY-895 and KEY-896 (the advice set and its red-team), KEY-897 (the way in from the Train tab), KEY-898 (re-run against the baseline).
 - Part 2, edits: KEY-899 (the workout guard), KEY-900 (the previous value for Undo), KEY-888 (`applyRoutineChanges` and the fingerprint), KEY-889 (`restoreSession` and `restoreExercise`), KEY-919 (a built routine's numbers), KEY-901 (the card contract), KEY-902, KEY-903, KEY-920, KEY-904, KEY-905, KEY-906 and KEY-907 (the nine writes), KEY-908 (the prompt for changes and for building), KEY-909 ("What the assistant changed" rows), KEY-911 and KEY-912 (the edits set and its red-team), KEY-913 (the exit gate).
+
+## Amendment 2 to this ADR: estimate_portions (2026-11-11)
+
+### Status
+
+Recorded on 2026-11-11 under KEY-965, part of Zee's request of the same day: describe a plate and a small bowl or two ("about 100 calories", "168 calories"), and have Ki-Lo work out the macros and log them. It adds the arithmetic and one read tool. The prompt rules that tell the model to use it, the Estimate badge on the card and the evals are the next ticket. This amendment adds no table, column or migration, and no ADR 0003 change: no `quality` key changes either.
+
+### Decision
+
+- **One new tool, `estimate_portions`.** It is a read tool (`kind: "read"`, `readOnlyHint: true`), so the allowlist puts it in every set that holds the food reads with no edit to `allowlist.ts`. It sits in the registry immediately before `ask_user`, the fixed order rule of this ADR, so the first deploy costs one cache write. It is `strict: false`, for the reason Amendment 1 gives: the request is near the API caps on strict tools, and its input has nullable fields. The executor validates every input with zod either way.
+- **The arithmetic is core's and never the model's.** The model names the container, the kind of each food and its share of the container, or a calorie figure the person gave. Core (`estimatePortions`, in `packages/core/src/foods/portionEstimate/`) turns that into grams (or millilitres for a food per 100 ml) and the nutrients for that amount, and the tool reads each food under the caller's JWT, one read per item, and returns the result. Every number the model then says comes from a tool result. The nutrients come from the same function the diary uses to snapshot an entry (`buildLogEntry`), so they match what `log_entry` will write, and a null stays null.
+- **The amounts are estimates, a second exception to the Amounts rule.** The Amounts section (Q10) says no amount carries the Estimate label, with one exception, recipe import. An amount that comes from a share of a plate or bowl, or from a stated calorie figure, is the second exception, and the answer is said with "about". The default sizes below are uncited editorial figures, chosen like the ones in `estimatedPortion.ts`, and none of them may be attributed to a source. The Q10 row of the table above reads the same way. Nothing new is stored on an entry: the card row's existing `estimate` flag marks it, which is the next ticket's work.
+- **The closest generic match is logged when no exact dish exists, and a custom food is never created for it.** `foods.quality` is not writable by a person, and a custom food per described dish would clutter Your foods.
+- **Rules.** Share-based amounts round to the nearest 5 g (or ml) with a minimum of 5. Shares are whole percents from 1 to 100. Shares on one container that add up to more than 100 are scaled down to 100 and the result says `shares_scaled: true`. Less than 100 is left as it is, because the rest of the plate was empty. A known calorie figure wins over a share, and gives the amount that lands within 1 % of it, rounded to the gram. A food per portion (ADR 0003, Amendment 18) is refused for that item with `counted_food`, because it is logged by its portions and never by weight. A food with no kcal answers `no_kcal` when calories are the basis. A soup or other liquid on a plate answers `bowl_only`. A food that cannot be read answers `not_found` for that item and the other items are still sized. An amount from calories of more than twice what the container holds carries `larger_than_container: true`, so the model can ask instead of logging something absurd. A size the person gave overrides the default: `diameter_cm` or `radius_cm` (the diameter wins when both are given), and `depth_cm` for a bowl. Plate diameters run from 10 to 40 cm, bowl diameters from 8 to 30 cm and depths from 2 to 15 cm. Anything else answers `invalid_input` with the field.
+
+Default containers. A plate holds food in a well of 0.8 times its radius. A bowl is a spherical cap, V = pi h (3 a squared + h squared) / 6, where a is the rim radius and h the depth.
+
+| Container     | Size                   | Food area or volume |
+| ------------- | ---------------------- | ------------------- |
+| `small_plate` | 20 cm diameter         | 201 cm2             |
+| `plate`       | 26 cm diameter         | 340 cm2             |
+| `large_plate` | 30 cm diameter         | 452 cm2             |
+| `small_bowl`  | 12 cm diameter, 5 cm   | 348 ml              |
+| `bowl`        | 14 cm diameter, 5.5 cm | 510 ml              |
+| `large_bowl`  | 18 cm diameter, 7 cm   | 1,070 ml            |
+
+The bowl fill is `half` (0.5), `most` (0.75, the default) or `full` (0.9).
+
+Food types. On a plate the grams are covered area times heap depth times bulk density. In a bowl they are volume times fill times share times density.
+
+| Food type           | Plate heap depth | Density g per ml |
+| ------------------- | ---------------- | ---------------- |
+| `leafy_salad`       | 3.0 cm           | 0.10             |
+| `vegetables`        | 2.0 cm           | 0.60             |
+| `rice_grains_pasta` | 2.5 cm           | 0.70             |
+| `potatoes`          | 3.0 cm           | 0.65             |
+| `curry_stew_sauce`  | 2.0 cm           | 1.00             |
+| `meat_fish`         | 2.0 cm           | 0.85             |
+| `bread_bakery`      | 4.0 cm           | 0.30             |
+| `dessert`           | 3.5 cm           | 0.60             |
+| `soup_liquid`       | bowl only        | 1.00             |
+| `cereal_dry`        | 2.0 cm           | 0.30             |
+| `yogurt_porridge`   | 2.0 cm           | 1.05             |
+| `other`             | 2.0 cm           | 0.80             |
+
+A food per 100 ml answers millilitres: on a plate, covered area times heap depth, in a bowl, volume times fill times share, with no density. A unit test pins the worked plate: the default plate with rice 30 %, curry 30 %, carrots 15 % and lettuce 15 % gives about 180 g, 205 g, 60 g and 15 g.
+
+### Consequences
+
+- The registry has 38 tools. The tool as sent is about 1,470 characters, which the prefix test counts. Its description is kept to what it does, that its amounts are the ones to log and that they are said with "about", and the full rules go in the prompt in the next ticket.
+- The working line has a row for the tool in the words table ("Working out the portions"), because every registry tool must have one.
+- Live Open Food Facts results are their own ticket and are not part of this amendment.
+
+### Implemented by
+
+- KEY-965, the core function, the tool and this amendment. The prompt rules, the `log_entry` flag, the card badge and the evals follow in the next ticket.
