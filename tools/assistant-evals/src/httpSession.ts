@@ -55,8 +55,8 @@ export function estimatedAmountsOf(result: string): EstimatedAmount[] {
   try {
     const parsed: unknown = JSON.parse(UNTRUSTED_PAYLOAD.exec(result)?.[1] ?? result);
     const items = isRecord(parsed) ? parsed["items"] : undefined;
-    return (Array.isArray(items) ? (items as unknown[]) : []).flatMap((item) => {
-      if (!isRecord(item) || typeof item["food_id"] !== "string") {
+    return (Array.isArray(items) ? items.filter(isRecord) : []).flatMap((item) => {
+      if (typeof item["food_id"] !== "string") {
         return [];
       }
       const unit = typeof item["grams"] === "number" ? "g" : "ml";

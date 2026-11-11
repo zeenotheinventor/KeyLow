@@ -67,7 +67,7 @@ const logEntryInput = z
     kind: z
       .enum(kinds)
       .describe(
-        "portion: a count of one of the food's own portions. grams or ml: an amount the person said. recipe: servings of one of their recipes. quick: calories the person gave.",
+        "portion: a count of one of the food's own portions. grams or ml: an amount the person said or estimate_portions returned. recipe: servings of one of their recipes. quick: calories the person gave.",
       ),
     food_id: z
       .guid()

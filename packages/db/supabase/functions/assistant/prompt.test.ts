@@ -281,6 +281,7 @@ Deno.test("a plate or bowl of several foods is one share question, then estimate
   }
   const oneQuestion = sectionOf("One question, never a guess");
   for (const rule of [
+    'or for the plate-share question a split such as "an even split"',
     "The share question is the one question of the turn.",
     "Foods it does not cover (a counted roll, a food with a known calorie figure) are logged in the turn after it, together with the plate.",
   ]) {
@@ -306,8 +307,8 @@ Deno.test(
   () => {
     const amounts = sectionOf("Amounts");
     for (const rule of [
-      "the food's own portion when it is a counted thing (a roll, an egg, a small butter pack)",
-      'and say it like "2 large eggs (100 g)", with the grams in brackets',
+      "First, a counted thing (a roll, an egg, a small butter pack): one of the food's own portions.",
+      "Prefer the food's own portions. Pick one portion from the food's portions, each of which has a label and grams, and a count, and say it like \"2 large eggs (100 g)\", with the grams in brackets.",
       "When the person gives grams, log those grams and do not convert them to a portion.",
       "Grams the person gave are logged as they are, never estimated and never sent through estimate_portions.",
     ]) {
@@ -474,8 +475,7 @@ Deno.test(
   "an estimated portion is used only for a serving with no amount, and said with about",
   () => {
     for (const rule of [
-      "A portion marked estimated is Ki-Lo's own guess at a typical serving.",
-      "Use it only when the person said a serving or the like and gave no amount",
+      "A portion marked estimated is a typical size. Use it for a counted thing the person named without an amount, or when they said a serving or the like.",
       'Write it with its words and "about" in the brackets, as in "1 typical serving (about 150 g)"',
       "When none of these gives an amount, ask for grams with ask_user.",
     ]) {
