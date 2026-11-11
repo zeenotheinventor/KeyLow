@@ -1,4 +1,4 @@
-// The ask-your-data set (KEY-699): 40 questions about the synthetic diary, each answered from the diary read
+// The ask-your-data set (KEY-699): 41 questions about the synthetic diary, each answered from the diary read
 // tools. Every expected number and every expected citation line is worked out from the fixture with the same
 // core functions the tools use (`fixtures/diaryTotals.ts`), so a change to the diary cannot leave a stale
 // answer. The questions name their dates, worked out from the anchor date the eval user's diary is dated from.
@@ -12,6 +12,7 @@ import {
   describeRangeCitation,
   describeWeighInCitation,
 } from "@keylow/core";
+import { sumEntries } from "@keylow/core/diary";
 import { roundCalories, roundGrams } from "@keylow/core/format";
 
 import { ASK_TARGETS } from "../fixtures/askExtras.ts";
@@ -493,6 +494,8 @@ export function askSpecs(anchorDate: string): readonly AskSpec[] {
   const biggestEntry = dayEntries(12).reduce((biggest, entry) =>
     (entry.nutrients.kcal ?? 0) > (biggest.nutrients.kcal ?? 0) ? entry : biggest,
   );
+  const lunchEntries = entriesBetween(20, "12:00", "14:00");
+  const lunchTotals = sumEntries(lunchEntries);
   const breakfastsOf = (firstDay: number, lastDay: number) =>
     Array.from({ length: lastDay - firstDay + 1 }, (_, offset) =>
       entriesBetween(firstDay + offset, null, "10:00"),
@@ -686,6 +689,25 @@ export function askSpecs(anchorDate: string): readonly AskSpec[] {
       12,
       [biggestEntry],
       [kcal(biggestEntry.nutrients.kcal ?? 0)],
+    ),
+
+    // KEY-975: a meal is a window of hours, and its total is the totals of get_entries over that window.
+    spec(
+      "eaten",
+      "eaten-lunch-total",
+      [`What are the calories and macros of my lunch on ${say(20)}?`],
+      {
+        calls: [[{ tool: "get_entries", arguments: { from: date(20), to: date(20) } }]],
+        mentions: wordsFor(lunchEntries),
+        numbers: [
+          kcal(lunchTotals.kcal ?? 0),
+          grams(lunchTotals.protein_g ?? 0),
+          grams(lunchTotals.fat_g ?? 0),
+          grams(lunchTotals.carbs_g ?? 0),
+          grams(lunchTotals.fibre_g ?? 0),
+        ],
+        citations: eatenCitations(20, lunchEntries.length, dayEntryCount(20)),
+      },
     ),
 
     // Weigh-ins and the trend, each with the Estimate label.

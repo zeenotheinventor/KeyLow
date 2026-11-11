@@ -189,6 +189,72 @@ Deno.test("get_entries leaves either end of the window open when it is null", as
   assertEquals(idsOf(upToLunch.result), [idOf(1), idOf(2)]);
 });
 
+Deno.test("get_entries totals the entries it lists, rounded as the Diary rounds them", async () => {
+  const upToLunch = { ...saturdayOnly, to_time: "12:30" };
+  const { result } = await fetchEntries(diary(), upToLunch);
+
+  assertEquals(field(payloadOf(result), "totals"), {
+    kcal: 192,
+    protein_g: 2.4,
+    fat_g: 0.6,
+    // Each entry reads 22 g of carbs, but the sum is of 21.6 + 21.6 and is rounded once.
+    carbs_g: 43,
+    fibre_g: 6.2,
+  });
+});
+
+Deno.test("get_entries totals only the entries inside the time window", async () => {
+  const lunch = { ...saturdayOnly, from_time: "12:30", to_time: "13:45" };
+  const { result } = await fetchEntries(diary(), lunch);
+
+  assertEquals(field(payloadOf(result), "totals"), {
+    kcal: 346,
+    protein_g: 1.2,
+    fat_g: 0.3,
+    carbs_g: 22,
+    fibre_g: 3.1,
+  });
+});
+
+Deno.test(
+  "get_entries leaves a total null when no listed entry gave a value for it, as a day does",
+  async () => {
+    const soupOnly = { ...saturdayOnly, from_time: "13:00", to_time: "13:45" };
+    const { result } = await fetchEntries(diary(), soupOnly);
+
+    assertEquals(field(payloadOf(result), "totals"), {
+      kcal: 250,
+      protein_g: null,
+      fat_g: null,
+      carbs_g: null,
+      fibre_g: null,
+    });
+  },
+);
+
+Deno.test("get_entries totals an empty window as nothing eaten, as an empty day is", async () => {
+  const { result } = await fetchEntries(diary(), {
+    ...saturdayOnly,
+    from_time: "15:00",
+    to_time: "16:00",
+  });
+
+  assertEquals(field(payloadOf(result), "totals"), {
+    kcal: 0,
+    protein_g: 0,
+    fat_g: 0,
+    carbs_g: 0,
+    fibre_g: 0,
+  });
+});
+
+Deno.test("get_entries says its totals are the sum of the entries it lists", () => {
+  assertStringIncludes(
+    getEntriesTool.description,
+    "The totals are the sum of the entries listed, for how much a meal was.",
+  );
+});
+
 Deno.test("get_entries words the citation from the entries it returns", async () => {
   const lunch = { ...saturdayOnly, from_time: "12:30", to_time: "13:45" };
   const { result } = await fetchEntries(diary(), lunch);
@@ -212,6 +278,7 @@ Deno.test(
       to_time: null,
       entry_count: 0,
       entries: [],
+      totals: { kcal: 0, protein_g: 0, fat_g: 0, carbs_g: 0, fibre_g: 0 },
       citation: "No entries, 17 Oct",
     });
   },

@@ -1,5 +1,7 @@
 import { readFileSync, readdirSync } from "node:fs";
 
+import { sumEntries } from "@keylow/core/diary";
+import { roundCalories, roundGrams } from "@keylow/core/format";
 import { describe, expect, it } from "vitest";
 
 import { fakeDatabase, readTool, turnResult, writeTool } from "./helpers.ts";
@@ -17,7 +19,7 @@ import {
 } from "../cases/ask.ts";
 import { ASK_TARGETS } from "../fixtures/askExtras.ts";
 import { diaryDateOf } from "../fixtures/diary.ts";
-import { dayTotals, rangeTotals } from "../fixtures/diaryTotals.ts";
+import { dayEntries as entriesOf, dayTotals, rangeTotals } from "../fixtures/diaryTotals.ts";
 import { THRESHOLD_PERCENT } from "../src/thresholds.ts";
 
 import type { AskArea, AskSpec } from "../cases/ask.ts";
@@ -84,15 +86,15 @@ function perfectDatabase(spec: AskSpec, turns: readonly TurnResult[]) {
 describe("the ask set", () => {
   const countOf = (area: AskArea) => specs.filter((spec) => spec.area === area).length;
 
-  it("should have 40 cases, in the five areas of the ticket", () => {
-    expect(cases).toHaveLength(40);
+  it("should have 41 cases, in the five areas of the ticket", () => {
+    expect(cases).toHaveLength(41);
     expect([
       countOf("day"),
       countOf("range"),
       countOf("eaten"),
       countOf("weight"),
       countOf("empty"),
-    ]).toEqual([8, 10, 8, 8, 6]);
+    ]).toEqual([8, 10, 9, 8, 6]);
   });
 
   it("should belong to the ask set, which has the 90 % threshold", () => {
@@ -101,9 +103,9 @@ describe("the ask set", () => {
   });
 
   it("should give every case its own id and its own question", () => {
-    expect(new Set(cases.map(({ id }) => id)).size).toBe(40);
+    expect(new Set(cases.map(({ id }) => id)).size).toBe(41);
     const finalQuestions = cases.flatMap(({ messages }) => messages.slice(-1));
-    expect(new Set(finalQuestions).size).toBe(40);
+    expect(new Set(finalQuestions).size).toBe(41);
   });
 
   it("should have four two-turn cases", () => {
@@ -549,6 +551,45 @@ describe("the routes the set accepts", () => {
     for (const id of ["eaten-at-midday", "eaten-after-six", "eaten-before-ten"]) {
       expect(callsOfCase(id).messages[0]).toMatch(/how many calories (?:was|were) each/i);
     }
+  });
+
+  // KEY-975. A meal is a window of hours, and its total is the totals get_entries gives for the window.
+  describe("the meal total case", () => {
+    const lunch = entriesOf(20).filter(({ time }) => time >= "12:00" && time <= "14:00");
+
+    it("should ask for the calories and macros of lunch, and expect the sum of the lunch entries", () => {
+      const spec = callsOfCase("eaten-lunch-total");
+      const sum = sumEntries(lunch);
+
+      expect(lunch.length).toBeGreaterThan(1);
+      expect(spec.messages[0]).toMatch(/calories and macros of my lunch/i);
+      expect(spec.numbers.map(({ value }) => value)).toEqual([
+        roundCalories(sum.kcal ?? Number.NaN),
+        roundGrams(sum.protein_g ?? Number.NaN),
+        roundGrams(sum.fat_g ?? Number.NaN),
+        roundGrams(sum.carbs_g ?? Number.NaN),
+        roundGrams(sum.fibre_g ?? Number.NaN),
+      ]);
+    });
+
+    it("should expect get_entries, because get_day cannot total a meal", async () => {
+      const spec = callsOfCase("eaten-lunch-total");
+      const perfect = perfectTurn(spec);
+      const dayOnly = {
+        ...perfect,
+        toolCalls: [readTool("get_day", { local_date: diaryDateOf(ANCHOR, 20) })],
+      };
+
+      expect(await run("eaten-lunch-total", perfect)).toEqual([]);
+      expect(await run("eaten-lunch-total", dayOnly)).not.toEqual([]);
+    });
+
+    it("should fail when the reply leaves the totals out", async () => {
+      const spec = callsOfCase("eaten-lunch-total");
+      const noTotals = { ...perfectTurn(spec), answer: "Chicken, rice and broccoli." };
+
+      expect(await run("eaten-lunch-total", noTotals)).not.toEqual([]);
+    });
   });
 
   it("should word the second range of the trend case as a range of its own", () => {

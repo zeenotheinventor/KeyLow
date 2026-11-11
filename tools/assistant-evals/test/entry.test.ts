@@ -61,13 +61,13 @@ describe("the check:assistant entry", () => {
     expect(result.exitCode).toBe(0);
   }, 30_000);
 
-  it("should load the 40 ask cases through the runner the command uses", async () => {
+  it("should load the 41 ask cases through the runner the command uses", async () => {
     const result = await tsx([
       "--eval",
       "import('./cases/ask.ts').then((module) => console.log(module.askCases.length))",
     ]);
 
-    expect(result.stdout.trim()).toBe("40");
+    expect(result.stdout.trim()).toBe("41");
     expect(result.exitCode).toBe(0);
   }, 30_000);
 
