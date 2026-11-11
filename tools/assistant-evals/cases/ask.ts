@@ -91,7 +91,8 @@ export const DIARY_READ_TOOLS: ReadonlySet<string> = new Set([
   "search_foods",
 ]);
 
-// Every read tool of the registry. A case about the diary does not accept the training reads, because a
+// Every read tool of the registry. A case about the diary does not accept the training reads or
+// `estimate_portions`, because a
 // model that reaches for one when asked about food has chosen the wrong tool, so the graders of the diary
 // cases use `DIARY_READ_TOOLS`.
 export const READ_TOOLS: ReadonlySet<string> = new Set([
@@ -105,6 +106,7 @@ export const READ_TOOLS: ReadonlySet<string> = new Set([
   "get_exercise_progress",
   "show_exercise_muscles",
   "show_exercise_form",
+  "estimate_portions",
 ]);
 
 /** Passes when every tool called is a read tool of the diary. */
