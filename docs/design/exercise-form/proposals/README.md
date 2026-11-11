@@ -31,4 +31,15 @@ Drawn by KEY-961.
 
 ### assistant-card
 
-Drawn by KEY-962.
+Board name `assistant-card · exercise-form`. The form guide of an exercise as a card in the assistant thread, under a short reply, the way the muscles card sits under its reply. The sheet is at full height, as it is for the muscles card, with the quiet header, the person's question, the reply and the card above the composer. There are two boards so that both kinds show in both themes: `assistant-card` has the video in dark and the photos in light, and `assistant-card-photos` has the photos in dark and the video in light.
+
+![assistant-card](assistant-card.png)
+
+![assistant-card-photos](assistant-card-photos.png)
+
+Open [assistant-card.html](assistant-card.html) and [assistant-card-photos.html](assistant-card-photos.html) in a browser.
+
+- **The reply.** One short line, "Here is a form guide for the barbell squat." It never says "I" (KEY-956). The prompt shapes it, so it is not app copy.
+- **The card.** `FormMediaCard`, unchanged, straight under the reply with the thread's 12 point gap. The video card opens YouTube. The photos card alternates the start and end photo, and sits side by side with Reduce Motion on, as `form-media-card` shows.
+- **Where it sits.** After the reply and before any link, notice or Ask again, whether the turn is live or stored. A stored conversation reopened later draws the same card with no read.
+- **Words.** Every word of the card is from `copy/exerciseForm.ts`. The sheet's words are the existing assistant copy. The board uses a neutral placeholder, never a real thumbnail or photo.

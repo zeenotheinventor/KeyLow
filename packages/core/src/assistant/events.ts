@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { assistantCardLinkSchema, assistantCardSchema } from "./card";
+import { assistantExerciseFormMediaSchema } from "./exerciseFormCard";
 import { assistantExerciseMusclesSchema } from "./exerciseMusclesCard";
 import { assistantIdSchema } from "./ids";
 import { assistantNoticeSchema } from "./notice";
@@ -74,6 +75,15 @@ const exerciseMusclesEventSchema = z.strictObject({
 });
 
 /**
+ * The form video or photos of an exercise (`assistant-card · exercise-form`): a read, drawn by the app as
+ * the form media card under the reply. One event for each exercise, in call order. It carries no URL.
+ */
+const exerciseFormMediaEventSchema = z.strictObject({
+  type: z.literal("exercise_form_media"),
+  exercise: assistantExerciseFormMediaSchema,
+});
+
+/**
  * The Ask again quick reply under the reply (`assistant · workout-in-progress`, A change refused): a press
  * sends the person's last message again. A later turn takes it away.
  */
@@ -132,6 +142,7 @@ export const assistantStreamEventSchema = z.discriminatedUnion("type", [
   cardEventSchema,
   linkEventSchema,
   exerciseMusclesEventSchema,
+  exerciseFormMediaEventSchema,
   askAgainEventSchema,
   clarifyEventSchema,
   confirmEventSchema,

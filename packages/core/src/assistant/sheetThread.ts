@@ -15,6 +15,7 @@ import {
 import type { AssistantCard, AssistantCardLink } from "./card";
 import type { AssistantOpenedFrom } from "./describeInLog";
 import type { AssistantStatus } from "./events";
+import type { AssistantExerciseFormMedia } from "./exerciseFormCard";
 import type { AssistantExerciseMuscles } from "./exerciseMusclesCard";
 import type { AssistantNotice } from "./notice";
 import type { AssistantThreadItem } from "./thread";
@@ -56,6 +57,8 @@ export type AssistantSheetLiveTurn = {
   } | null;
   /** The muscles of each exercise the turn showed, in call order, drawn under its words. */
   exerciseMuscles?: readonly AssistantExerciseMuscles[] | undefined;
+  /** The form media of each exercise the turn showed, in call order, drawn under its words. */
+  exerciseFormMedia?: readonly AssistantExerciseFormMedia[] | undefined;
   /** A link on its own that the turn sent, drawn under its words. */
   link?: AssistantCardLink | null | undefined;
   /** Whether the turn sent the Ask again quick reply. It is offered once the turn has ended. */
@@ -94,6 +97,12 @@ export type AssistantSheetEntry =
       kind: "exerciseMuscles";
       key: string;
       exercise: AssistantExerciseMuscles;
+    }
+  | {
+      /** The form video or photos of an exercise, the form media card (`assistant-card · exercise-form`). */
+      kind: "exerciseFormMedia";
+      key: string;
+      exercise: AssistantExerciseFormMedia;
     }
   | {
       /** A link on its own, a line that opens what the answer is about (`assistant-card · routine-updated`, Removing a day). */
@@ -147,7 +156,7 @@ export type AssistantSheetThread = {
   canAskAgain: boolean;
   /** The words in the empty field while a clarifying question waits for its answer ("Or say it your way"), else null. */
   fieldHint: string | null;
-  /** Whether the sheet is to be at full height, which a recipe import card needs so its ingredient list shows, and so does a routine just built, so its days can open, and so does the muscles of an exercise, for its figure and its rows. */
+  /** Whether the sheet is to be at full height, which a recipe import card needs so its ingredient list shows, and so does a routine just built, so its days can open, and so does the muscles of an exercise, for its figure and its rows, and its form media. */
   needsFullHeight: boolean;
 };
 
@@ -332,6 +341,9 @@ function storedEntries(items: readonly AssistantThreadItem[], isAllAnswered = fa
       case "exercise_muscles":
         entries.push({ kind: "exerciseMuscles", key: item.id, exercise: item.exercise });
         break;
+      case "exercise_form_media":
+        entries.push({ kind: "exerciseFormMedia", key: item.id, exercise: item.exercise });
+        break;
       case "link":
         entries.push({ kind: "link", key: item.id, link: item.link });
         break;
@@ -403,6 +415,13 @@ function sentEntries(
   for (const [position, exercise] of (live.exerciseMuscles ?? []).entries()) {
     entries.push({ kind: "exerciseMuscles", key: `sent:exerciseMuscles:${position}`, exercise });
   }
+  for (const [position, exercise] of (live.exerciseFormMedia ?? []).entries()) {
+    entries.push({
+      kind: "exerciseFormMedia",
+      key: `sent:exerciseFormMedia:${position}`,
+      exercise,
+    });
+  }
   if (live.link !== undefined && live.link !== null) {
     entries.push({ kind: "link", key: "sent:link", link: live.link });
   }
@@ -427,13 +446,13 @@ const liftsAt = (notice: DescribableAssistantNotice): string | null =>
 const isSameNotice = (first: DescribableAssistantNotice, second: DescribableAssistantNotice) =>
   first.code === second.code && liftsAt(first) === liftsAt(second);
 
-// The cards of the muscles come after the reply, so a reply that was cut short is the entry before them.
-function lastEntryBeforeMuscles(
+// The cards of the muscles and the form media come after the reply, so a reply that was cut short is the entry before them.
+function lastEntryBeforeCards(
   entries: readonly AssistantSheetEntry[],
 ): AssistantSheetEntry | undefined {
   for (let position = entries.length - 1; position >= 0; position -= 1) {
     const entry = entries[position];
-    if (entry?.kind !== "exerciseMuscles") {
+    if (entry?.kind !== "exerciseMuscles" && entry?.kind !== "exerciseFormMedia") {
       return entry;
     }
   }
@@ -491,7 +510,10 @@ export function isSentTurnStored(
         item.kind === "clarify" ||
         item.kind === "confirm" ||
         item.kind === "ask_again" ||
-        ((item.kind === "card" || item.kind === "link" || item.kind === "exercise_muscles") &&
+        ((item.kind === "card" ||
+          item.kind === "link" ||
+          item.kind === "exercise_muscles" ||
+          item.kind === "exercise_form_media") &&
           !hasWords),
     );
 }
@@ -536,7 +558,7 @@ export function buildAssistantSheetThread({
   const entries = allDrafts.map((entry, position): AssistantSheetEntry =>
     entry.kind === "notice" ? { ...entry, isLatest: position === allDrafts.length - 1 } : entry,
   );
-  const last = lastEntryBeforeMuscles(entries);
+  const last = lastEntryBeforeCards(entries);
 
   return {
     entries,
@@ -548,7 +570,9 @@ export function buildAssistantSheetThread({
     needsFullHeight:
       entries.some((entry) => entry.kind === "card" && isRecipeImportCard(entry.card)) ||
       endsWithBuiltRoutine(entries) ||
-      entries.some((entry) => entry.kind === "exerciseMuscles"),
+      entries.some(
+        (entry) => entry.kind === "exerciseMuscles" || entry.kind === "exerciseFormMedia",
+      ),
   };
 }
 

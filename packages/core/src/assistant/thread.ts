@@ -1,12 +1,14 @@
 import { z } from "zod";
 
 import { assistantCardLinkSchema, assistantCardSchema } from "./card";
+import { assistantExerciseFormMediaSchema } from "./exerciseFormCard";
 import { assistantExerciseMusclesSchema } from "./exerciseMusclesCard";
 import { assistantNoticeSchema } from "./notice";
 import { undoStateOfActions } from "./undoState";
 import { ASSISTANT_CARD_KINDS_WITHOUT_UNDO, mergeAssistantCards } from "./writeToolWords";
 
 import type { AssistantCard, AssistantCardLink } from "./card";
+import type { AssistantExerciseFormMedia } from "./exerciseFormCard";
 import type { AssistantExerciseMuscles } from "./exerciseMusclesCard";
 import type { AssistantNotice } from "./notice";
 import type { AssistantActionState } from "./undoState";
@@ -76,6 +78,8 @@ export type AssistantThreadItem =
   | { kind: "link"; id: string; link: AssistantCardLink }
   /** The muscles an exercise works, drawn as a figure under the reply (`assistant-card · exercise-muscles`). One item for each exercise, in call order, never merged. */
   | { kind: "exercise_muscles"; id: string; exercise: AssistantExerciseMuscles }
+  /** The form video or photos of an exercise, drawn as the form media card under the reply (`assistant-card · exercise-form`). One item for each exercise, in call order, never merged. */
+  | { kind: "exercise_form_media"; id: string; exercise: AssistantExerciseFormMedia }
   /** The Ask again quick reply at the end of a turn (`assistant · workout-in-progress`). `answered` once a later turn exists, and then the chip is gone. */
   | { kind: "ask_again"; id: string; answered: boolean };
 
@@ -124,6 +128,8 @@ const displayEntrySchema = z.object({
   link: assistantCardLinkSchema.optional(),
   // A non-strict object, so an older app reading a stored row drops this key and draws nothing.
   exerciseMuscles: assistantExerciseMusclesSchema.optional(),
+  // Also non-strict, for the same reason.
+  exerciseFormMedia: assistantExerciseFormMediaSchema.optional(),
   askAgain: z.boolean().optional(),
   citation: z.string().min(1).nullish(),
   estimate: z.string().min(1).nullish(),
@@ -190,9 +196,10 @@ function itemsOfTurn(
   context: TurnContext,
 ): AssistantThreadItem[] {
   const items: DraftItem[] = [];
-  // The muscles of an exercise, a link and Ask again are drawn at the end of the turn, under its words, as
-  // the boards show them: the reply, the muscles, the link, a notice, then Ask again.
+  // The muscles and the form media of an exercise, a link and Ask again are drawn at the end of the turn, under its words, as
+  // the boards show them: the reply, the muscles, the form media, the link, a notice, then Ask again.
   const exerciseMuscles: AssistantThreadItem[] = [];
+  const exerciseFormMedia: AssistantThreadItem[] = [];
   const links: AssistantThreadItem[] = [];
   const askAgains: AssistantThreadItem[] = [];
   const citations: (string | null | undefined)[] = [];
@@ -260,6 +267,13 @@ function itemsOfTurn(
             exercise: outcome.exerciseMuscles,
           });
         }
+        if (outcome.exerciseFormMedia !== undefined) {
+          exerciseFormMedia.push({
+            kind: "exercise_form_media",
+            id: `${id}:exerciseFormMedia`,
+            exercise: outcome.exerciseFormMedia,
+          });
+        }
         if (outcome.link !== undefined) {
           links.push({ kind: "link", id: `${id}:link`, link: outcome.link });
         }
@@ -275,7 +289,7 @@ function itemsOfTurn(
     turn,
     context,
     { citation: distinct(citations), estimate: distinct(estimates) },
-    { exerciseMuscles, links, askAgains },
+    { exerciseMuscles, exerciseFormMedia, links, askAgains },
   );
 }
 
@@ -286,6 +300,7 @@ function finishTurn(
   meta: AssistantAnswerMeta,
   trailing: {
     exerciseMuscles: AssistantThreadItem[];
+    exerciseFormMedia: AssistantThreadItem[];
     links: AssistantThreadItem[];
     askAgains: AssistantThreadItem[];
   },
@@ -314,7 +329,7 @@ function finishTurn(
       stopped: status === "stopped",
     };
   }
-  items.push(...trailing.exerciseMuscles, ...trailing.links);
+  items.push(...trailing.exerciseMuscles, ...trailing.exerciseFormMedia, ...trailing.links);
   const wroteSomething = drafts.some((item) => item.kind === "draft_card");
   // The notice says nothing was changed and offers Try again, so a turn that holds a card never draws it. The
   // server ends such a turn complete with words of its own (KEY-926). This covers the rows it cannot write: a

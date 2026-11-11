@@ -13,7 +13,11 @@ import {
 } from "../src/assistantLiveTurn";
 import { aCard, CONVERSATION_ID, TURN_ID } from "./support/assistantStream";
 
-import type { AssistantExerciseMuscles, AssistantStreamEvent } from "@keylow/core";
+import type {
+  AssistantExerciseFormMedia,
+  AssistantExerciseMuscles,
+  AssistantStreamEvent,
+} from "@keylow/core";
 
 const applyAll = (events: AssistantStreamEvent[]) =>
   events.reduce(applyAssistantEvent, newLiveTurn());
@@ -31,6 +35,7 @@ describe("applyAssistantEvent", () => {
       status: null,
       link: null,
       exerciseMuscles: [],
+      exerciseFormMedia: [],
       askAgain: false,
       notice: null,
       stopped: false,
@@ -91,6 +96,44 @@ describe("applyAssistantEvent", () => {
     };
 
     expect(applyAll([thinking, { type: "exercise_muscles", exercise }]).status).toBeNull();
+  });
+
+  describe("the form media of an exercise", () => {
+    const squat: AssistantExerciseFormMedia = {
+      exerciseName: "Barbell Squat",
+      media: {
+        kind: "video",
+        videoId: "abcdefghijk",
+        title: "Squat form",
+        channel: "Strength Basics",
+      },
+    };
+    const curl: AssistantExerciseFormMedia = {
+      exerciseName: "Dumbbell Curl",
+      media: { kind: "photos", imagePaths: ["Dumbbell_Curl/0.jpg", "Dumbbell_Curl/1.jpg"] },
+    };
+
+    it("should keep each exercise's media in the order it arrived, with the same objects", () => {
+      const live = applyAll([
+        { type: "exercise_form_media", exercise: squat },
+        { type: "text", delta: "Both." },
+        { type: "exercise_form_media", exercise: curl },
+        { type: "done", outcome: "complete" },
+      ]);
+
+      expect(live.exerciseFormMedia).toEqual([squat, curl]);
+      // The cards are memoised on these objects, so a streamed token must not replace them.
+      expect(live.exerciseFormMedia[0]).toBe(squat);
+      expect(live.text).toBe("Both.");
+    });
+
+    it("should clear the step when it arrives", () => {
+      const thinking = { type: "status", code: "thinking" } as const;
+
+      expect(
+        applyAll([thinking, { type: "exercise_form_media", exercise: squat }]).status,
+      ).toBeNull();
+    });
   });
 
   it("should offer Ask again when the event arrives", () => {

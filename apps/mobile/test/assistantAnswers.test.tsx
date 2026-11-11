@@ -122,6 +122,7 @@ const liveTurn = (overrides: Partial<AssistantLiveTurn> = {}): AssistantLiveTurn
   answerMeta: null,
   link: null,
   exerciseMuscles: [],
+  exerciseFormMedia: [],
   askAgain: false,
   status: null,
   notice: null,

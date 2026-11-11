@@ -694,6 +694,7 @@ const liveWithNotice = (notice: AssistantNotice): AssistantLiveTurn => ({
   answerMeta: null,
   link: null,
   exerciseMuscles: [],
+  exerciseFormMedia: [],
   askAgain: false,
   status: null,
   notice,
