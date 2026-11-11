@@ -30,7 +30,10 @@ const updatePastSetInput = z
       .number()
       .min(0)
       .nullable()
-      .describe("The new load in the user's own unit, as they said it. Null to keep it."),
+      .describe(
+        "The new load in the user's own unit, kg or lb, exactly as they said it and as get_workouts shows it. " +
+          "Never convert it. Null to keep it.",
+      ),
     rir: z
       .number()
       .int()

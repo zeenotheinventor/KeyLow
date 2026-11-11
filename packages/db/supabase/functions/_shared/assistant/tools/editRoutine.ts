@@ -38,14 +38,16 @@ const maxChanges = 10;
 
 const changeInput = z
   .strictObject({
-    op: z.enum(["add", "swap", "remove", "set_targets", "add_day", "update_day", "remove_day"]),
+    op: z
+      .enum(["add", "swap", "remove", "set_targets", "add_day", "update_day", "remove_day"])
+      .describe("What this change does."),
     day_id: z
       .string()
       .min(1)
       .max(64)
       .nullable()
       .describe(
-        "The day's id from get_routines, or for a day this call adds, its day_ref. Null for add_day and remove_day.",
+        "The id of the day the change is in, from get_routines. For a day this same call adds, the day_ref you gave it. Null for add_day and remove_day.",
       ),
     day_ref: z
       .string()
@@ -53,13 +55,13 @@ const changeInput = z
       .max(40)
       .nullable()
       .describe(
-        "For add_day only: a short name of your own for the new day, which later changes use as their day_id. Null otherwise.",
+        "For add_day only: a short name of your own for the new day, which later changes of this call use as their day_id. Null otherwise.",
       ),
     exercise_id: z
       .guid()
       .nullable()
       .describe(
-        "From get_routines or search_exercises. For add the exercise to add, for swap the one to take out, for remove and set_targets the one planned. Null for the day ops.",
+        "The exercise from get_routines or search_exercises. For add the exercise to add, for swap the exercise to take out, for remove and set_targets the one planned. Null for the day ops.",
       ),
     new_exercise_id: z
       .guid()
@@ -71,14 +73,14 @@ const changeInput = z
       .min(0)
       .nullable()
       .describe(
-        "From 0. For swap, remove and set_targets: which one when the day plans the same exercise twice, else null. For add: where in the day, null for the end. For add_day and update_day: where among the days, null to leave it.",
+        "From 0. For swap, remove and set_targets: which one when the day plans the same exercise twice, otherwise null. For add: where in the day it goes, null for the end. For add_day and update_day: where the day goes among the days, null to leave it.",
       ),
     sets: z
       .number()
       .int()
       .nullable()
       .describe(
-        "The target sets, only when the user said it. Null on add takes Ki-Lo's preset, null on set_targets keeps it.",
+        "The target sets, only when the user said it. Null on add takes Ki-Lo's preset for their goal, and null on set_targets keeps it.",
       ),
     rep_min: z
       .number()
@@ -94,7 +96,9 @@ const changeInput = z
       .number()
       .int()
       .nullable()
-      .describe("The target reps in reserve, only when the user said it. Null as for sets."),
+      .describe(
+        "The target reps in reserve, only when the user said it. Null as for sets. A set_targets cannot clear one.",
+      ),
     name: z
       .string()
       .trim()
@@ -685,31 +689,33 @@ const removedNames = (plan: Extract<Plan, { ok: true }>, input: EditRoutineInput
 export const editRoutineTool: WriteToolDefinition<EditRoutineInput> = {
   name: "edit_routine",
   description:
-    "Changes the exercises and days of one of the user's routines, with a card and Undo. Take ids from " +
-    "get_routines and search_exercises, never from memory. Send up to " +
+    "Changes the exercises and days of one of the user's routines, with a card and Undo. Take the routine, " +
+    "day and exercise ids from get_routines and search_exercises, never from memory. Send up to " +
     `${maxChanges} changes in one call, applied in order, as one edit. Each change has an op. ` +
-    "add puts exercise_id in a day (position null for the end). When the user gave no sets, reps or " +
+    "add puts exercise_id in a day (position null for the end), and when the user gave no sets, reps or " +
     "RIR leave them null and Ki-Lo uses its preset for their goal: send a number only when the user said it. " +
-    "With no goal saved there is no preset: sets and reps are then needed, the answer " +
+    "If the user has no goal saved there is no preset: sets and reps are then needed, and the answer " +
     "invalid_input with the rule numbers_need_goals means ask the user for them or point them to the Goal " +
-    "screen, and a null RIR is left unset. " +
-    "swap takes exercise_id out for new_exercise_id and keeps the old sets, reps and RIR. remove takes " +
+    "screen, while a null RIR is then left unset. " +
+    "swap takes exercise_id out for new_exercise_id and keeps the old one's sets, reps and RIR. remove takes " +
     "an exercise out of a day. set_targets changes sets, rep_min, rep_max or target_rir, and a null keeps " +
-    "that number. A RIR cannot be cleared from here, so tell the user to clear it in the routine editor. " +
-    "add_day adds a day with a day_ref of your own, a name and a weekday (0 Monday to 6 Sunday, null any " +
-    "day), and later changes in the call can use that day_ref as their day_id. update_day renames a day, " +
-    "moves it to a weekday or among the days, and a null keeps that field, so update_day cannot clear a weekday. " +
-    "A day cannot be removed here: remove_day changes nothing and the whole call is not applied, so tell " +
-    "the user what the answer says (a day can only be removed in the routine editor, because it unlinks " +
-    "the sessions they logged from it) and that exercises can be changed here. When the same exercise is " +
-    "planned twice in a day, say which with position. If the call is refused with invalid_input, the " +
-    "problems say which change (by its place in the list) and which rule, so correct it and call again, " +
-    "or ask the user. When a call removes more than one exercise it first answers needs_confirmation " +
-    "with a confirmation_id: in the same response, before the call, write the question in your own " +
-    "words, naming the exercises, the day and the routine, and also name any other changes in the call, because the " +
-    "buttons name only the removals. On yes call again with the same input and that confirmation_id. On " +
-    "no do not call again. Removing one exercise, adding, swapping, changing numbers and changing days " +
-    "ask nothing. The answer workout_in_progress means nothing was changed.",
+    "that number. A RIR cannot be cleared from here: set_targets keeps a null and an add with a null RIR " +
+    "takes the preset, so tell the user to clear it in the routine editor. add_day adds a day with a day_ref of your own, a " +
+    "name and a weekday (0 Monday to 6 Sunday, null any day), and later changes in the same call can use " +
+    "that day_ref as their day_id. update_day renames a day, moves it to a weekday, or moves it among the " +
+    "days, and a null keeps that field, so update_day cannot clear a weekday. A day cannot be removed " +
+    "here: for remove_day nothing is changed, the whole call is not applied, and you tell the user what " +
+    "the answer says (a day can only be removed in the routine editor, because it unlinks the sessions they " +
+    "logged from it) and that exercises can be changed here. When the same exercise is planned twice in a " +
+    "day, say which with position. If the call is refused with invalid_input, the problems say which change " +
+    "(by its place in the list) and which rule, so correct that change and call again, or ask the user. " +
+    "When a call removes more than one exercise it first answers needs_confirmation with a " +
+    "confirmation_id: in the same response as the call, before it, write the question in your own words, " +
+    "naming the exercises, the day and the routine, and also name any other changes in the call, because the " +
+    "buttons name only the removals. When they say yes call again with the same input " +
+    "and that confirmation_id. When they say no, do not call again. Removing one exercise, adding, " +
+    "swapping, changing numbers and changing days ask nothing. If the answer is workout_in_progress " +
+    "nothing was changed.",
   kind: "write",
   // Many nullable fields in a list of changes would use more than the strict budget of a request.
   strict: false,

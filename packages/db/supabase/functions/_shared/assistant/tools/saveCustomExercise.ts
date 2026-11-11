@@ -40,7 +40,9 @@ const saveCustomExerciseInput = z.strictObject({
     .guid()
     .nullable()
     .default(null)
-    .describe("The id of the user's own exercise to change, or null to add one."),
+    .describe(
+      "The id of the user's own exercise to change, from search_exercises, or null to add a new one.",
+    ),
   name: z
     .string()
     .trim()
@@ -48,11 +50,11 @@ const saveCustomExerciseInput = z.strictObject({
     .max(200)
     .nullable()
     .default(null)
-    .describe("Needed to add one. When changing, null keeps it."),
+    .describe("The exercise's name. Needed to add one. When changing, null keeps the name."),
   equipment: equipmentSchema
     .nullable()
     .default(null)
-    .describe("Needed to add one. When changing, null keeps it."),
+    .describe("The equipment it uses. Needed to add one. When changing, null keeps it."),
   muscles: z
     .array(muscleInput)
     .min(1)
@@ -60,7 +62,7 @@ const saveCustomExerciseInput = z.strictObject({
     .nullable()
     .default(null)
     .describe(
-      "Every muscle it works with its role, at least one primary. Needed to add one. When changing, a list replaces the whole map and null keeps it.",
+      "Every muscle the exercise works, each with its role, and at least one primary. Needed to add one. When changing, a list replaces the whole map, so null keeps it.",
     ),
 });
 
@@ -165,10 +167,10 @@ export const saveCustomExerciseTool: WriteToolDefinition<SaveCustomExerciseInput
     "Adds one of the user's own exercises, or changes one of them, with Undo. To add one pass id as null " +
     "with the name, the equipment and every muscle with its role, at least one primary. To change one pass " +
     "its id from search_exercises and only the fields that change, null for the rest. Muscles replaces " +
-    "the whole map, so send all the muscles search_exercises gives for that exercise, with " +
-    "their roles, and only what the user asked added, removed or changed. Never " +
+    "the whole map, so to change them take the muscles search_exercises gives for that exercise, with " +
+    "their roles, and send all of them with only what the user asked added, removed or changed. Never " +
     "drop a muscle the user did not mention. An exercise of the library cannot be " +
-    "changed: the call answers global_exercise, so tell the user and offer to add their own. Sets the " +
+    "changed, and the call answers global_exercise: tell the user, and offer to add their own. Sets the " +
     "user already logged keep what they were. An archived exercise is answered as not found, and there is " +
     "no tool to bring one back: point the user to Undo in More, Assistant, What the assistant changed. A " +
     "new exercise is not in any routine, so say it can go in a day when the user says which, or in the " +

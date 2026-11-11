@@ -69,7 +69,7 @@ const createRoutineInput = z.strictObject({
           .min(1)
           .max(maxExercisesPerDay)
           .describe(
-            `1 to ${maxExercisesPerDay} exercise ids from search_exercises, in the order done. None twice in a day.`,
+            `1 to ${maxExercisesPerDay} exercise ids from search_exercises, in the order they are done. None twice in a day.`,
           ),
       }),
     )
@@ -91,7 +91,8 @@ export const createRoutineTool: WriteToolDefinition<CreateRoutineInput> = {
     "get_training_goals first: when the user gave no number of days, use its days_per_week. Find every " +
     "exercise with search_exercises, passing the user's equipment from get_training_goals, and use only " +
     "the ids it gave, never one you have not seen. Make all " +
-    "the searches in one response and not one by one, because a turn has a time limit. You " +
+    "the searches in one response and not one by one, because a turn has a time limit. Choose the name, " +
+    "the days, their weekdays (0 Monday to 6 Sunday, or null) and which exercises, in which order. You " +
     "cannot send sets, reps or RIR: Ki-Lo gives every exercise the numbers of the user's goal. When the " +
     "user names numbers, build first and then change them with edit_routine. The routine is never " +
     "active. Offer to make it active, and when the user's own message asked for that, call " +
@@ -103,7 +104,7 @@ export const createRoutineTool: WriteToolDefinition<CreateRoutineInput> = {
     "is not a live exercise of the library or the user's own is invalid_input with its place " +
     "(days.0.exercise_ids.2): search again and replace it. An answer of needs_goal true means the user " +
     "has no training goal yet and nothing was saved: ask for their goal and experience together in one " +
-    "ask_user, with 3 quick replies that each give both, and say " +
+    'ask_user, with 3 quick replies that each give both, such as "Look better, intermediate", and say ' +
     "nothing is saved yet. Their answer is the request to save it with update_training_goals " +
     "(days_per_week is the number of days the user named for the routine), then call create_routine again.",
   kind: "write",
