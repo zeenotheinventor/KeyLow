@@ -32,7 +32,6 @@ const none = {
   carbs_g: null,
   fat_g: null,
   label: null,
-  estimated: null,
   local_date: null,
   time: null,
 };
@@ -213,6 +212,30 @@ Deno.test(
     assertObjectMatch(structuredOf(result), { card: { rows: [{ estimate: true }] } });
   },
 );
+
+Deno.test("a call without estimated logs as before, and a null estimated is the same", async () => {
+  const { ctx, stub } = setUp();
+
+  const without = await executeTool(ctx, "log_entry", {
+    ...none,
+    kind: "grams",
+    food_id: toastId,
+    grams: 60,
+  });
+  const withNull = await executeTool(ctx, "log_entry", {
+    ...none,
+    kind: "grams",
+    food_id: toastId,
+    grams: 60,
+    estimated: null,
+  });
+
+  for (const result of [without, withNull]) {
+    assertEquals(result.status, "ok");
+    assertObjectMatch(structuredOf(result), { card: { rows: [{ estimate: false }] } });
+  }
+  assertEquals(stub.tables["food_log_entries"]?.length, 2);
+});
 
 Deno.test("estimated ml is allowed, and false or null leaves the row unmarked", async () => {
   const { ctx } = setUp();

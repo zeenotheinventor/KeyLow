@@ -92,10 +92,14 @@ const logEntryInput = z
       .max(80)
       .nullable()
       .describe("A short name for the quick add, or null. For quick."),
+    // Optional, so a call without it (an older client, a resumed conversation) logs as it always did. A null
+    // from the model is dropped before the check.
     estimated: z
       .boolean()
-      .nullable()
-      .describe("true for an amount estimate_portions returned, else null. For grams and ml."),
+      .optional()
+      .describe(
+        "true for an amount estimate_portions returned. Leave out otherwise. For grams and ml.",
+      ),
     local_date: localDateSchema
       .nullable()
       .describe("The day, only when the person named another day than today. Otherwise null."),
@@ -106,7 +110,7 @@ const logEntryInput = z
   .superRefine((input, context) => {
     const allowed = new Set(fieldsOf[input.kind]);
     for (const field of amountFields) {
-      const given = input[field] !== null;
+      const given = input[field] !== null && input[field] !== undefined;
       const missing = requiredOf[input.kind].includes(field) && !given;
       if ((given && !allowed.has(field)) || missing) {
         context.addIssue({ code: "custom", path: [field], message: "Wrong field for this kind" });

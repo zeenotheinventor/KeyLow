@@ -20,7 +20,6 @@ const none = {
   carbs_g: null,
   fat_g: null,
   label: null,
-  estimated: null,
   local_date: null,
   time: null,
 };

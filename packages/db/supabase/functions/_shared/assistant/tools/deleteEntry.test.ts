@@ -44,7 +44,6 @@ const quick = (label: string) => ({
   carbs_g: null,
   fat_g: null,
   label,
-  estimated: null,
   local_date: null,
   time: "13:00",
 });
