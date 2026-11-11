@@ -144,7 +144,13 @@ function zeesLunch(today: string): EvalCase {
 
 function tomatoSoup(today: string): EvalCase {
   const message = "I had a small bowl of tomato soup, about 120 calories.";
-  const soup: readonly SizedItem[] = [{ ...SOUP, kcal: 120 }];
+  const soup: readonly SizedItem[] = [
+    {
+      codes: FOOD_ROUTES.tomatoSoup,
+      namePattern: /\btomato\b.*\bsoup\b|\bsoup\b.*\btomato\b/i,
+      kcal: 120,
+    },
+  ];
   return {
     id: "meal-estimate-tomato-soup-by-calories",
     set: "mealEstimate",

@@ -534,7 +534,7 @@ describe("meal-estimate-tomato-soup-by-calories", () => {
     expect(await failuresOf(id, [soup(120)])).toEqual([]);
   });
 
-  it("should pass a soup that is not the seeded one but is named a soup", async () => {
+  it("should pass a tomato soup that is not the seeded one but is named a tomato soup", async () => {
     const other = turnResult({
       answer: "Logged the soup: about 235 g.",
       toolCalls: [
@@ -544,7 +544,20 @@ describe("meal-estimate-tomato-soup-by-calories", () => {
       cards: [card(1, 0)],
     });
 
-    expect(await failuresOf(id, [other], { "99-001": "Mushroom soup" })).toEqual([]);
+    expect(await failuresOf(id, [other], { "99-001": "Cream of tomato soup" })).toEqual([]);
+  });
+
+  it("should fail a vegetable soup at 120 calories, because the person said tomato", async () => {
+    const other = turnResult({
+      answer: "Logged the soup: about 235 g.",
+      toolCalls: [
+        estimateCall([{ code: "99-001", kcal: 120, amount: 235 }], {}),
+        logged({ code: "99-001", amount: 235, kcal: 120 }),
+      ],
+      cards: [card(1, 0)],
+    });
+
+    expect(await failuresOf(id, [other], { "99-001": "Vegetable soup" })).not.toEqual([]);
   });
 
   it("should fail a food that is not a soup at 120 calories", async () => {

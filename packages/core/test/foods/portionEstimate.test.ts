@@ -393,7 +393,7 @@ describe("a known calorie figure", () => {
         container: null,
       }),
     );
-    // 2,000 g against twice what a large plate holds of rice (30 cm, about 1,000 g)
+    // 2,000 g against twice what a large plate holds of rice (30 cm, about 790 g, so about 1,580 g doubled)
     expect(big.largerThanContainer).toBe(true);
     const fine = onlyItemOf(
       inputOf([itemOf(rice, { food_type: "rice_grains_pasta", share_percent: null, kcal: 300 })], {
