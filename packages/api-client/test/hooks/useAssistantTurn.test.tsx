@@ -171,6 +171,7 @@ describe("useAssistantTurn, what each board shows", () => {
       answerMeta: null,
       link: null,
       exerciseMuscles: [],
+      exerciseFormMedia: [],
       askAgain: false,
       status: null,
       notice: null,

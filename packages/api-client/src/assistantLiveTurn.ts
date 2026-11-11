@@ -3,6 +3,7 @@ import { describeTurnEndedAfterWrite } from "@keylow/core";
 import type {
   AssistantCard,
   AssistantCardLink,
+  AssistantExerciseFormMedia,
   AssistantExerciseMuscles,
   AssistantNotice,
   AssistantStatus,
@@ -19,7 +20,7 @@ type EventOfType<Type extends AssistantStreamEvent["type"]> = Omit<
  * `text` grows with the reply (`assistant · streaming`), `cards` are the writes with their Undo, `clarify`
  * and `confirm` end the turn with a question, `answerMeta` sits under an answer, `status` is the step the
  * assistant is on, `notice` is a gate or a failure, and `stopped` is set when the person closed the sheet
- * before the end. `exerciseMuscles` are the muscles of each exercise the turn showed, in call order. `link` is a
+ * before the end. `exerciseMuscles` are the muscles of each exercise the turn showed, and `exerciseFormMedia` the form video or photos of each, both in call order. `link` is a
  * link that arrived on its own, and `askAgain` whether the turn offered the Ask
  * again quick reply. `outcome` is how the turn ended, null while it is still going or when it was stopped.
  */
@@ -32,6 +33,7 @@ export type AssistantLiveTurn = {
   confirm: EventOfType<"confirm"> | null;
   answerMeta: EventOfType<"answer_meta"> | null;
   exerciseMuscles: AssistantExerciseMuscles[];
+  exerciseFormMedia: AssistantExerciseFormMedia[];
   link: AssistantCardLink | null;
   askAgain: boolean;
   status: AssistantStatus | null;
@@ -50,6 +52,7 @@ export function newLiveTurn(): AssistantLiveTurn {
     confirm: null,
     answerMeta: null,
     exerciseMuscles: [],
+    exerciseFormMedia: [],
     link: null,
     askAgain: false,
     status: null,
@@ -80,6 +83,12 @@ export function applyAssistantEvent(
       return { ...live, status: null, cards: [...live.cards, event.card] };
     case "exercise_muscles":
       return { ...live, status: null, exerciseMuscles: [...live.exerciseMuscles, event.exercise] };
+    case "exercise_form_media":
+      return {
+        ...live,
+        status: null,
+        exerciseFormMedia: [...live.exerciseFormMedia, event.exercise],
+      };
     case "link":
       return { ...live, status: null, link: event.link };
     case "ask_again":
