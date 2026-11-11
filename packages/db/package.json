@@ -20,6 +20,7 @@
     "import:portions": "node --experimental-strip-types scripts/run-typescript.ts scripts/import-cofid-portions.ts",
     "emit:estimated-portions": "node --experimental-strip-types scripts/run-typescript.ts scripts/emit-estimated-portions.ts",
     "import:exercises": "node --experimental-strip-types scripts/run-typescript.ts scripts/import-exercises.ts",
+    "verify:form-videos": "node --experimental-strip-types scripts/run-typescript.ts scripts/verify-form-videos.ts",
     "curate:exercises": "node --experimental-strip-types scripts/run-typescript.ts scripts/curate-exercises.ts",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
