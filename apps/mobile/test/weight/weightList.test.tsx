@@ -7,6 +7,7 @@ import { render, screen } from "@testing-library/react-native";
 import { WeightScreen } from "../../components/WeightScreen";
 import { ThemeProvider } from "../../lib/theme";
 import { resetRouterMock } from "../support/expoRouterMock";
+import { pinClock } from "../support/weighInSheetHarness";
 import {
   createWeightQueryClient,
   resetWeightBackend,
@@ -94,6 +95,8 @@ describe("the Weight screen's list", () => {
   beforeEach(() => {
     resetRouterMock();
     resetWeightBackend();
+    // The clock is pinned to 24 Oct so the fixed October fixtures stay inside the list's window.
+    pinClock("2026-10-24T12:00:00Z");
   });
 
   afterEach(() => {
@@ -161,25 +164,7 @@ describe("the Weight screen's list", () => {
 
   it("should take today from the profile's time zone", async () => {
     // At 23:30 UTC on 23 October it is already the 24th in Kiritimati, so its own day is today there.
-    jest.useFakeTimers({
-      now: new Date("2026-10-23T23:30:00Z"),
-      doNotFake: [
-        "hrtime",
-        "nextTick",
-        "performance",
-        "queueMicrotask",
-        "requestAnimationFrame",
-        "cancelAnimationFrame",
-        "requestIdleCallback",
-        "cancelIdleCallback",
-        "setImmediate",
-        "clearImmediate",
-        "setInterval",
-        "clearInterval",
-        "setTimeout",
-        "clearTimeout",
-      ],
-    });
+    pinClock("2026-10-23T23:30:00Z");
     weightBackend.timeZone = "Pacific/Kiritimati";
     weightBackend.weighIns = [
       weighInRow({ localDate: "2026-10-24", utcTime: "07:42", weightKg: 81.6, timeZone: "UTC" }),

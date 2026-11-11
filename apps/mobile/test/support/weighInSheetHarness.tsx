@@ -33,6 +33,11 @@ export const ONLY_THE_DATE = [
   "clearTimeout",
 ] as const;
 
+/** Fakes only the date, to `now`, so timers keep running. Pair it with `jest.useRealTimers()` in `afterEach`. */
+export const pinClock = (now: string) => {
+  jest.useFakeTimers({ now: new Date(now), doNotFake: [...ONLY_THE_DATE] });
+};
+
 /** A manual weigh-in of 81.4 kg at 08:15 London time on the morning of `SHEET_NOW`, noted "Before breakfast". */
 export const manualWeighIn: WeighIn = {
   id: "00000000-0000-4000-8000-0000000000aa",
