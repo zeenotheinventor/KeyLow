@@ -39,6 +39,7 @@ export const ACCOUNT_EXPORT_TABLES = [
   "assistant_actions",
   "assistant_usage",
   "entitlements",
+  "feature_requests",
 ] as const;
 
 export type AccountExportTable = (typeof ACCOUNT_EXPORT_TABLES)[number];
@@ -90,6 +91,7 @@ export const accountExportSchema = z.strictObject({
     assistant_actions: rowsSchema,
     assistant_usage: rowsSchema,
     entitlements: rowsSchema,
+    feature_requests: rowsSchema,
   }),
 });
 

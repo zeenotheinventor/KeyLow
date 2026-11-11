@@ -2511,3 +2511,47 @@ Nothing. The sentence in `VERIFICATION.md` that left Nando's out for want of mac
 ### Consequences of Amendment 20
 
 No screen says a figure is estimated. An in-app "estimated" label is a follow-up for Zee to decide, and until then the mark is in the data only. No row carries the key until the wave 4 migration is applied, so no reset is needed. Any further deviation from the frozen Decision, from Amendments 1 to 18 or from this amendment needs an Amendment 21 before the migration or code that implements it lands.
+
+## Amendment 21 (Feature requests: one table for what people ask the app to do, 2026-11-11)
+
+### Status
+
+Recorded on 2026-11-11 under KEY-976 for Zee's ruling of the same day: when the assistant cannot do something because the app does not support it, it asks the person whether to send it as a feature request, with the context it was raised in, and More gets a place to type one in directly. The frozen Decision and Amendments 1 to 20 are unchanged. The table, the cap and the context shape below are interpretations. Zee confirms them by approving the pull request that carries this amendment.
+
+### The table
+
+`public.feature_requests`, one row per request:
+
+- `id uuid` primary key, default `gen_random_uuid()`.
+- `user_id uuid` not null, default `auth.uid()`, references `auth.users (id)` on delete cascade, so account deletion removes the rows.
+- `source text` not null, check `source in ('assistant', 'more_menu')`.
+- `request text` not null, check `char_length(btrim(request)) between 3 and 1000`.
+- `context jsonb` null. A `more_menu` row has a null context. An `assistant` row has a context that is a JSON object of at most 16384 bytes (`pg_column_size`).
+- `created_at timestamptz` not null, default `now()`.
+- An index on `(user_id, created_at)`, which serves the cascade and the daily cap.
+
+### The context shape
+
+Written only by the assistant, and validated in `@keylow/core` as `featureRequestContextSchema` so both sides share it: `{ version: 1, ask: string (max 500), unsupported: string (max 200), recent: Array<{ role: 'user' | 'assistant', text: string (max 500) }> (max 6) }`. It holds no ids, no tool calls, no tool results and no diary rows. The database checks only that it is an object under 16 KB, because the shape belongs to core.
+
+### Privileges and row level security
+
+Following Amendment 14: `revoke all` from `anon`, `authenticated` and `service_role`, then `select` and a column-level `insert (source, request, context)` to `authenticated`, and `select` to `service_role` so Zee can read requests from the dashboard. A client cannot set `user_id`, `id` or `created_at`. No role can update or delete. Two policies, `feature_requests_select_own` and `feature_requests_insert_own`, both on `user_id = (select auth.uid())`.
+
+### The daily cap
+
+At most 20 rows per person in any rolling 24 hours, enforced by a `before insert` trigger (`security invoker`, `set search_path = ''`) that counts the caller's rows since `now() - interval '24 hours'` and raises SQLSTATE `54000` with the message `feature_requests_daily_cap`. The repository maps it to the code `rate_limited`. The count is its own audit, so `consume_rate_limit()` is not used.
+
+### Health data
+
+`request` and `context` can hold diary talk, so they are health data under Amendment 9. They never appear in a log, an error message, a Sentry event or an analytics call. A repository error carries the action and a code only. The whole-account export includes the table (`exported`, owner column `user_id`), because the row is the person's own data. Deleting a conversation does not delete a request filed from it: the request is a separate record the person chose to send.
+
+### Implemented by
+
+- Migration `20261111120000_feature_requests.sql`, with pgTAP in `feature_requests_rls.test.sql`.
+- Core: `packages/core/src/featureRequests/schemas.ts`.
+- Api-client: `createFeatureRequest` in `repos/featureRequests.ts`, and the export coverage entries.
+
+### Consequences of Amendment 21
+
+`packages/db/src/types.gen.ts` gains the table. The export gains a table and keeps `export_version` at 1, as every earlier added table did. The assistant tool (KEY-977) and the More screen (KEY-978) write through `createFeatureRequest`. Any further deviation from the frozen Decision, from Amendments 1 to 20 or from this amendment needs an Amendment 22 before the migration or code that implements it lands.

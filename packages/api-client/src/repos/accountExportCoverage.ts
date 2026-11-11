@@ -44,6 +44,7 @@ export const ACCOUNT_EXPORT_COVERAGE: Record<
   assistant_actions: "exported",
   assistant_usage: "exported",
   entitlements: "exported",
+  feature_requests: "exported",
   muscles: {
     notExported: "Shared reference data, the same for everyone. No row belongs to the account.",
   },
