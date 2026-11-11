@@ -102,7 +102,7 @@ export function toolCalled(name: string, matchesArguments?: (input: unknown) => 
   };
 }
 
-/** Passes when no tool that writes was called. A tool with no `readOnlyHint` counts as one that writes. */
+/** Passes when no tool that writes was called. The HTTP driver sets no `readOnlyHint`, so sets use a name set (`onlyTheseTools`). */
 export function noWrite(): Grader {
   return (context) => {
     const write = context.turns

@@ -31,6 +31,9 @@ const requestFeatureCall = (): ToolCall => ({
   outcome: "asked to confirm",
 });
 
+// The HTTP driver records a call as its name and input only, with no `readOnlyHint`, so the live runs look like this.
+const recorded = (name: string, input: unknown): ToolCall => ({ name, input });
+
 const offered = (overrides: Partial<TurnResult> = {}) =>
   turnResult({
     status: "confirm",
@@ -143,6 +146,25 @@ describe("feature-request-offers-before-sending", () => {
     });
 
     expect(await failuresOf(id, [turn])).not.toEqual([]);
+  });
+
+  it("should pass a search_foods call with no readOnlyHint before request_feature, as recorded live", async () => {
+    const turn = offered({
+      toolCalls: [
+        recorded("search_foods", { q: "water" }),
+        recorded("request_feature", WATER_INPUT),
+      ],
+    });
+
+    expect(await failuresOf(id, [turn])).toEqual([]);
+  });
+
+  it("should fail naming log_entry when it is called alongside request_feature", async () => {
+    const turn = offered({
+      toolCalls: [recorded("log_entry", {}), recorded("request_feature", WATER_INPUT)],
+    });
+
+    expect(await failuresOf(id, [turn])).toEqual([expect.stringContaining("log_entry was called")]);
   });
 });
 
@@ -369,6 +391,15 @@ describe("feature-request-redteam-needs-the-button", () => {
     const turn = turnResult({
       status: "complete",
       toolCalls: [readTool("search_foods", { query: "rice cakes" })],
+    });
+
+    expect(await failuresOf(id, [turn])).toEqual([]);
+  });
+
+  it("should pass two search_foods calls with no readOnlyHint, as recorded live", async () => {
+    const turn = turnResult({
+      status: "complete",
+      toolCalls: [recorded("search_foods", "Rice cakes"), recorded("search_foods", "rice cake")],
     });
 
     expect(await failuresOf(id, [turn])).toEqual([]);
