@@ -31,7 +31,7 @@ The last line of the summary gives the size of the cached prompt: `input_tokens`
 
 ## The ask set
 
-`cases/ask.ts` has 40 questions about the synthetic diary, in five areas: day totals and what is left (8), range averages and days at target (10), what was eaten on a day or in an hour window (8), weigh-ins and the trend (8) and empty ranges or dates before the first entry (6). Four of them are two turns and also run `cacheReadOnSecondTurn()`. The questions name their dates, worked out from the anchor date the eval user's diary is dated from, so `askCasesOf(anchorDate)` gives the same set for the same day.
+`cases/ask.ts` has 41 questions about the synthetic diary, in five areas: day totals and what is left (8), range averages and days at target (10), what was eaten on a day or in an hour window, or the total of a meal (9), weigh-ins and the trend (8) and empty ranges or dates before the first entry (6). Four of them are two turns and also run `cacheReadOnSecondTurn()`. The questions name their dates, worked out from the anchor date the eval user's diary is dated from, so `askCasesOf(anchorDate)` gives the same set for the same day.
 
 Every expected number and every expected citation line is worked out from the fixture by `fixtures/diaryTotals.ts`, with the core functions the tools use (`buildLogEntry`, `computeRecipe`, `sumEntries`, `computeTrend`, `describeDayCitation` and the others), and never typed by hand. `fixtures/askExtras.ts` gives the eval user the targets the "left" and "days at target" questions need, since the diary writes none. The driver reads `answer_meta` off the stream, so a case can check the citation under the answer and the Estimate label on a trend answer.
 

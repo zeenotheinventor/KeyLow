@@ -332,6 +332,19 @@ Deno.test(
   },
 );
 
+// KEY-975. "What are the calories and macros of that meal" was answered with "Ki-Lo can't give a total for this
+// meal", because the diary only totals days. get_entries now totals the entries it lists.
+Deno.test(
+  "a meal's total is quoted from the totals of get_entries, never said to be unavailable",
+  () => {
+    assert(
+      sectionOf("Numbers").includes(
+        "The total of a meal is the totals of get_entries for its window, never said to be unavailable.",
+      ),
+    );
+  },
+);
+
 Deno.test(
   "a dish with no match is logged as the closest generic one, named once, never created",
   () => {

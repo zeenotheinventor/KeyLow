@@ -4,9 +4,9 @@
 // diary knows: "lunch" is a window of hours that the model chooses and says aloud.
 import { z } from "zod";
 
-import { addCalendarDays, describeRangeCitation, formatClockTime } from "../../core.ts";
+import { addCalendarDays, describeRangeCitation, formatClockTime, sumEntries } from "../../core.ts";
 import { getDiaryDay, getMyTimeZone } from "../../repos.ts";
-import { citedResult, entryView, zoneOrUtc } from "./diaryView.ts";
+import { citedResult, entryView, noNutrientsEaten, nutrientsView, zoneOrUtc } from "./diaryView.ts";
 import {
   clockTimeSchema,
   dataNotice,
@@ -76,7 +76,7 @@ export const getEntriesTool: ReadToolDefinition<z.infer<typeof getEntriesInput>>
     "24-hour HH:MM, applied to every day of the range, or null for no limit) and say the window " +
     "aloud, for example lunch as 12:00 to 14:00. A window cannot cross midnight, so a late-night " +
     "window such as 22:00 to 02:00 needs two calls, one up to 23:59 and one from 00:00. The nutrients are already rounded as the Diary " +
-    "rounds them. The citation is the line the app prints under your answer. " +
+    "rounds them. The totals are the sum of the entries listed, for how much a meal was. The citation is the line the app prints under your answer. " +
     `${unknownNotice} ${dataNotice}`,
   kind: "read",
   input: getEntriesInput,
@@ -87,19 +87,33 @@ export const getEntriesTool: ReadToolDefinition<z.infer<typeof getEntriesInput>>
       getMyTimeZone(ctx.caller),
     ]);
     const zone = zoneOrUtc(timeZone);
-    const entries = days
+    const listed = days
       .flatMap((day) => day.entries)
-      .flatMap((entry) => {
+      .filter((entry) => {
         const time = formatClockTime(new Date(entry.logged_at), zone);
         const isAfterStart = from_time === null || time >= from_time;
         const isBeforeEnd = to_time === null || time <= to_time;
-        return isAfterStart && isBeforeEnd
-          ? [{ date: entry.local_date, ...entryView(entry, zone), ...repeatFields(entry) }]
-          : [];
+        return isAfterStart && isBeforeEnd;
       });
+    const entries = listed.map((entry) => ({
+      date: entry.local_date,
+      ...entryView(entry, zone),
+      ...repeatFields(entry),
+    }));
+
+    // As a day's total is: from the entries' own frozen nutrients, and an empty window ate nothing.
+    const eaten = listed.length === 0 ? noNutrientsEaten : sumEntries(listed);
 
     return citedResult(
-      { from, to, from_time, to_time, entry_count: entries.length, entries },
+      {
+        from,
+        to,
+        from_time,
+        to_time,
+        entry_count: entries.length,
+        entries,
+        totals: nutrientsView(eaten),
+      },
       describeRangeCitation({ from, to, entryCount: entries.length }),
     );
   },
