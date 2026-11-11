@@ -5,6 +5,7 @@ import {
   ROUTINE_DAY_CONTROLS,
   ROUTINE_DISCARD,
   ROUTINE_EDITOR,
+  ROUTINE_EXERCISE_FORM,
   ROUTINE_MOVE,
   ROUTINE_SAVE_FAILED,
   ROUTINE_WEEKDAY_CHOICES,
@@ -35,6 +36,7 @@ import { leaveRoutineEditor, leaveRoutineEditorSaved } from "../../lib/leaveRout
 import { useKeyboardLift } from "../../lib/useKeyboardLift";
 import { useScrollFocusedInputIntoView } from "../../lib/useScrollFocusedInputIntoView";
 import { AddExerciseSheet } from "../AddExerciseSheet";
+import { ExerciseMusclesSheet } from "../ExerciseMusclesSheet";
 import { RoutineDayCard } from "../RoutineDayCard";
 import { RoutineDayExercises } from "../RoutineDayExercises";
 import {
@@ -52,6 +54,7 @@ import {
 } from "../ui";
 
 import type { OpenSheet, RoutineEditorProps } from "./types";
+import type { ExerciseMusclesSheetExercise } from "../ExerciseMusclesSheet";
 import type { EditorState, MoveDirection, RoutineDraft, RoutineMarks } from "@keylow/core/training";
 
 const emptyDraft: RoutineDraft = { name: "", days: [] };
@@ -129,8 +132,10 @@ const moveItems = (isFirst: boolean, isLast: boolean, move: (by: MoveDirection) 
  * its field, counts them in the banner and scrolls to the first (the marks then follow the draft as it is
  * fixed), and with none it saves, which needs a connection. A save that works returns to the routines list,
  * and one that fails keeps the draft and says so in a toast. A day's and an exercise's menus move them up
- * and down. Closing with changes asks first, by the header's Cancel, the Android back button and the iOS
- * swipe back alike, but never after a save.
+ * and down, and the exercise's name or its menu's first item opens the exercise sheet (the workout's own,
+ * with the form guide and the muscles), which holds no draft state, so the draft is as it was when it
+ * closes or the person comes back from YouTube. Closing with changes asks first, by the header's Cancel,
+ * the Android back button and the iOS swipe back alike, but never after a save.
  */
 export function RoutineEditor({
   initialDraft,
@@ -150,6 +155,8 @@ export function RoutineEditor({
   const [state, dispatch] = useReducer(routineDraftReducer, startingState);
   const [openSheet, setOpenSheet] = useState<OpenSheet | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  // The exercise the form and muscles sheet shows. It reads the muscles itself, so none are passed.
+  const [exerciseOnShow, setExerciseOnShow] = useState<ExerciseMusclesSheetExercise | null>(null);
   const [isDiscardOpen, setIsDiscardOpen] = useState(false);
   const [isMoreOpen, setIsMoreOpen] = useState(false);
   const [exit, setExit] = useState<"discarded" | "saved" | "archived" | null>(null);
@@ -333,6 +340,12 @@ export function RoutineEditor({
     setIsSheetOpen(true);
   }
 
+  function showExercise(exercise: { exercise_id: string; name: string }) {
+    // A focused field would keep the keyboard up over the sheet.
+    Keyboard.dismiss();
+    setExerciseOnShow({ id: exercise.exercise_id, name: exercise.name, muscles: null });
+  }
+
   function closeSheet() {
     setIsSheetOpen(false);
   }
@@ -437,6 +450,12 @@ export function RoutineEditor({
                   onChangeField={(key, field, text) => {
                     dispatch({ type: "editExercise", dayKey: day.key, key, field, text });
                   }}
+                  onOpenExercise={(key) => {
+                    const exercise = day.exercises.find((candidate) => candidate.key === key);
+                    if (exercise !== undefined) {
+                      showExercise(exercise);
+                    }
+                  }}
                   onOpenMenu={(key) => {
                     const exercise = day.exercises.find((candidate) => candidate.key === key);
                     openSheetFor("exerciseMenu", day, exercise);
@@ -523,6 +542,17 @@ export function RoutineEditor({
       >
         <ActionMenu
           items={[
+            {
+              label: ROUTINE_EXERCISE_FORM.menuAction,
+              icon: "PersonStanding",
+              onPress: () => {
+                const exercise = sheetExercises[sheetExercisePosition];
+                if (exercise !== undefined) {
+                  showExercise(exercise);
+                }
+                closeSheet();
+              },
+            },
             ...moveItems(
               sheetExercisePosition === 0,
               sheetExercisePosition === sheetExercises.length - 1,
@@ -576,6 +606,12 @@ export function RoutineEditor({
           ]}
         />
       </BottomSheet>
+      <ExerciseMusclesSheet
+        exercise={exerciseOnShow}
+        onClose={() => {
+          setExerciseOnShow(null);
+        }}
+      />
       <AddExerciseSheet
         mode="routine"
         open={isSheetOpen && openSheet?.kind === "exercise"}

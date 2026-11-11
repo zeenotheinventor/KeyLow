@@ -14,6 +14,8 @@ export type RoutineDayExercisesProps = {
   onChangeField: (key: number, field: ExerciseField, text: string) => void;
   /** Opens the menu of the exercise with this key. */
   onOpenMenu: (key: number) => void;
+  /** Opens the exercise sheet of the exercise with this key. */
+  onOpenExercise: (key: number) => void;
   /** Opens the picker for this day. */
   onAdd: () => void;
 };

@@ -1,5 +1,9 @@
-import { describeExerciseFieldNames, describeExerciseMenuName } from "@keylow/core/copy";
-import { View } from "react-native";
+import {
+  describeExerciseFieldNames,
+  describeExerciseMenuName,
+  describeFormAndMusclesButton,
+} from "@keylow/core/copy";
+import { Pressable, View } from "react-native";
 
 import { FieldError, IconButton, NumericInput, Text } from "../ui";
 
@@ -12,7 +16,9 @@ import type { RoutineExerciseRowProps } from "./types";
  * board draws no way to take an exercise out or to move it, so a menu button ends the row (KEY-450 and
  * KEY-454 propose it): its menu holds Move up, Move down and Remove. Each field is named with its exercise,
  * because the column heads are not read. A field with a problem takes the danger border, and one line under
- * the row says them all, as the `routines · invalid` board draws it.
+ * the row says them all, as the `routines · invalid` board draws it. The name is a button that opens the
+ * exercise sheet (`routine-editor-exercise` board): it is the column that gives way, so the three columns
+ * keep their widths, and its press area is the whole 48 point row.
  */
 export function RoutineExerciseRow({
   name,
@@ -23,15 +29,23 @@ export function RoutineExerciseRow({
   rowRef,
   onChangeField,
   onOpenMenu,
+  onOpenExercise,
 }: RoutineExerciseRowProps) {
   const fieldNames = describeExerciseFieldNames(name);
 
   return (
     <View ref={rowRef}>
       <View className="min-h-[48px] flex-row items-center gap-[6px] border-t border-border px-3">
-        <Text className="min-w-0 flex-1" numberOfLines={1} variant="body">
-          {name}
-        </Text>
+        <Pressable
+          aria-label={describeFormAndMusclesButton(name)}
+          className="min-h-[48px] min-w-0 flex-1 justify-center"
+          role="button"
+          onPress={onOpenExercise}
+        >
+          <Text numberOfLines={1} variant="body">
+            {name}
+          </Text>
+        </Pressable>
         <View className="w-[48px]">
           <NumericInput
             align="center"

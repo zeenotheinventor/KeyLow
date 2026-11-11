@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import { collectStrings } from "./collectStrings";
-import { EXERCISE_FORM, describeFormPhoto, describeFormVideoLink } from "../../src/copy";
+import {
+  EXERCISE_FORM,
+  ROUTINE_EXERCISE_FORM,
+  describeFormAndMusclesButton,
+  describeFormPhoto,
+  describeFormVideoLink,
+} from "../../src/copy";
 
 describe("the exercise form media copy", () => {
   it("should hold every word of the form media card", () => {
@@ -39,5 +45,25 @@ describe("describeFormPhoto", () => {
 
   it("should name the exercise and the end position", () => {
     expect(describeFormPhoto("Barbell back squat", "end")).toBe("Barbell back squat, end position");
+  });
+});
+
+describe("the routine editor's way to the form guide", () => {
+  it("should name the menu item", () => {
+    expect(ROUTINE_EXERCISE_FORM).toEqual({ menuAction: "Form and muscles" });
+  });
+
+  it("should use no em dash, double hyphen or semicolon", () => {
+    for (const sentence of collectStrings(ROUTINE_EXERCISE_FORM)) {
+      expect(sentence).not.toMatch(/\u2014|--|;/);
+    }
+  });
+});
+
+describe("describeFormAndMusclesButton", () => {
+  it("should name the exercise whose form and muscles the button opens", () => {
+    expect(describeFormAndMusclesButton("Barbell back squat")).toBe(
+      "Form and muscles, Barbell back squat",
+    );
   });
 });
