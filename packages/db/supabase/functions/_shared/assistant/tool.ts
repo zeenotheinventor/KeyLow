@@ -4,6 +4,7 @@
 import { toJSONSchema } from "zod";
 
 import type { Database } from "../core/database.types.ts";
+import type { OffLookup } from "./offLookup.ts";
 import type { ReportError } from "../report.ts";
 import type { RecipeImportServices } from "./recipeParse.ts";
 import type { ActionRecord, ActionStore, ActionTarget, StoredUndo } from "./store.ts";
@@ -46,6 +47,10 @@ export type ToolContext = {
   // The page fetch and the parse call of `import_recipe_from_url`. Only the `mcp` function sets it, so no
   // other tool reaches the network, and a context without it answers that tool `tool_failed`.
   recipeImport?: RecipeImportServices;
+  // The calls to `off-search` and `off-product`, made under the caller's JWT. Only the `mcp` function sets
+  // it. A context without it answers `search_foods` from the catalogue alone and `get_food` by `off_code`
+  // with `unavailable`.
+  offLookup?: OffLookup;
 };
 
 export type ToolRunOutput = {

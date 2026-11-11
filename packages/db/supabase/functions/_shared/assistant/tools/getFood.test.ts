@@ -4,8 +4,10 @@ import { executeTool } from "../executor.ts";
 import { createFakeContext } from "../testing.ts";
 import { toJsonSchema } from "../tool.ts";
 import { getFoodTool } from "./getFood.ts";
-import { payloadOf, stubCaller } from "./testing.ts";
+import { fakeOffLookup, payloadOf, stubCaller } from "./testing.ts";
 
+import type { Food } from "../../core.ts";
+import type { OffProductOutcome } from "../offLookup.ts";
 import type { StubData } from "./testing.ts";
 
 const foodId = "00000000-0000-4000-8000-000000000001";
@@ -115,16 +117,19 @@ Deno.test(
   },
 );
 
-Deno.test("the strict JSON Schema of get_food renders closed, with the id required", () => {
-  const schema = toJsonSchema(getFoodTool);
+Deno.test(
+  "the strict JSON Schema of get_food renders closed, with id and off_code both required",
+  () => {
+    const schema = toJsonSchema(getFoodTool);
 
-  assertEquals(schema["type"], "object");
-  assertEquals(schema["additionalProperties"], false);
-  assertEquals(schema["required"], ["id"]);
-  const properties = schema["properties"];
-  assert(typeof properties === "object" && properties !== null);
-  assertEquals(Object.keys(properties), ["id"]);
-});
+    assertEquals(schema["type"], "object");
+    assertEquals(schema["additionalProperties"], false);
+    assertEquals(schema["required"], ["id", "off_code"]);
+    const properties = schema["properties"];
+    assert(typeof properties === "object" && properties !== null);
+    assertEquals(Object.keys(properties), ["id", "off_code"]);
+  },
+);
 
 Deno.test(
   "get_food returns only the listed fields of the food, with its portions in order",
@@ -196,3 +201,153 @@ Deno.test("get_food rejects an id that is not a uuid and a key it does not know"
     assertEquals(calls, []);
   }
 });
+
+const offCode = "5000000000017";
+
+// The food off-product answers for the code, in the shape of the contract.
+const storedOffFood: Food = {
+  id: foodId,
+  source: "off",
+  source_ref: offCode,
+  owner_id: null,
+  name: "Beef massaman curry",
+  brand: "Tasty Co",
+  barcode: offCode,
+  basis: "per_100g",
+  density_g_per_ml: null,
+  kcal: 140,
+  protein_g: 8,
+  fat_g: 7,
+  sat_fat_g: null,
+  carbs_g: 11,
+  sugars_g: null,
+  fibre_g: 1.2,
+  salt_g: null,
+  micros: {},
+  quality: {},
+  food_group: null,
+  fetched_at: "2026-11-11T10:00:00+00:00",
+  deleted_at: null,
+  created_at: "2026-11-11T10:00:00+00:00",
+};
+
+async function fetchByOffCode(
+  product: OffProductOutcome,
+  rawInput: unknown = { off_code: offCode },
+) {
+  const { caller, calls } = stubCaller({});
+  const { offLookup, calls: liveCalls } = fakeOffLookup({ product });
+  const { ctx } = createFakeContext([getFoodTool]);
+  const result = await executeTool({ ...ctx, caller, offLookup }, "get_food", rawInput);
+  return { result, calls, liveCalls };
+}
+
+Deno.test("get_food by off_code answers the stored food with its id and portions", async () => {
+  const { result, calls, liveCalls } = await fetchByOffCode({
+    status: "ok",
+    food: storedOffFood,
+    portions: [
+      { ...portionRow("1 pack", 400, 0), food_id: foodId },
+      { ...portionRow("1 serving", 200, 1), food_id: foodId },
+    ],
+  });
+
+  assertEquals(liveCalls, [{ method: "product", argument: offCode }]);
+  assertEquals(calls, []);
+  assertEquals(payloadOf(result), {
+    id: foodId,
+    name: "Beef massaman curry",
+    brand: "Tasty Co",
+    source: "off",
+    basis: "per_100g",
+    kcal: 140,
+    protein_g: 8,
+    fat_g: 7,
+    carbs_g: 11,
+    fibre_g: 1.2,
+    portions: [
+      { id: portionIdOf(0), label: "1 pack", grams: 400, ml: null },
+      { id: portionIdOf(1), label: "1 serving", grams: 200, ml: null },
+    ],
+  });
+});
+
+Deno.test(
+  "get_food by off_code answers not_found for a code Open Food Facts does not have",
+  async () => {
+    const { result } = await fetchByOffCode({ status: "not_found" });
+
+    assertEquals(payloadOf(result), { error: "not_found" });
+  },
+);
+
+Deno.test(
+  "get_food by off_code answers unavailable when Open Food Facts cannot be reached",
+  async () => {
+    const { result } = await fetchByOffCode({ status: "unavailable" });
+
+    assertEquals(result.status, "ok");
+    assertEquals(payloadOf(result), { error: "unavailable" });
+  },
+);
+
+Deno.test(
+  "get_food by off_code answers unavailable when the context cannot reach Open Food Facts",
+  async () => {
+    const { result } = await fetchFood({}, { off_code: offCode });
+
+    assertEquals(payloadOf(result), { error: "unavailable" });
+  },
+);
+
+Deno.test("get_food accepts the nulls a model sends for the field it leaves out", async () => {
+  const byId = await fetchFood({ tables: { foods: [foodRow()] } }, { id: foodId, off_code: null });
+  assertEquals(byId.result.status, "ok");
+  const byCode = await fetchByOffCode({ status: "not_found" }, { id: null, off_code: offCode });
+  assertEquals(payloadOf(byCode.result), { error: "not_found" });
+  assertEquals(byCode.liveCalls, [{ method: "product", argument: offCode }]);
+});
+
+Deno.test("get_food names off_code as the field when neither or both are given", async () => {
+  for (const input of [{}, { id: foodId, off_code: offCode }]) {
+    const { result } = await fetchByOffCode({ status: "not_found" }, input);
+    assertEquals(result.status === "error" ? result.code : null, "invalid_input");
+    assertStringIncludes(result.text, "off_code");
+  }
+});
+
+Deno.test("get_food needs exactly one of id and off_code", async () => {
+  for (const input of [{}, { id: null, off_code: null }, { id: foodId, off_code: offCode }]) {
+    const { result, calls, liveCalls } = await fetchByOffCode({ status: "not_found" }, input);
+
+    assertEquals(
+      result.status === "error" ? result.code : null,
+      "invalid_input",
+      JSON.stringify(input),
+    );
+    assertEquals(calls, []);
+    assertEquals(liveCalls, []);
+  }
+});
+
+Deno.test("get_food rejects an off_code that is not 8 to 14 digits", async () => {
+  for (const code of ["massaman", "1234567", "123456789012345", "5000000000017x", 5000000000017]) {
+    const { result, liveCalls } = await fetchByOffCode({ status: "not_found" }, { off_code: code });
+
+    assertEquals(result.status === "error" ? result.code : null, "invalid_input", String(code));
+    assertEquals(liveCalls, []);
+  }
+});
+
+Deno.test(
+  "get_food says what off_code is, and its schema says exactly one of id and off_code",
+  () => {
+    assertStringIncludes(getFoodTool.description, "off_code");
+    assertStringIncludes(getFoodTool.description, "unavailable");
+    const properties = toJsonSchema(getFoodTool)["properties"];
+    assert(typeof properties === "object" && properties !== null && "off_code" in properties);
+    assertStringIncludes(JSON.stringify(properties["off_code"]), "exactly one of id and off_code");
+    assertStringIncludes(JSON.stringify(properties["off_code"]), "8 to 14 digits");
+    assertEquals(JSON.stringify(properties).includes("The id of a food."), true);
+  },
+);

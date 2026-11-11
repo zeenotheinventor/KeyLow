@@ -182,6 +182,57 @@ Deno.test("the strict tools of the registry stay inside what one request may hol
   assert(budget.unionParameters <= strictLimits.unionParameters, JSON.stringify(budget));
 });
 
+// The keywords a strict schema refuses, which the renderer leaves out of what the model sees.
+const keywordsLeftOut = [
+  "minimum",
+  "maximum",
+  "minLength",
+  "maxLength",
+  "minItems",
+  "maxItems",
+  "pattern",
+  "format",
+];
+
+function strictSchemaProblems(schema: unknown, place: string): string[] {
+  if (!isSchema(schema)) {
+    return [];
+  }
+  const problems = keywordsLeftOut
+    .filter((keyword) => keyword in schema)
+    .map((keyword) => `${place} has ${keyword}`);
+  const properties = isSchema(schema["properties"]) ? schema["properties"] : undefined;
+  if (properties !== undefined) {
+    const required = Array.isArray(schema["required"]) ? schema["required"] : [];
+    if (JSON.stringify([...required].sort()) !== JSON.stringify(Object.keys(properties).sort())) {
+      problems.push(`${place} does not require every property`);
+    }
+    if (schema["additionalProperties"] !== false) {
+      problems.push(`${place} is not closed`);
+    }
+  }
+  const children = [
+    ...Object.entries(properties ?? {}).map(([key, child]) => [`${place}.${key}`, child] as const),
+    [`${place}[]`, schema["items"]] as const,
+    ...(Array.isArray(schema["anyOf"])
+      ? schema["anyOf"].map((branch, index) => [`${place}|${index}`, branch] as const)
+      : []),
+  ];
+  return [
+    ...problems,
+    ...children.flatMap(([childPlace, child]) => strictSchemaProblems(child, childPlace)),
+  ];
+}
+
+Deno.test(
+  "every strict tool is sent with every property required, objects closed and no refused keyword",
+  () => {
+    for (const tool of toolRegistry.list.filter((candidate) => candidate.strict !== false)) {
+      assertEquals(strictSchemaProblems(toJsonSchema(tool), tool.name), []);
+    }
+  },
+);
+
 Deno.test("update_recipe opts out of strict mode and the other recipe writes do not", () => {
   const strictOf = (name: string) => toolRegistry.get(name)?.strict;
 
@@ -189,6 +240,13 @@ Deno.test("update_recipe opts out of strict mode and the other recipe writes do 
   assertEquals(strictOf("create_recipe"), undefined);
   assertEquals(strictOf("archive_recipe"), undefined);
 });
+
+Deno.test(
+  "get_food opts out of strict mode, which keeps the union budget off the API's cap",
+  () => {
+    assertEquals(toolRegistry.get("get_food")?.strict, false);
+  },
+);
 
 Deno.test("create_custom_food opts out of strict mode and update_targets does not", () => {
   const strictOf = (name: string) => toolRegistry.get(name)?.strict;
@@ -261,10 +319,10 @@ Deno.test(
 );
 
 Deno.test(
-  "the strict budget of the real registry is 16 tools, 0 optional and 14 union parameters",
+  "the strict budget of the real registry is 15 tools, 0 optional and 14 union parameters",
   () => {
     assertEquals(strictBudgetOf(toolRegistry.list), {
-      tools: 16,
+      tools: 15,
       optionalParameters: 0,
       unionParameters: 14,
     });

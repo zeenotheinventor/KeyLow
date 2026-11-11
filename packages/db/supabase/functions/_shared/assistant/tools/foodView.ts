@@ -3,7 +3,7 @@
 // tool, and a column added to `foods` later reaches the model only by being added here.
 import { isOurEstimate } from "../../core.ts";
 
-import type { Food, FoodPortion } from "../../core.ts";
+import type { Food, FoodPortion, OffCandidate } from "../../core.ts";
 
 type FoodFields = {
   id: string;
@@ -55,4 +55,19 @@ export const foodView = (food: FoodFields, portions: readonly FoodPortion[] | nu
             isOurEstimate({ ...food, food_group: food.food_group ?? null }, portion, portions),
           ),
         ),
+});
+
+// A live Open Food Facts candidate. It is not a food yet, so it has no id and no portions: `off_code` is
+// what `get_food` takes to store it and answer it as a food. Its default portion is left out on purpose,
+// because the stored food carries the portions the model logs with.
+export const liveView = (candidate: OffCandidate) => ({
+  off_code: candidate.code,
+  name: candidate.name,
+  brand: candidate.brand,
+  basis: candidate.basis,
+  kcal: candidate.kcal,
+  protein_g: candidate.protein_g,
+  fat_g: candidate.fat_g,
+  carbs_g: candidate.carbs_g,
+  fibre_g: candidate.fibre_g,
 });

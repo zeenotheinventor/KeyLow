@@ -14,6 +14,7 @@ import { createToolServer } from "./server.ts";
 
 import type { ExecutionResult } from "../_shared/assistant/executor.ts";
 import type { ActionStore } from "../_shared/assistant/store.ts";
+import type { OffLookup } from "../_shared/assistant/offLookup.ts";
 import type { RecipeImportServices } from "../_shared/assistant/recipeParse.ts";
 import type { ToolContext, ToolRegistry } from "../_shared/assistant/tool.ts";
 import type { Database } from "../_shared/core/database.types.ts";
@@ -31,6 +32,9 @@ export type McpDependencies = {
   // The page fetch and the parse call of `import_recipe_from_url`. A test that does not call that tool leaves
   // it out, and then the tool answers `tool_failed`.
   recipeImport?: RecipeImportServices;
+  // The lookup behind `search_foods` and `get_food` by `off_code`, made from the request so that it calls
+  // `off-search` and `off-product` under the caller's own JWT. A test that does not need it leaves it out.
+  offLookup?(request: Request): OffLookup;
   now(): Date;
   report: ReportError;
 };
@@ -83,6 +87,7 @@ export function createMcpEndpoint(
     localMoment: { localDate: string; localTime: string | null },
   ): Promise<Response> {
     const caller = dependencies.caller(request);
+    const offLookup = dependencies.offLookup?.(request);
     const allowedTools = allowedToolsOf(request);
 
     async function callTool(name: string, rawInput: unknown): Promise<ExecutionResult> {
@@ -131,6 +136,7 @@ export function createMcpEndpoint(
         ...(dependencies.recipeImport === undefined
           ? {}
           : { recipeImport: dependencies.recipeImport }),
+        ...(offLookup === undefined ? {} : { offLookup }),
       };
       return await executeTool(context, name, rawInput);
     }

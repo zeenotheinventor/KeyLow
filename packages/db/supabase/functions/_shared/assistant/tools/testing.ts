@@ -1,6 +1,7 @@
 // Stand-ins for the food read tools' tests: a caller client that answers from rows kept in memory and
 // records what was asked of it. Nothing in production imports this.
 import type { Database } from "../../core/database.types.ts";
+import type { OffLookup, OffProductOutcome, OffSearchOutcome } from "../offLookup.ts";
 import type { ExecutionResult } from "../executor.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -159,4 +160,20 @@ export function listOf(result: ExecutionResult, key: string): Record<string, unk
     throw new Error(`No list under ${key}`);
   }
   return list.filter(isRecord);
+}
+
+// An `OffLookup` that answers each call with the outcome given and records what it was asked.
+export function fakeOffLookup(answers: { search?: OffSearchOutcome; product?: OffProductOutcome }) {
+  const calls: { method: "search" | "product"; argument: string }[] = [];
+  const offLookup: OffLookup = {
+    search(terms) {
+      calls.push({ method: "search", argument: terms });
+      return Promise.resolve(answers.search ?? { status: "unavailable" });
+    },
+    product(code) {
+      calls.push({ method: "product", argument: code });
+      return Promise.resolve(answers.product ?? { status: "unavailable" });
+    },
+  };
+  return { offLookup, calls };
 }

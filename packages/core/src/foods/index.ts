@@ -56,6 +56,7 @@ export {
 } from "./offSearchStore";
 export type { OffSearchRowState, StoredOffSearch } from "./offSearchStore";
 export { MEASURE_ONLY_PORTION_LABEL, deriveOffPortions } from "./deriveOffPortions";
+export { hasStrongFoodMatch } from "./strongFoodMatch";
 export { withDefaultPortion } from "./withDefaultPortion";
 export { NATURAL_UNIT_PROCESSED_TAGS, NATURAL_UNIT_TYPES, naturalUnitsFor } from "./naturalUnits";
 export type { NaturalUnitPortion, NaturalUnitType } from "./naturalUnits";
