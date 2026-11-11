@@ -14,6 +14,7 @@ const rows = parseRestaurantCsv(
 
 /** The chain's own site. Anything else, a price comparison or a nutrition aggregator, is not a source. */
 const CHAIN_DOMAINS: Readonly<Record<string, string>> = {
+  "Burger King": "burgerking.co.uk",
   "McDonald's": "mcdonalds.com",
   KFC: "kfc.co.uk",
   Greggs: "greggs.co.uk",
@@ -140,6 +141,59 @@ describe("restaurant-foods.csv", () => {
         protein_g: 23,
         fat_g: 22,
         carbs_g: 43,
+      });
+    });
+  });
+
+  describe("Burger King", () => {
+    const burgerKingRows = rows.filter((row) => row.chain === "Burger King");
+
+    it("should hold its published figures in wave 3, each with the weight the PDF gives", () => {
+      expect(burgerKingRows.length).toBeGreaterThan(0);
+      for (const row of burgerKingRows) {
+        expect(row.wave, row.ref).toBe(3);
+        expect(row.weight_basis, row.ref).toBe("published");
+        expect(deriveFood(row).basis, row.ref).toBe("per_100g");
+      }
+    });
+
+    it("should store a nutrient the PDF prints as <0.5 as blank, not as a number", () => {
+      expect(
+        burgerKingRows.find((row) => row.ref === "burgerking-gb:chicken-nuggets-6"),
+      ).toMatchObject({
+        portion_label: "1 box of 6",
+        portion_grams: 100,
+        kcal: 255,
+        fibre_g: null,
+      });
+      expect(burgerKingRows.find((row) => row.ref === "burgerking-gb:fries-regular")).toMatchObject(
+        {
+          portion_label: "1 regular fries",
+          portion_grams: 116,
+          kcal: 275,
+          sugars_g: null,
+        },
+      );
+    });
+
+    it("should keep the fibre the PDF prints on the serving line of the 9 and 20 piece nuggets", () => {
+      expect(
+        burgerKingRows.find((row) => row.ref === "burgerking-gb:chicken-nuggets-9")?.fibre_g,
+      ).toBe(0.7);
+      expect(
+        burgerKingRows.find((row) => row.ref === "burgerking-gb:chicken-nuggets-20")?.fibre_g,
+      ).toBe(1.5);
+    });
+
+    it("should give the Whopper the figures Burger King publishes for one Whopper", () => {
+      expect(burgerKingRows.find((row) => row.ref === "burgerking-gb:whopper")).toMatchObject({
+        name: "Whopper",
+        portion_label: "1 burger",
+        portion_grams: 287,
+        kcal: 595,
+        protein_g: 29,
+        fat_g: 30,
+        carbs_g: 53,
       });
     });
   });
