@@ -6,6 +6,7 @@ export const samples: Record<string, () => string[]> = {
   describeFormVideoLink: () => [
     copy.describeFormVideoLink("Barbell back squat", "Strength Basics"),
   ],
+  describeFormAndMusclesButton: () => [copy.describeFormAndMusclesButton("Barbell back squat")],
   describeFormPhoto: () => [
     copy.describeFormPhoto("Barbell back squat", "start"),
     copy.describeFormPhoto("Barbell back squat", "end"),

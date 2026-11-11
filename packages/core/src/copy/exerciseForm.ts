@@ -27,3 +27,13 @@ export const describeFormVideoLink = (title: string, channel: string): string =>
 /** The name of one photo of an exercise. */
 export const describeFormPhoto = (exerciseName: string, position: FormPhotoPosition): string =>
   `${exerciseName}, ${position} position`;
+
+/** The routine editor's way to the exercise sheet, where the sheet shows the form guide and the muscles. */
+export const ROUTINE_EXERCISE_FORM = {
+  /** The first item of an exercise's menu. */
+  menuAction: "Form and muscles",
+} as const;
+
+/** The name of the exercise's name button in a routine row: it opens the sheet. */
+export const describeFormAndMusclesButton = (exerciseName: string): string =>
+  `${ROUTINE_EXERCISE_FORM.menuAction}, ${exerciseName}`;

@@ -18,6 +18,7 @@ export function RoutineDayExercises({
   registerRow,
   onChangeField,
   onOpenMenu,
+  onOpenExercise,
   onAdd,
 }: RoutineDayExercisesProps) {
   return (
@@ -53,6 +54,9 @@ export function RoutineDayExercises({
           setsText={exercise.setsText}
           onChangeField={(field, text) => {
             onChangeField(exercise.key, field, text);
+          }}
+          onOpenExercise={() => {
+            onOpenExercise(exercise.key);
           }}
           onOpenMenu={() => {
             onOpenMenu(exercise.key);

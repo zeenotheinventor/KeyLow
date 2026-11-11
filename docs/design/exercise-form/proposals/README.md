@@ -48,7 +48,18 @@ The live workout's exercise sheet (the "Muscles it works" sheet the exercise car
 
 ### routine-editor-exercise
 
-Drawn by KEY-961.
+How a person reaches the exercise sheet from the routine editor, and the sheet over the editor. One board, 820 by 844 at device pixel ratio 2. The left frame is dark and draws the way in: the editor with the Legs day open and an exercise's menu open over it. The right frame is light and draws the sheet open over the editor with the video card. The sheet is the one `session-exercise-sheet` draws, so its photos, loading and unavailable states, and its dark theme, are on those boards and are not repeated here.
+
+![routine-editor-exercise](routine-editor-exercise.png)
+
+Open [routine-editor-exercise.html](routine-editor-exercise.html) in a browser.
+
+- **The name is the button.** The exercise name in the row becomes a pressable, as the name is in the workout's exercise card, named "Form and muscles, <exercise>". It is drawn as the name has always been, with no underline, icon or colour, so the row looks as it did and the table stays quiet. Its press area is the whole name column, 48 points high.
+- **The columns do not move.** The name column is the flexible one and the sets, reps and RIR columns keep their 48, 84 and 48 points with 6 between, so they line up with the column heads. The row stays 48 points high (the board measures all six rows at 48). The name already ends in an ellipsis when it is long, and a press on that ellipsis opens the sheet, which shows the full name.
+- **The menu item is the way people find it.** A plain name does not look pressable, so the row's menu has "Form and muscles" at the top, above Move up, Move down and Remove, with the body glyph the workout card's button uses. Pressing it closes the menu and opens the sheet. Both ways open the same sheet for the same exercise.
+- **The sheet.** The same sheet as the workout's, with no second component. It reads the muscles itself and the form media only while it is open. A custom exercise shows its muscles and no form card (the brief loading card of the workout sheet applies here too).
+- **Closing and the draft.** Closing the sheet, or coming back from YouTube, leaves the editor as it was: the sheet holds no draft state and the editor never unmounts.
+- **Words.** The menu item and the name button's name come from `packages/core/src/copy/exerciseForm.ts`. The board uses a neutral placeholder, never a real thumbnail.
 
 ### assistant-card
 
