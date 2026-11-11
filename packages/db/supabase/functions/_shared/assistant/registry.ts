@@ -35,6 +35,7 @@ import { archiveRoutineTool } from "./tools/archiveRoutine.ts";
 import { updatePastSetTool } from "./tools/updatePastSet.ts";
 import { updateTrainingGoalsTool } from "./tools/updateTrainingGoals.ts";
 import { archiveCustomExerciseTool } from "./tools/archiveCustomExercise.ts";
+import { requestFeatureTool } from "./tools/requestFeature.ts";
 import { saveCustomExerciseTool } from "./tools/saveCustomExercise.ts";
 import { deleteWorkoutTool } from "./tools/deleteWorkout.ts";
 import { showExerciseFormTool } from "./tools/showExerciseForm.ts";
@@ -107,6 +108,7 @@ const toolDefinitions: readonly ToolDefinition[] = [
   deleteWorkoutTool,
   showExerciseFormTool,
   estimatePortionsTool,
+  requestFeatureTool,
   askUserTool,
 ];
 

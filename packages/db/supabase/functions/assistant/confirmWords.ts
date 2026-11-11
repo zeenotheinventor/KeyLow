@@ -15,6 +15,7 @@ import {
   confirmRemoveExercisesButtons,
   confirmArchiveExerciseButtons,
   confirmDeleteWorkoutButtons,
+  confirmFeatureRequestButtons,
 } from "../_shared/core.ts";
 
 export type ConfirmWords = {
@@ -33,6 +34,7 @@ const archiveRoutineInput = z.object({ routine_id: z.string() });
 const deleteWorkoutInput = z.object({ session_id: z.string() });
 const editRoutineInput = z.object({ changes: z.array(z.object({ op: z.string() })) });
 const archiveCustomExerciseInput = z.object({ id: z.string() });
+const requestFeatureInput = z.object({ request: z.string(), unsupported: z.string() });
 
 // The buttons of `update_targets` name the number the person keeps, which the tool's input holds as
 // `current_kcal`. `needsConfirmation` reads the person's own number and refuses a call that disagrees, so a
@@ -102,6 +104,13 @@ const wordsByTool: ReadonlyMap<string, WordsFor> = new Map<string, WordsFor>([
     (input) =>
       deleteWorkoutInput.safeParse(input).success
         ? { ...confirmDeleteWorkoutButtons(), tone: "danger" }
+        : null,
+  ],
+  [
+    "request_feature",
+    (input) =>
+      requestFeatureInput.safeParse(input).success
+        ? { ...confirmFeatureRequestButtons(), tone: "primary" }
         : null,
   ],
 ]);

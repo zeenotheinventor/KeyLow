@@ -12,6 +12,7 @@ export const EVAL_SET_NAMES = [
   "trainingEdits",
   "trainingKnowledge",
   "mealEstimate",
+  "featureRequest",
 ] as const;
 
 export type EvalSetName = (typeof EVAL_SET_NAMES)[number];
@@ -37,15 +38,18 @@ export const THRESHOLD_PERCENT: Readonly<Record<EvalSetName, number>> = {
   trainingKnowledge: 90,
   /** Described meals logged from estimate_portions (KEY-966). Its own set so it can be dispatched alone, under the 300,000 token budget of a run. */
   mealEstimate: 80,
+  /** The assistant offers a feature request when Ki-Lo has no such feature, and sends it only on the button (KEY-977). */
+  featureRequest: 90,
 };
 
 /**
  * The sets a run with no `--set` leaves out, because they would take it past the 300,000 token budget the other
- * sets share, or because they are run on demand (KEY-952, KEY-966). They run when named (`--set trainingEdits`), as the
+ * sets share, or because they are run on demand (KEY-952, KEY-966, KEY-977). They run when named (`--set trainingEdits`), as the
  * workflow's `sets` input does.
  */
 export const OPT_IN_SET_NAMES: readonly EvalSetName[] = [
   "trainingEdits",
   "trainingKnowledge",
   "mealEstimate",
+  "featureRequest",
 ];

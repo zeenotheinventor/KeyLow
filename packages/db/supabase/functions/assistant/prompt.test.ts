@@ -123,7 +123,7 @@ Deno.test(
       `Replies\nStart with the thing itself, as in "Your bench has stayed at the same weight."`,
       'For a limit, write "Starting a workout is done on the Train tab." For nothing found, write "No overhead press sets are logged."',
       'For an offer to look at something else, ask a question or name the next step, as in "Ask about shoulder press to see that one." A question about a clear change never stands in for the change.',
-      "Answer only the question asked, and add no offer the person did not ask for, such as logging food, except the offer to make a built routine active.",
+      "Answer only the question asked, and add no offer the person did not ask for, such as logging food, except the offer to make a built routine active and the offer to send a feature request.",
     ]) {
       assert(SYSTEM_PROMPT.includes(rule), `the system prompt does not hold: ${rule}`);
     }
@@ -420,7 +420,7 @@ Deno.test("a general training question is answered from general knowledge, brief
 Deno.test("the tools-cannot rule leaves general training questions to Training questions", () => {
   assert(
     SYSTEM_PROMPT.includes(
-      "When the tools cannot do what was asked, say so in one short sentence and do not try another way. A general weight training question is answered under Training questions.",
+      "When the tools cannot do what was asked, say so in one short sentence and do not try another way. When Ki-Lo has no such feature at all, also call request_feature to offer sending it as a feature request. A general weight training question is answered under Training questions.",
     ),
   );
 });

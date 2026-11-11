@@ -16,6 +16,11 @@ export type AllowlistInput = {
 
 const importToolName = "import_recipe_from_url";
 
+// The one write the read set holds (ADR 0006, Amendment 4). A question about a feature Ki-Lo lacks is
+// read-shaped, and the offer to send a feature request is needed exactly then. It is safe here because it
+// writes only after the person presses its confirm button and touches no diary or training row.
+const featureRequestToolName = "request_feature";
+
 // The tools a recipe link needs, each only if it is listed.
 const recipeImportTools: ReadonlySet<string> = new Set([
   importToolName,
@@ -132,7 +137,7 @@ export function allowedToolsFor({
       return recipeImportTools.has(tool.name);
     }
     if (looksLikeRead(text)) {
-      return tool.readOnlyHint;
+      return tool.readOnlyHint || tool.name === featureRequestToolName;
     }
     return tool.name !== importToolName;
   };

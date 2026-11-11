@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted when the pull request that carries it merges. Written on 2026-10-26 under KEY-662, part of KEY-185 (the M8 brief). The tables, columns and functions it needs are in ADR 0003, Amendment 14. Every M8 migration waits for both documents. Amended on 2026-11-07 under KEY-883, part of KEY-881 (the brief for weight training): see Amendment 1, Amendment 2 and Amendment 3 at the end. Two decisions in it were taken by the orchestrator while Zee was away, for his review, and are marked as such.
+Accepted when the pull request that carries it merges. Written on 2026-10-26 under KEY-662, part of KEY-185 (the M8 brief). The tables, columns and functions it needs are in ADR 0003, Amendment 14. Every M8 migration waits for both documents. Amended on 2026-11-07 under KEY-883, part of KEY-881 (the brief for weight training): see Amendment 1, Amendment 2, Amendment 3 and Amendment 4 at the end. Two decisions in it were taken by the orchestrator while Zee was away, for his review, and are marked as such.
 
 ## Context
 
@@ -414,3 +414,42 @@ The app's food search shows the catalogue and then live Open Food Facts rows. Th
 ### Implemented by
 
 - KEY-967, the strong match rule, the lookup, the two tools, the prompt section and this amendment.
+
+## Amendment 4 to this ADR: the assistant offers a feature request (2026-11-11)
+
+### Status
+
+Recorded on 2026-11-11 under KEY-977, the second of the two feature request tickets (KEY-976 added the table, the core schemas and `createFeatureRequest`, which ADR 0003, Amendment 21 describes). It adds one tool, one card kind, one prompt clause and one eval set. It adds no table, column or migration.
+
+### Context
+
+Zee, 2026-11-11: when the assistant cannot do something because the app does not support it, it should ask whether the person wants to request it as a new feature, and then send it into a feature request database along with the context of it being raised.
+
+### Decision
+
+- **The existing confirmation protocol is the explicit OK.** `request_feature` is a `kind: "write"` tool (`targetTable: "feature_requests"`) whose `needsConfirmation` always answers a question. The model says in one sentence that Ki-Lo has no such feature and, in the same response, calls the tool. The executor answers `needs_confirmation`, and the app shows the confirm card with the model's sentence, the line "A short part of this chat goes with it, and stays even if the chat is deleted." and the buttons Send request and No thanks. When the model wrote no text, the card asks "Send this to the Ki-Lo team as a feature request?". Nothing is written until the person presses Send request or types its words, and then the turn loop makes the stored call itself with no model call (`assistant/confirmedCall.ts`, Guards above). Any other answer writes nothing. This gives one offer and one tap with no double confirmation, and a model cannot file a request on its own.
+- **An exception to the read-shaped allowlist (a).** A message that looks like a read gets the read-only set. "Is there a dark mode in Ki-Lo?" is read-shaped, and the tool would be missing exactly when it is most needed. `allowedToolsFor` therefore adds `request_feature` to the read set by name, the way the recipe-import set names its tools. This is the one write the read set holds. It is safe there because the tool writes only after the button and touches no diary or training row. It is not added to the recipe-import set.
+- **When to offer.** Only when Ki-Lo as a whole has no such feature, such as water tracking, photo logging or sharing with a coach. Not when the feature exists elsewhere in the app (the rule in Replies stands: say where it is done, for example the Train tab). Not for the medical and injury limits, not after a tool error or `tool_not_allowed`, not when the person already declined in the conversation, and at most once for one ask. The prompt carries two short clauses (below) and the tool description carries the rest.
+- **Input.** `{ request: string of 3 to 300 characters, the feature in the person's terms, unsupported: string of 3 to 200 characters, what Ki-Lo cannot do }`, plus the `confirmation_id` the protocol adds. The tool opts out of `strict` (as the training tools do) because its `confirmation_id` would be the 15th of the union parameters a request may hold, over the cap in `registry.test.ts`. The executor validates every input with the same zod schema either way, and the strict budget of the registry stays at 15 tools, 0 optional and 14 union parameters.
+- **The context is built in core, never by the model.** `buildFeatureRequestContext` (`packages/core/src/assistant/featureRequestContext.ts`) is a pure function. `run` reads the newest 12 `assistant_messages` rows of the turn's conversation under the caller's JWT, so row-level security scopes them, and passes them with the confirm button's words and the tool input. It returns the `FeatureRequestContext` of ADR 0003, Amendment 21. `ask` is the person's latest own words that are not the button's, and `recent` is the last 6 text messages in order. A user message contributes only its own words block (the last block when it is text), never the context block the turn loop adds. An assistant message contributes its `text` blocks only, never `tool_use`, `tool_result` or thinking. Each is trimmed and cut to 500 characters by code point, and `unsupported` to 200. No tool call, tool result, context block or id can be in it, which the core unit tests prove. The press of the button is itself in `recent`, because it is one of the last messages.
+- **The card.** A new kind, `feature_requested`, with the icon `MessageSquareText` and the tone `secondary`, built by `buildFeatureRequestedCard` and worded in `copy/assistantFeatureRequest.ts`. Title "Feature request sent", sub the request text, `undo: "unavailable"`, `undoneSub: null`, no link. The tool is in `ASSISTANT_TOOLS_WITHOUT_UNDO` and has `inverse: null`, because a client cannot delete a request. The existing `AssistantActionCard` draws it with no new component. **No board draws this confirmation or this card.** The words and the layout are flagged to Zee as a small design gap, and nothing was invented beyond the existing card.
+- **Privacy.** The tool's `data` back to the model is only `{ sent: true }`. The request text and the context are never logged, reported through `ctx.reportError`, added to a Sentry breadcrumb or sent to analytics. A repo error carries the action and a code, so a failure answers `tool_failed` with that and nothing else. The daily cap of the table (20 in 24 hours, ADR 0003, Amendment 21) is answered to the model as `{ error: "rate_limited" }`, which it words as too many requests today, and no action is kept.
+
+### The prompt
+
+The system prompt is near its limit (`promptPrefix.test.ts`, 60% of the compaction threshold). The addition is two short clauses. In "What you can use", after "When the tools cannot do what was asked, say so in one short sentence and do not try another way.", one sentence: "When Ki-Lo has no such feature at all, also call request_feature to offer sending it as a feature request." In "Replies", the exception "except the offer to make a built routine active" now also allows the offer to send a feature request. The Limits section is untouched. The threshold is not raised: the prefix estimate went from about 26,430 to about 26,840 tokens against a limit of 27,600.
+
+### Evals
+
+A new opt-in set, `featureRequest`, with 8 cases at a threshold of 90% (`tools/assistant-evals/cases/featureRequest.ts`): the offer with nothing written, the button's words writing one row with the right context and no model call, a decline writing nothing, a read-shaped ask with no change word or request phrase ("Does Ki-Lo let me share my diary with a coach?") that still offers, which proves the allowlist exception and is pinned by a unit test against the real allowlist, no offer for a supported feature, for a feature elsewhere in the app or for a medical ask, and a red-team case where a food name tells the model to file a request and no row is written without the button. The set runs on demand with `--set featureRequest`, and every grader is unit tested with no model call.
+
+### Consequences
+
+- The registry has 39 tools. The tool description and the prompt clauses grow the prefix by about 1,200 characters, which the prefix test counts.
+- A request holds a short part of the chat, so it is health data (ADR 0003, Amendment 21). It stays when the conversation is deleted, and the confirm card says so before the person presses the button.
+- A model can still offer when it should not, and the person then presses nothing. The cost of a wrong offer is one card, and the evals measure how often it happens.
+- A board for the confirmation and the card is still needed from the designers. Until then the words are a draft in the style of the existing cards, marked NOT ON THE CANVAS in `copy/assistantFeatureRequest.ts`.
+
+### Implemented by
+
+- KEY-977, the tool, the context builder, the card, the copy, the allowlist exception, the prompt clauses, the eval set and this amendment.

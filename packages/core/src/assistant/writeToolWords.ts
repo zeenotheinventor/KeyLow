@@ -50,6 +50,7 @@ export const ASSISTANT_WRITE_TOOL_CARD_KINDS = {
   archive_custom_exercise: "exercise_archived",
   update_past_set: "set_updated",
   delete_workout: "workout_deleted",
+  request_feature: "feature_requested",
 } as const satisfies Record<string, AssistantCardKind>;
 
 export type AssistantWriteTool = keyof typeof ASSISTANT_WRITE_TOOL_CARD_KINDS;
@@ -59,11 +60,13 @@ export const isAssistantWriteTool = (tool: string): tool is AssistantWriteTool =
 
 /**
  * The write tools whose Undo is off in M8 (ADR 0006, Guards): an edit keeps no previous value to go
- * back to. The thread and the changes list both read this one set.
+ * back to, and a client cannot delete a feature request it sent. The thread and the changes list both read
+ * this one set.
  */
 export const ASSISTANT_TOOLS_WITHOUT_UNDO: ReadonlySet<string> = new Set([
   "update_entry",
   "update_recipe",
+  "request_feature",
 ]);
 
 /**
@@ -357,6 +360,7 @@ const plainTitles: Record<AssistantCardKind, (count: number) => string> = {
   exercise_archived: () => "Archived an exercise",
   set_updated: (count) => (count === 1 ? "Changed a set" : `Changed ${count} sets`),
   workout_deleted: () => "Deleted a workout",
+  feature_requested: () => "Sent a feature request",
 };
 
 /** The title and detail of one row of "What the assistant changed". */

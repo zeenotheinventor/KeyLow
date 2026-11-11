@@ -24,6 +24,12 @@ describe("describeAssistantCard, the icon of each kind", () => {
     ["the food created card", foodCreatedCard, "Apple", "success"],
     ["the targets changed card", targetsChangedCard, "Target", "secondary"],
     ["the deleted card", deletedCard, "Trash2", "secondary"],
+    [
+      "the feature requested card",
+      { ...deletedCard, kind: "feature_requested" },
+      "MessageSquareText",
+      "secondary",
+    ],
   ] as const)("should give %s its board's icon and tone", (_name, card, icon, tone) => {
     expect(describeAssistantCard(card)).toMatchObject({ icon, iconTone: tone });
   });
