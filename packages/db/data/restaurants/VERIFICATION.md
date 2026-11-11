@@ -2,14 +2,14 @@
 
 This is the written record of where each restaurant food in `restaurant-foods.csv` comes from, how it was read and what was left out. The rules for a row are in KEY-940 and ADR 0003 Amendment 18. The CSV holds facts only: numbers, the item's name, a URL and a date. No page, PDF, image or marketing text is copied into the repository.
 
-Every figure was read from the chain's own UK source on **2026-11-10**, the `retrieved_on` of every row. Figures on a chain's page change, so that date is the claim, and refreshing them is a later wave. No third-party site, no other country's site, Open Food Facts and no memory was used for any value.
+Every figure was read from the chain's own UK source on **2026-11-10**, the `retrieved_on` of every row, except Burger King (wave 3), read on **2026-11-11**. Figures on a chain's page change, so that date is the claim, and refreshing them is a later wave. No third-party site, no other country's site, Open Food Facts and no memory was used for any value.
 
 ## Method
 
 - Each source was fetched with `curl` and a plain User-Agent that says what the client is (`KeyLowDataBot/1.0 (nutrition data check; honest client)`). No client was disguised.
 - The CSV columns hold the per portion figures as published, and `portion_grams` holds the weight the chain publishes for that portion (`weight_basis` is `published`). No weight was derived or estimated. Wave 2 rows have no weight (`weight_basis` is `none`, `portion_grams` is blank), and are stored per portion with the figures as published.
 - `published_kcal_per_100g` is the chain's own per 100 g energy figure, kept only so a test can check the weight and the per portion energy against each other. The generator works out the per 100 g columns itself, as the per portion figure times 100 over the grams, to two decimals.
-- Every one of the 64 rows passes the checks in `test/unit/restaurant/restaurantFoodsCsv.test.ts`, which run in CI: energy within 15% of 4 x protein + 4 x carbohydrate + 9 x fat + 2 x fibre, the generated per 100 g energy within 2% of the published per 100 g energy, and the other rules of the ticket.
+- Every one of the 81 rows passes the checks in `test/unit/restaurant/restaurantFoodsCsv.test.ts`, which run in CI: energy within 15% of 4 x protein + 4 x carbohydrate + 9 x fat + 2 x fibre, the generated per 100 g energy within 2% of the published per 100 g energy, and the other rules of the ticket.
 - A figure the chain rounds (Greggs prints two significant figures) is stored as printed.
 
 ## Chains
@@ -21,7 +21,7 @@ Every figure was read from the chain's own UK source on **2026-11-10**, the `ret
 | Subway        | 8    | https://www.subway.com/en-gb/menunutrition/nutrition                                  | The "Nutrition Information November 2026, UK and ROI" PDF the page links. The Subs table gives the serving size in g and the values per serving, which is one six-inch sub, and per 100 g. Footlongs are out. |
 | McDonald's    | 17   | https://www.mcdonalds.com/gb/en-gb/product/<item>.html                                | Wave 2. The "Nutritional Information Per Portion" table of each product page, read in a browser session (see below). No weight is published.                                                                  |
 | KFC           | 17   | https://brand-uk.assets.kfc.co.uk/nutrition-allergens.pdf                             | Wave 2. The "Allergen & Nutrition Information November 2026" PDF on KFC UK's own asset host. It gives energy, fat, saturates, carbohydrate, sugars, protein and salt per item, and no weight.                 |
-| Burger King   | 0    | https://www.burgerking.co.uk/menu                                                     | Nothing. The UK site is a script-rendered app with no nutrition in the page a script receives (see below).                                                                                                    |
+| Burger King   | 17   | https://www.burgerking.co.uk/nutritional-info                                         | Wave 3. The nutrition PDF the page links (see below). It gives the serving size in g, and the values per serving and per 100 g.                                                                               |
 | Nando's       | 0    | https://www.nandos.co.uk/food/menu                                                    | Nothing. The UK menu page prints energy only, and no protein, fat or carbohydrate (see below).                                                                                                                |
 
 The Greggs PDF is hosted on the chain's content network, not on `greggs.co.uk`, so `source_url` names the page that links it. The Subway PDF is on `media.subway.com`, which the same page links.
@@ -39,9 +39,20 @@ The PDF is on `brand-uk.assets.kfc.co.uk`, KFC UK's own asset host, and was fetc
 - The PDF's columns are kJ, kcal, fat, saturates, carbohydrate, sugars, protein and salt. Items marked as sold only in Ireland (the fillet rolls), drinks, sauces, desserts and limited time items are out. "Hot Wing" is out because its sugars are printed "<0.5", which is not a figure.
 - Names are KFC's own: "Regular Signature Fries" has the label "1 regular fries", and "Regular Popcorn Chicken" has the label "1 regular popcorn chicken".
 
-### Burger King and Nando's: left out
+### Burger King: read from its PDF (wave 3)
 
-- **Burger King.** `https://www.burgerking.co.uk/nutrition` and `/nutrition-allergens` return the same 2,000 byte application shell as every other path, with no content. The item pages in its sitemap (`/menu/item-...`) are also that shell, and a script receives no nutrition. The nutrition is loaded by the app from a private API, which was not read. No PDF was found on the chain's own domain, and no third-party copy was used.
+`https://www.burgerking.co.uk/nutritional-info` is the "Nutritional info" link in the footer of burgerking.co.uk, and leads to Burger King UK's own PDF on Google Drive, "BKGUK13189-BKG Kit 6 Digital Nutrition-1080x1920_V8.pdf" (file id `18tcyQa41Ux2-Apgy2CWWDACpgIU0EQMR`, 7 pages, image-based, "Country report: United Kingdom", "Report printed: June 2026"). `source_url` names the page that links it. It was fetched on 2026-11-11 with `curl` and the honest User-Agent above, and read from page images.
+
+- It **gives a weight**: the first column of each item is the serving size in g, and every item has a per 100 g line. So every Burger King row has `weight_basis published`, is stored per 100 g, and `published_kcal_per_100g` is the PDF's own per 100 g energy.
+- The columns are serving size, kcal, kJ, fat, saturated fat, sodium, salt, carbohydrate, sugars, fibre and protein. The CSV takes the salt column, not sodium.
+- Names are the PDF's, with the registered mark dropped ("Whopper®" is "Whopper") and "Bacon&Cheese" spaced ("Whopper Bacon & Cheese"). The names of the onion rings are "Onion Rings 6pc" and "Onion Rings 9pc", each its own food because the PDF lists them as separate items. Their per 100 g figures match, so a later wave may fold them into one food with two portions.
+- Nuggets and fries are in. Where the PDF prints "<0.5" the field is blank: "printed as <0.5, stored blank", as KFC's unpublished fibre is. That is fibre for Chicken Nuggets 6pc only (the 9 and 20 pc serving lines print 0.7 g and 1.5 g, and only their per 100 g lines print "<0.5"), and sugars for both Fries sizes. Every other figure is as printed. The PDF lists two fries sizes, regular and small, each its own food. Labels are "1 box of 6", "1 box of 9", "1 box of 20", "1 regular fries" and "1 small fries".
+- Left out because the figure is ambiguous:
+  - **Big King.** Its row is inconsistent as printed (1402 kcal for 358 g, against 3416 kJ and 391 kcal per 100 g), so no energy figure can be trusted.
+  - Everything else on the menu was not chosen: drinks, desserts, dips, sauces, extras, kids items, breakfast, delivery exclusives, loaded and chicken fries, and the sharer boxes. No limited time item was taken.
+
+### Nando's: left out
+
 - **Nando's.** `https://www.nandos.co.uk/food/menu` is a normal page, and prints one energy figure in kcal per item. `https://www.nandos.co.uk/allergens` and its item pages are allergen tables only. No page gave protein, fat, saturates, carbohydrate, sugars or salt, so no complete row could be written. The help centre answered a script with a 403 challenge page. The PDFs on `assets.ctfassets.net` are the US and Canada guides, not UK figures, and were not used.
 
 ### Names
