@@ -13,6 +13,7 @@ import { compileKitStyles } from "../support/kitStyles";
 import { registerAppStyles } from "../support/nativeWindStyles";
 import { resolvedColor } from "../support/themeColor";
 import { viewsDrawn } from "../support/viewsDrawn";
+import { pinClock } from "../support/weighInSheetHarness";
 import {
   createWeightQueryClient,
   resetWeightBackend,
@@ -91,6 +92,12 @@ describe("a row of the Weight list", () => {
     resetRouterMock();
     resetWeightBackend();
     registerAppStyles(kitStyles);
+    // The clock is pinned to 24 Oct so the fixed October fixtures stay inside the list's window.
+    pinClock("2026-10-24T12:00:00Z");
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   it("should draw a heart for a Health Connect reading and a pencil for a manual one", async () => {
