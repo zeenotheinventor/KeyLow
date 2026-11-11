@@ -95,7 +95,7 @@ Deno.test("get_food marks the portion the app generated as estimated", async () 
         food_portions: [portionRow("1 typical serving", 40, 0)],
       },
     },
-    { id: foodId, off_code: null },
+    { id: foodId },
   );
 
   assertEquals(portionsOf(result), [
@@ -141,7 +141,7 @@ Deno.test(
           food_portions: [portionRow("1 bowl", 40, 0), portionRow("1 cup", null, 1)],
         },
       },
-      { id: foodId, off_code: null },
+      { id: foodId },
     );
 
     assertEquals(result.status, "ok");
@@ -171,7 +171,7 @@ Deno.test(
 
 Deno.test("get_food answers not_found when the caller cannot see the food", async () => {
   // Row level security hides another user's food, so the read finds no row.
-  const { result } = await fetchFood({ tables: { foods: [] } }, { id: foodId, off_code: null });
+  const { result } = await fetchFood({ tables: { foods: [] } }, { id: foodId });
 
   assertEquals(result.status, "ok");
   assertEquals(payloadOf(result), { error: "not_found" });
@@ -180,7 +180,7 @@ Deno.test("get_food answers not_found when the caller cannot see the food", asyn
 Deno.test("get_food answers not_found for a food that was deleted", async () => {
   const { result, calls } = await fetchFood(
     { tables: { foods: [foodRow({ deleted_at: "2026-10-20T10:00:00+00:00" })] } },
-    { id: foodId, off_code: null },
+    { id: foodId },
   );
 
   assertEquals(payloadOf(result), { error: "not_found" });
@@ -191,12 +191,7 @@ Deno.test("get_food answers not_found for a food that was deleted", async () => 
 });
 
 Deno.test("get_food rejects an id that is not a uuid and a key it does not know", async () => {
-  for (const input of [
-    { id: "oats", off_code: null },
-    { id: 7, off_code: null },
-    {},
-    { id: foodId, off_code: null, name: "oats" },
-  ]) {
+  for (const input of [{ id: "oats" }, { id: 7 }, {}, { id: foodId, name: "oats" }]) {
     const { result, calls } = await fetchFood({}, input);
     assertEquals(
       result.status === "error" ? result.code : null,
@@ -238,7 +233,7 @@ const storedOffFood: Food = {
 
 async function fetchByOffCode(
   product: OffProductOutcome,
-  rawInput: unknown = { id: null, off_code: offCode },
+  rawInput: unknown = { off_code: offCode },
 ) {
   const { caller, calls } = stubCaller({});
   const { offLookup, calls: liveCalls } = fakeOffLookup({ product });
@@ -299,17 +294,30 @@ Deno.test(
 Deno.test(
   "get_food by off_code answers unavailable when the context cannot reach Open Food Facts",
   async () => {
-    const { result } = await fetchFood({}, { id: null, off_code: offCode });
+    const { result } = await fetchFood({}, { off_code: offCode });
 
     assertEquals(payloadOf(result), { error: "unavailable" });
   },
 );
 
+Deno.test("get_food accepts the nulls a model sends for the field it leaves out", async () => {
+  const byId = await fetchFood({ tables: { foods: [foodRow()] } }, { id: foodId, off_code: null });
+  assertEquals(byId.result.status, "ok");
+  const byCode = await fetchByOffCode({ status: "not_found" }, { id: null, off_code: offCode });
+  assertEquals(payloadOf(byCode.result), { error: "not_found" });
+  assertEquals(byCode.liveCalls, [{ method: "product", argument: offCode }]);
+});
+
+Deno.test("get_food names off_code as the field when neither or both are given", async () => {
+  for (const input of [{}, { id: foodId, off_code: offCode }]) {
+    const { result } = await fetchByOffCode({ status: "not_found" }, input);
+    assertEquals(result.status === "error" ? result.code : null, "invalid_input");
+    assertStringIncludes(result.text, "off_code");
+  }
+});
+
 Deno.test("get_food needs exactly one of id and off_code", async () => {
-  for (const input of [
-    { id: null, off_code: null },
-    { id: foodId, off_code: offCode },
-  ]) {
+  for (const input of [{}, { id: null, off_code: null }, { id: foodId, off_code: offCode }]) {
     const { result, calls, liveCalls } = await fetchByOffCode({ status: "not_found" }, input);
 
     assertEquals(
@@ -324,10 +332,7 @@ Deno.test("get_food needs exactly one of id and off_code", async () => {
 
 Deno.test("get_food rejects an off_code that is not 8 to 14 digits", async () => {
   for (const code of ["massaman", "1234567", "123456789012345", "5000000000017x", 5000000000017]) {
-    const { result, liveCalls } = await fetchByOffCode(
-      { status: "not_found" },
-      { id: null, off_code: code },
-    );
+    const { result, liveCalls } = await fetchByOffCode({ status: "not_found" }, { off_code: code });
 
     assertEquals(result.status === "error" ? result.code : null, "invalid_input", String(code));
     assertEquals(liveCalls, []);

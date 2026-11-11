@@ -1,4 +1,4 @@
-import { assertEquals } from "@std/assert";
+import { assertEquals, assertThrows } from "@std/assert";
 
 import { createOffLookup } from "./offLookup.ts";
 
@@ -228,3 +228,68 @@ Deno.test(
     assertEquals(logged, []);
   },
 );
+
+Deno.test("an empty base URL throws at once instead of failing every call quietly", () => {
+  for (const baseUrl of ["", "  "]) {
+    assertThrows(() => createOffLookup({ baseUrl, authorization }), Error, "SUPABASE_URL");
+  }
+});
+
+Deno.test("a failure of ours is reported as its status class and nothing else", async () => {
+  const cases: [() => Response | Promise<Response>, string][] = [
+    [() => jsonResponse({}, 401), "auth"],
+    [() => jsonResponse({}, 403), "auth"],
+    [() => jsonResponse({}, 502), "server"],
+    [() => jsonResponse({}, 400), "client"],
+    [() => jsonResponse({ candidates: [{ code: "x" }] }), "bad_body"],
+    [() => new Response("<html>down</html>"), "bad_body"],
+    [() => Promise.reject(new TypeError("beef massaman")), "thrown"],
+  ];
+  for (const [respond, expected] of cases) {
+    for (const call of ["search", "product"] as const) {
+      const reported: string[] = [];
+      const lookup = createOffLookup({
+        baseUrl,
+        authorization,
+        fetch: () => Promise.resolve().then(respond),
+        report: (failure) => reported.push(failure),
+      });
+
+      const outcome =
+        call === "search"
+          ? await lookup.search("beef massaman")
+          : await lookup.product(candidate.code);
+
+      assertEquals(outcome, { status: "unavailable" });
+      assertEquals(reported, [expected], call);
+    }
+  }
+});
+
+Deno.test("a refused limit, a timeout and an unknown product are not reported", async () => {
+  const reported: string[] = [];
+  const report = (failure: string) => reported.push(failure);
+
+  await createOffLookup({
+    baseUrl,
+    authorization,
+    fetch: () => Promise.resolve(jsonResponse({}, 429)),
+    report,
+  }).search("beef massaman");
+  await createOffLookup({
+    baseUrl,
+    authorization,
+    fetch: hanging(),
+    report,
+    searchTimeoutMilliseconds: 20,
+    productTimeoutMilliseconds: 20,
+  }).search("beef massaman");
+  await createOffLookup({
+    baseUrl,
+    authorization,
+    fetch: () => Promise.resolve(jsonResponse({}, 404)),
+    report,
+  }).product(candidate.code);
+
+  assertEquals(reported, []);
+});

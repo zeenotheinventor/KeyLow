@@ -58,6 +58,14 @@ Deno.serve(
         createOffLookup({
           baseUrl: Deno.env.get("SUPABASE_URL") ?? "",
           authorization: incoming.headers.get("Authorization") ?? "",
+          // A status class only, as the lookup promises: the reporter drops the message and the stack
+          // holds no words.
+          report: (failure) =>
+            reportError(
+              `off_lookup_failed ${failure}`,
+              "upstream_error",
+              new Error("off_lookup_failed"),
+            ),
         }),
       now: () => new Date(),
       report: reportError,

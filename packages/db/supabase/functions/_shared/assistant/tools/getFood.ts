@@ -12,17 +12,18 @@ import type { ReadToolDefinition, ToolContext, ToolRunOutput } from "../tool.ts"
 
 const getFoodInput = z
   .strictObject({
-    id: z.guid().nullable().describe("The id of a food."),
+    id: z.guid().optional().describe("The id of a food."),
     off_code: z
       .string()
       .regex(/^[0-9]{8,14}$/)
-      .nullable()
+      .optional()
       .describe(
         "The off_code of a live result, 8 to 14 digits. Give exactly one of id and off_code.",
       ),
   })
-  .refine(({ id, off_code }) => (id === null) !== (off_code === null), {
+  .refine(({ id, off_code }) => (id === undefined) !== (off_code === undefined), {
     message: "Give exactly one of id and off_code.",
+    path: ["off_code"],
   });
 
 export const getFoodTool: ReadToolDefinition<z.infer<typeof getFoodInput>> = {
@@ -33,18 +34,18 @@ export const getFoodTool: ReadToolDefinition<z.infer<typeof getFoodInput>> = {
     "and its grams or ml. An empty portions list means the food has none, so ask the user for grams. " +
     `${estimatedNotice} ` +
     "Answers error not_found for a food that does not exist, was deleted, or is not the user's to " +
-    "see. With an off_code and a null id it stores that live product and answers it as a food with its " +
+    "see. With an off_code and no id it stores that live product and answers it as a food with its " +
     "own id, or error unavailable when it could not be looked up. " +
     `${unknownNotice} ${dataNotice}`,
   kind: "read",
   input: getFoodInput,
   annotations: { readOnlyHint: true },
   async run(ctx, { id, off_code }) {
-    if (off_code !== null) {
+    if (off_code !== undefined) {
       return await readLiveProduct(ctx, off_code);
     }
-    // The input check allows no call with both null, so this is not reached.
-    if (id === null) {
+    // The input check allows no call with neither, so this is not reached.
+    if (id === undefined) {
       return { data: { error: "not_found" } };
     }
     const food = await getFood(ctx.caller, id);

@@ -281,6 +281,8 @@ describe("tools/call", () => {
     const { text } = result;
     expect(text).toContain("<untrusted_data");
     expect(text).toContain(a.foodName);
+    // The unique word is in a catalogue food's name, a strong match, so no live Open Food Facts search ran.
+    expect(text).not.toContain('"live"');
     expect(text).not.toContain(a.user.id);
     expect(text).not.toContain(b.foodName);
     // The outcome holds no row. This tool has no card or citation, so `structured` is null.
