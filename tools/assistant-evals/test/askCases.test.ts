@@ -602,6 +602,7 @@ describe("READ_TOOLS", () => {
       "get_workouts",
       "get_exercise_progress",
       "show_exercise_muscles",
+      "show_exercise_form",
     ];
 
     expect([...DIARY_READ_TOOLS].sort()).toEqual(

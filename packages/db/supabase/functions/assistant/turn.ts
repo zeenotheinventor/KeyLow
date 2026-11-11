@@ -22,6 +22,7 @@ import { wrapUntrusted } from "../_shared/assistant/untrusted.ts";
 import {
   assistantCardLinkSchema,
   assistantCardSchema,
+  assistantExerciseFormMediaSchema,
   assistantExerciseMusclesSchema,
   describeTurnEndedAfterWrite,
   describeWorkoutInProgressRefusal,
@@ -55,6 +56,7 @@ import type {
 } from "../_shared/assistant/mcpClient.ts";
 import type {
   AssistantCard,
+  AssistantExerciseFormMedia,
   AssistantExerciseMuscles,
   AssistantStreamEvent,
 } from "../_shared/core.ts";
@@ -130,6 +132,10 @@ const DEFAULT_LIMITS: TurnLimits = {
 // tool runs per call in the `mcp` function and cannot see the turn. 4 is the tech lead's number, for Zee to change.
 export const MAX_EXERCISE_MUSCLES_CARDS = 4;
 
+// The most form cards (a video or two photos) one turn draws, for the same reason as the figures above. 2 is the
+// tech lead's number, for Zee to change.
+export const MAX_EXERCISE_FORM_CARDS = 2;
+
 // The SDK parses a streamed tool input as it arrives, and a model that emits invalid JSON makes the stream
 // fail with a plain `AnthropicError` whose cause is a `SyntaxError`, never an API error. That one failure
 // is re-issued, a few times, and only while the app has been shown none of the call's text.
@@ -142,6 +148,7 @@ const ASK_USER_TOOL = "ask_user";
 const IMPORT_RECIPE_TOOL = "import_recipe_from_url";
 const SEARCH_FOODS_TOOL = "search_foods";
 const SHOW_EXERCISE_MUSCLES_TOOL = "show_exercise_muscles";
+const SHOW_EXERCISE_FORM_TOOL = "show_exercise_form";
 
 // Made per turn, so a missing key ends that turn and never stops the function booting.
 export function createModelClient(read: (name: string) => string | undefined): Anthropic | null {
@@ -237,6 +244,8 @@ type Run = {
   pendingCards: AssistantCard[];
   // The muscles of each exercise shown, held to the end of the turn so the figures land under the finished reply.
   pendingExerciseMuscles: AssistantExerciseMuscles[];
+  // The form card of each exercise shown, held to the end of the turn for the same reason.
+  pendingExerciseFormMedia: AssistantExerciseFormMedia[];
   citations: (string | null)[];
   estimates: (string | null)[];
 };
@@ -470,6 +479,7 @@ const structuredSchema = z.looseObject({
   estimate: z.string().min(1).nullish(),
   undo: z.unknown().optional(),
   exerciseMuscles: z.unknown().optional(),
+  exerciseFormMedia: z.unknown().optional(),
 });
 const cardDraftSchema = assistantCardSchema.omit({ actionIds: true });
 
@@ -542,6 +552,7 @@ async function finishCall(
   const entry: Display = {};
   let card: AssistantCard | null = null;
   let figure: AssistantExerciseMuscles | null = null;
+  let formCard: AssistantExerciseFormMedia | null = null;
   if (structured.success) {
     const { citation = null, estimate = null } = structured.data;
     run.citations.push(citation);
@@ -574,6 +585,21 @@ async function finishCall(
           "assistant",
           "internal_error",
           new Error("exercise muscles cannot be drawn"),
+        );
+      }
+    }
+    // The form card of an exercise, in the same row. A read too, so no action and no Undo.
+    if (structured.data.exerciseFormMedia !== undefined) {
+      const parsed = assistantExerciseFormMediaSchema.safeParse(structured.data.exerciseFormMedia);
+      if (parsed.success) {
+        formCard = parsed.data;
+        entry["exerciseFormMedia"] = toJson(parsed.data);
+      } else {
+        // Fixed words only. A parse failure's own message is not reported, because it can quote the exercise.
+        run.dependencies.report(
+          "assistant",
+          "internal_error",
+          new Error("exercise form media cannot be drawn"),
         );
       }
     }
@@ -615,6 +641,9 @@ async function finishCall(
   // After the store, as for a card: a row that failed to store must not leave a figure that is sent and gone on reopening.
   if (figure !== null) {
     run.pendingExerciseMuscles.push(figure);
+  }
+  if (formCard !== null) {
+    run.pendingExerciseFormMedia.push(formCard);
   }
   return null;
 }
@@ -681,6 +710,17 @@ async function runToolUse(
   if (
     name === SHOW_EXERCISE_MUSCLES_TOOL &&
     run.pendingExerciseMuscles.length >= MAX_EXERCISE_MUSCLES_CARDS
+  ) {
+    await storeToolResult(
+      run,
+      toolResultBlock(id, wrapUntrusted(name, { error: "card_limit" }), true),
+      null,
+    );
+    return null;
+  }
+  if (
+    name === SHOW_EXERCISE_FORM_TOOL &&
+    run.pendingExerciseFormMedia.length >= MAX_EXERCISE_FORM_CARDS
   ) {
     await storeToolResult(
       run,
@@ -1052,6 +1092,10 @@ async function conclude(run: Run, reached: Ending): Promise<Ending> {
       emit(run, { type: "exercise_muscles", exercise });
     }
     run.pendingExerciseMuscles = [];
+    for (const exercise of run.pendingExerciseFormMedia) {
+      emit(run, { type: "exercise_form_media", exercise });
+    }
+    run.pendingExerciseFormMedia = [];
   }
   const final = endedAfterWrite ? await endWithWordsAfterWrite(run, early) : early;
   if (final.status === "complete") {
@@ -1120,6 +1164,7 @@ export function createRunTurn(
       unparseableInputRetries: 0,
       pendingCards: [],
       pendingExerciseMuscles: [],
+      pendingExerciseFormMedia: [],
       citations: [],
       estimates: [],
     };

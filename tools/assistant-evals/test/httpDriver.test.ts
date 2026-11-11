@@ -141,6 +141,39 @@ describe("createHttpDriver, the muscles of an exercise", () => {
   });
 });
 
+describe("createHttpDriver, the form of an exercise", () => {
+  const video = {
+    exerciseName: "Barbell Squat",
+    media: { kind: "video", videoId: "dQw4w9WgXcQ", title: "A squat", channel: "A channel" },
+  };
+  const photos = {
+    exerciseName: "Ab Roller",
+    media: { kind: "photos", imagePaths: ["Ab_Roller/0.jpg", "Ab_Roller/1.jpg"] },
+  };
+
+  it("should keep the form cards a turn showed, in order", async () => {
+    streamOf(
+      turnEvent,
+      sse({ type: "text", delta: "Brace first." }),
+      sse({ type: "exercise_form_media", exercise: video }),
+      sse({ type: "exercise_form_media", exercise: photos }),
+      sse({ type: "done", outcome: "complete" }),
+    );
+
+    const result = await driver().sendMessage({ conversationId: null, text: "how do I squat" });
+
+    expect(result.exerciseFormMedia).toEqual([video, photos]);
+  });
+
+  it("should leave the form cards out when the turn showed none", async () => {
+    streamOf(turnEvent, sse({ type: "done", outcome: "complete" }));
+
+    const result = await driver().sendMessage({ conversationId: null, text: "hello" });
+
+    expect(result).not.toHaveProperty("exerciseFormMedia");
+  });
+});
+
 describe("createHttpDriver, one turn", () => {
   it("should post the turn with the day in the user's time zone, and no hour", async () => {
     streamOf(turnEvent, sse({ type: "done", outcome: "complete" }));

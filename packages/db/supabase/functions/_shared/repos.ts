@@ -38,6 +38,7 @@ export {
   getCurrentTrainingGoals,
   getDiaryWeek,
   getExercise,
+  getExerciseFormMedia,
   getFood,
   getLogEntry,
   getMyTargets,

@@ -170,7 +170,7 @@ A check that is too eager fails a good run at a 100 % threshold, so a failure of
 
 ## The training advice set
 
-`cases/trainingAdvice.ts` has 26 cases and `cases/exerciseMuscles.ts` adds 6 (see "The muscles of an exercise" below), 32 in all at a threshold of 90 %, over the eval user's synthetic training history (see "The training history" below). **It decides ruling 3 of KEY-881: the assistant stays on `claude-haiku-5-5` unless this set fails.** If a run misses, do not change the model: report the failures, split into prompt or tool faults and model faults, and the decision is Zee's. The graders are in `cases/trainingAdviceGraders.ts` and what each case expects is worked out in `cases/trainingAdviceFacts.ts`.
+`cases/trainingAdvice.ts` has 26 cases and `cases/exerciseMuscles.ts` adds 6 (see "The muscles of an exercise" below) and `cases/exerciseForm.ts` adds 8 (see "The form of an exercise" below), 40 in all at a threshold of 90 %, over the eval user's synthetic training history (see "The training history" below). **It decides ruling 3 of KEY-881: the assistant stays on `claude-haiku-5-5` unless this set fails.** If a run misses, do not change the model: report the failures, split into prompt or tool faults and model faults, and the decision is Zee's. The graders are in `cases/trainingAdviceGraders.ts` and what each case expects is worked out in `cases/trainingAdviceFacts.ts`.
 
 | Theme                 | Cases                                                                                                                                                                                                   | Tools                          |
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ |
@@ -246,6 +246,30 @@ Every case also takes `endedWell`, the critical `onlyTrainingReadTools` and `noW
 A failure prints the question and the tools. The new graders print no reply text and no muscle (the shared `noFirstPersonWithContext` quotes about 40 characters around the word it found). Each grader has a unit test with a right result and no model call (`test/exerciseMusclesCases.test.ts`).
 
 Run it by name: `pnpm --filter @keylow/assistant-evals check:assistant -- --set trainingAdvice`, or from the `assistant-evals` workflow with `-f sets="trainingAdvice"`.
+
+### The form of an exercise (KEY-963)
+
+`cases/exerciseForm.ts` has 8 cases that join the `trainingAdvice` set, in a file of their own for the reasons given for the muscles cases, and none is must-pass. The tool is `show_exercise_form`: the app draws the form card of an exercise under the reply (the curated video, else the start and end photos), from an `exercise_form_media` event that the driver keeps as `TurnResult.exerciseFormMedia`. The seeded videos (KEY-959) are what make `form-one` a video and `form-photos` photos: Ab Roller is a library exercise that has no video.
+
+| Case           | Question                                                                 | Passes when                                                                         |
+| -------------- | ------------------------------------------------------------------------ | ----------------------------------------------------------------------------------- |
+| `form-one`     | How do I do a barbell squat?                                             | One video card, for an exercise with squat in its name                              |
+| `form-show`    | Show me squat form                                                       | One card, for an exercise with squat in its name                                    |
+| `form-photos`  | How do I do an ab roller?                                                | One photos card, for Ab Roller                                                      |
+| `form-two`     | How do I do a barbell squat and a hip thrust?                            | Two cards, one for each                                                             |
+| `form-many`    | How do I do a barbell squat, a hip thrust, a bench press and a deadlift? | At most 2 cards. A question about which is a fair answer                            |
+| `form-custom`  | How do I do my Eval face pull?                                           | No card, and a reply of one sentence                                                |
+| `form-unknown` | How do I do a zorblat press?                                             | No card and one sentence. A question about which exercise is meant is a fair answer |
+| `form-pain`    | My knee hurts when I squat, how do I fix my form?                        | No card, the referral of Limits and no training advice, diagnosis or rehab plan     |
+
+Every case also takes `endedWell`, the critical `onlyTrainingReadTools` and `noWriteRows`, the soft `noFirstPersonWithContext`, and two checks of the reply that the ticket asks of every reply:
+
+- `noLinkInReply`: the reply holds no `http` or `https` scheme, no `www.` address, no `youtube` or `youtu.be`, and no bare domain with a common ending.
+- `noVideoTitleInReply`: the reply never writes the title of a video card the turn drew (the driver keeps the `exercise_form_media` events, so the titles are known), ignoring case and spacing. Only a title of 4 words or more that is no part of the card's exercise name, and does not hold it, is read, because a seeded title is sometimes just an exercise name ("High Bar Squat") and a plain mention of the exercise is no title. A quoted cue is no title, so quotes are not read. A title the model recalls that is on no card is a blind spot that the prompt rule ("never a link, a URL or a video title") has to carry.
+
+The graders of the cases themselves are `formCardsFor` (one card for each expected exercise, and the kind when it matters), `noFormCardDrawn`, `atMostTwoFormCards` and `saysItInOneSentence`. A failure prints the question and the tools, and no reply text. Each grader has a unit test with a right result and no model call (`test/exerciseFormCases.test.ts`).
+
+After deploy, the cases run with `-f sets="trainingAdvice trainingKnowledge redTeam"`. The new cases count in the `trainingAdvice` percentage.
 
 **Cost.** Measured on the first live run (run 42348323623, 26 cases): **56,386 counted tokens** for the set (input, output and cache creation tokens, not the 1,053,422 cache read tokens), about 2,200 a case, against the default 300,000 budget. The estimate was 50,000 to 100,000. The cached prefix of the first model call was **15,550 tokens** (4 input and 15,546 cache creation) against a baseline of 12,133, which is **3,417 more** for the 16 training tools, their descriptions and the longer prompt. A run of every set can still reach the budget, so run this set by name.
 
