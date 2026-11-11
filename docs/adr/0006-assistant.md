@@ -407,7 +407,7 @@ The app's food search shows the catalogue and then live Open Food Facts rows. Th
 ### Consequences
 
 - The registry still has 38 tools. The two descriptions and the prompt section grow the prefix by about 1,000 characters, which the prefix test counts.
-- `get_food` has two optional parameters, which the model-facing schema renders as nullable and the strict budget counts as union parameters. The registry is at the API's cap of 16 union parameters with no room left, so the next strict tool with an optional or nullable field has to opt out of strict mode, as Amendment 1 and 2 do.
+- `get_food` is `strict: false`. Its two optional parameters render as nullable, and as a strict tool they took the registry to exactly the API's cap of 16 union parameters, where every live turn failed. Both keys are optional on the server, so a call with one left out is valid, and the strict budget is now 15 tools, 0 optional and 14 union parameters, as it was before this amendment apart from `get_food`, which counted for none.
 - The evals still reach no Open Food Facts answer: the live run starts no Open Food Facts stand-in, and serving a canned answer would need a change to the workflow. The unit tests of the lookup, the two tools and the route are the cover.
 - Semantic search stays deferred to Housekeeping, and the limits of `off-search` are unchanged.
 

@@ -39,6 +39,10 @@ export const getFoodTool: ReadToolDefinition<z.infer<typeof getFoodInput>> = {
     `${unknownNotice} ${dataNotice}`,
   kind: "read",
   input: getFoodInput,
+  // Not strict, to keep the strict budget at 14 of 16 union parameters. With both strict and a nullable
+  // `id` and `off_code` the registry sat exactly on the API's cap of 16, and every live turn failed
+  // (KEY-967). Both keys are optional here, so a call with one of them left out is valid.
+  strict: false,
   annotations: { readOnlyHint: true },
   async run(ctx, { id, off_code }) {
     if (off_code !== undefined) {
