@@ -28,11 +28,11 @@ import type { UsageToRecord } from "./usage.ts";
 
 // A prompt of exactly this many tokens is not compacted, one more is. The prompt of a call is the tools, the
 // system prompt and the conversation, so the tools and the system prompt come off this figure before the
-// conversation gets any room. They are about 24,400 tokens now, which leaves about 17,600 for the
-// conversation. It was 40,000 until KEY-952 added the Training questions section, and 20,000 before KEY-927,
-// when they were the whole of it and every turn compacted.
+// conversation gets any room. They are about 25,100 tokens now, which leaves about 20,900 for the
+// conversation. It was 42,000 until KEY-964 (the tool and prompt text was not trimmed, so the room comes from here), 40,000 until KEY-952 added the Training questions section, and
+// 20,000 before KEY-927, when they were the whole of it and every turn compacted.
 // `promptPrefix.test.ts` fails when the prefix passes 60 % of this figure.
-export const DEFAULT_COMPACT_AT_TOKENS = 42_000;
+export const DEFAULT_COMPACT_AT_TOKENS = 46_000;
 
 // The background call has no turn deadline around it. Its input is the conversation since the last note and
 // not the tools or the system prompt, so normally about 17,000 tokens for a prompt at the threshold, and its

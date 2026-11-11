@@ -12,14 +12,14 @@ describe("the compaction seed", () => {
   const seed = compactionSeed();
   const allText = seed.flatMap((turn) => [turn.user, turn.assistant]);
 
-  it("should be long enough that the next turn passes the 42,000 token threshold with room to spare", () => {
-    // 42,000 is DEFAULT_COMPACT_AT_TOKENS in the assistant's compact.ts, which this folder cannot import. The
+  it("should be long enough that the next turn passes the 46,000 token threshold with room to spare", () => {
+    // 46,000 is DEFAULT_COMPACT_AT_TOKENS in the assistant's compact.ts, which this folder cannot import. The
     // system prompt and the tools are at least 22,000 tokens (the first call of a one-message conversation
     // measured 22,396 in KEY-927). Plain English is at most about 4.5 characters a token, so dividing by it
     // gives the fewest tokens the history can be. The turn must land 10 % above the threshold even then.
     const fewestPrefixTokens = 22_000;
     const mostCharactersPerToken = 4.5;
-    const thresholdTokens = 42_000;
+    const thresholdTokens = 46_000;
     const fewestPromptTokens =
       fewestPrefixTokens + allText.join("").length / mostCharactersPerToken;
 
@@ -94,7 +94,7 @@ describe("the compaction case", () => {
   it("should seed the conversation, send the trigger and then the question, waiting in between", async () => {
     const { sent, log } = await play("You told me 1,850 kcal a day.");
 
-    expect(log).toEqual(["seed 75", "wait seeded"]);
+    expect(log).toEqual(["seed 90", "wait seeded"]);
     expect(sent.map(({ conversationId }) => conversationId)).toEqual(["seeded", "seeded"]);
     expect(sent[1]?.text).toBe("What did you tell me my daily average was last week?");
   });
