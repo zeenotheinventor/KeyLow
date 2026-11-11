@@ -7,9 +7,9 @@ Every figure was read from the chain's own UK source on **2026-11-10**, the `ret
 ## Method
 
 - Each source was fetched with `curl` and a plain User-Agent that says what the client is (`KeyLowDataBot/1.0 (nutrition data check; honest client)`). No client was disguised.
-- The CSV columns hold the per portion figures as published, and `portion_grams` holds the weight the chain publishes for that portion (`weight_basis` is `published`). No weight was derived or estimated in wave 1.
+- The CSV columns hold the per portion figures as published, and `portion_grams` holds the weight the chain publishes for that portion (`weight_basis` is `published`). No weight was derived or estimated. Wave 2 rows have no weight (`weight_basis` is `none`, `portion_grams` is blank), and are stored per portion with the figures as published.
 - `published_kcal_per_100g` is the chain's own per 100 g energy figure, kept only so a test can check the weight and the per portion energy against each other. The generator works out the per 100 g columns itself, as the per portion figure times 100 over the grams, to two decimals.
-- Every one of the 30 rows passes the checks in `test/unit/restaurant/restaurantFoodsCsv.test.ts`, which run in CI: energy within 15% of 4 x protein + 4 x carbohydrate + 9 x fat + 2 x fibre, the generated per 100 g energy within 2% of the published per 100 g energy, and the other rules of the ticket.
+- Every one of the 64 rows passes the checks in `test/unit/restaurant/restaurantFoodsCsv.test.ts`, which run in CI: energy within 15% of 4 x protein + 4 x carbohydrate + 9 x fat + 2 x fibre, the generated per 100 g energy within 2% of the published per 100 g energy, and the other rules of the ticket.
 - A figure the chain rounds (Greggs prints two significant figures) is stored as printed.
 
 ## Chains
@@ -19,13 +19,30 @@ Every figure was read from the chain's own UK source on **2026-11-10**, the `ret
 | Greggs        | 12   | https://www.greggs.co.uk/nutrition                                                    | The "Nutritional Information (Guide only)" PDF the page links, marked "Information correct at time of print (October 2026)". It lists the portion size in g or ml, and values per 100 g and per portion.      |
 | Pret A Manger | 10   | https://www.pret.co.uk/en-GB/products/categories/&lt;category&gt;/&lt;subcategory&gt; | The product listing pages for hot pastries, breakfast pastries, sandwiches and hot toasted sandwiches. Each product carries its average weight in g and its energy and nutrients per serving and per 100 g.   |
 | Subway        | 8    | https://www.subway.com/en-gb/menunutrition/nutrition                                  | The "Nutrition Information November 2026, UK and ROI" PDF the page links. The Subs table gives the serving size in g and the values per serving, which is one six-inch sub, and per 100 g. Footlongs are out. |
-| McDonald's    | 0    | https://www.mcdonalds.com/gb/en-gb/product/big-mac.html                               | Nothing. Every request returned 403 "Access Denied" (see below).                                                                                                                                              |
+| McDonald's    | 17   | https://www.mcdonalds.com/gb/en-gb/product/<item>.html                                | Wave 2. The "Nutritional Information Per Portion" table of each product page, read in a browser session (see below). No weight is published.                                                                  |
+| KFC           | 17   | https://brand-uk.assets.kfc.co.uk/nutrition-allergens.pdf                             | Wave 2. The "Allergen & Nutrition Information November 2026" PDF on KFC UK's own asset host. It gives energy, fat, saturates, carbohydrate, sugars, protein and salt per item, and no weight.                 |
+| Burger King   | 0    | https://www.burgerking.co.uk/menu                                                     | Nothing. The UK site is a script-rendered app with no nutrition in the page a script receives (see below).                                                                                                    |
+| Nando's       | 0    | https://www.nandos.co.uk/food/menu                                                    | Nothing. The UK menu page prints energy only, and no protein, fat or carbohydrate (see below).                                                                                                                |
 
 The Greggs PDF is hosted on the chain's content network, not on `greggs.co.uk`, so `source_url` names the page that links it. The Subway PDF is on `media.subway.com`, which the same page links.
 
-### McDonald's: not fetched
+### McDonald's: read in a browser
 
-On 2026-11-10 an honest, identified client got `403 Access Denied` from `www.mcdonalds.com` for `/gb/en-gb.html`, `/gb/en-gb/menu.html` and `/gb/en-gb/product/big-mac.html`. The block was not worked around, so no McDonald's row is in the CSV and no figure of theirs was filled in from elsewhere. The chain needs to be read in a normal browser session, or moved to KEY-943 as per portion rows if it publishes no weight.
+On 2026-11-10 an honest, identified client got `403 Access Denied` from `www.mcdonalds.com`, and the block was not worked around. The 17 McDonald's figures in wave 2 were read from each product page's "Nutritional Information Per Portion" table in a browser session on 2026-11-10, and `source_url` names that product page. The pages give no weight, so each row has `weight_basis none` and is stored per portion, as published. The fibre figure is on the page and is kept.
+
+### KFC: no weight, some averages
+
+The PDF is on `brand-uk.assets.kfc.co.uk`, KFC UK's own asset host, and was fetched with `curl` and the honest User-Agent above. KFC's UK nutrition page that links it did not answer a script (the connection failed), so `source_url` names the PDF itself. The PDF gives no weight for any item, so every KFC row has `weight_basis none`.
+
+- It publishes no fibre, so `fibre_g` is blank.
+- "Original Recipe Chicken", "Tender" and "Hash Brown" are published "per piece, average", so their rows are averages as KFC prints them, with the portion label "1 piece" or "1 hash brown".
+- The PDF's columns are kJ, kcal, fat, saturates, carbohydrate, sugars, protein and salt. Items marked as sold only in Ireland (the fillet rolls), drinks, sauces, desserts and limited time items are out. "Hot Wing" is out because its sugars are printed "<0.5", which is not a figure.
+- Names are KFC's own: "Regular Signature Fries" has the label "1 regular fries", and "Regular Popcorn Chicken" has the label "1 regular popcorn chicken".
+
+### Burger King and Nando's: left out
+
+- **Burger King.** `https://www.burgerking.co.uk/nutrition` and `/nutrition-allergens` return the same 2,000 byte application shell as every other path, with no content. The item pages in its sitemap (`/menu/item-...`) are also that shell, and a script receives no nutrition. The nutrition is loaded by the app from a private API, which was not read. No PDF was found on the chain's own domain, and no third-party copy was used.
+- **Nando's.** `https://www.nandos.co.uk/food/menu` is a normal page, and prints one energy figure in kcal per item. `https://www.nandos.co.uk/allergens` and its item pages are allergen tables only. No page gave protein, fat, saturates, carbohydrate, sugars or salt, so no complete row could be written. The help centre answered a script with a 403 challenge page. The PDFs on `assets.ctfassets.net` are the US and Canada guides, not UK figures, and were not used.
 
 ### Names
 
@@ -42,7 +59,7 @@ A plain "sausage roll" search now leads with the Greggs sausage roll, because it
 
 ## Reviewer's sample
 
-To be filled in by the reviewer, independently of the engineer: every McDonald's burger (none in this wave) and a random 20% of the rest, at least 3 per chain, each re-read from its source and compared with the CSV.
+To be filled in by the reviewer, independently of the engineer: every McDonald's burger, every KFC burger and a random 20% of the rest, at least 3 per chain, each re-read from its source and compared with the CSV.
 
 | Ref                                       | Source read                                                                                                  | kcal | Weight   | Matches |
 | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ---- | -------- | ------- |
@@ -78,3 +95,37 @@ To be filled in by the reviewer, independently of the engineer: every McDonald's
 | subway-gb:ham                             | Subway UK and ROI Nov 2026 PDF, Subs table, serving and per 100 g, all nine fields and per 100 g kcal        | 324  | 182 g    | Yes     |
 
 Read on 2026-11-10 by the reviewer, independently of the engineer, with `curl` and the same honest User-Agent. All 30 rows were checked (the brief asked for about a third and at least 4 per chain), field by field: portion grams, kcal, protein, fat, saturates, carbohydrate, sugars, fibre, salt, and the published per 100 g kcal. No mismatch beyond printed rounding.
+| mcdonalds-gb:big-mac | Orchestrator's browser reading of the product page table (reviewer cannot fetch the 403 site), all nine fields compared with the CSV | 509 | none | Yes |
+| mcdonalds-gb:quarter-pounder-with-cheese | Orchestrator's browser reading of the product page table (reviewer cannot fetch the 403 site), all nine fields compared with the CSV | 514 | none | Yes |
+| mcdonalds-gb:double-quarter-pounder-with-cheese | Orchestrator's browser reading of the product page table (reviewer cannot fetch the 403 site), all nine fields compared with the CSV | 749 | none | Yes |
+| mcdonalds-gb:cheeseburger | Orchestrator's browser reading of the product page table (reviewer cannot fetch the 403 site), all nine fields compared with the CSV | 303 | none | Yes |
+| mcdonalds-gb:hamburger | Orchestrator's browser reading of the product page table (reviewer cannot fetch the 403 site), all nine fields compared with the CSV | 255 | none | Yes |
+| mcdonalds-gb:double-cheeseburger | Orchestrator's browser reading of the product page table (reviewer cannot fetch the 403 site), all nine fields compared with the CSV | 452 | none | Yes |
+| mcdonalds-gb:mcchicken-sandwich | Orchestrator's browser reading of the product page table (reviewer cannot fetch the 403 site), all nine fields compared with the CSV | 371 | none | Yes |
+| mcdonalds-gb:filet-o-fish | Orchestrator's browser reading of the product page table (reviewer cannot fetch the 403 site), all nine fields compared with the CSV | 316 | none | Yes |
+| mcdonalds-gb:mccrispy | Orchestrator's browser reading of the product page table (reviewer cannot fetch the 403 site), all nine fields compared with the CSV | 484 | none | Yes |
+| mcdonalds-gb:chicken-mcnuggets-6 | Orchestrator's browser reading of the product page table (reviewer cannot fetch the 403 site), all nine fields compared with the CSV | 261 | none | Yes |
+| mcdonalds-gb:chicken-mcnuggets-9 | Orchestrator's browser reading of the product page table (reviewer cannot fetch the 403 site), all nine fields compared with the CSV | 391 | none | Yes |
+| mcdonalds-gb:fries-small | Orchestrator's browser reading of the product page table (reviewer cannot fetch the 403 site), all nine fields compared with the CSV | 237 | none | Yes |
+| mcdonalds-gb:fries-medium | Orchestrator's browser reading of the product page table (reviewer cannot fetch the 403 site), all nine fields compared with the CSV | 337 | none | Yes |
+| mcdonalds-gb:fries-large | Orchestrator's browser reading of the product page table (reviewer cannot fetch the 403 site), all nine fields compared with the CSV | 444 | none | Yes |
+| mcdonalds-gb:sausage-egg-mcmuffin | Orchestrator's browser reading of the product page table (reviewer cannot fetch the 403 site), all nine fields compared with the CSV | 424 | none | Yes |
+| mcdonalds-gb:bacon-egg-mcmuffin | Orchestrator's browser reading of the product page table (reviewer cannot fetch the 403 site), all nine fields compared with the CSV | 336 | none | Yes |
+| mcdonalds-gb:hash-brown | Orchestrator's browser reading of the product page table (reviewer cannot fetch the 403 site), all nine fields compared with the CSV | 127 | none | Yes |
+| kfc-gb:zinger-burger | KFC UK Nov 2026 PDF re-read by the reviewer, kJ, kcal and all seven nutrients per item, no weight, fibre blank | 468 | none | Yes |
+| kfc-gb:fillet-burger | KFC UK Nov 2026 PDF re-read by the reviewer, kJ, kcal and all seven nutrients per item, no weight, fibre blank | 463 | none | Yes |
+| kfc-gb:zinger-supercharger-tower-burger | KFC UK Nov 2026 PDF re-read by the reviewer, kJ, kcal and all seven nutrients per item, no weight, fibre blank | 652 | none | Yes |
+| kfc-gb:fillet-tower-burger | KFC UK Nov 2026 PDF re-read by the reviewer, kJ, kcal and all seven nutrients per item, no weight, fibre blank | 604 | none | Yes |
+| kfc-gb:zinger-stacker-burger | KFC UK Nov 2026 PDF re-read by the reviewer, kJ, kcal and all seven nutrients per item, no weight, fibre blank | 813 | none | Yes |
+| kfc-gb:mini-burger | KFC UK Nov 2026 PDF re-read by the reviewer, kJ, kcal and all seven nutrients per item, no weight, fibre blank | 277 | none | Yes |
+| kfc-gb:vegan-burger | KFC UK Nov 2026 PDF re-read by the reviewer, kJ, kcal and all seven nutrients per item, no weight, fibre blank | 396 | none | Yes |
+| kfc-gb:kentucky-mayo-twister | KFC UK Nov 2026 PDF re-read by the reviewer, kJ, kcal and all seven nutrients per item, no weight, fibre blank | 520 | none | Yes |
+| kfc-gb:sweet-chilli-twister | KFC UK Nov 2026 PDF re-read by the reviewer, kJ, kcal and all seven nutrients per item, no weight, fibre blank | 492 | none | Yes |
+| kfc-gb:smokey-bbq-twister | KFC UK Nov 2026 PDF re-read by the reviewer, kJ, kcal and all seven nutrients per item, no weight, fibre blank | 482 | none | Yes |
+| kfc-gb:supercharger-twister | KFC UK Nov 2026 PDF re-read by the reviewer, kJ, kcal and all seven nutrients per item, no weight, fibre blank | 548 | none | Yes |
+| kfc-gb:original-recipe-chicken | KFC UK Nov 2026 PDF re-read by the reviewer, kJ, kcal and all seven nutrients per item, no weight, fibre blank | 241 | none | Yes |
+| kfc-gb:tender | KFC UK Nov 2026 PDF re-read by the reviewer, kJ, kcal and all seven nutrients per item, no weight, fibre blank | 125 | none | Yes |
+| kfc-gb:regular-popcorn-chicken | KFC UK Nov 2026 PDF re-read by the reviewer, kJ, kcal and all seven nutrients per item, no weight, fibre blank | 307 | none | Yes |
+| kfc-gb:regular-signature-fries | KFC UK Nov 2026 PDF re-read by the reviewer, kJ, kcal and all seven nutrients per item, no weight, fibre blank | 261 | none | Yes |
+| kfc-gb:large-signature-fries | KFC UK Nov 2026 PDF re-read by the reviewer, kJ, kcal and all seven nutrients per item, no weight, fibre blank | 372 | none | Yes |
+| kfc-gb:hash-brown | KFC UK Nov 2026 PDF re-read by the reviewer, kJ, kcal and all seven nutrients per item, no weight, fibre blank | 92 | none | Yes |

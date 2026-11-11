@@ -1,4 +1,4 @@
--- Asserts the first wave of restaurant foods (KEY-940), loaded by the *_restaurant_foods.sql migration:
+-- Asserts the first wave of restaurant foods (KEY-940), loaded by the *_restaurant_foods.sql migrations:
 -- a Greggs sausage roll carries the chain's published figures scaled to 100 g and opens on one default
 -- portion at the published weight, every restaurant food has exactly one default portion that is not a
 -- bare gram amount and keeps its source URL in food_source_data, and search finds the Greggs rows.
@@ -16,7 +16,12 @@ insert into auth.users (instance_id, id, aud, role, email) values
   ('00000000-0000-0000-0000-000000000000', '94000001-0000-4000-8000-00000000000a', 'authenticated', 'authenticated', 'restaurant-wave1-user@keylow.test');
 
 select is(
-  (select count(*) from public.foods where source = 'restaurant'),
+  (
+    select count(*)
+    from public.foods food
+    join public.food_source_data source_data on source_data.food_id = food.id
+    where food.source = 'restaurant' and source_data.raw ->> 'wave' = '1'
+  ),
   30::bigint,
   'the first wave holds exactly 30 restaurant foods'
 );
@@ -77,7 +82,12 @@ select is_empty(
 );
 
 select is_empty(
-  $$ select source_ref from public.foods where source = 'restaurant' and basis = 'per_portion' $$,
+  $$
+    select food.source_ref
+    from public.foods food
+    join public.food_source_data source_data on source_data.food_id = food.id
+    where food.source = 'restaurant' and food.basis = 'per_portion' and source_data.raw ->> 'wave' = '1'
+  $$,
   'wave 1 holds no restaurant food per portion'
 );
 
