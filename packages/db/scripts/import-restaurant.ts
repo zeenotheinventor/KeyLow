@@ -8,14 +8,36 @@
 //              the CSV, or a later wave, is a NEW migration with a later timestamp.
 //
 //   pnpm --filter @keylow/db import:restaurant emit-migration --wave 1 --out supabase/migrations/<timestamp>_restaurant_foods.sql
+//
+//   nandos-rows  prints the Nando's lines of the CSV, worked out from data/restaurants/nandos-estimates.json.
+import { readFileSync } from "node:fs";
 import { parseArgs } from "node:util";
 
 import { emitRestaurantMigration } from "./restaurant/emitRestaurantMigration";
+import {
+  parseNandosEstimates,
+  readCofidReferences,
+  renderNandosCsvRows,
+} from "./restaurant/estimateNandosMacros";
 
 const DEFAULT_CSV_PATH = "data/restaurants/restaurant-foods.csv";
 
+const NANDOS_ESTIMATES_PATH = "data/restaurants/nandos-estimates.json";
+const COFID_CSV_PATH = "data/cofid/cofid-2021.normalised.csv";
+
 const usage = `Usage:
-  import-restaurant.ts emit-migration --wave <n> --out <migration file> [--csv <csv>]`;
+  import-restaurant.ts emit-migration --wave <n> --out <migration file> [--csv <csv>]
+  import-restaurant.ts nandos-rows`;
+
+/** Prints the Nando's lines of the CSV, worked out from data/restaurants/nandos-estimates.json. It connects to nothing. */
+function printNandosRows(): void {
+  const estimates = parseNandosEstimates(readFileSync(NANDOS_ESTIMATES_PATH, "utf8"));
+  const references = readCofidReferences(
+    readFileSync(COFID_CSV_PATH, "utf8"),
+    estimates.items.flatMap((item) => item.components.map((component) => component.cofid_code)),
+  );
+  process.stdout.write(renderNandosCsvRows(estimates, references));
+}
 
 function main(): void {
   const { positionals, values } = parseArgs({
@@ -27,6 +49,10 @@ function main(): void {
     },
   });
   const [command] = positionals;
+  if (command === "nandos-rows") {
+    printNandosRows();
+    return;
+  }
   const wave = Number(values.wave);
 
   if (command !== "emit-migration" || !Number.isInteger(wave) || values.out === undefined) {

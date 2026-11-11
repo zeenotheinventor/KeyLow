@@ -2,27 +2,27 @@
 
 This is the written record of where each restaurant food in `restaurant-foods.csv` comes from, how it was read and what was left out. The rules for a row are in KEY-940 and ADR 0003 Amendment 18. The CSV holds facts only: numbers, the item's name, a URL and a date. No page, PDF, image or marketing text is copied into the repository.
 
-Every figure was read from the chain's own UK source on **2026-11-10**, the `retrieved_on` of every row, except Burger King (wave 3), read on **2026-11-11**. Figures on a chain's page change, so that date is the claim, and refreshing them is a later wave. No third-party site, no other country's site, Open Food Facts and no memory was used for any value.
+Every figure was read from the chain's own UK source on **2026-11-10**, the `retrieved_on` of every row, except Burger King (wave 3) and Nando's (wave 4), read on **2026-11-11**. Figures on a chain's page change, so that date is the claim, and refreshing them is a later wave. No third-party site, no other country's site, Open Food Facts and no memory was used for any value.
 
 ## Method
 
 - Each source was fetched with `curl` and a plain User-Agent that says what the client is (`KeyLowDataBot/1.0 (nutrition data check; honest client)`). No client was disguised.
 - The CSV columns hold the per portion figures as published, and `portion_grams` holds the weight the chain publishes for that portion (`weight_basis` is `published`). No weight was derived or estimated. Wave 2 rows have no weight (`weight_basis` is `none`, `portion_grams` is blank), and are stored per portion with the figures as published.
 - `published_kcal_per_100g` is the chain's own per 100 g energy figure, kept only so a test can check the weight and the per portion energy against each other. The generator works out the per 100 g columns itself, as the per portion figure times 100 over the grams, to two decimals.
-- Every one of the 81 rows passes the checks in `test/unit/restaurant/restaurantFoodsCsv.test.ts`, which run in CI: energy within 15% of 4 x protein + 4 x carbohydrate + 9 x fat + 2 x fibre, the generated per 100 g energy within 2% of the published per 100 g energy, and the other rules of the ticket.
+- Every one of the 94 rows passes the checks in `test/unit/restaurant/restaurantFoodsCsv.test.ts`, which run in CI: energy within 15% of 4 x protein + 4 x carbohydrate + 9 x fat + 2 x fibre, the generated per 100 g energy within 2% of the published per 100 g energy, and the other rules of the ticket.
 - A figure the chain rounds (Greggs prints two significant figures) is stored as printed.
 
 ## Chains
 
-| Chain         | Rows | Source page (in `source_url`)                                                         | What was read                                                                                                                                                                                                 |
-| ------------- | ---- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Greggs        | 12   | https://www.greggs.co.uk/nutrition                                                    | The "Nutritional Information (Guide only)" PDF the page links, marked "Information correct at time of print (October 2026)". It lists the portion size in g or ml, and values per 100 g and per portion.      |
-| Pret A Manger | 10   | https://www.pret.co.uk/en-GB/products/categories/&lt;category&gt;/&lt;subcategory&gt; | The product listing pages for hot pastries, breakfast pastries, sandwiches and hot toasted sandwiches. Each product carries its average weight in g and its energy and nutrients per serving and per 100 g.   |
-| Subway        | 8    | https://www.subway.com/en-gb/menunutrition/nutrition                                  | The "Nutrition Information November 2026, UK and ROI" PDF the page links. The Subs table gives the serving size in g and the values per serving, which is one six-inch sub, and per 100 g. Footlongs are out. |
-| McDonald's    | 17   | https://www.mcdonalds.com/gb/en-gb/product/<item>.html                                | Wave 2. The "Nutritional Information Per Portion" table of each product page, read in a browser session (see below). No weight is published.                                                                  |
-| KFC           | 17   | https://brand-uk.assets.kfc.co.uk/nutrition-allergens.pdf                             | Wave 2. The "Allergen & Nutrition Information November 2026" PDF on KFC UK's own asset host. It gives energy, fat, saturates, carbohydrate, sugars, protein and salt per item, and no weight.                 |
-| Burger King   | 17   | https://www.burgerking.co.uk/nutritional-info                                         | Wave 3. The nutrition PDF the page links (see below). It gives the serving size in g, and the values per serving and per 100 g.                                                                               |
-| Nando's       | 0    | https://www.nandos.co.uk/food/menu                                                    | Nothing. The UK menu page prints energy only, and no protein, fat or carbohydrate (see below).                                                                                                                |
+| Chain         | Rows | Source page (in `source_url`)                                                         | What was read                                                                                                                                                                                                  |
+| ------------- | ---- | ------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Greggs        | 12   | https://www.greggs.co.uk/nutrition                                                    | The "Nutritional Information (Guide only)" PDF the page links, marked "Information correct at time of print (October 2026)". It lists the portion size in g or ml, and values per 100 g and per portion.       |
+| Pret A Manger | 10   | https://www.pret.co.uk/en-GB/products/categories/&lt;category&gt;/&lt;subcategory&gt; | The product listing pages for hot pastries, breakfast pastries, sandwiches and hot toasted sandwiches. Each product carries its average weight in g and its energy and nutrients per serving and per 100 g.    |
+| Subway        | 8    | https://www.subway.com/en-gb/menunutrition/nutrition                                  | The "Nutrition Information November 2026, UK and ROI" PDF the page links. The Subs table gives the serving size in g and the values per serving, which is one six-inch sub, and per 100 g. Footlongs are out.  |
+| McDonald's    | 17   | https://www.mcdonalds.com/gb/en-gb/product/<item>.html                                | Wave 2. The "Nutritional Information Per Portion" table of each product page, read in a browser session (see below). No weight is published.                                                                   |
+| KFC           | 17   | https://brand-uk.assets.kfc.co.uk/nutrition-allergens.pdf                             | Wave 2. The "Allergen & Nutrition Information November 2026" PDF on KFC UK's own asset host. It gives energy, fat, saturates, carbohydrate, sugars, protein and salt per item, and no weight.                  |
+| Burger King   | 17   | https://www.burgerking.co.uk/nutritional-info                                         | Wave 3. The nutrition PDF the page links (see below). It gives the serving size in g, and the values per serving and per 100 g.                                                                                |
+| Nando's       | 13   | https://www.nandos.co.uk/food/menu                                                    | Wave 4. The energy in kcal printed on each item of the menu page. It prints no macros, so protein, fat, saturates, carbohydrate, sugars, fibre and salt are estimated from the dish's ingredients (see below). |
 
 The Greggs PDF is hosted on the chain's content network, not on `greggs.co.uk`, so `source_url` names the page that links it. The Subway PDF is on `media.subway.com`, which the same page links.
 
@@ -51,9 +51,35 @@ The PDF is on `brand-uk.assets.kfc.co.uk`, KFC UK's own asset host, and was fetc
   - **Big King.** Its row is inconsistent as printed (1402 kcal for 358 g, against 3416 kJ and 391 kcal per 100 g), so no energy figure can be trusted.
   - Everything else on the menu was not chosen: drinks, desserts, dips, sauces, extras, kids items, breakfast, delivery exclusives, loaded and chicken fries, and the sharer boxes. No limited time item was taken.
 
-### Nando's: left out
+### Nando's: published energy, estimated macros
 
-- **Nando's.** `https://www.nandos.co.uk/food/menu` is a normal page, and prints one energy figure in kcal per item. `https://www.nandos.co.uk/allergens` and its item pages are allergen tables only. No page gave protein, fat, saturates, carbohydrate, sugars or salt, so no complete row could be written. The help centre answered a script with a 403 challenge page. The PDFs on `assets.ctfassets.net` are the US and Canada guides, not UK figures, and were not used.
+Zee's ruling of 2026-11-11 (ADR 0003 Amendment 20): the macros are estimated from each dish's ingredients and marked `quality.macros_estimated`. Everything below was fetched with `curl` and the plain User-Agent `KeyLowDataCheck/1.0 (nutrition data verification)`. No third-party nutrition site and no remembered figure was used.
+
+**Sources.**
+
+- Energy: `https://www.nandos.co.uk/food/menu`, the `kcal` printed on each item, read on 2026-11-11. Those are the `kcal` of the rows and are never scaled.
+- What a dish is made of: the item's page under `https://www.nandos.co.uk/allergens/<item>`, whose "Ingredients" list is in order of weight and has no amounts. `ingredients_url` in the estimates file names the page. For the published energy of a component sold on its own (a Tortilla Wrap, a Toasted Pitta, a Grilled Chicken Breast) the same menu page was used as a sense check on the assumed weights.
+
+**Method.** `nandos-estimates.json` lists, per item, the components, the CoFID code of the reference food for each, the assumed weight in grams of each in one portion, and the scale factor. The generator adds up the components' nutrients at those weights, then multiplies every component by one factor so the energy equals the published kcal exactly. The scaled protein, fat, saturates, carbohydrate, sugars, fibre and salt (sodium times 2.5 over 1000, as the CoFID import maps it) are the row's figures. A nutrient CoFID does not record for a reference counts as 0. Fibre is as the CoFID import stores it, AOAC where CoFID has it and otherwise NSP. `import:restaurant nandos-rows` prints the CSV lines, and `estimateNandosMacros.test.ts` recomputes them from the file and the CoFID CSV, checks every item's stored factor, and fails when the CSV and the file differ. The weights were chosen so that the components come to within about 7% of the published energy before scaling, so the factors sit between 0.95 and 1.07.
+
+**Assumptions.**
+
+- "From 498 kcal" and the like on the menu are taken as the regular size, because the same line says "Large serves 2". The large size's energy is not on the menu page, so no large row exists.
+- The marinade and basting sauce are modelled as rapeseed oil and salt, the only parts of them that carry energy or salt at a gram or two. The spices, vinegar, lemon and garlic are left out. The energy is published for the dish "in your favourite spice", with no spice named, so no spice is modelled.
+- 1/4 Chicken is "a breast or leg", and its 289 kcal is a quarter of the whole chicken's 1,159, so it is modelled as the mean of the two cuts: half of a 150 g breast quarter, grilled, meat and skin, and half of a 125 g leg quarter, roasted, meat and skin. Whole Chicken is two of each. A wing is 32 g of edible meat and skin.
+- Chicken Butterfly is two breasts joined by skin: 175 g of grilled breast, meat and skin.
+- Wrap and pitta are single, with the chicken breast fillet as skinless grilled breast. The yoghurt mayo, lemon and herb mayo, chilli jam and rainbow slaw have no CoFID food of their own, so retail mayonnaise, Greek style yoghurt, sugar with tomato puree, and retail coleslaw stand in, and each is named as a stand-in in the file.
+- PERi-Salted Chips are straight cut frozen chips fried in oil, plus salt for the PERi-Salt. Spicy Rice is boiled long grain rice with oil, peppers, onion and tomato. Macho Peas are frozen peas with olive oil, mint and parsley. Corn on the Cob is boiled sweetcorn weighed with its core, plus the butter portion it is served with, taken as part of the published energy. Garlic Bread is white bread standing in for the Portuguese roll, with a fat spread for the garlic and chilli spread and raw garlic.
+- The three Chicken Wings rows (3, 5 and 10) are the sizes the menu prints. Their kcal are 78.7 to 78.6 per wing, so they are consistent with one another.
+
+**Names and labels.** `name` is Nando's item name, with "Regular" added to a side whose size is given as "From" (as KFC's "Regular Signature Fries"). Labels are by what the portion is: "1 quarter chicken", "1 portion of 3 wings", "1 wrap", "1 pitta", "1 regular PERi-Salted Chips".
+
+**Left out.**
+
+- Half Chicken, which is not on the current menu page.
+- The chicken breast fillet burger, which the menu no longer lists under that name. Its allergen page exists, but there is no energy for it. The Sunset Burger and Garlic Churrasco Burger have energy, but "two chicken thighs or a breast" makes their components ambiguous, so they are left for a later wave.
+- PERi-Salted Chips large, and the large size of every side, because the menu prints one "From" figure and no large figure.
+- Drinks, desserts, kids' items, starters, sharing platters and extras.
 
 ### Names
 
@@ -70,7 +96,7 @@ A plain "sausage roll" search now leads with the Greggs sausage roll, because it
 
 ## Reviewer's sample
 
-To be filled in by the reviewer, independently of the engineer: every McDonald's burger, every KFC burger and a random 20% of the rest, at least 3 per chain, each re-read from its source and compared with the CSV.
+To be filled in by the reviewer, independently of the engineer: every McDonald's burger, every KFC burger and a random 20% of the rest, at least 3 per chain, each re-read from its source and compared with the CSV. For Nando's, the reviewer re-reads the kcal of at least 3 items from the menu page and checks the estimate of one item by hand from `nandos-estimates.json` and CoFID.
 
 | Ref                                       | Source read                                                                                                  | kcal | Weight   | Matches |
 | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ---- | -------- | ------- |
@@ -140,3 +166,18 @@ Read on 2026-11-10 by the reviewer, independently of the engineer, with `curl` a
 | kfc-gb:regular-signature-fries | KFC UK Nov 2026 PDF re-read by the reviewer, kJ, kcal and all seven nutrients per item, no weight, fibre blank | 261 | none | Yes |
 | kfc-gb:large-signature-fries | KFC UK Nov 2026 PDF re-read by the reviewer, kJ, kcal and all seven nutrients per item, no weight, fibre blank | 372 | none | Yes |
 | kfc-gb:hash-brown | KFC UK Nov 2026 PDF re-read by the reviewer, kJ, kcal and all seven nutrients per item, no weight, fibre blank | 92 | none | Yes |
+| nandos-gb:quarter-chicken | Nando's UK menu page re-read by the reviewer on 2026-11-11, kcal only (no macros published), "From" read as the regular size | 289 | none | Yes |
+| nandos-gb:whole-chicken | Nando's UK menu page re-read by the reviewer on 2026-11-11, kcal only (no macros published), "From" read as the regular size | 1159 | none | Yes |
+| nandos-gb:chicken-butterfly | Nando's UK menu page re-read by the reviewer on 2026-11-11, kcal only (no macros published), "From" read as the regular size | 332 | none | Yes |
+| nandos-gb:3-chicken-wings | Nando's UK menu page re-read by the reviewer on 2026-11-11, kcal only (no macros published), "From" read as the regular size | 236 | none | Yes |
+| nandos-gb:5-chicken-wings | Nando's UK menu page re-read by the reviewer on 2026-11-11, kcal only (no macros published), "From" read as the regular size | 393 | none | Yes |
+| nandos-gb:10-chicken-wings | Nando's UK menu page re-read by the reviewer on 2026-11-11, kcal only (no macros published), "From" read as the regular size | 786 | none | Yes |
+| nandos-gb:grilled-chicken-wrap | Nando's UK menu page re-read by the reviewer on 2026-11-11, kcal only (no macros published), "From" read as the regular size | 514 | none | Yes |
+| nandos-gb:grilled-chicken-pitta | Nando's UK menu page re-read by the reviewer on 2026-11-11, kcal only (no macros published), "From" read as the regular size | 508 | none | Yes |
+| nandos-gb:regular-peri-salted-chips | Nando's UK menu page re-read by the reviewer on 2026-11-11, kcal only (no macros published), "From" read as the regular size | 498 | none | Yes |
+| nandos-gb:regular-spicy-rice | Nando's UK menu page re-read by the reviewer on 2026-11-11, kcal only (no macros published), "From" read as the regular size | 246 | none | Yes |
+| nandos-gb:regular-macho-peas | Nando's UK menu page re-read by the reviewer on 2026-11-11, kcal only (no macros published), "From" read as the regular size | 155 | none | Yes |
+| nandos-gb:regular-corn-on-the-cob | Nando's UK menu page re-read by the reviewer on 2026-11-11, kcal only (no macros published), "From" read as the regular size | 142 | none | Yes |
+| nandos-gb:regular-garlic-bread | Nando's UK menu page re-read by the reviewer on 2026-11-11, kcal only (no macros published), "From" read as the regular size | 372 | none | Yes |
+
+Nando's estimate hand-checked by the reviewer: nandos-gb:quarter-chicken (75 g grilled breast 18-325, 62.5 g roast leg 18-337, 3 g rapeseed oil 17-041, 0.8 g salt 17-367 sum to 304.2 kcal, factor 0.9500, giving 33.0 g protein, 17.4 g fat, 3.6 g saturates, 1.0 g salt as stored) and nandos-gb:chicken-butterfly (factor 1.0069, giving 50.9 g protein, 14.3 g fat, 1.8 g saturates, 1.26 g salt as stored). Both match the CSV.

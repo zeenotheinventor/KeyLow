@@ -80,3 +80,16 @@ burgerking-gb:chicken-nuggets-9,3,Burger King,Chicken Nuggets 9pc,1 box of 9,150
 burgerking-gb:chicken-nuggets-20,3,Burger King,Chicken Nuggets 20pc,1 box of 20,334,published,848,45,46,7.2,59,3.7,1.5,4.6,254,https://www.burgerking.co.uk/nutritional-info,2026-11-11
 burgerking-gb:fries-regular,3,Burger King,Fries Regular,1 regular fries,116,published,275,3.6,12,4.0,36,,6.2,0.52,237,https://www.burgerking.co.uk/nutritional-info,2026-11-11
 burgerking-gb:fries-small,3,Burger King,Fries Small,1 small fries,90,published,213,2.8,9.1,3.1,28,,4.8,0.4,237,https://www.burgerking.co.uk/nutritional-info,2026-11-11
+nandos-gb:quarter-chicken,4,Nando's,1/4 Chicken,1 quarter chicken,,none,289,33,17.4,3.6,0,0,0,1,,https://www.nandos.co.uk/food/menu,2026-11-11
+nandos-gb:whole-chicken,4,Nando's,Whole Chicken,1 whole chicken,,none,1159,134.3,69.1,14.4,0,0,0,3.87,,https://www.nandos.co.uk/food/menu,2026-11-11
+nandos-gb:chicken-butterfly,4,Nando's,Chicken Butterfly,1 chicken butterfly,,none,332,50.9,14.3,1.8,0,0,0,1.26,,https://www.nandos.co.uk/food/menu,2026-11-11
+nandos-gb:3-chicken-wings,4,Nando's,3 Chicken Wings,1 portion of 3 wings,,none,236,23,16,3.8,0,0,0,1.09,,https://www.nandos.co.uk/food/menu,2026-11-11
+nandos-gb:5-chicken-wings,4,Nando's,5 Chicken Wings,1 portion of 5 wings,,none,393,38.4,26.6,6.4,0,0,0,1.81,,https://www.nandos.co.uk/food/menu,2026-11-11
+nandos-gb:10-chicken-wings,4,Nando's,10 Chicken Wings,1 portion of 10 wings,,none,786,76.7,53.3,12.7,0,0,0,3.62,,https://www.nandos.co.uk/food/menu,2026-11-11
+nandos-gb:grilled-chicken-wrap,4,Nando's,Grilled Chicken Wrap,1 wrap,,none,514,37.8,15.4,4.1,59.8,11.4,3.8,2.1,,https://www.nandos.co.uk/food/menu,2026-11-11
+nandos-gb:grilled-chicken-pitta,4,Nando's,Grilled Chicken Pitta,1 pitta,,none,508,38.9,16.7,1.8,53.9,4.6,2.5,1.77,,https://www.nandos.co.uk/food/menu,2026-11-11
+nandos-gb:regular-peri-salted-chips,4,Nando's,Regular PERi-Salted Chips,1 regular PERi-Salted Chips,,none,498,7.5,24.6,4.6,65.7,1.3,4.4,1.67,,https://www.nandos.co.uk/food/menu,2026-11-11
+nandos-gb:regular-spicy-rice,4,Nando's,Regular Spicy Rice,1 regular spicy rice,,none,246,4.7,4.7,0.4,49.5,2.3,1.8,1.03,,https://www.nandos.co.uk/food/menu,2026-11-11
+nandos-gb:regular-macho-peas,4,Nando's,Regular Macho Peas,1 regular macho peas,,none,155,9.3,5.3,0.8,18.7,9.8,9.2,0.83,,https://www.nandos.co.uk/food/menu,2026-11-11
+nandos-gb:regular-corn-on-the-cob,4,Nando's,Regular Corn on the Cob,1 regular corn on the cob,,none,142,4.4,9.1,4.6,11.6,3.1,6.2,0.15,,https://www.nandos.co.uk/food/menu,2026-11-11
+nandos-gb:regular-garlic-bread,4,Nando's,Regular Garlic Bread,1 regular garlic bread,,none,372,8.7,17.7,5.2,47.5,2.9,2.9,1.36,,https://www.nandos.co.uk/food/menu,2026-11-11

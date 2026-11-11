@@ -39,6 +39,17 @@ export const testBucket: RestaurantCsvCells = {
   source_url: "https://www.otherchain.example/nutrition",
 };
 
+/** Nando's publishes energy only, so its protein, fat and the rest are estimated from the ingredients. */
+export const testNandosDish: RestaurantCsvCells = {
+  ...testBucket,
+  ref: "nandos-gb:test-dish",
+  wave: "4",
+  chain: "Nando's",
+  name: "Test Dish",
+  portion_label: "1 dish",
+  source_url: "https://www.nandos.co.uk/food/menu",
+};
+
 export const restaurantCsvOf = (...rows: readonly RestaurantCsvCells[]): string =>
   formatCsv([
     [...RESTAURANT_COLUMNS],

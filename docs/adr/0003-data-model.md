@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted, 2026-09-22. Amendment 1 appended 2026-10-07. Amendment 2 appended 2026-10-15. Amendment 3 appended 2026-10-15. Amendment 4 appended 2026-10-15. Amendment 5 appended 2026-10-15. Amendment 6 appended 2026-10-15. Amendment 7 appended 2026-10-15. Amendment 8 appended 2026-10-16. Amendment 9 appended 2026-10-18. Amendment 10 appended 2026-10-23. Amendment 11 appended 2026-10-23. Amendment 12 appended 2026-10-23. Amendment 13 appended 2026-10-23. Amendment 14 appended 2026-10-26, with addenda of 2026-11-03 and 2026-11-07. Amendment 15 appended 2026-10-29. Amendment 16 appended 2026-11-10. Amendment 17 appended 2026-11-10. Amendment 18 appended 2026-11-10. Amendment 19 appended 2026-11-11.
+Accepted, 2026-09-22. Amendment 1 appended 2026-10-07. Amendment 2 appended 2026-10-15. Amendment 3 appended 2026-10-15. Amendment 4 appended 2026-10-15. Amendment 5 appended 2026-10-15. Amendment 6 appended 2026-10-15. Amendment 7 appended 2026-10-15. Amendment 8 appended 2026-10-16. Amendment 9 appended 2026-10-18. Amendment 10 appended 2026-10-23. Amendment 11 appended 2026-10-23. Amendment 12 appended 2026-10-23. Amendment 13 appended 2026-10-23. Amendment 14 appended 2026-10-26, with addenda of 2026-11-03 and 2026-11-07. Amendment 15 appended 2026-10-29. Amendment 16 appended 2026-11-10. Amendment 17 appended 2026-11-10. Amendment 18 appended 2026-11-10. Amendment 19 appended 2026-11-11. Amendment 20 appended 2026-11-11.
 
 ## Context
 
@@ -2472,3 +2472,42 @@ The migration `20261111070000_recipe_weightless_ingredients.sql` with pgTAP in `
 ### Consequences of Amendment 19
 
 No column, table or enum changes, so `packages/db/src/types.gen.ts` is unchanged. A client that does not know `servingsOnly` reads such a recipe as one with no cooked weight and an `effectiveGrams` of 0, which its grams chip would refuse to log, so phone and web ship together. Any further deviation from the frozen Decision or from Amendments 1 to 18 needs an Amendment 20 before the migration or code that implements it lands.
+
+## Amendment 20 (Restaurant foods: macros estimated from a dish's ingredients, 2026-11-11)
+
+### Status
+
+Recorded on 2026-11-11 under KEY-955 for Zee's ruling of the same day. Nando's UK publishes one energy figure per item and no protein, fat, carbohydrate, sugars, fibre or salt (see `data/restaurants/VERIFICATION.md`), so under the rule of KEY-940 it had no complete row. On leaving it at calories only: "nah it needs macros, i want you to estimate it based on ingeridents".
+
+Amendment 19 is KEY-944's and is not on `main` yet, so this one is numbered 20. The frozen Decision and Amendments 1 to 18 are unchanged. The key, the method and the marking below are interpretations. Zee confirms them by approving the pull request that carries this amendment.
+
+### The `quality` key
+
+`foods.quality` gains one key, `macros_estimated`, a boolean. Like every other key it is optional, and absent reads as false, so `'{}'` stays the neutral value. It is true for a food whose energy is as the chain publishes it and whose protein, fat, saturates, carbohydrate, sugars, fibre and salt were estimated from the dish's ingredients. The key set in Amendment 1 is the frozen list, and this adds to it. The zod `foodQualitySchema` in `@keylow/core` stays the source of truth and gains the same key. No column, constraint or grant changes, because `quality` is `jsonb` with no check on its keys.
+
+### The method
+
+Every Nando's food is stored per portion (Amendment 18), with one default count portion and no weight, because Nando's publishes none. For each item:
+
+1. `kcal` is the figure printed on `https://www.nandos.co.uk/food/menu`. It is fact and is never changed by the estimate.
+2. The components are what the dish is made of, read from the item's page under `https://www.nandos.co.uk/allergens/`, with an assumed weight for each. No third-party nutrition source is used.
+3. Each component is a CoFID food already in the repository, so its nutrients are the ones the CoFID import maps.
+4. The components' energy is added up and every component is scaled by one factor so that the total equals the published kcal exactly. The scaled protein, fat, saturates, carbohydrate, sugars, fibre and salt are the stored figures, rounded to one decimal place (salt to two).
+5. The components, reference codes, assumed weights and scale factor of every item are in `data/restaurants/nandos-estimates.json`. `import:restaurant nandos-rows` derives the CSV rows from it, and a unit test recomputes them, so the CSV cannot drift from the estimates.
+
+A food gets the mark from its chain. `deriveFood` returns `quality: { macros_estimated: true }` for a Nando's row, and the generated migration writes `quality` for such a row only, so every other restaurant food's statements are unchanged.
+
+### What this supersedes
+
+Nothing. The sentence in `VERIFICATION.md` that left Nando's out for want of macros is replaced by the method above. KEY-940's rule that the chain's own UK figures are the only source still holds for the energy. The estimated figures are not the chain's, and the mark is how they are told apart.
+
+### Implemented by
+
+- Core: `macros_estimated` in `foodQualitySchema`.
+- Scripts: `estimateNandosMacros.ts`, the `nandos-rows` command of `import-restaurant.ts`, `quality` in `deriveFood` and in `renderRestaurantMigration`.
+- Data: `nandos-estimates.json` and the Nando's rows of `restaurant-foods.csv` (wave 4).
+- The wave 4 migration `20261111080000_restaurant_foods.sql`, with pgTAP in `restaurant_foods_wave4.test.sql`.
+
+### Consequences of Amendment 20
+
+No screen says a figure is estimated. An in-app "estimated" label is a follow-up for Zee to decide, and until then the mark is in the data only. No row carries the key until the wave 4 migration is applied, so no reset is needed. Any further deviation from the frozen Decision, from Amendments 1 to 18 or from this amendment needs an Amendment 21 before the migration or code that implements it lands.

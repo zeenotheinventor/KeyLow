@@ -1,4 +1,11 @@
 import type { RestaurantFoodRow } from "./restaurantFoodsCsv";
+import type { FoodQuality } from "@keylow/core";
+
+/**
+ * The chains that publish energy and no macros, so every figure but the energy of their rows is estimated
+ * from the dish's ingredients (ADR 0003, Amendment 20, and data/restaurants/nandos-estimates.json).
+ */
+const CHAINS_WITH_ESTIMATED_MACROS: ReadonlySet<string> = new Set(["Nando's"]);
 
 export type DerivedFood = {
   basis: "per_100g" | "per_portion";
@@ -12,6 +19,7 @@ export type DerivedFood = {
     fibre_g: number | null;
     salt_g: number | null;
   };
+  quality: FoodQuality;
   /** The one default portion. A count portion has no grams. */
   portion: { label: string; grams: number | null };
 };
@@ -44,6 +52,7 @@ export function deriveFood(row: RestaurantFoodRow): DerivedFood {
       fibre_g: stored(row.fibre_g),
       salt_g: stored(row.salt_g),
     },
+    quality: CHAINS_WITH_ESTIMATED_MACROS.has(row.chain) ? { macros_estimated: true } : {},
     portion: { label: row.portion_label, grams },
   };
 }

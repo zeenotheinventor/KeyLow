@@ -281,6 +281,8 @@ pnpm --filter @keylow/db import:restaurant emit-migration --wave 2 --out supabas
 
 It writes the file without connecting to any database, and refuses a path that holds a file already. A corrected figure or a later wave is a new migration with a later timestamp. A unit test regenerates the newest `*_restaurant_foods.sql` from the CSV and its wave and fails when the two differ, and it fails when that migration does not hold a `per_portion` food for every CSV row up to its wave that has no weight. Apply it to the local stack with `pnpm --filter @keylow/db migration:up`.
 
+Nando's publishes energy only, so its rows (wave 4) carry the published kcal and macros estimated from each dish's ingredients (ADR 0003 Amendment 20). `data/restaurants/nandos-estimates.json` holds each item's components, CoFID reference codes, assumed weights and scale factor. Print the CSV lines it works out with `pnpm --filter @keylow/db import:restaurant nandos-rows`, and a unit test fails when the CSV and the estimates differ. The generated migration marks those foods `quality.macros_estimated`.
+
 ### Edge Functions
 
 Edge Functions live in `packages/db/supabase/functions/` and run under Deno. The Node tools (ESLint, `tsc`) ignore that folder, and Deno checks it instead. Shared helpers are in `_shared/`, and each function is a folder with an `index.ts`. A folder whose name starts with an underscore is never deployed as a function.
