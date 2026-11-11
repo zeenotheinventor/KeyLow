@@ -261,12 +261,12 @@ Deno.test(
 );
 
 Deno.test(
-  "the strict budget of the real registry is 16 tools, 0 optional and 14 union parameters",
+  "the strict budget of the real registry is 16 tools, 0 optional and 16 union parameters",
   () => {
     assertEquals(strictBudgetOf(toolRegistry.list), {
       tools: 16,
       optionalParameters: 0,
-      unionParameters: 14,
+      unionParameters: 16,
     });
   },
 );

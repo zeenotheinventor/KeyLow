@@ -1,4 +1,4 @@
-import { assert, assertEquals, assertThrows } from "@std/assert";
+import { assert, assertEquals, assertStringIncludes, assertThrows } from "@std/assert";
 
 import { toAnthropicTools } from "../_shared/assistant/adapters/anthropic.ts";
 import { toolRegistry } from "../_shared/assistant/registry.ts";
@@ -368,6 +368,23 @@ Deno.test("hand measures stay banned and the grounding rules of the food section
   );
 });
 
+Deno.test("Live foods follows Read before you write and says how a live product is used", () => {
+  const sections = SYSTEM_PROMPT.split("\n\n");
+  const position = sections.findIndex((section) => section.startsWith("Live foods\n"));
+
+  assert(position > 0, "the system prompt has no Live foods section");
+  assert(sections[position - 1]?.startsWith("Read before you write"));
+  const live = sections[position] ?? "";
+  for (const rule of [
+    "Prefer a catalogue food that matches the dish.",
+    "Use a product from live only when its name names the dish better",
+    "read it with get_food by its off_code before logging",
+    "log with the id and portion ids that answer gives",
+  ]) {
+    assertStringIncludes(live, rule);
+  }
+});
+
 Deno.test("Training questions is one section, between Training advice and One question", () => {
   const titles = SYSTEM_PROMPT.split("\n\n").map((section) => section.split("\n")[0]);
   const position = titles.indexOf("Training questions");
@@ -687,6 +704,7 @@ const SNAKE_CASE_WORDS_THAT_ARE_NOT_TOOLS: ReadonlySet<string> = new Set([
   "untrusted_data",
   "primary_muscles",
   "conversation_summary",
+  "off_code",
 ]);
 
 Deno.test("every snake_case word in the prompt is a registered tool or a listed code", () => {

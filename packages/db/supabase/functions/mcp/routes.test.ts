@@ -18,6 +18,7 @@ import type {
   ToolDefinition,
   ToolRegistry,
 } from "../_shared/assistant/tool.ts";
+import type { OffLookup } from "../_shared/assistant/offLookup.ts";
 import type { ReportError } from "../_shared/report.ts";
 import type { McpDependencies } from "./routes.ts";
 import type { McpTurn } from "./turns.ts";
@@ -400,6 +401,44 @@ Deno.test("a tool is given the recipe import's services when the function has th
 
   assertEquals(seen, [false, true]);
 });
+
+Deno.test(
+  "a tool is given the Open Food Facts lookup made from the request, so under the caller's JWT",
+  async () => {
+    const seen: (OffLookup | undefined)[] = [];
+    const probe: ToolDefinition = {
+      ...fakeReadTool("read_probe").definition,
+      run(ctx) {
+        seen.push(ctx.offLookup);
+        return Promise.resolve({ data: { rows: [] } });
+      },
+    };
+    const lookup: OffLookup = {
+      search: () => Promise.resolve({ status: "unavailable" }),
+      product: () => Promise.resolve({ status: "unavailable" }),
+    };
+    const authorizations: (string | null)[] = [];
+    const made = fake({ registry: createRegistry([probe]) });
+
+    await post(made.dependencies, callTool("read_probe", { note: "x" }), {
+      headers: { "x-kilo-allowed-tools": "read_probe", authorization: "Bearer caller-jwt" },
+    });
+    await post(
+      {
+        ...made.dependencies,
+        offLookup: (request) => {
+          authorizations.push(request.headers.get("authorization"));
+          return lookup;
+        },
+      },
+      callTool("read_probe", { note: "x" }),
+      { headers: { "x-kilo-allowed-tools": "read_probe", authorization: "Bearer caller-jwt" } },
+    );
+
+    assertEquals(seen, [undefined, lookup]);
+    assertEquals(authorizations, ["Bearer caller-jwt"]);
+  },
+);
 
 Deno.test("a write on a turn without a user message answers no_user_message", async () => {
   const write = fakeWriteTool();

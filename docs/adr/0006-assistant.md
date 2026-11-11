@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted when the pull request that carries it merges. Written on 2026-10-26 under KEY-662, part of KEY-185 (the M8 brief). The tables, columns and functions it needs are in ADR 0003, Amendment 14. Every M8 migration waits for both documents. Amended on 2026-11-07 under KEY-883, part of KEY-881 (the brief for weight training): see Amendment 1 and Amendment 2 at the end. Two decisions in it were taken by the orchestrator while Zee was away, for his review, and are marked as such.
+Accepted when the pull request that carries it merges. Written on 2026-10-26 under KEY-662, part of KEY-185 (the M8 brief). The tables, columns and functions it needs are in ADR 0003, Amendment 14. Every M8 migration waits for both documents. Amended on 2026-11-07 under KEY-883, part of KEY-881 (the brief for weight training): see Amendment 1, Amendment 2 and Amendment 3 at the end. Two decisions in it were taken by the orchestrator while Zee was away, for his review, and are marked as such.
 
 ## Context
 
@@ -154,7 +154,7 @@ Every turn sends the whole conversation to the model again, so a long one costs 
 
 ### Semantic food search is deferred
 
-Semantic food search (pgvector, embeddings and `search_foods_hybrid`) is deferred to Housekeeping (Zee, 2026-10-25, KEY-185 Amendment 2 H) and gets no column in Amendment 14 and no decision here. The assistant resolves foods with the existing `search_foods` (full text plus trigram), retrying once with other words before it asks, and never guesses.
+Semantic food search (pgvector, embeddings and `search_foods_hybrid`) is deferred to Housekeeping (Zee, 2026-10-25, KEY-185 Amendment 2 H) and gets no column in Amendment 14 and no decision here. The assistant resolves foods with the existing `search_foods` (full text plus trigram), retrying once with other words before it asks, and never guesses. Amendment 3 adds a live Open Food Facts step for a search the catalogue does not answer.
 
 ### Evals
 
@@ -383,3 +383,34 @@ A food per 100 ml answers millilitres: on a plate, covered area times heap depth
 
 - KEY-965, the core function, the tool and this amendment. The prompt rules, the `log_entry` flag, the card badge and the evals follow in the next ticket.
 - KEY-966, the prompt rules (Numbers, Amounts, Read before you write, One question), the `estimated` flag of `log_entry` that sets the card row's `estimate`, the seed foods and the `mealEstimate` eval set (on demand, 80 %).
+
+## Amendment 3 to this ADR: live Open Food Facts for the food reads (2026-11-11)
+
+### Status
+
+Recorded on 2026-11-11 under KEY-967, the follow-up Amendment 2 names ("Live Open Food Facts results are their own ticket"). It changes how the assistant finds a food. It adds no table, column, migration or tool, and no ADR 0003 change: the shared Open Food Facts rows and the search store are written by the functions that wrote them before.
+
+### Context
+
+The app's food search shows the catalogue and then live Open Food Facts rows. The assistant's `search_foods` read only the `search_foods` RPC, which holds CoFID, the curated USDA list, restaurant foods, the person's own foods and the Open Food Facts products someone has already opened. A branded dish that none of them holds, such as a beef massaman or a spinach soup, was therefore unreachable, and the assistant said the food was not in the database. The section above that says the assistant resolves foods with the existing `search_foods` stands for the catalogue. This amendment adds the live step after it.
+
+### Decision
+
+- **The trigger is core's.** `hasStrongFoodMatch(query, names)` in `packages/core/src/foods/` is true when one catalogue name holds every query word of 3 or more letters, compared by stem, so "tomatoes" matches "Tomato, raw". Shorter words are ignored, and no names is never a match. `search_foods` asks for live results only when the catalogue answer has no strong match, so a search the catalogue answers ("basmati rice" against "Rice, white, basmati, boiled") costs nothing new. "Beef massaman" against "Curry, beef, homemade" is not a match.
+- **Live results come through the functions, never from Open Food Facts directly.** `search_foods` posts the words to the project's `off-search` function over HTTP with the caller's own JWT, so the per-user and global limits, the shared result store (ADR 0003, Amendment 16) and the UK filter apply unchanged, and the tool imports none of the function's modules: one code path, one limit. The call is capped at 4 seconds. The answer is the catalogue results as before plus `live`, up to 5 candidates, each with `off_code`, name, brand, basis and the kcal and macros per 100, and no id and no portions. A refused limit, a failure, a body that is not the contract and a timeout all answer the catalogue with `live: null` and a short `live_notice`, never an error.
+- **A candidate becomes a food through `get_food`.** The input is now `id` and `off_code`, both required and nullable so the strict schema stays closed, and exactly one is given. A JSON Schema cannot say that, so the zod input refines it and the executor answers `invalid_input` for neither or both, and the description says it. An `off_code` makes `get_food` call `off-product` over HTTP with the caller's JWT, which stays the only writer of shared Open Food Facts rows, and the answer is the stored food with its own id and portions, so `log_entry` and `estimate_portions` work on it unchanged. The call is capped at 8 seconds, because `off-product` may have to fetch and store the product. A 404 answers `not_found`, and a refusal, a failure or a timeout answers `unavailable`. The `id` key and its description are kept, because the tool is on the logging path and its wording is measured by the writes evals.
+- **The calls are a service on the tool context.** `offLookup` is set by the `mcp` function from the request it is serving, the way `recipeImport` is set, so a context without it (every unit test that does not need it) answers from the catalogue alone.
+- **The prompt gets one short section, Live foods.** It says to prefer a catalogue food that matches the dish, to use a live product only when its name names the dish better, to read it with `get_food` by its `off_code` before logging, and to log with the id and portion ids that answer gives. The sections of Amendment 1 and 2 are not reworded.
+- **Live text is untrusted like every result.** Live names and brands are Open Food Facts text, and they arrive inside the same `<untrusted_data>` wrapper as any other result.
+- **Nothing is logged.** The search words are the key of the shared store, so no log line, report or error of the lookup carries them, a product name or a nutrient. A failure is an outcome, and its reason is not kept.
+
+### Consequences
+
+- The registry still has 38 tools. The two descriptions and the prompt section grow the prefix by about 1,000 characters, which the prefix test counts.
+- `get_food` now has two nullable parameters, which count as union parameters in the strict budget. The registry is at the API's cap of 16 union parameters with no room left, so the next strict tool with a nullable field has to opt out of strict mode, as Amendment 1 and 2 do.
+- The evals still reach no Open Food Facts answer: the live run starts no Open Food Facts stand-in, and serving a canned answer would need a change to the workflow. The unit tests of the lookup, the two tools and the route are the cover.
+- Semantic search stays deferred to Housekeeping, and the limits of `off-search` are unchanged.
+
+### Implemented by
+
+- KEY-967, the strong match rule, the lookup, the two tools, the prompt section and this amendment.

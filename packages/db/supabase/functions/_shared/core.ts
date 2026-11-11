@@ -148,6 +148,7 @@ export {
   FOCUS_OPTIONS,
   GOAL_OPTIONS,
   formatClockTime,
+  hasStrongFoodMatch,
   isGeneratedEstimate,
   isOurEstimate,
   estimatePortions,
