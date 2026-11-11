@@ -42,6 +42,14 @@ jest.mock(
 // The clock stands still at 19:00 on the golden Thursday.
 jest.mock("../lib/useNow", () => ({ useNow: () => new Date("2026-10-15T18:00:00Z") }));
 
+// Jest does not turn the library's scroll handlers into worklets, so the plain scroll view stands in for the
+// library's, which the sheet's contents scroll in.
+jest.mock("@gorhom/bottom-sheet", () =>
+  jest
+    .requireActual<{ mockBottomSheet: () => unknown }>("./support/sheetScrollViewMock")
+    .mockBottomSheet(),
+);
+
 setUpTests();
 
 const LEG_PRESS_PRIMARY = { name: "Quads, Primary · counts 1 set" };

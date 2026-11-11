@@ -6,6 +6,7 @@ import { View } from "react-native";
 import { useBodyFigure } from "../../../lib/bodyFigure";
 import { BodyStage } from "../../BodyMapFigures";
 import { useBody3DLayout } from "../../BodyView";
+import { ExerciseFormSection } from "../../ExerciseFormSection";
 // Not through the screen's barrel: the screen mounts this sheet, and the barrel would import it back.
 import { useExerciseMuscles } from "../../SessionScreen/useExerciseMuscles";
 import { BodyFigure, Card, SegmentedControl, Skeleton, Text } from "../../ui";
@@ -31,7 +32,9 @@ function isSameState(first: ExerciseMusclesState, second: ExerciseMusclesState):
 }
 
 /**
- * The contents of the Muscles it works sheet for one exercise: its name and caption, the body coloured by
+ * The contents of the Muscles it works sheet for one exercise: its name, the form card under it when the
+ * exercise has a video or photos (`ExerciseFormSection`, which draws nothing otherwise, so the name and the
+ * caption stay together as they were), the caption, the body coloured by
  * role, and below it the role rows and the explanation, or the loading rows, or the line that says why
  * there are no muscles. The body is the front and the back in 2D, or when the person chose 3D in More and
  * the phone can draw it, one body on the dark stage with the Front and Back switch and the line that says to
@@ -65,6 +68,11 @@ export function ExerciseMusclesBody({ exercise, isOpen }: ExerciseMusclesBodyPro
         <Text role="heading" variant="h2">
           {exercise.name}
         </Text>
+        <ExerciseFormSection
+          exerciseId={exercise.id}
+          exerciseName={exercise.name}
+          isOpen={isOpen}
+        />
         <Text tone="secondary" variant="caption">
           {EXERCISE_MUSCLES.caption}
         </Text>

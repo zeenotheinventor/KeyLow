@@ -40,6 +40,14 @@ jest.mock(
     jest.requireActual<{ default: unknown }>("react-native-safe-area-context/jest/mock").default,
 );
 
+// Jest does not turn the library's scroll handlers into worklets, so the plain scroll view stands in for the
+// library's, which the sheet's contents scroll in.
+jest.mock("@gorhom/bottom-sheet", () =>
+  jest
+    .requireActual<{ mockBottomSheet: () => unknown }>("./support/sheetScrollViewMock")
+    .mockBottomSheet(),
+);
+
 setUpTests();
 
 const LEG_PRESS_ID = "00000000-0000-4000-8000-000000000a01";
