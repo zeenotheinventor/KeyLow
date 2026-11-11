@@ -167,6 +167,7 @@ const toolWords: [string[], string, string][] = [
   [["archive_custom_exercise"], "Looking at the exercise", "Archiving the exercise"],
   [["update_past_set"], "Updating the set", "Updating the set"],
   [["delete_workout"], "Looking at the workout", "Removing the workout"],
+  [["request_feature"], "Looking at your request", "Sending your request"],
   [["show_exercise_muscles"], "Checking the exercise", "Checking the exercise"],
   [["show_exercise_form"], "Checking the exercise", "Checking the exercise"],
   [["estimate_portions"], "Working out the portions", "Working out the portions"],

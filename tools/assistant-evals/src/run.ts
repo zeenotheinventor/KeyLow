@@ -9,6 +9,7 @@ import { compactionCases } from "../cases/compaction.ts";
 import { describeCases } from "../cases/describe.ts";
 import { exerciseFormCases } from "../cases/exerciseForm.ts";
 import { exerciseMusclesCases } from "../cases/exerciseMuscles.ts";
+import { featureRequestCases } from "../cases/featureRequest.ts";
 import { mealEstimateCases } from "../cases/mealEstimate.ts";
 import { recipeCases } from "../cases/recipes.ts";
 import { redTeamCases } from "../cases/redteam.ts";
@@ -34,6 +35,7 @@ const output = await runCli(process.argv.slice(2), process.env, {
     ...trainingEditsCases,
     ...trainingKnowledgeCases,
     ...mealEstimateCases,
+    ...featureRequestCases,
     ...redTeamCases,
     ...redTeamEditCases,
   ],

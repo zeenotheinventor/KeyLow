@@ -55,3 +55,9 @@ export { buildExerciseUpdatedCard } from "./exerciseUpdated";
 export { confirmDeleteWorkoutButtons, confirmDeleteWorkoutQuestion } from "./confirmDeleteWorkout";
 export type { DeleteWorkoutQuestionInput } from "./confirmDeleteWorkout";
 export { buildWorkoutDeletedCard } from "./workoutDeleted";
+export { buildFeatureRequestedCard } from "./featureRequested";
+export {
+  confirmFeatureRequestButtons,
+  confirmFeatureRequestNote,
+  confirmFeatureRequestQuestion,
+} from "./confirmFeatureRequest";

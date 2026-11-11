@@ -378,3 +378,76 @@ Deno.test("a request to build a routine is not a read and reaches create_routine
     );
   }
 });
+
+// The one write the read set holds, so the offer to send a feature request is there for a question such as
+// "Is there a dark mode in Ki-Lo?". It writes only after the person presses its button (ADR 0006, Amendment 4).
+Deno.test("request_feature is in the read set, the general set and not the import set", () => {
+  const withRequest = [...tools, write("request_feature")];
+  const allowedWith = (text: string) =>
+    allowedToolsFor({ text, pendingConfirmationTool: null, tools: withRequest });
+
+  assertEquals(allowedWith("Is there a dark mode in Ki-Lo?"), [
+    "search_foods",
+    "get_food",
+    "get_day",
+    "ask_user",
+    "request_feature",
+  ]);
+  assert(allowedWith("Can you track my water intake?").includes("request_feature"));
+  assertEquals(
+    allowedWith("Is https://example.com/pancakes healthy?").includes("request_feature"),
+    false,
+  );
+});
+
+Deno.test("no other write joins the read set, whatever its name", () => {
+  const withWrites = [...tools, write("request_feature"), write("archive_recipe")];
+
+  const readSet = allowedToolsFor({
+    text: "what is my protein today?",
+    pendingConfirmationTool: null,
+    tools: withWrites,
+  });
+
+  assertEquals(readSet.includes("request_feature"), true);
+  assertEquals(readSet.includes("archive_recipe"), false);
+});
+
+Deno.test("the real registry's request_feature is in the read set", () => {
+  const registered = toolRegistry.list.map((tool) => ({
+    name: tool.name,
+    readOnlyHint: tool.annotations.readOnlyHint,
+  }));
+
+  const readSet = allowedToolsFor({
+    text: "Is there a dark mode in Ki-Lo?",
+    pendingConfirmationTool: null,
+    tools: registered,
+  });
+
+  assert(readSet.includes("request_feature"));
+  assertEquals(readSet.includes("log_entry"), false);
+});
+
+// The sentence of the eval case `feature-request-read-shaped-ask-still-offers` (KEY-977). It has no change word
+// and no request phrase, so it gets the read set, which is what proves the exception. Change both together.
+Deno.test(
+  "the read-shaped eval ask gets the read set with request_feature and no log_entry",
+  () => {
+    const listed = [
+      read("get_day"),
+      write("log_entry"),
+      write("request_feature"),
+      read("ask_user"),
+    ];
+
+    assertEquals(
+      allowedToolsFor({
+        text: "Does Ki-Lo let me share my diary with a coach?",
+        pendingConfirmationTool: null,
+        tools: listed,
+      }),
+      ["get_day", "request_feature", "ask_user"],
+    );
+  },
+);

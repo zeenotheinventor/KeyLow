@@ -76,7 +76,7 @@ Deno.test("a name that is not lower snake case is refused", () => {
 });
 
 Deno.test(
-  "the real registry lists the food reads, the diary reads, the diary, day, recipe, food, targets and recipe import writes, the training reads, estimate_portions and then ask_user in order",
+  "the real registry lists the food reads, the diary reads, the diary, day, recipe, food, targets and recipe import writes, the training reads, estimate_portions, request_feature and then ask_user in order",
   () => {
     assertEquals(
       toolRegistry.list.map((tool) => [tool.name, tool.kind]),
@@ -118,6 +118,7 @@ Deno.test(
         ["delete_workout", "write"],
         ["show_exercise_form", "read"],
         ["estimate_portions", "read"],
+        ["request_feature", "write"],
         ["ask_user", "read"],
       ],
     );
@@ -314,6 +315,16 @@ Deno.test(
   "update_past_set opts out of strict mode, so it takes nothing from the strict budget",
   () => {
     const tool = toolRegistry.get("update_past_set");
+
+    assertEquals(tool?.strict, false);
+    assertEquals(tool?.kind, "write");
+  },
+);
+
+Deno.test(
+  "request_feature is a write that opts out of strict mode, because its confirmation id would pass the union cap",
+  () => {
+    const tool = toolRegistry.get("request_feature");
 
     assertEquals(tool?.strict, false);
     assertEquals(tool?.kind, "write");

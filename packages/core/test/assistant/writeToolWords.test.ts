@@ -385,6 +385,16 @@ describe("the training tools", () => {
   });
 });
 
+describe("request_feature", () => {
+  it("should build a feature_requested card, worded plainly as a request sent", () => {
+    expect(isAssistantWriteTool("request_feature")).toBe(true);
+    expect(ASSISTANT_WRITE_TOOL_CARD_KINDS.request_feature).toBe("feature_requested");
+    expect(
+      describeAssistantChange({ tool: "request_feature", actionCount: 1, targets: [] }),
+    ).toEqual({ title: "Sent a feature request", detail: null });
+  });
+});
+
 describe("ASSISTANT_TOOLS_NEEDING_STORED_UNDO", () => {
   it("should name the training writes whose Undo reads the value their turn stored", () => {
     expect([...ASSISTANT_TOOLS_NEEDING_STORED_UNDO].sort()).toEqual([

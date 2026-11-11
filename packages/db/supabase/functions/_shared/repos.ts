@@ -31,6 +31,7 @@ export {
   RoutineRuleError,
   FoodsPartialWriteError,
   copyDay,
+  createFeatureRequest,
   createFood,
   createRecipe,
   getActiveSession,

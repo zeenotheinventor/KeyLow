@@ -66,6 +66,7 @@ export type {
   CardExercise,
   CleanCustomExercise,
   CustomExerciseDraft,
+  StoredFeatureRequestMessage,
 } from "./core/index.js";
 export {
   addCalendarDays,
@@ -77,6 +78,8 @@ export {
   buildDayCompletedCard,
   buildDayCopiedCard,
   buildDeletedCard,
+  buildFeatureRequestContext,
+  buildFeatureRequestedCard,
   buildFoodCreatedCard,
   buildLoggedCard,
   buildRecipeArchivedCard,
@@ -274,5 +277,8 @@ export {
   buildWorkoutDeletedCard,
   confirmDeleteWorkoutButtons,
   confirmDeleteWorkoutQuestion,
+  confirmFeatureRequestButtons,
+  confirmFeatureRequestNote,
+  confirmFeatureRequestQuestion,
   planProgress,
 } from "./core/index.js";

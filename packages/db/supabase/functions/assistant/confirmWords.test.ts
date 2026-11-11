@@ -122,3 +122,18 @@ Deno.test(
     assertEquals(confirmWordsFor("edit_routine", null), null);
   },
 );
+
+Deno.test("request_feature gets the board's Send request buttons and the primary tone", () => {
+  assertEquals(
+    confirmWordsFor("request_feature", {
+      request: "Track my water intake",
+      unsupported: "Ki-Lo does not track water",
+    }),
+    { confirmLabel: "Send request", cancelLabel: "No thanks", tone: "primary" },
+  );
+});
+
+Deno.test("a request_feature input that is not a request gives no words", () => {
+  assertEquals(confirmWordsFor("request_feature", {}), null);
+  assertEquals(confirmWordsFor("request_feature", "not an object"), null);
+});

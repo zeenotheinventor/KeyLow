@@ -62,6 +62,7 @@ export const samples: Record<string, () => string[]> = {
       "archive_custom_exercise",
       "update_past_set",
       "delete_workout",
+      "request_feature",
     ].flatMap((tool) => [
       copy.describeAssistantStatus({ code: "tool", tool, food: null, isConfirmed: false }),
       copy.describeAssistantStatus({ code: "tool", tool, food: null, isConfirmed: true }),

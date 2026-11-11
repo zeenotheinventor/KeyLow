@@ -5,10 +5,10 @@ import { characterCount } from "../recipes/characterCount";
 export const FEATURE_REQUEST_TEXT_MIN = 3;
 export const FEATURE_REQUEST_TEXT_MAX = 1000;
 
-const MAX_CONTEXT_ASK_LENGTH = 500;
-const MAX_CONTEXT_UNSUPPORTED_LENGTH = 200;
-const MAX_CONTEXT_TURN_LENGTH = 500;
-const MAX_CONTEXT_TURNS = 6;
+export const MAX_CONTEXT_ASK_LENGTH = 500;
+export const MAX_CONTEXT_UNSUPPORTED_LENGTH = 200;
+export const MAX_CONTEXT_TURN_LENGTH = 500;
+export const MAX_CONTEXT_TURNS = 6;
 
 /** The request as typed, trimmed, and between the bounds the database checks. */
 export const featureRequestTextSchema = z

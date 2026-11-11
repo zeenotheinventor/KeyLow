@@ -59,6 +59,7 @@ const cardKinds = [
   "exercise_archived",
   "set_updated",
   "workout_deleted",
+  "feature_requested",
 ];
 const undoStates = ["available", "undone", "unavailable"];
 

@@ -24,7 +24,15 @@ import type {
 
 /** The icons the boards draw on a card, by their names in the app's icon set. */
 export type AssistantCardIconName =
-  "Check" | "Copy" | "ChefHat" | "Trash2" | "Apple" | "Target" | "RotateCcw" | "Archive";
+  | "Check"
+  | "Copy"
+  | "ChefHat"
+  | "Trash2"
+  | "Apple"
+  | "Target"
+  | "RotateCcw"
+  | "Archive"
+  | "MessageSquareText";
 
 export type AssistantCardIconTone = "success" | "secondary" | "muted";
 
@@ -52,6 +60,7 @@ const kindLooks: Record<
   exercise_archived: { icon: "Archive", tone: "secondary" },
   set_updated: { icon: "Check", tone: "success" },
   workout_deleted: { icon: "Trash2", tone: "secondary" },
+  feature_requested: { icon: "MessageSquareText", tone: "secondary" },
 };
 
 const TRAINING_CARD_KINDS: ReadonlySet<AssistantCardKind> = new Set([

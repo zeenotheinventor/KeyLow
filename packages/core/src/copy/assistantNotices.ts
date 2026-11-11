@@ -173,6 +173,7 @@ const TOOL_WORDS = new Map<string, ToolWords>([
   ],
   ["update_past_set", { words: "Updating the set" }],
   ["delete_workout", { words: "Looking at the workout", afterConfirm: "Removing the workout" }],
+  ["request_feature", { words: "Looking at your request", afterConfirm: "Sending your request" }],
   ["show_exercise_muscles", { words: "Checking the exercise" }],
   ["show_exercise_form", { words: "Checking the exercise" }],
   ["estimate_portions", { words: "Working out the portions" }],

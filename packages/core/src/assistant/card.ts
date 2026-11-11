@@ -94,6 +94,7 @@ export const assistantCardSchema = z.strictObject({
     "exercise_archived",
     "set_updated",
     "workout_deleted",
+    "feature_requested",
   ]),
   title: z.string().min(1),
   sub: z.string().min(1).nullable(),

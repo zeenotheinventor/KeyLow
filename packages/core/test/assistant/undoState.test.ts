@@ -62,8 +62,16 @@ describe("undoStateOfActions", () => {
 });
 
 describe("the tools that can never be undone", () => {
-  it("should be the two edits, and the kinds of their cards", () => {
-    expect([...ASSISTANT_TOOLS_WITHOUT_UNDO]).toEqual(["update_entry", "update_recipe"]);
-    expect([...ASSISTANT_CARD_KINDS_WITHOUT_UNDO]).toEqual(["updated", "recipe_updated"]);
+  it("should be the two edits and the feature request, and the kinds of their cards", () => {
+    expect([...ASSISTANT_TOOLS_WITHOUT_UNDO]).toEqual([
+      "update_entry",
+      "update_recipe",
+      "request_feature",
+    ]);
+    expect([...ASSISTANT_CARD_KINDS_WITHOUT_UNDO]).toEqual([
+      "updated",
+      "recipe_updated",
+      "feature_requested",
+    ]);
   });
 });
