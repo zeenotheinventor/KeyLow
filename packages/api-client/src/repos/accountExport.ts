@@ -71,6 +71,7 @@ const READ_PLANS: { [Table in AccountExportTable]: ReadPlan<Table> } = {
   assistant_actions: { ownerColumn: "user_id", orderColumns: ["id"] },
   assistant_usage: { ownerColumn: "user_id", orderColumns: ["id"] },
   entitlements: { ownerColumn: "user_id", orderColumns: ["user_id", "feature"] },
+  feature_requests: { ownerColumn: "user_id", orderColumns: ["created_at", "id"] },
 };
 
 /**

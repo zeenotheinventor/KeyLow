@@ -7,6 +7,7 @@
     ".": "./src/index.ts",
     "./dates": "./src/dates/index.ts",
     "./diary": "./src/diary/index.ts",
+    "./featureRequests": "./src/featureRequests/index.ts",
     "./foods": "./src/foods/index.ts",
     "./schemas": "./src/schemas/index.ts",
     "./nutrition": "./src/nutrition/index.ts",

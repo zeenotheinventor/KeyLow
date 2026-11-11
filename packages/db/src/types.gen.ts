@@ -648,6 +648,33 @@ export type Database = {
           },
         ];
       };
+      feature_requests: {
+        Row: {
+          context: Json | null;
+          created_at: string;
+          id: string;
+          request: string;
+          source: string;
+          user_id: string;
+        };
+        Insert: {
+          context?: Json | null;
+          created_at?: string;
+          id?: string;
+          request: string;
+          source: string;
+          user_id?: string;
+        };
+        Update: {
+          context?: Json | null;
+          created_at?: string;
+          id?: string;
+          request?: string;
+          source?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       food_favourites: {
         Row: {
           created_at: string;
