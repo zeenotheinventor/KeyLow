@@ -2,7 +2,7 @@ import { http } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
-import { createFeatureRequest } from "../../src/repos/featureRequests";
+import { createFeatureRequest, isDailyLimitFailure } from "../../src/repos/featureRequests";
 import { createTestClient } from "../createTestClient";
 import { REST_URL, postgrestError, postgrestRows } from "../support/postgrest";
 
@@ -141,5 +141,24 @@ describe("createFeatureRequest", () => {
     }).catch((error: unknown) => error);
 
     expect(failure).toHaveProperty("cause", { code: "54000" });
+  });
+});
+
+describe("isDailyLimitFailure", () => {
+  it("should recognise the failure a reached daily cap throws", async () => {
+    answerInsert(() => postgrestError(400, "54000", "feature_requests_daily_cap"));
+
+    const failure = await createFeatureRequest(createTestClient(), {
+      source: "more_menu",
+      request: "stub request",
+    }).catch((error: unknown) => error);
+
+    expect(isDailyLimitFailure(failure)).toBe(true);
+  });
+
+  it("should not take any other failure for the cap", () => {
+    expect(isDailyLimitFailure(new Error("x", { cause: { code: "XX000" } }))).toBe(false);
+    expect(isDailyLimitFailure(new Error("x"))).toBe(false);
+    expect(isDailyLimitFailure("rate_limited")).toBe(false);
   });
 });

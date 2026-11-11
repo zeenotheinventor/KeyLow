@@ -41,6 +41,8 @@ import { useReadsEnabled } from "../../../lib/useReadsEnabled";
 // holds Export my data, which opens its screen inside this tab, above Sign out.
 // Assistant is the first row of Settings and opens its settings screen inside this tab, its sub line and value
 // following whether the assistant is on, and none until that is read.
+// Request a feature is the last row of Settings and opens its screen inside this tab, where a request is typed
+// and sent to the Ki-Lo team. No board draws it, so it follows Export my data.
 // Reminders and About are under Settings and open their screens. No board draws Reminders, and its icon is the
 // clock because the kit has no bell.
 export default function MoreRoute() {
@@ -173,6 +175,16 @@ export default function MoreRoute() {
             title={MORE_SCREEN.settings.about.title}
             onPress={() => {
               router.push("/about");
+            }}
+          />
+          <ListRow
+            icon="MessageSquareText"
+            subtitle={MORE_SCREEN.settings.featureRequest.subtitle}
+            title={MORE_SCREEN.settings.featureRequest.title}
+            onPress={() => {
+              openOnce(() => {
+                router.push("/more/feature-request");
+              });
             }}
           />
         </GroupedList>

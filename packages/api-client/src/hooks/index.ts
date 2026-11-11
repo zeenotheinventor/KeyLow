@@ -4,6 +4,7 @@ export type { DiaryReadOptions } from "./DiaryReadOptions";
 export { useArchiveRecipe } from "./useArchiveRecipe";
 export { useCompleteDays } from "./useCompleteDays";
 export { useCopyDay } from "./useCopyDay";
+export { useCreateFeatureRequest } from "./useCreateFeatureRequest";
 export { useCreateFood } from "./useCreateFood";
 export { useCreateRecipe } from "./useCreateRecipe";
 export { useDebouncedValue } from "./useDebouncedValue";

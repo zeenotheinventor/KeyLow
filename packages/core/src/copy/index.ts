@@ -71,3 +71,4 @@ export * from "./assistantTrainingCards";
 export * from "./widgets";
 export * from "./accountExport";
 export * from "./exerciseForm";
+export * from "./featureRequestScreen";
