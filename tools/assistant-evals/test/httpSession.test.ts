@@ -109,3 +109,53 @@ describe("toolCallsOfTurn, what became of each call", () => {
     ]);
   });
 });
+
+describe("toolCallsOfTurn, the amounts estimate_portions returned", () => {
+  const call = (id: string, name: string) => ({ type: "tool_use", id, name, input: {} });
+  const result = (id: string, content: string) => ({
+    type: "tool_result",
+    tool_use_id: id,
+    content,
+  });
+  const estimateResult =
+    '<untrusted_data source="estimate_portions">{"shares_scaled":false,"items":[' +
+    '{"food_id":"f1","name":"Rice, boiled","grams":180,"method":"share","kcal":211},' +
+    '{"food_id":"f2","name":"Milk","ml":250,"method":"share","kcal":120},' +
+    '{"food_id":"f3","error":"counted_food"}]}</untrusted_data>';
+
+  it("should keep the food id, the unit and the amount of each sized item, and no name or nutrient", () => {
+    const contents = [[call("t1", "estimate_portions")], [result("t1", estimateResult)]];
+
+    expect(toolCallsOfTurn(contents)).toEqual([
+      {
+        name: "estimate_portions",
+        input: {},
+        estimatedAmounts: [
+          { foodId: "f1", unit: "g", amount: 180 },
+          { foodId: "f2", unit: "ml", amount: 250 },
+        ],
+      },
+    ]);
+  });
+
+  it("should add nothing for another tool, a refused call or a result that is not JSON", () => {
+    const contents = [
+      [
+        call("t1", "search_foods"),
+        call("t2", "estimate_portions"),
+        call("t3", "estimate_portions"),
+      ],
+      [
+        result("t1", estimateResult),
+        result("t2", '{"error":"invalid_input","fields":["items"]}'),
+        result("t3", "not json"),
+      ],
+    ];
+
+    const [search, refused, broken] = toolCallsOfTurn(contents);
+
+    expect(search).not.toHaveProperty("estimatedAmounts");
+    expect(refused).not.toHaveProperty("estimatedAmounts");
+    expect(broken).not.toHaveProperty("estimatedAmounts");
+  });
+});

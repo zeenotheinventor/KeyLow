@@ -11,6 +11,7 @@ export const EVAL_SET_NAMES = [
   "trainingAdvice",
   "trainingEdits",
   "trainingKnowledge",
+  "mealEstimate",
 ] as const;
 
 export type EvalSetName = (typeof EVAL_SET_NAMES)[number];
@@ -34,11 +35,17 @@ export const THRESHOLD_PERCENT: Readonly<Record<EvalSetName, number>> = {
   trainingEdits: 90,
   /** General training knowledge (KEY-952): general weightlifting questions answered from general knowledge, and a pain case that refers. */
   trainingKnowledge: 90,
+  /** Described meals logged from estimate_portions (KEY-966). Its own set so it can be dispatched alone, under the 300,000 token budget of a run. */
+  mealEstimate: 80,
 };
 
 /**
  * The sets a run with no `--set` leaves out, because they would take it past the 300,000 token budget the other
- * sets share, or because they are run on demand (KEY-952). They run when named (`--set trainingEdits`), as the
+ * sets share, or because they are run on demand (KEY-952, KEY-966). They run when named (`--set trainingEdits`), as the
  * workflow's `sets` input does.
  */
-export const OPT_IN_SET_NAMES: readonly EvalSetName[] = ["trainingEdits", "trainingKnowledge"];
+export const OPT_IN_SET_NAMES: readonly EvalSetName[] = [
+  "trainingEdits",
+  "trainingKnowledge",
+  "mealEstimate",
+];

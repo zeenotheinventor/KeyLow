@@ -103,7 +103,7 @@ const dayAccepted = (given: unknown, wanted: string | undefined, today: string):
     : given === wanted;
 
 /** Whether the food is the row of one of the codes, as the database holds it. */
-async function isFoodOf(
+export async function isFoodOf(
   foodId: string,
   codes: readonly string[],
   database: EvalDatabase,

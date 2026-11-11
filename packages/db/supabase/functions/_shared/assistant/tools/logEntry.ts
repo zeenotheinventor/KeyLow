@@ -31,8 +31,8 @@ type Kind = (typeof kinds)[number];
 // with the name of the field that does not belong.
 const fieldsOf: Record<Kind, readonly string[]> = {
   portion: ["food_id", "portion_id", "count"],
-  grams: ["food_id", "grams"],
-  ml: ["food_id", "ml"],
+  grams: ["food_id", "grams", "estimated"],
+  ml: ["food_id", "ml", "estimated"],
   recipe: ["recipe_id", "servings"],
   quick: ["kcal", "protein_g", "carbs_g", "fat_g", "label"],
 };
@@ -56,6 +56,7 @@ const amountFields = [
   "carbs_g",
   "fat_g",
   "label",
+  "estimated",
 ] as const;
 
 const amount = (max: number) => z.number().positive().max(max).nullable();
@@ -91,6 +92,10 @@ const logEntryInput = z
       .max(80)
       .nullable()
       .describe("A short name for the quick add, or null. For quick."),
+    estimated: z
+      .boolean()
+      .nullable()
+      .describe("true for an amount estimate_portions returned, else null. For grams and ml."),
     local_date: localDateSchema
       .nullable()
       .describe("The day, only when the person named another day than today. Otherwise null."),
@@ -178,9 +183,9 @@ export const logEntryTool: WriteToolDefinition<LogEntryInput> = {
     "Logs one thing the user ate to their diary and shows them a card with Undo. Call it once for each food. " +
     "Pick the food or recipe from search_foods, get_food or get_recipes, never an id you have not seen. " +
     "For a food, use kind portion with one of that food's own portion ids and a count, such as 2 of the " +
-    "large egg portion. Use kind grams or ml only for an amount the user said, such as 150 g of rice or " +
-    "200 ml of milk, and never as a guess for a portion. If no portion fits and the user gave no amount, " +
-    "ask them with ask_user instead of guessing. Do not describe an amount in hand measures. Use kind " +
+    "large egg portion. Use kind grams or ml for an amount the user said, such as 150 g of rice or " +
+    "200 ml of milk, or an amount estimate_portions returned, sent with estimated true. Never use them " +
+    "for a guess of your own. If nothing gives an amount, ask with ask_user. Do not describe an amount in hand measures. Use kind " +
     "recipe for servings of one of their recipes, and kind quick only when the user gave the calories " +
     "themselves. Set every field that does not belong to the kind to null. Leave local_date and time null " +
     "unless the user named another day or time: they then default to the day and time of this message. " +
@@ -221,13 +226,18 @@ export const logEntryTool: WriteToolDefinition<LogEntryInput> = {
       ctx.reportError("assistant tool log_entry", "internal_error", caught);
     }
     const cardEntry = cardEntryOfRow(entry, timeZone);
+    const cardOptions = { estimated: input.estimated === true };
     // Without the stamp Undo would refuse, so the card does not offer it.
     const card =
       cardEntry === null
         ? null
         : targetUpdatedAt === undefined
-          ? { ...buildLoggedCard([cardEntry]), undo: "unavailable" as const, undoneSub: null }
-          : buildLoggedCard([cardEntry]);
+          ? {
+              ...buildLoggedCard([cardEntry], cardOptions),
+              undo: "unavailable" as const,
+              undoneSub: null,
+            }
+          : buildLoggedCard([cardEntry], cardOptions);
     return {
       data: { logged: entryView(entry, timeZone) },
       ...(card === null ? {} : { structured: { card } }),

@@ -127,6 +127,23 @@ describe("buildLoggedCard", () => {
     expect(card.undoneSub).toBe("Removed white rice from 13:00");
   });
 
+  it("should mark every row an estimate when the amount was estimated, and no row otherwise", () => {
+    const rice = buildFood({
+      id: "00000000-0000-4000-8000-0000000000a3",
+      name: "White rice, boiled",
+      kcal: 138,
+    });
+    const row = stored(
+      "00000000-0000-4000-8000-0000000000c3",
+      buildLogEntry({ food: rice, quantity: 180, unit: "g", ...timing("13:00") }),
+    );
+    const entries = [mustEntry(row, London)];
+
+    expect(buildLoggedCard(entries, { estimated: true }).rows[0]?.estimate).toBe(true);
+    expect(buildLoggedCard(entries, { estimated: false }).rows[0]?.estimate).toBe(false);
+    expect(buildLoggedCard(entries).rows[0]?.estimate).toBe(false);
+  });
+
   it.each([
     ["Bucket", 1, "1 Bucket"],
     ["Bucket", 2, "2 Buckets"],

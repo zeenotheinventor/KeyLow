@@ -382,3 +382,4 @@ A food per 100 ml answers millilitres: on a plate, covered area times heap depth
 ### Implemented by
 
 - KEY-965, the core function, the tool and this amendment. The prompt rules, the `log_entry` flag, the card badge and the evals follow in the next ticket.
+- KEY-966, the prompt rules (Numbers, Amounts, Read before you write, One question), the `estimated` flag of `log_entry` that sets the card row's `estimate`, the seed foods and the `mealEstimate` eval set (on demand, 80 %).
