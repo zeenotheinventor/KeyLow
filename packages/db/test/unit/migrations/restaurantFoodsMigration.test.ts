@@ -3,6 +3,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 import { renderRestaurantMigration } from "../../../scripts/restaurant/renderRestaurantMigration";
+import { parseRestaurantCsv } from "../../../scripts/restaurant/restaurantFoodsCsv";
 
 const packageUrl = new URL("../../../", import.meta.url);
 const migrationsUrl = new URL("supabase/migrations/", packageUrl);
@@ -32,7 +33,13 @@ describe("the committed restaurant foods migration", () => {
     ).toBe(true);
   });
 
-  it("should hold no food per portion until KEY-943", () => {
-    expect(newestSql).not.toContain("per_portion");
+  it("should hold a food per portion for every row of the CSV up to its wave that has no weight", () => {
+    const csv = readFileSync(new URL("data/restaurants/restaurant-foods.csv", packageUrl), "utf8");
+    const rowsWithoutWeightUpToWave = parseRestaurantCsv(csv).filter(
+      (row) => row.wave <= waveOfNewest && row.weight_basis === "none",
+    );
+
+    expect(rowsWithoutWeightUpToWave.length).toBeGreaterThan(0);
+    expect(newestSql.split("'per_portion'")).toHaveLength(rowsWithoutWeightUpToWave.length + 1);
   });
 });

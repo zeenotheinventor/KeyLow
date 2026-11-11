@@ -15,6 +15,7 @@ const rows = parseRestaurantCsv(
 /** The chain's own site. Anything else, a price comparison or a nutrition aggregator, is not a source. */
 const CHAIN_DOMAINS: Readonly<Record<string, string>> = {
   "McDonald's": "mcdonalds.com",
+  KFC: "kfc.co.uk",
   Greggs: "greggs.co.uk",
   "Pret A Manger": "pret.co.uk",
   Subway: "subway.com",
@@ -108,6 +109,39 @@ describe("restaurant-foods.csv", () => {
       expect(row.portion_grams, row.ref).not.toBeNull();
       expect(deriveFood(row).basis, row.ref).toBe("per_100g");
     }
+  });
+
+  describe("where no weight is published", () => {
+    const rowsWithoutWeight = rows.filter((row) => row.weight_basis === "none");
+
+    it("should hold McDonald's and KFC, in wave 2", () => {
+      expect(new Set(rowsWithoutWeight.map((row) => row.chain))).toEqual(
+        new Set(["McDonald's", "KFC"]),
+      );
+      for (const row of rowsWithoutWeight) {
+        expect(row.wave, row.ref).toBe(2);
+      }
+    });
+
+    it("should be stored per portion, as published, with no per 100 g figure", () => {
+      for (const row of rowsWithoutWeight) {
+        expect(deriveFood(row).basis, row.ref).toBe("per_portion");
+        expect(deriveFood(row).nutrients.kcal, row.ref).toBe(row.kcal);
+        expect(row.published_kcal_per_100g, row.ref).toBeNull();
+      }
+    });
+
+    it("should give the KFC Zinger Burger the figures KFC publishes for one burger", () => {
+      const zingerBurger = rows.find((row) => row.ref === "kfc-gb:zinger-burger");
+
+      expect(zingerBurger).toMatchObject({
+        portion_label: "1 burger",
+        kcal: 468,
+        protein_g: 23,
+        fat_g: 22,
+        carbs_g: 43,
+      });
+    });
   });
 
   describe("where a weight exists", () => {
