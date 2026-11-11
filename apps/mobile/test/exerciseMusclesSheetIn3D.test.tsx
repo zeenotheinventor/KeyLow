@@ -1,8 +1,22 @@
 import { KeyLowProvider } from "@keylow/api-client";
-import { BODY_MAP, describeExerciseMusclesFigureLabel, EXERCISE_MUSCLES } from "@keylow/core/copy";
+import {
+  BODY_MAP,
+  describeExerciseMusclesFigureLabel,
+  describeFormVideoLink,
+  EXERCISE_MUSCLES,
+} from "@keylow/core/copy";
 import { exerciseRoleValues } from "@keylow/core/training";
 import { createClient } from "@supabase/supabase-js";
-import { act, cleanup, render, screen, userEvent, waitFor } from "@testing-library/react-native";
+import {
+  act,
+  cleanup,
+  render,
+  screen,
+  userEvent,
+  waitFor,
+  within,
+} from "@testing-library/react-native";
+import { openURL } from "expo-linking";
 import { AccessibilityInfo } from "react-native";
 import { setUpTests } from "react-native-reanimated";
 
@@ -12,9 +26,14 @@ import { resetBodyFigureForTests } from "../lib/bodyFigure/testing";
 import { resetBodyMapRendererForTests } from "../lib/bodyMapRenderer/testing";
 import { ThemeProvider } from "../lib/theme";
 import { createDiaryQueryClient } from "./support/diaryBackend";
+import {
+  formMediaBackend,
+  formMediaFetch,
+  resetFormMediaBackend,
+} from "./support/formMediaBackend";
 import { compileKitStyles } from "./support/kitStyles";
 import { registerAppStyles } from "./support/nativeWindStyles";
-import { resetTrainBackend, trainFetch } from "./support/trainBackend";
+import { resetTrainBackend } from "./support/trainBackend";
 
 import type { ExerciseMusclesSheetProps } from "../components/ExerciseMusclesSheet";
 import type { Body3DProps } from "../components/ui";
@@ -68,7 +87,9 @@ jest.mock("../components/ui/Body3D", () => {
 // does with the gesture on a device is in the library's own tests and on the device.
 const mockSheet: { canDragFromContent: boolean | undefined } = { canDragFromContent: undefined };
 jest.mock("@gorhom/bottom-sheet", () => {
-  const { forwardRef, useImperativeHandle } = jest.requireActual<typeof import("react")>("react");
+  const { createElement, forwardRef, useImperativeHandle } =
+    jest.requireActual<typeof import("react")>("react");
+  const { View } = jest.requireActual<typeof import("react-native")>("react-native");
   const FakeSheet = forwardRef<
     unknown,
     { children: React.ReactNode; enableContentPanningGesture: boolean }
@@ -82,9 +103,12 @@ jest.mock("@gorhom/bottom-sheet", () => {
     default: FakeSheet,
     BottomSheetView: ({ children }: never) => children,
     BottomSheetTextInput: () => null,
-    BottomSheetScrollView: ({ children }: never) => children,
+    BottomSheetScrollView: ({ children }: { children: React.ReactNode }) =>
+      createElement(View, { "aria-label": "Sheet scroll view" }, children),
   };
 });
+
+jest.mock("expo-linking", () => ({ openURL: jest.fn() }));
 
 setUpTests();
 
@@ -106,7 +130,7 @@ const curl = {
 
 const client = createClient<Database>("http://localhost:54321", "anon-key", {
   auth: { persistSession: false, autoRefreshToken: false },
-  global: { fetch: trainFetch },
+  global: { fetch: formMediaFetch },
 });
 
 let queryClient: QueryClient;
@@ -165,12 +189,15 @@ describe("the Muscles it works sheet in 3D", () => {
       "components/ExerciseMusclesSheet",
       "components/BodyMapFigures",
       "components/BodyView",
+      "components/ExerciseFormSection",
     ]);
   });
 
   beforeEach(() => {
     registerAppStyles(kitStyles);
     resetTrainBackend();
+    resetFormMediaBackend();
+    jest.mocked(openURL).mockResolvedValue(true);
     mockStorageItems.clear();
     mockStorageItems.set("bodyMap.renderer", "3d");
     resetBodyFigureForTests();
@@ -243,6 +270,30 @@ describe("the Muscles it works sheet in 3D", () => {
       expect(frontButton()).not.toBeChecked();
     });
 
+    it("should keep the form card pressable while the body turns", async () => {
+      formMediaBackend.rowsByExercise[LEG_PRESS_ID] = {
+        video_id: "abcdefghijk",
+        video_title: "Leg press, step by step",
+        video_channel: "Strength Basics",
+        image_paths: null,
+      };
+      await renderSheet();
+      await drawFirstFrame();
+
+      await userEvent.press(
+        await screen.findByRole("link", {
+          name: describeFormVideoLink("Leg press, step by step", "Strength Basics"),
+        }),
+      );
+      await callBody3D((props) => {
+        props.onSideChange?.("back");
+      });
+
+      expect(openURL).toHaveBeenCalledWith("https://www.youtube.com/watch?v=abcdefghijk");
+      expect(backButton()).toBeChecked();
+      expect(mockSheet.canDragFromContent).toBe(false);
+    });
+
     it("should keep the heading, the rows and the explanation", async () => {
       await renderSheet();
 
@@ -255,6 +306,16 @@ describe("the Muscles it works sheet in 3D", () => {
     it("should not let a drag on the contents move the sheet, so a drag turns the body", async () => {
       await renderSheet();
 
+      expect(mockSheet.canDragFromContent).toBe(false);
+    });
+
+    it("should hold the stage in a scroll view, so a sheet taller than the screen can still be scrolled", async () => {
+      await renderSheet();
+      await drawFirstFrame();
+
+      expect(
+        within(screen.getByLabelText("Sheet scroll view")).getByRole("img", { name: frontName }),
+      ).toBeOnTheScreen();
       expect(mockSheet.canDragFromContent).toBe(false);
     });
 
