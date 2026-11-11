@@ -297,7 +297,7 @@ Deno.test("Training questions is one section, between Training advice and One qu
 
 Deno.test("a general training question is answered from general knowledge, briefly", () => {
   for (const rule of [
-    "A general weight training question, such as rep ranges, sets, form, progression, rest, exercise choice, warm-ups or tempo, is answered from general training knowledge, with no tool call needed.",
+    "A general weight training question, such as rep ranges, sets, progression, rest, exercise choice, warm-ups or tempo, is answered from general training knowledge, with no tool call needed. How to do one exercise, or its form, is answered under How to do an exercise.",
     "Answer first, in at most 3 short sentences or bullets.",
     "A general range, such as most people use 10 to 15 reps on flyes, is worded as general guidance, never as the person's data or a Ki-Lo figure.",
     "Never refuse a general training question because Ki-Lo holds no figure for it.",
@@ -503,13 +503,16 @@ Deno.test("the new sections stay away from the exercise muscles section of KEY-9
 
 const MUSCLES_SECTION_TITLE = "What an exercise works\n";
 const sectionTitles = SYSTEM_PROMPT.split("\n\n").map((section) => section.split("\n")[0]);
+const formSection = () =>
+  SYSTEM_PROMPT.split("\n\n").find((section) => section.startsWith("How to do an exercise\n")) ??
+  "";
 
 Deno.test(
-  "what an exercise works is a section of its own between the one question and days and times",
+  "what an exercise works is a section of its own between the one question and how to do an exercise",
   () => {
     const position = sectionTitles.indexOf("What an exercise works");
     assertEquals(sectionTitles[position - 1], "One question, never a guess");
-    assertEquals(sectionTitles[position + 1], "Days and times");
+    assertEquals(sectionTitles[position + 1], "How to do an exercise");
     assertEquals(SYSTEM_PROMPT.split(MUSCLES_SECTION_TITLE).length, 2);
   },
 );
@@ -539,6 +542,60 @@ Deno.test(
     ]) {
       assert(SYSTEM_PROMPT.includes(rule), `the system prompt does not hold: ${rule}`);
     }
+  },
+);
+
+const FORM_SECTION_TITLE = "How to do an exercise\n";
+
+Deno.test(
+  "how to do an exercise is a section of its own, right after what an exercise works",
+  () => {
+    const position = sectionTitles.indexOf("How to do an exercise");
+    assertEquals(sectionTitles[position - 1], "What an exercise works");
+    assertEquals(sectionTitles[position + 1], "Days and times");
+    assertEquals(SYSTEM_PROMPT.split(FORM_SECTION_TITLE).length, 2);
+  },
+);
+
+Deno.test(
+  "the form section sends each exercise to show_exercise_form, at most 2 in an answer",
+  () => {
+    for (const rule of [
+      "find the exercise with search_exercises and call show_exercise_form once for each, at most 2 in one answer. When more are asked about, ask which.",
+      "A name with several close matches is not unclear: show the closest.",
+      "This changes nothing, so it works during a workout.",
+    ]) {
+      assert(formSection().includes(rule), `the form section does not hold: ${rule}`);
+    }
+  },
+);
+
+Deno.test("the form section keeps the reply to short cues, with no link and no video title", () => {
+  for (const rule of [
+    "write one or two short sentences of cues from general training knowledge, worded as general guidance",
+    "never a link, a URL or a video title",
+    "When no exercise is found, or the tool says no form guide is held for it, say so in one short sentence.",
+  ]) {
+    assert(formSection().includes(rule), `the form section does not hold: ${rule}`);
+  }
+});
+
+Deno.test("the form section never models a first person reply", () => {
+  assertEquals(/\b(?:I|I'm|I'll|I've|I'd|me|my)\b/.test(formSection()), false);
+});
+
+Deno.test(
+  "Training questions sends a form question to the form section and no longer says form needs no tool",
+  () => {
+    const training =
+      SYSTEM_PROMPT.split("\n\n").find((section) => section.startsWith("Training questions\n")) ??
+      "";
+    assertEquals(training.includes("sets, form,"), false);
+    assert(
+      training.includes(
+        "How to do one exercise, or its form, is answered under How to do an exercise.",
+      ),
+    );
   },
 );
 

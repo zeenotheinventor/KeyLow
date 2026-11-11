@@ -13,6 +13,7 @@ import {
 import { DEFAULT_COMPACT_AT_TOKENS } from "./compact.ts";
 import { contextBlock, MODEL } from "./prompt.ts";
 import {
+  MAX_EXERCISE_FORM_CARDS,
   MAX_EXERCISE_MUSCLES_CARDS,
   MCP_REQUEST_TIMEOUT_MILLISECONDS,
   MODEL_REQUEST_TIMEOUT_MILLISECONDS,
@@ -32,7 +33,11 @@ import {
 } from "./turnTesting.ts";
 
 import type { ListedTool } from "../_shared/assistant/mcpClient.ts";
-import type { AssistantExerciseMuscles, AssistantStreamEvent } from "../_shared/core.ts";
+import type {
+  AssistantExerciseFormMedia,
+  AssistantExerciseMuscles,
+  AssistantStreamEvent,
+} from "../_shared/core.ts";
 import type { Harness, HarnessOptions, ScriptedResponse, ToolAnswer } from "./turnTesting.ts";
 
 const reply = (text: string): ScriptedResponse => ({
@@ -4120,6 +4125,256 @@ Deno.test(
         );
         assertEquals(live, [romanianDeadlift]);
         assertEquals(stored, live);
+      },
+    );
+  },
+);
+
+// The form of an exercise (KEY-963)
+
+const showFormTools = [
+  ...fakeTools,
+  listed("show_exercise_form", true, { exercise_id: { type: "string" } }, false),
+];
+
+const squatVideo: AssistantExerciseFormMedia = {
+  exerciseName: "Barbell Squat",
+  media: { kind: "video", videoId: "dQw4w9WgXcQ", title: "Sentinel squat", channel: "Sentinel" },
+};
+
+const hipThrustPhotos: AssistantExerciseFormMedia = {
+  exerciseName: "Barbell Hip Thrust",
+  media: { kind: "photos", imagePaths: ["Hip_Thrust/0.jpg", "Hip_Thrust/1.jpg"] },
+};
+
+const showForm = (id: string) => ({
+  id,
+  name: "show_exercise_form",
+  input: { exercise_id: `exercise-${id}` },
+});
+
+const formOf = (exercise: AssistantExerciseFormMedia) =>
+  okResult({
+    name: "show_exercise_form",
+    payload: { exercise: exercise.exerciseName },
+    structured: { exerciseFormMedia: exercise },
+  });
+
+const formOptions = (responses: ScriptedResponse[], ...answers: ToolAnswer[]): HarnessOptions => ({
+  responses,
+  tools: showFormTools,
+  answers: { show_exercise_form: inSequence(...answers) },
+});
+
+const formItemsOf = (rows: Parameters<typeof threadFromMessages>[0]) =>
+  threadFromMessages(rows, []).flatMap((item) =>
+    item.kind === "exercise_form_media" ? [item.exercise] : [],
+  );
+
+Deno.test(
+  "a shown form card sends its event after the reply and before done, and stores it under the call's id",
+  async () => {
+    await withHarness(
+      formOptions(
+        [callTools([showForm("f1")], "Checking."), reply("Brace, sit between the hips.")],
+        formOf(squatVideo),
+      ),
+      async (harness) => {
+        const result = await harness.take("How do I do a barbell squat?");
+
+        const types = typesOf(withoutStatus(result.events));
+        assertEquals(types.filter((type) => type !== "text").slice(-2), [
+          "exercise_form_media",
+          "done",
+        ]);
+        assertEquals(types.lastIndexOf("text") < types.indexOf("exercise_form_media"), true);
+        assertEquals(eventsOfType(result.events, "exercise_form_media"), [
+          { type: "exercise_form_media", exercise: squatVideo },
+        ]);
+        const [toolRow] = toolResultRows(harness);
+        assertEquals(toolRow?.display, { f1: { exerciseFormMedia: squatVideo } });
+        assertEquals(await harness.turns.turnHasAction(result.turnId), false);
+        assertEquals(typesOf(result.events).includes("answer_meta"), false);
+      },
+    );
+  },
+);
+
+Deno.test(
+  "parity: the stored thread reads the form card back as the item the live event drew",
+  async () => {
+    await withHarness(
+      formOptions([callTools([showForm("f1")]), reply("Brace first.")], formOf(hipThrustPhotos)),
+      async (harness) => {
+        const result = await harness.take("Show me hip thrust form");
+
+        const live = eventsOfType(result.events, "exercise_form_media").map(
+          (event) => event.exercise,
+        );
+        assertEquals(formItemsOf(result.rows), live);
+        assertEquals(live, [hipThrustPhotos]);
+      },
+    );
+  },
+);
+
+Deno.test("two shown form cards send two events in call order, never merged", async () => {
+  await withHarness(
+    formOptions(
+      [callTools([showForm("f1"), showForm("f2")]), reply("Both are shown.")],
+      formOf(squatVideo),
+      formOf(hipThrustPhotos),
+    ),
+    async (harness) => {
+      const result = await harness.take("How do I squat and hip thrust?");
+
+      assertEquals(
+        eventsOfType(result.events, "exercise_form_media").map((event) => event.exercise),
+        [squatVideo, hipThrustPhotos],
+      );
+      assertEquals(formItemsOf(result.rows).length, 2);
+    },
+  );
+});
+
+Deno.test("a third form card answers card_limit and reaches no tool", async () => {
+  const calls = ["f1", "f2", "f3"].map(showForm);
+  await withHarness(
+    formOptions(
+      [callTools(calls), reply("Two are shown. Which others?")],
+      ...Array.from({ length: MAX_EXERCISE_FORM_CARDS }, () => formOf(squatVideo)),
+    ),
+    async (harness) => {
+      const result = await harness.take("How do I do every exercise in my routine?");
+
+      assertEquals(MAX_EXERCISE_FORM_CARDS, 2);
+      assertEquals(eventsOfType(result.events, "exercise_form_media").length, 2);
+      assertEquals(harness.connections[0]?.calls.length, 2);
+      const [third] = toolResultRows(harness).slice(-1);
+      const [block] = blocksOf(third?.content);
+      assertEquals(block?.["tool_use_id"], "f3");
+      assertEquals(block?.["is_error"], true);
+      assertStringIncludes(String(block?.["content"]), '"error":"card_limit"');
+      assertEquals(third?.display, null);
+    },
+  );
+});
+
+Deno.test("a not_found answer draws nothing and does not use up one of the two", async () => {
+  const notFound = okResult({ name: "show_exercise_form", payload: { error: "not_found" } });
+  await withHarness(
+    formOptions(
+      [callTools(["f1", "f2", "f3"].map(showForm)), reply("Two are shown.")],
+      notFound,
+      formOf(squatVideo),
+      formOf(hipThrustPhotos),
+    ),
+    async (harness) => {
+      const result = await harness.take("How do I do these?");
+
+      assertEquals(eventsOfType(result.events, "exercise_form_media").length, 2);
+      assertEquals(harness.connections[0]?.calls.length, 3);
+    },
+  );
+});
+
+Deno.test("a stopped turn sends no event for the form card it had", async () => {
+  let run: ReturnType<Harness["start"]> | undefined;
+  await withHarness(
+    {
+      ...formOptions([callTools([showForm("f1")]), reply("never asked for")]),
+      answers: {
+        show_exercise_form: async () => {
+          await run?.cancel();
+          return formOf(squatVideo);
+        },
+      },
+    },
+    async (harness) => {
+      run = harness.start("How do I do a barbell squat?");
+      const result = await run.finished;
+
+      assertEquals(typesOf(result.events).includes("exercise_form_media"), false);
+      assertEquals(turnStatuses(harness), ["stopped"]);
+    },
+  );
+});
+
+Deno.test(
+  "a form card that does not parse, a none one included, is reported with fixed words, stored as nothing and not sent",
+  async () => {
+    const spy = spyOnConsole();
+    const unreadable = [
+      {
+        exerciseName: "Sentinel Squat",
+        media: { kind: "video", videoId: "dQw4w9WgXcQ", title: "Sentinel", channel: "S", url: "x" },
+      },
+      { exerciseName: "Sentinel Squat", media: { kind: "none" } },
+    ];
+    try {
+      for (const exerciseFormMedia of unreadable) {
+        await withHarness(
+          formOptions(
+            [callTools([showForm("f1")]), reply("Brace first.")],
+            okResult({ name: "show_exercise_form", structured: { exerciseFormMedia } }),
+          ),
+          async (harness) => {
+            const result = await harness.take("How do I squat?");
+
+            assertEquals(typesOf(result.events).includes("exercise_form_media"), false);
+            assertEquals(result.events.at(-1), { type: "done", outcome: "complete" });
+            assertEquals(toolResultRows(harness)[0]?.display, null);
+            assertEquals(harness.reports.length, 1);
+            assertEquals(String(harness.reports[0]?.caught).includes("Sentinel"), false);
+          },
+        );
+      }
+    } finally {
+      spy.restore();
+    }
+    assertEquals(spy.lines.join("\n").includes("Sentinel"), false);
+  },
+);
+
+Deno.test("a form card whose row cannot be stored is never sent, as the turn fails", async () => {
+  await withHarness(
+    {
+      ...formOptions([callTools([showForm("f1")]), reply("never asked for")], formOf(squatVideo)),
+      wrapTurns: (turns) => ({
+        ...turns,
+        appendMessages: (userId, conversationId, turnId, messages) =>
+          messages.some((message) => message.display !== undefined && message.display !== null)
+            ? Promise.reject(new Error("the store failed"))
+            : turns.appendMessages(userId, conversationId, turnId, messages),
+      }),
+    },
+    async (harness) => {
+      const result = await harness.take("How do I do a barbell squat?");
+
+      assertEquals(typesOf(result.events).includes("exercise_form_media"), false);
+      assertEquals(turnStatuses(harness), ["failed"]);
+      assertEquals(formItemsOf(result.rows), []);
+    },
+  );
+});
+
+Deno.test(
+  "a form card that was stored before a later model call failed is sent, so the live turn and the stored one agree",
+  async () => {
+    await withHarness(
+      formOptions(
+        [callTools([showForm("f1")]), { blocks: [], stopReason: "end_turn", httpStatus: 400 }],
+        formOf(squatVideo),
+      ),
+      async (harness) => {
+        const result = await harness.take("How do I do a barbell squat?");
+
+        assertEquals(turnStatuses(harness), ["failed"]);
+        const live = eventsOfType(result.events, "exercise_form_media").map(
+          (event) => event.exercise,
+        );
+        assertEquals(live, [squatVideo]);
+        assertEquals(formItemsOf(result.rows), live);
       },
     );
   },

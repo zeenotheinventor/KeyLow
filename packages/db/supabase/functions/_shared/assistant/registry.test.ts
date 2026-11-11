@@ -116,6 +116,7 @@ Deno.test(
         ["save_custom_exercise", "write"],
         ["archive_custom_exercise", "write"],
         ["delete_workout", "write"],
+        ["show_exercise_form", "read"],
         ["ask_user", "read"],
       ],
     );
@@ -205,6 +206,7 @@ Deno.test(
       "get_workouts",
       "get_exercise_progress",
       "show_exercise_muscles",
+      "show_exercise_form",
     ]) {
       assertEquals(toolRegistry.get(name)?.strict, false, name);
     }

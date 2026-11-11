@@ -325,6 +325,24 @@ Deno.test("a question about the muscles of an exercise reaches show_exercise_mus
   }
 });
 
+Deno.test("a question about the form of an exercise reaches show_exercise_form", () => {
+  const registered = toolRegistry.list.map((tool) => ({
+    name: tool.name,
+    readOnlyHint: tool.annotations.readOnlyHint,
+  }));
+  // "How" and "What's" open as a read. "Show" and "Can" do not, so those two get the general set.
+  for (const text of [
+    "How do I do a Romanian deadlift?",
+    "Show me squat form",
+    "What's proper form for a bench press?",
+    "Can you show me a video of a hip thrust?",
+  ]) {
+    const tools = allowedToolsFor({ text, pendingConfirmationTool: null, tools: registered });
+    assert(tools.includes("show_exercise_form"), text);
+    assert(tools.includes("search_exercises"), text);
+  }
+});
+
 Deno.test("a training question gets the read set", () => {
   for (const text of [
     "What should I train today?",
