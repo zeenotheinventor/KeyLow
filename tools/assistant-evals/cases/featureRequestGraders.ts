@@ -28,18 +28,6 @@ export function toolNotCalled(name: string): Grader {
     );
 }
 
-/** Passes when no tool that writes was called, `allowed` apart. A tool with no `readOnlyHint` counts as one that writes. */
-export function noWriteBut(allowed: string): Grader {
-  return ({ turns }) => {
-    const write = callsOf(turns).find(
-      (call) => call.readOnlyHint !== true && call.name !== allowed,
-    );
-    return Promise.resolve(
-      write === undefined ? pass(`no tool wrote but ${allowed}`) : fail(`${write.name} wrote`),
-    );
-  };
-}
-
 /**
  * Passes when the turn, counted from 0, ended waiting for the button, called `request_feature`, and the app drew
  * the Send request button. The question above it is the model's own words, so it is not read.
