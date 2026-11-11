@@ -169,6 +169,7 @@ const toolWords: [string[], string, string][] = [
   [["delete_workout"], "Looking at the workout", "Removing the workout"],
   [["show_exercise_muscles"], "Checking the exercise", "Checking the exercise"],
   [["show_exercise_form"], "Checking the exercise", "Checking the exercise"],
+  [["estimate_portions"], "Working out the portions", "Working out the portions"],
 ];
 
 describe("describeAssistantStatus", () => {

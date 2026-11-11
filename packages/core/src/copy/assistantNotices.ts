@@ -175,6 +175,7 @@ const TOOL_WORDS = new Map<string, ToolWords>([
   ["delete_workout", { words: "Looking at the workout", afterConfirm: "Removing the workout" }],
   ["show_exercise_muscles", { words: "Checking the exercise" }],
   ["show_exercise_form", { words: "Checking the exercise" }],
+  ["estimate_portions", { words: "Working out the portions" }],
 ]);
 
 /** The status line while no text arrives (`assistant · working`, `assistant · recipe-import`, left). */
