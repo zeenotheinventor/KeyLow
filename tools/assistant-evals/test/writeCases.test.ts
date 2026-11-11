@@ -56,11 +56,11 @@ function dayIn(message: string): string {
 }
 
 describe("the write set", () => {
-  it("should have 33 cases: 20 writes, 1 routine build, 7 Undo, 1 never repeated, 1 yesterday's lunch, 2 during a workout and 1 build with no goal", () => {
+  it("should have 34 cases: 21 writes, 1 routine build, 7 Undo, 1 never repeated, 1 yesterday's lunch, 2 during a workout and 1 build with no goal", () => {
     const idsStarting = (prefix: string) => cases.filter(({ id }) => id.startsWith(prefix)).length;
 
-    expect(cases).toHaveLength(33);
-    expect(idsStarting("write-")).toBe(21);
+    expect(cases).toHaveLength(34);
+    expect(idsStarting("write-")).toBe(22);
     expect(idsStarting("undo-")).toBe(7);
     expect(idsStarting("never-repeated-")).toBe(1);
     expect(idsStarting("log-yesterdays-lunch-again")).toBe(1);
@@ -75,7 +75,7 @@ describe("the write set", () => {
     expect(
       ids.filter((id) => id.includes("complete-a-day") || id.includes("reopen-a-day")),
     ).toHaveLength(2);
-    expect(ids.filter((id) => id.startsWith("write-create-a-recipe"))).toHaveLength(1);
+    expect(ids.filter((id) => id.startsWith("write-create-a-recipe"))).toHaveLength(2);
     expect(ids.filter((id) => id.startsWith("write-archive-"))).toHaveLength(2);
     expect(ids.filter((id) => id.startsWith("write-create-a-food"))).toHaveLength(2);
     expect(ids.filter((id) => id.startsWith("write-set-"))).toHaveLength(4);
@@ -245,6 +245,11 @@ const seedRows: Rows = {
       id: foodIdOf(code),
       source: "cofid",
       source_ref: code,
+    })),
+    ...["kfc-gb:zinger-burger", "kfc-gb:large-signature-fries"].map((reference) => ({
+      id: foodIdOf(reference),
+      source: "restaurant",
+      source_ref: reference,
     })),
   ],
   food_portions: ["12-940", "14-318"].map((code) => ({
@@ -582,6 +587,31 @@ const perfect: Record<string, () => Played> = {
     play([{ calls: [recipeCall("Scratch oat bowl")], actions: [["create_recipe", 1]] }], {
       recipes: [{ name: "Scratch oat bowl", is_archived: false }],
     }),
+  "write-create-a-recipe-of-restaurant-foods": () =>
+    play(
+      [
+        {
+          calls: [
+            writeTool("create_recipe", {
+              name: "Scratch meal deal",
+              servings: 4,
+              ingredients: ["kfc-gb:zinger-burger", "kfc-gb:large-signature-fries"].map(
+                (reference) => ({
+                  food_id: foodIdOf(reference),
+                  unit: "portion",
+                  amount: 1,
+                  portion_id: `portion-${reference}`,
+                }),
+              ),
+              steps: [],
+              source_url: null,
+            }),
+          ],
+          actions: [["create_recipe", 1]],
+        },
+      ],
+      { recipes: [{ name: "Scratch meal deal", is_archived: false }] },
+    ),
   "write-archive-a-recipe-after-a-yes": () =>
     play(
       [

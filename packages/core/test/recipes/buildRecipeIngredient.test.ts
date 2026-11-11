@@ -27,16 +27,39 @@ const slice = buildFoodPortion({
 });
 
 describe("buildRecipeIngredient", () => {
-  it("should refuse a food per portion, which has no weight to be an ingredient", () => {
+  describe("a food per portion", () => {
     const bucket = buildFood({ source: "restaurant", basis: "per_portion", kcal: 500 });
+    const ingredient = buildRecipeIngredient(bucket, {
+      quantity: 2,
+      unit: "portion",
+      portion: { id: "p", label: "1 bucket", grams: null, ml: null },
+    });
 
-    expect(() =>
-      buildRecipeIngredient(bucket, {
-        quantity: 1,
+    it("should be counted in portions with no weight", () => {
+      expect(ingredient).toMatchObject({
+        food_id: bucket.id,
+        quantity: 2,
         unit: "portion",
-        portion: { id: "p", label: "1 bucket", grams: null, ml: null },
-      }),
-    ).toThrow(new RangeError("A food per portion has no weight, so it cannot be an ingredient"));
+        resolved_grams: 0,
+      });
+    });
+
+    it("should freeze the food per portion", () => {
+      expect(ingredient.snapshot).toMatchObject({
+        basis: "per_portion",
+        portion: { label: "1 bucket" },
+      });
+    });
+
+    it("should pass the ingredient schema a recipe is saved with", () => {
+      expect(recipeIngredientSchema.safeParse({ ...ingredient, portion_id: null }).success).toBe(
+        true,
+      );
+    });
+
+    it("should refuse grams of it, which it has no weight to be measured in", () => {
+      expect(() => buildRecipeIngredient(bucket, { quantity: 100, unit: "g" })).toThrow(RangeError);
+    });
   });
 
   describe("in grams", () => {

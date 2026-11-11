@@ -1,5 +1,5 @@
-// The write set (KEY-700): 29 cases for the assistant's writes, and two more for training changes during a
-// workout (KEY-908, `trainingPromptCases.ts`). 20 check one tool each (update_entry,
+// The write set (KEY-700): 30 cases for the assistant's writes, and two more for training changes during a
+// workout (KEY-908, `trainingPromptCases.ts`). 21 check one tool each (update_entry,
 // delete_entry, copy_day, set_day_complete, create_recipe, archive_recipe, create_custom_food and
 // update_targets, with the four that ask first answered both ways), 7 press Undo, 1 sends the same message twice
 // and 1 logs yesterday's lunch again.
@@ -174,6 +174,65 @@ function recipeCreated(
   };
 }
 
+/**
+ * Passes when the recipe call has the name, the servings and one line of 1 portion for each restaurant food, as
+ * the database holds it (KEY-944). A food with no published weight is counted in portions, never grams.
+ */
+function restaurantRecipeCreated(
+  name: string,
+  servings: number,
+  sourceRefs: readonly string[],
+): Grader {
+  const isPortionLine = async (
+    line: unknown,
+    sourceRef: string,
+    database: EvalDatabase,
+  ): Promise<boolean> => {
+    if (!isRecord(line) || line["unit"] !== "portion" || line["amount"] !== 1) {
+      return false;
+    }
+    const foodId = line["food_id"];
+    return (
+      typeof foodId === "string" &&
+      (await database.countRows({
+        table: "foods",
+        where: { id: foodId, source: "restaurant", source_ref: sourceRef },
+      })) > 0
+    );
+  };
+
+  return async ({ turns, database }) => {
+    for (const input of inputsOf(turns, "create_recipe")) {
+      const lines = isRecord(input) ? input["ingredients"] : undefined;
+      if (
+        !isRecord(input) ||
+        input["name"] !== name ||
+        input["servings"] !== servings ||
+        !Array.isArray(lines) ||
+        lines.length !== sourceRefs.length
+      ) {
+        continue;
+      }
+      const lineList: readonly unknown[] = lines;
+      const found = await Promise.all(
+        sourceRefs.map(async (sourceRef) => {
+          const matches = await Promise.all(
+            lineList.map((line) => isPortionLine(line, sourceRef, database)),
+          );
+          return matches.some(Boolean);
+        }),
+      );
+      if (found.every(Boolean)) {
+        return { passed: true, reason: "create_recipe was called with the restaurant foods" };
+      }
+    }
+    return {
+      passed: false,
+      reason: `create_recipe was not called with ${name} and its restaurant foods in portions`,
+    };
+  };
+}
+
 // The card the app draws for each write, by case: the turn (counted from 0) and the kind. A card is the app's
 // own proof that the write is the one the person asked for, so a right-looking write with the wrong card fails.
 const CARDS_OF_THE_WRITE: Readonly<
@@ -216,6 +275,7 @@ const CARDS_OF_THE_WRITE: Readonly<
     [2, "day_completed"],
   ],
   "write-create-a-recipe": [[0, "recipe_created"]],
+  "write-create-a-recipe-of-restaurant-foods": [[0, "recipe_created"]],
   "write-archive-a-recipe-after-a-yes": [
     [0, "recipe_created"],
     [2, "recipe_archived"],
@@ -534,6 +594,21 @@ export function writeCasesOf(anchorDate: string): readonly EvalCase[] {
         recipeCreated("Scratch oat bowl", 1, recipeIngredients),
         actionRows("create_recipe", 1),
         recipeIs("Scratch oat bowl", false, 1),
+      ],
+    ),
+    // A recipe of foods with no published weight (KEY-944): each is one portion, and the recipe has no weight.
+    make(
+      "write-create-a-recipe-of-restaurant-foods",
+      [
+        "Make a recipe called Scratch meal deal for 4 servings: a KFC Zinger Burger and a KFC Large Signature Fries.",
+      ],
+      [
+        restaurantRecipeCreated("Scratch meal deal", 4, [
+          "kfc-gb:zinger-burger",
+          "kfc-gb:large-signature-fries",
+        ]),
+        actionRows("create_recipe", 1),
+        recipeIs("Scratch meal deal", false, 1),
       ],
     ),
     // The fourth message proves the next request is accepted after a press, whose stored call has no thinking

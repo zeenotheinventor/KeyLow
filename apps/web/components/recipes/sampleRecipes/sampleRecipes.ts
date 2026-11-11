@@ -31,6 +31,7 @@ function sampleRecipe(
       per100g: nutrientsOf(100 / oneServingGrams),
       totalGrams: effectiveGrams,
       effectiveGrams,
+      servingsOnly: false,
       engineVersion: 1,
     },
   };

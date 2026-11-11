@@ -15,7 +15,11 @@ export {
 } from "./schemas";
 export type { Recipe, RecipeComputed, RecipeIngredient, StoredRecipeIngredient } from "./schemas";
 export { buildRecipeIngredient } from "./buildRecipeIngredient";
-export { canBeRecipeIngredient } from "./canBeRecipeIngredient";
+export {
+  hasWeightlessIngredient,
+  isWeightlessIngredient,
+  showsCookedWeight,
+} from "./weightlessIngredient";
 export type { RecipeIngredientInput } from "./buildRecipeIngredient";
 export { frozenFoodOf, newIngredient, withAmount } from "./ingredientAmount";
 export { computeRecipe, per100gOf } from "./computeRecipe";

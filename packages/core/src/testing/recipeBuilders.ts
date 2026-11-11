@@ -59,3 +59,60 @@ export function buildChickenAndRiceRecipe(
     ],
   };
 }
+
+export type BucketAndFriesRecipe = {
+  foods: { bucket: Food; fries: Food };
+  servings: number;
+  /** A recipe holding a food per portion has no cooked weight. */
+  yieldGrams: null;
+  /** One bucket (a food per portion) and 200 g of fries, in that order. */
+  ingredients: RecipeIngredient[];
+};
+
+/**
+ * A meal deal for the golden of a recipe with a food that has no weight: one bucket of a restaurant food per
+ * portion (2000 kcal and 100 g protein for the whole bucket) and 200 g of fries (300 kcal and 4 g protein per
+ * 100 g) make 2600 kcal and 108 g protein, and weigh 200 g. Four servings unless overridden.
+ */
+export function buildBucketAndFriesRecipe(
+  overrides: Partial<Pick<BucketAndFriesRecipe, "servings">> = {},
+): BucketAndFriesRecipe {
+  const bucket = buildFood({
+    id: "00000000-0000-4000-8000-0000000000b1",
+    source: "restaurant",
+    name: "Chicken bucket",
+    basis: "per_portion",
+    kcal: 2000,
+    protein_g: 100,
+    fat_g: 120,
+    carbs_g: 80,
+    fibre_g: 4,
+  });
+  const fries = buildFood({
+    id: "00000000-0000-4000-8000-0000000000b2",
+    name: "Fries",
+    kcal: 300,
+    protein_g: 4,
+    fat_g: 15,
+    carbs_g: 38,
+    fibre_g: 3,
+  });
+  return {
+    foods: { bucket, fries },
+    servings: overrides.servings ?? 4,
+    yieldGrams: null,
+    ingredients: [
+      buildRecipeIngredient(bucket, {
+        quantity: 1,
+        unit: "portion",
+        portion: {
+          id: "00000000-0000-4000-8000-0000000000c1",
+          label: "1 bucket",
+          grams: null,
+          ml: null,
+        },
+      }),
+      buildRecipeIngredient(fries, { quantity: 200, unit: "g" }),
+    ],
+  };
+}

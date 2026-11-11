@@ -7,7 +7,6 @@ import {
   VALUES_PER_100_G_NOTE,
   describeLiveGroupNote,
 } from "@keylow/core/copy";
-import { canBeRecipeIngredient } from "@keylow/core/recipes";
 import {
   FOOD_SEARCH_FETCH_LIMIT,
   groupFoodSearchResults,
@@ -44,10 +43,8 @@ export function SearchResults({
   choosesAmount = false,
 }: SearchResultsProps) {
   const trimmedQuery = query.trim();
-  const search = useFoodSearch(trimmedQuery, SEARCH_OPTIONS);
-  const { off, isLoadingLocal, isLoadingOff, isDebouncing, offError, localError } = search;
-  // Choosing an amount is the ingredient search, which lists only what a recipe can hold.
-  const local = choosesAmount ? search.local.filter(canBeRecipeIngredient) : search.local;
+  const { local, off, isLoadingLocal, isLoadingOff, isDebouncing, offError, localError } =
+    useFoodSearch(trimmedQuery, SEARCH_OPTIONS);
 
   // The recipes of the log search are looked for beside the foods, and count as results and as searching.
   const recipeRows = logRows?.recipes?.rows ?? [];

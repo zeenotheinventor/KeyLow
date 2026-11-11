@@ -1,5 +1,6 @@
 import { scaleFactor, scaleIngredientAmount, scaleYield } from "./scaleRecipe";
-import { describeRecipeYield } from "../copy/recipeLog";
+import { hasWeightlessIngredient } from "./weightlessIngredient";
+import { describeRecipeYield, describeServingsOnlyYield } from "../copy/recipeLog";
 import {
   describeIngredientsFor,
   describeResetServings,
@@ -51,12 +52,15 @@ export const recipeViewOf = (recipe: StoredRecipe, chosenServings: number | null
   const factor = scaleFactor(servings, recipe.servings);
   const isScaled = servings !== recipe.servings;
   const cookedGrams = scaleYield(recipe.yield_grams, factor);
+  const isServingsOnly = hasWeightlessIngredient(recipe.ingredients);
 
   return {
     servings,
     isScaled,
     valueText: describeServingsValue(servings),
-    yieldLine: describeRecipeYield(servings, cookedGrams),
+    yieldLine: isServingsOnly
+      ? describeServingsOnlyYield(servings)
+      : describeRecipeYield(servings, cookedGrams),
     ingredientsFor: describeIngredientsFor(servings),
     ingredients: recipe.ingredients.map((ingredient) => {
       const name = ingredient.snapshot.name;

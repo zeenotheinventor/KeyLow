@@ -149,6 +149,8 @@ describe("the problem sentences", () => {
       servingsTooMany: "Enter 1,000 servings or fewer.",
       cookedWeight: "Enter a cooked weight above 0, or leave it blank.",
       cookedWeightTooLarge: "Enter 100,000 g or less.",
+      cookedWeightWithRestaurantFood:
+        "Remove the cooked weight. A recipe with a restaurant food is logged by servings.",
       noIngredient: "Add at least one ingredient.",
       ingredientLimit: "Up to 100 ingredients",
       stepLimit: "Up to 50 steps",
@@ -175,6 +177,10 @@ describe("describeRecipeProblem", () => {
     ["servings_too_many", "Enter 1,000 servings or fewer."],
     ["cooked_weight_invalid", "Enter a cooked weight above 0, or leave it blank."],
     ["cooked_weight_too_large", "Enter 100,000 g or less."],
+    [
+      "cooked_weight_with_food_per_portion",
+      "Remove the cooked weight. A recipe with a restaurant food is logged by servings.",
+    ],
     ["ingredients_none", "Add at least one ingredient."],
     ["ingredients_too_many", "Up to 100 ingredients"],
     ["ingredient_invalid", "Check the amount of each ingredient."],
@@ -260,6 +266,10 @@ describe("describeCookedWeightHelper", () => {
 });
 
 describe("the Per serving card", () => {
+  it("should caption a serving with no weight as Per serving alone", () => {
+    expect(describeRecipePerServing(null)).toBe("Per serving");
+  });
+
   it.each([
     [275, "Per serving (275 g)"],
     [180, "Per serving (180 g)"],
@@ -464,6 +474,7 @@ describe("problemSentences", () => {
     ["name_too_long", "name"],
     ["servings_too_many", "servings"],
     ["cooked_weight_too_large", "cookedWeight"],
+    ["cooked_weight_with_food_per_portion", "cookedWeight"],
   ])("should file %s under %s", (problem, field) => {
     expect(problemSentences([problem])[field]).toBe(describeRecipeProblem(problem));
   });

@@ -9,6 +9,8 @@ export const chickenId = "00000000-0000-4000-8000-0000000000c1";
 export const riceId = "00000000-0000-4000-8000-0000000000c2";
 export const oliveOilId = "00000000-0000-4000-8000-0000000000c3";
 export const tablespoonId = "00000000-0000-4000-8000-0000000000c4";
+export const bucketId = "00000000-0000-4000-8000-0000000000c5";
+export const bucketPortionId = "00000000-0000-4000-8000-0000000000c6";
 export const otherUserId = "00000000-0000-4000-8000-0000000000b2";
 
 // The figures are per 100 g, chosen so the board's Chicken and rice (500 g chicken breast, 400 g white rice
@@ -42,6 +44,26 @@ const recipeFoods = () => ({
     }),
   ],
   food_portions: [portionRow(tablespoonId, oliveOilId, "tbsp", 13.5)],
+});
+
+// A restaurant food per portion, which has no weight: one bucket is 2000 kcal, and its only portion is a count.
+const bucketFood = () => ({
+  food: foodRow({
+    id: bucketId,
+    source: "restaurant",
+    owner_id: null,
+    name: "Chicken bucket",
+    basis: "per_portion",
+    kcal: 2000,
+    protein_g: 100,
+    fat_g: 120,
+    carbs_g: 80,
+  }),
+  portion: {
+    ...portionRow(bucketPortionId, bucketId, "1 bucket", 0),
+    grams: null,
+    is_default: true,
+  },
 });
 
 // The board's ingredients, as the model sends them.
@@ -132,10 +154,11 @@ export function recipeContext(
 ) {
   const diet = dietRows();
   const foods = recipeFoods();
+  const bucket = bucketFood();
   return writeContext(tools, {
     rows: {
-      foods: [...diet.foods, ...foods.foods],
-      food_portions: [...diet.food_portions, ...foods.food_portions],
+      foods: [...diet.foods, ...foods.foods, bucket.food],
+      food_portions: [...diet.food_portions, ...foods.food_portions, bucket.portion],
       ...options.rows,
     },
     rpc: { save_recipe: saveRecipeRpc },

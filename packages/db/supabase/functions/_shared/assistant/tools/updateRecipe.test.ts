@@ -4,6 +4,8 @@ import { executeTool } from "../executor.ts";
 import { undoAction } from "../undo.ts";
 import { createRecipeTool } from "./createRecipe.ts";
 import {
+  bucketId,
+  bucketPortionId,
   chickenAndRice,
   chickenId,
   oliveOilId,
@@ -342,3 +344,45 @@ Deno.test("an edit has no Undo", async () => {
   assertEquals(undone, { status: "error", code: "undo_unavailable" });
   assertEquals(updateRecipeTool.inverse, null);
 });
+
+Deno.test("a food per portion can be added to a recipe with no cooked weight", async () => {
+  const { ctx, id, stub } = await savedChickenAndRice();
+
+  const result = await executeTool(ctx, "update_recipe", {
+    ...keep,
+    id,
+    ingredients: [
+      ...chickenAndRice.ingredients,
+      { food_id: bucketId, unit: "portion", amount: 2, portion_id: bucketPortionId },
+    ],
+  });
+
+  assertEquals(result.status, "ok");
+  const [after] = stub.tables["recipes"] ?? [];
+  assertObjectMatch(after?.["computed"] as object, { servingsOnly: true });
+  assertEquals(after?.["yield_grams"], null);
+});
+
+Deno.test(
+  "a food per portion is refused for a recipe that has a cooked weight, and nothing changes",
+  async () => {
+    const { ctx, id, stub } = await savedChickenAndRice();
+    const [row] = stub.tables["recipes"] ?? [];
+    if (row !== undefined) {
+      row["yield_grams"] = 1100;
+    }
+    const before = structuredClone(stub.tables["recipes"]);
+
+    const result = await executeTool(ctx, "update_recipe", {
+      ...keep,
+      id,
+      ingredients: [
+        ...chickenAndRice.ingredients,
+        { food_id: bucketId, unit: "portion", amount: 1, portion_id: bucketPortionId },
+      ],
+    });
+
+    assertEquals(payloadOf(result), { error: "invalid_input", fields: ["recipe"] });
+    assertEquals(stub.tables["recipes"], before);
+  },
+);

@@ -86,22 +86,34 @@ export const recipeEntryUnitSchema = z.enum(["serving", "g"]);
  * weight the grams are measured against. A recipe has no portion and no density. There are no
  * micronutrients.
  */
-export const recipeSnapshotSchema = z.object({
-  v: z.literal(SNAPSHOT_VERSION),
-  kind: z.literal("recipe"),
-  /** The id of the recipe the snapshot was taken from. */
-  ref: rowIdSchema,
-  name: z.string(),
-  servings: z.number().positive(),
-  /** Null when the recipe had no measured cooked weight. */
-  yieldGrams: z.number().positive().nullable(),
-  effectiveGrams: z.number().positive(),
-  total: nutrientsSchema,
-  quantity: z.number().nonnegative(),
-  unit: recipeEntryUnitSchema,
-  resolvedGrams: z.number().nonnegative(),
-  engineVersion: z.number().int().positive().max(NUTRITION_ENGINE_VERSION),
-});
+export const recipeSnapshotSchema = z
+  .object({
+    v: z.literal(SNAPSHOT_VERSION),
+    kind: z.literal("recipe"),
+    /** The id of the recipe the snapshot was taken from. */
+    ref: rowIdSchema,
+    name: z.string(),
+    servings: z.number().positive(),
+    /** Null when the recipe had no measured cooked weight. */
+    yieldGrams: z.number().positive().nullable(),
+    /** 0 only for a recipe that is servings only, which has no weight. */
+    effectiveGrams: z.number().nonnegative(),
+    /** True for a recipe with a food per portion, which is logged by servings only (Amendment 19). */
+    servingsOnly: z.literal(true).optional(),
+    total: nutrientsSchema,
+    quantity: z.number().nonnegative(),
+    unit: recipeEntryUnitSchema,
+    resolvedGrams: z.number().nonnegative(),
+    engineVersion: z.number().int().positive().max(NUTRITION_ENGINE_VERSION),
+  })
+  .refine((snapshot) => snapshot.effectiveGrams > 0 || snapshot.servingsOnly === true, {
+    message: "Only a recipe that is servings only has no weight",
+    path: ["effectiveGrams"],
+  })
+  .refine((snapshot) => snapshot.servingsOnly !== true || snapshot.unit === "serving", {
+    message: "A recipe that is servings only is logged by servings",
+    path: ["unit"],
+  });
 
 /**
  * When an entry was logged: the instant (`logged_at`, with an offset) and the calendar day it

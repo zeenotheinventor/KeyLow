@@ -1,9 +1,8 @@
 import { DIARY_LOAD_FAILED } from "./diary";
 import {
   describeOneServing,
-  describeSpokenGrams,
   describeSpokenNutrients,
-  gramsOfOneServing,
+  describeSpokenOneServing,
 } from "./recipeWording";
 import { formatScaledCount } from "../format/scaledCount";
 import { MAX_RECIPE_NAME_LENGTH } from "../recipes/bounds";
@@ -109,7 +108,7 @@ export const describeRecipeServingCaption = (recipe: RecipeServings): string =>
 export const describeRecipeRowName = (name: string, recipe: RecipeForLibraryRow): string =>
   [
     name,
-    `1 serving ${describeSpokenGrams(gramsOfOneServing(recipe))}`,
+    describeSpokenOneServing(recipe),
     `makes ${formatScaledCount(recipe.servings)}`,
     describeSpokenNutrients(recipe.computed.perServing),
     "open",

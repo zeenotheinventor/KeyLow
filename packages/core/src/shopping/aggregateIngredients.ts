@@ -62,7 +62,8 @@ const withSource = (sources: ShoppingSource[], source: ShoppingSource): Shopping
  * appears. Each recipe is scaled by `scaleFactor`, so it throws the same `RangeError` for servings that
  * are not a number it accepts, before anything is summed. A food is sorted once, by its first
  * ingredient, with `classifyIngredient`. A count of portions is kept only while every ingredient of the
- * food used the same portion label. Grams are always kept, and nothing is rounded.
+ * food used the same portion label. Grams are always kept, and nothing is rounded. An ingredient with no
+ * weight is left out.
  */
 export function aggregateIngredients(recipes: readonly ShoppingRecipe[]): AggregatedIngredients {
   const factors = recipes.map((recipe) =>
@@ -75,6 +76,11 @@ export function aggregateIngredients(recipes: readonly ShoppingRecipe[]): Aggreg
     const source: ShoppingSource = { recipeId: recipe.recipeId, name: recipe.recipeName };
 
     for (const ingredient of recipe.ingredients) {
+      // An ingredient with no weight is a food per portion, such as a restaurant bucket, which is not bought
+      // in a shop (ADR 0003, Amendment 19). A weighed ingredient always has grams above 0.
+      if (ingredient.resolvedGrams === 0) {
+        continue;
+      }
       const grams = ingredient.resolvedGrams * factor;
       const count = ingredient.unit === "portion" ? ingredient.quantity * factor : null;
       const label = ingredient.unit === "portion" ? ingredient.portionLabel : null;

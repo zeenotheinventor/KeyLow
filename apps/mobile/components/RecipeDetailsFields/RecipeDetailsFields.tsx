@@ -4,6 +4,7 @@ import {
   describeCookedWeightHelper,
   describeServingsFieldSuffix,
 } from "@keylow/core/copy";
+import { showsCookedWeight } from "@keylow/core/recipes";
 import { View } from "react-native";
 
 import { Input, NumericInput, Text } from "../ui";
@@ -12,7 +13,9 @@ import type { RecipeDetailsFieldsProps } from "./types";
 
 /**
  * The Details section of the recipe editor: the name, the servings and the cooked weight. The helper under
- * the cooked weight says what a blank one means, and gives way to the sentence when the weight is wrong.
+ * the cooked weight says what a blank one means, and gives way to the sentence when the weight is wrong. A
+ * recipe with a restaurant food has no cooked weight, so the field is gone unless it still holds one that Save
+ * refuses (core's `showsCookedWeight`).
  */
 export function RecipeDetailsFields({
   draft,
@@ -55,20 +58,22 @@ export function RecipeDetailsFields({
             onChange("servings", text);
           }}
         />
-        <NumericInput
-          accessibilityLabel={RECIPE_EDITOR.cookedWeightName}
-          disabled={isLocked}
-          error={errors.cookedWeight}
-          helper={describeCookedWeightHelper(draft.ingredients)}
-          inputRef={cookedWeightRef}
-          label={RECIPE_EDITOR.cookedWeight}
-          placeholder=""
-          unit="g"
-          value={draft.cookedWeight}
-          onChangeText={(text) => {
-            onChange("cookedWeight", text);
-          }}
-        />
+        {showsCookedWeight(draft) ? (
+          <NumericInput
+            accessibilityLabel={RECIPE_EDITOR.cookedWeightName}
+            disabled={isLocked}
+            error={errors.cookedWeight}
+            helper={describeCookedWeightHelper(draft.ingredients)}
+            inputRef={cookedWeightRef}
+            label={RECIPE_EDITOR.cookedWeight}
+            placeholder=""
+            unit="g"
+            value={draft.cookedWeight}
+            onChangeText={(text) => {
+              onChange("cookedWeight", text);
+            }}
+          />
+        ) : null}
       </View>
     </View>
   );

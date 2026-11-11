@@ -9,9 +9,10 @@ import {
   MAX_RECIPE_YIELD_GRAMS,
   buildRecipeIngredient,
   recipeSchema,
+  showsCookedWeight,
   validateRecipeDraft,
 } from "../../src/recipes";
-import { buildFood } from "../../src/testing";
+import { buildBucketAndFriesRecipe, buildFood } from "../../src/testing";
 
 import type { RecipeDraft, RecipeDraftProblem } from "../../src/recipes";
 
@@ -32,6 +33,26 @@ const problemsOf = (changes: Partial<RecipeDraft>): readonly RecipeDraftProblem[
 };
 
 describe("validateRecipeDraft", () => {
+  describe("a recipe with a food per portion", () => {
+    const { ingredients } = buildBucketAndFriesRecipe();
+
+    it("should be ok with no cooked weight", () => {
+      expect(problemsOf({ ingredients, cookedWeight: "" })).toEqual([]);
+    });
+
+    it("should refuse a cooked weight, because such a recipe is logged by servings only", () => {
+      expect(problemsOf({ ingredients, cookedWeight: "1100" })).toEqual([
+        "cooked_weight_with_food_per_portion",
+      ]);
+    });
+
+    it("should refuse a cooked weight even when it is not a number", () => {
+      expect(problemsOf({ ingredients, cookedWeight: "lots" })).toEqual([
+        "cooked_weight_with_food_per_portion",
+      ]);
+    });
+  });
+
   describe("a draft with nothing wrong", () => {
     it("should be ok and hand back the values ready for computeRecipe", () => {
       expect(validateRecipeDraft(validDraft)).toEqual({
@@ -336,6 +357,7 @@ describe("validateRecipeDraft", () => {
         case "servings_too_many":
         case "cooked_weight_invalid":
         case "cooked_weight_too_large":
+        case "cooked_weight_with_food_per_portion":
         case "ingredients_none":
         case "ingredients_too_many":
         case "ingredient_invalid":
@@ -352,5 +374,21 @@ describe("validateRecipeDraft", () => {
     it("should be a closed union a screen can switch over", () => {
       expect(sentenceKeyOf("name_required")).toBe("name_required");
     });
+  });
+});
+
+describe("showsCookedWeight", () => {
+  const { ingredients: withBucket } = buildBucketAndFriesRecipe();
+
+  it("should show the field for a recipe of weighed foods", () => {
+    expect(showsCookedWeight({ ingredients: [ingredient], cookedWeight: "" })).toBe(true);
+  });
+
+  it("should hide the field for a recipe with a food per portion", () => {
+    expect(showsCookedWeight({ ingredients: withBucket, cookedWeight: "" })).toBe(false);
+  });
+
+  it("should keep the field while it still holds a weight, so its error has somewhere to show", () => {
+    expect(showsCookedWeight({ ingredients: withBucket, cookedWeight: "900" })).toBe(true);
   });
 });

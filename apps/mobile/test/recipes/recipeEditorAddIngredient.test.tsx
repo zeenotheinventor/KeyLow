@@ -517,7 +517,7 @@ describe("adding an ingredient from the recipe editor", () => {
       expect(screen.queryByRole("heading", { name: /recipes/i })).not.toBeOnTheScreen();
     });
 
-    it("should leave out a food counted in portions, which has no weight to be an ingredient", async () => {
+    it("should list a food counted in portions beside a food with a weight", async () => {
       const bucket = buildFood({
         id: uuidOf("a"),
         source: "restaurant",
@@ -538,10 +538,10 @@ describe("adding an ingredient from the recipe editor", () => {
       await type("spinach");
 
       expect(resultRow("Spinach, baby, raw", "100 g")).toBeOnTheScreen();
-      expect(screen.queryByRole("button", { name: /Spinach bucket/ })).not.toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: /Spinach bucket/ })).toBeOnTheScreen();
     });
 
-    it("should leave a food counted in portions out of Recent too", async () => {
+    it("should list a food counted in portions in Recent too", async () => {
       mockRecentFoods.current = [
         {
           ...oatsLoggedAt50Grams,
@@ -563,7 +563,7 @@ describe("adding an ingredient from the recipe editor", () => {
       await user.press(addRow());
 
       expect(screen.getByRole("button", { name: /Onions, raw/ })).toBeOnTheScreen();
-      expect(screen.queryByRole("button", { name: /Bargain bucket/ })).not.toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: /Bargain bucket/ })).toBeOnTheScreen();
     });
 
     it("should say nothing was found without offering to create a food", async () => {

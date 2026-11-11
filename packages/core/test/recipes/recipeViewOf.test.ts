@@ -2,7 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import { SPOON_PORTIONS } from "../../src/nutrition";
 import { buildRecipeIngredient, recipeViewOf } from "../../src/recipes";
-import { buildChickenAndRiceRecipe, buildFood, buildFoodPortion } from "../../src/testing";
+import {
+  buildBucketAndFriesRecipe,
+  buildChickenAndRiceRecipe,
+  buildFood,
+  buildFoodPortion,
+} from "../../src/testing";
 
 import type { StoredRecipe } from "../../src/recipes";
 
@@ -278,5 +283,38 @@ describe("recipeViewOf the chosen servings", () => {
     recipeViewOf(recipe, 6);
 
     expect(recipe).toEqual(before);
+  });
+});
+
+describe("recipeViewOf a recipe with a food per portion", () => {
+  const stored: StoredRecipe = {
+    name: "Meal deal",
+    servings: 4,
+    yield_grams: null,
+    instructions: [],
+    ingredients: buildBucketAndFriesRecipe().ingredients,
+  };
+
+  it("should count the bucket in portions, with no grams", () => {
+    const view = recipeViewOf(stored, null);
+
+    expect(view.ingredients[0]).toEqual({
+      name: "Chicken bucket",
+      caption: "1 bucket",
+      accessibleName: "Chicken bucket, 1 bucket",
+    });
+  });
+
+  it("should say how many it makes and not how much it weighs", () => {
+    const view = recipeViewOf(stored, null);
+
+    expect(view.yieldLine).toBe("Makes 4");
+    expect(view.announcement).toBe("Ingredients for 4 servings");
+  });
+
+  it("should scale the portion count and keep the fries in grams", () => {
+    const view = recipeViewOf(stored, 8);
+
+    expect(view.ingredients.map(({ caption }) => caption)).toEqual(["2 × 1 bucket", "400 g"]);
   });
 });

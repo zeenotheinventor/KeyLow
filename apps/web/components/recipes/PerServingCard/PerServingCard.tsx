@@ -37,7 +37,11 @@ export function PerServingCard({ card }: PerServingCardProps) {
         values: card.perServing,
         region: {
           name: regionName,
-          footnote: describeRecipePer100(card.per100gBasis, card.per100g.kcal),
+          // A recipe with no weight has no values per 100 g.
+          footnote:
+            card.per100gBasis === null
+              ? undefined
+              : describeRecipePer100(card.per100gBasis, card.per100g.kcal),
           announcement: describeRecipePerServingCard(card.perServing),
         },
       }}

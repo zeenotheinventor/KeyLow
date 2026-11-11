@@ -12,7 +12,8 @@ import type { NullableNutrients } from "../schemas/nutrients";
  */
 export type LoggableRecipe = Pick<Recipe, "name" | "servings" | "yield_grams"> & {
   id: string;
-  computed: Pick<RecipeComputed, "total" | "effectiveGrams">;
+  computed: Pick<RecipeComputed, "total" | "effectiveGrams"> &
+    Partial<Pick<RecipeComputed, "servingsOnly">>;
 };
 
 /** An amount of a recipe: a number of its servings, or grams of its cooked weight. */
@@ -26,7 +27,10 @@ export type FrozenRecipe = Omit<
 
 const optionalKeys = ["sat_fat_g", "sugars_g", "salt_g"] as const;
 
-/** Freezes a recipe. The totals are copied, so a later edit to the recipe's cache cannot reach the snapshot. */
+/**
+ * Freezes a recipe. The totals are copied, so a later edit to the recipe's cache cannot reach the snapshot.
+ * A recipe that is servings only (Amendment 19) says so, and any other recipe has no such key.
+ */
 export const freezeRecipe = (recipe: LoggableRecipe): FrozenRecipe => ({
   v: SNAPSHOT_VERSION,
   kind: "recipe",
@@ -35,6 +39,7 @@ export const freezeRecipe = (recipe: LoggableRecipe): FrozenRecipe => ({
   servings: recipe.servings,
   yieldGrams: recipe.yield_grams,
   effectiveGrams: recipe.computed.effectiveGrams,
+  ...(recipe.computed.servingsOnly === true ? { servingsOnly: true as const } : {}),
   total: { ...recipe.computed.total },
 });
 
@@ -44,8 +49,10 @@ export const freezeRecipe = (recipe: LoggableRecipe): FrozenRecipe => ({
  * arithmetic is part of the contract (ADR 0003, Amendment 8), because floating point makes the orders
  * differ in the last digits and a stored entry must rebuild bit for bit.
  *
- * Throws a `RangeError` for a unit that is not `serving` or `g`, a negative or non-finite quantity,
- * servings or cooked weight that is not above 0, and an amount too large to work out. The messages state
+ * A recipe that is servings only has no weight, so it is logged by servings alone and its grams are 0
+ * (Amendment 19). Throws a `RangeError` for a unit that is not `serving` or `g`, grams of a recipe that is
+ * servings only, a negative or non-finite quantity, servings or cooked weight that is not above 0, and an
+ * amount too large to work out. The messages state
  * the rule and never the value, because the amount is health data.
  */
 export const withRecipeQuantity = (recipe: FrozenRecipe, amount: RecipeAmount): RecipeSnapshot => {
@@ -58,7 +65,14 @@ export const withRecipeQuantity = (recipe: FrozenRecipe, amount: RecipeAmount): 
   if (!Number.isFinite(recipe.servings) || recipe.servings <= 0) {
     throw new RangeError("The recipe's servings must be a finite number above 0");
   }
-  if (!Number.isFinite(recipe.effectiveGrams) || recipe.effectiveGrams <= 0) {
+  if (recipe.servingsOnly === true && amount.unit === "g") {
+    throw new RangeError("A recipe with a food per portion is logged by servings");
+  }
+  if (recipe.servingsOnly === true) {
+    if (recipe.effectiveGrams !== 0) {
+      throw new RangeError("A recipe that is servings only must have a weight of 0");
+    }
+  } else if (!Number.isFinite(recipe.effectiveGrams) || recipe.effectiveGrams <= 0) {
     throw new RangeError("The recipe's cooked weight must be a finite number above 0");
   }
   const resolvedGrams =
