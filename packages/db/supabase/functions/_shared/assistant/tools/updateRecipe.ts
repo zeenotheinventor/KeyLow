@@ -30,9 +30,11 @@ const updateRecipeInput = z
     ingredients: recipeIngredients
       .nullable()
       .describe(
-        `The full new list, 1 to ${maxIngredients}, replacing the old one. Null to keep it.`,
+        `All of the recipe's ingredients as they should now be, 1 to ${maxIngredients}, replacing the old list. Null to keep them.`,
       ),
-    steps: recipeSteps.nullable().describe("The full new list in order. Null to keep it."),
+    steps: recipeSteps
+      .nullable()
+      .describe("All of the recipe's steps as they should now be, in order. Null to keep them."),
   })
   .refine(
     ({ name, servings, ingredients, steps }) =>

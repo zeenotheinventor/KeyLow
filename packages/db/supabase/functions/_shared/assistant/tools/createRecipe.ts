@@ -23,8 +23,8 @@ import {
 import type { WriteToolDefinition } from "../tool.ts";
 
 const createRecipeInput = z.strictObject({
-  name: recipeName,
-  servings: recipeServings,
+  name: recipeName.describe("The recipe's name, as the user said it."),
+  servings: recipeServings.describe("How many servings the recipe makes."),
   ingredients: recipeIngredients.describe(
     `The ingredients, 1 to ${maxIngredients}, each a food from search_foods or get_food and an amount.`,
   ),
