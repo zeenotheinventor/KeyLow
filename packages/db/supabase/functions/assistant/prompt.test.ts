@@ -264,27 +264,108 @@ Deno.test(
   },
 );
 
-// The food sections as they stood before KEY-952, copied byte for byte. A training change must not move them.
-const READ_BEFORE_YOU_WRITE_SECTION =
-  'Read before you write\nBefore any call that changes the diary, read what the call needs. Never log from memory. Find the food with search_foods, read its portions with get_food, and use the ids those results give. Never invent a food, an id or a portion. When search_foods finds nothing, search once more with other words, a simpler or more general name (for example "semi skimmed milk" becomes "milk"), before asking the person. When that finds nothing either, ask with ask_user. Never guess a food. A training change reads first too: exercise ids come from search_exercises or get_routines, set ids from get_workouts, and none is invented.';
-const NUMBERS_FOOD_SENTENCES =
-  'Numbers\nEvery number in a reply comes from a tool result. Never add up, average, convert or work out a change yourself, and never fill in a number from memory. When a result gives a total, a trend or a rate, quote it as given. A value of null means unknown, never zero. State an amount exactly as the tool gives it, without "about" or "roughly", except as set out under Amounts. The one thing described as an estimate is a trend weight, and only as the tool describes it.';
-const AMOUNTS_SECTION =
-  'Amounts\nPrefer the food\'s own portions. Pick one portion from the food\'s portions, each of which has a label and grams, and a count, and say it like "2 large eggs (100 g)", with the grams in brackets. The grams come from the portion in the read tool\'s result or from the write result, never from multiplying in your head. When no portion fits, use the grams the person said, like "150 g rice". When the person gives grams, log those grams and do not convert them to a portion. When the person gave no amount and no portion fits, ask for grams with ask_user. A portion marked estimated is Ki-Lo\'s own guess at a typical serving. Use it only when the person said a serving or the like and gave no amount. Write it with its words and "about" in the brackets, as in "1 typical serving (about 150 g)". This is the one exception to never describing an amount as an estimate. Otherwise ask for grams as above. Never use hand measures such as a fist, a palm, a cupped hand or a thumb, and never describe an amount as an estimate.';
+const sectionOf = (title: string): string =>
+  SYSTEM_PROMPT.split("\n\n").find((section) => section.startsWith(`${title}\n`)) ?? "";
 
-Deno.test("the food grounding rules are byte-identical to the ones before KEY-952", () => {
-  const sections = SYSTEM_PROMPT.split("\n\n");
+// KEY-966. The food rules of Numbers and Amounts, and what Read before you write and One question add for a
+// described meal. Each rule is a sentence of the section it belongs to.
+Deno.test("a plate or bowl of several foods is one share question, then estimate_portions", () => {
+  const amounts = sectionOf("Amounts");
+  for (const rule of [
+    "ask one ask_user question for the share of the plate each took",
+    "call estimate_portions once for each container with those shares",
+    "log each result with estimated true",
+    "Use the default container, or the diameter or radius in cm the person gave, and never ask for the size.",
+  ]) {
+    assert(amounts.includes(rule), `Amounts does not hold: ${rule}`);
+  }
+  const oneQuestion = sectionOf("One question, never a guess");
+  for (const rule of [
+    'or for the plate-share question a split such as "an even split"',
+    "The share question is the one question of the turn.",
+    "Foods it does not cover (a counted roll, a food with a known calorie figure) are logged in the turn after it, together with the plate.",
+  ]) {
+    assert(oneQuestion.includes(rule), `One question does not hold: ${rule}`);
+  }
+});
 
-  assertEquals(
-    sections.find((section) => section.startsWith("Read before you write")),
-    READ_BEFORE_YOU_WRITE_SECTION,
+Deno.test(
+  "a calorie figure the person gave for a food goes through estimate_portions, not quick",
+  () => {
+    const amounts = sectionOf("Amounts");
+    for (const rule of [
+      "a calorie figure the person gave for a food: search for the food, call estimate_portions with that kcal, and log the grams it returns with estimated true.",
+      "Never log it as quick when a match exists, because the person wants macros.",
+    ]) {
+      assert(amounts.includes(rule), `Amounts does not hold: ${rule}`);
+    }
+  },
+);
+
+Deno.test(
+  "a counted food is logged by its own portion, and given grams are never estimated",
+  () => {
+    const amounts = sectionOf("Amounts");
+    for (const rule of [
+      "First, a counted thing (a roll, an egg, a small butter pack): one of the food's own portions.",
+      "Prefer the food's own portions. Pick one portion from the food's portions, each of which has a label and grams, and a count, and say it like \"2 large eggs (100 g)\", with the grams in brackets.",
+      "When the person gives grams, log those grams and do not convert them to a portion.",
+      "Grams the person gave are logged as they are, never estimated and never sent through estimate_portions.",
+    ]) {
+      assert(amounts.includes(rule), `Amounts does not hold: ${rule}`);
+    }
+  },
+);
+
+Deno.test(
+  "an estimated amount is said with about, listed once with the other two exceptions",
+  () => {
+    const numbers = sectionOf("Numbers");
+    assert(numbers.includes('without "about" or "roughly".'));
+    assert(
+      numbers.includes(
+        'Three things take "about": a trend weight as the tool describes it, a typical serving, and an amount from estimate_portions, as in "about 180 g rice".',
+      ),
+    );
+    assert(numbers.includes("Never scale or convert such an amount."));
+    assertEquals(SYSTEM_PROMPT.includes("except as set out under Amounts"), false);
+  },
+);
+
+Deno.test(
+  "a dish with no match is logged as the closest generic one, named once, never created",
+  () => {
+    const read = sectionOf("Read before you write");
+    for (const rule of [
+      'a massaman becomes "beef curry"',
+      'name the substitution once in the reply, as in "Massaman is logged as Curry, beef, homemade, the closest match."',
+      "Never create a custom food for a dish that is missing.",
+      "When that finds nothing either and the person gave calories, log them as quick, otherwise ask with ask_user.",
+    ]) {
+      assert(read.includes(rule), `Read before you write does not hold: ${rule}`);
+    }
+  },
+);
+
+Deno.test("hand measures stay banned and the grounding rules of the food sections stay", () => {
+  assert(
+    sectionOf("Amounts").includes(
+      "Never use hand measures such as a fist, a palm, a cupped hand or a thumb.",
+    ),
   );
-  assertEquals(
-    sections.find((section) => section.startsWith("Amounts\n")),
-    AMOUNTS_SECTION,
+  const read = sectionOf("Read before you write");
+  for (const rule of [
+    "Never log from memory.",
+    "Never invent a food, an id or a portion.",
+    "Never guess a food.",
+  ]) {
+    assert(read.includes(rule), `Read before you write does not hold: ${rule}`);
+  }
+  assert(
+    sectionOf("Numbers").includes(
+      "Every number in a reply comes from a tool result. Never add up, average, convert or work out a change yourself",
+    ),
   );
-  const numbers = sections.find((section) => section.startsWith("Numbers\n")) ?? "";
-  assert(numbers.startsWith(NUMBERS_FOOD_SENTENCES), "the food sentences of Numbers changed");
 });
 
 Deno.test("Training questions is one section, between Training advice and One question", () => {
@@ -394,15 +475,12 @@ Deno.test(
   "an estimated portion is used only for a serving with no amount, and said with about",
   () => {
     for (const rule of [
-      "A portion marked estimated is Ki-Lo's own guess at a typical serving.",
-      "Use it only when the person said a serving or the like and gave no amount",
+      "A portion marked estimated is a typical size. Use it for a counted thing the person named without an amount, or when they said a serving or the like.",
       'Write it with its words and "about" in the brackets, as in "1 typical serving (about 150 g)"',
-      "This is the one exception to never describing an amount as an estimate.",
-      "Otherwise ask for grams as above",
+      "When none of these gives an amount, ask for grams with ask_user.",
     ]) {
       assert(SYSTEM_PROMPT.includes(rule), `the system prompt does not hold: ${rule}`);
     }
-    assert(SYSTEM_PROMPT.includes("except as set out under Amounts"));
   },
 );
 

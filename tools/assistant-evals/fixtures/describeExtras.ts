@@ -91,6 +91,32 @@ export const SEEDED_FOODS: readonly SeededFood[] = [
   food("12-527", "Cheese, processed, plain", [portion("1 slice", 21, true)]),
   food("11-788", "Porridge oats, unfortified", []),
   food("12-313", "Milk, semi-skimmed, pasteurised, average", []),
+  // The foods of the meal estimate set (KEY-966). All but the old raw carrots have no portion in the seed files, so the
+  // estimate seed gives each its one default ("1 typical roll", "1 typical serving").
+  food("19-549", "Curry, beef, homemade", []),
+  food("11-1055", "Crumble, apple, homemade", []),
+  food("17-684", "Soup, vegetable, homemade", []),
+  food("17-652", "Soup, cream of tomato, canned", []),
+  food("11-985", "Bread rolls, white, crusty", []),
+  food("17-685", "Butter, salted", []),
+  food("17-661", "Butter, unsalted", []),
+  food("17-655", "Butter, spreadable (75-80% fat)", []),
+  food("13-520", "Lettuce, average, raw", []),
+  food("13-448", "Carrots, young, raw", []),
+  food("13-496", "Carrots, old, raw", [
+    portion("1 small", 50, false),
+    portion("1 medium", 61, true),
+    portion("1 large", 72, false),
+  ]),
+  food("13-497", "Carrots, old, boiled in unsalted water", []),
+  food("16-368", "Cod, in batter, fried, takeaway", []),
+  food("13-485", "Potato chips, fried in commercial oil, from takeaway fish and chip shops", []),
+  food("13-487", "Potato chips, oven ready, no batter, baked", []),
+  food("13-025", "Potato chips, straight cut, frozen, fried in corn oil", []),
+  food("11-450", "Pasta, plain, fresh, boiled", []),
+  food("11-722", "Pasta, white, spaghetti, dried, boiled in unsalted water", []),
+  food("11-723", "Pasta, wholewheat, spaghetti, dried, boiled in unsalted water", []),
+  food("11-1129", "Pasta, white, dried, boiled in unsalted water", []),
 ];
 
 /**
@@ -118,6 +144,17 @@ export const FOOD_ROUTE_WORDS: Readonly<Record<keyof typeof FOOD_ROUTES, string>
   boiledBroccoli: "boiled broccoli",
   porridgeOats: "porridge oats",
   semiSkimmedMilk: "semi-skimmed milk",
+  beefCurry: "beef curry",
+  appleCrumble: "apple crumble",
+  vegetableSoup: "vegetable soup",
+  tomatoSoup: "tomato soup",
+  crustyRoll: "bread roll",
+  butter: "butter",
+  lettuce: "lettuce",
+  carrots: "carrots",
+  batteredFish: "battered cod",
+  chips: "chips",
+  boiledPasta: "pasta",
 };
 
 export function seededFood(code: string): SeededFood {
@@ -156,6 +193,19 @@ export const FOOD_ROUTES = {
   boiledBroccoli: ["13-503"],
   porridgeOats: ["11-788"],
   semiSkimmedMilk: ["12-313"],
+  // The meal estimate set (KEY-966). Only seeded foods are listed, so a route is as wide as the seed.
+  beefCurry: ["19-549"],
+  appleCrumble: ["11-1055"],
+  vegetableSoup: ["17-684"],
+  tomatoSoup: ["17-652"],
+  crustyRoll: ["11-985"],
+  butter: ["17-685", "17-661", "17-655"],
+  lettuce: ["13-520"],
+  // Old raw carrots (13-496) have portions in the seed, so they are not on this route, which holds only foods that have none.
+  carrots: ["13-448", "13-497"],
+  batteredFish: ["16-368"],
+  chips: ["13-485", "13-487", "13-025"],
+  boiledPasta: ["11-450", "11-722", "11-723", "11-1129"],
 } as const satisfies Readonly<Record<string, readonly [string, ...string[]]>>;
 
 /** The foods of a diary day eaten at lunch, 12:00 to 14:00, with the CoFID code and the grams each was logged in. A recipe serving is left out. */

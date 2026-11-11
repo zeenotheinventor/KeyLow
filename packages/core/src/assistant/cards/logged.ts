@@ -5,16 +5,21 @@ import type { CardEntry, AssistantCardDraft } from "./entryCardEntry";
 
 /**
  * The card after a `log_entry`, worded from the rows it wrote: "Logged 2 eggs and toast at 08:10", a row
- * for each entry, the total of the entries and the line shown once Undo has run.
+ * for each entry, the total of the entries and the line shown once Undo has run. `estimated` marks every row
+ * an estimate, for an amount `estimate_portions` worked out and the person never said (the card draws the
+ * Estimate badge).
  */
-export function buildLoggedCard(entries: readonly CardEntry[]): AssistantCardDraft {
+export function buildLoggedCard(
+  entries: readonly CardEntry[],
+  { estimated = false }: { estimated?: boolean } = {},
+): AssistantCardDraft {
   const names = entries.map(describeCardName);
   const clockTime = sharedClockTime(entries);
   return {
     kind: "logged",
     title: describeLoggedTitle(names, clockTime),
     sub: null,
-    rows: entries.map(cardRowOf),
+    rows: entries.map((entry) => ({ ...cardRowOf(entry), estimate: estimated })),
     totalText: describeCardTotal(entries),
     note: null,
     link: null,

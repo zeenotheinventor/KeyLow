@@ -47,8 +47,9 @@ const assistantCardDaySchema = z.strictObject({
  * One line of a card. A logged food leads with its own portion, grams in brackets ("2 large eggs
  * (100 g)"), or plain grams ("200 g"). On a recipe import `name` is the line as the page wrote it and
  * `matchedFood` the line under it as the board prints it: the food it matched, or why it is not counted.
- * `estimate` is true only on an imported line whose vague amount the import guessed, false everywhere
- * else (plan 2.8).
+ * `estimate` is true on an imported line whose vague amount the import guessed (plan 2.8) and on a logged
+ * food whose amount `estimate_portions` worked out (`log_entry` with `estimated`, ADR 0006 Amendment 2),
+ * false everywhere else.
  *
  * The rows are reused by the training cards, and their fields keep their names because stored cards hold
  * them: `amountText` is the row's detail ("Was Look better") and `kcalText` its value on the right ("Get

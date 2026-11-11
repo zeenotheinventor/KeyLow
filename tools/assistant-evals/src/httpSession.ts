@@ -17,7 +17,7 @@ import { redTeamWorldHolder } from "../fixtures/redTeamWorld.ts";
 
 import type { EvalSession } from "./cli.ts";
 import type { FixtureUser } from "./fixtureUser.ts";
-import type { ToolCall } from "./types.ts";
+import type { EstimatedAmount, ToolCall } from "./types.ts";
 import type { Database } from "@keylow/api-client";
 
 // packages/db, which holds the Supabase project the CLI reads the stack status for.
@@ -42,6 +42,31 @@ export function toolCallsOf(content: unknown): ToolCall[] {
 // Only the code is kept, never the rest of the result.
 const NEEDS_CONFIRMATION = /"status"\s*:\s*"needs_confirmation"/;
 const ERROR_CODE = /"error"\s*:\s*"([a-z_]+)"/;
+// An `estimate_portions` answer holds an `error` for each item it could not size, and that is not a refused call.
+const SIZED_ITEMS = /"shares_scaled"\s*:/;
+
+const UNTRUSTED_PAYLOAD = /<untrusted_data[^>]*>([\s\S]*)<\/untrusted_data>/;
+
+/**
+ * The food, the unit and the size of each item an `estimate_portions` result sized. Nothing else of the result is
+ * kept. A result that is not the tool's answer, or an item that carries an error, gives no amount.
+ */
+export function estimatedAmountsOf(result: string): EstimatedAmount[] {
+  try {
+    const parsed: unknown = JSON.parse(UNTRUSTED_PAYLOAD.exec(result)?.[1] ?? result);
+    const items = isRecord(parsed) ? parsed["items"] : undefined;
+    return (Array.isArray(items) ? items.filter(isRecord) : []).flatMap((item) => {
+      if (typeof item["food_id"] !== "string") {
+        return [];
+      }
+      const unit = typeof item["grams"] === "number" ? "g" : "ml";
+      const amount = item[unit === "g" ? "grams" : "ml"];
+      return typeof amount === "number" ? [{ foodId: item["food_id"], unit, amount }] : [];
+    });
+  } catch {
+    return [];
+  }
+}
 
 /**
  * The calls of a whole turn, in order, from every stored message of it: each `tool_use` block, with the error
@@ -50,6 +75,7 @@ const ERROR_CODE = /"error"\s*:\s*"([a-z_]+)"/;
  */
 export function toolCallsOfTurn(contents: readonly unknown[]): ToolCall[] {
   const codes = new Map<string, string>();
+  const results = new Map<string, string>();
   const asked = new Set<string>();
   const answered = new Set<string>();
   for (const block of contents.flatMap(blocksOf)) {
@@ -61,7 +87,13 @@ export function toolCallsOfTurn(contents: readonly unknown[]): ToolCall[] {
       const id = block["tool_use_id"];
       answered.add(id);
       const text = block["content"];
-      const code = typeof text === "string" ? ERROR_CODE.exec(text)?.[1] : undefined;
+      if (typeof text === "string") {
+        results.set(id, text);
+      }
+      const code =
+        typeof text === "string" && !SIZED_ITEMS.test(text)
+          ? ERROR_CODE.exec(text)?.[1]
+          : undefined;
       if (code !== undefined) {
         codes.set(id, code);
       } else if (typeof text === "string" && NEEDS_CONFIRMATION.test(text)) {
@@ -84,12 +116,18 @@ export function toolCallsOfTurn(contents: readonly unknown[]): ToolCall[] {
             !answered.has(id) && block["name"] !== "ask_user"
             ? ("no result" as const)
             : undefined;
+    const result = id === undefined ? undefined : results.get(id);
+    const estimatedAmounts =
+      block["name"] === "estimate_portions" && code === undefined && result !== undefined
+        ? estimatedAmountsOf(result)
+        : [];
     return [
       {
         name: block["name"],
         input: block["input"],
         ...(code === undefined ? {} : { errorCode: code }),
         ...(outcome === undefined ? {} : { outcome }),
+        ...(estimatedAmounts.length === 0 ? {} : { estimatedAmounts }),
       },
     ];
   });

@@ -29,7 +29,17 @@ export type ToolCall = Readonly<{
    * yes, and `no result` when the turn stored the call and no result for it, so the loop never ran it.
    */
   outcome?: "asked to confirm" | "no result" | undefined;
+  /**
+   * The amounts an `estimate_portions` call answered, in the order of its items: the food, the unit and the
+   * size, read from the stored tool result. Only those three, because a name or a nutrient is the person's
+   * diary and the graders need the amount alone, to check `log_entry` logged what the tool said. Absent for
+   * every other tool, and when the call was refused.
+   */
+  estimatedAmounts?: readonly EstimatedAmount[] | undefined;
 }>;
+
+/** One food an `estimate_portions` call sized: grams, or millilitres for a food per 100 ml. */
+export type EstimatedAmount = Readonly<{ foodId: string; unit: "g" | "ml"; amount: number }>;
 
 /** What the app prints under an answer from the person's data. Either is null when the turn had none. */
 export type AnswerMeta = Readonly<{ citation: string | null; estimate: string | null }>;

@@ -4,7 +4,7 @@ import { fakeEnvironment } from "./fakeEnvironment.ts";
 import { readTool, turnResult, writeTool } from "./helpers.ts";
 import { rowDatabase } from "./rowDatabase.ts";
 import { describeCasesOf, describeSpecs } from "../cases/describe.ts";
-import { portionsOf } from "../fixtures/describeExtras.ts";
+import { FOOD_ROUTES, portionsOf } from "../fixtures/describeExtras.ts";
 import { THRESHOLD_PERCENT } from "../src/thresholds.ts";
 
 import type { DescribeSpec } from "../cases/describe.ts";
@@ -864,5 +864,67 @@ describe("the milestone's sentence", () => {
     const failures = await failuresOf(caseOf(id), turn, rowDatabase(rowsFor([eggs, milk], turn)));
 
     expect(failures[0]).toContain("logged a food that is not one of the real ones");
+  });
+});
+
+describe("describe-a-bowl-of-pasta, an estimate through estimate_portions with the default bowl", () => {
+  const caseOfPasta = () => caseOf("describe-a-bowl-of-pasta");
+  const [pasta] = FOOD_ROUTES.boiledPasta;
+
+  const estimatedBowl = (container: Record<string, unknown>, estimated: boolean | null = true) => {
+    const turn = turnResult({
+      answer: "Logged about 250 g pasta.",
+      toolCalls: [
+        readTool("search_foods", { q: "pasta", limit: 5 }),
+        {
+          ...readTool("estimate_portions", {
+            container: "bowl",
+            diameter_cm: null,
+            radius_cm: null,
+            depth_cm: null,
+            fill: null,
+            ...container,
+            items: [
+              {
+                food_id: foodIdOf(pasta),
+                food_type: "rice_grains_pasta",
+                share_percent: 100,
+                kcal: null,
+              },
+            ],
+          }),
+          estimatedAmounts: [{ foodId: foodIdOf(pasta), unit: "g" as const, amount: 250 }],
+        },
+        writeTool("log_entry", {
+          ...logCallInput({ codes: [pasta], amount: { grams: 250 } }),
+          estimated,
+        }),
+      ],
+      cards: [card("logged")],
+    });
+    const database = rowDatabase({
+      ...rowsFor([{ codes: [pasta], amount: { grams: 250 } }], turn),
+    });
+    return { turn, database };
+  };
+
+  it("should pass a bowl of pasta logged in the grams the default bowl gave, sent as an estimate", async () => {
+    const { turn, database } = estimatedBowl({});
+
+    expect(await failuresOf(caseOfPasta(), turn, database)).toEqual([]);
+  });
+
+  it("should fail an estimate that is not flagged, and one for a bowl whose size nobody gave", async () => {
+    const unflagged = estimatedBowl({}, null);
+    const invented = estimatedBowl({ diameter_cm: 18 });
+
+    expect(await failuresOf(caseOfPasta(), unflagged.turn, unflagged.database)).not.toEqual([]);
+    expect(await failuresOf(caseOfPasta(), invented.turn, invented.database)).not.toEqual([]);
+  });
+
+  it("should still pass one question and nothing written", async () => {
+    expect(
+      await failuresOf(caseOfPasta(), asking("How many grams of pasta?", []), rowDatabase({})),
+    ).toEqual([]);
   });
 });

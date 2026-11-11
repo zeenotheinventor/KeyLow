@@ -34,6 +34,12 @@ import {
   undoWrites,
   withContext,
 } from "./entryGraders.ts";
+import {
+  estimatedRows,
+  loggedEstimatedAmounts,
+  neverQuick,
+  sizedWithEstimatePortions,
+} from "./mealEstimateGraders.ts";
 import { FOOD_ROUTES } from "../fixtures/describeExtras.ts";
 import { diaryDateOf } from "../fixtures/diary.ts";
 import { clarifyingQuestion, noActionRows } from "../src/case.ts";
@@ -56,6 +62,8 @@ type LogSpec = Readonly<{
 /**
  * A message too vague to log: one question, nothing written. `asksAboutFoodOrAmount` when no portion fits the
  * food and the question has to be about it. `mayLog` for a message where a natural portion is as good.
+ * `mayLogEstimate` (KEY-966) for a message that names a container, where the amount of the default bowl from
+ * `estimate_portions`, logged as an estimate, is as good as the question.
  */
 type ClarifySpec = Readonly<{
   id: string;
@@ -63,6 +71,7 @@ type ClarifySpec = Readonly<{
   message: string;
   asksAboutFoodOrAmount: boolean;
   mayLog: ExpectedItem | null;
+  mayLogEstimate: readonly [string, ...string[]] | null;
 }>;
 
 /** The milestone's own sentence, whose butter and flat white have no portion: portions only, or one question. */
@@ -83,6 +92,7 @@ type EstimateSpec = Readonly<{
 export type DescribeSpec = LogSpec | ClarifySpec | BriefSpec | EstimateSpec;
 
 const WRITE_AND_READ_TOOLS: ReadonlySet<string> = new Set([...DIARY_READ_TOOLS, "log_entry"]);
+const ESTIMATE_TOOLS: ReadonlySet<string> = new Set([...WRITE_AND_READ_TOOLS, "estimate_portions"]);
 
 /** Every case of the set, as plain data. `anchorDate` is today in a run. */
 export function describeSpecs(anchorDate: string): readonly DescribeSpec[] {
@@ -96,13 +106,18 @@ export function describeSpecs(anchorDate: string): readonly DescribeSpec[] {
   const clarify = (
     id: string,
     message: string,
-    options: { asksAboutFoodOrAmount?: boolean; mayLog?: ExpectedItem } = {},
+    options: {
+      asksAboutFoodOrAmount?: boolean;
+      mayLog?: ExpectedItem;
+      mayLogEstimate?: readonly [string, ...string[]];
+    } = {},
   ): ClarifySpec => ({
     id,
     kind: "clarify",
     message,
     asksAboutFoodOrAmount: options.asksAboutFoodOrAmount ?? false,
     mayLog: options.mayLog ?? null,
+    mayLogEstimate: options.mayLogEstimate ?? null,
   });
 
   return [
@@ -206,7 +221,11 @@ export function describeSpecs(anchorDate: string): readonly DescribeSpec[] {
     // No serving said and no amount: every food now has a portion, and one that is only an estimate must not
     // be logged on the person's behalf. The chicken has the estimate and no portion of its own.
     clarify("describe-some-chicken", "I had some chicken.", { asksAboutFoodOrAmount: true }),
-    clarify("describe-a-bowl-of-pasta", "I had a bowl of pasta.", { asksAboutFoodOrAmount: true }),
+    // A bowl is a container `estimate_portions` knows, so the default bowl of it, logged as an estimate, is as good as asking.
+    clarify("describe-a-bowl-of-pasta", "I had a bowl of pasta.", {
+      asksAboutFoodOrAmount: true,
+      mayLogEstimate: FOOD_ROUTES.boiledPasta,
+    }),
     clarify("describe-some-cheese", "I had some cheese.", {
       mayLog: { codes: FOOD_ROUTES.cheeseSlice, amount: { portion: true } },
     }),
@@ -248,6 +267,22 @@ const logged = (items: readonly ExpectedItem[], today: string): Grader[] => [
   onlyTheseTools(WRITE_AND_READ_TOOLS),
 ];
 
+// The route where a named container is sized by `estimate_portions` with no size nobody gave (the default bowl), and
+// the amount it answered is logged as an estimate.
+const loggedAsEstimate = (codes: readonly [string, ...string[]], today: string): Grader[] => {
+  const items = [{ codes }];
+  return [
+    sizedWithEstimatePortions(items, { names: ["bowl"], diameterCm: null }),
+    loggedEstimatedAmounts(items, today),
+    estimatedRows(items, today),
+    neverQuick(),
+    actionRows("log_entry", 1),
+    cardOfKind(0, "logged"),
+    turnEnded(0, "complete"),
+    onlyTheseTools(ESTIMATE_TOOLS),
+  ];
+};
+
 // The route where the assistant logs what is clear and asks about the rest: some of the items logged rightly,
 // nothing else, and one question about a food or an amount. Nothing is guessed, so it is as good as logging all.
 const loggedThenAsked = (items: readonly ExpectedItem[], today: string): Grader[] => [
@@ -278,9 +313,14 @@ function gradersOf(spec: DescribeSpec, anchorDate: string): Grader[] {
           ...onlyQuestion(),
           ...(spec.asksAboutFoodOrAmount ? [askedAboutFoodOrAmount()] : []),
         ];
-        return spec.mayLog === null
-          ? asking
-          : [anyOfRoutes([asking, logged([spec.mayLog], anchorDate)])];
+        const routes: Grader[][] = [asking];
+        if (spec.mayLog !== null) {
+          routes.push(logged([spec.mayLog], anchorDate));
+        }
+        if (spec.mayLogEstimate !== null) {
+          routes.push(loggedAsEstimate(spec.mayLogEstimate, anchorDate));
+        }
+        return routes.length === 1 ? asking : [anyOfRoutes(routes)];
       }
       case "estimate":
         return [...logged([spec.item], anchorDate), answerSaysAbout()];

@@ -41,9 +41,11 @@
 11-980 # Bread, white, sliced
 11-981 # Bread, wholemeal, average
 11-982 # Bread, wholemeal, toasted
+11-985 # Bread rolls, white, crusty
 11-988 # Croissants
 11-1001 # Bread, white, toasted
 11-1029 # Banana bread, homemade
+11-1055 # Crumble, apple, homemade
 11-1106 # Porridge, made with milk and water
 11-1107 # Porridge, made with water
 11-1108 # Porridge, made with whole milk
@@ -129,6 +131,7 @@
 13-512 # Cauliflower, raw
 13-517 # Tomatoes, standard, raw
 13-519 # Tomatoes, cherry, raw
+13-520 # Lettuce, average, raw
 13-521 # Spinach, baby, raw
 13-523 # Cucumber, raw, flesh and skin
 13-524 # Pepper, capsicum, red, raw
@@ -211,6 +214,7 @@
 16-356 # Salmon, farmed, flesh only, raw
 16-357 # Salmon, farmed, flesh only, grilled
 16-360 # Salmon, wild, flesh only, raw
+16-368 # Cod, in batter, fried, takeaway
 16-372 # Cod, flesh only, raw
 16-373 # Cod, flesh only, baked
 16-399 # Tuna, flesh only, raw
@@ -229,8 +233,10 @@
 17-212 # Lager, alcohol-free
 17-222 # Cider, dry
 17-247 # Spirits, 40% volume
+17-652 # Soup, cream of tomato, canned
 17-655 # Butter, spreadable (75-80% fat)
 17-661 # Butter, unsalted
+17-684 # Soup, vegetable, homemade
 17-685 # Butter, salted
 17-686 # Oil, vegetable, average
 17-727 # Stock cubes, vegetable
@@ -274,3 +280,4 @@
 19-500 # Bacon rashers, back, grilled
 19-509 # Sausages, pork, chilled, grilled
 19-510 # Sausages, pork, raw
+19-549 # Curry, beef, homemade
