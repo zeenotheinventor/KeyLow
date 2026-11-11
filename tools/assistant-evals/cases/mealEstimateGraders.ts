@@ -10,15 +10,75 @@ import type { EstimatedAmount, EvalDatabase, ToolCall, TurnResult } from "../src
 const pass = (reason: string): GradeOutcome => ({ passed: true, reason });
 const fail = (reason: string): GradeOutcome => ({ passed: false, reason });
 
-/** One food of a meal: the foods that are right for the words, and how the amount is sized. */
-export type SizedItem = Readonly<{
+/** The foods that are right for some words: the seeded CoFID foods, or any food whose name fits. */
+export type FoodMatch = Readonly<{
   /** The CoFID codes of the foods that are right, any one of them. */
-  codes: readonly [string, ...string[]];
-  /** The share of the plate or bowl the person named, as a whole percent. */
-  share?: number;
-  /** The calories the person gave for the food. */
-  kcal?: number;
+  codes: readonly string[];
+  /** A food of any source whose name fits is right too, for a dish the seed holds only some of (a soup, a crumble). */
+  namePattern?: RegExp;
 }>;
+
+/** One food of a meal: the foods that are right for the words, and how the amount is sized. */
+export type SizedItem = FoodMatch &
+  Readonly<{
+    /** The share of the plate or bowl the person named, as a whole percent. */
+    share?: number;
+    /** The calories the person gave for the food. */
+    kcal?: number;
+  }>;
+
+/** Whether the food is the match: one of the seeded codes, or named as the match says. */
+export async function isItemFood(
+  foodId: string,
+  { codes, namePattern }: FoodMatch,
+  database: EvalDatabase,
+): Promise<boolean> {
+  if (await isFoodOf(foodId, codes, database)) {
+    return true;
+  }
+  if (namePattern === undefined) {
+    return false;
+  }
+  const rows = await database.readRows({ table: "foods", where: { id: foodId } });
+  return rows.some(({ name }) => typeof name === "string" && namePattern.test(name));
+}
+
+async function isAnyFood(
+  foodId: string,
+  foods: readonly FoodMatch[],
+  database: EvalDatabase,
+): Promise<boolean> {
+  for (const food of foods) {
+    if (await isItemFood(foodId, food, database)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/** The names of the foods the turns picked, for a failure to say what was chosen instead. */
+async function pickedFoodsText(
+  turns: readonly TurnResult[],
+  database: EvalDatabase,
+): Promise<string> {
+  const foodIds = new Set<string>();
+  for (const call of turns.flatMap((turn) => turn.toolCalls)) {
+    const sized = call.name === "estimate_portions" ? itemsOfCall(call) : [];
+    const logged = call.name === "log_entry" && isRecord(call.input) ? [call.input] : [];
+    for (const entry of [...sized, ...logged]) {
+      const foodId = entry["food_id"];
+      if (typeof foodId === "string") {
+        foodIds.add(foodId);
+      }
+    }
+  }
+  const names: string[] = [];
+  for (const id of foodIds) {
+    const [row] = await database.readRows({ table: "foods", where: { id } });
+    names.push(typeof row?.["name"] === "string" ? row["name"] : id);
+  }
+  return names.length === 0 ? "no food was picked" : `foods picked: ${names.join(", ")}`;
+}
 
 /** The container a share-sized item goes through: one of the names, and the diameter the person gave, or null when they gave none. */
 export type ExpectedContainer = Readonly<{
@@ -34,13 +94,13 @@ const callsOf = (turns: readonly TurnResult[], name: string): ToolCall[] =>
 
 const itemsOfCall = (call: ToolCall): Record<string, unknown>[] => {
   const items = isRecord(call.input) ? call.input["items"] : undefined;
-  return Array.isArray(items) ? (items as unknown[]).filter(isRecord) : [];
+  return Array.isArray(items) ? items.filter(isRecord) : [];
 };
 
 const sizeGiven = (value: unknown): boolean => value !== null && value !== undefined;
 
-const describeSizedItem = ({ codes, share, kcal }: SizedItem): string =>
-  `${codes.join("|")}${share === undefined ? "" : ` ${share}%`}${kcal === undefined ? "" : ` ${kcal} kcal`}`;
+const describeSizedItem = ({ codes, namePattern, share, kcal }: SizedItem): string =>
+  `${[...codes, ...(namePattern === undefined ? [] : [String(namePattern)])].join("|")}${share === undefined ? "" : ` ${share}%`}${kcal === undefined ? "" : ` ${kcal} kcal`}`;
 
 /** Every amount an `estimate_portions` call of the turns answered for the food, in grams or millilitres. */
 function estimatedAmountsFor(turns: readonly TurnResult[], foodId: string): EstimatedAmount[] {
@@ -96,7 +156,7 @@ async function sizedByCall(
       typeof foodId === "string" &&
       (item.share === undefined || sized["share_percent"] === item.share) &&
       (item.kcal === undefined || sized["kcal"] === item.kcal) &&
-      (await isFoodOf(foodId, item.codes, database))
+      (await isItemFood(foodId, item, database))
     ) {
       return true;
     }
@@ -125,7 +185,9 @@ export function sizedWithEstimatePortions(
         }
       }
       if (!named) {
-        return fail(`no estimate_portions call sized ${describeSizedItem(item)}`);
+        return fail(
+          `no estimate_portions call sized ${describeSizedItem(item)} (${await pickedFoodsText(turns, database)})`,
+        );
       }
     }
     return pass(`estimate_portions sized the ${items.length} items`);
@@ -201,7 +263,7 @@ export function loggedEstimatedAmounts(
         ) &&
         dayOk(input["local_date"], today) &&
         timeOk(input["time"], lunch) &&
-        (await isFoodOf(foodId, item.codes, database))
+        (await isItemFood(foodId, item, database))
       );
     });
     const item = items[missing];
@@ -210,7 +272,7 @@ export function loggedEstimatedAmounts(
           `log_entry sent the ${items.length} estimated amounts, each as estimate_portions gave it`,
         )
       : fail(
-          `no log_entry call logged ${describeSizedItem(item)} with estimated true, in the amount estimate_portions gave`,
+          `no log_entry call logged ${describeSizedItem(item)} with estimated true, in the amount estimate_portions gave (${await pickedFoodsText(turns, database)})`,
         );
   };
 }
@@ -251,13 +313,15 @@ export function estimatedRows(items: readonly SizedItem[], today: string): Grade
           (sized) => sized.unit === unit && sized.amount === Number(row["quantity"]),
         ) &&
         (item.kcal === undefined || withinTolerance(kcalOfRow(row), item.kcal)) &&
-        (await isFoodOf(foodId, item.codes, database))
+        (await isItemFood(foodId, item, database))
       );
     });
     const item = items[missing];
     return item === undefined
       ? pass(`the diary holds the ${items.length} estimated entries`)
-      : fail(`no logged entry matched ${describeSizedItem(item)} in the amount and calories`);
+      : fail(
+          `no logged entry matched ${describeSizedItem(item)} in the amount and calories (${await pickedFoodsText(turns, database)})`,
+        );
   };
 }
 
@@ -321,7 +385,8 @@ const SHARE_WORDS =
 const questionTextOf = (call: ToolCall): string => {
   const input = isRecord(call.input) ? call.input : {};
   const replies: unknown = input["quick_replies"];
-  return [input["question"], ...(Array.isArray(replies) ? (replies as unknown[]) : [])]
+  const quickReplies: unknown[] = Array.isArray(replies) ? replies : [];
+  return [input["question"], ...quickReplies]
     .filter((part): part is string => typeof part === "string")
     .join(" ");
 };
@@ -357,21 +422,36 @@ export function noQuestionInTurn(turnIndex: number): Grader {
 }
 
 /**
- * Passes when every `log_entry` call of the turn, counted from 0, is for one of the foods with these codes. It is
- * for the route where the first turn logs what the share question does not cover and leaves the plate for later.
+ * Passes when every `log_entry` call of the turn, counted from 0, is for one of these foods. It is for the route
+ * where the first turn logs what the share question does not cover and leaves the plate for later.
  */
-export function turnLoggedOnlyFoods(turnIndex: number, codes: readonly string[]): Grader {
+export function turnLoggedOnlyFoods(turnIndex: number, foods: readonly FoodMatch[]): Grader {
   return async ({ turns, database }) => {
     const calls = (turns[turnIndex]?.toolCalls ?? []).filter(({ name }) => name === "log_entry");
     for (const { input } of calls) {
       const foodId = isRecord(input) ? input["food_id"] : undefined;
-      if (typeof foodId !== "string" || !(await isFoodOf(foodId, codes, database))) {
+      if (typeof foodId !== "string" || !(await isAnyFood(foodId, foods, database))) {
         return fail(
-          `turn ${turnIndex + 1} logged a food of the plate before the shares were known`,
+          `turn ${turnIndex + 1} logged a food of the plate before the shares were known (${await pickedFoodsText(turns, database)})`,
         );
       }
     }
     return pass(`turn ${turnIndex + 1} logged nothing of the plate`);
+  };
+}
+
+/** Passes when every `log_entry` call is for one of these foods. */
+export function onlyFoodsOfMatches(foods: readonly FoodMatch[]): Grader {
+  return async ({ turns, database }) => {
+    for (const input of inputsOf(turns, "log_entry")) {
+      const foodId = isRecord(input) ? input["food_id"] : undefined;
+      if (typeof foodId !== "string" || !(await isAnyFood(foodId, foods, database))) {
+        return fail(
+          `log_entry logged a food that is not one of the right ones (${await pickedFoodsText(turns, database)})`,
+        );
+      }
+    }
+    return pass("only the right foods were logged");
   };
 }
 

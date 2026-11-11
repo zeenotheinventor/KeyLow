@@ -15,7 +15,6 @@ import {
   loggedItems,
   loggedRows,
   noActionRowsInTurn,
-  onlyFoodsOf,
   onlyTheseTools,
   turnEnded,
   undoWrites,
@@ -35,13 +34,14 @@ import {
   noInventedMacros,
   noMadeUpFigures,
   noQuestionInTurn,
+  onlyFoodsOfMatches,
   sizedWithEstimatePortions,
   turnLoggedOnlyFoods,
 } from "./mealEstimateGraders.ts";
 import { FOOD_ROUTES } from "../fixtures/describeExtras.ts";
 
 import type { ExpectedItem } from "./entryGraders.ts";
-import type { ExpectedContainer, SizedItem } from "./mealEstimateGraders.ts";
+import type { ExpectedContainer, FoodMatch, SizedItem } from "./mealEstimateGraders.ts";
 import type { EvalCase, Grader } from "../src/case.ts";
 
 /** Zee's message of 2026-11-11, word for word (KEY-966). */
@@ -63,9 +63,13 @@ const plateItems: readonly SizedItem[] = [
 ];
 // "About 100 calories" and "168 calories" are the person's figures. A soup is any CoFID soup the seed holds.
 const SOUPS = [...FOOD_ROUTES.vegetableSoup, ...FOOD_ROUTES.tomatoSoup] as const;
+// The seed holds only some soups and crumbles, and the model may pick another that the search finds, so these also
+// match by name. The calories are what keeps a wrong food out: a cake at 100 kcal is a different weight.
+const SOUP: FoodMatch = { codes: SOUPS, namePattern: /\bsoup\b/i };
+const CRUMBLE: FoodMatch = { codes: FOOD_ROUTES.appleCrumble, namePattern: /crumble/i };
 const calorieItems: readonly SizedItem[] = [
-  { codes: SOUPS, kcal: 100 },
-  { codes: FOOD_ROUTES.appleCrumble, kcal: 168 },
+  { ...SOUP, kcal: 100 },
+  { ...CRUMBLE, kcal: 168 },
 ];
 // The roll and the butter are counted things, logged by a portion the food has.
 const portionItems = (): ExpectedItem[] => [
@@ -73,15 +77,15 @@ const portionItems = (): ExpectedItem[] => [
   { codes: FOOD_ROUTES.butter, amount: { portion: true }, time: "any" },
 ];
 
-const ALL_CODES = [
-  ...RICE_ON_A_PLATE,
-  ...FOOD_ROUTES.beefCurry,
-  ...CARROTS_ON_A_PLATE,
-  ...FOOD_ROUTES.lettuce,
-  ...SOUPS,
-  ...FOOD_ROUTES.appleCrumble,
-  ...FOOD_ROUTES.crustyRoll,
-  ...FOOD_ROUTES.butter,
+const ALL_FOODS: readonly FoodMatch[] = [
+  { codes: RICE_ON_A_PLATE },
+  { codes: FOOD_ROUTES.beefCurry },
+  { codes: CARROTS_ON_A_PLATE },
+  { codes: FOOD_ROUTES.lettuce },
+  SOUP,
+  CRUMBLE,
+  { codes: FOOD_ROUTES.crustyRoll },
+  { codes: FOOD_ROUTES.butter },
 ];
 
 const ESTIMATE_AND_READ_TOOLS: ReadonlySet<string> = new Set([
@@ -99,10 +103,10 @@ const firstTurnRoutes = (): Grader[] => [
       turnEnded(0, "clarify"),
       askedAboutSharesInTurn(0),
       turnLoggedOnlyFoods(0, [
-        ...SOUPS,
-        ...FOOD_ROUTES.appleCrumble,
-        ...FOOD_ROUTES.crustyRoll,
-        ...FOOD_ROUTES.butter,
+        SOUP,
+        CRUMBLE,
+        { codes: FOOD_ROUTES.crustyRoll },
+        { codes: FOOD_ROUTES.butter },
       ]),
     ],
   ]),
@@ -127,7 +131,7 @@ function zeesLunch(today: string): EvalCase {
       loggedItems(portionItems(), today),
       loggedRows(portionItems(), today),
       neverQuick(),
-      onlyFoodsOf(ALL_CODES),
+      onlyFoodsOfMatches(ALL_FOODS),
       actionRows("log_entry", 8),
       estimateBadgeRows(estimated.length),
       answerSaysAbout(),
@@ -140,7 +144,7 @@ function zeesLunch(today: string): EvalCase {
 
 function tomatoSoup(today: string): EvalCase {
   const message = "I had a small bowl of tomato soup, about 120 calories.";
-  const soup: readonly SizedItem[] = [{ codes: FOOD_ROUTES.tomatoSoup, kcal: 120 }];
+  const soup: readonly SizedItem[] = [{ ...SOUP, kcal: 120 }];
   return {
     id: "meal-estimate-tomato-soup-by-calories",
     set: "mealEstimate",

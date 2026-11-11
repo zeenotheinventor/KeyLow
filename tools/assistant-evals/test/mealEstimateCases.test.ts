@@ -115,13 +115,18 @@ const card = (estimates: number, portions: number): AssistantCard => ({
 });
 
 /** The rows the seed and the writes of these turns would leave. */
-function worldOf(turns: readonly TurnResult[]) {
+function worldOf(turns: readonly TurnResult[], names: Readonly<Record<string, string>> = {}) {
   const entries = turns.flatMap((turn) =>
     turn.toolCalls.filter(({ name }) => name === "log_entry").map((call) => ({ turn, call })),
   );
   const codes = [...new Set(entries.map(({ call }) => codeOf(call)))];
   return rowDatabase({
-    foods: codes.map((code) => ({ id: foodId(code), source: "cofid", source_ref: code })),
+    foods: codes.map((code) => ({
+      id: foodId(code),
+      source: "cofid",
+      source_ref: code,
+      name: names[code] ?? null,
+    })),
     food_portions: codes.map((code) => ({ id: portionId(code), food_id: foodId(code) })),
     assistant_actions: entries.map(({ turn }, index) => ({
       turn_id: turn.turnId,
@@ -161,8 +166,12 @@ const logged = (entry: Entry, overrides: Record<string, unknown> = {}): ToolCall
   return call;
 };
 
-async function failuresOf(id: string, turns: readonly TurnResult[]) {
-  const database = worldOf(turns);
+async function failuresOf(
+  id: string,
+  turns: readonly TurnResult[],
+  names: Readonly<Record<string, string>> = {},
+) {
+  const database = worldOf(turns, names);
   const outcomes = await Promise.all(caseOf(id).expect.map((grade) => grade({ turns, database })));
   return outcomes.filter(({ passed }) => !passed).map(({ reason }) => reason);
 }
@@ -446,6 +455,54 @@ describe("meal-estimate-zees-lunch", () => {
     expect(await failuresOf(id, [shareQuestion(), noSwap])).not.toEqual([]);
   });
 
+  it("should pass a soup and a crumble that are not the seeded foods but are named for them", async () => {
+    const calorieCall = estimateCall(
+      [
+        { code: "99-001", kcal: 100, amount: 250 },
+        { code: "99-002", kcal: 168, amount: 90 },
+      ],
+      {},
+    );
+    const second = lunchAnswer({
+      toolCalls: [
+        plate(),
+        calorieCall,
+        ...lunchEntries().slice(0, 6),
+        logged({ code: "99-001", amount: 250, kcal: 100 }),
+        logged({ code: "99-002", amount: 90, kcal: 169 }),
+      ],
+    });
+    const names = { "99-001": "Mushroom soup, canned", "99-002": "Rhubarb crumble, homemade" };
+
+    expect(await failuresOf(id, [shareQuestion(), second], names)).toEqual([]);
+  });
+
+  it("should fail a food that is not a soup at 100 calories, and name the food it picked", async () => {
+    const calorieCall = estimateCall(
+      [
+        { code: "99-003", kcal: 100, amount: 30 },
+        { code: CRUMBLE, kcal: 168, amount: 84 },
+      ],
+      {},
+    );
+    const second = lunchAnswer({
+      toolCalls: [
+        plate(),
+        calorieCall,
+        ...lunchEntries().slice(0, 6),
+        logged({ code: "99-003", amount: 30, kcal: 100 }),
+        logged({ code: CRUMBLE, amount: 84, kcal: 169 }),
+      ],
+    });
+
+    const failures = await failuresOf(id, [shareQuestion(), second], {
+      "99-003": "Chocolate cake",
+    });
+
+    expect(failures).not.toEqual([]);
+    expect(failures.join(" ")).toContain("Chocolate cake");
+  });
+
   it("should fail a custom food: a log of a food that is not one of the seeded ones", async () => {
     const second = lunchAnswer({
       toolCalls: [
@@ -475,6 +532,32 @@ describe("meal-estimate-tomato-soup-by-calories", () => {
 
   it("should pass when the soup is sized by its calories and logged with no question", async () => {
     expect(await failuresOf(id, [soup(120)])).toEqual([]);
+  });
+
+  it("should pass a soup that is not the seeded one but is named a soup", async () => {
+    const other = turnResult({
+      answer: "Logged the soup: about 235 g.",
+      toolCalls: [
+        estimateCall([{ code: "99-001", kcal: 120, amount: 235 }], {}),
+        logged({ code: "99-001", amount: 235, kcal: 120 }),
+      ],
+      cards: [card(1, 0)],
+    });
+
+    expect(await failuresOf(id, [other], { "99-001": "Mushroom soup" })).toEqual([]);
+  });
+
+  it("should fail a food that is not a soup at 120 calories", async () => {
+    const other = turnResult({
+      answer: "Logged: about 30 g.",
+      toolCalls: [
+        estimateCall([{ code: "99-001", kcal: 120, amount: 30 }], {}),
+        logged({ code: "99-001", amount: 30, kcal: 120 }),
+      ],
+      cards: [card(1, 0)],
+    });
+
+    expect(await failuresOf(id, [other], { "99-001": "Chocolate cake" })).not.toEqual([]);
   });
 
   it("should fail a question, and an entry that is not within 2 % of the 120 calories", async () => {
