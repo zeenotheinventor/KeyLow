@@ -131,8 +131,10 @@ Deno.test(
 // The Messages API caps what the strict tools of one request hold together: 20 tools, 24 optional
 // parameters and 16 parameters with a union type (`anyOf` or a type array), counted across all of
 // their schemas. https://platform.claude.com/docs/en/build-with-claude/structured-outputs.md
-// (section "Explicit limits"). A tool that would break a cap sets `strict: false`.
-const strictLimits = { tools: 20, optionalParameters: 24, unionParameters: 16 } as const;
+// (section "Explicit limits"). A tool that would break a cap sets `strict: false`. The union limit here
+// is 14 and not the documented 16, because a registry at 16 was refused live (KEY-967, ADR 0006
+// Amendment 3), and 14 is the figure observed to work.
+const strictLimits = { tools: 20, optionalParameters: 24, unionParameters: 14 } as const;
 
 type Schema = Record<string, unknown>;
 const isSchema = (value: unknown): value is Schema =>

@@ -294,7 +294,7 @@ Deno.test(
   () => {
     const amounts = sectionOf("Amounts");
     for (const rule of [
-      "a calorie figure the person gave for a food: search for the food, call estimate_portions with that kcal, and log the grams it returns with estimated true.",
+      "a calorie figure the person gave for a food: search for the food, call estimate_portions with that kcal, and log the grams or ml it returns with estimated true.",
       "Never log it as quick when a match exists, because the person wants macros.",
     ]) {
       assert(amounts.includes(rule), `Amounts does not hold: ${rule}`);

@@ -87,6 +87,19 @@ Deno.test(
   },
 );
 
+Deno.test(
+  "estimate_portions tells the model what to do with the errors and larger_than_container",
+  () => {
+    const { description } = estimatePortionsTool;
+    assertStringIncludes(description, "larger_than_container");
+    assertStringIncludes(description, "ask_user before logging");
+    assertStringIncludes(description, "counted_food");
+    assertStringIncludes(description, "portions");
+    assertStringIncludes(description, "bowl_only");
+    assertStringIncludes(description, "bowl");
+  },
+);
+
 Deno.test("estimate_portions keeps its description and schema short", () => {
   const characters =
     estimatePortionsTool.description.length +

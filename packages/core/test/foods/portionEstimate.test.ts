@@ -386,14 +386,41 @@ describe("a known calorie figure", () => {
     expect(big.largerThanContainer).toBe(true);
   });
 
-  it("does not flag when no container is given", () => {
-    const item = onlyItemOf(
-      inputOf([itemOf(foodOf("a", { kcal: 10 }), { share_percent: null, kcal: 1000 })], {
+  it("falls back to a large plate when no container is given, so a huge amount is still flagged", () => {
+    const rice = foodOf("rice", { kcal: 100 });
+    const big = onlyItemOf(
+      inputOf([itemOf(rice, { food_type: "rice_grains_pasta", share_percent: null, kcal: 2000 })], {
         container: null,
       }),
     );
-    expect(item.largerThanContainer).toBe(false);
+    // 2,000 g against twice what a large plate holds of rice (30 cm, about 790 g, so about 1,580 g doubled)
+    expect(big.largerThanContainer).toBe(true);
+    const fine = onlyItemOf(
+      inputOf([itemOf(rice, { food_type: "rice_grains_pasta", share_percent: null, kcal: 300 })], {
+        container: null,
+      }),
+    );
+    expect(fine.largerThanContainer).toBe(false);
   });
+
+  it.each(["soup_liquid", "yogurt_porridge", "cereal_dry"] as const)(
+    "falls back to a large bowl for %s when no container is given",
+    (foodType) => {
+      const food = foodOf("a", { kcal: 10 });
+      const big = onlyItemOf(
+        inputOf([itemOf(food, { food_type: foodType, share_percent: null, kcal: 4000 })], {
+          container: null,
+        }),
+      );
+      expect(big.largerThanContainer).toBe(true);
+      const fine = onlyItemOf(
+        inputOf([itemOf(food, { food_type: foodType, share_percent: null, kcal: 30 })], {
+          container: null,
+        }),
+      );
+      expect(fine.largerThanContainer).toBe(false);
+    },
+  );
 });
 
 describe("a food per portion", () => {

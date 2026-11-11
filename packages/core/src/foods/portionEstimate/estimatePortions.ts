@@ -6,6 +6,7 @@ import {
   FILL_SHARES,
   PLATE_DIAMETERS_CM,
   PLATE_DIAMETER_RANGE_CM,
+  PORTION_ESTIMATE_BOWLS,
   bowlVolume,
   isPlateContainer,
   plateWellArea,
@@ -150,6 +151,28 @@ function geometryOf(input: PortionEstimateInput): Geometry {
   };
 }
 
+const BOWL_FOOD_TYPES: readonly PortionEstimateFoodType[] = [
+  "soup_liquid",
+  "yogurt_porridge",
+  "cereal_dry",
+];
+
+/** With no container named, an amount is measured against the largest default of its kind. */
+function fallbackGeometryOf(foodType: PortionEstimateFoodType): Geometry {
+  const fillShare = FILL_SHARES[DEFAULT_FILL];
+  return BOWL_FOOD_TYPES.includes(foodType)
+    ? {
+        plateWellAreaSquareCm: null,
+        bowlVolumeMl: PORTION_ESTIMATE_BOWLS.large_bowl.volumeMl,
+        fillShare,
+      }
+    : {
+        plateWellAreaSquareCm: plateWellArea(PLATE_DIAMETERS_CM.large_plate),
+        bowlVolumeMl: null,
+        fillShare,
+      };
+}
+
 const roundedToStep = (value: number) =>
   Math.max(SHARE_STEP, Math.round(value / SHARE_STEP) * SHARE_STEP);
 
@@ -216,7 +239,13 @@ function estimateItem(
   }
   const unit = food.basis === "per_100ml" ? "ml" : "g";
   const { densityGramsPerMl } = FOOD_TYPE_FIGURES[item.food_type];
-  const capacity = capacityOf(geometry, item.food_type, unit);
+  const capacity = capacityOf(
+    geometry.plateWellAreaSquareCm === null && geometry.bowlVolumeMl === null
+      ? fallbackGeometryOf(item.food_type)
+      : geometry,
+    item.food_type,
+    unit,
+  );
 
   let amount: number;
   let method: "share" | "kcal";
