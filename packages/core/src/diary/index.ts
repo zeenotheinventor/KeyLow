@@ -7,7 +7,7 @@ export type { BuildRecipeLogEntryInput } from "./buildRecipeLogEntry";
 export { canLogRecipe } from "./canLogRecipe";
 export { favouriteTiles } from "./favouriteTiles";
 export type { FavouriteFoodInput, FavouriteRecipeInput, FavouriteTile } from "./favouriteTiles";
-export { previewRecipeAmount, recipeAmountStart } from "./previewRecipeAmount";
+export { previewRecipeAmount, recipeAmountStart, recipeUnitsOf } from "./previewRecipeAmount";
 export type { RecipeAmountValues } from "./previewRecipeAmount";
 export { previewTypedRecipeAmount } from "./previewTypedRecipeAmount";
 export type { TypedRecipeAmount } from "./previewTypedRecipeAmount";

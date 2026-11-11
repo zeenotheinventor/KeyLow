@@ -1,3 +1,4 @@
+import { hasWeightlessIngredient } from "./weightlessIngredient";
 import { sumEntries } from "../diary/rules/sumEntries";
 import { nutrientsOfSnapshot } from "../diary/snapshotQuantity";
 import { NUTRITION_ENGINE_VERSION } from "../diary/versions";
@@ -82,8 +83,12 @@ export const per100gOf = (total: NullableNutrients, effectiveGrams: number): Nul
  * Nothing is rounded. A recipe with no ingredients, or one that weighs nothing, has no `per100g` (every
  * key null), so the result never holds `NaN` or `Infinity`.
  *
- * Throws a `RangeError` for servings, or a yield, that is not a finite number above 0. The messages state
- * the rule and never the value.
+ * A recipe with an ingredient that has no weight (a food per portion, ADR 0003, Amendment 19) is servings
+ * only: `total` counts its portions times its per portion values, `totalGrams` is the weight of the other
+ * ingredients, and `effectiveGrams` is 0, so `per100g` is all null.
+ *
+ * Throws a `RangeError` for servings, or a yield, that is not a finite number above 0, and for a yield on a
+ * recipe that is servings only. The messages state the rule and never the value.
  */
 export const computeRecipe = (input: ComputeRecipeInput): RecipeComputed => {
   const { servings, yieldGrams, ingredients } = input;
@@ -94,13 +99,18 @@ export const computeRecipe = (input: ComputeRecipeInput): RecipeComputed => {
     throw new RangeError("The yield must be a finite number above 0");
   }
 
+  const servingsOnly = hasWeightlessIngredient(ingredients);
+  if (servingsOnly && yieldGrams !== null) {
+    throw new RangeError("A recipe with a food per portion has no cooked weight");
+  }
+
   const total = withoutUnknownOptionals(
     sumEntries(
       ingredients.map((ingredient) => ({ nutrients: nutrientsOfSnapshot(ingredient.snapshot) })),
     ),
   );
   const totalGrams = ingredients.reduce((sum, ingredient) => sum + ingredient.resolved_grams, 0);
-  const effectiveGrams = yieldGrams ?? totalGrams;
+  const effectiveGrams = servingsOnly ? 0 : (yieldGrams ?? totalGrams);
 
   return {
     total,
@@ -108,6 +118,7 @@ export const computeRecipe = (input: ComputeRecipeInput): RecipeComputed => {
     per100g: per100gOf(total, effectiveGrams),
     totalGrams,
     effectiveGrams,
+    servingsOnly,
     engineVersion: NUTRITION_ENGINE_VERSION,
   };
 };

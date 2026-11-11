@@ -306,6 +306,43 @@ describe("PortionPicker in recipe mode", () => {
     });
   });
 
+  describe("a recipe with a restaurant food, which has no weight (ADR 0003, Amendment 19)", () => {
+    const servingsOnlyRecipe = (): ReturnType<typeof goldenRecipe> => {
+      const golden = goldenRecipe(null);
+      return {
+        ...golden,
+        computed: {
+          ...golden.computed,
+          per100g: { kcal: null, protein_g: null, carbs_g: null, fat_g: null, fibre_g: null },
+          effectiveGrams: 0,
+          servingsOnly: true,
+        },
+      };
+    };
+
+    it("should say what it makes and not what it weighs, with no values per 100 g", async () => {
+      await renderPicker({ recipe: servingsOnlyRecipe() });
+
+      expect(screen.getByText("Makes 4")).toBeOnTheScreen();
+      expect(screen.queryByLabelText(/^Per 100 g/)).not.toBeOnTheScreen();
+    });
+
+    it("should offer servings only", async () => {
+      await renderPicker({ recipe: servingsOnlyRecipe() });
+
+      expect(screen.getByRole("radio", { name: "1 serving", checked: true })).toBeOnTheScreen();
+      expect(screen.queryByRole("radio", { name: "g" })).not.toBeOnTheScreen();
+    });
+
+    it("should come to 561 kcal for 1.5 servings, written with no grams", async () => {
+      await renderPicker({ recipe: servingsOnlyRecipe() });
+      await typeAmount("1.5");
+
+      const hero = screen.getByLabelText("Energy and macros, For 1.5 servings");
+      expect(within(hero).getByText("561")).toBeOnTheScreen();
+    });
+  });
+
   describe("Add", () => {
     it("should hand over one serving and the time the row shows", async () => {
       const { user, onSubmit } = await renderPicker();

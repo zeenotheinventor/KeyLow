@@ -33,6 +33,10 @@ export const samples: Record<string, () => string[]> = {
     copy.describeRecipeAmountBasis({ unit: "serving", quantity: 1, resolvedGrams: 275 }),
     copy.describeRecipeAmountBasis({ unit: "g", quantity: 300, resolvedGrams: 300 }),
   ],
+  describeServingsOnlyYield: () => [
+    copy.describeServingsOnlyYield(4),
+    copy.describeServingsOnlyYield(1),
+  ],
   describeRecipeYield: () => [copy.describeRecipeYield(4, 1100), copy.describeRecipeYield(4, null)],
   describeRecipePer100Heading: () => [
     copy.describeRecipePer100Heading(1100),

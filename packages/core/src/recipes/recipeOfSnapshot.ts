@@ -6,7 +6,7 @@ import type { RecipeSnapshot } from "../diary/schemas";
 
 /** A recipe made from what an entry froze: the part of a recipe row and its cache that the entry's screens read. */
 export type RecipeOfSnapshot = Omit<LoggableRecipe, "computed"> & {
-  computed: Pick<RecipeComputed, "total" | "effectiveGrams" | "per100g">;
+  computed: Pick<RecipeComputed, "total" | "effectiveGrams" | "per100g" | "servingsOnly">;
 };
 
 /**
@@ -24,5 +24,6 @@ export const recipeOfSnapshot = (snapshot: RecipeSnapshot): RecipeOfSnapshot => 
     total: snapshot.total,
     effectiveGrams: snapshot.effectiveGrams,
     per100g: per100gOf(snapshot.total, snapshot.effectiveGrams),
+    servingsOnly: snapshot.servingsOnly === true,
   },
 });

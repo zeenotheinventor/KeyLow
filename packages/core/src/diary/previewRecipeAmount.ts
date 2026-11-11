@@ -13,6 +13,13 @@ export type RecipeAmountValues = Pick<
   "kcal" | "protein_g" | "carbs_g" | "fat_g"
 >;
 
+/**
+ * The units a recipe can be logged in: servings, and grams of its cooked weight. A recipe that is servings
+ * only has no weight to measure grams against, so it offers servings alone (ADR 0003, Amendment 19).
+ */
+export const recipeUnitsOf = (recipe: LoggableRecipe): readonly RecipeAmount["unit"][] =>
+  recipe.computed.servingsOnly === true ? ["serving"] : ["serving", "g"];
+
 /** Where the recipe picker opens: one serving. */
 export const recipeAmountStart = (): RecipeAmount => ({ quantity: 1, unit: "serving" });
 

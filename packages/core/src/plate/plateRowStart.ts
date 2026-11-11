@@ -40,10 +40,10 @@ export function plateRecipeRowStart(item: PlateRecipeItem): RecipeAmount {
  * no read of the recipe and shows the figures the log will use.
  */
 export function plateRecipeOfRow(item: PlateRecipeItem): RecipeOfSnapshot {
-  const { total, effectiveGrams } = item.recipe.computed;
+  const { total, effectiveGrams, servingsOnly = false } = item.recipe.computed;
 
   return {
     ...item.recipe,
-    computed: { total, effectiveGrams, per100g: per100gOf(total, effectiveGrams) },
+    computed: { total, effectiveGrams, servingsOnly, per100g: per100gOf(total, effectiveGrams) },
   };
 }

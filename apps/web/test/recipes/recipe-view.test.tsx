@@ -8,7 +8,12 @@ import {
 } from "@keylow/core/copy";
 import { SPOON_PORTIONS } from "@keylow/core/nutrition";
 import { buildRecipeIngredient } from "@keylow/core/recipes";
-import { buildChickenAndRiceRecipe, buildFood, buildFoodPortion } from "@keylow/core/testing";
+import {
+  buildBucketAndFriesRecipe,
+  buildChickenAndRiceRecipe,
+  buildFood,
+  buildFoodPortion,
+} from "@keylow/core/testing";
 import { onlineManager } from "@tanstack/react-query";
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -517,5 +522,42 @@ describe("RecipeViewScreen", () => {
       expect(screen.getByRole("heading", { name: RECIPE_NOT_FOUND.title })).toBeTruthy();
       expect(recipeViewBackend.requests).toEqual([]);
     });
+  });
+});
+
+describe("RecipeViewScreen a recipe with a restaurant food (ADR 0003, Amendment 19)", () => {
+  const mealDeal = buildBucketAndFriesRecipe({ servings: 4 });
+  const recipe: SavedRecipe = {
+    id: "77777777-7777-4777-8777-777777777777",
+    name: "Meal deal",
+    servings: 4,
+    yield_grams: null,
+    instructions: [],
+    ingredients: mealDeal.ingredients,
+  };
+
+  it("should say how many it makes and not how much it weighs", async () => {
+    await showRecipe(recipe);
+
+    expect(screen.getByText("Makes 4")).toBeTruthy();
+    expect(screen.queryByText(/cooked/)).toBeNull();
+  });
+
+  it("should show a serving with no grams and no values per 100 g", async () => {
+    await showRecipe(recipe);
+
+    expect(within(perServingCard()).getByText("Per serving")).toBeTruthy();
+    expect(within(perServingCard()).queryByText(/Per 100 g/)).toBeNull();
+  });
+
+  it("should count the bucket in portions, and scale the count with the servings", async () => {
+    await showRecipe(recipe);
+
+    expect(amountOf("Chicken bucket, 1 bucket")).toBeTruthy();
+
+    fireEvent.click(plusButton());
+    type(servingsField(), "8");
+
+    expect(amountOf("Chicken bucket, 2 × 1 bucket")).toBeTruthy();
   });
 });

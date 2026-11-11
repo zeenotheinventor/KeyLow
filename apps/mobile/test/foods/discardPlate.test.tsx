@@ -142,6 +142,7 @@ const chickenAndRice = {
     per100g: { kcal: 136.1, protein_g: 11.5, carbs_g: 15.5, fat_g: 2.95, fibre_g: null },
     totalGrams: 720,
     effectiveGrams: 1100,
+    servingsOnly: false,
     engineVersion: 1,
   },
 };

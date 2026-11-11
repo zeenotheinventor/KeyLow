@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted, 2026-09-22. Amendment 1 appended 2026-10-07. Amendment 2 appended 2026-10-15. Amendment 3 appended 2026-10-15. Amendment 4 appended 2026-10-15. Amendment 5 appended 2026-10-15. Amendment 6 appended 2026-10-15. Amendment 7 appended 2026-10-15. Amendment 8 appended 2026-10-16. Amendment 9 appended 2026-10-18. Amendment 10 appended 2026-10-23. Amendment 11 appended 2026-10-23. Amendment 12 appended 2026-10-23. Amendment 13 appended 2026-10-23. Amendment 14 appended 2026-10-26, with addenda of 2026-11-03 and 2026-11-07. Amendment 15 appended 2026-10-29. Amendment 16 appended 2026-11-10. Amendment 17 appended 2026-11-10. Amendment 18 appended 2026-11-10.
+Accepted, 2026-09-22. Amendment 1 appended 2026-10-07. Amendment 2 appended 2026-10-15. Amendment 3 appended 2026-10-15. Amendment 4 appended 2026-10-15. Amendment 5 appended 2026-10-15. Amendment 6 appended 2026-10-15. Amendment 7 appended 2026-10-15. Amendment 8 appended 2026-10-16. Amendment 9 appended 2026-10-18. Amendment 10 appended 2026-10-23. Amendment 11 appended 2026-10-23. Amendment 12 appended 2026-10-23. Amendment 13 appended 2026-10-23. Amendment 14 appended 2026-10-26, with addenda of 2026-11-03 and 2026-11-07. Amendment 15 appended 2026-10-29. Amendment 16 appended 2026-11-10. Amendment 17 appended 2026-11-10. Amendment 18 appended 2026-11-10. Amendment 19 appended 2026-11-11.
 
 ## Context
 
@@ -2414,3 +2414,61 @@ The About screen credits restaurant food as one more data source, "Restaurant ch
 ### Consequences of Amendment 18
 
 No row of either new value exists until the restaurant foods ticket (KEY-940) loads them, so the migrations cope with any database and a reset is not needed. The screens that show and log a per portion food, and the assistant's reading of one, are KEY-942. Any further deviation from the frozen Decision, from Amendments 1 to 17 or from this amendment needs an Amendment 19 before the migration or code that implements it lands.
+
+## Amendment 19 (A recipe may hold a food per portion: servings only recipes, 2026-11-11)
+
+### Status
+
+Recorded on 2026-11-11 under KEY-944 for Zee's ruling of 2026-11-10. Offered "A recipe that includes a KFC bucket adds the bucket's calories and macros as usual, but adds nothing to the recipe's weight. Any recipe holding one of these foods is logged by servings only", with the cost that grams of such a recipe cannot be weighed out, Zee replied: "Yeah that's fine. Serving is way more natural and important anyways".
+
+This amendment lifts rule 5 of Amendment 18, that a food per portion is never a recipe ingredient. It removes the check that refused it and core's `canBeRecipeIngredient`, which was the one place in core that held the screens' filter. The frozen Decision and Amendments 1 to 18 are unchanged except for that rule. The remaining details are interpretations made for implementation. They are, in full: the checks below, the choice that `per100g` stays an object of null values and is not itself null, the refusal of a cooked weight by core and by `save_recipe`, the shape of the relaxed snapshot, the units a servings only recipe offers, the shopping list rule, and the wording of the cooked weight sentence. Zee confirms them by approving the pull request that carries this amendment.
+
+### Definitions
+
+- A weightless ingredient is an ingredient whose snapshot has `basis: "per_portion"`.
+- A servings only recipe is a recipe with at least one weightless ingredient.
+
+### The ingredient row
+
+- `recipe_ingredients_resolved_grams_check` is now "`resolved_grams > 0 and resolved_grams <= 100000`, or `resolved_grams = 0` when `snapshot ->> 'basis'` is `per_portion`". A snapshot with no basis reads as not per portion, so a row of 0 grams with one is still refused.
+- A new check, `recipe_ingredients_per_portion_is_portion_check`, requires the unit `portion` for such a row. Both read only the row, so they are plain checks. The 0 matches the `resolvedGrams` of the food snapshot of Amendment 18.
+- `save_recipe` refuses a non-null `yield_grams` when any ingredient sent is weightless, with `22023` and a message that quotes no value. The cached `computed` stays written by the client and is not verified, as Amendment 8 says.
+- `day_totals`, `food_log_entries` and the shopping list need no column change. Existing rows all have grams above 0, so no stored row changes.
+
+### The cache
+
+`recipes.computed` gains the key `servingsOnly: boolean`. A cache written before this amendment has no key and reads as false (a zod default), so no stored recipe changes. When it is true:
+
+- `total` counts every ingredient. A weightless one counts its portions times its per portion values, through the basis scale of Amendment 18.
+- `totalGrams` is the weight of the weighed ingredients only. It is no longer the recipe's weight.
+- `effectiveGrams` is 0 and `per100g` has every key null. `yieldGrams` must be null, and core's `computeRecipe` throws for one.
+- `perServing` is `total / servings` as before.
+
+A recipe with no weightless ingredient computes exactly as before, the golden recipes are unchanged and `NUTRITION_ENGINE_VERSION` stays. Scaling a recipe scales portion counts. The recipe card and view show no grams of a serving, no cooked weight and no values per 100 g.
+
+### Logging a servings only recipe
+
+- The diary offers the unit `serving` only, with any quantity above 0. Grams are refused in core.
+- The recipe snapshot stays version 1 and the change is additive. `effectiveGrams` may be 0 only together with the new optional `servingsOnly: true`, and then the unit is `serving`. `resolvedGrams` is 0. The nutrients are `total x quantity / servings`, the existing serving path. Old snapshots parse unchanged, and editing an entry recomputes from its snapshot alone and keeps the unit `serving`.
+- No copy writes grams for such an entry: "1 serving", "0.5 servings".
+- A recipe as an ingredient of another recipe does not exist, because `recipe_ingredients` holds foods only. There is nothing to change.
+
+### The editor
+
+A recipe with a weightless ingredient shows no Cooked weight field. A cooked weight typed before such an ingredient was added is kept, the save is refused, and the field shows "Remove the cooked weight. A recipe with a restaurant food is logged by servings." through its error slot. Nothing is cleared silently.
+
+### The shopping list
+
+Adding a servings only recipe leaves out its weightless ingredients, as store cupboard items are left out, because a restaurant bucket is not bought in a shop. Its weighed ingredients are added as usual.
+
+### The assistant
+
+`create_recipe` and `update_recipe` accept a weightless food counted in portions and refuse grams or millilitres of it. `get_recipes` reports `servings_only` and no grams. Logging a recipe through the assistant is by servings. `importRecipeFromUrl` keeps skipping weightless foods, because a web recipe is home cooking and a match to a chain's item would be wrong far more often than right.
+
+### Implemented by
+
+The migration `20261111070000_recipe_weightless_ingredients.sql` with pgTAP in `recipe_weightless_ingredients.test.sql`. Core: `computeRecipe`, `recipeComputedSchema`, `recipeIngredientSchema`, `recipeSnapshotSchema`, `withRecipeQuantity`, `recipeCardOf`, `recipeViewOf`, `validateRecipeDraft`, `showsCookedWeight`, `recipeUnitsOf` and `aggregateIngredients`. The recipe editor, the recipe view and the recipe amount step on phone and web.
+
+### Consequences of Amendment 19
+
+No column, table or enum changes, so `packages/db/src/types.gen.ts` is unchanged. A client that does not know `servingsOnly` reads such a recipe as one with no cooked weight and an `effectiveGrams` of 0, which its grams chip would refuse to log, so phone and web ship together. Any further deviation from the frozen Decision or from Amendments 1 to 18 needs an Amendment 20 before the migration or code that implements it lands.

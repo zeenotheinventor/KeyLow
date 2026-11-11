@@ -247,8 +247,8 @@ describe("a food with no published weight in the add dialog", () => {
   });
 });
 
-describe("a food with no published weight in the Add ingredient dialog", () => {
-  it("should leave it out of the search results", () => {
+describe("a food with no published weight in the Add ingredient dialog (ADR 0003, Amendment 19)", () => {
+  it("should list it in the search results, beside a food with a weight", () => {
     openBucket("ingredient");
     api.hits = [hitOf(bucket), hitOf(cheese)];
 
@@ -257,10 +257,10 @@ describe("a food with no published weight in the Add ingredient dialog", () => {
     expect(
       results().getByRole("button", { name: rowNamed("Cheese bucket of curds") }),
     ).toBeTruthy();
-    expect(results().queryByRole("button", { name: rowNamed("Bargain bucket") })).toBeNull();
+    expect(results().getByRole("button", { name: rowNamed("Bargain bucket") })).toBeTruthy();
   });
 
-  it("should leave it out of Recent", () => {
+  it("should list it in Recent", () => {
     api.recent = [
       {
         foodId: bucket.id,
@@ -276,6 +276,6 @@ describe("a food with no published weight in the Add ingredient dialog", () => {
     ];
     openBucket("ingredient");
 
-    expect(screen.queryByText("Bargain bucket")).toBeNull();
+    expect(screen.getByText("Bargain bucket")).toBeTruthy();
   });
 });

@@ -8,7 +8,6 @@ import {
 } from "@keylow/core/copy";
 import { nutrientsOfSnapshot, snapshotNeedsReview } from "@keylow/core/diary";
 import { formatCalories } from "@keylow/core/format";
-import { canBeRecipeIngredient } from "@keylow/core/recipes";
 import { describeMacros } from "@keylow/core/search";
 import { Clock, CloudOff } from "lucide-react";
 
@@ -28,12 +27,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
  * while it has rows. A read that failed, or that is waiting for a connection with nothing cached,
  * says so in a quiet line in place of the rows, so the dialog is never blank and never an endless skeleton.
  */
-export function RecentFoods({
-  addDisabled,
-  forRecipeIngredient = false,
-  onOpen,
-  onAdd,
-}: RecentFoodsProps) {
+export function RecentFoods({ addDisabled, onOpen, onAdd }: RecentFoodsProps) {
   const recent = useRecentFoods();
 
   if (recent.data === undefined) {
@@ -52,11 +46,7 @@ export function RecentFoods({
     );
   }
 
-  const foods = forRecipeIngredient
-    ? recent.data.filter(({ snapshot }) => canBeRecipeIngredient(snapshot))
-    : recent.data;
-
-  if (foods.length === 0) {
+  if (recent.data.length === 0) {
     return (
       <>
         <p className="text-caption text-text-muted">{SEARCH_IDLE.hint}</p>
@@ -72,7 +62,7 @@ export function RecentFoods({
 
   return (
     <GroupedList title={RECENT_FOODS.heading} source={RECENT_FOODS.caption}>
-      {foods.map((food) => {
+      {recent.data.map((food) => {
         const { snapshot } = food;
         const nutrients = nutrientsOfSnapshot(snapshot);
         const macros = describeMacros(nutrients);

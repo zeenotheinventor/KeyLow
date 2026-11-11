@@ -72,6 +72,26 @@ function withoutCookedWeight(): RecipeSummary {
   };
 }
 
+/**
+ * The same recipe with a restaurant food in it, which has no weight (ADR 0003, Amendment 19): no cooked weight, no
+ * weight of a serving and no values per 100 g.
+ */
+function withRestaurantFood(): RecipeSummary {
+  const nothingKnown = { kcal: null, protein_g: null, carbs_g: null, fat_g: null, fibre_g: null };
+
+  return {
+    ...withCookedWeight,
+    yield_grams: null,
+    computed: {
+      ...withCookedWeight.computed,
+      per100g: nothingKnown,
+      totalGrams: 200,
+      effectiveGrams: 0,
+      servingsOnly: true,
+    },
+  };
+}
+
 const NOW = new Date("2026-10-15T12:40:30Z");
 
 function renderDialog(request: AddFoodRequest = { date: "2026-10-15", time: "18:00" }) {
@@ -387,6 +407,33 @@ describe("the add food dialog, the amount step of a recipe", () => {
 
       expect(note.closest("[aria-hidden='true']")).toBeNull();
       expect(hero("For 275 g").getAttribute("aria-describedby")).toBe(note.id);
+    });
+  });
+
+  describe("a recipe with a restaurant food", () => {
+    it("should say what it makes and not what it weighs, with no values per 100 g", async () => {
+      renderDialog();
+      await openRecipe(withRestaurantFood());
+
+      expect(screen.getByText("Makes 4")).toBeTruthy();
+      expect(screen.queryByRole("table", { name: /Per 100 g/ })).toBeNull();
+    });
+
+    it("should offer servings only, with no grams chip", async () => {
+      renderDialog();
+      await openRecipe(withRestaurantFood());
+
+      expect(unitChip("1 serving").getAttribute("aria-checked")).toBe("true");
+      expect(screen.queryByRole("radio", { name: "g" })).toBeNull();
+    });
+
+    it("should come to 561 kcal for 1.5 servings, written with no grams", async () => {
+      renderDialog();
+      await openRecipe(withRestaurantFood());
+
+      typeAmount("1.5");
+
+      expect(within(hero("For 1.5 servings")).getByText("561")).toBeTruthy();
     });
   });
 

@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { NUTRITION_ENGINE_VERSION, nutrientsOfSnapshot } from "../../src/diary";
 import { SPOON_PORTIONS } from "../../src/nutrition";
 import { buildRecipeIngredient, computeRecipe, recipeComputedSchema } from "../../src/recipes";
-import { buildChickenAndRiceRecipe, buildFood } from "../../src/testing";
+import { buildBucketAndFriesRecipe, buildChickenAndRiceRecipe, buildFood } from "../../src/testing";
 
 const [, tablespoon] = SPOON_PORTIONS;
 if (tablespoon === undefined) {
@@ -19,6 +19,44 @@ const unknownNutrients = {
 };
 
 describe("computeRecipe", () => {
+  describe("a bucket per portion and 200 g of fries, in four servings", () => {
+    const recipe = buildBucketAndFriesRecipe({ servings: 4 });
+    const computed = computeRecipe(recipe);
+
+    it("should total the bucket and the fries", () => {
+      expect(computed.total.kcal).toBeCloseTo(2000 + 600, 9);
+      expect(computed.total.protein_g).toBeCloseTo(100 + 8, 9);
+    });
+
+    it("should give a quarter of the total per serving", () => {
+      expect(computed.perServing.kcal).toBeCloseTo(650, 9);
+    });
+
+    it("should weigh only the fries", () => {
+      expect(computed.totalGrams).toBe(200);
+    });
+
+    it("should have no weight to share out, so no values per 100 g", () => {
+      expect(computed.servingsOnly).toBe(true);
+      expect(computed.effectiveGrams).toBe(0);
+      expect(computed.per100g).toEqual(unknownNutrients);
+    });
+
+    it("should refuse a cooked weight, which a recipe with a food per portion cannot have", () => {
+      expect(() => computeRecipe({ ...recipe, yieldGrams: 400 })).toThrow(
+        new RangeError("A recipe with a food per portion has no cooked weight"),
+      );
+    });
+
+    it("should be a cache the schema accepts", () => {
+      expect(recipeComputedSchema.safeParse(computed).success).toBe(true);
+    });
+  });
+
+  it("should not be servings only without a food per portion", () => {
+    expect(computeRecipe(buildChickenAndRiceRecipe()).servingsOnly).toBe(false);
+  });
+
   describe("the chicken and rice golden", () => {
     const withYield = computeRecipe(buildChickenAndRiceRecipe({ servings: 4, yieldGrams: 1100 }));
     const withoutYield = computeRecipe(buildChickenAndRiceRecipe({ servings: 4 }));

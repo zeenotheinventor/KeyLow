@@ -89,6 +89,7 @@ Deno.test("get_recipes returns only the listed fields of each recipe", async () 
         id: idOf(1),
         name: "Chilli 1",
         servings: 4,
+        servings_only: false,
         per_serving: { kcal: 500, protein_g: 30, fat_g: 12, carbs_g: 45, fibre_g: 6 },
       },
     ],
@@ -201,6 +202,42 @@ Deno.test(
     assertEquals(
       reported.map((failure) => failure.code),
       ["internal_error"],
+    );
+  },
+);
+
+Deno.test(
+  "get_recipes says a recipe with a food per portion is servings only, and gives no grams",
+  async () => {
+    const servingsOnly = recipeRow(7, {
+      yield_grams: null,
+      computed: {
+        total: nutrients(2600),
+        perServing: nutrients(650),
+        per100g: nutrients(0),
+        totalGrams: 200,
+        effectiveGrams: 0,
+        servingsOnly: true,
+        engineVersion: 1,
+      },
+    });
+
+    const { result } = await fetchRecipes(
+      { tables: { recipes: [recipeRow(1), servingsOnly] } },
+      { q: null, limit: 10 },
+    );
+
+    const { recipes } = payloadOf(result) as { recipes: Record<string, unknown>[] };
+    assertEquals(
+      recipes.map((recipe) => [recipe["name"], recipe["servings_only"]]),
+      [
+        ["Chilli 1", false],
+        ["Chilli 7", true],
+      ],
+    );
+    assertEquals(
+      Object.keys(recipes[1] ?? {}).some((key) => key.includes("gram")),
+      false,
     );
   },
 );

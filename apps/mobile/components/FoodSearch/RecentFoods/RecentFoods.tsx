@@ -7,7 +7,6 @@ import {
 } from "@keylow/core/copy";
 import { nutrientsOfSnapshot } from "@keylow/core/diary";
 import { formatCalories } from "@keylow/core/format";
-import { canBeRecipeIngredient } from "@keylow/core/recipes";
 import { describeMacros } from "@keylow/core/search";
 
 import { useReadsEnabled } from "../../../lib/useReadsEnabled";
@@ -20,12 +19,7 @@ import type { RecentFoodsProps } from "./types";
  * values for that amount. Its plus puts that amount on the plate. With no history it says so. Nothing is read
  * until the account has accepted the current Terms.
  */
-export function RecentFoods({
-  addDisabled,
-  forRecipeIngredient = false,
-  onAdd,
-  onOpen,
-}: RecentFoodsProps) {
+export function RecentFoods({ addDisabled, onAdd, onOpen }: RecentFoodsProps) {
   const recent = useRecentFoods({ enabled: useReadsEnabled() });
 
   if (recent.isError && recent.data === undefined) {
@@ -43,11 +37,7 @@ export function RecentFoods({
     return <Skeleton variant="group" />;
   }
 
-  const foods = forRecipeIngredient
-    ? recent.data.filter(({ snapshot }) => canBeRecipeIngredient(snapshot))
-    : recent.data;
-
-  if (foods.length === 0) {
+  if (recent.data.length === 0) {
     return (
       <EmptyState body={RECENT_FOODS.empty.body} icon="Clock" title={RECENT_FOODS.empty.title} />
     );
@@ -55,7 +45,7 @@ export function RecentFoods({
 
   return (
     <GroupedList source={RECENT_FOODS.caption} title={RECENT_FOODS.heading}>
-      {foods.map((food) => {
+      {recent.data.map((food) => {
         const { snapshot } = food;
         const nutrients = nutrientsOfSnapshot(snapshot);
         const macros = describeMacros(nutrients);

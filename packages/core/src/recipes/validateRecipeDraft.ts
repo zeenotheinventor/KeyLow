@@ -9,6 +9,7 @@ import {
 import { characterCount } from "./characterCount";
 import { recipeIngredientSchema } from "./schemas";
 import { normaliseSteps } from "./steps";
+import { hasWeightlessIngredient } from "./weightlessIngredient";
 import { enteredNumber } from "../diary/rules/enteredNumber";
 
 import type { RecipeIngredient } from "./schemas";
@@ -35,6 +36,7 @@ export type RecipeDraftProblem =
   | "servings_too_many"
   | "cooked_weight_invalid"
   | "cooked_weight_too_large"
+  | "cooked_weight_with_food_per_portion"
   | "ingredients_none"
   | "ingredients_too_many"
   | "ingredient_invalid"
@@ -76,8 +78,19 @@ const servingsProblems = (servings: number | null): RecipeDraftProblem[] => {
   return problem === "too_large" ? ["servings_too_many"] : [];
 };
 
-/** A blank cooked weight is no yield, so only a number that was typed can be a problem. */
-const cookedWeightProblems = (cookedWeight: number | null): RecipeDraftProblem[] => {
+/**
+ * A blank cooked weight is no yield, so only a number that was typed can be a problem. A recipe with a food
+ * per portion has no weight, so anything typed is refused, and a number that was not a number needs no second
+ * sentence (Amendment 19).
+ */
+const cookedWeightProblems = (
+  cookedWeight: number | null,
+  isServingsOnly: boolean,
+  isBlank: boolean,
+): RecipeDraftProblem[] => {
+  if (isServingsOnly) {
+    return isBlank ? [] : ["cooked_weight_with_food_per_portion"];
+  }
   if (cookedWeight === null) {
     return [];
   }
@@ -135,7 +148,11 @@ export const validateRecipeDraft = (
   const problems = [
     ...nameProblems(name),
     ...servingsProblems(servings),
-    ...cookedWeightProblems(yieldGrams),
+    ...cookedWeightProblems(
+      yieldGrams,
+      hasWeightlessIngredient(draft.ingredients),
+      draft.cookedWeight.trim() === "",
+    ),
     ...ingredientProblems(draft.ingredients),
     ...stepProblems(steps),
   ];

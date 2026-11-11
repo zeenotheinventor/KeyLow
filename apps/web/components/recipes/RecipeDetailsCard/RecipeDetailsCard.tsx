@@ -4,6 +4,7 @@ import {
   describeCookedWeightHelper,
   describeServingsFieldSuffix,
 } from "@keylow/core/copy";
+import { showsCookedWeight } from "@keylow/core/recipes";
 import { useId } from "react";
 
 import type { RecipeDetailsCardProps } from "./types";
@@ -26,6 +27,9 @@ export function RecipeDetailsCard({
   cookedWeightRef,
 }: RecipeDetailsCardProps) {
   const helperId = useId();
+  // A recipe with a restaurant food has no cooked weight, so the field is gone unless it still holds one that
+  // Save refuses (core's `showsCookedWeight`).
+  const hasCookedWeight = showsCookedWeight(draft);
 
   return (
     <Card asChild className="flex flex-col gap-3">
@@ -61,24 +65,26 @@ export function RecipeDetailsCard({
               }}
             />
           </div>
-          <div className="w-full min-[700px]:w-[200px]">
-            <NumericInput
-              ref={cookedWeightRef}
-              label={RECIPE_EDITOR.cookedWeight}
-              aria-label={RECIPE_EDITOR.cookedWeightName}
-              unit="g"
-              placeholder=""
-              value={draft.cookedWeight}
-              readOnly={isLocked}
-              error={errors.cookedWeight}
-              describedBy={errors.cookedWeight === undefined ? helperId : undefined}
-              onChange={(event) => {
-                onChange("cookedWeight", event.target.value);
-              }}
-            />
-          </div>
+          {hasCookedWeight && (
+            <div className="w-full min-[700px]:w-[200px]">
+              <NumericInput
+                ref={cookedWeightRef}
+                label={RECIPE_EDITOR.cookedWeight}
+                aria-label={RECIPE_EDITOR.cookedWeightName}
+                unit="g"
+                placeholder=""
+                value={draft.cookedWeight}
+                readOnly={isLocked}
+                error={errors.cookedWeight}
+                describedBy={errors.cookedWeight === undefined ? helperId : undefined}
+                onChange={(event) => {
+                  onChange("cookedWeight", event.target.value);
+                }}
+              />
+            </div>
+          )}
         </div>
-        {errors.cookedWeight === undefined && (
+        {hasCookedWeight && errors.cookedWeight === undefined && (
           <p id={helperId} className="text-caption tabular-nums text-text-muted">
             {describeCookedWeightHelper(draft.ingredients)}
           </p>

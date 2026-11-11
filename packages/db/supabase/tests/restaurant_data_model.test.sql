@@ -2,7 +2,7 @@
 -- restaurant food stored per portion with one count portion (no grams and no ml), the rule that only a
 -- restaurant food is per portion, the rule that only a per portion food has a portion with no size (held
 -- by a trigger, so it binds the service role and a signed-in person writing to their own food alike),
--- a recipe never taking such a food, and day_totals summing an entry of one.
+-- and day_totals summing an entry of one. A recipe taking such a food is in recipe_weightless_ingredients.test.sql.
 --
 -- `supabase test db` runs this file as postgres inside a transaction that is rolled back, so nothing
 -- created here persists. Every fixture id starts with 93900000 and the email with key939-. Each actor is
@@ -10,7 +10,7 @@
 
 begin;
 
-select plan(23);
+select plan(22);
 
 select enum_has_labels(
   'public',
@@ -154,18 +154,6 @@ select throws_ok(
 );
 
 reset role;
-
--- A recipe weighs the sum of its ingredients' grams, and a per portion food has none to give.
-insert into public.recipes (id, owner_id, name, servings, computed) values
-  ('93900000-0000-4000-8000-000000000301', '93900000-0000-4000-8000-00000000000a', 'key939 recipe', 1, '{}');
-
-select throws_ok(
-  $$insert into public.recipe_ingredients (recipe_id, owner_id, position, food_id, quantity, unit, portion_id, resolved_grams, snapshot)
-    values ('93900000-0000-4000-8000-000000000301', '93900000-0000-4000-8000-00000000000a', 0, '93900000-0000-4000-8000-000000000101', 1, 'portion', '93900000-0000-4000-8000-000000000201', 0, '{"kind":"food"}')$$,
-  '23514',
-  'new row for relation "recipe_ingredients" violates check constraint "recipe_ingredients_resolved_grams_check"',
-  'a recipe ingredient pointing at a per portion food is refused'
-);
 
 -- day_totals sums the nutrients core computed at write time, so an entry of a per portion food counts as any other.
 insert into public.food_log_entries (id, user_id, local_date, logged_at, item_type, food_id, quantity, unit, portion_id, resolved_grams, snapshot, nutrients) values
