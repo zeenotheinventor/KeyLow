@@ -25,9 +25,11 @@ import type { ReadToolDefinition } from "../tool.ts";
 
 const getWeighInsInput = z
   .strictObject({
-    from: localDateSchema.describe("The first day, YYYY-MM-DD, in the user's own time zone."),
+    from: localDateSchema.describe(
+      "The first day of the range, YYYY-MM-DD, in the user's own time zone.",
+    ),
     to: localDateSchema.describe(
-      `The last day, YYYY-MM-DD, in the user's own time zone, at most ${maxRangeDays} days from the first.`,
+      `The last day of the range, YYYY-MM-DD, in the user's own time zone, at most ${maxRangeDays} days from the first.`,
     ),
   })
   .refine(isRangeOfAtMost(maxRangeDays), { path: ["to"], when: hasNoFieldProblem });
@@ -41,7 +43,7 @@ export const getWeighInsTool: ReadToolDefinition<z.infer<typeof getWeighInsInput
     "to the last day of the range (negative means the weight is falling), worked out from the whole history and already rounded to 0.1 kg. The " +
     "trend weight is an estimate and not a measurement, so say so. settling is true while the trend " +
     "has too few weigh-ins to trust, and then the weekly rate may be null. Use the numbers as " +
-    "given and do not work out any change yourself. The citation is printed under " +
+    "given and do not work out any change yourself. The citation is the line the app prints under " +
     `your answer. ${dataNotice}`,
   kind: "read",
   input: getWeighInsInput,

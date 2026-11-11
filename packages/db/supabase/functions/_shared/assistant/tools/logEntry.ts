@@ -63,7 +63,11 @@ const macro = z.number().min(0).max(1000).nullable();
 
 const logEntryInput = z
   .strictObject({
-    kind: z.enum(kinds),
+    kind: z
+      .enum(kinds)
+      .describe(
+        "portion: a count of one of the food's own portions. grams or ml: an amount the person said. recipe: servings of one of their recipes. quick: calories the person gave.",
+      ),
     food_id: z
       .guid()
       .nullable()
@@ -171,12 +175,12 @@ async function write(
 export const logEntryTool: WriteToolDefinition<LogEntryInput> = {
   name: "log_entry",
   description:
-    "Logs one thing the user ate to their diary, with a card and Undo. Call it once for each food. " +
+    "Logs one thing the user ate to their diary and shows them a card with Undo. Call it once for each food. " +
     "Pick the food or recipe from search_foods, get_food or get_recipes, never an id you have not seen. " +
     "For a food, use kind portion with one of that food's own portion ids and a count, such as 2 of the " +
     "large egg portion. Use kind grams or ml only for an amount the user said, such as 150 g of rice or " +
     "200 ml of milk, and never as a guess for a portion. If no portion fits and the user gave no amount, " +
-    "ask them with ask_user instead of guessing. Use kind " +
+    "ask them with ask_user instead of guessing. Do not describe an amount in hand measures. Use kind " +
     "recipe for servings of one of their recipes, and kind quick only when the user gave the calories " +
     "themselves. Set every field that does not belong to the kind to null. Leave local_date and time null " +
     "unless the user named another day or time: they then default to the day and time of this message. " +

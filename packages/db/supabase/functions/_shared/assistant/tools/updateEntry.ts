@@ -22,7 +22,7 @@ const updateEntryInput = z
       .max(5000)
       .nullable()
       .describe(
-        "The new amount in the entry's own unit: a count for a portion, otherwise grams, millilitres or servings. Null to keep it.",
+        "The new amount in the unit the entry already has: a count for a portion, otherwise grams, millilitres or servings. Null to keep it.",
       ),
     time: clockTimeSchema
       .nullable()

@@ -28,8 +28,8 @@ export const getDayTool: ReadToolDefinition<z.infer<typeof getDayInput>> = {
     "time and kcal, protein, fat, carbs and fibre, then the day's totals, the user's targets for that " +
     "day and what is left of each (negative means over). The targets are the user's current targets, " +
     "applied to past days as well. The sums are worked out here from what each " +
-    "entry was logged with and rounded as the Diary rounds them, so use them as given. " +
-    "The citation is printed under your answer. " +
+    "entry was logged with, already rounded as the Diary rounds them, so use them as given and do " +
+    "not add anything up. The citation is the line the app prints under your answer. " +
     `${unknownNotice} A null target means none is set. ${dataNotice}`,
   kind: "read",
   input: getDayInput,

@@ -21,9 +21,11 @@ import type { DayTargets, NutrientValues } from "./diaryView.ts";
 
 const getRangeTotalsInput = z
   .strictObject({
-    from: localDateSchema.describe("The first day, YYYY-MM-DD, in the user's own time zone."),
+    from: localDateSchema.describe(
+      "The first day of the range, YYYY-MM-DD, in the user's own time zone.",
+    ),
     to: localDateSchema.describe(
-      `The last day, YYYY-MM-DD, in the user's own time zone, at most ${maxRangeDays} days from the first.`,
+      `The last day of the range, YYYY-MM-DD, in the user's own time zone, at most ${maxRangeDays} days from the first.`,
     ),
   })
   .refine(isRangeOfAtMost(maxRangeDays), { path: ["to"], when: hasNoFieldProblem });
@@ -57,10 +59,11 @@ export const getRangeTotalsTool: ReadToolDefinition<z.infer<typeof getRangeTotal
     "total, the daily average over the days that have entries, each logged day's totals, and for " +
     "kcal, protein, carbs and fat the user's target, how far the average is from it (negative means " +
     "under) and on how many days the user reached it. The sums are worked out here from what each " +
-    "entry was logged with and rounded as the Diary rounds them, so use them as given. days_in_range is how many days the range has and days_logged how many " +
+    "entry was logged with, already rounded as the Diary rounds them, so use them as given and do " +
+    "not add anything up. days_in_range is how many days the range has and days_logged how many " +
     "of them have entries. A range that includes today counts today as a partial day, so say so when " +
     "it does. The targets are the user's current targets, applied to past days as well. The " +
-    "citation is printed under your answer. " +
+    "citation is the line the app prints under your answer. " +
     `${unknownNotice} A null target means none is set. ${dataNotice}`,
   kind: "read",
   input: getRangeTotalsInput,

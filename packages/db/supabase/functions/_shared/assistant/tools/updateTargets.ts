@@ -26,24 +26,29 @@ import type { Targets } from "../../repos.ts";
 import type { ConfirmationNeed, WriteRunOutput, WriteToolDefinition } from "../tool.ts";
 
 const macrosInput = z.strictObject({
-  protein_g: z.number().min(0).max(1000).describe("Daily protein target, grams."),
-  carbs_g: z.number().min(0).max(1000).describe("Daily carbs target, grams."),
-  fat_g: z.number().min(0).max(1000).describe("Daily fat target, grams."),
+  protein_g: z.number().min(0).max(1000).describe("The new daily protein target in grams."),
+  carbs_g: z.number().min(0).max(1000).describe("The new daily carbs target in grams."),
+  fat_g: z.number().min(0).max(1000).describe("The new daily fat target in grams."),
 });
 
 const updateTargetsInput = z.strictObject({
-  kcal: z.number().int().min(800).max(6000).describe("Daily calorie target, a whole number."),
+  kcal: z
+    .number()
+    .int()
+    .min(800)
+    .max(6000)
+    .describe("The new daily calorie target, a whole number."),
   macros: macrosInput
     .nullable()
     .describe(
-      "The protein, carbs and fat targets when the user gave all three, else null. Never a partial set.",
+      "The new protein, carbs and fat targets when the user gave all three, or null when the user gave only calories. Never a partial set.",
     ),
   current_kcal: z
     .number()
     .int()
     .nullable()
     .describe(
-      "The user's calorie target right now, from the targets in get_day, or null when none is set. The user is shown this number, so it must be their own.",
+      "The user's calorie target right now, from the targets in get_day, or null when none is set. The user is shown this number, so it must be their own. If the call is refused with current_kcal, call again with that number.",
     ),
 });
 
@@ -79,8 +84,8 @@ export const updateTargetsTool: WriteToolDefinition<UpdateTargetsInput> = {
     "targets ends the user's programme and its weekly check-in, so read the targets with get_day first " +
     "and pass the calorie target the user has now as current_kcal. When the user gave only calories " +
     '("set my calories to 2,000"), pass macros as null: Ki-Lo adjusts their current protein, carbs and ' +
-    "fat by the same proportion, so do not work out the grams or ask for them. When the user " +
-    "gave all three, pass macros with the three numbers. If some but not all, ask " +
+    "fat by the same proportion. Do not work out the new grams and do not ask for them. When the user " +
+    "gave all three, pass macros with the three numbers. If the user gave some macros but not all, ask " +
     "for the rest with ask_user, never guess one. The call first answers needs_confirmation with a " +
     "confirmation_id: in the same response as the call, before it, write the question in your own words, " +
     "asking the user to change their calorie target from the current number to the new one, and when " +

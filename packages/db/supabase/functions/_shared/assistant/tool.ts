@@ -297,7 +297,8 @@ export const confirmationIdKey = "confirmation_id";
 
 const confirmationIdProperty = {
   anyOf: [{ type: "string" }, { type: "null" }],
-  description: "From the needs_confirmation answer, once the user said yes.",
+  description:
+    "The confirmation_id of an earlier needs_confirmation answer, once the user said yes.",
 };
 
 // The strict JSON Schema the model sees for the tool's input (`strict: true` on the Messages API).

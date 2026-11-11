@@ -63,7 +63,7 @@ const importRecipeInput = z.strictObject({
     .max(1000)
     .nullable()
     .describe(
-      "Only after the answer was servings_missing and the user said how many. Otherwise null.",
+      "How many servings the recipe makes, only after the answer was servings_missing and the user told you. Otherwise null.",
     ),
 });
 
