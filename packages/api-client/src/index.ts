@@ -24,6 +24,7 @@ export {
   useArchiveRecipe,
   useCompleteDays,
   useCopyDay,
+  useCreateFeatureRequest,
   useCreateFood,
   useCreateRecipe,
   useDebouncedValue,
@@ -176,6 +177,7 @@ export type {
   SetupWeighIn,
 } from "./repos";
 export { useLogRecipeServing } from "./hooks";
+export { isDailyLimitFailure } from "./repos";
 export { logRecipe } from "./repos";
 export type { LogRecipeInput, RecipeLogEntry } from "./repos";
 export { useRecipeRefreshPreview, useRefreshRecipeIngredients } from "./hooks";

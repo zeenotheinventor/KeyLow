@@ -15,6 +15,9 @@ const ACTION = "send the feature request";
 const DAILY_CAP_CODE = "54000";
 const DAILY_CAP_MESSAGE = "feature_requests_daily_cap";
 
+// The code a failed send carries when the daily cap is reached.
+const RATE_LIMITED_CODE = "rate_limited";
+
 /**
  * Files one feature request for the signed in user and resolves to its id. The text and the context
  * are checked with the core schemas first, so nothing invalid is sent. The database gives the row its
@@ -41,8 +44,19 @@ export async function createFeatureRequest(
 
   if (error) {
     const isDailyCap = error.code === DAILY_CAP_CODE && error.message === DAILY_CAP_MESSAGE;
-    throw repoError(ACTION, { code: isDailyCap ? "rate_limited" : error.code });
+    throw repoError(ACTION, { code: isDailyCap ? RATE_LIMITED_CODE : error.code });
   }
 
   return { id: data.id };
+}
+
+/** Whether a failed send was the daily cap, so a screen can say to try again tomorrow. */
+export function isDailyLimitFailure(failure: unknown): boolean {
+  return (
+    failure instanceof Error &&
+    typeof failure.cause === "object" &&
+    failure.cause !== null &&
+    "code" in failure.cause &&
+    failure.cause.code === RATE_LIMITED_CODE
+  );
 }

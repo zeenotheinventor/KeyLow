@@ -210,4 +210,4 @@ export type {
   AssistantUndoResult,
 } from "./assistantConversations";
 export { AccountExportError, exportMyData, readMyDataByTable } from "./accountExport";
-export { createFeatureRequest } from "./featureRequests";
+export { createFeatureRequest, isDailyLimitFailure } from "./featureRequests";

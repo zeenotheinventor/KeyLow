@@ -12,3 +12,4 @@ export type {
   FeatureRequestInput,
   FeatureRequestSource,
 } from "./schemas";
+export { isFeatureRequestTooLong } from "./isFeatureRequestTooLong";

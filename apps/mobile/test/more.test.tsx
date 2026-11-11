@@ -792,6 +792,30 @@ describe("the More screen", () => {
     });
   });
 
+  describe("Request a feature", () => {
+    it("should be the last row in Settings, after About, with its icon and a chevron", async () => {
+      await renderMore();
+
+      const settings = within(screen.getByLabelText("Settings"));
+      const row = settings.getByRole("button", { name: /^Request a feature/ });
+
+      expect(row).toBeEnabled();
+      expect(drawingsIn(row)).toHaveLength(2);
+      const rows = settings.getAllByRole("button");
+      expect(rows[rows.length - 1]).toBe(row);
+    });
+
+    it("should open the Request a feature screen once when pressed", async () => {
+      const user = userEvent.setup();
+      await renderMore();
+
+      await user.press(screen.getByRole("button", { name: /^Request a feature/ }));
+
+      expect(routerMock.push).toHaveBeenCalledWith("/more/feature-request");
+      expect(routerMock.push).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe("Export my data", () => {
     it("should be the first row in Account, above Sign out, with its icon and a chevron", async () => {
       await renderMore();
