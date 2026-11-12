@@ -113,13 +113,13 @@ describe("ExerciseFormSection", () => {
   it("should show nothing for an exercise with no form media", async () => {
     await renderSection(true);
 
+    // The read landing and the loading mark leaving arrive independently, so all of them wait inside one check.
     await waitFor(() => {
       expect(formMediaBackend.reads).toBe(1);
+      expect(screen.queryByRole("status")).not.toBeOnTheScreen();
+      expect(screen.queryByRole("link")).not.toBeOnTheScreen();
+      expect(screen.queryAllByRole("img")).toHaveLength(0);
     });
-    await act(() => Promise.resolve());
-    expect(screen.queryByRole("status")).not.toBeOnTheScreen();
-    expect(screen.queryByRole("link")).not.toBeOnTheScreen();
-    expect(screen.queryAllByRole("img")).toHaveLength(0);
   });
 
   it("should show the loading card while the read is out", async () => {
