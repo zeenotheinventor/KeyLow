@@ -22,15 +22,22 @@ function isPartialAt(props: AssistantChatMessageProps, index: number): boolean {
   );
 }
 
+// How the reader reads a paragraph: the last one can be cut short, and only while it is still arriving does the
+// reader hold back a line that starts with a pipe, so a stopped reply shows every line it has.
+function readOptionsAt(props: AssistantChatMessageProps, index: number) {
+  return {
+    isPartial: isPartialAt(props, index),
+    isArriving: props.isStreaming === true && index === props.paragraphs.length - 1,
+  };
+}
+
 // What a screen reader hears: who said it first, then the words and the lines under them in the order the
 // message draws them, without the markers the assistant wrote. The caret is not in it, because it is only a mark.
 function describeMessage(props: ChatMessageProps): string {
   const lines =
     props.role === "assistant"
       ? props.paragraphs
-          .map((paragraph, index) =>
-            replyWords(paragraph, { isPartial: isPartialAt(props, index) }),
-          )
+          .map((paragraph, index) => replyWords(paragraph, readOptionsAt(props, index)))
           .filter((words) => words !== "")
       : [...props.paragraphs];
   if (props.estimate !== undefined) {
@@ -94,9 +101,10 @@ function FormattedParagraphs({
   hasCaret: boolean;
 }) {
   const blocks = props.paragraphs.flatMap((paragraph, paragraphIndex) =>
-    parseReplyText(paragraph, { isPartial: isPartialAt(props, paragraphIndex) }).map(
-      (block, blockIndex) => ({ key: `${paragraphIndex}-${blockIndex}`, block }),
-    ),
+    parseReplyText(paragraph, readOptionsAt(props, paragraphIndex)).map((block, blockIndex) => ({
+      key: `${paragraphIndex}-${blockIndex}`,
+      block,
+    })),
   );
   if (blocks.length === 0) {
     return hasCaret ? (

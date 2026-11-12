@@ -1,5 +1,5 @@
 import { parseReplyText } from "@keylow/core";
-import { fireEvent, render, screen } from "@testing-library/react-native";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react-native";
 import { ScrollView, View } from "react-native";
 
 import { ReplyTable } from "../../components/ui";
@@ -69,6 +69,11 @@ describe("ReplyTable", () => {
 
   beforeEach(() => {
     registerAppStyles(kitStyles);
+  });
+
+  // The measured tests fire events at the tables, so each starts with no table of an earlier test still mounted.
+  afterEach(async () => {
+    await cleanup();
   });
 
   it("should draw every heading and cell before anything is measured, with no pipe", async () => {
@@ -209,14 +214,20 @@ describe("ReplyTable", () => {
 
     it("should flash the platform's scroll indicator once when it first shows as wider", async () => {
       const flash = jest.spyOn(ScrollView.prototype, "flashScrollIndicators");
-      await renderTable();
-      await measure({});
-      const flashesWhenFirstWide = flash.mock.calls.length;
-      await measure({ columns: 520 });
+      try {
+        await renderTable();
+        // Tables left mounted by earlier tests can answer a restyle with a flash of their own, so this counts
+        // only what measuring this table adds.
+        const flashesBefore = flash.mock.calls.length;
+        await measure({});
+        const flashesWhenFirstWide = flash.mock.calls.length - flashesBefore;
+        await measure({ columns: 520 });
 
-      expect(flashesWhenFirstWide).toBeGreaterThan(0);
-      expect(flash).toHaveBeenCalledTimes(flashesWhenFirstWide);
-      flash.mockRestore();
+        expect(flashesWhenFirstWide).toBe(1);
+        expect(flash).toHaveBeenCalledTimes(flashesBefore + 1);
+      } finally {
+        flash.mockRestore();
+      }
     });
 
     it("should scroll sideways, with the platform's indicator", async () => {
@@ -240,6 +251,34 @@ describe("ReplyTable", () => {
         borderRightWidth: 1,
       });
       expect(screen.getByTestId("reply-table")).toHaveStyle({ borderRadius: 12 });
+    });
+  });
+
+  describe("the first column's words", () => {
+    const longName = "Potato wedges, with skin, cooked in sunflower oil";
+
+    it("should keep to 127 points and 2 lines while the table is wide", async () => {
+      await renderTable();
+      await measure({});
+
+      expect(screen.getByText(longName)).toHaveStyle({ maxWidth: 127 });
+      expect(screen.getByText(longName)).toHaveProp("numberOfLines", 2);
+    });
+
+    it("should take the spare width, with no cap and no line limit, when the table fits", async () => {
+      await renderTable();
+      await measure({ columns: 150 });
+
+      expect(screen.getByText(longName)).not.toHaveStyle({ maxWidth: 127 });
+      expect(screen.getByText(longName)).not.toHaveProp("numberOfLines", 2);
+    });
+
+    it("should stay fitting when its words widen to the spare width", async () => {
+      await renderTable();
+      await measure({ columns: 150 });
+      await fireEvent(screen.getByText(longName), "layout", layoutEvent(200));
+
+      expect(screen.getByTestId("reply-table-first-column")).toHaveStyle({ flexGrow: 1 });
     });
   });
 

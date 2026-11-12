@@ -656,6 +656,16 @@ describe("ChatMessage", () => {
       expect(caretIn("The Baileys has no macros.")).toHaveLength(1);
     });
 
+    it("should show every line of a stopped reply, a pipe among its words included", async () => {
+      await renderMessage({
+        ...answer,
+        paragraphs: ["Rice is good.\nkcal | protein per 100 g"],
+        stoppedLabel: "Stopped when you closed the assistant",
+      });
+
+      expect(screen.getByText("kcal | protein per 100 g")).toBeOnTheScreen();
+    });
+
     it("should draw no empty row and no caret for a table that was stopped", async () => {
       await renderMessage({
         ...tableIsLast,

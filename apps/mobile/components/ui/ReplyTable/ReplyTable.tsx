@@ -1,5 +1,5 @@
 import { vars } from "nativewind";
-import { useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { ScrollView, View } from "react-native";
 
 import { ReplySpans } from "./ReplySpans";
@@ -15,12 +15,19 @@ import type { LayoutChangeEvent, NativeScrollEvent, NativeSyntheticEvent } from 
 const cellSidePadding = 12;
 const cellVerticalPadding = 8;
 const firstColumnLine = 1;
+// The widest the first column's words go, 152 less its line and its padding, and the width from which a measured
+// word counts as having met that cap. Words that wrap in the capped column measure a little under it, so a
+// table is judged by the same width whether its first column is capped or has the spare width.
+const firstColumnWordsCap = 127;
+const cappedWordsWidth = 100;
 
 type CellProps = {
   spans: readonly ReplySpan[];
   row: number;
   column: number;
   isNumeric: boolean;
+  /** The first column's words keep to the cap and to 2 lines, while the table is wide or not yet measured. */
+  isCapped: boolean;
   rowHeight: number | undefined;
   mark?: ReactNode;
   onTextLayout: (row: number, column: number, event: LayoutChangeEvent) => void;
@@ -30,14 +37,58 @@ type CellProps = {
 // is the tallest of its cells' words and their padding, handed to every cell of the row through a variable,
 // because no class can name a height measured at run time. The words are measured, not the padded box, so
 // that holding the box to the row's height does not feed back into the measurement.
-function Cell({ spans, row, column, isNumeric, rowHeight, mark, onTextLayout }: CellProps) {
+function sameSpans(first: readonly ReplySpan[], second: readonly ReplySpan[]): boolean {
+  return (
+    first.length === second.length &&
+    first.every((span, index) => {
+      const other = second[index];
+      return (
+        other !== undefined &&
+        span.text === other.text &&
+        span.isStrong === other.isStrong &&
+        span.isEmphasis === other.isEmphasis &&
+        span.isCode === other.isCode
+      );
+    })
+  );
+}
+
+// Each streamed chunk reads the reply again, so a cell's spans are new arrays holding the same words. A cell
+// draws again only when its words, its row's height or its mark change.
+function areCellsEqual(before: CellProps, after: CellProps): boolean {
+  return (
+    before.row === after.row &&
+    before.column === after.column &&
+    before.isNumeric === after.isNumeric &&
+    before.isCapped === after.isCapped &&
+    before.rowHeight === after.rowHeight &&
+    before.mark === after.mark &&
+    before.onTextLayout === after.onTextLayout &&
+    sameSpans(before.spans, after.spans)
+  );
+}
+
+const Cell = memo(function Cell({
+  spans,
+  row,
+  column,
+  isNumeric,
+  isCapped,
+  rowHeight,
+  mark,
+  onTextLayout,
+}: CellProps) {
   const isHeading = row === 0;
   const isDash = spans.length === 1 && spans[0]?.text === "–";
   const isFirstColumn = column === 0;
   const alignClassName = isNumeric ? "text-right" : "";
   // The first column's words keep to the width its cell leaves them and to what they need, so the column can
   // be as narrow as its longest name and the space it is given never widens them.
-  const widthClassName = isFirstColumn ? "max-w-[127px] self-start" : "";
+  const widthClassName = isFirstColumn
+    ? isCapped
+      ? "max-w-[127px] self-start"
+      : "self-start"
+    : "";
 
   return (
     <View className={isHeading ? "" : "border-t border-border"}>
@@ -47,7 +98,7 @@ function Cell({ spans, row, column, isNumeric, rowHeight, mark, onTextLayout }: 
       >
         <Text
           className={`${alignClassName} ${widthClassName}`}
-          numberOfLines={isFirstColumn ? 2 : 1}
+          numberOfLines={isFirstColumn ? (isCapped ? 2 : undefined) : 1}
           onLayout={(event) => {
             onTextLayout(row, column, event);
           }}
@@ -64,7 +115,7 @@ function Cell({ spans, row, column, isNumeric, rowHeight, mark, onTextLayout }: 
       </View>
     </View>
   );
-}
+}, areCellsEqual);
 
 /**
  * A markdown table in a reply. A table that fits the thread fills it, its first column taking the spare
@@ -91,7 +142,7 @@ export function ReplyTable({ table, pendingMark }: ReplyTableProps) {
   const scrollOffset = useRef(0);
   const hasFlashed = useRef(false);
 
-  function handleTextLayout(row: number, column: number, event: LayoutChangeEvent) {
+  const handleTextLayout = useCallback((row: number, column: number, event: LayoutChangeEvent) => {
     const { width, height } = event.nativeEvent.layout;
     setTextHeights((heights) =>
       heights[`${row}:${column}`] === height
@@ -99,11 +150,12 @@ export function ReplyTable({ table, pendingMark }: ReplyTableProps) {
         : { ...heights, [`${row}:${column}`]: height },
     );
     if (column === 0) {
+      const wordsWidth = width >= cappedWordsWidth ? firstColumnWordsCap : width;
       setFirstTextWidths((widths) =>
-        widths[row] === width ? widths : { ...widths, [row]: width },
+        widths[row] === wordsWidth ? widths : { ...widths, [row]: wordsWidth },
       );
     }
-  }
+  }, []);
 
   function rowHeightOf(row: number): number | undefined {
     const heights = columnIndexes.flatMap((column) => textHeights[`${row}:${column}`] ?? []);
@@ -144,6 +196,7 @@ export function ReplyTable({ table, pendingMark }: ReplyTableProps) {
     return (
       <Cell
         column={column}
+        isCapped={isWide || !isMeasured}
         isNumeric={isNumeric[column] === true}
         key={row}
         mark={mark}

@@ -6,6 +6,7 @@ import type { ReplyBlock, ReplySpan } from "../../src/assistant";
 
 const finished = { isPartial: false };
 const partial = { isPartial: true };
+const arriving = { isPartial: true, isArriving: true };
 
 const plain = (text: string): ReplySpan => ({
   text,
@@ -672,16 +673,31 @@ describe("tables", () => {
   });
 
   describe("a partial reply", () => {
-    const parsePartial = (value: string) => parseReplyText(value, partial);
+    const parsePartial = (value: string) => parseReplyText(value, arriving);
 
     it.each([
       ["mid heading", "Intro\n| Food | kc"],
       ["heading ended with no next line", "Intro\n| Food | kcal |\n"],
       ["mid divider", "Intro\n| Food | kcal |\n| --- | -"],
       ["a pipe line after a pipe heading", "Intro\n| Food | kcal |\n| Toast"],
-      ["a pipe-less heading ended", "Intro\nFood | kcal\n"],
     ])("should hold back the lines of a table that is not decided yet: %s", (_name, value) => {
       expect(parsePartial(value)).toEqual([line(plain("Intro"))]);
+    });
+
+    it("should show a heading with no outer pipes as a line until its divider arrives", () => {
+      expect(parsePartial("Intro\nFood | kcal\n")).toEqual([
+        line(plain("Intro")),
+        line(plain("Food | kcal")),
+      ]);
+      expect(parsePartial("Food | kcal\n--- | ---\n")).toEqual([
+        table([words("Food"), words("kcal")], [], [false, true], true),
+      ]);
+    });
+
+    it("should hold back only a line that starts with a pipe, not one with a pipe among its words", () => {
+      expect(parsePartial("Eat rice | beans and then keep going")).toEqual([
+        line(plain("Eat rice | beans and then keep going")),
+      ]);
     });
 
     it("should draw an open table with no rows when the divider has ended", () => {
@@ -715,6 +731,16 @@ describe("tables", () => {
 
     it("should close the table when a line has ended after it", () => {
       expect(parsePartial(`${foodTable}\nDone.\n`)).toEqual([foodBlock, line(plain("Done."))]);
+    });
+
+    it("should show every line of a stopped reply, its unfinished last row included", () => {
+      expect(parseReplyText("Rice is good.\nkcal | protein per 100 g", partial)).toEqual([
+        line(plain("Rice is good.")),
+        line(plain("kcal | protein per 100 g")),
+      ]);
+      expect(parseReplyText("| Food | kcal |\n| --- | --- |\n| Toast | 90", partial)).toEqual([
+        table([words("Food"), words("kcal")], [[words("Toast"), words("90")]], [false, true]),
+      ]);
     });
 
     it("should hold nothing back in a finished reply", () => {
@@ -793,7 +819,7 @@ describe("tables", () => {
 
   describe("a hostile table", () => {
     const takesUnderASecond = (hostile: string) => {
-      for (const options of [finished, partial]) {
+      for (const options of [finished, partial, arriving]) {
         const startedAt = performance.now();
 
         parseReplyText(hostile, options);
@@ -817,6 +843,19 @@ describe("tables", () => {
     it("should read 20,000 rows quickly", () => {
       takesUnderASecond(`| A | B |\n| - | - |\n${"| x | 1 |\n".repeat(20_000)}`);
       takesUnderASecond(`| A | B |\n${"| x | 1 |\n".repeat(20_000)}`);
+    });
+
+    it("should read thousands of heading cells over thousands of short rows quickly, in at most 12 columns", () => {
+      const headings = `${"| h ".repeat(20_000)}|`;
+      const rows = "| x |\n".repeat(10_000);
+
+      takesUnderASecond(`${headings}\n${"| - ".repeat(20_000)}|\n${rows}`);
+      takesUnderASecond(`${"| h ".repeat(3_000)}|\n${"| x\n".repeat(3_000)}`);
+      const [block] = parseReplyText(`${headings}\n${"| - ".repeat(20_000)}|\n${rows}`, finished);
+      expect(block?.kind === "table" && block.headings.length).toBe(12);
+      expect(block?.kind === "table" && block.rows.every((cells) => cells.length === 12)).toBe(
+        true,
+      );
     });
 
     it("should read 100,000 characters of escapes in a cell quickly", () => {

@@ -34,6 +34,12 @@ type TextBlock = Exclude<ReplyBlock, ReplyTable>;
 type ParseOptions = {
   /** The words are still arriving or were cut short: the last line holds back what the next chunk decides. */
   isPartial: boolean;
+  /**
+   * The reply is still arriving, as opposed to cut short. Only then is a line that starts with a pipe held back
+   * until the next line shows whether it is a table, and a table's last line is no row until it has ended. A
+   * reply that was stopped shows every line it has, its unfinished last row included.
+   */
+  isArriving?: boolean;
 };
 
 type InlineStyle = { isStrong: boolean; isEmphasis: boolean };
@@ -461,6 +467,9 @@ function parseLine(rawLine: string, isHeldBack: boolean): TextBlock | null {
 }
 
 const dividerCharacters = "|-: ";
+// A table reads no more columns than this: the headings and cells past it are dropped, so the work and the
+// memory a table takes are its rows times this, whatever the model wrote.
+const MAX_TABLE_COLUMNS = 12;
 const noValueDash = "–";
 
 // A pipe that is not escaped. One pass.
@@ -531,13 +540,13 @@ function readTable(
   lines: readonly string[],
   headingIndex: number,
   firstRowIndex: number,
-  isPartial: boolean,
+  isArriving: boolean,
 ): { block: ReplyTable; nextIndex: number } {
   const lastIndex = lines.length - 1;
-  const headingCells = splitCells((lines[headingIndex] ?? "").trim());
+  const headingCells = splitCells((lines[headingIndex] ?? "").trim()).slice(0, MAX_TABLE_COLUMNS);
   const rows: ReplySpan[][][] = [];
   let index = firstRowIndex;
-  while (index < lines.length && !(isPartial && index === lastIndex)) {
+  while (index < lines.length && !(isArriving && index === lastIndex)) {
     const row = (lines[index] ?? "").trim();
     if (!hasPipe(row)) {
       break;
@@ -551,7 +560,7 @@ function readTable(
     index += 1;
   }
   let isOpen = false;
-  if (isPartial && index === lastIndex) {
+  if (isArriving && index === lastIndex) {
     const unfinished = (lines[lastIndex] ?? "").trim();
     isOpen = unfinished === "" || hasPipe(unfinished);
     index = isOpen ? lines.length : index;
@@ -565,14 +574,17 @@ function readTable(
  * The blocks a reply draws, one for each line that holds words and one for each table. A single line break
  * stays a line break, and a number stays as the model wrote it. `isPartial` is for a reply still arriving or
  * cut short, and it changes the end only: an opener with no closer is drawn styled to the end of the line, a
- * marker that the next chunk decides is held back, so no `*`, `` ` ``, `[` or line-start marker shows, and a
- * line with a pipe waits until the next line shows whether it is a table, so nothing jumps between a line and a
- * table. A finished reply holds nothing back, and an opener that never closed stays as typed.
+ * marker that the next chunk decides is held back, so no `*`, `` ` ``, `[` or line-start marker shows. While
+ * the reply is arriving (`isArriving`), a line that starts with a pipe also waits until the next line shows
+ * whether it is a table, so nothing jumps between a line and a table. A finished reply holds nothing back, and an opener that never closed stays as typed.
  *
  * A table is a heading line with a pipe, a divider, then rows, or two or more lines that start with a pipe
  * and have no divider. One lone pipe line stays a line as typed.
  */
-export function parseReplyText(text: string, { isPartial }: ParseOptions): ReplyBlock[] {
+export function parseReplyText(
+  text: string,
+  { isPartial, isArriving = false }: ParseOptions,
+): ReplyBlock[] {
   const lines = text.split("\n");
   const lastIndex = lines.length - 1;
   const blocks: ReplyBlock[] = [];
@@ -580,18 +592,24 @@ export function parseReplyText(text: string, { isPartial }: ParseOptions): Reply
   while (index < lines.length) {
     const heading = (lines[index] ?? "").trim();
     if (hasPipe(heading) && !isTableDivider(heading)) {
-      if (isPartial && index === lastIndex) {
+      const startsWithPipe = heading.startsWith("|");
+      if (isArriving && startsWithPipe && index === lastIndex) {
         break;
       }
       const next = lines[index + 1]?.trim();
       if (next !== undefined) {
         const startsBoth = heading.startsWith("|") && next.startsWith("|");
-        if (isPartial && index + 1 === lastIndex && (startsBoth || isDividerStart(next))) {
+        if (
+          isArriving &&
+          startsWithPipe &&
+          index + 1 === lastIndex &&
+          (next.startsWith("|") || isDividerStart(next))
+        ) {
           break;
         }
         const hasDivider = isTableDivider(next);
         if (startsBoth || hasDivider) {
-          const table = readTable(lines, index, hasDivider ? index + 2 : index + 1, isPartial);
+          const table = readTable(lines, index, hasDivider ? index + 2 : index + 1, isArriving);
           blocks.push(table.block);
           index = table.nextIndex;
           continue;
