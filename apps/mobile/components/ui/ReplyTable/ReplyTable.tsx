@@ -230,7 +230,7 @@ export function ReplyTable({ table, pendingMark }: ReplyTableProps) {
   }
 
   const outerClassName = hasMoreToTheRight
-    ? "-mr-4 overflow-hidden rounded-l-medium border border-r-0 border-border"
+    ? "-mr-4 overflow-hidden rounded-l-medium border border-border border-r-transparent"
     : "-mr-4 overflow-hidden rounded-medium border border-border";
   const firstColumnClassName =
     isWide || !isMeasured ? "max-w-[152px] shrink-0 border-r border-border" : "flex-1";

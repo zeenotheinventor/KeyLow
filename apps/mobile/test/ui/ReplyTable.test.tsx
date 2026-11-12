@@ -60,6 +60,16 @@ async function measure({ container, first, columns, viewport }: Record<string, n
   await fireEvent(screen.getByTestId("reply-table-scroll"), "layout", layoutEvent(viewport ?? 204));
 }
 
+async function scrollToEnd() {
+  await fireEvent.scroll(screen.getByTestId("reply-table-scroll"), {
+    nativeEvent: {
+      contentOffset: { x: 296, y: 0 },
+      contentSize: { width: 500, height: 300 },
+      layoutMeasurement: { width: 204, height: 300 },
+    },
+  });
+}
+
 describe("ReplyTable", () => {
   let kitStyles: string;
 
@@ -164,10 +174,12 @@ describe("ReplyTable", () => {
 
       expect(screen.getByTestId("reply-table-fade", hidden)).toBeOnTheScreen();
       expect(screen.getByTestId("reply-table")).toHaveStyle({
-        borderRightWidth: 0,
+        borderWidth: 1,
+        borderRightColor: "#00000000",
         borderTopLeftRadius: 12,
         borderBottomLeftRadius: 12,
       });
+      expect(screen.getByTestId("reply-table")).not.toHaveStyle({ borderRightWidth: 0 });
       expect(screen.getByTestId("reply-table")).not.toHaveStyle({ borderRadius: 12 });
     });
 
@@ -195,6 +207,34 @@ describe("ReplyTable", () => {
 
       expect(screen.queryByTestId("reply-table-fade", hidden)).not.toBeOnTheScreen();
       expect(screen.getByTestId("reply-table")).toHaveStyle({ borderRadius: 12 });
+    });
+
+    it("should keep the right border 1 point wide when it reaches the end, so the scroll view keeps its width", async () => {
+      await renderTable();
+      await measure({});
+
+      expect(screen.getByTestId("reply-table")).toHaveStyle({
+        borderWidth: 1,
+        borderRightColor: "#00000000",
+      });
+
+      await scrollToEnd();
+
+      expect(screen.getByTestId("reply-table")).toHaveStyle({
+        borderWidth: 1,
+        borderColor: resolvedColor("dark", "border"),
+      });
+      expect(screen.getByTestId("reply-table")).not.toHaveStyle({ borderRightWidth: 0 });
+    });
+
+    it("should not bring the fade back when the scroll view is 1 point narrower at the end", async () => {
+      await renderTable();
+      await measure({});
+      await scrollToEnd();
+
+      await fireEvent(screen.getByTestId("reply-table-scroll"), "layout", layoutEvent(203));
+
+      expect(screen.queryByTestId("reply-table-fade", hidden)).not.toBeOnTheScreen();
     });
 
     it("should fix the first column at 152 points with a line on its right", async () => {
