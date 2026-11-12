@@ -19,3 +19,5 @@ export * from "./describeInLog";
 export * from "./recipeImport";
 export * from "./replyText";
 export * from "./featureRequestContext";
+export * from "./chatMessage";
+export * from "./workingLine";
