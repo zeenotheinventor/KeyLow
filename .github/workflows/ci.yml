@@ -145,9 +145,10 @@ jobs:
             full "A file outside the packages changed, so every job runs."
           fi
           # The stack runs for the packages the stack, the functions (which embed @keylow/core) and the
-          # integration suites read.
+          # integration suites read, and for tools/assistant-evals, which holds integration suites of
+          # its own.
           db=false
-          if grep -qE '^packages/(db|core|api-client|config)/' <<<"$changed"; then
+          if grep -qE '^(packages/(db|core|api-client|config)|tools/assistant-evals)/' <<<"$changed"; then
             db=true
           fi
           turbo_version=$(sed -n 's/^  turbo@\(.*\):$/\1/p' pnpm-lock.yaml | head -n 1)
@@ -268,16 +269,17 @@ jobs:
         run: pnpm --filter @keylow/db check:functions
 
   # The Supabase stack and the integration suites against a real local stack, with the Edge Functions
-  # served. It runs for the packages the stack, the functions and the suites read, and on every full
-  # run. The job runs as two legs side by side, each on its own runner with a stack of its own:
-  # "database" runs pgTAP, the database and function suites of @keylow/db and the generated types
-  # check, and "clients" runs the api-client and assistant-evals suites. The Open Food Facts mock
-  # listens on one fixed port that the function container reaches (KEY-51), so two suites that use it
-  # cannot share a stack at the same time. Two runners have two stacks and two ports, so the split keeps
-  # that rule. Only the db function suites and the api-client suite start the mock. The assistant-evals
-  # suite does not, so the "clients" leg needs no --concurrency=1. Turbo runs it after the api-client
-  # suite anyway, because the package depends on it. The tasks run with --only, so the packages they
-  # depend on are not type-checked again, `core` does that.
+  # served. It runs for the packages the stack, the functions and the suites read, for
+  # tools/assistant-evals, which holds suites itself, and on every full run. The job runs as two legs
+  # side by side, each on its own runner with a stack of its own: "database" runs pgTAP, the database
+  # and function suites of @keylow/db and the generated types check, and "clients" runs the api-client
+  # and assistant-evals suites. The Open Food Facts mock listens on one fixed port that the function
+  # container reaches (KEY-51), so two suites that use it cannot share a stack at the same time. Two
+  # runners have two stacks and two ports, so the split keeps that rule. Only the db function suites
+  # and the api-client suite start the mock. The assistant-evals suite does not, so the "clients" leg
+  # needs no --concurrency=1. Turbo runs it after the api-client suite anyway, because the package
+  # depends on it. The tasks run with --only, so the packages they depend on are not type-checked
+  # again, `core` does that.
   # The stack starts in the background before anything is installed, so its image pulls and boot
   # overlap the install and the core bundle, and the stack steps run even when a step before them
   # fails, so one run reports everything. `checks` needs `db`, which waits for both legs, so the
