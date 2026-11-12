@@ -518,6 +518,8 @@ export type {
   UndoAssistantActionInput,
   UseAssistantChatInput,
 } from "./hooks";
+export { useAssistantCardUndo, useHeldWords, MINIMUM_WORDS_TIME_MS } from "./hooks";
+export type { AssistantCardUndo } from "./hooks";
 export {
   createAssistantConversation,
   deleteAllAssistantConversations,

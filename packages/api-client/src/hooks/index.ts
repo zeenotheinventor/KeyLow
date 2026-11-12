@@ -293,6 +293,9 @@ export { useDeleteAllAssistantConversations } from "./useDeleteAllAssistantConve
 export { useAssistantChanges } from "./useAssistantChanges";
 export { useUndoAssistantAction } from "./useUndoAssistantAction";
 export type { UndoAssistantActionInput } from "./useUndoAssistantAction";
+export { useAssistantCardUndo } from "./useAssistantCardUndo";
+export type { AssistantCardUndo } from "./useAssistantCardUndo";
+export { useHeldWords, MINIMUM_WORDS_TIME_MS } from "./useHeldWords";
 export { useAccountExportFile } from "./useAccountExportFile";
 export type {
   AccountExportFile,

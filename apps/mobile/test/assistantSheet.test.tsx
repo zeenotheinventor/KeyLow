@@ -73,8 +73,9 @@ jest.mock("@keylow/api-client", () => ({
   useSetAssistantConsent: () => ({ mutate: jest.fn(), isPending: false }),
   useProfileTimeZone: () => ({ data: "Europe/London" }),
   // The card's Undo is tested with the real hook in assistantActionCards.test.tsx.
-  useUndoAssistantAction: () => ({ mutateAsync: jest.fn(), isPending: false }),
-  useActiveSession: () => ({ data: null }),
+  useAssistantCardUndo: jest.requireActual<{ mockAssistantCardUndo: unknown }>(
+    "./support/assistantCardUndoMock",
+  ).mockAssistantCardUndo,
 }));
 
 setUpTests();

@@ -1,4 +1,4 @@
-import { parseReplyText, replyWords } from "@keylow/core";
+import { describeChatMessage, parseReplyText, replyReadOptions } from "@keylow/core";
 import { View } from "react-native";
 
 import { Badge } from "../Badge";
@@ -14,42 +14,14 @@ function Caret() {
   return <View aria-hidden className="ml-[2px] h-[18px] w-[8px] rounded-[1px] bg-accent" />;
 }
 
-// Only the last paragraph can be cut short: while the message arrives, and on a reply that was stopped.
-function isPartialAt(props: AssistantChatMessageProps, index: number): boolean {
-  return (
-    (props.isStreaming === true || props.stoppedLabel !== undefined) &&
-    index === props.paragraphs.length - 1
-  );
-}
-
-// How the reader reads a paragraph: the last one can be cut short, and only while it is still arriving does the
-// reader hold back a line that starts with a pipe, so a stopped reply shows every line it has.
+// How the reader reads a paragraph of the assistant's message, which core decides for both apps.
 function readOptionsAt(props: AssistantChatMessageProps, index: number) {
-  return {
-    isPartial: isPartialAt(props, index),
-    isArriving: props.isStreaming === true && index === props.paragraphs.length - 1,
-  };
-}
-
-// What a screen reader hears: who said it first, then the words and the lines under them in the order the
-// message draws them, without the markers the assistant wrote. The caret is not in it, because it is only a mark.
-function describeMessage(props: ChatMessageProps): string {
-  const lines =
-    props.role === "assistant"
-      ? props.paragraphs
-          .map((paragraph, index) => replyWords(paragraph, readOptionsAt(props, index)))
-          .filter((words) => words !== "")
-      : [...props.paragraphs];
-  if (props.estimate !== undefined) {
-    lines.push(`${props.estimate.badgeLabel} ${props.estimate.label}`);
-  }
-  if (props.citation !== undefined) {
-    lines.push(props.citation);
-  }
-  if (props.stoppedLabel !== undefined) {
-    lines.push(props.stoppedLabel);
-  }
-  return `${props.speakerLabel}: ${lines.join(" ")}`;
+  return replyReadOptions({
+    paragraphCount: props.paragraphs.length,
+    index,
+    isStreaming: props.isStreaming === true,
+    isStopped: props.stoppedLabel !== undefined,
+  });
 }
 
 // Your words are plain text, never read as markdown. The key is the position as well as the words because
@@ -163,7 +135,7 @@ export function ChatMessage(props: ChatMessageProps) {
   const accessibility = {
     accessible: true,
     role: "group",
-    "aria-label": describeMessage(props),
+    "aria-label": describeChatMessage(props),
   } as const;
 
   if (props.role === "you") {

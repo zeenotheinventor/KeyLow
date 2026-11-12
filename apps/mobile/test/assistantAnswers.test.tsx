@@ -82,8 +82,9 @@ jest.mock("@keylow/api-client", () => ({
   }),
   useSetAssistantConsent: () => ({ mutate: jest.fn(), isPending: false }),
   useProfileTimeZone: () => ({ data: "Europe/London" }),
-  useUndoAssistantAction: () => ({ mutateAsync: jest.fn(), isPending: false }),
-  useActiveSession: () => ({ data: null }),
+  useAssistantCardUndo: jest.requireActual<{ mockAssistantCardUndo: unknown }>(
+    "./support/assistantCardUndoMock",
+  ).mockAssistantCardUndo,
 }));
 
 setUpTests();

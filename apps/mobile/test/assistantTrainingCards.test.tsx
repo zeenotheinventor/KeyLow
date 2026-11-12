@@ -48,12 +48,22 @@ jest.mock("expo/fetch", () => ({ fetch: jest.fn() }));
 
 // The hooks that read the conversation and run the turn are the app's own and are tested in the api client.
 // The undo hook is the real one, on a client whose network is the undo route, so what it refreshes is real.
+// So is the read of the workout in progress: a test sets it by seeding the cache the read answers from.
 const mockAssistant: {
   items: AssistantThreadItem[];
   send: jest.Mock;
   /** The workout in progress the app reads, or null when there is none. */
   activeSession: { id: string } | null;
-} = { items: [], send: jest.fn(), activeSession: null };
+} = {
+  items: [],
+  send: jest.fn(),
+  get activeSession() {
+    return queryClient.getQueryData<{ id: string } | null>(keys.training.activeSession) ?? null;
+  },
+  set activeSession(session) {
+    queryClient.setQueryData(keys.training.activeSession, session);
+  },
+};
 
 jest.mock("@keylow/api-client", () => ({
   ...jest.requireActual<object>("@keylow/api-client"),
@@ -63,7 +73,6 @@ jest.mock("@keylow/api-client", () => ({
     isError: false,
     isFetching: false,
   }),
-  useActiveSession: () => ({ data: mockAssistant.activeSession }),
   useAssistantTurn: () => ({
     send: mockAssistant.send,
     stop: jest.fn(),
@@ -164,10 +173,14 @@ describe("the training cards in the assistant sheet", () => {
     mockScrollToEnd.mockClear();
     mockAssistant.items = [];
     mockAssistant.send = jest.fn();
-    mockAssistant.activeSession = null;
+    // Reads stay fresh, so the workout in progress seeded below is not read again from the fake network.
     queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+      defaultOptions: {
+        queries: { retry: false, staleTime: Infinity },
+        mutations: { retry: false },
+      },
     });
+    mockAssistant.activeSession = null;
   });
 
   afterEach(async () => {

@@ -1,14 +1,12 @@
+import { useHeldWords } from "@keylow/api-client";
+import { WORKING_LINE_ANNOUNCEMENT_GAP_MS } from "@keylow/core";
 import { useEffect, useRef } from "react";
 import { AccessibilityInfo, View } from "react-native";
 
-import { useHeldWords } from "./useHeldWords";
 import { LoadingMark } from "../../LoadingMark";
 import { Text } from "../../ui";
 
 import type { WorkingLineProps } from "./types";
-
-/** A screen reader hears the line once, then again only if this long has passed, so a run of steps is not chatter. */
-const ANNOUNCEMENT_GAP_MS = 5000;
 
 // The one place the glyph is drawn.
 function WorkingGlyph() {
@@ -30,7 +28,10 @@ export function WorkingLine({ text }: WorkingLineProps) {
 
   useEffect(() => {
     const now = Date.now();
-    if (lastAnnouncedAt.current === null || now - lastAnnouncedAt.current >= ANNOUNCEMENT_GAP_MS) {
+    if (
+      lastAnnouncedAt.current === null ||
+      now - lastAnnouncedAt.current >= WORKING_LINE_ANNOUNCEMENT_GAP_MS
+    ) {
       lastAnnouncedAt.current = now;
       AccessibilityInfo.announceForAccessibility(words);
     }
