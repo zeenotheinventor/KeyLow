@@ -232,6 +232,16 @@ describe("ReplyTable", () => {
       expect(screen.getByTestId("reply-table-scroll")).toHaveProp("horizontal", true);
       expect(screen.getByTestId("reply-table-scroll")).toHaveProp("scrollEnabled", true);
     });
+
+    it("should scroll in the gesture handler's scroll view, so the sheet's drag cannot take a sideways swipe", async () => {
+      await renderTable();
+      await measure({});
+
+      expect(screen.getByTestId("reply-table-scroll")).toHaveProp(
+        "handlerType",
+        "NativeViewGestureHandler",
+      );
+    });
   });
 
   describe("narrower than the thread", () => {

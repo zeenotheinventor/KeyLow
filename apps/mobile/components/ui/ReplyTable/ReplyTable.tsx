@@ -1,13 +1,14 @@
 import { vars } from "nativewind";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
-import { ScrollView, View } from "react-native";
+import { View } from "react-native";
 
 import { ReplySpans } from "./ReplySpans";
+import { TableScrollView } from "./TableScrollView";
 import { Text } from "../Text";
 
 import type { ReplyTableProps } from "./types";
 import type { ReplySpan } from "@keylow/core";
-import type { ReactNode } from "react";
+import type { ComponentRef, ReactNode } from "react";
 import type { LayoutChangeEvent, NativeScrollEvent, NativeSyntheticEvent } from "react-native";
 
 // A cell is 12 points in at each side and 8 above and below. The fixed first column is at most 152 points
@@ -138,7 +139,7 @@ export function ReplyTable({ table, pendingMark }: ReplyTableProps) {
   const [columnsWidth, setColumnsWidth] = useState<number>();
   const [viewportWidth, setViewportWidth] = useState<number>();
   const [isAtEnd, setIsAtEnd] = useState(false);
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<ComponentRef<typeof TableScrollView>>(null);
   const scrollOffset = useRef(0);
   const hasFlashed = useRef(false);
 
@@ -247,7 +248,7 @@ export function ReplyTable({ table, pendingMark }: ReplyTableProps) {
         <View className={firstColumnClassName} testID="reply-table-first-column">
           {column(0)}
         </View>
-        <ScrollView
+        <TableScrollView
           className={scrollClassName}
           horizontal
           onLayout={(event) => {
@@ -274,7 +275,7 @@ export function ReplyTable({ table, pendingMark }: ReplyTableProps) {
               </View>
             ))}
           </View>
-        </ScrollView>
+        </TableScrollView>
       </View>
       {hasMoreToTheRight ? (
         <View

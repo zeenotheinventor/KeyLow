@@ -22,6 +22,9 @@ import type { ComponentRef } from "react";
 // The design's `--space-6`, which the sheet keeps under its contents before the safe area.
 const bottomPadding = Number.parseInt(spacing["6"], 10);
 
+// A sideways swipe inside a sheet always belongs to its contents, so the sheet's own drag starts on vertical movement only.
+const sheetDragActiveOffsetY: [number, number] = [-10, 10];
+
 // The design slams the sheet up with `--ease-spring` over `--duration-flourish` and takes it down with
 // `--ease-exit` over `--duration-standard`. The bezier overshoots on the way up and settles.
 const enterAnimation = {
@@ -159,6 +162,7 @@ export function BottomSheet({
       <GorhomBottomSheet
         ref={sheetRef}
         accessible={false}
+        activeOffsetY={sheetDragActiveOffsetY}
         animationConfigs={open ? enterAnimation : exitAnimation}
         backdropComponent={SheetBackdrop}
         backgroundComponent={SheetBackground}
