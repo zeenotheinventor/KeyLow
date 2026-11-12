@@ -75,6 +75,10 @@ function Spans({ spans, isHeading }: { spans: readonly ReplySpan[]; isHeading: b
 
 // An item is its marker in a column of at least 20 points and then its words, which wrap under themselves.
 function ReplyBlockView({ block, hasCaret }: { block: ReplyBlock; hasCaret: boolean }) {
+  // Placeholder until the ReplyTable draws a table (KEY-980 part B).
+  if (block.kind === "table") {
+    return null;
+  }
   const words = (
     <>
       <Spans isHeading={block.kind === "heading"} spans={block.spans} />

@@ -30,6 +30,12 @@ export const ASSISTANT_SHEET = {
   speakerAssistant: "Assistant",
   /** Names the loading placeholder a sheet opens on while its conversation is read (`assistant · opening`), for a screen reader. */
   openingLabel: "Loading your conversation",
+  /** A table in a reply, as a screen reader hears it: "Table, 7 rows." then a sentence for each row (`assistant · table`). */
+  tableLabel: "Table",
+  tableRowOne: "row",
+  tableRowMany: "rows",
+  /** What a `–` cell reads as. */
+  tableNoValue: "no value",
 } as const;
 
 /**
