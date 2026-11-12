@@ -71,7 +71,7 @@ export type { SaveSetupInput } from "./useSaveSetup";
 export { useSetupDraft } from "./useSetupDraft";
 export { useSetupState } from "./useSetupState";
 export { useSkipSetup } from "./useSkipSetup";
-export { useTargets } from "./useTargets";
+export { targetsForDay, useTargets } from "./useTargets";
 export { useTermsAcceptance } from "./useTermsAcceptance";
 export { useToggleFavouriteFood } from "./useToggleFavouriteFood";
 export { useToggleFavouriteRecipe } from "./useToggleFavouriteRecipe";

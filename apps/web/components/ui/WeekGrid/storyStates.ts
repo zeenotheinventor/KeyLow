@@ -5,6 +5,7 @@ export const storyStates = [
   "MondayOfTheWeek",
   "NothingBeforeToday",
   "NoTarget",
+  "DayByDayTargets",
   "PastDayWithoutEntries",
   "CopyDisabled",
   "OnPhone",

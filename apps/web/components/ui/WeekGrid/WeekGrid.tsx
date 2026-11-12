@@ -27,7 +27,7 @@ function kindOfDay(localDate: string, today: string): WeekGridCellKind {
 /**
  * The web week view's grid: the seven days of a week, Monday to Sunday, then their Average. At 1280 px
  * and up each is a card in one of eight columns, below it a row of one list. A day shows its calories
- * against the target with a thin bar, its macros, whether it is complete, and, on a past day with
+ * against its own target with a thin bar, its macros, whether it is complete, and, on a past day with
  * entries, Copy to today. Today is framed, a day to come is dimmed, and the Average covers the days with
  * entries from Monday to yesterday, as the dashboard's This week card does. It holds no data: the screen
  * passes the totals in.
@@ -72,7 +72,7 @@ export function WeekGrid({
             // A day that has not come opens nothing, because the diary shows today in its place.
             href={kind === "future" ? undefined : dayHref(day.localDate)}
             totals={day.totals}
-            calorieTarget={calorieTarget}
+            calorieTarget={day.calorieTarget}
             isComplete={day.isComplete}
             onCopyToToday={
               kind === "past" && day.totals !== null

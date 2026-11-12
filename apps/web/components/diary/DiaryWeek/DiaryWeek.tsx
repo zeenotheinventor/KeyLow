@@ -1,4 +1,10 @@
-import { useCopyDay, useDiaryWeek, useTargets, useUndoCopyDay } from "@keylow/api-client";
+import {
+  targetsForDay,
+  useCopyDay,
+  useDiaryWeek,
+  useTargets,
+  useUndoCopyDay,
+} from "@keylow/api-client";
 import {
   DIARY_LOAD_FAILED,
   DIARY_LOADING_LABEL,
@@ -102,6 +108,7 @@ export function DiaryWeek({ viewedDate, today, timeZone }: DiaryWeekProps) {
     localDate: day.localDate,
     totals: weekDayTotals(day.totals),
     isComplete: day.dayLog?.is_complete ?? false,
+    calorieTarget: targetsForDay(targets, day.localDate).kcal,
   }));
   const title = describeWeekGridTitle(monday);
 

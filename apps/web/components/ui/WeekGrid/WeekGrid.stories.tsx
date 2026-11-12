@@ -11,6 +11,7 @@ const day = (
   isComplete = false,
 ): WeekGridDay => ({
   localDate,
+  calorieTarget: 2200,
   totals:
     totals === null
       ? null
@@ -93,7 +94,28 @@ export const NothingBeforeToday: Story = {
 };
 
 // No target set: the calories stand alone and there is no bar.
-export const NoTarget: Story = { args: { calorieTarget: null } };
+export const NoTarget: Story = {
+  args: {
+    days: [monday, tuesday, wednesday, thursday, ...toCome].map((weekDay) => ({
+      ...weekDay,
+      calorieTarget: null,
+    })),
+    calorieTarget: null,
+  },
+};
+
+// A programme with day by day figures: each day is set against its own, and the Average against the week's.
+export const DayByDayTargets: Story = {
+  args: {
+    days: [
+      { ...monday, calorieTarget: 2140 },
+      tuesday,
+      { ...wednesday, calorieTarget: 1900 },
+      thursday,
+      ...toCome,
+    ],
+  },
+};
 
 // A past day with nothing logged says so, and has no Copy to today.
 export const PastDayWithoutEntries: Story = {

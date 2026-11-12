@@ -3,7 +3,7 @@ import { http } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
-import { useTargets } from "../../src/hooks/useTargets";
+import { targetsForDay, useTargets } from "../../src/hooks/useTargets";
 import { keys } from "../../src/queryKeys";
 import {
   activeProgram,
@@ -219,5 +219,43 @@ describe("useTargets with a date for manual targets", () => {
       expect(result.current.isSuccess).toBe(true);
     });
     expect(result.current.data?.kcal).toBeNull();
+  });
+});
+
+describe("targetsForDay", () => {
+  const engineTargets = {
+    kcal: 2140,
+    protein_g: 126,
+    carbs_g: 245,
+    fat_g: 73,
+    dowCaloriesKcal: [2200, 2200, 2200, 2200, 2200, 1900, 2100],
+    source: "engine",
+  } as const;
+  const manualTargets = {
+    kcal: 2200,
+    protein_g: 160,
+    carbs_g: 220,
+    fat_g: 70,
+    source: "manual",
+  } as const;
+
+  it.each([
+    ["a Monday", "2026-10-26", 2200],
+    ["a Saturday", "2026-10-24", 1900],
+    ["a Sunday", "2026-10-25", 2100],
+  ])(
+    "should give the calories of %s for a program with day by day figures",
+    (_name, date, kcal) => {
+      expect(targetsForDay(engineTargets, date)).toEqual({ ...engineTargets, kcal });
+    },
+  );
+
+  it("should give manual targets the same calories on every day", () => {
+    expect(targetsForDay(manualTargets, "2026-10-24").kcal).toBe(2200);
+    expect(targetsForDay(manualTargets, "2026-10-26").kcal).toBe(2200);
+  });
+
+  it("should keep a missing calorie target missing", () => {
+    expect(targetsForDay({ ...manualTargets, kcal: null }, "2026-10-24").kcal).toBeNull();
   });
 });
