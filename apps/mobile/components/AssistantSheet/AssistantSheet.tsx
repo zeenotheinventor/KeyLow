@@ -29,18 +29,10 @@ import { AssistantEmpty } from "./AssistantEmpty";
 import { AssistantThread } from "./AssistantThread";
 import { Composer } from "./Composer";
 import { ConsentCard } from "./ConsentCard";
+import { OpeningPlaceholder } from "./OpeningPlaceholder";
 import { assistantCardHref } from "../../lib/assistantCardRoutes";
 import { useIsOnline } from "../../lib/connectivity";
-import {
-  Badge,
-  Banner,
-  BottomSheet,
-  SheetHeader,
-  SheetScrollView,
-  Skeleton,
-  Text,
-  useToast,
-} from "../ui";
+import { Badge, Banner, BottomSheet, SheetHeader, SheetScrollView, Text, useToast } from "../ui";
 
 import type { AssistantSheetProps } from "./types";
 import type { AssistantCardLink, AssistantSheetSent } from "@keylow/core";
@@ -60,6 +52,8 @@ const FULL_HEIGHT_SNAP_INDEX = 1;
 
 // How far from the end of the thread, in points, the person can scroll and still be reading the end of it.
 const NEAR_THE_END_DISTANCE = 40;
+// How far from the top of the thread, in points, a scroll of the person's own starts loading older turns.
+const NEAR_THE_TOP_DISTANCE = 300;
 // Scroll events carry on after a finger is lifted, while the flick settles. The library's scroll view does not
 // pass on the end of that, so the scroll counts as the person's until no event has arrived for this long.
 const SCROLL_SETTLED_MS = 150;
@@ -155,6 +149,14 @@ export function AssistantSheet({
 
   function readUserScroll(event: NativeSyntheticEvent<NativeScrollEvent>) {
     isFollowingEnd.current = distanceFromEnd(event.nativeEvent) <= NEAR_THE_END_DISTANCE;
+    // Reading up towards older turns is never followed back to the end, even in a thread short enough for
+    // the top and the end to be within reach of each other, and the turns that load must not pull the view.
+    if (conversation.hasOlder && event.nativeEvent.contentOffset.y <= NEAR_THE_TOP_DISTANCE) {
+      isFollowingEnd.current = false;
+      if (!conversation.isLoadingOlder) {
+        conversation.loadOlder();
+      }
+    }
   }
 
   // Scroll events count as the person's from the touch down to a quiet moment after the finger lifts.
@@ -340,11 +342,7 @@ export function AssistantSheet({
 
   function renderBody() {
     if (isOpening) {
-      return (
-        <View accessible aria-label={ASSISTANT_SHEET.openingLabel} role="status">
-          <Skeleton variant="assistantThread" />
-        </View>
-      );
+      return <OpeningPlaceholder />;
     }
     if (access.kind === "consent") {
       return (
@@ -367,15 +365,18 @@ export function AssistantSheet({
       );
     }
     return (
-      <AssistantThread
-        thread={thread}
-        timeZone={timeZone}
-        onAskAgain={sendLastMessageAgain}
-        onTryAgain={sendLastMessageAgain}
-        onOpenCardLink={openCardLink}
-        canAnswer={canAnswerAssistantQuestion(sendState)}
-        onAnswer={sendMessage}
-      />
+      <>
+        {conversation.isLoadingOlder ? <OpeningPlaceholder key="older-turns-placeholder" /> : null}
+        <AssistantThread
+          thread={thread}
+          timeZone={timeZone}
+          onAskAgain={sendLastMessageAgain}
+          onTryAgain={sendLastMessageAgain}
+          onOpenCardLink={openCardLink}
+          canAnswer={canAnswerAssistantQuestion(sendState)}
+          onAnswer={sendMessage}
+        />
+      </>
     );
   }
 
@@ -417,7 +418,15 @@ export function AssistantSheet({
           }
           keyboardDismissMode="on-drag"
           keyboardShouldPersistTaps="handled"
+          maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
           ref={scrollRef}
+          onLayout={() => {
+            // The scroll view gets its height after a cached thread has already settled its size, and again
+            // when the sheet changes snap point, and each time the end has to be scrolled to once more.
+            if (isFollowingEnd.current) {
+              scrollRef.current?.scrollToEnd({ animated: false });
+            }
+          }}
           onContentSizeChange={() => {
             if (isFollowingEnd.current) {
               scrollRef.current?.scrollToEnd({ animated: false });

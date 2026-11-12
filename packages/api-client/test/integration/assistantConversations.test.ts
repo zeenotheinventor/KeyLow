@@ -7,7 +7,7 @@ import { requireServedFunction } from "../../../db/test/integration/support/func
 import {
   createAssistantConversation,
   deleteAllAssistantConversations,
-  getLatestAssistantConversation,
+  getAssistantConversationPage,
   readAssistantActions,
   undoAssistantActions,
 } from "../../src/repos/assistantConversations";
@@ -220,18 +220,18 @@ describe("the assistant conversation and its changes against the local stack wit
 
   describe("the thread", () => {
     it("should read the newest conversation of the caller and never a row of another user", async () => {
-      const conversation = await getLatestAssistantConversation(userA.client);
+      const conversation = await getAssistantConversationPage(userA.client, null);
 
-      expect(conversation?.conversationId).toBe(conversationA.id);
+      expect(conversation.conversationId).toBe(conversationA.id);
       expect(JSON.stringify(conversation)).not.toContain("B: ");
-      expect(conversation?.messages.map((message) => message.role)).toEqual(["user", "assistant"]);
-      expect(conversation?.actions.map((action) => action.id).sort()).toEqual(actionIdsA.sort());
+      expect(conversation.messages.map((message) => message.role)).toEqual(["user", "assistant"]);
+      expect(conversation.actions.map((action) => action.id).sort()).toEqual(actionIdsA.sort());
     });
 
     it("should read the other user's own conversation for them", async () => {
-      const conversation = await getLatestAssistantConversation(userB.client);
+      const conversation = await getAssistantConversationPage(userB.client, null);
 
-      expect(conversation?.conversationId).toBe(conversationB.id);
+      expect(conversation.conversationId).toBe(conversationB.id);
       expect(JSON.stringify(conversation)).not.toContain("A: ");
     });
 
@@ -243,9 +243,9 @@ describe("the assistant conversation and its changes against the local stack wit
         "2026-10-27T10:00:00Z",
       );
 
-      const conversation = await getLatestAssistantConversation(user.client);
+      const conversation = await getAssistantConversationPage(user.client, null);
 
-      expect(conversation?.messages.map((message) => message.turnStatus)).toEqual([
+      expect(conversation.messages.map((message) => message.turnStatus)).toEqual([
         "stopped",
         "stopped",
       ]);
@@ -270,8 +270,8 @@ describe("the assistant conversation and its changes against the local stack wit
         });
       }
       const cardStates = async () => {
-        const read = await getLatestAssistantConversation(user.client);
-        return threadFromMessages(read?.messages ?? [], read?.actions ?? []).flatMap((item) =>
+        const read = await getAssistantConversationPage(user.client, null);
+        return threadFromMessages(read.messages, read.actions).flatMap((item) =>
           item.kind === "card" ? [item.card.undo] : [],
         );
       };
@@ -285,6 +285,91 @@ describe("the assistant conversation and its changes against the local stack wit
       expect(error).toBeNull();
 
       expect(await cardStates()).toEqual(["undone"]);
+    });
+  });
+
+  describe("a long conversation, a page of turns at a time", () => {
+    const TURN_COUNT = 45;
+    let user: TestUser;
+    let conversation: Conversation;
+    let actionIdOfTurn: Map<string, string>;
+
+    beforeAll(async () => {
+      user = await createTestUser("key981");
+      // Every fifth turn logs something: a tool call, its result with the card, and an action.
+      const cardActionIds = Array.from({ length: TURN_COUNT }, () => crypto.randomUUID());
+      conversation = await storeConversation(
+        user,
+        Array.from({ length: TURN_COUNT }, (_, index) => ({
+          text: `Question ${index}`,
+          reply: `Answer ${index}`,
+          ...(index % 5 === 0 ? { card: loggedCard([cardActionIds[index] ?? ""]) } : {}),
+        })),
+        "2026-10-27T10:00:00Z",
+      );
+      actionIdOfTurn = new Map();
+      for (const [index, turnId] of conversation.turnIds.entries()) {
+        if (index % 5 === 0) {
+          const id = cardActionIds[index] ?? "";
+          await storeAction({
+            id,
+            user,
+            conversation,
+            turnIndex: index,
+            turnSeq: 1,
+            tool: "log_entry",
+            createdAt: "2026-10-27T10:00:00Z",
+          });
+          actionIdOfTurn.set(turnId, id);
+        }
+      }
+    });
+
+    const turnIdsOf = (page: { messages: { turnId: string }[] }) => [
+      ...new Set(page.messages.map((message) => message.turnId)),
+    ];
+
+    it("should read the newest 20 turns first, then the next 20, then the last 5 with no cursor", async () => {
+      const first = await getAssistantConversationPage(user.client, null);
+      const second = await getAssistantConversationPage(user.client, first.olderCursor);
+      const third = await getAssistantConversationPage(user.client, second.olderCursor);
+
+      expect(turnIdsOf(first)).toEqual(conversation.turnIds.slice(25));
+      expect(turnIdsOf(second)).toEqual(conversation.turnIds.slice(5, 25));
+      expect(turnIdsOf(third)).toEqual(conversation.turnIds.slice(0, 5));
+      expect(first.olderCursor).not.toBeNull();
+      expect(second.olderCursor).not.toBeNull();
+      expect(third.olderCursor).toBeNull();
+    });
+
+    it("should split no turn and repeat none across the pages, with the messages in seq order", async () => {
+      const first = await getAssistantConversationPage(user.client, null);
+      const second = await getAssistantConversationPage(user.client, first.olderCursor);
+      const third = await getAssistantConversationPage(user.client, second.olderCursor);
+
+      const turnIds = [third, second, first].flatMap(turnIdsOf);
+      expect(turnIds).toEqual(conversation.turnIds);
+      const messageIds = [third, second, first].flatMap((page) =>
+        page.messages.map((message) => message.id),
+      );
+      expect(new Set(messageIds).size).toBe(messageIds.length);
+      const { data, error } = await adminClient()
+        .from("assistant_messages")
+        .select("id")
+        .eq("conversation_id", conversation.id)
+        .order("seq", { ascending: true });
+      expect(error).toBeNull();
+      expect(messageIds).toEqual((data ?? []).map((row) => row.id));
+    });
+
+    it("should give each page the actions of its own turns only", async () => {
+      const first = await getAssistantConversationPage(user.client, null);
+      const second = await getAssistantConversationPage(user.client, first.olderCursor);
+
+      for (const page of [first, second]) {
+        const expected = turnIdsOf(page).flatMap((turnId) => actionIdOfTurn.get(turnId) ?? []);
+        expect(page.actions.map((action) => action.id).sort()).toEqual(expected.sort());
+      }
     });
   });
 
@@ -361,14 +446,14 @@ describe("the assistant conversation and its changes against the local stack wit
     it("should start a new conversation that becomes the caller's newest, with no thread", async () => {
       const conversationId = await createAssistantConversation(userA.client);
 
-      const conversation = await getLatestAssistantConversation(userA.client);
+      const conversation = await getAssistantConversationPage(userA.client, null);
 
       expect(conversation).toMatchObject({ conversationId, messages: [] });
       expect(conversationId).not.toBe(conversationA.id);
     });
 
     it("should leave the other user's newest conversation alone", async () => {
-      expect((await getLatestAssistantConversation(userB.client))?.conversationId).toBe(
+      expect((await getAssistantConversationPage(userB.client, null)).conversationId).toBe(
         conversationB.id,
       );
     });
@@ -437,7 +522,12 @@ describe("the assistant conversation and its changes against the local stack wit
     });
 
     it("should leave the caller with no conversation to read", async () => {
-      expect(await getLatestAssistantConversation(userA.client)).toBeNull();
+      expect(await getAssistantConversationPage(userA.client, null)).toEqual({
+        conversationId: null,
+        messages: [],
+        actions: [],
+        olderCursor: null,
+      });
     });
   });
 });

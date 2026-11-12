@@ -7,6 +7,7 @@ export * from "./consentVersion";
 export * from "./citations";
 export * from "./writeToolWords";
 export * from "./thread";
+export * from "./threadPages";
 export * from "./undoState";
 export * from "./changes";
 export * from "./cards";

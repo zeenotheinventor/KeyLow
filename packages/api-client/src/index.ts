@@ -515,11 +515,11 @@ export type { AssistantConversation, UndoAssistantActionInput } from "./hooks";
 export {
   createAssistantConversation,
   deleteAllAssistantConversations,
-  getLatestAssistantConversation,
+  getAssistantConversationPage,
   readAssistantActions,
   undoAssistantActions,
 } from "./repos";
-export type { AssistantActionsRead, AssistantConversationRead, AssistantUndoResult } from "./repos";
+export type { AssistantActionsRead, AssistantConversationPage, AssistantUndoResult } from "./repos";
 export type { AssistantLiveTurn } from "./assistantLiveTurn";
 export type { StreamingFetch, StreamingResponse } from "./runAssistantTurn";
 
