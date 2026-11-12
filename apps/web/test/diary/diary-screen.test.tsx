@@ -1,4 +1,5 @@
 import { CopyDayPartialWriteError } from "@keylow/api-client";
+import { COPY_FAILED_BANNER } from "@keylow/core/copy";
 import { buildLogEntry } from "@keylow/core/diary";
 import { onlineManager } from "@tanstack/react-query";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
@@ -219,6 +220,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  copyDay.isPending = false;
   onlineManager.setOnline(true);
   vi.useRealTimers();
 });
@@ -1033,13 +1035,6 @@ describe("the diary screen", () => {
       expect(backend.dayReads).toContainEqual({ date: "2026-10-14", enabled: true });
     });
 
-    it("should not read yesterday on a day that has foods", () => {
-      showDay(TODAY);
-      renderDiary();
-
-      expect(backend.dayReads).not.toContainEqual({ date: "2026-10-14", enabled: true });
-    });
-
     it("should copy the whole of yesterday onto the day", () => {
       renderDiary();
 
@@ -1187,7 +1182,7 @@ describe("the diary screen", () => {
 
         finishCopy(view);
 
-        expect(screen.queryByRole("button", { name: "Copy yesterday" })).toBeNull();
+        expect(screen.queryByRole("region", { name: "Nothing logged yet" })).toBeNull();
         expect(document.activeElement).toBe(screen.getByRole("button", { name: "Undo" }));
       });
 
@@ -1229,6 +1224,18 @@ describe("the diary screen", () => {
 
         expect(screen.getByRole("button", { name: "Copy yesterday" })).toBeTruthy();
         expect(document.activeElement).toBe(dayCompleteSwitch());
+      });
+
+      it("should give focus to the first copied row after a keyboard-style click with nothing focused", () => {
+        const view = renderDiary();
+        fireEvent.keyDown(document, { key: "Enter" });
+        expect(document.activeElement).toBe(document.body);
+        fireEvent.click(copyYesterday(), { detail: 0 });
+        finishCopy(view);
+
+        fireEvent.keyDown(screen.getByRole("button", { name: "Undo" }), { key: "Escape" });
+
+        expect(document.activeElement).toBe(firstCopiedRow());
       });
 
       it("should leave focus alone after a pointer press", () => {
@@ -1273,6 +1280,207 @@ describe("the diary screen", () => {
       renderDiary();
 
       expect(screen.queryByRole("region", { name: "Nothing logged yet" })).toBeNull();
+    });
+  });
+
+  describe("a day with foods", () => {
+    const copied: CopiedDay = { localDate: TODAY, count: 8, entryIds: ["a"] };
+    const copyYesterdayButton = () => screen.getByRole("button", { name: "Copy yesterday" });
+
+    beforeEach(() => {
+      showDay("2026-10-14", sampleDay("2026-10-14"));
+    });
+
+    it("should offer Copy yesterday in the header of today", () => {
+      renderDiary();
+
+      expect(copyYesterdayButton()).toHaveProperty("disabled", false);
+      expect(screen.queryByRole("region", { name: "Nothing logged yet" })).toBeNull();
+    });
+
+    it("should offer Copy yesterday on a past day", () => {
+      showDay("2026-10-13", sampleDay("2026-10-13"));
+      renderDiary({ date: "2026-10-14" });
+
+      fireEvent.click(copyYesterdayButton());
+
+      expect(copyDay.mutate.mock.calls[0]?.[0]).toEqual({
+        from: "2026-10-13",
+        to: "2026-10-14",
+        timeZone: "UTC",
+      });
+    });
+
+    it("should show no Copy yesterday on the week view", () => {
+      renderDiary({ view: "week" });
+
+      expect(screen.queryByRole("button", { name: "Copy yesterday" })).toBeNull();
+    });
+
+    it("should show no Copy yesterday while the day is loading", () => {
+      backend.days.delete(TODAY);
+      renderDiary();
+
+      expect(screen.queryByRole("button", { name: "Copy yesterday" })).toBeNull();
+    });
+
+    it("should read yesterday on a day that has foods", () => {
+      renderDiary();
+
+      expect(backend.dayReads).toContainEqual({ date: "2026-10-14", enabled: true });
+    });
+
+    it("should copy the whole of yesterday onto the day, after what is there", () => {
+      renderDiary();
+
+      fireEvent.click(copyYesterdayButton());
+
+      expect(copyDay.mutate).toHaveBeenCalledOnce();
+      expect(copyDay.mutate.mock.calls[0]?.[0]).toEqual({
+        from: "2026-10-14",
+        to: TODAY,
+        timeZone: "UTC",
+      });
+    });
+
+    it("should confirm the copy with the count and take back only the copied rows with Undo", () => {
+      copyDay.mutate.mockImplementation((_input, options) => {
+        options.onSuccess(copied);
+      });
+      renderDiary();
+
+      fireEvent.click(copyYesterdayButton());
+
+      expect(screen.getByText("Copied 8 entries from yesterday")).toBeTruthy();
+      fireEvent.click(screen.getByRole("button", { name: "Undo" }));
+      expect(undoCopyDay.mutate.mock.calls[0]?.[0]).toBe(copied);
+    });
+
+    it("should give focus back to its button when the Undo toast is dismissed after a keyboard press", () => {
+      copyDay.mutate.mockImplementation((_input, options) => {
+        options.onSuccess(copied);
+      });
+      renderDiary();
+      fireEvent.keyDown(document, { key: "Enter" });
+      copyYesterdayButton().focus();
+
+      fireEvent.click(copyYesterdayButton());
+      expect(document.activeElement).toBe(screen.getByRole("button", { name: "Undo" }));
+      fireEvent.keyDown(screen.getByRole("button", { name: "Undo" }), { key: "Escape" });
+
+      expect(document.activeElement).toBe(copyYesterdayButton());
+    });
+
+    it("should say when the copy failed, and take nothing back when nothing was written", () => {
+      copyDay.mutate.mockImplementation((_input, options) => {
+        options.onError(new Error("network"));
+      });
+      renderDiary();
+
+      fireEvent.click(copyYesterdayButton());
+
+      expect(screen.getByRole("alert").textContent).toBe(COPY_FAILED_BANNER);
+      expect(undoCopyDay.mutate).not.toHaveBeenCalled();
+    });
+
+    it("should take back the copies already written when the copy fails part way, and say it failed", () => {
+      const partialWrite = new CopyDayPartialWriteError(
+        ["a", "b"],
+        "Copied 2 of 3",
+        new Error("network"),
+      );
+      copyDay.mutate.mockImplementation((_input, options) => {
+        options.onError(partialWrite);
+      });
+      renderDiary();
+
+      fireEvent.click(copyYesterdayButton());
+
+      expect(undoCopyDay.mutate).toHaveBeenCalledExactlyOnceWith({
+        localDate: TODAY,
+        count: 2,
+        entryIds: ["a", "b"],
+      });
+      expect(screen.getByRole("alert").textContent).toBe(COPY_FAILED_BANNER);
+    });
+
+    it("should dim the button and say why when yesterday has nothing to copy", () => {
+      showDay("2026-10-14", []);
+      renderDiary();
+
+      expect(copyYesterdayButton()).toHaveProperty("disabled", true);
+      expect(screen.getByText("Nothing logged yesterday")).toBeTruthy();
+    });
+
+    it("should not say nothing was logged yesterday when yesterday has foods", () => {
+      renderDiary();
+
+      expect(screen.queryByText("Nothing logged yesterday")).toBeNull();
+    });
+
+    it("should not carry a failed copy over to another day, or bring it back on returning", () => {
+      showDay("2026-10-13", sampleDay("2026-10-13"));
+      copyDay.mutate.mockImplementation((_input, options) => {
+        options.onError(new Error("network"));
+      });
+      const view = render(
+        <ToastProvider>
+          <DiaryScreen date={undefined} view="day" />
+        </ToastProvider>,
+      );
+      fireEvent.click(copyYesterdayButton());
+      expect(screen.getByRole("alert")).toBeTruthy();
+
+      view.rerender(
+        <ToastProvider>
+          <DiaryScreen date="2026-10-14" view="day" />
+        </ToastProvider>,
+      );
+      expect(screen.queryByRole("alert")).toBeNull();
+
+      view.rerender(
+        <ToastProvider>
+          <DiaryScreen date={undefined} view="day" />
+        </ToastProvider>,
+      );
+      expect(screen.queryByRole("alert")).toBeNull();
+    });
+
+    it("should not read yesterday on the week view", () => {
+      renderDiary({ view: "week" });
+
+      expect(backend.dayReads).not.toContainEqual({ date: "2026-10-14", enabled: true });
+    });
+
+    it("should not read yesterday while the day is loading", () => {
+      backend.days.delete(TODAY);
+      renderDiary();
+
+      expect(backend.dayReads).not.toContainEqual({ date: "2026-10-14", enabled: true });
+    });
+
+    it("should dim the button and show it busy while a copy is running", () => {
+      copyDay.isPending = true;
+      renderDiary();
+
+      expect(screen.getByRole("button", { name: "Loading" })).toHaveProperty("disabled", true);
+    });
+
+    it("should dim the button offline", () => {
+      renderDiary();
+
+      act(() => {
+        onlineManager.setOnline(false);
+      });
+
+      expect(copyYesterdayButton()).toHaveProperty("disabled", true);
+    });
+
+    it("should give a day with nothing logged the card's button alone", () => {
+      showDay(TODAY, []);
+      renderDiary();
+
+      expect(screen.getAllByRole("button", { name: "Copy yesterday" })).toHaveLength(1);
     });
   });
 

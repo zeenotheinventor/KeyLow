@@ -11,6 +11,8 @@ export type DayHeaderProps = {
   view: DiaryView;
   /** The week view's day stepper, drawn in place of the title and the calendar button. */
   weekStepper?: ReactNode;
+  /** The day view's action, drawn after the calendar button. */
+  action?: ReactNode;
   onSelectDate: (localDate: string) => void;
   onViewChange: (view: DiaryView) => void;
 };

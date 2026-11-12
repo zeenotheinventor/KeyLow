@@ -1,5 +1,5 @@
 import { useDiaryDay, useDiaryWeek, useTargets } from "@keylow/api-client";
-import { DIARY_LOAD_FAILED } from "@keylow/core/copy";
+import { COPY_FAILED_BANNER, DIARY_ACTIONS, DIARY_LOAD_FAILED } from "@keylow/core/copy";
 import {
   clockHourOf,
   describeDiaryTitle,
@@ -7,13 +7,16 @@ import {
   toLocalDate,
 } from "@keylow/core/dates";
 import { nextWeek, previousWeek, weekOf } from "@keylow/core/diary";
+import { iconStroke } from "@keylow/tokens";
+import { Copy } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { DayHeader } from "../DayHeader";
 import { DiaryDayContent } from "../DiaryDayContent";
 import { DiaryLoading } from "../DiaryLoading";
 import { DiaryWeek } from "../DiaryWeek";
+import { useCopyYesterday } from "../useCopyYesterday";
 import { useCheckinToast } from "./useCheckinToast";
 import { WeekStepper } from "../WeekStepper";
 
@@ -21,10 +24,12 @@ import type { DiaryDayProps } from "./types";
 import type { WeekStripWeekChange } from "@/components/ui/WeekStrip";
 import type { DiaryView } from "@/lib/diary";
 
+import { Button } from "@/components/ui/Button";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { WeekStrip } from "@/components/ui/WeekStrip";
 import { diaryHref } from "@/lib/diary";
 import { useFoodLogActions } from "@/lib/foodLogActions";
+import { useIsOnline } from "@/lib/useIsOnline";
 import { useNow } from "@/lib/useNow";
 
 const NOON = 12;
@@ -69,6 +74,16 @@ export function DiaryDay({ date, view, timeZone }: DiaryDayProps) {
 
   const day = dayQuery.data;
   const targets = targetsQuery.data;
+  const isOnline = useIsOnline();
+  const logElement = useRef<HTMLDivElement>(null);
+  const copy = useCopyYesterday({
+    localDate: viewedDate,
+    timeZone,
+    logElement,
+    enabled: view === "day" && day !== undefined,
+  });
+  // An empty day offers Copy yesterday on its own card, so the header's button is for a day with foods.
+  const hasFoods = view === "day" && day !== undefined && day.entries.length > 0;
   // A refetch that fails while the data is on screen leaves the data where it is: the error replaces the
   // diary only when there is nothing to show.
   const isFailed =
@@ -93,6 +108,33 @@ export function DiaryDay({ date, view, timeZone }: DiaryDayProps) {
       dayQuery.isError ? dayQuery.refetch() : undefined,
       targetsQuery.isError ? targetsQuery.refetch() : undefined,
     ]);
+  }
+
+  // Where the phone's More, Copy yesterday sits. It says why it is dimmed when yesterday has nothing to copy,
+  // and says so when the copy failed.
+  function renderCopyYesterday() {
+    return (
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <Button
+          type="button"
+          variant="secondary"
+          disabled={copy.isYesterdayEmpty || !isOnline}
+          loading={copy.isCopying}
+          onClick={copy.copyYesterday}
+        >
+          <Copy aria-hidden strokeWidth={iconStroke} />
+          {DIARY_ACTIONS.copyYesterday}
+        </Button>
+        {copy.isYesterdayEmpty && (
+          <p className="text-caption text-text-muted">{DIARY_ACTIONS.nothingLoggedYesterday}</p>
+        )}
+        {copy.hasCopyFailed && (
+          <p role="alert" className="text-caption text-text-primary">
+            {COPY_FAILED_BANNER}
+          </p>
+        )}
+      </div>
+    );
   }
 
   function renderBody() {
@@ -137,6 +179,8 @@ export function DiaryDay({ date, view, timeZone }: DiaryDayProps) {
             isToday={viewedDate === today}
             targets={targets}
             timeZone={timeZone}
+            copy={copy}
+            logElement={logElement}
             onOpenTargets={() => {
               router.push(TARGETS_HREF);
             }}
@@ -153,6 +197,7 @@ export function DiaryDay({ date, view, timeZone }: DiaryDayProps) {
         title={describeDiaryTitle(instantAtLocalTime(viewedDate, NOON, 0, timeZone), now, timeZone)}
         today={today}
         view={view}
+        action={hasFoods ? renderCopyYesterday() : undefined}
         weekStepper={
           <WeekStepper
             selectedDate={viewedDate}
