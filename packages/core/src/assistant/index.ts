@@ -13,6 +13,7 @@ export * from "./changes";
 export * from "./cards";
 export * from "./confirmAnswer";
 export * from "./sheetThread";
+export * from "./chatController";
 export * from "./cardPresentation";
 export * from "./describeInLog";
 export * from "./recipeImport";

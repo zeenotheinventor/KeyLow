@@ -283,6 +283,8 @@ export type {
 export { useAssistantConsent } from "./useAssistantConsent";
 export { useAssistantStatus } from "./useAssistantStatus";
 export { useAssistantTurn } from "./useAssistantTurn";
+export { useAssistantChat } from "./useAssistantChat";
+export type { AssistantChatReaders, UseAssistantChatInput } from "./useAssistantChat";
 export { useSetAssistantConsent } from "./useSetAssistantConsent";
 export { useAssistantConversation } from "./useAssistantConversation";
 export type { AssistantConversation } from "./useAssistantConversation";
