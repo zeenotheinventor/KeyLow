@@ -497,6 +497,7 @@ export {
 export type { ShoppingSourceRecipe } from "./repos";
 export type { FavouriteFood, FavouriteRecipe } from "./repos";
 export {
+  useAssistantChat,
   useAssistantConsent,
   useAssistantStatus,
   useAssistantTurn,
@@ -511,7 +512,11 @@ export {
   useNewAssistantConversation,
   useUndoAssistantAction,
 } from "./hooks";
-export type { AssistantConversation, UndoAssistantActionInput } from "./hooks";
+export type {
+  AssistantConversation,
+  UndoAssistantActionInput,
+  UseAssistantChatInput,
+} from "./hooks";
 export {
   createAssistantConversation,
   deleteAllAssistantConversations,
