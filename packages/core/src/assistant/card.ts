@@ -22,6 +22,8 @@ const assistantCardLinkTargetSchema = z.discriminatedUnion("screen", [
   }),
   z.strictObject({ screen: z.literal("own_food"), foodId: assistantIdSchema }),
   z.strictObject({ screen: z.literal("diary_day"), localDate: z.iso.date() }),
+  z.strictObject({ screen: z.literal("routine_editor"), routineId: assistantIdSchema }),
+  z.strictObject({ screen: z.literal("session_detail"), sessionId: assistantIdSchema }),
 ]);
 
 export const assistantCardLinkSchema = z.strictObject({
@@ -30,11 +32,28 @@ export const assistantCardLinkSchema = z.strictObject({
 });
 
 /**
+ * One day of a routine, drawn as a line that opens to its exercises (`assistant-card · routine-created`).
+ * `name` is the day and its focus ("Monday · Push"), `summary` what the day holds ("5 exercises · 15 sets
+ * · about 50 min"), and each exercise its name and its detail ("3 sets · 8 to 10 reps · RIR 2"). Every
+ * string is worded in core by the card's builder.
+ */
+const assistantCardDaySchema = z.strictObject({
+  name: z.string().min(1),
+  summary: z.string().min(1),
+  exercises: z.array(z.strictObject({ name: z.string().min(1), detail: z.string().min(1) })),
+});
+
+/**
  * One line of a card. A logged food leads with its own portion, grams in brackets ("2 large eggs
  * (100 g)"), or plain grams ("200 g"). On a recipe import `name` is the line as the page wrote it and
  * `matchedFood` the line under it as the board prints it: the food it matched, or why it is not counted.
- * `estimate` is true only on an imported line whose vague amount the import guessed, false everywhere
- * else (plan 2.8).
+ * `estimate` is true on an imported line whose vague amount the import guessed (plan 2.8) and on a logged
+ * food whose amount `estimate_portions` worked out (`log_entry` with `estimated`, ADR 0006 Amendment 2),
+ * false everywhere else.
+ *
+ * The rows are reused by the training cards, and their fields keep their names because stored cards hold
+ * them: `amountText` is the row's detail ("Was Look better") and `kcalText` its value on the right ("Get
+ * stronger"), whatever the row counts.
  */
 const assistantCardRowSchema = z.strictObject({
   name: z.string().min(1),
@@ -65,10 +84,25 @@ export const assistantCardSchema = z.strictObject({
     "recipe_archived",
     "food_created",
     "targets_changed",
+    "routine_updated",
+    "routine_active",
+    "routine_archived",
+    "routine_created",
+    "goals_updated",
+    "exercise_created",
+    "exercise_updated",
+    "exercise_archived",
+    "set_updated",
+    "workout_deleted",
+    "feature_requested",
   ]),
   title: z.string().min(1),
   sub: z.string().min(1).nullable(),
   rows: z.array(assistantCardRowSchema),
+  /** The days of a routine the card built or changed. Absent or null on every other card, and on every card stored before they existed. */
+  days: z.array(assistantCardDaySchema).nullish(),
+  /** The short fact the changes list shows for the card ("4 changes"). Absent or null when there is none. */
+  changeDetail: z.string().min(1).nullish(),
   totalText: z.string().min(1).nullable(),
   note: z.string().min(1).nullable(),
   link: assistantCardLinkSchema.nullable(),
@@ -78,5 +112,6 @@ export const assistantCardSchema = z.strictObject({
 
 export type AssistantCard = z.infer<typeof assistantCardSchema>;
 export type AssistantCardRow = AssistantCard["rows"][number];
+export type AssistantCardDay = z.infer<typeof assistantCardDaySchema>;
 export type AssistantCardLink = z.infer<typeof assistantCardLinkSchema>;
 export type AssistantCardKind = AssistantCard["kind"];

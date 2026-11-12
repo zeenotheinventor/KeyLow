@@ -4,6 +4,7 @@ export type { DiaryReadOptions } from "./DiaryReadOptions";
 export { useArchiveRecipe } from "./useArchiveRecipe";
 export { useCompleteDays } from "./useCompleteDays";
 export { useCopyDay } from "./useCopyDay";
+export { useCreateFeatureRequest } from "./useCreateFeatureRequest";
 export { useCreateFood } from "./useCreateFood";
 export { useCreateRecipe } from "./useCreateRecipe";
 export { useDebouncedValue } from "./useDebouncedValue";
@@ -34,6 +35,13 @@ export type {
 export { useFoodWithPortions } from "./useFoodWithPortions";
 export type { FoodWithPortionsState } from "./useFoodWithPortions";
 export { useLogEntries } from "./useLogEntries";
+export {
+  PlateFoodGoneError,
+  PlateFoodNeedsReviewError,
+  plateEntriesOf,
+  useLogPlateEntries,
+} from "./useLogPlateEntries";
+export type { LogPlateEntriesInput, PlateFoodReaders, PlateLoggedWhen } from "./useLogPlateEntries";
 export { useLogEntry } from "./useLogEntry";
 export { useLogFood } from "./useLogFood";
 export { useMaterialiseOffProduct } from "./useMaterialiseOffProduct";
@@ -60,6 +68,7 @@ export { useEditProgram } from "./useEditProgram";
 export type { EditProgramInput } from "./useEditProgram";
 export { useSaveSetup } from "./useSaveSetup";
 export type { SaveSetupInput } from "./useSaveSetup";
+export { useSetupDraft } from "./useSetupDraft";
 export { useSetupState } from "./useSetupState";
 export { useSkipSetup } from "./useSkipSetup";
 export { useTargets } from "./useTargets";
@@ -85,6 +94,8 @@ export type { UseWeighInEntryInput } from "./useWeighInEntry";
 export { useWeightTrend } from "./useWeightTrend";
 export { useBodyMeasurements } from "./useBodyMeasurements";
 export { useBodyTrend } from "./useBodyTrend";
+export { useBodyCompositionKind } from "./useBodyCompositionKind";
+export type { BodyCompositionKind } from "./useBodyCompositionKind";
 export { useImportBodyMeasurements } from "./useImportBodyMeasurements";
 export { useHeatSets } from "./useHeatSets";
 export { useMuscleState } from "./useMuscleState";
@@ -101,11 +112,27 @@ export type {
   TrainWeekView,
 } from "./trainHomeTypes";
 export { useActiveSession } from "./useActiveSession";
+export { useSessionBarView } from "./useSessionBarView";
+export type { SessionBarView } from "./useSessionBarView";
 export { useHasLoggedSession } from "./useHasLoggedSession";
 export { useLastPerformance } from "./useLastPerformance";
 export type { UseLastPerformanceOptions } from "./useLastPerformance";
+export { useExerciseProgress } from "./useExerciseProgress";
+export type {
+  ExerciseChartData,
+  ExerciseProgress,
+  ExerciseProgressBody,
+  ExerciseWeekItem,
+} from "./exerciseProgressTypes";
 export { useExerciseTrendSets } from "./useExerciseTrendSets";
 export type { UseTrendSetsOptions } from "./useExerciseTrendSets";
+export { useRoutineProgress } from "./useRoutineProgress";
+export type {
+  RoutineProgress,
+  RoutineProgressDayItem,
+  RoutineProgressExercise,
+  RoutineProgressState,
+} from "./routineProgressTypes";
 export { useRoutineTrendSets } from "./useRoutineTrendSets";
 export { useSession } from "./useSession";
 export { useWeightUnit } from "./useWeightUnit";
@@ -116,6 +143,8 @@ export { useDashboardBodyMap } from "./useDashboardBodyMap";
 export type { DashboardBodyMap, DashboardToday } from "./useDashboardBodyMap";
 export { useMuscleList } from "./useMuscleList";
 export type { UseMuscleListInput } from "./useMuscleList";
+export { useMuscleScaleList } from "./useMuscleScaleList";
+export type { UseMuscleScaleListInput } from "./useMuscleScaleList";
 export { useMuscleDetail } from "./useMuscleDetail";
 export type { UseMuscleDetailInput } from "./useMuscleDetail";
 
@@ -125,6 +154,10 @@ export { useRoutines } from "./useRoutines";
 export type { UseRoutinesOptions } from "./useRoutines";
 export { useSaveRoutine } from "./useSaveRoutine";
 export { useSetActiveRoutine } from "./useSetActiveRoutine";
+export { useMakeRoutineActive } from "./useMakeRoutineActive";
+export { useArchiveRoutineWithUndo } from "./useArchiveRoutineWithUndo";
+export { useRestoreRoutine } from "./useRestoreRoutine";
+export type { RoutineNotices } from "./routineNotices";
 
 export { useDeleteSession } from "./useDeleteSession";
 export { useFinishSession } from "./useFinishSession";
@@ -144,10 +177,20 @@ export type {
   SessionDetailSet,
   SessionDetailView,
 } from "./sessionDetailTypes";
-export { describeFinishDetails } from "./describeFinishDetails";
+export { describeFinishDetails, heatSetsOf } from "./describeFinishDetails";
 export type { FinishDetails } from "./describeFinishDetails";
 export { useSetLogging } from "./useSetLogging";
 export { useChangeSetType } from "./useChangeSetType";
+export { useAddToPastSession } from "./useAddToPastSession";
+export type {
+  AddSetEntry,
+  AddToPastSession,
+  AddToPastSessionOpening,
+  PickedExercise,
+  SetLogRequest,
+} from "./useAddToPastSession";
+export { useEditSet } from "./useEditSet";
+export type { EditSet, EditSetOpening, EditSetOpeningState, SetChanges } from "./useEditSet";
 export { useRemoveSetWithUndo } from "./useRemoveSetWithUndo";
 export type { SetNotices } from "./useRemoveSetWithUndo";
 export { useAddedExercises } from "./useAddedExercises";
@@ -184,6 +227,8 @@ export { useTrainingGoals } from "./useTrainingGoals";
 export { useTrainingGoalsHistory } from "./useTrainingGoalsHistory";
 export { useExercise } from "./useExercise";
 export type { ExerciseState } from "./useExercise";
+export { useExerciseFormMedia } from "./useExerciseFormMedia";
+export type { ExerciseFormMediaState } from "./useExerciseFormMedia";
 export { useExerciseMuscles } from "./useExerciseMuscles";
 export type { ExerciseMusclesState } from "./useExerciseMuscles";
 export { useExerciseSearch } from "./useExerciseSearch";
@@ -196,6 +241,16 @@ export { useArchiveExercise } from "./useArchiveExercise";
 export { useSaveExercise } from "./useSaveExercise";
 export { useProgramSummary } from "./useProgramSummary";
 export { useRunDueCheckins } from "./useRunDueCheckins";
+export { useRunCheckinsIfDue } from "./useRunCheckinsIfDue";
+export type { UseRunCheckinsIfDueOptions } from "./useRunCheckinsIfDue";
+export { useProgramScreen } from "./useProgramScreen";
+export type { ProgramScreenState, UseProgramScreenOptions } from "./useProgramScreen";
+export { useSettlingChecklist } from "./useSettlingChecklist";
+export type { UseSettlingChecklistOptions } from "./useSettlingChecklist";
+export { useCheckinSummary } from "./useCheckinSummary";
+export type { UseCheckinSummaryOptions } from "./useCheckinSummary";
+export { useExpenditureChart } from "./useExpenditureChart";
+export type { ExpenditureChartState, UseExpenditureChartOptions } from "./useExpenditureChart";
 export { useExpenditureHistory } from "./useExpenditureHistory";
 export { useTargetsHistory } from "./useTargetsHistory";
 export type { ProgramHistoryOptions } from "./ProgramHistoryOptions";
@@ -219,6 +274,12 @@ export type {
   SuggestionUnavailableReason,
   UseSuggestionInput,
 } from "./useSuggestion";
+export { useSuggestionCard } from "./useSuggestionCard";
+export type {
+  SuggestionCardState,
+  SuggestionNotices,
+  UseSuggestionCardInput,
+} from "./useSuggestionCard";
 export { useAssistantConsent } from "./useAssistantConsent";
 export { useAssistantStatus } from "./useAssistantStatus";
 export { useAssistantTurn } from "./useAssistantTurn";
@@ -230,3 +291,10 @@ export { useDeleteAllAssistantConversations } from "./useDeleteAllAssistantConve
 export { useAssistantChanges } from "./useAssistantChanges";
 export { useUndoAssistantAction } from "./useUndoAssistantAction";
 export type { UndoAssistantActionInput } from "./useUndoAssistantAction";
+export { useAccountExportFile } from "./useAccountExportFile";
+export type {
+  AccountExportFile,
+  AccountExportScreenEvent,
+  UseAccountExportFile,
+  UseAccountExportFileInput,
+} from "./useAccountExportFile";

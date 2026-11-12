@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   ADD_PRODUCT_FAILED,
   ADD_PRODUCT_NOT_FOUND,
-  OPEN_FOOD_FACTS_BUSY,
+  SEARCH_RATE_LIMITED,
   OPEN_FOOD_FACTS_SEARCH_FAILED,
   SEARCH_EMPTY,
   SEARCH_FAILED_MOBILE,
@@ -12,7 +12,6 @@ import {
   SEARCH_IDLE,
   SEARCH_STATUS,
   YOUR_FOODS_EMPTY,
-  describeSeeMore,
 } from "../../src/copy";
 
 describe("search group headings", () => {
@@ -36,16 +35,6 @@ describe("search group headings", () => {
         label: "Open Food Facts results",
       },
     });
-  });
-});
-
-describe("describeSeeMore", () => {
-  it.each([
-    [1, "See 1 more"],
-    [2, "See 2 more"],
-    [18, "See 18 more"],
-  ])("should write %s hidden rows as %s", (hiddenCount, expected) => {
-    expect(describeSeeMore(hiddenCount)).toBe(expected);
   });
 });
 
@@ -95,7 +84,7 @@ describe("search sheet sentences", () => {
   });
 
   it("should pin the Open Food Facts notices", () => {
-    expect(OPEN_FOOD_FACTS_BUSY).toBe("Open Food Facts is busy");
+    expect(SEARCH_RATE_LIMITED).toBe("Too many searches just now");
     expect(OPEN_FOOD_FACTS_SEARCH_FAILED).toEqual({
       title: "Open Food Facts could not be searched right now",
       body: "Your own results still work. Change your search to try again.",

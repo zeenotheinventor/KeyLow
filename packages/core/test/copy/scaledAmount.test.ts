@@ -123,6 +123,19 @@ describe("describeScaledAmount of the frittata", () => {
   });
 });
 
+describe("describeScaledAmount of a portion with no size", () => {
+  it("should write the count and the label with no weight in brackets", () => {
+    expect(
+      describeScaledAmount({
+        unit: "portion",
+        quantity: 2,
+        resolvedGrams: 0,
+        portion: { label: "1 bucket" },
+      }),
+    ).toBe("2 × 1 bucket");
+  });
+});
+
 describe("describeScaledAmount counts", () => {
   it("should write 1.33 of a medium onion for 4 servings out of 3", () => {
     expect(scaledTo(asPortions(1, 110, mediumOnion), 4, 3)).toBe("1.33 × 1 medium (147 g)");
@@ -350,5 +363,64 @@ describe("describeScaledAmount properties", () => {
         expect(text.replaceAll(",", "")).toBe(`${grams} g`);
       }),
     );
+  });
+});
+
+describe("describeScaledAmount of an estimated portion", () => {
+  it("should say about before the grams", () => {
+    expect(
+      describeScaledAmount({
+        unit: "portion",
+        quantity: 2,
+        resolvedGrams: 300,
+        portion: { label: "1 typical serving", grams: 150 },
+      }),
+    ).toBe("2 × 1 typical serving (about 300 g)");
+  });
+});
+
+describe("describeScaledAmount of a portion measured in millilitres that is not a spoon", () => {
+  it("should write an estimated portion in millilitres, with about", () => {
+    expect(
+      describeScaledAmount({
+        unit: "portion",
+        quantity: 1,
+        resolvedGrams: 206,
+        portion: { label: "1 typical glass", ml: 200 },
+      }),
+    ).toBe("1 typical glass (about 200 ml)");
+  });
+
+  it("should write the scaled volume of several cans with a thousands separator", () => {
+    expect(
+      describeScaledAmount({
+        unit: "portion",
+        quantity: 4,
+        resolvedGrams: 1360,
+        portion: { label: "1 can", ml: 330 },
+      }),
+    ).toBe("4 × 1 can (1,320 ml)");
+  });
+
+  it("should not write the size twice when the label already says it", () => {
+    expect(
+      describeScaledAmount({
+        unit: "portion",
+        quantity: 1,
+        resolvedGrams: 250,
+        portion: { label: "250 ml", ml: 250 },
+      }),
+    ).toBe("250 ml");
+  });
+
+  it("should read as the diary row does", () => {
+    const amount: LoggedAmount = {
+      unit: "portion",
+      quantity: 2,
+      resolvedGrams: 660,
+      portion: { label: "1 can", ml: 330 },
+    };
+
+    expect(describeScaledAmount(amount)).toBe(describeLoggedAmount(amount));
   });
 });

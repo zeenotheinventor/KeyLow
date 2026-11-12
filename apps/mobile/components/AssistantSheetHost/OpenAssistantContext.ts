@@ -11,7 +11,7 @@ const noHost: AssistantOpener = {
 
 export const OpenAssistantContext = createContext<AssistantOpener>(noHost);
 
-/** What opens the assistant sheet, from the diary's button or from Describe in Log food. */
+/** What opens the assistant sheet, from the diary's button, the Train header's or Describe in Log food. */
 export function useOpenAssistant(): AssistantOpener["open"] {
   return useContext(OpenAssistantContext).open;
 }

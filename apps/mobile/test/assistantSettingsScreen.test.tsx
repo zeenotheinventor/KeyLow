@@ -54,7 +54,7 @@ jest.mock(
 );
 
 const FIRST_PARAGRAPH =
-  "The assistant answers questions about your diary, weight and targets, and logs, copies and changes entries for you. Every change shows as a card with Undo.";
+  "The assistant answers questions about your diary, weight, targets and training. It logs, copies and changes entries for you, builds and changes your routines, and changes your training goals, custom exercises and past workouts. Every change shows as a card with Undo.";
 const SECOND_PARAGRAPH =
   "To do this, your messages and the Ki-Lo data the assistant reads are sent to Anthropic, the company that runs its AI model, as Ki-Lo's processor. Anthropic keeps them for up to 30 days. Ki-Lo keeps your conversations until you delete them.";
 const DIALOG_BODY =
@@ -187,7 +187,9 @@ describe("the Assistant settings screen", () => {
 
       expect(switchRow()).toBeChecked();
       expect(
-        screen.getByText("On. Open it from the Diary header or Describe in Log food."),
+        screen.getByText(
+          "On. Open it from the Diary header, the Train header or Describe in Log food.",
+        ),
       ).toBeOnTheScreen();
     });
 

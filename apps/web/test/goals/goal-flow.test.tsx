@@ -148,11 +148,8 @@ describe("the second and third questions", () => {
   it("should go on to the fourth question from the days", async () => {
     goalsBackend.row = storedGoalRow;
     renderGoalFlow(router, "/goal/3");
-    const next = await nextButton();
-    // The fourth question is not built yet, so the push is watched and the page stays on the days.
-    router.push.mockImplementation(() => undefined);
 
-    await userEvent.click(next);
+    await userEvent.click(await nextButton());
 
     expect(router.push).toHaveBeenCalledWith("/goal/4");
   });
@@ -238,14 +235,14 @@ describe("closing the questionnaire", () => {
     expect(router.replace).toHaveBeenCalledWith("/more");
   });
 
-  it("should not ask when the answers are only the goal that was stored", async () => {
+  it("should not ask when the answers are only the goal that was stored, and leave for the Goal page", async () => {
     goalsBackend.row = storedGoalRow;
     renderGoalFlow(router);
 
     await userEvent.click(await screen.findByRole("button", { name: "Cancel" }));
 
     expect(screen.queryByRole("dialog")).toBeNull();
-    expect(router.replace).toHaveBeenCalledWith("/more");
+    expect(router.replace).toHaveBeenCalledWith("/goal");
   });
 
   it("should ask when an answer was changed from the stored goal", async () => {

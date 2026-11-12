@@ -1,5 +1,6 @@
 import { assert, assertEquals } from "@std/assert";
 
+import { toolRegistry } from "../_shared/assistant/registry.ts";
 import { allowedToolsFor } from "./allowlist.ts";
 
 import type { AllowlistTool } from "./allowlist.ts";
@@ -282,3 +283,171 @@ Deno.test("a write tool added to the list lands in the general set and not the r
 Deno.test("the answer is the same on every call for the same input", () => {
   assertEquals(allowed("log two eggs"), allowed("log two eggs"));
 });
+
+Deno.test(
+  "the training reads of the real registry land in the read set with no change here",
+  () => {
+    const registered = toolRegistry.list.map((tool) => ({
+      name: tool.name,
+      readOnlyHint: tool.annotations.readOnlyHint,
+    }));
+    const readSet = allowedToolsFor({
+      text: "what's in my push day?",
+      pendingConfirmationTool: null,
+      tools: registered,
+    });
+
+    for (const name of [
+      "search_exercises",
+      "get_routines",
+      "get_training_goals",
+      "get_exercise_progress",
+    ]) {
+      assert(readSet.includes(name), name);
+    }
+    assertEquals(readSet.includes("log_entry"), false);
+  },
+);
+
+Deno.test("a question about the muscles of an exercise reaches show_exercise_muscles", () => {
+  const registered = toolRegistry.list.map((tool) => ({
+    name: tool.name,
+    readOnlyHint: tool.annotations.readOnlyHint,
+  }));
+  for (const text of [
+    "What muscles does a Romanian deadlift work?",
+    "Show me what a squat works",
+    "Which works my hamstrings more, Romanian deadlift or leg curl?",
+  ]) {
+    const tools = allowedToolsFor({ text, pendingConfirmationTool: null, tools: registered });
+    assert(tools.includes("show_exercise_muscles"), text);
+    assert(tools.includes("search_exercises"), text);
+  }
+});
+
+Deno.test("a question about the form of an exercise reaches show_exercise_form", () => {
+  const registered = toolRegistry.list.map((tool) => ({
+    name: tool.name,
+    readOnlyHint: tool.annotations.readOnlyHint,
+  }));
+  // "How" and "What's" open as a read. "Show" and "Can" do not, so those two get the general set.
+  for (const text of [
+    "How do I do a Romanian deadlift?",
+    "Show me squat form",
+    "What's proper form for a bench press?",
+    "Can you show me a video of a hip thrust?",
+  ]) {
+    const tools = allowedToolsFor({ text, pendingConfirmationTool: null, tools: registered });
+    assert(tools.includes("show_exercise_form"), text);
+    assert(tools.includes("search_exercises"), text);
+  }
+});
+
+Deno.test("a training question gets the read set", () => {
+  for (const text of [
+    "What should I train today?",
+    "Why has my bench stalled?",
+    "Am I doing enough for my back?",
+  ]) {
+    assertEquals(allowed(text), ["search_foods", "get_food", "get_day", "ask_user"], text);
+  }
+});
+
+Deno.test("a request to change training gets the general set", () => {
+  for (const text of [
+    "Swap bench for incline",
+    "Make Push Pull Legs active",
+    "Delete yesterday's workout",
+  ]) {
+    assert(allowed(text).includes("log_entry"), text);
+  }
+});
+
+Deno.test("a question that holds a change word falls to the general set", () => {
+  assert(allowed("Should I add more sets?").includes("log_entry"));
+});
+
+Deno.test("a request to build a routine is not a read and reaches create_routine", () => {
+  const listed = [read("search_exercises"), write("create_routine"), read("ask_user")];
+  for (const text of ["Build me a push pull legs routine", "Can you make me a routine?"]) {
+    assert(
+      allowedToolsFor({ text, pendingConfirmationTool: null, tools: listed }).includes(
+        "create_routine",
+      ),
+      text,
+    );
+  }
+});
+
+// The one write the read set holds, so the offer to send a feature request is there for a question such as
+// "Is there a dark mode in Ki-Lo?". It writes only after the person presses its button (ADR 0006, Amendment 4).
+Deno.test("request_feature is in the read set, the general set and not the import set", () => {
+  const withRequest = [...tools, write("request_feature")];
+  const allowedWith = (text: string) =>
+    allowedToolsFor({ text, pendingConfirmationTool: null, tools: withRequest });
+
+  assertEquals(allowedWith("Is there a dark mode in Ki-Lo?"), [
+    "search_foods",
+    "get_food",
+    "get_day",
+    "ask_user",
+    "request_feature",
+  ]);
+  assert(allowedWith("Can you track my water intake?").includes("request_feature"));
+  assertEquals(
+    allowedWith("Is https://example.com/pancakes healthy?").includes("request_feature"),
+    false,
+  );
+});
+
+Deno.test("no other write joins the read set, whatever its name", () => {
+  const withWrites = [...tools, write("request_feature"), write("archive_recipe")];
+
+  const readSet = allowedToolsFor({
+    text: "what is my protein today?",
+    pendingConfirmationTool: null,
+    tools: withWrites,
+  });
+
+  assertEquals(readSet.includes("request_feature"), true);
+  assertEquals(readSet.includes("archive_recipe"), false);
+});
+
+Deno.test("the real registry's request_feature is in the read set", () => {
+  const registered = toolRegistry.list.map((tool) => ({
+    name: tool.name,
+    readOnlyHint: tool.annotations.readOnlyHint,
+  }));
+
+  const readSet = allowedToolsFor({
+    text: "Is there a dark mode in Ki-Lo?",
+    pendingConfirmationTool: null,
+    tools: registered,
+  });
+
+  assert(readSet.includes("request_feature"));
+  assertEquals(readSet.includes("log_entry"), false);
+});
+
+// The sentence of the eval case `feature-request-read-shaped-ask-still-offers` (KEY-977). It has no change word
+// and no request phrase, so it gets the read set, which is what proves the exception. Change both together.
+Deno.test(
+  "the read-shaped eval ask gets the read set with request_feature and no log_entry",
+  () => {
+    const listed = [
+      read("get_day"),
+      write("log_entry"),
+      write("request_feature"),
+      read("ask_user"),
+    ];
+
+    assertEquals(
+      allowedToolsFor({
+        text: "Does Ki-Lo let me share my diary with a coach?",
+        pendingConfirmationTool: null,
+        tools: listed,
+      }),
+      ["get_day", "request_feature", "ask_user"],
+    );
+  },
+);

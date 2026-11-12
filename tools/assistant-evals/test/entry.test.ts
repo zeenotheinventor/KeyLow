@@ -61,6 +61,16 @@ describe("the check:assistant entry", () => {
     expect(result.exitCode).toBe(0);
   }, 30_000);
 
+  it("should load the 41 ask cases through the runner the command uses", async () => {
+    const result = await tsx([
+      "--eval",
+      "import('./cases/ask.ts').then((module) => console.log(module.askCases.length))",
+    ]);
+
+    expect(result.stdout.trim()).toBe("41");
+    expect(result.exitCode).toBe(0);
+  }, 30_000);
+
   it("should print the missing key message and exit 1 when run with no key", async () => {
     const result = await tsx(["src/run.ts"], withoutKey);
 

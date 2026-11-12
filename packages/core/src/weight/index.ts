@@ -27,6 +27,13 @@ export { mapHealthSample, mapHealthSamples } from "./mapHealthSample";
 export { KILOGRAMS_PER_POUND, displayWeight, kgToLb, lbToKg } from "./units";
 export { isTrendSettling } from "./isTrendSettling";
 export { pointsInRange, rangeWindow, weighInsInRange } from "./ranges";
+export { prepareWeightChart } from "./prepareWeightChart";
+export type {
+  WeightChartAxis,
+  WeightChartData,
+  WeightChartReading,
+  WeightChartTrendPoint,
+} from "./chartTypes";
 export { weeklyRateKg } from "./weeklyRateKg";
 export {
   BODY_FAT_MAX_PCT,
@@ -45,7 +52,31 @@ export type {
   HealthBodyFatSample,
   HealthLeanMassSample,
 } from "./bodyTypes";
+export { bodyLineSeries } from "./bodyLineSeries";
+export { buildBodyCompositionCard } from "./buildBodyCompositionCard";
+export type {
+  BodyCompositionCardData,
+  BodyCompositionChartCardData,
+  BodyCompositionRangeEmptyCardData,
+  BodyCompositionSettlingCardData,
+} from "./buildBodyCompositionCard";
 export { bodyChangeOverRange, bodyPointsInRange, isBodyTrendSettling } from "./bodyTrendHelpers";
 export { computeBodyTrend } from "./computeBodyTrend";
 export { mapHealthBodyFatSamples, mapHealthLeanMassSamples } from "./mapHealthBodyMeasurements";
 export { composeBodySplit } from "./composeBodySplit";
+export { buildCompositionAxis } from "./buildCompositionAxis";
+export type {
+  BodyCompositionChartAxis,
+  BodyCompositionChartData,
+  BodyCompositionChartPlot,
+  BodyCompositionChartPoint,
+} from "./compositionChartTypes";
+export {
+  COMPOSITION_PLOT_PADDING,
+  COMPOSITION_VALUE_COLUMN_WIDTH,
+  compositionEmptyGridOffsets,
+  compositionPlotOffsetOf,
+} from "./compositionPlotLayout";
+export { prepareBodyCompositionChart } from "./prepareBodyCompositionChart";
+export { bodyCompositionSectionStage, bodyCompositionViewStage } from "./bodyCompositionStage";
+export type { BodyCompositionKindStatus, BodyCompositionStage } from "./bodyCompositionStage";

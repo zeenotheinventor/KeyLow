@@ -66,6 +66,25 @@ describe("useSkipSetup", () => {
     expect(isInvalidated(queryClient, keys.profiles.setupState)).toBe(true);
   });
 
+  it("should mark the cached setup state set up before anything reads it again, so a page change right after the escape is not sent back", async () => {
+    installSetupSaveFake(server);
+    const { queryClient, result } = await renderSignedIn();
+
+    await act(() => result.current.mutateAsync());
+
+    expect(queryClient.getQueryData(keys.profiles.setupState)).toEqual({ isSetUp: true });
+  });
+
+  it("should not make up a setup state when none was cached", async () => {
+    installSetupSaveFake(server);
+    const { queryClient, result } = await renderSignedIn();
+    queryClient.removeQueries({ queryKey: keys.profiles.setupState });
+
+    await act(() => result.current.mutateAsync());
+
+    expect(queryClient.getQueryData(keys.profiles.setupState)).toBeUndefined();
+  });
+
   it("should not touch the targets or the terms acceptance, which are not changed", async () => {
     installSetupSaveFake(server);
     const { queryClient, result } = await renderSignedIn();
@@ -90,6 +109,7 @@ describe("useSkipSetup", () => {
     });
     expect(result.current.error?.message).toBe("Could not mark your setup done (42501)");
     expect(isInvalidated(queryClient, keys.profiles.setupState)).toBe(false);
+    expect(queryClient.getQueryData(keys.profiles.setupState)).toEqual({ isSetUp: false });
   });
 
   it("should refuse before any request when nobody is signed in", async () => {

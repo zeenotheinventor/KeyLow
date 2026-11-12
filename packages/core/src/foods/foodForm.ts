@@ -1,4 +1,6 @@
-import type { Food, FoodPortion, NutrientBasis } from "../schemas/food";
+import { isGeneratedEstimate } from "./estimatedPortion";
+
+import type { CustomFoodBasis, Food, FoodPortion, NutrientBasis } from "../schemas/food";
 
 const PLAIN_DECIMAL = /^-?(\d+\.?\d*|\.\d+)$/;
 
@@ -21,10 +23,11 @@ export function parseFormNumber(text: string): number | undefined {
 }
 
 /** The unit every portion amount is in: grams under a per 100 g basis, millilitres under per 100 ml. */
-export const amountUnit = (basis: NutrientBasis): "g" | "ml" => (basis === "per_100g" ? "g" : "ml");
+export const amountUnit = (basis: CustomFoodBasis): "g" | "ml" =>
+  basis === "per_100g" ? "g" : "ml";
 
 /** The key a portion's amount has in the custom food input. */
-export const portionAmountKey = (basis: NutrientBasis): "grams" | "ml" =>
+export const portionAmountKey = (basis: CustomFoodBasis): "grams" | "ml" =>
   basis === "per_100g" ? "grams" : "ml";
 
 /** The nutrients the schema requires, in the order the forms draw them. Fibre may be left blank. */
@@ -40,7 +43,7 @@ export type FoodFormFields = {
   name: string;
   brand: string;
   barcode: string;
-  basis: NutrientBasis;
+  basis: CustomFoodBasis;
   kcal: string;
   protein_g: string;
   fat_g: string;
@@ -94,13 +97,24 @@ export function customFoodInputFrom(
 
 const numberToText = (value: number | null): string => (value === null ? "" : String(value));
 
-/** Fills the form from a stored food, with blank text for anything it lacks. */
+// A food per portion is a restaurant food, which a person can neither edit nor create, so no form holds one.
+function formBasisOf(basis: NutrientBasis): CustomFoodBasis {
+  if (basis === "per_portion") {
+    throw new RangeError("A food per portion cannot be put into a food form");
+  }
+  return basis;
+}
+
+/**
+ * Fills the form from a stored food, with blank text for anything it lacks. Throws a `RangeError` for a food
+ * per portion.
+ */
 export function foodToFormFields(food: Food): FoodFormFields {
   return {
     name: food.name,
     brand: food.brand ?? "",
     barcode: food.barcode ?? "",
-    basis: food.basis,
+    basis: formBasisOf(food.basis),
     kcal: numberToText(food.kcal),
     protein_g: numberToText(food.protein_g),
     fat_g: numberToText(food.fat_g),
@@ -116,6 +130,18 @@ export function portionToFormFields(portion: FoodPortion): PortionFormFields {
     amount: numberToText(portion.grams ?? portion.ml),
     isDefault: portion.is_default,
   };
+}
+
+/**
+ * Fills the portion rows of the form from a stored food's portions, leaving out the estimate the app
+ * generated. The estimate is not something the person typed, so the form shows only their own portions
+ * and saving derives it again. A portion the person named like an estimate is theirs and stays.
+ */
+export function portionsToFormFields(
+  food: Pick<Food, "basis" | "kcal" | "food_group">,
+  portions: readonly FoodPortion[],
+): PortionFormFields[] {
+  return isGeneratedEstimate(food, portions) ? [] : portions.map(portionToFormFields);
 }
 
 export type CopyFormStart = {

@@ -52,7 +52,7 @@ const goldens = [
         food_group: "breakfast-cereals",
       },
       portions: [
-        { label: "40 g", grams: 40, ml: null, isDefault: true },
+        { label: "1 serving", grams: 40, ml: null, isDefault: true },
         { label: "1 pack", grams: 500, ml: null, isDefault: false },
       ],
     },
@@ -78,7 +78,7 @@ const goldens = [
         quality: {},
         food_group: null,
       },
-      portions: [{ label: "1 pack", grams: 200, ml: null, isDefault: false }],
+      portions: [{ label: "1 serving", grams: 200, ml: null, isDefault: true }],
     },
   },
   {
@@ -102,7 +102,7 @@ const goldens = [
         quality: { kcal_derived: true },
         food_group: null,
       },
-      portions: [{ label: "1 pack", grams: 250, ml: null, isDefault: false }],
+      portions: [{ label: "1 serving", grams: 250, ml: null, isDefault: true }],
     },
   },
   {
@@ -129,7 +129,7 @@ const goldens = [
         food_group: null,
       },
       portions: [
-        { label: "30 g", grams: 30, ml: null, isDefault: true },
+        { label: "1 serving", grams: 30, ml: null, isDefault: true },
         { label: "1 pack", grams: 150, ml: null, isDefault: false },
       ],
     },
@@ -150,7 +150,7 @@ const goldens = [
         quality: allFourMacrosMissing,
         food_group: null,
       },
-      portions: [],
+      portions: [{ label: "1 typical serving", grams: 100, ml: null, isDefault: true }],
     },
   },
   {
@@ -173,7 +173,7 @@ const goldens = [
         quality: { suspect: true, fields_missing: ["protein_g"] },
         food_group: null,
       },
-      portions: [{ label: "1 pack", grams: 300, ml: null, isDefault: false }],
+      portions: [{ label: "1 serving", grams: 300, ml: null, isDefault: true }],
     },
   },
   {
@@ -200,7 +200,7 @@ const goldens = [
         food_group: "beverages",
       },
       portions: [
-        { label: "250 ml", grams: null, ml: 250, isDefault: true },
+        { label: "1 serving", grams: null, ml: 250, isDefault: true },
         { label: "1 pack", grams: null, ml: 1000, isDefault: false },
       ],
     },
@@ -253,7 +253,10 @@ const goldens = [
         },
         food_group: null,
       },
-      portions: [{ label: "1 pack", grams: 200, ml: null, isDefault: false }],
+      portions: [
+        { label: "1 typical serving", grams: 40, ml: null, isDefault: true },
+        { label: "1 pack", grams: 200, ml: null, isDefault: false },
+      ],
     },
   },
   {
@@ -278,7 +281,7 @@ const goldens = [
         quality: {},
         food_group: null,
       },
-      portions: [{ label: "1 pack", grams: 100, ml: null, isDefault: false }],
+      portions: [{ label: "1 serving", grams: 100, ml: null, isDefault: true }],
     },
   },
   {
@@ -297,7 +300,10 @@ const goldens = [
         quality: allFourMacrosMissing,
         food_group: null,
       },
-      portions: [{ label: "1 pack", grams: 800, ml: null, isDefault: false }],
+      portions: [
+        { label: "1 typical serving", grams: 100, ml: null, isDefault: true },
+        { label: "1 pack", grams: 800, ml: null, isDefault: false },
+      ],
     },
   },
   {
@@ -324,7 +330,7 @@ const goldens = [
         food_group: null,
       },
       portions: [
-        { label: "50 g", grams: 50, ml: null, isDefault: true },
+        { label: "1 serving", grams: 50, ml: null, isDefault: true },
         { label: "1 pack", grams: 400, ml: null, isDefault: false },
       ],
     },
@@ -379,14 +385,14 @@ describe("normaliseOffProduct", () => {
         packaging_tags: ["en:metal", "en:can", "en:canned", "en:food-can"],
       });
       expect(portions).toEqual([
-        { label: "40 g", grams: 40, ml: null, isDefault: true },
+        { label: "1 serving", grams: 40, ml: null, isDefault: true },
         { label: "1 can", grams: 415, ml: null, isDefault: false },
       ]);
     });
 
-    it("should offer the pack alone, not as the default, without a serving", () => {
+    it("should open on the pack, read as a serving, when there is no serving and the pack is one item", () => {
       const { portions } = normaliseOk(fixtures.macrosOnly);
-      expect(portions).toEqual([{ label: "1 pack", grams: 250, ml: null, isDefault: false }]);
+      expect(portions).toEqual([{ label: "1 serving", grams: 250, ml: null, isDefault: true }]);
     });
   });
 
@@ -442,7 +448,9 @@ describe("normaliseOffProduct", () => {
 
     it("should borrow nothing when the energy is not that of an egg", () => {
       const { portions } = normaliseOk({ ...boxOfEggs, nutriments: { "energy-kcal_100g": 0 } });
-      expect(portions).toEqual([]);
+      expect(portions).toEqual([
+        { label: "1 typical serving", grams: 5, ml: null, isDefault: true },
+      ]);
     });
 
     it("should keep the serving as the default of a box of eggs", () => {
@@ -525,7 +533,7 @@ describe("normaliseOffProduct", () => {
         ...fixtures.kcalPresent,
         packaging_tags: "en:can",
       });
-      expect(portions.map((portion) => portion.label)).toEqual(["40 g", "1 pack"]);
+      expect(portions.map((portion) => portion.label)).toEqual(["1 serving", "1 pack"]);
     });
 
     it("should treat nutriments that is not an object as empty", () => {
@@ -620,7 +628,7 @@ describe("offProductPayloadSchema", () => {
 
 describe("normaliseOffCandidate", () => {
   it("should give the search preview of a product", () => {
-    expect(normaliseOffCandidate(fixtures.kcalPresent)).toEqual({
+    expect(normaliseOffCandidate(fixtures.kcalPresent)).toMatchObject({
       code: "5000000010011",
       name: "Test Oat Crunch",
       brand: "Northfield Mills",
@@ -631,6 +639,41 @@ describe("normaliseOffCandidate", () => {
       carbs_g: 62,
       fibre_g: 8,
       quality: {},
+    });
+  });
+
+  it("should carry the default portion the product would be stored with", () => {
+    const raw = {
+      ...fixtures.kcalPresent,
+      serving_size: "1 burger (240 g)",
+      serving_quantity: 240,
+    };
+
+    expect(normaliseOffCandidate(raw)?.default_portion).toEqual({
+      label: "1 burger (240 g)",
+      grams: 240,
+      ml: null,
+    });
+  });
+
+  it("should carry an estimate when the product has nothing to size it by", () => {
+    const candidate = normaliseOffCandidate({
+      code: "5000000010011",
+      product_name: "Test Oat Crunch",
+      nutriments: { "energy-kcal_100g": 380 },
+    });
+
+    expect(candidate?.default_portion?.label).toBe("1 typical serving");
+  });
+
+  it("should carry the same portion as the one normaliseOffProduct marks as the default", () => {
+    const result = normaliseOffProduct(fixtures.liquidMl);
+    const defaultPortion = result.ok ? result.portions.find((portion) => portion.isDefault) : null;
+
+    expect(normaliseOffCandidate(fixtures.liquidMl)?.default_portion).toEqual({
+      label: defaultPortion?.label,
+      grams: defaultPortion?.grams,
+      ml: defaultPortion?.ml,
     });
   });
 

@@ -7,8 +7,8 @@ import { Card, Text } from "../ui";
 import type { NutrientTableProps } from "./types";
 
 /** The nutrition of a food per 100 g or 100 ml, as the boards draw it: a heading over a card of rows. */
-export function NutrientTable({ food, note }: NutrientTableProps) {
-  const heading = describeNutritionHeading(food.basis);
+export function NutrientTable({ food, note, portionLabel }: NutrientTableProps) {
+  const heading = describeNutritionHeading(food.basis, portionLabel);
 
   return (
     <View className="gap-2">

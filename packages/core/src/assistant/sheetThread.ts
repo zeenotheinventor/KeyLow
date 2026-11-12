@@ -1,12 +1,22 @@
+import { replyWords } from "./replyText";
 import {
   ASSISTANT_CARD_WORDS,
   ASSISTANT_OFFLINE,
   describeAssistantNotice,
   describeAssistantStatus,
 } from "../copy/assistantNotices";
-import { ASSISTANT_DESCRIBE, ASSISTANT_SHEET, describeLogsAt } from "../copy/assistantSheet";
+import {
+  ASSISTANT_DESCRIBE,
+  ASSISTANT_SHEET,
+  ASSISTANT_TRAIN_SHEET,
+  describeLogsAt,
+} from "../copy/assistantSheet";
 
-import type { AssistantCard } from "./card";
+import type { AssistantCard, AssistantCardLink } from "./card";
+import type { AssistantOpenedFrom } from "./describeInLog";
+import type { AssistantStatus } from "./events";
+import type { AssistantExerciseFormMedia } from "./exerciseFormCard";
+import type { AssistantExerciseMuscles } from "./exerciseMusclesCard";
 import type { AssistantNotice } from "./notice";
 import type { AssistantThreadItem } from "./thread";
 import type { DescribableAssistantNotice } from "../copy/assistantNotices";
@@ -19,7 +29,8 @@ import type { DescribableAssistantNotice } from "../copy/assistantNotices";
  * `confirm`): its words, then the quick replies or the two buttons, which are gone once the person has
  * sent their next message. An answer from the person's data carries its citation and, for the trend
  * weight, its Estimate line, exactly as the tool sent them (`assistant · answer`, `answer-estimate`), and
- * a recipe link shows the working line while its page is read (`assistant · recipe-reading`).
+ * the working line shows the turn's current step under your message, "Thinking" until the assistant says
+ * more (`assistant · working`, `assistant · recipe-reading`).
  */
 
 /** What the sheet needs of the turn being written: the part of `AssistantLiveTurn` it draws. */
@@ -29,8 +40,8 @@ export type AssistantSheetLiveTurn = {
   cards: readonly AssistantCard[];
   /** The line under the answer and the Estimate badge, sent at the end of an answer from the person's data. */
   answerMeta: { citation: string | null; estimate: string | null } | null;
-  /** The recipe page being read, until the next event of the turn. */
-  status: { code: "reading_recipe"; host: string } | null;
+  /** The step the assistant is on, until the next event of the turn. */
+  status: AssistantStatus | null;
   /** The question that ended the turn, with the words in the field and up to three quick replies. */
   clarify: {
     question: string;
@@ -44,8 +55,18 @@ export type AssistantSheetLiveTurn = {
     cancelLabel: string;
     tone: "danger" | "primary";
   } | null;
+  /** The muscles of each exercise the turn showed, in call order, drawn under its words. */
+  exerciseMuscles?: readonly AssistantExerciseMuscles[] | undefined;
+  /** The form media of each exercise the turn showed, in call order, drawn under its words. */
+  exerciseFormMedia?: readonly AssistantExerciseFormMedia[] | undefined;
+  /** A link on its own that the turn sent, drawn under its words. */
+  link?: AssistantCardLink | null | undefined;
+  /** Whether the turn sent the Ask again quick reply. It is offered once the turn has ended. */
+  askAgain?: boolean | undefined;
   stopped: boolean;
   notice: AssistantNotice | null;
+  /** How the turn ended, null while it is still going or when it was stopped. */
+  outcome: "complete" | "clarify" | "confirm" | "failed" | null;
 };
 
 /**
@@ -72,6 +93,29 @@ export type AssistantSheetEntry =
       options: string[];
     }
   | {
+      /** The muscles an exercise works, a flat card with a figure and a row for each role (`assistant-card · exercise-muscles`). */
+      kind: "exerciseMuscles";
+      key: string;
+      exercise: AssistantExerciseMuscles;
+    }
+  | {
+      /** The form video or photos of an exercise, the form media card (`assistant-card · exercise-form`). */
+      kind: "exerciseFormMedia";
+      key: string;
+      exercise: AssistantExerciseFormMedia;
+    }
+  | {
+      /** A link on its own, a line that opens what the answer is about (`assistant-card · routine-updated`, Removing a day). */
+      kind: "link";
+      key: string;
+      link: AssistantCardLink;
+    }
+  | {
+      /** The turn offers Ask again. It is drawn as the quick reply at the end of the thread, as for an answer that was cut short, and has no entry of its own. */
+      kind: "askAgain";
+      key: string;
+    }
+  | {
       /** The two buttons under a confirmation: yes first, then the cancel. Each is sent as your message. */
       kind: "confirm";
       key: string;
@@ -91,7 +135,7 @@ export type AssistantSheetEntry =
       estimate: AssistantSheetEstimate | null;
     }
   | {
-      /** The working line under your message while a recipe page is read. */
+      /** The working line under your message while the assistant works with no words to show. */
       kind: "status";
       key: string;
       text: string;
@@ -108,11 +152,11 @@ export type AssistantSheetThread = {
   entries: AssistantSheetEntry[];
   /** Your last message, which Try again and Ask again send again. Null before the first one. */
   lastMessage: string | null;
-  /** Whether the thread ends in an answer that was cut short, which offers the Ask again quick reply. */
+  /** Whether the thread ends in an answer that was cut short, or a turn that asked for it, which offers the Ask again quick reply. */
   canAskAgain: boolean;
   /** The words in the empty field while a clarifying question waits for its answer ("Or say it your way"), else null. */
   fieldHint: string | null;
-  /** Whether the sheet is to be at full height, which a recipe import card needs so its ingredient list shows. */
+  /** Whether the sheet is to be at full height, which a recipe import card needs so its ingredient list shows, and so does a routine just built, so its days can open, and so does the muscles of an exercise, for its figure and its rows, and its form media. */
   needsFullHeight: boolean;
 };
 
@@ -154,6 +198,18 @@ const answerLinesOf = (
 /** A recipe made from a link: its lines say which food each matched, which a recipe made from typed ingredients has none of. */
 const isRecipeImportCard = (card: AssistantCard): boolean =>
   card.kind === "recipe_created" && card.rows.some((row) => row.match !== null);
+
+// A routine that was just built, whose days need the room to open (`assistant-card · routine-created`): the
+// thread's last card only, because an earlier one has been read already.
+function endsWithBuiltRoutine(entries: readonly AssistantSheetEntry[]): boolean {
+  for (let position = entries.length - 1; position >= 0; position -= 1) {
+    const entry = entries[position];
+    if (entry?.kind === "card") {
+      return entry.card.kind === "routine_created";
+    }
+  }
+  return false;
+}
 
 // Whether the paragraphs of a reply end with the paragraphs of a question: the question of a confirmation is
 // the text of the reply that asked it, and the live reply joins every step's words, so words can come first.
@@ -282,9 +338,40 @@ function storedEntries(items: readonly AssistantThreadItem[], isAllAnswered = fa
           entries.push({ kind: "notice", key: item.id, notice: item.notice });
         }
         break;
+      case "exercise_muscles":
+        entries.push({ kind: "exerciseMuscles", key: item.id, exercise: item.exercise });
+        break;
+      case "exercise_form_media":
+        entries.push({ kind: "exerciseFormMedia", key: item.id, exercise: item.exercise });
+        break;
+      case "link":
+        entries.push({ kind: "link", key: item.id, link: item.link });
+        break;
+      case "ask_again":
+        if (!item.answered && !isAllAnswered) {
+          entries.push({ kind: "askAgain", key: item.id });
+        }
+        break;
     }
   }
   return entries;
+}
+
+// The words of the working line while the turn streams: the step the function sent, else Thinking while there
+// is nothing else to show. That default is the part the app does by itself (press to first event, and every
+// plain answer), and a stop, a question, a notice or the end of the turn stop it flashing for the moment before `done`.
+function workingLineWords(live: AssistantSheetLiveTurn, hasWords: boolean): string | null {
+  if (live.status !== null) {
+    return describeAssistantStatus(live.status);
+  }
+  const hasSomethingElseToShow =
+    hasWords ||
+    live.stopped ||
+    live.clarify !== null ||
+    live.confirm !== null ||
+    live.notice !== null ||
+    live.outcome !== null;
+  return hasSomethingElseToShow ? null : describeAssistantStatus({ code: "thinking" });
 }
 
 function sentEntries(
@@ -299,23 +386,25 @@ function sentEntries(
   for (const [position, card] of live.cards.entries()) {
     entries.push({ kind: "card", key: `sent:card:${position}`, card });
   }
-  // While a recipe page is read no words arrive, so there is no caret to draw, and the working line stands in.
-  const status = isStreaming ? live.status : null;
-  const isWriting = isStreaming && status === null;
-  if (live.text.trim() !== "" || live.stopped || isWriting) {
-    const paragraphs = paragraphsOf(live.text);
+  // A marker the next chunk decides (a lone `**` or `-`) is held back, so it is not words yet and draws no caret.
+  const hasWords = replyWords(live.text, { isPartial: true }).trim() !== "";
+  // A step shows its line and no caret, and a text event clears the step, so words always replace the line.
+  const isWriting = isStreaming && live.status === null && hasWords;
+  // Words held back count once the turn is over: it has ended, or its outcome has arrived while the stream closes.
+  const isOver = !isStreaming || live.outcome !== null;
+  if (hasWords || live.stopped || (isOver && live.text.trim() !== "")) {
     entries.push({
       kind: "assistant",
       key: "sent:reply",
-      // One empty paragraph draws the caret alone, before the first words arrive.
-      paragraphs: isWriting && paragraphs.length === 0 ? [""] : paragraphs,
+      paragraphs: paragraphsOf(live.text),
       isStreaming: isWriting,
       isStopped: live.stopped && !isStreaming,
       ...answerLinesOf(live.answerMeta),
     });
   }
-  if (status !== null) {
-    entries.push({ kind: "status", key: "sent:status", text: describeAssistantStatus(status) });
+  const workingWords = isStreaming ? workingLineWords(live, hasWords) : null;
+  if (workingWords !== null) {
+    entries.push({ kind: "status", key: "sent:status", text: workingWords });
   }
   if (live.clarify !== null) {
     entries.push(...clarifyEntries("sent:clarify", live.clarify, false, entries.at(-1)));
@@ -323,8 +412,25 @@ function sentEntries(
   if (live.confirm !== null) {
     entries.push(...confirmEntries("sent:confirm", live.confirm, false, entries.at(-1)));
   }
+  for (const [position, exercise] of (live.exerciseMuscles ?? []).entries()) {
+    entries.push({ kind: "exerciseMuscles", key: `sent:exerciseMuscles:${position}`, exercise });
+  }
+  for (const [position, exercise] of (live.exerciseFormMedia ?? []).entries()) {
+    entries.push({
+      kind: "exerciseFormMedia",
+      key: `sent:exerciseFormMedia:${position}`,
+      exercise,
+    });
+  }
+  if (live.link !== undefined && live.link !== null) {
+    entries.push({ kind: "link", key: "sent:link", link: live.link });
+  }
   if (live.notice !== null && isDescribable(live.notice)) {
     entries.push({ kind: "notice", key: "sent:notice", notice: live.notice });
+  }
+  // A press while the turn is still streaming would be refused, so the chip waits for the end.
+  if (live.askAgain === true && !isStreaming) {
+    entries.push({ kind: "askAgain", key: "sent:askAgain" });
   }
   return entries;
 }
@@ -339,6 +445,19 @@ const liftsAt = (notice: DescribableAssistantNotice): string | null =>
 
 const isSameNotice = (first: DescribableAssistantNotice, second: DescribableAssistantNotice) =>
   first.code === second.code && liftsAt(first) === liftsAt(second);
+
+// The cards of the muscles and the form media come after the reply, so a reply that was cut short is the entry before them.
+function lastEntryBeforeCards(
+  entries: readonly AssistantSheetEntry[],
+): AssistantSheetEntry | undefined {
+  for (let position = entries.length - 1; position >= 0; position -= 1) {
+    const entry = entries[position];
+    if (entry?.kind !== "exerciseMuscles" && entry?.kind !== "exerciseFormMedia") {
+      return entry;
+    }
+  }
+  return undefined;
+}
 
 function lastMessageOf(entries: readonly AssistantSheetEntry[]): string | null {
   for (let position = entries.length - 1; position >= 0; position -= 1) {
@@ -390,7 +509,12 @@ export function isSentTurnStored(
         item.kind === "notice" ||
         item.kind === "clarify" ||
         item.kind === "confirm" ||
-        (item.kind === "card" && !hasWords),
+        item.kind === "ask_again" ||
+        ((item.kind === "card" ||
+          item.kind === "link" ||
+          item.kind === "exercise_muscles" ||
+          item.kind === "exercise_form_media") &&
+          !hasWords),
     );
 }
 
@@ -434,22 +558,27 @@ export function buildAssistantSheetThread({
   const entries = allDrafts.map((entry, position): AssistantSheetEntry =>
     entry.kind === "notice" ? { ...entry, isLatest: position === allDrafts.length - 1 } : entry,
   );
-  const last = entries.at(-1);
+  const last = lastEntryBeforeCards(entries);
 
   return {
     entries,
     lastMessage: lastMessageOf(entries),
-    canAskAgain: last?.kind === "assistant" && last.isStopped && !last.isStreaming,
+    canAskAgain:
+      (last?.kind === "assistant" && last.isStopped && !last.isStreaming) ||
+      entries.some((entry) => entry.kind === "askAgain"),
     fieldHint: fieldHintOf(items, isSentShown, live),
-    needsFullHeight: entries.some(
-      (entry) => entry.kind === "card" && isRecipeImportCard(entry.card),
-    ),
+    needsFullHeight:
+      entries.some((entry) => entry.kind === "card" && isRecipeImportCard(entry.card)) ||
+      endsWithBuiltRoutine(entries) ||
+      entries.some(
+        (entry) => entry.kind === "exerciseMuscles" || entry.kind === "exerciseFormMedia",
+      ),
   };
 }
 
 /**
- * Send is on for a message with words, while the app is online, no answer is arriving, no recipe page is
- * being read, and the stored conversation has been read (a read that failed counts) and is not being read
+ * Send is on for a message with words, while the app is online, no answer is arriving, no step of the
+ * turn is showing, and the stored conversation has been read (a read that failed counts) and is not being read
  * again. Before that the conversation's id is not known, and a message would start a new conversation by
  * accident.
  */
@@ -465,8 +594,8 @@ type AssistantSendState = {
   isOnline: boolean;
   isThreadKnown: boolean;
   isThreadFetching: boolean;
-  /** The turn's status is `reading_recipe`: a recipe page is being read, until the next event of the turn. */
-  isReadingRecipe: boolean;
+  /** The turn has a step showing (any status), until the next event of the turn. */
+  isWorking: boolean;
   access: AssistantSheetAccess;
 };
 
@@ -480,12 +609,12 @@ export function canAnswerAssistantQuestion({
   isOnline,
   isThreadKnown,
   isThreadFetching,
-  isReadingRecipe,
+  isWorking,
   access,
 }: AssistantSendState): boolean {
   return (
     !isStreaming &&
-    !isReadingRecipe &&
+    !isWorking &&
     isOnline &&
     isThreadKnown &&
     !isThreadFetching &&
@@ -574,6 +703,24 @@ export function resolveAssistantSheetAccess({
   return accessOfNotice(statusNotice) ?? { kind: "open" };
 }
 
+/**
+ * Whether the sheet draws its loading placeholder (`assistant · opening`) in place of a thread: while the
+ * status is read, and when the assistant is open but the stored conversation has not been read yet and
+ * there is nothing to draw. The consent card and a limit are never behind it, and neither is a conversation
+ * that is known, whose starters are drawn once the read settles.
+ */
+export function isAssistantSheetOpening({
+  access,
+  isEmpty,
+  isThreadKnown,
+}: {
+  access: AssistantSheetAccess;
+  isEmpty: boolean;
+  isThreadKnown: boolean;
+}): boolean {
+  return access.kind === "checking" || (access.kind === "open" && isEmpty && !isThreadKnown);
+}
+
 export type AssistantComposerLook =
   | { isShown: false }
   | {
@@ -585,32 +732,38 @@ export type AssistantComposerLook =
     };
 
 /**
- * The composer under the thread: gone for the consent card and while the status is read, off with the
- * notice's own words when the assistant is limited (in the person's time zone), off with the offline
- * words while offline, else on with the sheet's placeholder. Opened from Describe (`describeAt` is the
- * time it logs at) it asks for a meal instead, and says when the meal is logged while the field is on.
+ * The composer under the thread: gone for the consent card only, off with the notice's own words when the
+ * assistant is limited (in the person's time zone), off with the offline words while offline, else on with
+ * the sheet's placeholder. It is on while the status is read, as when open, so the sheet that opens on its
+ * loading placeholder (`assistant · opening`) shows the field at once, and Send stays off until the
+ * conversation is known. Opened from Describe (`describeAt` is the time it logs at) it asks for a meal
+ * instead, and says when the meal is logged while the field is on.
  */
 export function describeAssistantComposer({
   access,
   isOnline,
   timeZone,
   describeAt,
+  from,
   fieldHint = null,
 }: {
   access: AssistantSheetAccess;
   isOnline: boolean;
   timeZone: string;
   describeAt?: string | undefined;
+  /** The Train header, which asks about training in the field. */
+  from?: AssistantOpenedFrom | undefined;
   /** The words of a clarifying question waiting for its answer, which the field shows in place of its own. */
   fieldHint?: string | null | undefined;
 }): AssistantComposerLook {
   const placeholder =
     fieldHint ??
-    (describeAt === undefined
-      ? ASSISTANT_SHEET.composerPlaceholder
-      : ASSISTANT_DESCRIBE.composerPlaceholder);
+    (describeAt !== undefined
+      ? ASSISTANT_DESCRIBE.composerPlaceholder
+      : from === "train"
+        ? ASSISTANT_TRAIN_SHEET.composerPlaceholder
+        : ASSISTANT_SHEET.composerPlaceholder);
   switch (access.kind) {
-    case "checking":
     case "consent":
       return { isShown: false };
     case "limited":
@@ -619,6 +772,7 @@ export function describeAssistantComposer({
         isFieldDisabled: true,
         placeholder: describeAssistantNotice(access.notice, timeZone).fieldText ?? placeholder,
       };
+    case "checking":
     case "open":
       if (!isOnline) {
         return { isShown: true, isFieldDisabled: true, placeholder: ASSISTANT_OFFLINE.fieldText };

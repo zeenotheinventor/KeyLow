@@ -1,4 +1,6 @@
+import { useBodyCompositionKind } from "@keylow/api-client";
 import { BODY_COMPOSITION } from "@keylow/core/copy";
+import { bodyCompositionSectionStage } from "@keylow/core/weight";
 import { useRouter } from "expo-router";
 import { Text as NativeText, View } from "react-native";
 
@@ -6,7 +8,6 @@ import { useReadsEnabled } from "../../lib/useReadsEnabled";
 import { BodyCompositionCard } from "../BodyCompositionCard";
 import { BodyCompositionPrompt } from "../BodyCompositionPrompt";
 import { Skeleton, Text } from "../ui";
-import { useBodyCompositionKind } from "./useBodyCompositionKind";
 
 import type { BodyCompositionSectionProps } from "./types";
 import type { BodyMeasurementKind } from "@keylow/core/weight";
@@ -39,12 +40,12 @@ export function BodyCompositionSection({
   const router = useRouter();
   const isReadEnabled = useReadsEnabled();
   const bodyFat = useBodyCompositionKind("body_fat_pct", {
-    isEnabled: access.bodyFat && isReadEnabled,
+    enabled: access.bodyFat && isReadEnabled,
     range,
     today,
   });
   const leanMass = useBodyCompositionKind("lean_mass_kg", {
-    isEnabled: access.leanMass && isReadEnabled,
+    enabled: access.leanMass && isReadEnabled,
     range,
     today,
   });
@@ -104,7 +105,16 @@ export function BodyCompositionSection({
         />
       );
     }
-    if (readings.some((reading) => reading.status === "loading")) {
+    const cards = readings.flatMap((reading) =>
+      reading.status === "readings" ? [reading.card] : [],
+    );
+    // The phone has no paused reads, so it is always online here.
+    const stage = bodyCompositionSectionStage({
+      statuses: readings.map((reading) => reading.status),
+      hasCards: cards.length > 0,
+      isOnline: true,
+    });
+    if (stage === "loading") {
       return (
         <View
           accessible
@@ -116,7 +126,7 @@ export function BodyCompositionSection({
         </View>
       );
     }
-    if (readings.some((reading) => reading.status === "error")) {
+    if (stage === "error") {
       return (
         <BodyCompositionPrompt
           retry={BODY_COMPOSITION.error.retry}
@@ -133,9 +143,6 @@ export function BodyCompositionSection({
         />
       );
     }
-    const cards = readings.flatMap((reading) =>
-      reading.status === "readings" ? [reading.card] : [],
-    );
 
     return (
       <>

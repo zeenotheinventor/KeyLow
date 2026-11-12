@@ -407,6 +407,41 @@ export type Database = {
         };
         Relationships: [];
       };
+      exercise_form_videos: {
+        Row: {
+          channel: string;
+          created_at: string;
+          exercise_id: string;
+          title: string;
+          verified_on: string;
+          youtube_video_id: string;
+        };
+        Insert: {
+          channel: string;
+          created_at?: string;
+          exercise_id: string;
+          title: string;
+          verified_on: string;
+          youtube_video_id: string;
+        };
+        Update: {
+          channel?: string;
+          created_at?: string;
+          exercise_id?: string;
+          title?: string;
+          verified_on?: string;
+          youtube_video_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "exercise_form_videos_exercise_id_fkey";
+            columns: ["exercise_id"];
+            isOneToOne: true;
+            referencedRelation: "exercises";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       exercise_import_runs: {
         Row: {
           created_at: string;
@@ -612,6 +647,33 @@ export type Database = {
             referencedColumns: ["id"];
           },
         ];
+      };
+      feature_requests: {
+        Row: {
+          context: Json | null;
+          created_at: string;
+          id: string;
+          request: string;
+          source: string;
+          user_id: string;
+        };
+        Insert: {
+          context?: Json | null;
+          created_at?: string;
+          id?: string;
+          request: string;
+          source: string;
+          user_id?: string;
+        };
+        Update: {
+          context?: Json | null;
+          created_at?: string;
+          id?: string;
+          request?: string;
+          source?: string;
+          user_id?: string;
+        };
+        Relationships: [];
       };
       food_favourites: {
         Row: {
@@ -936,6 +998,24 @@ export type Database = {
           id?: string;
           position?: number;
           size_class?: Database["public"]["Enums"]["muscle_size_class"];
+        };
+        Relationships: [];
+      };
+      off_search_results: {
+        Row: {
+          candidates: Json;
+          fetched_at: string;
+          query_key: string;
+        };
+        Insert: {
+          candidates: Json;
+          fetched_at?: string;
+          query_key: string;
+        };
+        Update: {
+          candidates?: Json;
+          fetched_at?: string;
+          query_key?: string;
         };
         Relationships: [];
       };
@@ -1703,8 +1783,22 @@ export type Database = {
           retry_after_seconds: number;
         }[];
       };
+      create_food: { Args: { p_food: Json; p_portions: Json }; Returns: Json };
       delete_workout_session: {
         Args: { p_session_id: string };
+        Returns: undefined;
+      };
+      exercise_form_media: {
+        Args: { p_exercise_id: string };
+        Returns: {
+          image_paths: string[];
+          video_channel: string;
+          video_id: string;
+          video_title: string;
+        }[];
+      };
+      give_foods_default_portions: {
+        Args: { p_food_ids?: string[] };
         Returns: undefined;
       };
       has_entitlement: {
@@ -1737,6 +1831,10 @@ export type Database = {
           p_user_id: string;
         };
         Returns: string;
+      };
+      replace_food_portions: {
+        Args: { p_food_id: string; p_portions: Json };
+        Returns: Json;
       };
       save_exercise: {
         Args: { p_exercise: Json; p_exercise_id: string; p_muscles: Json };
@@ -1782,6 +1880,14 @@ export type Database = {
         Args: { p_food: Json; p_portions: Json; p_raw: Json };
         Returns: Json;
       };
+      store_off_search_results: {
+        Args: {
+          p_candidates: Json;
+          p_keep_seconds: number;
+          p_query_key: string;
+        };
+        Returns: undefined;
+      };
       training_focus_is_valid: { Args: { focus: string[] }; Returns: boolean };
     };
     Enums: {
@@ -1801,13 +1907,13 @@ export type Database = {
       exercise_mechanic: "compound" | "isolation";
       exercise_source: "free_exercise_db" | "user";
       experience_level: "beginner" | "intermediate" | "advanced";
-      food_source: "off" | "cofid" | "user" | "usda";
+      food_source: "off" | "cofid" | "user" | "usda" | "restaurant";
       goal_type: "lose" | "maintain" | "gain";
       log_item_type: "food" | "recipe" | "quick";
       muscle_group: "chest" | "shoulders" | "back" | "arms" | "core" | "legs" | "neck";
       muscle_role: "primary" | "secondary" | "stabiliser";
       muscle_size_class: "small" | "medium" | "large";
-      nutrient_basis: "per_100g" | "per_100ml";
+      nutrient_basis: "per_100g" | "per_100ml" | "per_portion";
       set_type: "warmup" | "working" | "drop" | "failure";
       training_goal: "aesthetic" | "strength" | "hybrid";
       weigh_in_source: "manual" | "healthkit" | "health_connect" | "import";
@@ -1952,13 +2058,13 @@ export const Constants = {
       exercise_mechanic: ["compound", "isolation"],
       exercise_source: ["free_exercise_db", "user"],
       experience_level: ["beginner", "intermediate", "advanced"],
-      food_source: ["off", "cofid", "user", "usda"],
+      food_source: ["off", "cofid", "user", "usda", "restaurant"],
       goal_type: ["lose", "maintain", "gain"],
       log_item_type: ["food", "recipe", "quick"],
       muscle_group: ["chest", "shoulders", "back", "arms", "core", "legs", "neck"],
       muscle_role: ["primary", "secondary", "stabiliser"],
       muscle_size_class: ["small", "medium", "large"],
-      nutrient_basis: ["per_100g", "per_100ml"],
+      nutrient_basis: ["per_100g", "per_100ml", "per_portion"],
       set_type: ["warmup", "working", "drop", "failure"],
       training_goal: ["aesthetic", "strength", "hybrid"],
       weigh_in_source: ["manual", "healthkit", "health_connect", "import"],

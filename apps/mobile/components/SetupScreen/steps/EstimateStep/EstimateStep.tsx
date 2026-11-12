@@ -1,9 +1,7 @@
 import {
-  ACCURACY_LINE_WITH_CHECKIN,
-  describeMeasuredAccuracyLine,
+  describeEstimateLines,
+  describeEstimateWords,
   OFFLINE_BANNER,
-  PROGRAM_SETUP_CARRIED_FORWARD,
-  PROGRAM_SETUP_MEASURED,
   SAVE_FAILED_BANNER,
   SETUP_ESTIMATE,
   SETUP_GROUP_TITLES,
@@ -12,42 +10,11 @@ import {
 import { formatCalories } from "@keylow/core/format";
 import { View } from "react-native";
 
-import { describeEstimateLines } from "./describeEstimateLines";
 import { EstimateCard } from "./EstimateCard";
 import { Banner, Button, GroupedList, ListRow, Text } from "../../../ui";
 import { SetupShell } from "../../SetupShell";
 
-import type { EstimateMeasurement, EstimateStepProps } from "./types";
-
-type EstimateWords = Readonly<{
-  heading: string;
-  expenditureSubtitle: string;
-  accuracyLine: string;
-}>;
-
-// After a check-in the screen says where the expenditure came from, and that changing the answers keeps it.
-function wordsOf(measurement: EstimateMeasurement | undefined): EstimateWords {
-  switch (measurement?.kind) {
-    case "measured":
-      return {
-        heading: PROGRAM_SETUP_MEASURED.heading,
-        expenditureSubtitle: PROGRAM_SETUP_MEASURED.expenditureSubtitle,
-        accuracyLine: describeMeasuredAccuracyLine(measurement.measuredOn),
-      };
-    case "carried-forward":
-      return {
-        heading: PROGRAM_SETUP_MEASURED.heading,
-        expenditureSubtitle: PROGRAM_SETUP_CARRIED_FORWARD.expenditureSubtitle,
-        accuracyLine: PROGRAM_SETUP_CARRIED_FORWARD.accuracyLine,
-      };
-    case undefined:
-      return {
-        heading: SETUP_ESTIMATE.heading,
-        expenditureSubtitle: SETUP_ESTIMATE.expenditure.caption,
-        accuracyLine: ACCURACY_LINE_WITH_CHECKIN,
-      };
-  }
-}
+import type { EstimateStepProps } from "./types";
 
 /**
  * The last step of the wizard: the starting targets and the energy they come from, labelled as an
@@ -69,7 +36,7 @@ export function EstimateStep({
   onBack,
   onClose,
 }: EstimateStepProps) {
-  const words = wordsOf(measurement);
+  const words = describeEstimateWords(measurement);
 
   return (
     <SetupShell

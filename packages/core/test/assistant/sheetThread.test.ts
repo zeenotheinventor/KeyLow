@@ -6,6 +6,7 @@ import {
   canAnswerAssistantQuestion,
   canSendAssistantMessage,
   describeAssistantComposer,
+  isAssistantSheetOpening,
   isAssistantStatusKnown,
   isSentTurnStored,
   isStaleStreamGateNotice,
@@ -31,6 +32,7 @@ const liveTurn = (overrides: Partial<AssistantSheetLiveTurn> = {}): AssistantShe
   status: null,
   stopped: false,
   notice: null,
+  outcome: null,
   ...overrides,
 });
 
@@ -144,10 +146,21 @@ describe("buildAssistantSheetThread", () => {
       ]);
     });
 
-    it("should draw the caret alone before the first words arrive", () => {
+    it("should draw the working line, and no caret, before the first words arrive", () => {
       const thread = build({ sent, live: liveTurn(), isStreaming: true, items: storedItems });
 
-      expect(thread.entries.at(-1)).toMatchObject({ paragraphs: [""], isStreaming: true });
+      expect(thread.entries.slice(-2)).toEqual([
+        { kind: "you", key: "sent:you", text: "What did I eat yesterday?" },
+        { kind: "status", key: "sent:status", text: "Thinking" },
+      ]);
+    });
+
+    it("should never draw an assistant entry holding one empty paragraph", () => {
+      for (const text of ["", "**", "-", "\n\n"]) {
+        const { entries } = build({ sent, live: liveTurn({ text }), isStreaming: true });
+
+        expect(entries).not.toContainEqual(expect.objectContaining({ paragraphs: [""] }));
+      }
     });
 
     it("should stop drawing it once the stored conversation has moved on, so nothing shows twice", () => {
@@ -651,6 +664,25 @@ describe("buildAssistantSheetThread with a question", () => {
     });
   });
 
+  describe("a reply and a question that hold the same markdown", () => {
+    const MARKED_QUESTION = "**Delete both entries?**\n- Two eggs\n- Toast";
+    const buttons = { confirmLabel: "Delete", cancelLabel: "Keep", tone: "danger" } as const;
+
+    it("should draw the question once, with the raw paragraphs on the entry", () => {
+      const thread = build({
+        sent: { text: "Delete both of today's entries", afterItemId: null },
+        live: liveTurn({
+          text: MARKED_QUESTION,
+          confirm: { question: MARKED_QUESTION, ...buttons },
+        }),
+      });
+
+      const drawn = thread.entries.filter((entry) => entry.kind === "assistant");
+      expect(drawn).toHaveLength(1);
+      expect(drawn[0]).toMatchObject({ paragraphs: [MARKED_QUESTION] });
+    });
+  });
+
   describe("a confirmation whose question ends with a line the code added", () => {
     const MODEL_QUESTION = "Change your calorie target from 2,140 to 2,000 kcal?";
     const NOTE =
@@ -765,6 +797,173 @@ describe("buildAssistantSheetThread with a question", () => {
     });
   });
 
+  describe("a confirmation the code worded because the model wrote no question", () => {
+    const NOTE =
+      "Your macros will be adjusted proportionally: protein 118 g, carbs 229 g, fat 68 g.";
+    const CODE_QUESTION =
+      "Change your calorie target from 2,140 to 2,000 kcal? This ends your programme and its weekly check-in. Today and later days use your own targets.";
+    const buttons = {
+      confirmLabel: "Change target",
+      cancelLabel: "Keep 2,140",
+      tone: "primary",
+    } as const;
+    const wordsOf = (entries: ReturnType<typeof build>["entries"]) =>
+      entries.flatMap((entry) => (entry.kind === "assistant" ? entry.paragraphs : []));
+    const kindsOf = (entries: ReturnType<typeof build>["entries"]) =>
+      entries.map((entry) => entry.kind);
+    const sent = { text: "Set my calories to 2,000", afterItemId: null };
+
+    it("should draw the stored question once, with the note as a second paragraph and the buttons once", () => {
+      const thread = build({
+        items: askedItems({
+          kind: "confirm",
+          id: "k1",
+          confirmationId: CONFIRMATION_ID,
+          question: `${CODE_QUESTION}\n\n${NOTE}`,
+          ...buttons,
+          answered: false,
+        }),
+      });
+
+      expect(wordsOf(thread.entries)).toEqual([CODE_QUESTION, NOTE]);
+      expect(kindsOf(thread.entries)).toEqual(["you", "assistant", "confirm"]);
+    });
+
+    it("should draw the live question once, with the note as a second paragraph and the buttons once", () => {
+      const thread = build({
+        sent,
+        live: liveTurn({
+          text: "",
+          confirm: { question: `${CODE_QUESTION}\n\n${NOTE}`, ...buttons },
+        }),
+      });
+
+      expect(wordsOf(thread.entries)).toEqual([CODE_QUESTION, NOTE]);
+      expect(kindsOf(thread.entries)).toEqual(["you", "assistant", "confirm"]);
+    });
+
+    it("should draw the stored question without its buttons once a later turn exists", () => {
+      const thread = build({
+        items: askedItems({
+          kind: "confirm",
+          id: "k1",
+          confirmationId: CONFIRMATION_ID,
+          question: CODE_QUESTION,
+          ...buttons,
+          answered: true,
+        }),
+      });
+
+      expect(wordsOf(thread.entries)).toEqual([CODE_QUESTION]);
+      expect(kindsOf(thread.entries)).toEqual(["you", "assistant"]);
+    });
+  });
+
+  describe("a confirmation asked again after an answer that was not the button", () => {
+    const FIRST_ID = "00000000-0000-4000-8000-0000000000a2";
+    const SECOND_ID = "00000000-0000-4000-8000-0000000000a3";
+    const buttons = {
+      confirmLabel: "Delete 3 entries",
+      cancelLabel: "Keep them",
+      tone: "danger",
+    } as const;
+    const wordsOf = (entries: ReturnType<typeof build>["entries"]) =>
+      entries.flatMap((entry) => (entry.kind === "assistant" ? entry.paragraphs : []));
+    const buttonsOf = (entries: ReturnType<typeof build>["entries"]) =>
+      entries.filter((entry) => entry.kind === "confirm");
+    const confirmed = (id: string, key: string, answered: boolean): AssistantThreadItem => ({
+      kind: "confirm",
+      id: key,
+      confirmationId: id,
+      question: DELETE_QUESTION,
+      ...buttons,
+      answered,
+    });
+    const typedYes: AssistantThreadItem = { kind: "user", id: "u2", text: "yes please" };
+
+    it("should draw the buttons once, on the new question, when the thread is read back", () => {
+      const thread = build({
+        items: [
+          ...askedItems(confirmed(FIRST_ID, "k1", true)),
+          typedYes,
+          confirmed(SECOND_ID, "k2", false),
+        ],
+      });
+
+      expect(thread.entries.map((entry) => entry.kind)).toEqual([
+        "you",
+        "assistant",
+        "you",
+        "assistant",
+        "confirm",
+      ]);
+      expect(buttonsOf(thread.entries)).toEqual([{ kind: "confirm", key: "k2", ...buttons }]);
+      expect(wordsOf(thread.entries)).toEqual([DELETE_QUESTION, DELETE_QUESTION]);
+    });
+
+    it("should draw the model's words above the new question and the buttons once", () => {
+      const reply: AssistantThreadItem = {
+        kind: "reply",
+        id: "r2",
+        text: "Deleting those now.",
+        answerMeta: null,
+        stopped: false,
+      };
+      const thread = build({
+        items: [
+          ...askedItems(confirmed(FIRST_ID, "k1", true)),
+          typedYes,
+          reply,
+          confirmed(SECOND_ID, "k2", false),
+        ],
+      });
+
+      expect(wordsOf(thread.entries)).toEqual([
+        DELETE_QUESTION,
+        "Deleting those now.",
+        DELETE_QUESTION,
+      ]);
+      expect(buttonsOf(thread.entries)).toHaveLength(1);
+    });
+
+    it("should draw the buttons once, on the new question, while the turn is written", () => {
+      const thread = build({
+        items: askedItems(confirmed(FIRST_ID, "k1", false)),
+        sent: { text: "yes please", afterItemId: "k1" },
+        live: liveTurn({ text: "", confirm: { question: DELETE_QUESTION, ...buttons } }),
+      });
+
+      expect(thread.entries.map((entry) => entry.kind)).toEqual([
+        "you",
+        "assistant",
+        "you",
+        "assistant",
+        "confirm",
+      ]);
+      expect(buttonsOf(thread.entries)).toEqual([
+        { kind: "confirm", key: "sent:confirm", ...buttons },
+      ]);
+    });
+
+    it("should draw the model's words above the new question once while the turn is written", () => {
+      const thread = build({
+        items: askedItems(confirmed(FIRST_ID, "k1", false)),
+        sent: { text: "yes please", afterItemId: "k1" },
+        live: liveTurn({
+          text: "Deleting those now.",
+          confirm: { question: DELETE_QUESTION, ...buttons },
+        }),
+      });
+
+      expect(wordsOf(thread.entries)).toEqual([
+        DELETE_QUESTION,
+        "Deleting those now.",
+        DELETE_QUESTION,
+      ]);
+      expect(buttonsOf(thread.entries)).toHaveLength(1);
+    });
+  });
+
   describe("the message that answers a question", () => {
     it("should draw the stored question without its quick replies while the next turn is drawn", () => {
       const items = askedItems(clarifyItem());
@@ -776,7 +975,7 @@ describe("buildAssistantSheetThread with a question", () => {
       });
 
       expect(thread.entries.some((entry) => entry.kind === "quickReplies")).toBe(false);
-      expect(thread.entries.at(-1)).toMatchObject({ kind: "assistant", isStreaming: true });
+      expect(thread.entries.at(-1)).toMatchObject({ kind: "status", text: "Thinking" });
     });
 
     it("should draw the stored confirmation without its buttons while the next turn is drawn", () => {
@@ -899,7 +1098,7 @@ describe("canSendAssistantMessage", () => {
     isOnline: true,
     isThreadKnown: true,
     isThreadFetching: false,
-    isReadingRecipe: false,
+    isWorking: false,
     access: { kind: "open" } satisfies AssistantSheetAccess,
   };
 
@@ -942,7 +1141,7 @@ describe("canAnswerAssistantQuestion", () => {
     isOnline: true,
     isThreadKnown: true,
     isThreadFetching: false,
-    isReadingRecipe: false,
+    isWorking: false,
     access: { kind: "open" } satisfies AssistantSheetAccess,
   };
 
@@ -1081,12 +1280,84 @@ describe("describeAssistantComposer", () => {
     ).toMatchObject({ placeholder: "Needs a connection" });
   });
 
-  it.each([{ kind: "consent" }, { kind: "checking" }] as const)(
-    "should not be shown for $kind",
-    (access) => {
-      expect(describeComposer(access)).toEqual({ isShown: false });
+  it("should not be shown for the consent card", () => {
+    expect(describeComposer({ kind: "consent" })).toEqual({ isShown: false });
+  });
+
+  it("should look as it does when open while the status is read", () => {
+    expect(describeComposer({ kind: "checking" })).toEqual(describeComposer({ kind: "open" }));
+  });
+
+  it("should look as it does when open while the status is read and the app is offline", () => {
+    expect(describeComposer({ kind: "checking" }, false)).toEqual(
+      describeComposer({ kind: "open" }, false),
+    );
+  });
+
+  it("should look as it does when open from Describe while the status is read", () => {
+    const fromDescribe = (access: AssistantSheetAccess) =>
+      describeAssistantComposer({
+        access,
+        isOnline: true,
+        timeZone: "Europe/London",
+        describeAt: "2026-07-01T12:30:00Z",
+      });
+
+    expect(fromDescribe({ kind: "checking" })).toEqual(fromDescribe({ kind: "open" }));
+    expect(fromDescribe({ kind: "checking" })).toHaveProperty("hint");
+  });
+});
+
+describe("isAssistantSheetOpening", () => {
+  const opening = {
+    access: { kind: "open" } satisfies AssistantSheetAccess,
+    isEmpty: true,
+    isThreadKnown: false,
+  };
+
+  it.each([true, false])(
+    "should be true while the status is read, whether the thread is known (%s) or not",
+    (isThreadKnown) => {
+      expect(
+        isAssistantSheetOpening({
+          access: { kind: "checking" },
+          isEmpty: true,
+          isThreadKnown,
+        }),
+      ).toBe(true);
     },
   );
+
+  it("should be true while the status is read over a thread with entries", () => {
+    expect(
+      isAssistantSheetOpening({ ...opening, access: { kind: "checking" }, isEmpty: false }),
+    ).toBe(true);
+  });
+
+  it("should be true when open with an empty thread that is not known", () => {
+    expect(isAssistantSheetOpening(opening)).toBe(true);
+  });
+
+  it("should be false under the consent card", () => {
+    expect(isAssistantSheetOpening({ ...opening, access: { kind: "consent" } })).toBe(false);
+  });
+
+  it("should be false under a limit", () => {
+    expect(
+      isAssistantSheetOpening({
+        ...opening,
+        access: { kind: "limited", notice: { code: "plus" } },
+      }),
+    ).toBe(false);
+  });
+
+  it("should be false when open with a known thread, which is the starters", () => {
+    expect(isAssistantSheetOpening({ ...opening, isThreadKnown: true })).toBe(false);
+  });
+
+  it("should be false when open with entries", () => {
+    expect(isAssistantSheetOpening({ ...opening, isEmpty: false })).toBe(false);
+  });
 });
 
 describe("resolveAssistantTimeZone", () => {

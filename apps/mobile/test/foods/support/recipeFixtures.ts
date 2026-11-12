@@ -37,6 +37,7 @@ export function goldenRecipe(yieldGrams: number | null = 1100): RecipeSummary {
       },
       totalGrams: 720,
       effectiveGrams,
+      servingsOnly: false,
       engineVersion: 1,
     },
   };

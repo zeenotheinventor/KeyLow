@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { collectStrings } from "./collectStrings";
-import { ASSISTANT_SHEET } from "../../src/copy";
+import { ASSISTANT_SHEET, ASSISTANT_TRAIN_SHEET } from "../../src/copy";
 
 describe("ASSISTANT_SHEET", () => {
   it("should carry the words the assistant sheet boards print", () => {
@@ -24,11 +24,36 @@ describe("ASSISTANT_SHEET", () => {
       composerPlaceholder: "Log food or ask about your diary",
       speakerYou: "You",
       speakerAssistant: "Assistant",
+      openingLabel: "Loading your conversation",
+      tableLabel: "Table",
+      tableRowOne: "row",
+      tableRowMany: "rows",
+      tableNoValue: "no value",
     });
   });
 
   it("should use no em dash and no double hyphen in any word", () => {
     for (const words of collectStrings(ASSISTANT_SHEET)) {
+      expect(words).not.toMatch(/—|--/);
+    }
+  });
+});
+
+describe("ASSISTANT_TRAIN_SHEET", () => {
+  it("should carry the words of assistant · empty-train", () => {
+    expect(ASSISTANT_TRAIN_SHEET).toEqual({
+      emptyHeading: "Ask about your training",
+      starters: [
+        "What should I train today?",
+        "Why has my bench stalled?",
+        "Am I doing enough for my back?",
+      ],
+      composerPlaceholder: "Ask about your training",
+    });
+  });
+
+  it("should use no em dash and no double hyphen in any word", () => {
+    for (const words of collectStrings(ASSISTANT_TRAIN_SHEET)) {
       expect(words).not.toMatch(/—|--/);
     }
   });

@@ -5,7 +5,7 @@ import {
   describeAssistantEmpty,
   describeInLogOpening,
 } from "../../src/assistant";
-import { ASSISTANT_SHEET, describeLogsAt } from "../../src/copy";
+import { ASSISTANT_SHEET, ASSISTANT_TRAIN_SHEET, describeLogsAt } from "../../src/copy";
 
 describe("describeInLogOpening", () => {
   const now = new Date("2026-10-15T14:20:00Z");
@@ -46,6 +46,19 @@ describe("describeAssistantEmpty", () => {
       heading: "Log food or ask about your diary",
       lede: ASSISTANT_SHEET.emptyLede,
       starters: ASSISTANT_SHEET.starters,
+      isNotMedicalLineShown: true,
+    });
+  });
+
+  it("should be the training words, with the diary's lede and the not-medical line, when the sheet was opened from Train", () => {
+    expect(describeAssistantEmpty(undefined, "train")).toEqual({
+      heading: "Ask about your training",
+      lede: ASSISTANT_SHEET.emptyLede,
+      starters: [
+        "What should I train today?",
+        "Why has my bench stalled?",
+        "Am I doing enough for my back?",
+      ],
       isNotMedicalLineShown: true,
     });
   });
@@ -108,5 +121,33 @@ describe("describeAssistantComposer when describing", () => {
       isFieldDisabled: false,
       placeholder: "Log food or ask about your diary",
     });
+  });
+});
+
+describe("describeAssistantComposer when opened from Train", () => {
+  it("should ask about training in the field", () => {
+    expect(
+      describeAssistantComposer({
+        access: { kind: "open" },
+        isOnline: true,
+        timeZone: "Europe/London",
+        from: "train",
+      }),
+    ).toEqual({
+      isShown: true,
+      isFieldDisabled: false,
+      placeholder: ASSISTANT_TRAIN_SHEET.composerPlaceholder,
+    });
+  });
+
+  it("should keep the offline words while offline", () => {
+    expect(
+      describeAssistantComposer({
+        access: { kind: "open" },
+        isOnline: false,
+        timeZone: "Europe/London",
+        from: "train",
+      }),
+    ).toEqual({ isShown: true, isFieldDisabled: true, placeholder: "Needs a connection" });
   });
 });

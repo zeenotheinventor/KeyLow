@@ -1,6 +1,6 @@
 import type { LogRows } from "../SearchResults";
 import type { FoodSearchHit } from "@keylow/api-client";
-import type { FoodSearchGroup, FoodSearchGroupKey } from "@keylow/core/search";
+import type { FoodSearchGroup } from "@keylow/core/search";
 
 export type LocalFoodGroupsProps = {
   groups: readonly FoodSearchGroup<FoodSearchHit>[];
@@ -10,6 +10,5 @@ export type LocalFoodGroupsProps = {
   logRows?: LogRows | undefined;
   /** Draws each row as a serving that opens the amount step, with a chevron and no plus, as the ingredient search does. */
   choosesAmount?: boolean | undefined;
-  onSeeMore: (key: FoodSearchGroupKey) => void;
   onOpenFood: (foodId: string) => void;
 };

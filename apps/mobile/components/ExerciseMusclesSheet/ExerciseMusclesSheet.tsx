@@ -22,6 +22,10 @@ import type { ExerciseMusclesSheetProps } from "./types";
  * again. The library swaps the view that carries the contents when the drag setting changes, which would
  * remount them, so it must not change while the sheet is open. If 3D fails meanwhile, the stage stays with
  * the 2D figure in it, and the next opening is draggable again.
+ *
+ * The sheet can be taller than the screen, with the form card added to the figures and the rows, so it is
+ * `isScrollable`: it stops below the status bar and the contents scroll inside it. The 3D body sits in the
+ * scroll view as the body map screen's does in its own.
  */
 export function ExerciseMusclesSheet({ exercise, onClose }: ExerciseMusclesSheetProps) {
   // The sheet takes its last length of time to leave, and the exercise must not vanish from it meanwhile.
@@ -49,6 +53,7 @@ export function ExerciseMusclesSheet({ exercise, onClose }: ExerciseMusclesSheet
   return (
     <BottomSheet
       isContentDraggable={!isBody3dOnOpen}
+      isScrollable
       label={shown?.name}
       open={isOpen}
       onClose={onClose}

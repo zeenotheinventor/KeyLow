@@ -46,7 +46,7 @@ const ingredientFields = {
   unit: quantityUnitSchema,
   /** Set only for a portion that is a table row, so a spoon has none. */
   portion_id: rowIdSchema.nullable(),
-  resolved_grams: z.number().positive().max(MAX_INGREDIENT_RESOLVED_GRAMS),
+  resolved_grams: z.number().nonnegative().max(MAX_INGREDIENT_RESOLVED_GRAMS),
   snapshot: foodSnapshotSchema,
 };
 
@@ -59,9 +59,16 @@ type IngredientColumns = {
   snapshot: z.infer<typeof foodSnapshotSchema>;
 };
 
+// A food per portion has 0 grams and every other food has more than 0 (ADR 0003, Amendment 19).
+const hasGramsExactlyWhenWeighed = (ingredient: IngredientColumns): boolean =>
+  ingredient.snapshot.basis === "per_portion"
+    ? ingredient.resolved_grams === 0
+    : ingredient.resolved_grams > 0;
+
 /**
  * The columns of an ingredient repeat its snapshot, and core builds both from the same snapshot. A
- * portion link is only for the portion unit (Amendment 2), and a spoon has none.
+ * portion link is only for the portion unit (Amendment 2), and a spoon has none. The grams are above 0,
+ * except for a food per portion, which has none.
  */
 const withIngredientRules = <Ingredient extends IngredientColumns>(
   schema: z.ZodType<Ingredient>,
@@ -75,6 +82,10 @@ const withIngredientRules = <Ingredient extends IngredientColumns>(
         ingredient.resolved_grams === ingredient.snapshot.resolvedGrams,
       { message: "The ingredient columns must agree with its snapshot" },
     )
+    .refine(hasGramsExactlyWhenWeighed, {
+      message: "An ingredient has grams exactly when its food has a weight",
+      path: ["resolved_grams"],
+    })
     .refine((ingredient) => ingredient.unit === "portion" || ingredient.portion_id === null, {
       message: "A portion link is only allowed for the portion unit",
       path: ["portion_id"],
@@ -93,7 +104,8 @@ export const storedRecipeIngredientSchema = withIngredientRules(
 
 /**
  * `recipes.computed`: the cache `computeRecipe` writes with the recipe. `perServing` and `per100g` keep
- * a null as null, and `per100g` is all null when `effectiveGrams` is 0.
+ * a null as null, and `per100g` is all null when `effectiveGrams` is 0, as it is for a recipe that is
+ * servings only.
  */
 export const recipeComputedSchema = z.object({
   total: nutrientsSchema,
@@ -103,6 +115,11 @@ export const recipeComputedSchema = z.object({
   totalGrams: z.number().nonnegative(),
   /** The yield when the recipe has one, otherwise `totalGrams`. */
   effectiveGrams: z.number().nonnegative(),
+  /**
+   * True when an ingredient has no weight, so the recipe has no cooked weight and no values per 100 g and
+   * is logged by servings only (ADR 0003, Amendment 19). A cache written before it has no key and reads as false.
+   */
+  servingsOnly: z.boolean().default(false),
   engineVersion: z.number().int().positive().max(NUTRITION_ENGINE_VERSION),
 });
 

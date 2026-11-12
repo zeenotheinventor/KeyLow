@@ -4,9 +4,10 @@
 import { toJSONSchema } from "zod";
 
 import type { Database } from "../core/database.types.ts";
+import type { OffLookup } from "./offLookup.ts";
 import type { ReportError } from "../report.ts";
 import type { RecipeImportServices } from "./recipeParse.ts";
-import type { ActionRecord, ActionStore, ActionTarget } from "./store.ts";
+import type { ActionRecord, ActionStore, ActionTarget, StoredUndo } from "./store.ts";
 import type { JsonValue } from "./untrusted.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ZodType } from "zod";
@@ -19,6 +20,9 @@ export type ToolTurn = {
   conversationId: string;
   // The text of the message that started the turn. Null when the turn has none, and then no write runs.
   userMessageText: string | null;
+  // The person's own words: the last block of their stored message, when that block is text. Never the
+  // context block or a tool result. Null when the turn has none, and then nothing can confirm a write.
+  personsWords: string | null;
   // The day the turn's sheet was opened on, and the hour the Describe sheet knows, if any. A write
   // defaults to them when the person names no day or time.
   localDate: string;
@@ -31,6 +35,9 @@ export type ToolContext = {
   // The only holder of the service client: ids-only rows of `assistant_actions` and the turn's
   // pending confirmation.
   actions: ActionStore;
+  // The `previous` and `fingerprint` the write tool stored beside its card, for the action being undone, or null
+  // when they are gone. For an `inverse` only: an inverse that gets null answers `unavailable`. Scoped to `userId`.
+  previousValueOf(action: ActionRecord): Promise<StoredUndo | null>;
   userId: string;
   turn: ToolTurn;
   registry: ToolRegistry;
@@ -40,6 +47,10 @@ export type ToolContext = {
   // The page fetch and the parse call of `import_recipe_from_url`. Only the `mcp` function sets it, so no
   // other tool reaches the network, and a context without it answers that tool `tool_failed`.
   recipeImport?: RecipeImportServices;
+  // The calls to `off-search` and `off-product`, made under the caller's JWT. Only the `mcp` function sets
+  // it. A context without it answers `search_foods` from the catalogue alone and `get_food` by `off_code`
+  // with `unavailable`.
+  offLookup?: OffLookup;
 };
 
 export type ToolRunOutput = {
@@ -54,9 +65,16 @@ export type WriteRunOutput = ToolRunOutput & {
   target: ActionTarget | null;
 };
 
-export type ConfirmationNeed = boolean | { note: string };
+// False asks nothing. Otherwise the tool gives the board's words for the call, built from its own rows with
+// the same core functions the buttons use: the `question` the app shows when the model wrote none, the
+// `confirmLabel` of the button that confirms, and a `note` line the turn loop adds after the question.
+export type ConfirmationNeed = false | { question: string; confirmLabel: string; note?: string };
 
-export type InverseOutcome = "undone" | "unavailable";
+// Why an Undo is unavailable, for the boards' notes. An inverse that gives none answers a bare "unavailable".
+export type UndoReason = "changed" | "active" | "logged" | "used" | "workout_in_progress";
+
+export type InverseOutcome =
+  "undone" | "unavailable" | { status: "unavailable"; reason: UndoReason };
 
 type ToolBase<Input> = {
   name: string;
@@ -80,10 +98,14 @@ export type WriteToolDefinition<Input = unknown> = ToolBase<Input> & {
   kind: "write";
   // The table the write changes, recorded on its action.
   targetTable: string;
-  // Present when the call can be destructive or bulk. A true answer asks for a confirmation first. A `note`
-  // asks too, and carries one line the tool wrote from the person's own rows. The turn loop adds it after
-  // the model's question, because the model words that question in the same response as the call, before
-  // the tool has answered.
+  // Set on every write to a training table. The executor then refuses the call, and Undo refuses its
+  // inverse, while the person has a workout in progress, whatever the model was told (ADR 0006).
+  refusesDuringWorkout?: true;
+  // Present when the call can be destructive or bulk. An answer other than false asks for a confirmation
+  // first, and carries the tool's own question. The turn loop shows the model's question when it wrote one
+  // and this one when it did not. A `note` is one line the tool wrote from the person's own rows. The turn
+  // loop adds it after the question, because the model words that question in the same response as the
+  // call, before the tool has answered.
   needsConfirmation?(input: Input, ctx: ToolContext): ConfirmationNeed | Promise<ConfirmationNeed>;
   // Must not throw once its write has landed. A throw releases the slot and answers `tool_failed`, so
   // a write that landed and then threw would be retried by the model and done twice. Do the write

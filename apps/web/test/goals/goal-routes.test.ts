@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { goalPath, goalQuestionPath, readGoalStep } from "@/lib/goalRoutes";
+import {
+  goalExitPath,
+  goalLeavePath,
+  goalPath,
+  goalQuestionPath,
+  goalRowPath,
+  goalSummaryPath,
+  readGoalStep,
+} from "@/lib/goalRoutes";
 
 describe("where the goal questionnaire leads", () => {
   it("should open the flow at /goal", () => {
@@ -10,6 +18,32 @@ describe("where the goal questionnaire leads", () => {
   it("should address each question under the flow by its number", () => {
     expect(goalQuestionPath(1)).toBe("/goal/1");
     expect(goalQuestionPath(6)).toBe("/goal/6");
+  });
+});
+
+describe("where the last question and the Goal row lead", () => {
+  it("should address the summary under the flow, beside the questions", () => {
+    expect(goalSummaryPath()).toBe("/goal/summary");
+  });
+
+  it("should open the Goal page from the Goal row of More", () => {
+    expect(goalRowPath()).toBe("/goal");
+  });
+});
+
+describe("where the goal questionnaire leaves to", () => {
+  it("should leave to More, which is where its row is", () => {
+    expect(goalExitPath()).toBe("/more");
+  });
+});
+
+describe("where a saved or closed flow leaves to", () => {
+  it("should leave for the Goal page when a goal was stored, so the new answers show", () => {
+    expect(goalLeavePath(true)).toBe("/goal");
+  });
+
+  it("should leave for More when the first goal is being set", () => {
+    expect(goalLeavePath(false)).toBe("/more");
   });
 });
 

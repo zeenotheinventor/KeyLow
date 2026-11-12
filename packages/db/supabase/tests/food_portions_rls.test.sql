@@ -44,15 +44,15 @@ select ok(
 select throws_ok(
   $$insert into public.food_portions (food_id, owner_id, label, grams, ml) values ('36000002-0000-4000-8000-0000000001a1', '36000002-0000-4000-8000-00000000000a', 'both', 30, 30)$$,
   '23514',
-  'new row for relation "food_portions" violates check constraint "food_portions_exactly_one_of_grams_ml"',
+  'new row for relation "food_portions" violates check constraint "food_portions_at_most_one_of_grams_ml"',
   'a portion with both grams and ml is rejected'
 );
 
 select throws_ok(
   $$insert into public.food_portions (food_id, owner_id, label) values ('36000002-0000-4000-8000-0000000001a1', '36000002-0000-4000-8000-00000000000a', 'neither')$$,
   '23514',
-  'new row for relation "food_portions" violates check constraint "food_portions_exactly_one_of_grams_ml"',
-  'a portion with neither grams nor ml is rejected'
+  'A portion needs a size in grams or ml unless its food is per portion',
+  'a portion with neither grams nor ml is rejected on a food that has a weight'
 );
 
 select throws_ok(

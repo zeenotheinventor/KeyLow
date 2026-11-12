@@ -9,7 +9,7 @@ const addressHitSlop = { top: 14, bottom: 14 };
 
 /**
  * One source's credit on a card: its name, the statement its licence asks for and its address, which is
- * underlined as a link and opens in the browser.
+ * underlined as a link and opens in the browser. A source with no address has no link.
  */
 export function DataSourceCredit({ name, text, url }: DataSourceCreditProps) {
   return (
@@ -17,18 +17,20 @@ export function DataSourceCredit({ name, text, url }: DataSourceCreditProps) {
       <View className="gap-2">
         <Text variant="body-strong">{name}</Text>
         <Text tone="secondary">{text}</Text>
-        <Pressable
-          hitSlop={addressHitSlop}
-          role="link"
-          onPress={() => {
-            // A device with no browser rejects, and there is nothing else to do about it, so the screen stays as it is.
-            Linking.openURL(url).catch(() => undefined);
-          }}
-        >
-          <Text className="underline" tone="secondary" variant="caption">
-            {url}
-          </Text>
-        </Pressable>
+        {url !== undefined && (
+          <Pressable
+            hitSlop={addressHitSlop}
+            role="link"
+            onPress={() => {
+              // A device with no browser rejects, and there is nothing else to do about it, so the screen stays as it is.
+              Linking.openURL(url).catch(() => undefined);
+            }}
+          >
+            <Text className="underline" tone="secondary" variant="caption">
+              {url}
+            </Text>
+          </Pressable>
+        )}
       </View>
     </Card>
   );

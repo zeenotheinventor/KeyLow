@@ -1,4 +1,5 @@
 export {
+  customFoodBasisSchema,
   customFoodInputSchema,
   foodPortionSchema,
   foodQualitySchema,
@@ -7,6 +8,7 @@ export {
   nutrientBasisSchema,
 } from "./food";
 export type {
+  CustomFoodBasis,
   CustomFoodInput,
   Food,
   FoodPortion,
@@ -43,6 +45,7 @@ export type {
   EdgeError,
   EdgeErrorCode,
   OffCandidate,
+  OffCandidatePortion,
   OffProductRequest,
   OffProductResponse,
   OffSearchRequest,

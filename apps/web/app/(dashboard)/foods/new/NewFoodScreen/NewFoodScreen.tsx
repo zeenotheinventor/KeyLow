@@ -17,13 +17,15 @@ export function NewFoodScreen() {
   const barcode = searchParameters.get("barcode");
   const fromId = searchParameters.get("from");
   const day = searchParameters.get("day");
+  // A food made for a recipe's ingredient is not logged: the recipe tab it came from picks it up by search.
+  const isForRecipe = searchParameters.get("for") === "recipe";
   const scannedBarcode = barcode === null || barcode === "" ? undefined : barcode;
   const scannedDay = day !== null && isCalendarDay(day) ? day : undefined;
 
   // A food made for a scanned barcode is added to the diary next, as a food found by that barcode is.
   // A plain new food ends on its own page.
   function addToDiaryIfScanned(foodId: string) {
-    if (scannedBarcode !== undefined) {
+    if (scannedBarcode !== undefined && !isForRecipe) {
       openAddFoodOnNextPage(
         { foodId, ...(scannedDay === undefined ? {} : { date: scannedDay }) },
         `/foods/${foodId}`,

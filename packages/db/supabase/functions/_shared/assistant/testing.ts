@@ -11,6 +11,8 @@ import type {
   ActionTarget,
   PendingConfirmation,
   SlotRequest,
+  StoredConfirmation,
+  StoredUndo,
 } from "./store.ts";
 import type {
   ConfirmationNeed,
@@ -30,7 +32,8 @@ type FakeTurn = {
   id: string;
   conversationId: string;
   userId: string;
-  pending: PendingConfirmation | null;
+  // A row written before the label was stored has `confirmLabel: null`.
+  pending: StoredConfirmation | null;
 };
 
 export type FakeActionStore = ActionStore & {
@@ -38,6 +41,8 @@ export type FakeActionStore = ActionStore & {
   turns: FakeTurn[];
   // Counts the calls of the store, by method.
   calls: Record<string, number>;
+  // What `previousValueOf` answers, by the id of the action it belongs to.
+  previousValues: Map<string, StoredUndo>;
 };
 
 // The real store is awaited over a network, so two parallel callers both read before either writes.
@@ -53,6 +58,7 @@ export function createFakeActionStore(
     { id: turnId, conversationId, userId, pending: null },
   ];
   const calls: Record<string, number> = {};
+  const previousValues = new Map<string, StoredUndo>();
   const count = (method: string) => {
     calls[method] = (calls[method] ?? 0) + 1;
   };
@@ -67,6 +73,7 @@ export function createFakeActionStore(
     actions,
     turns,
     calls,
+    previousValues,
 
     async takenSlots(forTurn) {
       count("takenSlots");
@@ -148,6 +155,12 @@ export function createFakeActionStore(
       return Promise.resolve();
     },
 
+    previousValueOf(action: ActionRecord, forUser: string) {
+      count("previousValueOf");
+      const owned = action.turnId !== null && mine(action.id, forUser) !== undefined;
+      return Promise.resolve(owned ? (previousValues.get(action.id) ?? null) : null);
+    },
+
     previousPendingConfirmation(forConversation: string, forUser: string, currentTurn: string) {
       count("previousPendingConfirmation");
       // The turns are kept oldest first, so a turn is earlier when it sits before the current one.
@@ -188,7 +201,7 @@ export function createFakeActionStore(
 // Turns of one conversation, oldest first, with the current one last.
 export function turnsOfConversation(
   ids: string[],
-  pending: Record<string, PendingConfirmation> = {},
+  pending: Record<string, StoredConfirmation> = {},
   inConversation: string = conversationId,
 ): FakeTurn[] {
   return ids.map((id) => ({
@@ -234,6 +247,8 @@ export function createFakeContext(
     store?: FakeActionStore;
     allowedTools?: ReadonlySet<string> | undefined;
     userMessageText?: string | null;
+    // The person's own words, which the context block and the tool results are never part of.
+    personsWords?: string | null;
     turn?: { id: string; conversationId: string };
     localDate?: string;
     localTime?: string | null;
@@ -244,12 +259,14 @@ export function createFakeContext(
   const ctx: ToolContext = {
     caller: Object.create(null),
     actions: store,
+    previousValueOf: (action) => store.previousValueOf(action, userId),
     userId,
     turn: {
       id: overrides.turn?.id ?? turnId,
       conversationId: overrides.turn?.conversationId ?? conversationId,
       userMessageText:
         "userMessageText" in overrides ? (overrides.userMessageText ?? null) : "log my lunch",
+      personsWords: overrides.personsWords ?? null,
       localDate: overrides.localDate ?? "2026-11-03",
       localTime: "localTime" in overrides ? (overrides.localTime ?? null) : "08:10",
     },
@@ -265,6 +282,12 @@ export function createFakeContext(
   return { ctx, store, reported };
 }
 
+// What a confirming fake tool answers: the words a real tool builds from the board.
+export const fakeAsk: Exclude<ConfirmationNeed, false> = {
+  question: "Delete the lunch entries?",
+  confirmLabel: "Delete them",
+};
+
 export const noteInput = z.object({ note: z.string(), extra: z.string().optional() });
 type NoteInput = z.infer<typeof noteInput>;
 
@@ -273,6 +296,7 @@ export type FakeToolOptions = {
   run?: (input: NoteInput) => Promise<{ target: ActionTarget | null }>;
   needsConfirmation?: (input: NoteInput) => ConfirmationNeed;
   inverse?: WriteToolDefinition<NoteInput>["inverse"];
+  refusesDuringWorkout?: true;
 };
 
 // A write tool that counts its runs. By default it lands one row.
@@ -288,6 +312,7 @@ export function fakeWriteTool(options: FakeToolOptions = {}) {
     ...(options.needsConfirmation === undefined
       ? {}
       : { needsConfirmation: options.needsConfirmation }),
+    ...(options.refusesDuringWorkout === undefined ? {} : { refusesDuringWorkout: true as const }),
     inverse: "inverse" in options ? (options.inverse ?? null) : () => Promise.resolve("undone"),
     async run(_ctx, input) {
       runs.push(input);

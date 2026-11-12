@@ -1,8 +1,10 @@
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 
+import { createActionStore } from "../../../supabase/functions/_shared/assistant/store";
 import { anthropicMock } from "../support/anthropicMock";
 import { callAssistant, eventsOf, newAssistantUser, turnBody } from "../support/assistantClient";
 import { requireServedFunction } from "../support/functionsLane";
+import { adminClient } from "../support/stack";
 import { deleteCreatedTestUsers } from "../support/users";
 
 import type { ModelRequestBody, ScriptedReply } from "../support/anthropicMock";
@@ -207,12 +209,16 @@ async function storedMessages(turn: FinishedTurn) {
 const textOf = (event: AssistantStreamEvent) => (event.type === "text" ? event.delta : "");
 
 describe("a turn that calls search_foods and then answers", () => {
-  it("streams events that all parse, in the order turn, text, done complete", () => {
+  it("streams events that all parse, in the order turn, the search step, thinking, text, done complete", () => {
     const { events } = searchTurn;
 
     expect(events[0]?.type).toBe("turn");
     expect(events.at(-1)).toEqual({ type: "done", outcome: "complete" });
-    expect(events.slice(1, -1).every(({ type }) => type === "text")).toBe(true);
+    expect(events.slice(1, 3)).toEqual([
+      { type: "status", code: "tool", tool: "search_foods", food: foodWord, isConfirmed: false },
+      { type: "status", code: "thinking" },
+    ]);
+    expect(events.slice(3, -1).every(({ type }) => type === "text")).toBe(true);
     expect(events.map(textOf).join("")).toBe("You have scrambled eggs saved.");
   });
 
@@ -305,12 +311,16 @@ describe("a turn that calls search_foods and then answers", () => {
 });
 
 describe("a turn that calls log_entry", () => {
-  it("streams a card event before the words, then done complete", () => {
+  it("streams the log step and thinking, then a card event before the words, then done complete", () => {
     const types = logTurn.events.map(({ type }) => type);
 
     expect(types[0]).toBe("turn");
-    expect(types[1]).toBe("card");
-    expect(types.slice(2, -1).every((type) => type === "text")).toBe(true);
+    expect(logTurn.events.slice(1, 3)).toEqual([
+      { type: "status", code: "tool", tool: "log_entry", food: null, isConfirmed: false },
+      { type: "status", code: "thinking" },
+    ]);
+    expect(types[3]).toBe("card");
+    expect(types.slice(4, -1).every((type) => type === "text")).toBe(true);
     expect(logTurn.events.at(-1)).toEqual({ type: "done", outcome: "complete" });
   });
 
@@ -330,6 +340,116 @@ describe("a turn that calls log_entry", () => {
       turnEvent?.type === "turn" ? turnEvent.turnId : null,
     ]);
     expect(card.card.actionIds).toEqual(actions.data?.map(({ id }) => id));
+  });
+});
+
+// The undo a write tool leaves beside its card (KEY-900). No tool sends one yet, so it is stored by hand in
+// the `display` of a real turn's tool result, where the turn loop would put it, and read back through the
+// real action store on the service client. The deletion at the end goes through the real foreign keys.
+describe("the undo kept beside a card, read back by previousValueOf", () => {
+  const store = createActionStore(adminClient());
+  const toolUseId = `toolu_${crypto.randomUUID().replaceAll("-", "")}`;
+  const fingerprint = "fingerprint-8832";
+  let undoTurn: FinishedTurn;
+  let conversationId: string;
+  let actionId: string;
+
+  async function storeUndo(previous: unknown): Promise<void> {
+    const card = undoTurn.events.find((event) => event.type === "card");
+    if (card?.type !== "card") {
+      throw new Error("The stream held no card");
+    }
+    const { error } = await adminClient()
+      .from("assistant_messages")
+      .update({
+        display: JSON.parse(
+          JSON.stringify({
+            [toolUseId]: { card: card.card, undo: { actionId, previous, fingerprint } },
+          }),
+        ),
+      })
+      .eq("user_id", undoTurn.user.id)
+      .not("display", "is", null);
+    if (error) {
+      throw new Error("Could not store the undo", { cause: error });
+    }
+  }
+
+  async function ownAction() {
+    const action = await store.findAction(actionId, undoTurn.user.id);
+    if (action === null) {
+      throw new Error("The action was not found");
+    }
+    return action;
+  }
+
+  beforeAll(async () => {
+    const user = await newAssistantUser("assistant-turn");
+    undoTurn = await runTurn({
+      user,
+      text: "Please log my toast",
+      marker: markerOf(),
+      replies: logReplies(toolUseId),
+    });
+    const turnEvent = undoTurn.events[0];
+    const action = await adminClient()
+      .from("assistant_actions")
+      .select("id")
+      .eq("user_id", user.id)
+      .single();
+    if (turnEvent?.type !== "turn" || action.error) {
+      throw new Error("The turn left no action");
+    }
+    conversationId = turnEvent.conversationId;
+    actionId = action.data.id;
+  }, 60_000);
+
+  afterAll(async () => {
+    await anthropicMock.forget(undoTurn.marker);
+  });
+
+  it("gives a string back exactly as it was stored, microseconds included", async () => {
+    const previous = { deletedAt: "2026-11-03T08:10:00.123456+00:00" };
+    await storeUndo(previous);
+
+    expect(await store.previousValueOf(await ownAction(), undoTurn.user.id)).toEqual({
+      previous,
+      fingerprint,
+    });
+  });
+
+  it("gives a previous value of JSON null back inside the record", async () => {
+    await storeUndo(null);
+
+    expect(await store.previousValueOf(await ownAction(), undoTurn.user.id)).toEqual({
+      previous: null,
+      fingerprint,
+    });
+  });
+
+  it("answers null for another user's id", async () => {
+    await storeUndo({ deletedAt: "2026-11-03T08:10:00.123456+00:00" });
+
+    expect(await store.previousValueOf(await ownAction(), bystander.id)).toBeNull();
+  });
+
+  it("answers null once the conversation is deleted, through on delete cascade and set null", async () => {
+    await storeUndo({ deletedAt: "2026-11-03T08:10:00.123456+00:00" });
+    const before = await ownAction();
+
+    // As the person, which is how a conversation is deleted. The service role has no delete on it.
+    const { error } = await undoTurn.user.client
+      .from("assistant_conversations")
+      .delete()
+      .eq("id", conversationId);
+    expect(error).toBeNull();
+
+    // The messages went with the conversation, so even the old record finds nothing.
+    expect(await store.previousValueOf(before, undoTurn.user.id)).toBeNull();
+    // The action stays, and its turn is now null.
+    const after = await ownAction();
+    expect(after.turnId).toBeNull();
+    expect(await store.previousValueOf(after, undoTurn.user.id)).toBeNull();
   });
 });
 

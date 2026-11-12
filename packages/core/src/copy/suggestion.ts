@@ -85,11 +85,19 @@ export const SUGGESTION_DETAIL = {
     "Ki-Lo keeps your plan and adds what your week is short of. Muscles still hot are left out.",
   footnoteWithoutPlan:
     "Ki-Lo builds this from what your week is short of. Muscles still hot are left out.",
+  /** The web dialog's line while there is no connection: Add and Start are off, Not now is not. No board draws it. */
+  offline: "Adding to a day or starting a session needs a connection.",
 } as const;
 
 /** The fixed words of the accepted card and its toast. */
 export const SUGGESTION_ACCEPTED = {
   undoAction: "Undo",
+} as const;
+
+/** The toasts for an add or an Undo that did not go through, which the boards do not draw. They state no value. */
+export const SUGGESTION_FAILED = {
+  acceptFailed: "Not saved. Check your connection and try again.",
+  undoFailed: "Couldn't undo. Try again.",
 } as const;
 
 /** The card for a user with no goal. No board draws it. */
@@ -100,14 +108,20 @@ export const SUGGESTION_NO_GOAL = {
   action: "Set your goal",
 } as const;
 
-const isToday = ({ localDate, todayLocalDate }: SuggestionContext): boolean =>
+/** What the words of a day need: the day, today and the routine day it adds to. */
+type SuggestionDayContext = Pick<
+  SuggestionContext,
+  "localDate" | "todayLocalDate" | "routineDayName"
+>;
+
+const isToday = ({ localDate, todayLocalDate }: SuggestionDayContext): boolean =>
   localDate === todayLocalDate;
 
 /** The day as a sentence says it: "Thursday", or "today". */
-const describeDay = (context: SuggestionContext): string =>
+const describeDay = (context: SuggestionDayContext): string =>
   isToday(context) ? "today" : describeWeekdayName(context.localDate);
 
-const describeRoutineDay = ({ routineDayName }: SuggestionContext): string =>
+const describeRoutineDay = ({ routineDayName }: SuggestionDayContext): string =>
   routineDayName ?? "session";
 
 const exerciseNameOf = (exerciseId: string, context: SuggestionContext): string => {
@@ -150,11 +164,15 @@ export const EXERCISE_PROPER_WORDS: ReadonlySet<string> = new Set([
   "Zottman",
 ]);
 
-/** An exercise inside a sentence: "incline dumbbell press". */
-const describeExerciseInSentence = (exerciseId: string, context: SuggestionContext): string =>
-  exerciseNameOf(exerciseId, context).replace(/(?<![A-Z]-)\b[A-Z][a-z]+\b/g, (word) =>
+/** A library name inside a sentence: "Incline Dumbbell Press" reads "incline dumbbell press". */
+const lowerExerciseName = (name: string): string =>
+  name.replace(/(?<![A-Z]-)\b[A-Z][a-z]+\b/g, (word) =>
     EXERCISE_PROPER_WORDS.has(word) ? word : word.toLowerCase(),
   );
+
+/** An exercise inside a sentence: "incline dumbbell press". */
+const describeExerciseInSentence = (exerciseId: string, context: SuggestionContext): string =>
+  lowerExerciseName(exerciseNameOf(exerciseId, context));
 
 /** An exercise as a row title: "Incline dumbbell press". */
 const describeExerciseTitle = (exerciseId: string, context: SuggestionContext): string =>
@@ -299,10 +317,22 @@ const describeHeadline = (suggestion: SuggestedDay, context: SuggestionContext):
       )}`
     : FRESH_HEADLINE;
 
-const describeStartName = (suggestion: SuggestedDay, context: SuggestionContext): string =>
-  suggestion.kind === "plan_adjusted"
-    ? `Start ${describeRoutineDay(context)} with the added ${addedOf(suggestion).length === 1 ? "exercise" : "exercises"}`
+/** The name of a Start button: the routine day with the exercises added to it, or the session built for the week. */
+const describeStartNameFor = (
+  hasPlan: boolean,
+  addedCount: number,
+  context: SuggestionDayContext,
+): string =>
+  hasPlan
+    ? `Start ${describeRoutineDay(context)} with the added ${addedCount === 1 ? "exercise" : "exercises"}`
     : "Start the suggested session";
+
+const describeStartName = (suggestion: SuggestedDay, context: SuggestionContext): string =>
+  describeStartNameFor(
+    suggestion.kind === "plan_adjusted",
+    suggestion.kind === "plan_adjusted" ? addedOf(suggestion).length : 0,
+    context,
+  );
 
 /** The two buttons and their names, for the card and for the detail. */
 type SuggestionActions = Readonly<{
@@ -503,24 +533,71 @@ export type SuggestionAcceptedCopy = Readonly<{
   toast: string;
   undoAction: string;
   undoActionName: string;
+  /**
+   * The name of the card's Start, which the card draws for today: the same name the offer's Start had
+   * ("Start Legs with the added exercise"), so two Start buttons on a screen are told apart.
+   */
+  startActionName: string;
 }>;
+
+const buildAcceptedCopy = (
+  added: string,
+  addedCount: number,
+  sets: number,
+  context: SuggestionDayContext,
+): SuggestionAcceptedCopy => {
+  const day = describeDay(context);
+  return {
+    cardName: capitaliseFirst(day),
+    title: `${capitaliseFirst(day)}'s ${describeRoutineDay(context)}: ${describeCount(sets, "set", "sets")}`,
+    detail: `Now with ${added}. They count as planned.`,
+    toast: `Added to ${day}: ${added}`,
+    undoAction: SUGGESTION_ACCEPTED.undoAction,
+    undoActionName: `${SUGGESTION_ACCEPTED.undoAction} adding to ${day}`,
+    startActionName: describeStartNameFor(context.routineDayName !== null, addedCount, context),
+  };
+};
 
 /** The words of the card and the toast once the suggestion is added to the day. */
 export const describeSuggestionAccepted = (
   suggestion: PlanAdjusted,
   context: SuggestionContext,
-): SuggestionAcceptedCopy => {
-  const day = describeDay(context);
-  const added = describeAdded(addedOf(suggestion), context);
-  return {
-    cardName: capitaliseFirst(day),
-    title: `${capitaliseFirst(day)}'s ${describeRoutineDay(context)}: ${describeCount(suggestion.sets, "set", "sets")}`,
-    detail: `Now with ${added}. They count as planned.`,
-    toast: `Added to ${day}: ${added}`,
-    undoAction: SUGGESTION_ACCEPTED.undoAction,
-    undoActionName: `${SUGGESTION_ACCEPTED.undoAction} adding to ${day}`,
-  };
-};
+): SuggestionAcceptedCopy =>
+  buildAcceptedCopy(
+    describeAdded(addedOf(suggestion), context),
+    addedOf(suggestion).length,
+    suggestion.sets,
+    context,
+  );
+
+/** An exercise an accepted suggestion stored: its sets and the library's name for it, frozen when it was accepted. */
+export type StoredAddedExercise = Readonly<{
+  target_sets: number;
+  exercise: Readonly<{ name: string }>;
+}>;
+
+/**
+ * The words of the accepted card, written from the stored row and not from a live suggestion, so they stay
+ * true when the goal, the routine or the week moves on after the add. The row holds the exercises added,
+ * with their sets and names. `plannedSets` is what the routine day plans now (0 for a session that follows
+ * no routine day), and the day reads that and the stored sets together.
+ */
+export const describeStoredAcceptedSuggestion = (
+  exercises: readonly StoredAddedExercise[],
+  plannedSets: number,
+  context: SuggestionDayContext,
+): SuggestionAcceptedCopy =>
+  buildAcceptedCopy(
+    joinInWords(
+      exercises.map(
+        ({ target_sets, exercise }) =>
+          `${describeCount(target_sets, "set", "sets")} of ${lowerExerciseName(exercise.name)}`,
+      ),
+    ),
+    exercises.length,
+    exercises.reduce((total, { target_sets }) => total + target_sets, plannedSets),
+    context,
+  );
 
 export type NothingToSuggestCopy = Readonly<{
   cardName: string;

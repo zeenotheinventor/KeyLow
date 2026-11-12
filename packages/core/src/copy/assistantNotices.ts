@@ -3,7 +3,7 @@ import { parseCalendarDay } from "../dates/calendarDay";
 import { isValidTimeZone } from "../dates/isValidTimeZone";
 import { readZonedClock } from "../dates/zonedClock";
 
-import type { AssistantNotice, AssistantStreamEvent } from "../assistant";
+import type { AssistantNotice, AssistantStatus } from "../assistant";
 
 /*
  * The words of the assistant's notices and states, as the approved mobile boards print them (canvas
@@ -110,11 +110,125 @@ export function describeAssistantNotice(
   }
 }
 
-/** The status line while no text arrives (`assistant · recipe-import`, left). */
-export function describeAssistantStatus(
-  status: Omit<Extract<AssistantStreamEvent, { type: "status" }>, "type">,
-): string {
-  return `Reading the recipe at ${status.host}`;
+/**
+ * The words that end a turn which failed or was cut short after a write landed, in place of the failed-turn
+ * notice (KEY-926). That notice says "Nothing was changed" and offers Try again, which would send the message
+ * again and could repeat the write. The server stores these words and the app shows them too, when a stream
+ * breaks after a card. `writes` is how many changes the turn saved.
+ */
+export function describeTurnEndedAfterWrite(writes: number): string {
+  return writes === 1
+    ? "Your change was saved, but the reply did not finish. Sending the same message again could repeat it."
+    : "Your changes were saved, but the reply did not finish. Sending the same message again could repeat them.";
+}
+
+const DEFAULT_STEP_WORDS = "Thinking";
+
+type ToolWords = { words: string; afterConfirm?: string };
+
+/*
+ * The words of each tool's step (`assistant · working`), keyed by the tool's name as the server sends it. A
+ * tool is one row here and nothing else: a name with no row shows the default step. `afterConfirm` is for a
+ * tool that may stop to ask. Before the press nothing can claim a change yet, so the words only look.
+ * `ask_user` has no row because the question arrives instead, and a recipe link is `reading_recipe`.
+ */
+const LOOKING_UP_THE_FOOD: ToolWords = { words: "Looking up the food" };
+const CHECKING_YOUR_DIARY: ToolWords = { words: "Checking your diary" };
+const SAVING_THE_RECIPE: ToolWords = { words: "Saving the recipe" };
+const LOOKING_AT_THE_ROUTINE = "Looking at the routine";
+const TOOL_WORDS = new Map<string, ToolWords>([
+  ["search_foods", LOOKING_UP_THE_FOOD],
+  ["get_food", LOOKING_UP_THE_FOOD],
+  ["get_day", CHECKING_YOUR_DIARY],
+  ["get_entries", CHECKING_YOUR_DIARY],
+  ["get_range_totals", CHECKING_YOUR_DIARY],
+  ["get_weigh_ins", { words: "Checking your weigh-ins" }],
+  ["get_recipes", { words: "Checking your recipes" }],
+  ["log_entry", { words: "Logging your food" }],
+  ["update_entry", { words: "Updating your diary" }],
+  ["set_day_complete", { words: "Marking the day complete" }],
+  ["create_custom_food", { words: "Saving the food" }],
+  ["create_recipe", SAVING_THE_RECIPE],
+  ["update_recipe", SAVING_THE_RECIPE],
+  ["delete_entry", { words: "Looking at the entry", afterConfirm: "Removing the entry" }],
+  ["copy_day", { words: "Looking at the day", afterConfirm: "Copying the day" }],
+  ["archive_recipe", { words: "Looking at the recipe", afterConfirm: "Archiving the recipe" }],
+  ["update_targets", { words: "Looking at your targets", afterConfirm: "Changing your targets" }],
+  ["search_exercises", { words: "Looking up exercises" }],
+  ["get_workouts", { words: "Checking your workouts" }],
+  ["get_exercise_progress", { words: "Checking your progress" }],
+  ["get_routines", { words: "Checking your routines" }],
+  ["get_training_goals", { words: "Checking your goals" }],
+  ["get_muscle_state", { words: "Checking your recovery" }],
+  ["suggest_next_session", { words: "Working out what to train" }],
+  ["edit_routine", { words: LOOKING_AT_THE_ROUTINE, afterConfirm: "Changing the routine" }],
+  ["set_active_routine", { words: "Changing your active routine" }],
+  ["archive_routine", { words: LOOKING_AT_THE_ROUTINE, afterConfirm: "Archiving the routine" }],
+  ["create_routine", { words: "Building your routine" }],
+  ["update_training_goals", { words: "Saving your goals" }],
+  ["save_custom_exercise", { words: "Saving the exercise" }],
+  [
+    "archive_custom_exercise",
+    { words: "Looking at the exercise", afterConfirm: "Archiving the exercise" },
+  ],
+  ["update_past_set", { words: "Updating the set" }],
+  ["delete_workout", { words: "Looking at the workout", afterConfirm: "Removing the workout" }],
+  ["request_feature", { words: "Looking at your request", afterConfirm: "Sending your request" }],
+  ["show_exercise_muscles", { words: "Checking the exercise" }],
+  ["show_exercise_form", { words: "Checking the exercise" }],
+  ["estimate_portions", { words: "Working out the portions" }],
+]);
+
+/** The status line while no text arrives (`assistant · working`, `assistant · recipe-import`, left). */
+export function describeAssistantStatus(status: AssistantStatus): string {
+  switch (status.code) {
+    case "reading_recipe":
+      return `Reading the recipe at ${status.host}`;
+    case "thinking":
+      return DEFAULT_STEP_WORDS;
+    case "tool": {
+      if (status.food !== null) {
+        const food = safeWordsToShow(status.food);
+        return food === null ? LOOKING_UP_THE_FOOD.words : `Looking up ${food}`;
+      }
+      const row = TOOL_WORDS.get(status.tool);
+      return (
+        (status.isConfirmed ? row?.afterConfirm : undefined) ?? row?.words ?? DEFAULT_STEP_WORDS
+      );
+    }
+  }
+}
+
+const MAX_SAFE_WORDS_CODE_POINTS = 60;
+// Only this many UTF-16 units are read, so a huge value is not scanned whole. It is well over what 60 code points
+// can take (120), leaving room for the characters taken out.
+const MAX_SAFE_WORDS_UNITS_READ = 600;
+
+// Control characters, lone surrogate halves, the characters that reverse or isolate the direction of text
+// (which can make a food read as something else), and the ones that are zero-width. The zero-width joiner stays,
+// because it joins an emoji.
+const unwantedCharacters =
+  /[\p{Cc}\p{Cs}\u202A-\u202E\u2066-\u2069\u200E\u200F\u061C\u200B\u2060\uFEFF]/gu;
+
+/**
+ * Words made safe to show, or null when nothing is left: the food a search used on the working line, and a
+ * routine's name in a citation. The model chooses the first, and on a recipe import it can come from a
+ * fetched page, and the person writes the second, so both are untrusted text: anything but a string is null, control, direction and zero-width characters go, whitespace collapses to
+ * one space, and the first 60 code points stay, cut between whole characters so no emoji is split.
+ */
+export function safeWordsToShow(input: unknown): string | null {
+  if (typeof input !== "string") {
+    return null;
+  }
+  const words = input
+    .slice(0, MAX_SAFE_WORDS_UNITS_READ)
+    .replace(unwantedCharacters, (character) =>
+      /\p{Cc}/u.test(character) && /\s/u.test(character) ? " " : "",
+    )
+    .replace(/\s+/gu, " ")
+    .trim();
+  const cut = Array.from(words).slice(0, MAX_SAFE_WORDS_CODE_POINTS).join("").trim();
+  return cut === "" ? null : cut;
 }
 
 /** Offline is the app's own state, with no notice code (`assistant · unavailable`, right). */
@@ -132,13 +246,13 @@ export const ASSISTANT_STOPPED = {
 
 /** Under the starters on the empty sheet and at the start of the consent card's small print. */
 export const ASSISTANT_NOT_MEDICAL_ADVICE =
-  "The assistant's answers are not medical advice. Speak to a doctor before you make big changes to your diet or your weight.";
+  "The assistant's answers are not medical advice. Speak to a doctor before you make big changes to your diet, your weight or your training.";
 
 /** The consent card (`assistant · consent-needed`), the same words as the Settings consent row. */
 export const ASSISTANT_CONSENT_CARD = {
   title: "Turn on the assistant",
   paragraphs: [
-    "The assistant answers questions about your diary, weight and targets, and logs, copies and changes entries for you. Every change shows as a card with Undo.",
+    "The assistant answers questions about your diary, weight, targets and training. It logs, copies and changes entries for you, builds and changes your routines, and changes your training goals, custom exercises and past workouts. Every change shows as a card with Undo.",
     "To do this, your messages and the Ki-Lo data the assistant reads are sent to Anthropic, the company that runs its AI model, as Ki-Lo's processor. Anthropic keeps them for up to 30 days. Ki-Lo keeps your conversations until you delete them.",
   ],
   privacyLinkLabel: "Privacy policy",
@@ -160,5 +274,7 @@ export const ASSISTANT_CARD_WORDS = {
   estimateLabel: "Estimate",
   undoLabel: "Undo",
   cannotUndoLabel: "Can't undo",
+  /** Plain words in place of Undo on a training card while a workout is in progress (`assistant-card · undo-unavailable-training`, During a workout). */
+  waitUndoLabel: "Can't undo yet",
   undoneTitle: "Undone",
 } as const;

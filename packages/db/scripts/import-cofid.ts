@@ -77,6 +77,7 @@ function readCsv(csvPath: string): { csv: string; sha256: string } {
 const storeThatMustNotBeUsed: ImportStore = {
   startRun: () => Promise.reject(new Error("A dry run must not write")),
   writeBatch: () => Promise.reject(new Error("A dry run must not write")),
+  giveDefaultPortions: () => Promise.reject(new Error("A dry run must not write")),
   finishRun: () => Promise.reject(new Error("A dry run must not write")),
   recordRowCount: () => Promise.reject(new Error("A dry run must not write")),
 };

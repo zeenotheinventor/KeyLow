@@ -49,3 +49,25 @@ export const describeExportReady = (sizeText: string): string => `${sizeText} ·
  */
 export const describeExportSaved = (sizeText: string, folderName: string): string =>
   `${sizeText} · Saved to ${folderName === "" ? "the folder you picked" : folderName}`;
+
+/**
+ * The words the web prints where the phone's say something a browser cannot: the phone's ready and saved footers
+ * name a phone and a Files app, and the web downloads the file, so it has no folder to name. The offline body is
+ * the web's alone, since the phone has no offline state. Everything else on the web boards is `ACCOUNT_EXPORT_COPY`.
+ */
+export const ACCOUNT_EXPORT_WEB_COPY = {
+  ready: {
+    footer:
+      "Save file downloads it through your browser. It stays in your downloads until you move or delete it.",
+  },
+  saved: {
+    tickLabel: "Downloaded",
+    footer: "Find it in your browser's downloads. If it is not there, open Export my data again.",
+  },
+  offline: {
+    body: "Preparing your file needs a connection. It starts when you're back online.",
+  },
+} as const;
+
+/** The file row's sub line once the browser has the file, such as "1.8 MB · Downloaded". */
+export const describeExportDownloaded = (sizeText: string): string => `${sizeText} · Downloaded`;

@@ -4,6 +4,9 @@
  * CANVAS is a draft in the board's style that the designers have not drawn, and waits for Zee's approval.
  */
 
+import { describeShortDate } from "./bodyMap";
+import { addCalendarDays } from "../dates/calendarDay";
+
 const entriesOf = (count: number): string => (count === 1 ? "1 entry" : `${count} entries`);
 
 /** "a", "a and b", "a, b and c". */
@@ -62,3 +65,23 @@ export const describeConfirmDeleteQuestion = (
   names: readonly string[],
 ): string =>
   `Delete ${entriesOf(count)}${clockTime === null ? "" : ` at ${clockTime}`} ${dayWord}? ${capitalised(joinNames(names))}.`;
+
+/**
+ * Where the question names the day of the entries to delete. "today" is the board's. NOT ON THE CANVAS,
+ * waiting for Zee's approval: "yesterday", "on Tue 3 Nov" for any other day, and "across 2 days" when the
+ * entries are on more than one.
+ */
+export const describeConfirmDeleteDayWord = (
+  localDates: readonly string[],
+  today: string,
+): string => {
+  const days = [...new Set(localDates)];
+  const [only] = days;
+  if (only === undefined || days.length > 1) {
+    return `across ${days.length} days`;
+  }
+  if (only === today) {
+    return "today";
+  }
+  return only === addCalendarDays(today, -1) ? "yesterday" : `on ${describeShortDate(only)}`;
+};

@@ -17,11 +17,13 @@ const mockSheet: {
   reportClose: () => void;
   canDragDown: boolean | undefined;
   canDragFromContent: boolean | undefined;
+  activeOffsetY: [number, number] | undefined;
 } = {
   calls: [],
   reportClose: jest.fn(),
   canDragDown: undefined,
   canDragFromContent: undefined,
+  activeOffsetY: undefined,
 };
 
 jest.mock("@gorhom/bottom-sheet", () => {
@@ -33,14 +35,16 @@ jest.mock("@gorhom/bottom-sheet", () => {
       onClose: () => void;
       enablePanDownToClose: boolean;
       enableContentPanningGesture: boolean;
+      activeOffsetY: [number, number];
     }
   >(function FakeSheet(
-    { children, onClose, enablePanDownToClose, enableContentPanningGesture },
+    { children, onClose, enablePanDownToClose, enableContentPanningGesture, activeOffsetY },
     ref,
   ) {
     mockSheet.reportClose = onClose;
     mockSheet.canDragDown = enablePanDownToClose;
     mockSheet.canDragFromContent = enableContentPanningGesture;
+    mockSheet.activeOffsetY = activeOffsetY;
     useImperativeHandle(ref, () => ({
       close: () => mockSheet.calls.push("close"),
       snapToIndex: (index: number) => mockSheet.calls.push(`snapToIndex(${index})`),
@@ -165,6 +169,12 @@ describe("BottomSheet on the library's ref", () => {
 
     await view.rerender(sheetElement(true, () => undefined, undefined, true));
     expect(mockSheet.canDragFromContent).toBe(true);
+  });
+
+  it("should start the sheet's own drag only on vertical movement, so a sideways swipe belongs to the contents", async () => {
+    await render(sheetElement(true, () => undefined));
+
+    expect(mockSheet.activeOffsetY).toEqual([-10, 10]);
   });
 
   it("should not snap anywhere on the first open", async () => {

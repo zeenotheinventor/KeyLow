@@ -4,7 +4,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import {
   assistantTargetSources,
-  getLatestAssistantConversation,
+  getAssistantConversationPage,
   readAssistantActions,
 } from "../../src/repos/assistantConversations";
 import { createTestClient } from "../createTestClient";
@@ -15,6 +15,9 @@ import {
   actionRow,
   createAssistantFakeState,
   installAssistantFake,
+  longConversation,
+  turnId,
+  turnTime,
 } from "../support/assistantFake";
 import { REST_URL, postgrestError, postgrestRows } from "../support/postgrest";
 
@@ -141,7 +144,12 @@ describe("the reads of the assistant", () => {
   it("should give null for a person with no conversation", async () => {
     installAssistantFake(server, createAssistantFakeState({ conversationIds: [] }));
 
-    expect(await getLatestAssistantConversation(createTestClient())).toBeNull();
+    expect(await getAssistantConversationPage(createTestClient(), null)).toEqual({
+      conversationId: null,
+      messages: [],
+      actions: [],
+      olderCursor: null,
+    });
   });
 });
 
@@ -164,56 +172,157 @@ describe("the reads of a long history", () => {
     expect(read.actions).toHaveLength(2300);
     expect(new Set(read.actions.map((action) => action.id)).size).toBe(2300);
   });
+});
 
-  it("should read every message and the status of every turn of a long conversation", async () => {
-    const turns = Array.from({ length: 1100 }, (_, index) => ({
-      id: uuid("00000003", index),
-      status: index === 1099 ? "stopped" : "complete",
-    }));
-    const messages = turns.map((turn, index) => ({
-      id: uuid("00000004", index),
-      turn_id: turn.id,
-      role: "user",
-      content: [{ type: "text", text: `Question ${index}` }],
-      display: null,
-      conversation_id: CONVERSATION_ID,
-      seq: index + 1,
-    }));
-    installAssistantFake(server, createAssistantFakeState({ messages, turns, actions: [] }));
+const TURN_COUNT = 45;
 
-    const conversation = await getLatestAssistantConversation(createTestClient());
+describe("getAssistantConversationPage", () => {
+  it("should read the newest conversation's newest 21 turns, newest first, with their messages embedded", async () => {
+    const state = createAssistantFakeState(longConversation(TURN_COUNT));
+    installAssistantFake(server, state);
 
-    expect(conversation?.messages).toHaveLength(1100);
-    expect(conversation?.messages.at(-1)).toMatchObject({ turnStatus: "stopped" });
-    expect(conversation?.messages.at(0)).toMatchObject({ turnStatus: "complete" });
+    await getAssistantConversationPage(createTestClient(), null);
+
+    const [read] = state.turnReads;
+    expect(state.turnReads).toHaveLength(1);
+    expect(read?.get("conversation_id")).toBe(`eq.${CONVERSATION_ID}`);
+    expect(read?.get("order")).toBe("created_at.desc,id.desc");
+    expect(read?.get("limit")).toBe("21");
+    expect(read?.get("or")).toBeNull();
+    expect(read?.get("select")).toContain(
+      "assistant_messages(id,turn_id,role,content,display,seq)",
+    );
+    expect(read?.get("assistant_messages.order")).toBe("seq.asc");
   });
 
-  it("should read a message whose turn started after the turns were read as open", async () => {
-    installAssistantFake(server, createAssistantFakeState({ turns: [] }));
+  it("should give the newest 20 turns' messages in seq order, each with its turn's status", async () => {
+    installAssistantFake(server, createAssistantFakeState(longConversation(TURN_COUNT)));
 
-    const conversation = await getLatestAssistantConversation(createTestClient());
+    const page = await getAssistantConversationPage(createTestClient(), null);
 
-    expect(conversation?.messages.map((message) => message.turnStatus)).toEqual([
-      "open",
-      "open",
-      "open",
-      "open",
-      "open",
-    ]);
+    expect(page.messages).toHaveLength(40);
+    expect(page.messages.at(0)).toMatchObject({ id: uuid("00000004", 50), turnStatus: "complete" });
+    expect(page.messages.at(-1)).toMatchObject({ id: uuid("00000004", 89), turnStatus: "stopped" });
+    expect(page.messages.map((message) => message.id)).toEqual(
+      [...page.messages.map((message) => message.id)].sort(),
+    );
+  });
+
+  it("should give a cursor naming the oldest turn of the page when an older turn exists", async () => {
+    installAssistantFake(server, createAssistantFakeState(longConversation(TURN_COUNT)));
+
+    const page = await getAssistantConversationPage(createTestClient(), null);
+
+    expect(page.conversationId).toBe(CONVERSATION_ID);
+    expect(page.olderCursor).toEqual({
+      conversationId: CONVERSATION_ID,
+      createdAt: turnTime(25),
+      turnId: turnId(25),
+    });
+  });
+
+  it("should give no cursor for exactly 20 turns", async () => {
+    installAssistantFake(server, createAssistantFakeState(longConversation(20)));
+
+    const page = await getAssistantConversationPage(createTestClient(), null);
+
+    expect(page.messages).toHaveLength(40);
+    expect(page.olderCursor).toBeNull();
+  });
+
+  it("should read the 20 turns older than the cursor with a keyset filter that quotes the timestamp", async () => {
+    const state = createAssistantFakeState(longConversation(TURN_COUNT));
+    installAssistantFake(server, state);
+    const first = await getAssistantConversationPage(createTestClient(), null);
+    state.turnReads.length = 0;
+    state.conversationRead = null;
+
+    const second = await getAssistantConversationPage(createTestClient(), first.olderCursor);
+
+    expect(state.turnReads[0]?.get("or")).toBe(
+      `(created_at.lt."${turnTime(25)}",and(created_at.eq."${turnTime(25)}",id.lt.${turnId(25)}))`,
+    );
+    expect(state.conversationRead).toBeNull();
+    expect(second.messages.map((message) => message.id).at(0)).toBe(uuid("00000004", 10));
+    expect(second.messages.map((message) => message.id).at(-1)).toBe(uuid("00000004", 49));
+    expect(second.olderCursor).toMatchObject({ turnId: turnId(5) });
+  });
+
+  it("should end with the last 5 turns and no cursor, with no turn split or repeated across pages", async () => {
+    installAssistantFake(server, createAssistantFakeState(longConversation(TURN_COUNT)));
+    const first = await getAssistantConversationPage(createTestClient(), null);
+    const second = await getAssistantConversationPage(createTestClient(), first.olderCursor);
+
+    const third = await getAssistantConversationPage(createTestClient(), second.olderCursor);
+
+    expect(third.messages).toHaveLength(10);
+    expect(third.olderCursor).toBeNull();
+    const ids = [first, second, third].flatMap((page) => page.messages.map((row) => row.id));
+    expect(new Set(ids).size).toBe(90);
+  });
+
+  it("should read the actions of the page's turns only", async () => {
+    const state = createAssistantFakeState(longConversation(TURN_COUNT));
+    installAssistantFake(server, state);
+
+    const page = await getAssistantConversationPage(createTestClient(), null);
+
+    expect(state.actionReads).toHaveLength(1);
+    const inList = state.actionReads[0]?.get("turn_id") ?? "";
+    expect(inList.replace(/^in\.\(|\)$/g, "").split(",")).toHaveLength(20);
+    expect(page.actions.map((action) => action.turnId).sort()).toEqual(
+      [turnId(25), turnId(30), turnId(35), turnId(40)].sort(),
+    );
+  });
+
+  it("should read no actions for a conversation with no turns", async () => {
+    const state = createAssistantFakeState({ turns: [], messages: [] });
+    installAssistantFake(server, state);
+
+    const page = await getAssistantConversationPage(createTestClient(), null);
+
+    expect(page).toEqual({
+      conversationId: CONVERSATION_ID,
+      messages: [],
+      actions: [],
+      olderCursor: null,
+    });
+    expect(state.actionReads).toEqual([]);
   });
 
   it("should read what the app draws for a message with the message", async () => {
     installAssistantFake(server, createAssistantFakeState());
 
-    const conversation = await getLatestAssistantConversation(createTestClient());
+    const page = await getAssistantConversationPage(createTestClient(), null);
 
-    expect(conversation?.messages.map((message) => message.display !== null)).toEqual([
+    expect(page.messages.map((message) => message.display !== null)).toEqual([
       false,
       false,
       true,
       false,
       false,
     ]);
+  });
+
+  it("should name the action and the database code in a failure and never the database's message", async () => {
+    server.use(
+      http.get(`${REST_URL}/assistant_conversations`, ({ request }) =>
+        postgrestRows(request, [{ id: CONVERSATION_ID }]),
+      ),
+      http.get(`${REST_URL}/assistant_turns`, () =>
+        postgrestError(500, "XX000", "failing row (2 eggs and toast) violates a check"),
+      ),
+    );
+
+    const failure = await getAssistantConversationPage(createTestClient(), null).then(
+      () => null,
+      (thrown: unknown) => thrown,
+    );
+
+    expect(failure).toMatchObject({
+      message: "Could not load your conversation (XX000)",
+      cause: { code: "XX000" },
+    });
   });
 });
 
@@ -480,5 +589,166 @@ describe("the programs target source", () => {
     expect(reads).toEqual([
       { id: PROGRAM_ID, updatedAt: "2026-11-03T10:00:00+00:00", row: { id: PROGRAM_ID } },
     ]);
+  });
+});
+
+describe("the training cards of the changes list", () => {
+  const TRAINING_TURN_ID = "00000000-0000-4000-8000-0000000000c1";
+  const FOOD_TURN_ID = "00000000-0000-4000-8000-0000000000c2";
+  const PREVIOUS_VALUE_MARKER = "a-routine-name-that-must-not-leave-the-read";
+
+  const storedCard = {
+    actionIds: [FIRST_ACTION_ID],
+    kind: "routine_updated",
+    title: "Updated routine Push Pull Legs",
+    sub: null,
+    rows: [],
+    changeDetail: "4 changes",
+    totalText: null,
+    note: null,
+    link: null,
+    undo: "available",
+    undoneSub: null,
+  };
+  const messageOf = (turnId: string, display: unknown, id = `m-${turnId}`) => ({
+    id,
+    turn_id: turnId,
+    role: "user",
+    content: [],
+    display,
+    conversation_id: CONVERSATION_ID,
+    seq: 1,
+  });
+  const trainingDisplay = {
+    "call-1": {
+      card: storedCard,
+      undo: { previous: { name: PREVIOUS_VALUE_MARKER }, fingerprint: "f" },
+    },
+  };
+  const trainingAction = actionRow({
+    id: FIRST_ACTION_ID,
+    turn_id: TRAINING_TURN_ID,
+    tool: "edit_routine",
+  });
+  const foodAction = actionRow({ id: SECOND_ACTION_ID, turn_id: FOOD_TURN_ID, tool: "log_entry" });
+
+  const read = (state: ReturnType<typeof createAssistantFakeState>) => {
+    installAssistantFake(server, state);
+    return readAssistantActions(createTestClient(), { withCards: true }, noSources);
+  };
+
+  it("should read the words of the card of a training write and nothing else the display holds", async () => {
+    const { cards } = await read(
+      createAssistantFakeState({
+        actions: [trainingAction],
+        messages: [messageOf(TRAINING_TURN_ID, trainingDisplay)],
+      }),
+    );
+
+    expect(cards).toEqual([
+      {
+        actionIds: [FIRST_ACTION_ID],
+        kind: "routine_updated",
+        title: "Updated routine Push Pull Legs",
+        sub: null,
+        link: null,
+        changeDetail: "4 changes",
+      },
+    ]);
+    expect(JSON.stringify(cards)).not.toContain(PREVIOUS_VALUE_MARKER);
+  });
+
+  it("should make one select for the turns of the training writes, naming only the columns it needs", async () => {
+    const state = createAssistantFakeState({
+      actions: [trainingAction, foodAction],
+      messages: [messageOf(TRAINING_TURN_ID, trainingDisplay)],
+    });
+
+    await read(state);
+
+    expect(state.turnMessageReads).toHaveLength(1);
+    expect(state.turnMessageReads[0]?.get("select")).toBe("id,display");
+    expect(state.turnMessageReads[0]?.get("turn_id")).toBe(`in.(${TRAINING_TURN_ID})`);
+  });
+
+  it("should read no messages when no write is a training one", async () => {
+    const state = createAssistantFakeState({ actions: [foodAction] });
+
+    const { cards } = await read(state);
+
+    expect(state.turnMessageReads).toEqual([]);
+    expect(cards).toEqual([]);
+  });
+
+  it("should read no messages for a write whose conversation was deleted, which has no turn", async () => {
+    const state = createAssistantFakeState({
+      actions: [{ ...trainingAction, turn_id: null, conversation_id: null }],
+    });
+
+    const { cards } = await read(state);
+
+    expect(state.turnMessageReads).toEqual([]);
+    expect(cards).toEqual([]);
+  });
+
+  it("should give no card for a turn whose messages are gone, so its row falls back", async () => {
+    const { cards } = await read(
+      createAssistantFakeState({ actions: [trainingAction], messages: [] }),
+    );
+
+    expect(cards).toEqual([]);
+  });
+
+  it("should read no messages at all for the conversation's own read, which draws the cards itself", async () => {
+    const state = createAssistantFakeState({ actions: [trainingAction] });
+    installAssistantFake(server, state);
+
+    await readAssistantActions(createTestClient(), {}, noSources);
+
+    expect(state.turnMessageReads).toEqual([]);
+  });
+
+  it("should ask for at most 100 turns at a time, which keeps the request's address short", async () => {
+    const turnId = (index: number) => `00000000-0000-4000-8000-${String(index).padStart(12, "0")}`;
+    const actions = Array.from({ length: 250 }, (_, index) =>
+      actionRow({
+        id: `10000000-0000-4000-8000-${String(index).padStart(12, "0")}`,
+        turn_id: turnId(index),
+        tool: "update_training_goals",
+      }),
+    );
+    const state = createAssistantFakeState({ actions, messages: [] });
+
+    await read(state);
+
+    expect(
+      state.turnMessageReads
+        .map((query) => query.get("turn_id")?.split(",").length ?? 0)
+        .sort((a, b) => a - b),
+    ).toEqual([50, 100, 100]);
+  });
+
+  it("should name the action and the database code in a failure and never the database's message", async () => {
+    installAssistantFake(server, createAssistantFakeState({ actions: [trainingAction] }));
+    server.use(
+      http.get(`${REST_URL}/assistant_messages`, () =>
+        postgrestError(500, "XX000", `failing row (${PREVIOUS_VALUE_MARKER}) violates a check`),
+      ),
+    );
+
+    const failure = await readAssistantActions(
+      createTestClient(),
+      { withCards: true },
+      noSources,
+    ).then(
+      () => null,
+      (thrown: unknown) => thrown,
+    );
+
+    expect(failure).toMatchObject({
+      message: "Could not load what the assistant changed (XX000)",
+      cause: { code: "XX000" },
+    });
+    expect(JSON.stringify(failure)).not.toContain(PREVIOUS_VALUE_MARKER);
   });
 });

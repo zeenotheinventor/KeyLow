@@ -102,7 +102,9 @@ export type { WeighIn } from "./weighInSchemas";
 export { importBodyMeasurements, listBodyMeasurements } from "./bodyMeasurements";
 export type { BodyMeasurementImportResult } from "./bodyMeasurements";
 export type { BodyMeasurement } from "./bodyMeasurementSchemas";
-export { getActiveRoutine, listSetsFrom, listWeekSessions } from "./training";
+export { getActiveRoutine, hasLoggedSession, listSetsFrom, listWeekSessions } from "./training";
+export { HEAT_LOOKBACK_DAYS, readMuscleState, readTrainingInputs } from "./trainingReads";
+export type { TrainingInputs } from "./trainingReads";
 export type {
   ActiveRoutine,
   LastPerformanceSession,
@@ -112,28 +114,42 @@ export type {
   TrainingSet,
   WeekSession,
 } from "./trainingSchemas";
-export { getActiveSession, getLastPerformance, getSession } from "./trainingSessions";
+export {
+  getActiveSession,
+  getLastPerformance,
+  getSession,
+  getSessionsByIds,
+} from "./trainingSessions";
 export type { LastPerformanceOptions } from "./trainingSessions";
 export { listTrendSets } from "./trainingTrend";
 export type { TrendSetRow, TrendSetRows } from "./trainingSchemas";
 export { getRoutine, listRoutines } from "./routines";
 export type { ListRoutinesOptions } from "./routines";
 export { saveRoutine, setActiveRoutine, setRoutineArchived } from "./routineWrites";
+export { RoutineRuleError } from "../errors";
 export type { RoutineSave } from "./routineWrites";
 export type { RoutineDetail, RoutineListEntry, RoutineRecord } from "./routineSchemas";
-export { deleteSession, finishSession, startSession } from "./sessionWrites";
-export type { SessionFinish, SessionStart } from "./sessionWrites";
-export { addSet, removeSet, reorderSets, restoreSet, updateSet } from "./setWrites";
+export { deleteSession, finishSession, restoreSession, startSession } from "./sessionWrites";
+export type { SessionFinish, SessionRestore, SessionStart } from "./sessionWrites";
+export { addSet, getSet, removeSet, reorderSets, restoreSet, updateSet } from "./setWrites";
 export type { SetAdd, SetPatch } from "./setWrites";
 export { findPreviousSessionWeek, listSessionsInWeek } from "./trainingHistory";
 export type { HistorySessionRow, HistorySetRow } from "./trainingSchemas";
 export {
+  closeTrainingGoals,
   getCurrentTrainingGoals,
   listTrainingGoalsHistory,
   saveTrainingGoals,
+  saveTrainingGoalsReturningId,
 } from "./trainingGoals";
-export { exerciseHitOf, getExercise, searchExercises } from "./exercises";
-export type { ExerciseDetail, ExerciseSearchHit, ExerciseSearchOptions } from "./exercises";
+export { exerciseHitOf, getExercise, readExercisesById, searchExercises } from "./exercises";
+export type {
+  ExerciseDetail,
+  ExerciseLine,
+  ExerciseSearchHit,
+  ExerciseSearchOptions,
+} from "./exercises";
+export { getExerciseFormMedia } from "./exerciseFormMedia";
 export { listSuggestionLibrary } from "./suggestionLibrary";
 export type { SuggestionLibraryOptions } from "./suggestionLibrary";
 export {
@@ -147,7 +163,7 @@ export type {
   AcceptedSuggestionsRead,
   SkippedAcceptedSuggestion,
 } from "./acceptedSuggestions";
-export { archiveExercise, saveExercise } from "./exerciseWrites";
+export { archiveExercise, restoreExercise, saveExercise } from "./exerciseWrites";
 export type { ExerciseSave } from "./exerciseWrites";
 export {
   getMyProgramSummary,
@@ -182,15 +198,16 @@ export {
   assistantTargetSources,
   createAssistantConversation,
   deleteAllAssistantConversations,
-  getLatestAssistantConversation,
+  getAssistantConversationPage,
   readAssistantActions,
   undoAssistantActions,
 } from "./assistantConversations";
 export type {
   AssistantActionsRead,
-  AssistantConversationRead,
+  AssistantConversationPage,
   AssistantTargetRead,
   AssistantTargetSource,
   AssistantUndoResult,
 } from "./assistantConversations";
 export { AccountExportError, exportMyData, readMyDataByTable } from "./accountExport";
+export { createFeatureRequest, isDailyLimitFailure } from "./featureRequests";

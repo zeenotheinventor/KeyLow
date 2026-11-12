@@ -29,10 +29,11 @@ export const getRecipesTool: ReadToolDefinition<z.infer<typeof getRecipesInput>>
         : await searchRecipes(ctx.caller, q, { limit });
     return {
       data: {
-        recipes: recipes.map(({ id, name, servings, computed: { perServing } }) => ({
+        recipes: recipes.map(({ id, name, servings, computed: { perServing, servingsOnly } }) => ({
           id,
           name,
           servings,
+          servings_only: servingsOnly,
           per_serving: {
             kcal: perServing.kcal,
             protein_g: perServing.protein_g,

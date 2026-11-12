@@ -29,8 +29,6 @@ export const SEARCH_GROUP_HEADINGS: Readonly<Record<SearchGroupKey, SearchGroupH
   },
 };
 
-export const describeSeeMore = (hiddenCount: number): string => `See ${hiddenCount} more`;
-
 /** The name of the control that empties a search field once it holds text. */
 export const SEARCH_CLEAR_LABEL = "Clear search";
 
@@ -71,8 +69,11 @@ export const SEARCH_FAILED_MOBILE = {
   body: "Check your connection and try again.",
 };
 
-/** The title of the notice shown when Open Food Facts is rate limited. The body is `describeRateLimit`. */
-export const OPEN_FOOD_FACTS_BUSY = "Open Food Facts is busy";
+/**
+ * The title of the notice shown when a search is rate limited. The client gets one code for Ki-Lo's own limit
+ * and for a real limit from Open Food Facts, so the words blame neither. The body is `describeRateLimit`.
+ */
+export const SEARCH_RATE_LIMITED = "Too many searches just now";
 
 export const OPEN_FOOD_FACTS_SEARCH_FAILED = {
   title: "Open Food Facts could not be searched right now",

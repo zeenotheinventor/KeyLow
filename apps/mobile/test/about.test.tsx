@@ -132,6 +132,15 @@ describe("the About screen", () => {
       ).toBeOnTheScreen();
     });
 
+    it("should credit the restaurant chains' own published figures, in one sentence and with no link", async () => {
+      await renderAbout();
+
+      expect(screen.getByText(DATA_SOURCE_ATTRIBUTION.restaurant.name)).toBeOnTheScreen();
+      expect(screen.getByText(DATA_SOURCE_ATTRIBUTION.restaurant.text)).toBeOnTheScreen();
+      expect(screen.queryByText(/connected/i)).not.toBeOnTheScreen();
+      expect(screen.getAllByRole("link")).toHaveLength(5);
+    });
+
     it("should credit Open Food Facts under the Open Database Licence", async () => {
       await renderAbout();
 

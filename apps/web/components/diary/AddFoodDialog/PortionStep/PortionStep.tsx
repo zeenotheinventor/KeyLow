@@ -4,10 +4,10 @@ import {
   FOOD_NOT_LOADED,
   FOOD_REVIEW_ACTION_IN_NEW_TAB,
   FOOD_REVIEW_BANNER,
-  SAVE_FAILED_BANNER,
   describeMissingValuesBeforeLogging,
 } from "@keylow/core/copy";
 import { missingFieldsOf } from "@keylow/core/diary";
+import { canBeCopiedToYourFoods } from "@keylow/core/foods";
 import { SearchX } from "lucide-react";
 
 import { BackToResults } from "../BackToResults";
@@ -18,22 +18,27 @@ import { PortionFields } from "@/components/diary/PortionFields";
 import { Banner } from "@/components/ui/Banner";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
+import { IconButton } from "@/components/ui/IconButton";
 import { Skeleton } from "@/components/ui/Skeleton";
 
 /**
- * The add dialog's second step, for the food a row opened: a Results link, then what the chosen amount
- * comes to, the amount, its unit and the Time field (an ingredient has none). A food that has to be
+ * The add dialog's second step, for the food a row opened: a Results link with the favourite heart at the
+ * other end of its row, then what the chosen amount
+ * comes to, the amount and its unit. The diary's add dialog has no Time field here, as the time belongs to the
+ * plate, and an ingredient has none. A food that has to be
  * reviewed first says so, with a way to copy it to the person's own foods, and cannot be added from here.
  */
 export function PortionStep({
   draft,
-  hasSaveError = false,
   opensReviewInNewTab = false,
+  note,
+  favouriteHeart,
   onBack,
+  backLabel,
   amountRef,
   ...timeProps
 }: PortionStepProps) {
-  const back = <BackToResults onClick={onBack} />;
+  const back = <BackToResults onClick={onBack} label={backLabel} />;
 
   if (draft.status !== "ready") {
     return (
@@ -61,7 +66,10 @@ export function PortionStep({
 
   return (
     <>
-      {back}
+      <div className="flex items-center justify-between gap-3">
+        {back}
+        {favouriteHeart !== undefined && <IconButton {...favouriteHeart} />}
+      </div>
       <PortionFields
         name={food.name}
         food={food}
@@ -80,15 +88,17 @@ export function PortionStep({
               <Banner
                 tone="review"
                 title={FOOD_REVIEW_BANNER.title}
-                action={
-                  opensReviewInNewTab
-                    ? {
-                        label: FOOD_REVIEW_ACTION_IN_NEW_TAB,
-                        href: `/foods/new?from=${food.id}`,
-                        newTab: true,
-                      }
-                    : { label: FOOD_REVIEW_BANNER.action, href: `/foods/new?from=${food.id}` }
-                }
+                {...(canBeCopiedToYourFoods(food)
+                  ? {
+                      action: opensReviewInNewTab
+                        ? {
+                            label: FOOD_REVIEW_ACTION_IN_NEW_TAB,
+                            href: `/foods/new?from=${food.id}`,
+                            newTab: true,
+                          }
+                        : { label: FOOD_REVIEW_BANNER.action, href: `/foods/new?from=${food.id}` },
+                    }
+                  : {})}
               >
                 {describeMissingValuesBeforeLogging(
                   missingFieldsOf(food),
@@ -96,7 +106,7 @@ export function PortionStep({
                 )}
               </Banner>
             )}
-            {hasSaveError && <Banner tone="error">{SAVE_FAILED_BANNER}</Banner>}
+            {note !== undefined && <p className="text-caption text-text-muted">{note}</p>}
           </>
         }
       />

@@ -517,6 +517,55 @@ describe("adding an ingredient from the recipe editor", () => {
       expect(screen.queryByRole("heading", { name: /recipes/i })).not.toBeOnTheScreen();
     });
 
+    it("should list a food counted in portions beside a food with a weight", async () => {
+      const bucket = buildFood({
+        id: uuidOf("a"),
+        source: "restaurant",
+        name: "Spinach bucket",
+        basis: "per_portion",
+        kcal: 500,
+        protein_g: 40,
+        fat_g: 30,
+        carbs_g: 20,
+      });
+      mockFoodSearch.mockReturnValue({
+        ...idleSearch,
+        local: [hitOf(spinach, 0.9), { ...hitOf(bucket, 0.8), default_portion_label: "1 bucket" }],
+      });
+      const user = await showEditor();
+      await user.press(addRow());
+
+      await type("spinach");
+
+      expect(resultRow("Spinach, baby, raw", "100 g")).toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: /Spinach bucket/ })).toBeOnTheScreen();
+    });
+
+    it("should list a food counted in portions in Recent too", async () => {
+      mockRecentFoods.current = [
+        {
+          ...oatsLoggedAt50Grams,
+          foodId: uuidOf("a"),
+          snapshot: {
+            ...oatsLoggedAt50Grams.snapshot,
+            name: "Bargain bucket",
+            basis: "per_portion",
+            unit: "portion",
+            quantity: 1,
+            portion: { label: "1 bucket" },
+            resolvedGrams: 0,
+          },
+        },
+        oatsLoggedAt50Grams,
+      ];
+      const user = await showEditor();
+
+      await user.press(addRow());
+
+      expect(screen.getByRole("button", { name: /Onions, raw/ })).toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: /Bargain bucket/ })).toBeOnTheScreen();
+    });
+
     it("should say nothing was found without offering to create a food", async () => {
       const user = await showEditor();
       await user.press(addRow());

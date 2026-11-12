@@ -126,3 +126,24 @@ export async function archiveExercise(client: SupabaseClient<Database>, id: stri
     throw await refusal(client, id, "archive the exercise", error, NO_ROW_MATCHED);
   }
 }
+
+/**
+ * Brings an archived custom exercise back by clearing `deleted_at` (the Undo of `archiveExercise`), so
+ * search and `getExercise` show it again. One that is already live resolves with no change. An exercise
+ * of the library is refused with an `ExerciseRuleError` with the rule `global_exercise`, and one that is
+ * not the caller's or does not exist fails with the code PGRST116.
+ */
+export async function restoreExercise(client: SupabaseClient<Database>, id: string): Promise<void> {
+  assertExerciseId(id);
+
+  const { error } = await client
+    .from("exercises")
+    .update({ deleted_at: null })
+    .eq("id", id)
+    .select("id")
+    .single();
+
+  if (error) {
+    throw await refusal(client, id, "restore the exercise", error, NO_ROW_MATCHED);
+  }
+}

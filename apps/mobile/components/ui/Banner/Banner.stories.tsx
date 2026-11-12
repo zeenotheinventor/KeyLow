@@ -3,9 +3,9 @@ import {
   FOOD_REVIEW_BANNER,
   NO_TARGET_BANNER,
   OFFLINE_BANNER,
-  OPEN_FOOD_FACTS_BUSY,
+  LOOKUP_RATE_LIMITED,
   OPEN_FOOD_FACTS_SEARCH_FAILED,
-  describeBarcodeRateLimit,
+  describeRateLimit,
 } from "@keylow/core/copy";
 import { View } from "react-native";
 
@@ -65,8 +65,8 @@ export const InfoBusy: Story = {
   args: {
     variant: "info",
     icon: "Clock",
-    title: OPEN_FOOD_FACTS_BUSY,
-    body: describeBarcodeRateLimit(30),
+    title: LOOKUP_RATE_LIMITED,
+    body: describeRateLimit(30),
   },
 };
 

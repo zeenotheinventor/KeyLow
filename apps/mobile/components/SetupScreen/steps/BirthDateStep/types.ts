@@ -1,13 +1,3 @@
-import type { BirthDateReason } from "@keylow/core/setup";
-
-/** What each of the three fields holds, as typed. */
-export type BirthDateFieldTexts = Readonly<{ day: string; month: string; year: string }>;
-
-export type BirthDateReading =
-  | Readonly<{ kind: "empty" }>
-  | Readonly<{ kind: "valid"; birthDate: string }>
-  | Readonly<{ kind: "problem"; reason: BirthDateReason }>;
-
 export type BirthDateStepProps = {
   /** The birth date to start the fields from, `YYYY-MM-DD`, or `undefined` for empty fields. */
   value: string | undefined;

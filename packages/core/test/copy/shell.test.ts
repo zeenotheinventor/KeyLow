@@ -85,6 +85,10 @@ describe("the tab shell copy", () => {
         },
         reminders: { title: "Reminders" },
         about: { title: "About" },
+        featureRequest: {
+          title: "Request a feature",
+          subtitle: "Tell us what Ki-Lo should do next",
+        },
       },
       account: { title: "Account", signOut: "Sign out" },
     });

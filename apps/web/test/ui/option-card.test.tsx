@@ -48,6 +48,25 @@ function Focuses({ initial = [] }: { initial?: ("chest" | "arms")[] }) {
   );
 }
 
+describe("figures", () => {
+  it("should draw the title and the value in tabular figures, and the description in proportional ones", () => {
+    render(
+      <OptionCard
+        title="0.25% a week"
+        description="Gentle, 1 to 3 days."
+        value="0.2 kg"
+        valueCaption="a week"
+        checked={false}
+        onPress={() => undefined}
+      />,
+    );
+
+    expect(screen.getByText("0.25% a week").className).toContain("tabular-nums");
+    expect(screen.getByText("0.2 kg").className).toContain("tabular-nums");
+    expect(screen.getByText("Gentle, 1 to 3 days.").className).not.toContain("tabular-nums");
+  });
+});
+
 describe("OptionCard", () => {
   it("should name the card by its title, badge, description, reason and value, without closing full stops", () => {
     render(

@@ -1,4 +1,4 @@
-import type { NutrientBasis } from "@keylow/core/schemas";
+import type { CustomFoodBasis } from "@keylow/core/schemas";
 
 export type PortionCardProps = {
   /** One-based, used to tell the cards apart in accessible names and error messages. */
@@ -7,7 +7,7 @@ export type PortionCardProps = {
   amount: string;
   isDefault: boolean;
   /** The nutrition basis, which sets the unit the amount is in. */
-  basis: NutrientBasis;
+  basis: CustomFoodBasis;
   labelError?: string | undefined;
   amountError?: string | undefined;
   onLabelChange: (label: string) => void;

@@ -9,11 +9,10 @@ import {
 import { formatCalories } from "@keylow/core/format";
 import { energyShares } from "@keylow/core/search";
 
-import { MacroTile } from "./MacroTile";
-
 import type { MacroHeroProps } from "./types";
 
 import { Card } from "@/components/ui/Card";
+import { MacroTile } from "@/components/ui/MacroTile";
 import { cn } from "@/lib/utils";
 
 const NO_VALUES = { kcal: null, protein_g: null, carbs_g: null, fat_g: null };
@@ -29,7 +28,10 @@ export function MacroHero(props: MacroHeroProps) {
   // Only an amount can have no values: the food's own always have, even if one is not given.
   const hasNoAmount = values === null;
   const shares = energyShares(values ?? NO_VALUES);
-  const basis = props.amount === undefined ? describeBasis(props.food.basis) : props.amount.caption;
+  const basis =
+    props.amount === undefined
+      ? describeBasis(props.food.basis, props.portionLabel)
+      : props.amount.caption;
   const region = amount?.region;
   // The note only explains the shares, so it goes when none is drawn.
   const hasShares = Object.values(shares).some((share) => share !== null);

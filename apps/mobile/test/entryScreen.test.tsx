@@ -1414,4 +1414,79 @@ describe("the entry screen", () => {
       expect(lastUpdate()).toMatchObject({ quantity: 200, unit: "g" });
     });
   });
+
+  describe("a bucket, whose food has no published weight", () => {
+    const BUCKET_ENTRY_ID = "00000000-0000-4000-8000-0000000000dd";
+    const bucket = buildFood({
+      id: "77777777-7777-4777-8777-777777777777",
+      source: "restaurant",
+      name: "Bargain bucket",
+      basis: "per_portion",
+      kcal: 500,
+      protein_g: 40,
+      fat_g: 30,
+      carbs_g: 20,
+    });
+    const bucketPortion = buildFoodPortion({
+      id: "88888888-8888-4888-8888-888888888881",
+      food_id: bucket.id,
+      label: "1 bucket",
+      grams: null,
+      ml: null,
+      is_default: true,
+    });
+
+    beforeEach(() => {
+      const entry = buildLogEntry({
+        food: bucket,
+        quantity: 1.5,
+        unit: "portion",
+        portion: bucketPortion,
+        localDate: "2026-10-15",
+        loggedAt: "2026-10-15T11:40:10.000Z",
+      });
+      diaryBackend.entries = [
+        {
+          ...entry,
+          id: BUCKET_ENTRY_ID,
+          created_at: "2026-10-15T11:40:31+00:00",
+          kcal: entry.nutrients.kcal,
+        },
+      ];
+      entryBackend.foods = [bucket];
+      entryBackend.foodPortions = [bucketPortion];
+    });
+
+    it("should open on the count with only the portion chip and no grams", async () => {
+      await renderEntry(BUCKET_ENTRY_ID);
+      await screen.findByRole("heading", { name: "Bargain bucket" });
+
+      await screen.findByRole("radio", { name: "1 bucket", checked: true });
+
+      expect(screen.getAllByRole("radio")).toHaveLength(1);
+      expect(amountField()).toHaveDisplayValue("1.5");
+      expect(heroKcal("For 1.5 × 1 bucket").getByText("750")).toBeOnTheScreen();
+      expect(screen.queryByText(/\b100 g\b/)).not.toBeOnTheScreen();
+    });
+
+    it("should keep the count when it is edited, and write no grams", async () => {
+      const user = await renderEntry(BUCKET_ENTRY_ID);
+      await screen.findByRole("heading", { name: "Bargain bucket" });
+      await screen.findByRole("radio", { name: "1 bucket", checked: true });
+
+      await user.clear(amountField());
+      await user.type(amountField(), "2");
+      await user.press(saveButton());
+
+      await waitFor(() => {
+        expect(updates()).toHaveLength(1);
+      });
+      expect(lastUpdate()).toMatchObject({
+        quantity: 2,
+        unit: "portion",
+        resolved_grams: 0,
+        nutrients: expect.objectContaining({ kcal: 1000 }) as unknown,
+      });
+    });
+  });
 });

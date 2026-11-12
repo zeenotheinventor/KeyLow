@@ -16,13 +16,19 @@ describe("the plate module", () => {
       "canLogPlate",
       "clearPlate",
       "isPlateItemValid",
+      "plateDayBars",
       "plateFoodAmount",
+      "plateFoodRowStart",
       "plateItemName",
       "plateItemOfHit",
       "plateItemOfPickedFood",
       "plateItemOfRecent",
       "plateItemOfRecipe",
       "plateItemValues",
+      "plateLoggedAt",
+      "plateRecipeOfRow",
+      "plateRecipeRowStart",
+      "plateReducer",
       "plateTotals",
       "plateUnitWord",
       "plateUnitWords",
@@ -30,6 +36,7 @@ describe("the plate module", () => {
       "replacePlateItem",
       "restorePlate",
       "setPlateQuantity",
+      "startingPlate",
     ]);
   });
 });

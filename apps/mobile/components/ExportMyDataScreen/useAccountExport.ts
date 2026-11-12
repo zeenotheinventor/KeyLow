@@ -1,23 +1,15 @@
-import { exportMyData } from "@keylow/api-client";
-import {
-  accountExportFileName,
-  accountExportReducer,
-  displayFolderName,
-  initialAccountExportState,
-  serialiseAccountExport,
-} from "@keylow/core";
-import { toLocalDate } from "@keylow/core/dates";
-import { formatFileSize } from "@keylow/core/format";
+import { exportMyData, useAccountExportFile } from "@keylow/api-client";
+import { displayFolderName } from "@keylow/core";
 import { Directory } from "expo-file-system";
-import { useFocusEffect } from "expo-router";
-import { useCallback, useReducer, useRef } from "react";
+import { useIsFocused } from "expo-router";
+import { useCallback, useRef } from "react";
 
 import { supabase } from "../../lib/supabase";
 
 import type { AccountExportController } from "./types";
 import type { File } from "expo-file-system";
 
-const deviceTimeZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
+const readExport = () => exportMyData(supabase);
 
 // What expo-file-system rejects with when the person closes the folder picker. The native class
 // PickerCancelledException has no code of its own, so the module infers this one from the class name.
@@ -65,67 +57,23 @@ function writeFile(folder: Directory, name: string, text: string): boolean {
 
 /**
  * Drives the Export my data screen: prepares the whole-account export when the screen is focused, then writes it
- * into a folder the person picks. The branching is `accountExportReducer`'s, in core.
+ * into a folder the person picks. The preparing, the held file and the reducer are `useAccountExportFile`'s, in
+ * `@keylow/api-client`, and the branching is `accountExportReducer`'s, in core. The picker and the write are the
+ * phone's.
  *
- * The file is health data, so its text is held in a ref, never in state, a cache or a log, and it is dropped
- * after a save, after a failed save, on retry and when focus leaves the screen. The tabs blur a screen without
- * unmounting it, so leaving by the tab bar drops the file and the state too, and coming back prepares a new one.
- * A failure is reported as the step that failed and nothing else: the error is never read, so no message, row or
- * content can travel with it.
+ * The tabs blur a screen without unmounting it, so leaving by the tab bar drops the file and the state too, and
+ * coming back prepares a new one.
  */
 export function useAccountExport(): AccountExportController {
-  const [state, dispatch] = useReducer(accountExportReducer, initialAccountExportState);
-  // The name is set only after the export is read, or cleared when focus leaves or on a retry. It is a reducer
-  // because the lint rule react-hooks/set-state-in-effect flags a `useState` setter reached from the effect that
-  // starts the export, although this one is only called after an await.
-  const [fileName, setFileName] = useReducer(
-    (_previous: string | undefined, next: string | undefined) => next,
-    undefined,
-  );
-  const fileRef = useRef<{ name: string; text: string } | null>(null);
-  const isFocusedRef = useRef(false);
-  const isPreparingRef = useRef(false);
+  const isFocused = useIsFocused();
+  const { state, fileName, sizeText, readFile, dispatch } = useAccountExportFile({
+    isActive: isFocused,
+    readExport,
+  });
   const isSavingRef = useRef(false);
 
-  const runExport = useCallback(async () => {
-    // A second call while one runs is the same export, and a ref is read at once where state is read on the next render.
-    if (isPreparingRef.current) {
-      return;
-    }
-    isPreparingRef.current = true;
-    try {
-      const text = serialiseAccountExport(await exportMyData(supabase));
-      if (isFocusedRef.current) {
-        const name = accountExportFileName(toLocalDate(new Date(), deviceTimeZone()));
-        fileRef.current = { name, text };
-        setFileName(name);
-        dispatch({ type: "prepared", sizeBytes: new TextEncoder().encode(text).length });
-      }
-    } catch {
-      if (isFocusedRef.current) {
-        dispatch({ type: "failedWhile", step: "preparing" });
-      }
-    } finally {
-      isPreparingRef.current = false;
-    }
-  }, []);
-
-  useFocusEffect(
-    useCallback(() => {
-      isFocusedRef.current = true;
-      dispatch({ type: "start" });
-      void runExport();
-      return () => {
-        isFocusedRef.current = false;
-        fileRef.current = null;
-        setFileName(undefined);
-        dispatch({ type: "reset" });
-      };
-    }, [runExport]),
-  );
-
   const save = useCallback(async () => {
-    const file = fileRef.current;
+    const file = readFile();
     if (file === null || isSavingRef.current) {
       return;
     }
@@ -134,47 +82,34 @@ export function useAccountExport(): AccountExportController {
     try {
       const folder = await pickFolder();
       // The screen was left while the picker was open, and the file went with it.
-      if (!isFocusedRef.current) {
+      if (readFile() === null) {
         return;
       }
       if (folder === undefined) {
         dispatch({ type: "pickerCancelled" });
         return;
       }
-      const isWritten = writeFile(folder, file.name, file.text);
-      fileRef.current = null;
       dispatch(
-        isWritten
+        writeFile(folder, file.name, file.text)
           ? { type: "savedTo", folderName: displayFolderName(folder.name) }
           : { type: "failedWhile", step: "saving" },
       );
     } catch {
-      fileRef.current = null;
-      if (isFocusedRef.current) {
-        dispatch({ type: "failedWhile", step: "saving" });
-      }
+      // While the screen is left the file is gone and the reducer ignores the failure it would be told of.
+      dispatch({ type: "failedWhile", step: "saving" });
     } finally {
       isSavingRef.current = false;
     }
-  }, []);
+  }, [dispatch, readFile]);
 
   const retry = useCallback(() => {
-    if (state.status !== "failed" || isPreparingRef.current) {
-      return;
-    }
-    fileRef.current = null;
-    setFileName(undefined);
     dispatch({ type: "retry" });
-    void runExport();
-  }, [runExport, state.status]);
+  }, [dispatch]);
 
   return {
     state,
     fileName,
-    sizeText:
-      state.status === "ready" || state.status === "saving" || state.status === "saved"
-        ? formatFileSize(state.sizeBytes)
-        : undefined,
+    sizeText,
     folderName: state.status === "saved" ? state.folderName : undefined,
     save,
     retry,

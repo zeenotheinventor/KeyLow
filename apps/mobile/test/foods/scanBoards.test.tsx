@@ -359,7 +359,7 @@ describe("barcode scan boards", () => {
     });
 
     describe("rate-limited", () => {
-      it("should be a quiet info notice titled Open Food Facts is busy, with the time to wait", async () => {
+      it("should be a quiet info notice titled Too many lookups just now, with the time to wait", async () => {
         setLookupOutcome({
           error: { kind: "rate_limited", retryAfterSeconds: 30, debugMessage: "Slow down" },
         });
@@ -367,7 +367,7 @@ describe("barcode scan boards", () => {
 
         expect(
           screen.getByRole("status", {
-            name: "Open Food Facts is busy Too many lookups just now. Try again in 30 seconds.",
+            name: "Too many lookups just now Try again in 30 seconds.",
           }),
         ).toBeOnTheScreen();
         expect(screen.queryByRole("alert")).not.toBeOnTheScreen();
@@ -378,16 +378,14 @@ describe("barcode scan boards", () => {
         setLookupOutcome({ error: { kind: "rate_limited", debugMessage: "Slow down" } });
         await renderScanned(scheme);
 
-        expect(screen.getByText("Open Food Facts is busy")).toBeOnTheScreen();
-        expect(
-          screen.getByText("Too many lookups just now. Try again in a moment."),
-        ).toBeOnTheScreen();
+        expect(screen.getByText("Too many lookups just now")).toBeOnTheScreen();
+        expect(screen.getByText("Try again in a moment.")).toBeOnTheScreen();
       });
 
       it.each([
-        [1, "Too many lookups just now. Try again in 1 second."],
-        [0.4, "Too many lookups just now. Try again in a moment."],
-        [29.2, "Too many lookups just now. Try again in 30 seconds."],
+        [1, "Try again in 1 second."],
+        [0.4, "Try again in a moment."],
+        [29.2, "Try again in 30 seconds."],
       ])("should never say 1 seconds: %p reads %j", async (retryAfterSeconds, sentence) => {
         setLookupOutcome({
           error: { kind: "rate_limited", retryAfterSeconds, debugMessage: "Slow down" },

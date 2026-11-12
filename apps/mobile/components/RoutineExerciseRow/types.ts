@@ -17,4 +17,6 @@ export type RoutineExerciseRowProps = {
   onChangeField: (field: ExerciseField, text: string) => void;
   /** Opens the exercise's menu: Move up, Move down and Remove. */
   onOpenMenu: () => void;
+  /** Opens the exercise sheet, which shows how the exercise is done and the muscles it works. */
+  onOpenExercise: () => void;
 };

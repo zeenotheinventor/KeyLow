@@ -13,7 +13,6 @@ import {
   foodRow,
   portionRow,
   postgrestError,
-  postgrestRows,
   signInAs,
 } from "../support/postgrest";
 import { createWrapper } from "../support/wrapper";
@@ -21,16 +20,14 @@ import { createWrapper } from "../support/wrapper";
 const server = setupServer();
 
 let authRequests = 0;
-let foodInserts: unknown[] = [];
-let portionInserts: unknown[] = [];
+let creates: unknown[] = [];
 
 beforeAll(() => {
   server.listen({ onUnhandledFrame: "error" });
 });
 beforeEach(() => {
   authRequests = 0;
-  foodInserts = [];
-  portionInserts = [];
+  creates = [];
   server.use(
     http.get(AUTH_USER_URL, () => {
       authRequests += 1;
@@ -40,13 +37,9 @@ beforeEach(() => {
         role: "authenticated",
       });
     }),
-    http.post(`${REST_URL}/foods`, async ({ request }) => {
-      foodInserts.push(await request.clone().json());
-      return postgrestRows(request, [foodRow()], 201);
-    }),
-    http.post(`${REST_URL}/food_portions`, async ({ request }) => {
-      portionInserts.push(await request.clone().json());
-      return postgrestRows(request, [portionRow()], 201);
+    http.post(`${REST_URL}/rpc/create_food`, async ({ request }) => {
+      creates.push(await request.clone().json());
+      return HttpResponse.json({ food: foodRow(), portions: [portionRow()] });
     }),
   );
 });
@@ -82,9 +75,11 @@ describe("useCreateFood", () => {
     const created = await act(() => result.current.mutateAsync(validInput));
 
     expect(created).toEqual({ food: foodRow(), portions: [portionRow()] });
-    expect(foodInserts).toMatchObject([{ owner_id: SIGNED_IN_USER_ID, source: "user" }]);
-    expect(portionInserts).toMatchObject([
-      [{ owner_id: SIGNED_IN_USER_ID, food_id: foodRow().id, label: "1 bar" }],
+    expect(creates).toMatchObject([
+      {
+        p_food: { owner_id: SIGNED_IN_USER_ID, source: "user" },
+        p_portions: [{ label: "1 bar" }],
+      },
     ]);
   });
 
@@ -97,8 +92,7 @@ describe("useCreateFood", () => {
 
     expect(failure).toBeInstanceOf(CustomFoodValidationError);
     expect(authRequests).toBe(0);
-    expect(foodInserts).toEqual([]);
-    expect(portionInserts).toEqual([]);
+    expect(creates).toEqual([]);
   });
 
   it("should reject when nobody is signed in and never write anything", async () => {
@@ -111,7 +105,7 @@ describe("useCreateFood", () => {
 
     expect(failure).toBeInstanceOf(Error);
     expect(failure).toHaveProperty("message", expect.stringMatching(/signed in/i));
-    expect(foodInserts).toEqual([]);
+    expect(creates).toEqual([]);
   });
 
   it("should invalidate every foods query once the food is created", async () => {
@@ -133,39 +127,11 @@ describe("useCreateFood", () => {
     expect(queryClient.getQueryData(keys.foods.portions(foodRow().id))).toEqual([portionRow()]);
   });
 
-  it("should surface an error naming the food when its portions were not saved", async () => {
+  it("should leave the caches alone when the create fails, because nothing was written", async () => {
     server.use(
-      http.post(`${REST_URL}/food_portions`, () =>
-        postgrestError(403, "42501", "new row violates row-level security policy"),
+      http.post(`${REST_URL}/rpc/create_food`, () =>
+        postgrestError(403, "42501", "permission denied"),
       ),
-    );
-    const { result } = await renderSignedIn();
-
-    const failure = await act(() =>
-      result.current.mutateAsync(validInput).catch((error: unknown) => error),
-    );
-
-    expect(failure).toHaveProperty("message", expect.stringContaining(foodRow().id));
-  });
-
-  it("should invalidate every foods query when only the portions were not saved, because the food exists", async () => {
-    server.use(
-      http.post(`${REST_URL}/food_portions`, () =>
-        postgrestError(403, "42501", "new row violates row-level security policy"),
-      ),
-    );
-    const { queryClient, result } = await renderSignedIn();
-    const invalidate = vi.spyOn(queryClient, "invalidateQueries");
-
-    await act(() => result.current.mutateAsync(validInput).catch(() => undefined));
-
-    expect(invalidate).toHaveBeenCalledTimes(1);
-    expect(invalidate.mock.calls[0]?.[0]).toHaveProperty("queryKey", keys.foods.all);
-  });
-
-  it("should leave the caches alone when the food insert fails", async () => {
-    server.use(
-      http.post(`${REST_URL}/foods`, () => postgrestError(403, "42501", "permission denied")),
     );
     const { queryClient, result } = await renderSignedIn();
     const invalidate = vi.spyOn(queryClient, "invalidateQueries");

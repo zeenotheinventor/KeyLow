@@ -1,3 +1,4 @@
+import type { PortionTimeProps } from "../PortionFields";
 import type { RecipeEntryUnit, TypedRecipeAmount } from "@keylow/core/diary";
 import type { RecipeOfSnapshot } from "@keylow/core/recipes";
 import type { ReactNode, Ref } from "react";
@@ -14,18 +15,13 @@ export type RecipeAmountDraft = {
   setUnit: (unit: RecipeEntryUnit) => void;
 };
 
-export type RecipeAmountFieldsProps = {
+export type RecipeAmountFieldsProps = PortionTimeProps & {
   /**
    * The recipe the figures are drawn from: the library's row when adding, and what the entry froze
    * (core's `recipeOfSnapshot`) when editing, so a logged recipe never reads the live one.
    */
   recipe: RecipeOfSnapshot;
   draft: RecipeAmountDraft;
-  /** The Time field's value, `HH:mm`. */
-  time: string;
-  /** The time is still the moment the dialog opened, so the Time field says Now. */
-  isNow: boolean;
-  onTimeChange: (time: string) => void;
   /** Reaches the amount field, so the cursor can start in it. */
   amountRef?: Ref<HTMLInputElement> | undefined;
   /** Above the Recipe badge: a failed save. */

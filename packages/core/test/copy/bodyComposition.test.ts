@@ -44,6 +44,8 @@ describe("weight: chart and weigh-ins · body-composition", () => {
         title: "No body fat or lean mass readings yet",
         text: "Weigh in on a smart scale that saves body fat and lean mass to Health Connect. New readings show here the next time you open Ki-Lo.",
       },
+      noReadingsWeb:
+        "No body fat or lean mass readings yet. They come from a smart scale, through Health Connect in the Ki-Lo phone app.",
       partial: {
         body_fat_pct: { text: "Ki-Lo can't read body fat yet.", action: "Add body fat" },
         lean_mass_kg: { text: "Ki-Lo can't read lean mass yet.", action: "Add lean mass" },

@@ -22,6 +22,7 @@ import {
   snapshotAsFood,
   startingAmount,
 } from "@keylow/core/diary";
+import { canBeCopiedToYourFoods, portionLabelOfFoodPerPortion } from "@keylow/core/foods";
 import { useState } from "react";
 import { View } from "react-native";
 
@@ -129,8 +130,12 @@ function FoodPortionPicker(props: FoodPortionPickerProps) {
       ? unitValue
       : describePortionUnit(chosenPortion.label, amount?.quantity ?? 1);
   const chosenUnit = choices.options.find((option) => option.value === unitValue);
-  // The pages that show Copy to your foods in place of their button for a food that must be reviewed first.
-  const copiesWhenReviewed = (props.mode === "add" || props.mode === "add-to-plate") && needsReview;
+  // The pages that show Copy to your foods in place of their button for a food that must be reviewed first. A
+  // restaurant food counted in portions cannot be copied, so it keeps its own button.
+  const copiesWhenReviewed =
+    (props.mode === "add" || props.mode === "add-to-plate") &&
+    needsReview &&
+    canBeCopiedToYourFoods(food);
   const note =
     props.mode === "add" || props.mode === "edit" || props.mode === "add-to-plate"
       ? props.note
@@ -268,7 +273,13 @@ function FoodPortionPicker(props: FoodPortionPickerProps) {
         </Text>
       ) : null}
       <MacroHero amount={hero} food={food} />
-      <PerHundredList heading={describePer100Heading(food.basis)} values={food} />
+      <PerHundredList
+        heading={describePer100Heading(
+          food.basis,
+          portionLabelOfFoodPerPortion(food, choices.portions),
+        )}
+        values={food}
+      />
     </PortionPickerShell>
   );
 }

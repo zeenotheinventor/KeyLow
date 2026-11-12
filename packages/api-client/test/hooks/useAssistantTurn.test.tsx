@@ -169,6 +169,10 @@ describe("useAssistantTurn, what each board shows", () => {
       clarify: null,
       confirm: null,
       answerMeta: null,
+      link: null,
+      exerciseMuscles: [],
+      exerciseFormMedia: [],
+      askAgain: false,
       status: null,
       notice: null,
       stopped: false,
@@ -535,6 +539,23 @@ describe("useAssistantTurn, a turn that breaks", () => {
     });
   });
 
+  it("should read a status the app does not know as the default step, and carry on to the words", async () => {
+    answerTurns(() =>
+      openTurnResponse(
+        `${eventText({ type: "turn", turnId: TURN_ID, conversationId: CONVERSATION_ID })}data: ${JSON.stringify({ type: "status", code: "dreaming", detail: "a new field" })}\n\n${eventText({ type: "text", delta: "You had " })}${eventText({ type: "text", delta: "toast." })}${eventText({ type: "done", outcome: "complete" })}`,
+      ),
+    );
+    const rendered = await renderTurn();
+
+    await sendAndSettle(rendered);
+
+    expect(rendered.result.current.live).toMatchObject({
+      text: "You had toast.",
+      notice: null,
+      outcome: "complete",
+    });
+  });
+
   it.each([
     ["an event type the app does not know", { type: "surprise" }],
     ["an event with a key the app does not know", { type: "text", delta: "x", extra: true }],
@@ -729,6 +750,7 @@ describe("useAssistantTurn, what the end of a turn refreshes", () => {
       keys.assistant.changes,
       keys.assistant.status,
       keys.diary.all,
+      keys.training.activeRoutine,
     );
 
     await sendAndSettle(rendered);
@@ -737,6 +759,7 @@ describe("useAssistantTurn, what the end of a turn refreshes", () => {
     expect(isInvalidated(keys.assistant.changes)).toBe(true);
     expect(isInvalidated(keys.assistant.status)).toBe(true);
     expect(isInvalidated(keys.diary.all)).toBe(true);
+    expect(isInvalidated(keys.training.activeRoutine)).toBe(true);
   });
 
   it("should read everything again when the person stops before the card arrives", async () => {

@@ -2,7 +2,7 @@ import { amountUnit } from "../foods/foodForm";
 import { MAX_GRAMS_PER_100, MAX_KCAL_PER_100 } from "../schemas/nutrients";
 
 import type { BarcodeInvalidReason } from "../foods/barcode";
-import type { NutrientBasis } from "../schemas/food";
+import type { CustomFoodBasis } from "../schemas/food";
 
 export const FOOD_FORM_BUTTONS = {
   create: "Create food",
@@ -178,9 +178,9 @@ export const describePortionField = (
 };
 
 /** The name of a portion's amount field, with the unit that follows the basis. `position` counts from 1. */
-export const describePortionAmountField = (position: number, basis: NutrientBasis): string =>
+export const describePortionAmountField = (position: number, basis: CustomFoodBasis): string =>
   `Amount for portion ${position} (${amountUnit(basis)})`;
 
 /** Says which unit every portion amount is in: grams under a per 100 g basis, millilitres under per 100 ml. */
-export const describeAmountUnitNote = (basis: NutrientBasis): string =>
+export const describeAmountUnitNote = (basis: CustomFoodBasis): string =>
   `Each amount is in ${amountUnit(basis)}, to match the basis.`;

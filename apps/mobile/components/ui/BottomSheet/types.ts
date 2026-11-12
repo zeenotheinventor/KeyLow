@@ -21,6 +21,14 @@ export type BottomSheetProps = {
    * screen reader's escape and the Android back button. Defaults to true.
    */
   isContentDraggable?: boolean | undefined;
+  /**
+   * For a sheet that sizes itself to its contents and can be taller than the screen: the contents scroll in
+   * the library's scroll view once the sheet is as tall as its container, and the sheet stops below the status
+   * bar. Without it a sheet that is too tall is cut off, and what is below the cut cannot be reached. Works
+   * with `isContentDraggable` off, which only stops a drag on the contents from moving the sheet. Has no effect
+   * with `snapPoints`, whose sheet is a fixed height one. Defaults to false.
+   */
+  isScrollable?: boolean | undefined;
   /** Sets the sheet's heading and its accessible name. Leave it out when the contents have their own. */
   title?: string | undefined;
   /** Centres the title, as the discard sheet's board draws it. Defaults to the start of the line. */

@@ -1,15 +1,15 @@
-import { EntryNotFoundError } from "@keylow/api-client";
+import { EntryNotFoundError, weekStartOf } from "@keylow/api-client";
 import { toLocalDate } from "@keylow/core/dates";
+import { amountLastLogged } from "@keylow/core/diary";
 import {
   planProgress,
   prefillNextSet,
-  scaffoldSession,
+  scaffoldSessionWithAdditions,
   setDraftOfValues,
   setValuesOfPrefill,
 } from "@keylow/core/training";
 import { isUndoWindowOpen } from "@keylow/core/widgets";
 
-import { amountLastLogged } from "../amountLastLogged";
 import { runOnce } from "./inFlight";
 import { WidgetActionError } from "./widgetActionError";
 import { emitWidgetActionDone } from "./widgetActionEvents";
@@ -18,6 +18,7 @@ import type { WidgetActionCode, WidgetActionName, WidgetActionResult, WidgetBrid
 import type { LogEntry, LogFoodInput, SetAdd } from "@keylow/api-client";
 import type { Food, FoodPortion } from "@keylow/core/schemas";
 import type {
+  AcceptedSuggestion,
   LastPerformanceSet,
   PrefillSessionSet,
   ProgressSet,
@@ -44,12 +45,17 @@ export type WidgetRepositories = Readonly<{
   getActiveSession: () => Promise<{
     id: string;
     routine_day_id: string | null;
+    local_date: string;
     sets: readonly SessionSetRow[];
   } | null>;
   getActiveRoutine: () => Promise<{ id: string } | null>;
   getRoutine: (id: string) => Promise<{
     days: readonly { id: string; exercises: readonly ScaffoldRoutineExercise[] }[];
   } | null>;
+  /** The live accepted suggestions of the training week that starts on the Monday `weekStart`. */
+  listAcceptedSuggestions: (weekStart: string) => Promise<{
+    suggestions: readonly AcceptedSuggestion[];
+  }>;
   getLastPerformance: (
     exerciseId: string,
     options: { excludeSessionId: string },
@@ -152,13 +158,7 @@ export function logAgain(
       repositories.getMyTimeZone(),
     ]);
     const amount = amountLastLogged(
-      {
-        foodId: food.id,
-        entryId: entry.id,
-        loggedAt: entry.logged_at,
-        portionId: entry.portion_id,
-        snapshot: entry.snapshot,
-      },
+      { portionId: entry.portion_id, snapshot: entry.snapshot },
       portions,
     );
     const tapped = now();
@@ -203,16 +203,28 @@ export function logNextSet(
   return run("log_set", dependencies, async () => {
     const movedOn = new WidgetActionError("log_set", "session_moved_on");
     const session = await repositories.getActiveSession();
-    if (session?.id !== sessionId || session.routine_day_id === null) {
+    if (session?.id !== sessionId) {
       throw movedOn;
     }
-    const routine = await repositories.getActiveRoutine();
-    const detail = routine === null ? null : await repositories.getRoutine(routine.id);
-    const day = detail?.days.find(({ id }) => id === session.routine_day_id);
-    if (day === undefined) {
-      throw movedOn;
+    const routineDayId = session.routine_day_id;
+    let day = null;
+    if (routineDayId !== null) {
+      const routine = await repositories.getActiveRoutine();
+      const detail = routine === null ? null : await repositories.getRoutine(routine.id);
+      day = detail?.days.find(({ id }) => id === routineDayId) ?? null;
+      if (day === null) {
+        throw movedOn;
+      }
     }
-    const { nextSet } = planProgress(scaffoldSession(day), session.sets);
+    // The plan is the one the session screen and the widget's snapshot work from, with the suggestion accepted
+    // for the session's day added. A read of the accepted suggestions that cannot be made leaves them out, as
+    // the screen does, so the two can only disagree on an added set, which then logs nothing.
+    const accepted = await repositories
+      .listAcceptedSuggestions(weekStartOf(session.local_date))
+      .then(({ suggestions }) => suggestions)
+      .catch((): readonly AcceptedSuggestion[] => []);
+    const { scaffold } = scaffoldSessionWithAdditions(session, day, accepted);
+    const { nextSet } = planProgress(scaffold, session.sets);
     if (nextSet?.exerciseId !== exerciseId || nextSet.setNumber !== setNumber) {
       throw movedOn;
     }

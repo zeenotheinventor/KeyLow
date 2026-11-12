@@ -69,6 +69,22 @@ describe("the committed portions file", () => {
     }
   });
 
+  it("should give every food exactly one default, so no curated food opens on a chip the person did not expect", () => {
+    for (const [foodCode, foodRows] of rowsByFood) {
+      const defaults = foodRows.filter((row) => row["is_default"] === "true");
+      expect(defaults.length, `food ${foodCode}`).toBe(1);
+    }
+  });
+
+  it("should open cod, raw and cooked, on 1 fillet", () => {
+    for (const foodCode of ["16-372", "16-373"]) {
+      const defaults = (rowsByFood.get(foodCode) ?? []).filter(
+        (row) => row["is_default"] === "true",
+      );
+      expect(defaults.map((row) => row["label"])).toEqual(["1 fillet"]);
+    }
+  });
+
   it("should give each portion of a food its own position", () => {
     for (const [foodCode, foodRows] of rowsByFood) {
       const positions = foodRows.map((row) => row["position"]);

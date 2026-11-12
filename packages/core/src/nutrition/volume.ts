@@ -71,3 +71,18 @@ export const densityForLogging = (
   food: VolumeFood,
   portions: readonly PortionForDensity[] = [],
 ): number | null => food.density_g_per_ml ?? estimateDensity(food, portions)?.gPerMl ?? null;
+
+/**
+ * The size of a logged portion as its own measure: the whole amount in millilitres when the portion is
+ * measured in millilitres (a can, a glass), and in grams otherwise. The diary row and the scaled recipe
+ * view both read it, so they cannot disagree. A portion with no millilitres, such as one from an older
+ * snapshot, is its resolved grams.
+ */
+export const measureOfLoggedPortion = (amount: {
+  quantity: number;
+  resolvedGrams: number;
+  portion: { ml?: number | null };
+}): { amount: number; unit: "g" | "ml" } =>
+  amount.portion.ml === undefined || amount.portion.ml === null
+    ? { amount: amount.resolvedGrams, unit: "g" }
+    : { amount: amount.quantity * amount.portion.ml, unit: "ml" };

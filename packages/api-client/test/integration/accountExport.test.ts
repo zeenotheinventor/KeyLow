@@ -442,6 +442,14 @@ async function seed(user: TestUser, options: { year: boolean }): Promise<void> {
     ).error,
     "entitlement",
   );
+  succeeded(
+    (
+      await client
+        .from("feature_requests")
+        .insert({ source: "more_menu", request: "key707 feature request" })
+    ).error,
+    "feature request",
+  );
   await addFavouriteFood(client, (foods[1] ?? food).id);
 }
 

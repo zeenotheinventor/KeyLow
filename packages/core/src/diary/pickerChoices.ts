@@ -28,14 +28,18 @@ const MILLILITRES_OPTION: UnitOption = { value: "ml", label: "ml" };
 export const isSameLabel = (first: string, second: string): boolean =>
   first.trim().toLowerCase() === second.trim().toLowerCase();
 
+/** How the food can be measured, which decides the chips after its own portions. */
+export type MeasuredBy = { isWeighable: boolean; isMeasuredByVolume: boolean };
+
 /**
- * The chips for portions the food already has: those portions in the order given, then g, and, when the
- * food is measured by volume, ml and the teaspoon, tablespoon and cup. A chip says its words only ("1 medium",
- * "1 tbsp"); the sizes are in the hero's caption.
+ * The chips for portions the food already has: those portions in the order given, then g (but not for a food
+ * that has no weight, which is counted in its portion only), and, when the food is measured by volume, ml and
+ * the teaspoon, tablespoon and cup. A chip says its words only ("1 medium", "1 tbsp"); the sizes are in the
+ * hero's caption.
  */
 export function choicesFor<Portion extends AmountPortion>(
   ownPortions: readonly Portion[],
-  isMeasuredByVolume: boolean,
+  { isWeighable, isMeasuredByVolume }: MeasuredBy,
 ): PickerChoices<Portion> {
   const spoons = isMeasuredByVolume ? SPOON_PORTIONS : [];
 
@@ -43,7 +47,7 @@ export function choicesFor<Portion extends AmountPortion>(
     portions: [...ownPortions, ...spoons],
     options: [
       ...ownPortions.map((portion) => ({ value: portion.id, label: portion.label })),
-      GRAMS_OPTION,
+      ...(isWeighable ? [GRAMS_OPTION] : []),
       ...(isMeasuredByVolume ? [MILLILITRES_OPTION] : []),
       ...spoons.map((spoon) => ({ value: spoon.id, label: spoon.label })),
     ],
@@ -52,7 +56,8 @@ export function choicesFor<Portion extends AmountPortion>(
 
 /**
  * The picker's chips for a food and its portions, in this order: the food's own portions by `position`
- * (the default one is the one the picker opens on, not necessarily the first), then g, then, only when the
+ * (the default one is the one the picker opens on, not necessarily the first), then g (not for a food per
+ * portion, which has no weight and so only its portion), then, only when the
  * food can be measured by volume, ml, 1 tsp, 1 tbsp and 1 cup. A food that cannot gets no volume chip at all. A
  * food measured by volume can have its density from a portion's label, such as "1 tbsp (15 g)".
  * Read the starting amount from `portions`, which holds the spoons that the chips name. A spoon whose label
@@ -64,7 +69,11 @@ export function pickerChoices<Portion extends AmountPortion & Pick<FoodPortion, 
   portions: readonly Portion[],
 ): PickerChoices<Portion> {
   const inOrder = [...portions].sort((first, second) => first.position - second.position);
-  const choices = choicesFor(inOrder, canMeasureByVolume(food, portions));
+  const isWeighable = food.basis !== "per_portion";
+  const choices = choicesFor(inOrder, {
+    isWeighable,
+    isMeasuredByVolume: isWeighable && canMeasureByVolume(food, portions),
+  });
 
   return withoutRepeatedSpoons(choices, inOrder);
 }

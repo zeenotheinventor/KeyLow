@@ -74,3 +74,6 @@ export const Program: Story = { args: { variant: "program" } };
 
 // The Weight screen's Body composition section while it loads: two 104 point blocks, one for each card.
 export const BodyComposition: Story = { args: { variant: "bodyComposition" } };
+
+// The assistant sheet's conversation while it opens: your message as a bubble bone, then the reply as lines, twice.
+export const AssistantThread: Story = { args: { variant: "assistantThread" } };

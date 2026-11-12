@@ -67,6 +67,7 @@ const fieldOfProblem: Record<RecipeDraftProblem, string> = {
   servings_too_many: "servings",
   cooked_weight_invalid: "recipe",
   cooked_weight_too_large: "recipe",
+  cooked_weight_with_food_per_portion: "recipe",
   ingredients_none: "ingredients",
   ingredients_too_many: "ingredients",
   ingredient_invalid: "ingredients",

@@ -1,0 +1,30 @@
+{
+  "keyframes": {
+    "kl-cut-in": {
+      "from": {
+        "opacity": "0",
+        "transform": "translateX(28px) skewX(-8deg)"
+      },
+      "65%": {
+        "opacity": "1",
+        "transform": "translateX(-3px) skewX(2deg)"
+      },
+      "to": {
+        "opacity": "1",
+        "transform": "none"
+      }
+    },
+    "kl-fade-in": {
+      "from": {
+        "opacity": "0"
+      },
+      "to": {
+        "opacity": "1"
+      }
+    }
+  },
+  "animation": {
+    "kl-cut-in": "kl-cut-in {transitionDuration.standard} {transitionTimingFunction.enter} both",
+    "kl-fade-in": "kl-fade-in {transitionDuration.quick} ease both"
+  }
+}

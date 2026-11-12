@@ -5,6 +5,8 @@ import { MONTH_NAMES_LONG } from "./diaryDay";
 import { RETRY_LABEL } from "./errors";
 import { NOT_MEDICAL_ADVICE } from "./legal";
 import {
+  ACCURACY_LINE_WITH_CHECKIN,
+  SETUP_ESTIMATE,
   SETUP_FLOOR_ABOVE_EXPENDITURE_ADVICE,
   SETUP_GOAL_NOT_OFFERED_UNDER_18,
   SETUP_GOAL_NOTES,
@@ -24,7 +26,7 @@ import { PROTEIN_G_PER_KG, bindingCalorieClamp } from "../setup";
 import type { SetupGuardrailFigures } from "./setup";
 import type { MeasurementCounts, MeasurementReason } from "../engine";
 import type { ExpenditureBand } from "../program";
-import type { ProteinPreset, SetupClamp } from "../setup";
+import type { EstimateMeasurement, ProteinPreset, SetupClamp } from "../setup";
 import type { WeightDisplayUnit } from "../weight";
 
 /*
@@ -83,6 +85,8 @@ export const PROGRAM_SCREEN = {
   },
   editLabel: "Edit programme",
   howItWorksLabel: "How it works",
+  /** On the web, under the offline banner's title (`OFFLINE_BANNER.title`): the page holds only what this session read. */
+  offlineBody: "Showing your programme from this session. Changes need a connection.",
   /** Under the cards, muted: the legal copy's own sentence, not a second copy of it. */
   notMedicalAdvice: NOT_MEDICAL_ADVICE,
 } as const;
@@ -470,6 +474,8 @@ export const describeExpenditureChartSummary = ({
 /** Edit programme: the title, the four groups, the button, and the setup canvas's banners and reason, reused. */
 export const PROGRAM_EDIT = {
   title: "Edit programme",
+  /** The web's way back to the Programme page, which leaves without saving and without asking. */
+  backName: "Back to Programme",
   groups: {
     goal: { title: "Goal" },
     rate: {
@@ -486,6 +492,8 @@ export const PROGRAM_EDIT = {
     },
   },
   saveLabel: "Save changes",
+  /** The web's footer notice while offline, over the footnote, with Save changes off. */
+  saveOffline: "Saving your programme needs a connection. Try again when you're back online.",
   /** Under the goal cards, always shown, and different for someone under 18. */
   goalNotes: SETUP_GOAL_NOTES,
   /** On the disabled Lose card for someone aged 13 to 17. */
@@ -553,6 +561,41 @@ export const PROGRAM_SETUP_CARRIED_FORWARD = {
 /** The estimate's accuracy line after a measurement, from the date of the last check-in. */
 export const describeMeasuredAccuracyLine = (measuredOn: string): string =>
   `Ki-Lo measured your expenditure at your last check-in, on ${describeDateInWords(measuredOn)}. Changing your answers keeps it and changes only your targets.`;
+
+/** The estimate's heading, the expenditure row's subtitle and the accuracy line for one source of the expenditure. */
+export type EstimateWords = Readonly<{
+  heading: string;
+  expenditureSubtitle: string;
+  accuracyLine: string;
+}>;
+
+/**
+ * The estimate's words by where its expenditure came from. After a check-in the screen says so, and that changing
+ * the answers keeps it. With no measurement (the first run, or a recalculation that starts again from the answers)
+ * it is the starting estimate's. The phone and the web both read this.
+ */
+export function describeEstimateWords(measurement: EstimateMeasurement | undefined): EstimateWords {
+  switch (measurement?.kind) {
+    case "measured":
+      return {
+        heading: PROGRAM_SETUP_MEASURED.heading,
+        expenditureSubtitle: PROGRAM_SETUP_MEASURED.expenditureSubtitle,
+        accuracyLine: describeMeasuredAccuracyLine(measurement.measuredOn),
+      };
+    case "carried-forward":
+      return {
+        heading: PROGRAM_SETUP_MEASURED.heading,
+        expenditureSubtitle: PROGRAM_SETUP_CARRIED_FORWARD.expenditureSubtitle,
+        accuracyLine: PROGRAM_SETUP_CARRIED_FORWARD.accuracyLine,
+      };
+    case undefined:
+      return {
+        heading: SETUP_ESTIMATE.heading,
+        expenditureSubtitle: SETUP_ESTIMATE.expenditure.caption,
+        accuracyLine: ACCURACY_LINE_WITH_CHECKIN,
+      };
+  }
+}
 
 /**
  * The tip under the settling counts when older weigh-ins make the date that completes the cover earlier than the

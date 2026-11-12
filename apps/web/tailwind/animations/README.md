@@ -19,3 +19,4 @@ What each one is:
 - `toast-in`: the design system's kl-toast-in at full distance. A toast cuts in from above and the right at an angle and straightens as it settles. Reduced motion is a `motion-reduce:animate-none` on the toast, not a variable.
 - `dim-in`: the design system's kl-dim-in, which dims the page behind a dialog.
 - `dialog-in`: a dialog enters with the design's kl-punch over the standard duration. Reduced motion is a `motion-reduce:animate-none` on each use.
+- `kl-cut-in`: the design system's kl-cut-in at full distance, for a card that arrives from the side, leaning back and settling upright. `kl-fade-in` is what it becomes under reduced motion, a fade over the quick duration, so a use is `animate-kl-cut-in motion-reduce:animate-kl-fade-in`.

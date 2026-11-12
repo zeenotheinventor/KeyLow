@@ -1,4 +1,10 @@
-import { assert, assertEquals, assertFalse, assertObjectMatch } from "@std/assert";
+import {
+  assert,
+  assertEquals,
+  assertFalse,
+  assertObjectMatch,
+  assertStringIncludes,
+} from "@std/assert";
 
 import { executeTool } from "../executor.ts";
 import {
@@ -11,6 +17,7 @@ import { undoAction } from "../undo.ts";
 import { copyDayTool } from "./copyDay.ts";
 import { quickEntryRow } from "./diaryFixtures.ts";
 import { payloadOf } from "./testing.ts";
+import { confirmWordsFor } from "../../../assistant/confirmWords.ts";
 import { dietRows, fixClock, structuredOf } from "./writeFixtures.ts";
 import { writeStub } from "./writeStub.ts";
 
@@ -67,6 +74,7 @@ function copyContexts(rows: Diary, options: { slotLimit?: number; viewing?: stri
   const contextOn = (turnId: string): ToolContext => {
     const made = createFakeContext([copyDayTool], {
       store,
+      personsWords: "Copy 3 entries",
       turn: { id: turnId, conversationId: store.turns[0]?.conversationId ?? "" },
       localDate: options.viewing ?? today,
       localTime: "13:00",
@@ -486,3 +494,54 @@ Deno.test(
     );
   },
 );
+
+Deno.test("the question is the board's, and the label is its button", async () => {
+  const { asking } = copyContexts({
+    food_log_entries: [...mealsOf(userId, yesterday, 3), ...mealsOf(userId, today, 3, 500)],
+  });
+
+  const asked = await executeTool(asking, "copy_day", copyOf(3));
+  const need = await copyDayTool.needsConfirmation?.(copyOf(3), asking);
+
+  assert(asked.status === "needs_confirmation");
+  assertEquals(
+    asked.question,
+    "Today already has 3 entries. Add yesterday's 3 entries to them? Nothing is replaced.",
+  );
+  assertEquals(
+    need !== false && need !== undefined ? need.confirmLabel : null,
+    confirmWordsFor("copy_day", copyOf(3))?.confirmLabel,
+  );
+});
+
+Deno.test(
+  "the description tells the model to word the question in the same response as the call",
+  () => {
+    const { description } = copyDayTool;
+
+    assertStringIncludes(
+      description,
+      "in the same response as the call, before it, write the question",
+    );
+    assertStringIncludes(description, "When they say no, do not call again.");
+    assertFalse(description.includes("ask the user"));
+  },
+);
+
+Deno.test("after a typed yes the confirmation asks again and nothing is copied", async () => {
+  const { asking, confirming, stub, store } = copyContexts({
+    food_log_entries: [...mealsOf(userId, yesterday, 3), ...mealsOf(userId, today, 3, 500)],
+  });
+  const asked = await executeTool(asking, "copy_day", copyOf(3));
+  assert(asked.status === "needs_confirmation");
+
+  const result = await executeTool(
+    { ...confirming, turn: { ...confirming.turn, personsWords: "yes please" } },
+    "copy_day",
+    { ...copyOf(3), confirmation_id: asked.confirmationId },
+  );
+
+  assertObjectMatch(result, { status: "needs_confirmation", asksAgain: true });
+  assertEquals(mine(stub, today).length, 3);
+  assertEquals(store.actions.length, 0);
+});

@@ -1,4 +1,4 @@
-import { copyFormStart, foodToFormFields, portionToFormFields } from "@keylow/core/foods";
+import { copyFormStart, foodToFormFields, portionsToFormFields } from "@keylow/core/foods";
 
 import type { FoodFormExistingFood, FoodFormValues, PortionFormValues } from "./types";
 import type { RequiredFoodNutrient } from "@keylow/core/foods";
@@ -16,10 +16,10 @@ export const emptyFoodFormValues: FoodFormValues = {
   portions: [],
 };
 
-function savedPortions({ portions }: FoodFormExistingFood): PortionFormValues[] {
-  return portions.map((portion, index) => ({
+function savedPortions({ food, portions }: FoodFormExistingFood): PortionFormValues[] {
+  return portionsToFormFields(food, portions).map((portion, index) => ({
     key: `saved-${String(index)}`,
-    ...portionToFormFields(portion),
+    ...portion,
   }));
 }
 

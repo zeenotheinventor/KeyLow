@@ -9,8 +9,10 @@ import {
   describeRecipePer100Heading,
   describeRecipeYield,
   describeServingSuffix,
+  describeServingsOnlyYield,
   nutrientRows,
 } from "@keylow/core/copy";
+import { recipeUnitsOf } from "@keylow/core/diary";
 import { iconStroke } from "@keylow/tokens";
 import { Info } from "lucide-react";
 import { useId } from "react";
@@ -27,34 +29,36 @@ import { NumericInput } from "@/components/ui/NumericInput";
 import { NutrientTable } from "@/components/ui/NutrientTable";
 import { TimeField } from "@/components/ui/TimeField";
 
-// The two chips of a recipe, a number of servings first because it is the recipe's own unit.
-const UNIT_OPTIONS: readonly { value: RecipeEntryUnit; label: string }[] = [
-  { value: "serving", label: RECIPE_UNITS.serving },
-  { value: "g", label: RECIPE_UNITS.grams },
-];
+// The chips of a recipe, a number of servings first because it is the recipe's own unit.
+const UNIT_LABELS: Record<RecipeEntryUnit, string> = {
+  serving: RECIPE_UNITS.serving,
+  g: RECIPE_UNITS.grams,
+};
 
 /**
  * What the add dialog's amount step and the edit dialog share for a recipe, as the web diary's recipe boards
  * draw them: the Recipe badge with what the recipe makes, what the chosen amount comes to in the hero, the
- * recipe's values per 100 g, the amount with its unit chips, and the Time field. Every figure and sentence is
+ * recipe's values per 100 g, the amount with its unit chips, and the Time field (the plate has one time of its own, so
+ * the add dialog leaves it out). Every figure and sentence is
  * core's, worked out from the recipe given, so the hero is what the entry stores. A recipe with no cooked
  * weight says so under the hero when grams are chosen, because those grams are of the raw ingredients.
  */
 export function RecipeAmountFields({
   recipe,
   draft,
-  time,
-  isNow,
-  onTimeChange,
   amountRef,
   notice,
   recipeNotice,
+  ...timeProps
 }: RecipeAmountFieldsProps) {
   const noteId = useId();
   const { amountFieldRef, onChipPress } = useSelectAmountOnChipPress(amountRef);
   const selectOnFocus = useSelectAmountOnFocus();
   const { servings, yield_grams: yieldGrams } = recipe;
   const { unit, typed } = draft;
+  // A recipe with a restaurant food has no weight, so it is logged by servings alone (ADR 0003, Amendment 19).
+  const isServingsOnly = recipe.computed.servingsOnly;
+  const unitOptions = recipeUnitsOf(recipe).map((value) => ({ value, label: UNIT_LABELS[value] }));
   // Grams of a recipe with no cooked weight are of the raw ingredients, which the fields say.
   const isRawGrams = yieldGrams === null && unit === "g";
   const caption =
@@ -78,7 +82,9 @@ export function RecipeAmountFields({
       <div className="flex flex-wrap items-center gap-2">
         <Badge className="border-border">{RECIPE_BADGE}</Badge>
         <span className="text-caption tabular-nums text-text-secondary">
-          {describeRecipeYield(servings, yieldGrams)}
+          {isServingsOnly
+            ? describeServingsOnlyYield(servings)
+            : describeRecipeYield(servings, yieldGrams)}
         </span>
       </div>
       {recipeNotice}
@@ -96,7 +102,9 @@ export function RecipeAmountFields({
           {describeRawGramsNote(recipe.computed.effectiveGrams)}
         </p>
       )}
-      <NutrientTable caption={describeRecipePer100Heading(yieldGrams)} rows={per100Rows} />
+      {isServingsOnly ? null : (
+        <NutrientTable caption={describeRecipePer100Heading(yieldGrams)} rows={per100Rows} />
+      )}
       <div className="grid items-end gap-3 min-[700px]:grid-cols-[160px_1fr]">
         <NumericInput
           ref={amountFieldRef}
@@ -111,13 +119,19 @@ export function RecipeAmountFields({
         />
         <ChipGroup
           label={PORTION_PICKER.unitLabel}
-          options={UNIT_OPTIONS}
+          options={unitOptions}
           value={unit}
           onChange={draft.setUnit}
           onChipPress={onChipPress}
         />
       </div>
-      <TimeField value={time} isNow={isNow} onChange={onTimeChange} />
+      {timeProps.time !== undefined && (
+        <TimeField
+          value={timeProps.time}
+          isNow={timeProps.isNow}
+          onChange={timeProps.onTimeChange}
+        />
+      )}
     </>
   );
 }

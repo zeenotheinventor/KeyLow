@@ -7,12 +7,12 @@ import {
   describeSettlingLine,
   describeTrendLine,
 } from "@keylow/core/copy";
-import { WEIGHT_RANGES } from "@keylow/core/weight";
+import { WEIGHT_RANGES, prepareWeightChart } from "@keylow/core/weight";
 import { useMemo, useState } from "react";
 import { Text as NativeText, View } from "react-native";
 
 import { Badge, Card, SegmentedControl, Text } from "../ui";
-import { WeightChart, prepareWeightChart } from "../WeightChart";
+import { WeightChart } from "../WeightChart";
 
 import type { WeightTrendCardProps } from "./types";
 import type { WeightRange } from "@keylow/core/weight";

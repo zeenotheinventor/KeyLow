@@ -5,7 +5,9 @@ import { collectStrings } from "../collectStrings";
 // a function has no row, so no sentence escapes the sweep.
 export const samples: Record<string, () => string[]> = {
   describeNutritionHeading: () =>
-    (["per_100g", "per_100ml"] as const).map(copy.describeNutritionHeading),
+    (["per_100g", "per_100ml", "per_portion"] as const).map((basis) =>
+      copy.describeNutritionHeading(basis),
+    ),
   describeMissingValues: () => [
     copy.describeMissingValues([], undefined),
     copy.describeMissingValues(["protein_g"], undefined),

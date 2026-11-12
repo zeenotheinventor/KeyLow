@@ -1,4 +1,4 @@
-import { useBodyTrend } from "@keylow/api-client";
+import { useBodyCompositionKind, useBodyTrend } from "@keylow/api-client";
 import {
   BODY_COMPOSITION,
   BODY_COMPOSITION_CHART,
@@ -6,7 +6,7 @@ import {
   describeCompositionChartName,
   describeCompositionSource,
 } from "@keylow/core/copy";
-import { composeBodySplit } from "@keylow/core/weight";
+import { bodyCompositionViewStage, composeBodySplit } from "@keylow/core/weight";
 import { useRouter } from "expo-router";
 import { useMemo } from "react";
 import { Text as NativeText, View } from "react-native";
@@ -14,7 +14,6 @@ import { Text as NativeText, View } from "react-native";
 import { useReadsEnabled } from "../../lib/useReadsEnabled";
 import { BodyCompositionChart, prepareBodyCompositionChart } from "../BodyCompositionChart";
 import { BodyCompositionPrompt } from "../BodyCompositionPrompt";
-import { useBodyCompositionKind } from "../BodyCompositionSection";
 import { Badge, Skeleton, SegmentedControl, Text } from "../ui";
 
 import type { BodyCompositionViewProps } from "./types";
@@ -54,12 +53,12 @@ export function BodyCompositionView({
   const isBodyFatAllowed = isConnected && access?.bodyFat === true;
   const isLeanMassAllowed = isConnected && access?.leanMass === true;
   const bodyFat = useBodyCompositionKind("body_fat_pct", {
-    isEnabled: isBodyFatAllowed && isReadEnabled,
+    enabled: isBodyFatAllowed && isReadEnabled,
     range,
     today,
   });
   const leanMass = useBodyCompositionKind("lean_mass_kg", {
-    isEnabled: isLeanMassAllowed && isReadEnabled,
+    enabled: isLeanMassAllowed && isReadEnabled,
     range,
     today,
   });
@@ -88,6 +87,12 @@ export function BodyCompositionView({
     ...(isLeanMassAllowed ? [leanMass] : []),
   ];
   const hasNoAllowedKind = access !== null && !access.bodyFat && !access.leanMass;
+  // The phone has no paused reads, so it is always online here.
+  const stage = bodyCompositionViewStage({
+    statuses: allowedKinds.map((kind) => kind.status),
+    hasSplit: split.driver !== null,
+    isOnline: true,
+  });
 
   if (!isConnected || hasNoAllowedKind) {
     return (
@@ -103,7 +108,7 @@ export function BodyCompositionView({
     );
   }
 
-  if (access === null || allowedKinds.some((kind) => kind.status === "loading")) {
+  if (access === null || stage === "loading") {
     return (
       <View accessible aria-label={BODY_COMPOSITION.loadingLabel} aria-live="polite" role="status">
         <Skeleton variant="bodyComposition" />
@@ -111,7 +116,7 @@ export function BodyCompositionView({
     );
   }
 
-  if (split.driver !== null) {
+  if (stage === "drawing" && split.driver !== null) {
     const latestFat = chart.bodyFat.latest;
     const latestLean = chart.leanMass.latest;
     const latest =
@@ -150,7 +155,7 @@ export function BodyCompositionView({
     );
   }
 
-  if (allowedKinds.some((kind) => kind.status === "error")) {
+  if (stage === "error") {
     return (
       <BodyCompositionPrompt
         retry={BODY_COMPOSITION.error.retry}

@@ -9,4 +9,10 @@ export const storyStates = [
   "OverTargetOnPhone",
   "OnDesktop",
   "Focused",
+  "WithPlateShare",
+  "OverTargetOnSheet",
+  "AsCard",
+  "AsCardOnPhone",
+  "OverTargetAsCard",
+  "Loading",
 ];

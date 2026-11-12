@@ -33,6 +33,20 @@ export const weightBackend: {
   updatedRows: { id: string; change: Row }[];
   /** The ids of the weigh-ins the app deleted. */
   deletedIds: string[];
+  /** The live `body_measurements` rows of both kinds, as the section's two reads filter them by `kind`. */
+  bodyMeasurements: Row[];
+  /** Fails the reads of the body measurements with a database error that carries a value, as a leak would. */
+  bodyReadsFail: boolean;
+  /** Fails only the reads of these kinds, as a database error that carries a value does. */
+  bodyKindsFail: string[];
+  /** Never answers the reads of the body measurements. */
+  bodyReadsHang: boolean;
+  /** Holds the reads of these kinds until the promise settles, as a slow connection does. */
+  bodyKindGates: Record<string, Promise<void> | undefined>;
+  /** The number of requests made for the body measurements. */
+  bodyRequestCount: number;
+  /** The number of requests made for each kind of body measurement. */
+  bodyRequestCountByKind: Record<string, number>;
 } = {
   weighIns: [],
   timeZone: "UTC",
@@ -45,6 +59,13 @@ export const weightBackend: {
   addedRows: [],
   updatedRows: [],
   deletedIds: [],
+  bodyMeasurements: [],
+  bodyReadsFail: false,
+  bodyKindsFail: [],
+  bodyReadsHang: false,
+  bodyKindGates: {},
+  bodyRequestCount: 0,
+  bodyRequestCountByKind: {},
 };
 
 export function resetWeightBackend(): void {
@@ -59,6 +80,13 @@ export function resetWeightBackend(): void {
   weightBackend.addedRows = [];
   weightBackend.updatedRows = [];
   weightBackend.deletedIds = [];
+  weightBackend.bodyMeasurements = [];
+  weightBackend.bodyReadsFail = false;
+  weightBackend.bodyKindsFail = [];
+  weightBackend.bodyReadsHang = false;
+  weightBackend.bodyKindGates = {};
+  weightBackend.bodyRequestCount = 0;
+  weightBackend.bodyRequestCountByKind = {};
 }
 
 const USER_ID = "11111111-1111-4111-8111-111111111111";
@@ -99,6 +127,53 @@ export function weighInRow({
   };
 }
 
+type BodyMeasurementOptions = {
+  kind: "body_fat_pct" | "lean_mass_kg";
+  /** The day, `YYYY-MM-DD`. */
+  localDate: string;
+  value: number;
+};
+
+/** A body measurement as the section reads it from the database, imported from the phone at 07:30 UTC. */
+export function bodyMeasurementRow({ kind, localDate, value }: BodyMeasurementOptions): Row {
+  weighInCount += 1;
+
+  return {
+    id: `00000000-0000-4000-8000-${String(weighInCount).padStart(12, "0")}`,
+    kind,
+    measured_at: `${localDate}T07:30:00+00:00`,
+    local_date: localDate,
+    tz: "UTC",
+    value,
+    source: "health_connect",
+  };
+}
+
+/**
+ * `count` readings of one kind, one a day ending on `lastLocalDate`, which move evenly from `first` to
+ * `last`, so the trend falls or rises steadily and a change over a range is easy to say.
+ */
+export function bodyMeasurementSeries(
+  kind: "body_fat_pct" | "lean_mass_kg",
+  {
+    count,
+    lastLocalDate,
+    first,
+    last,
+  }: { count: number; lastLocalDate: string; first: number; last: number },
+): Row[] {
+  return Array.from({ length: count }, (_, index) => {
+    const date = new Date(`${lastLocalDate}T00:00:00Z`);
+    date.setUTCDate(date.getUTCDate() - (count - 1 - index));
+
+    return bodyMeasurementRow({
+      kind,
+      localDate: date.toISOString().slice(0, 10),
+      value: count === 1 ? last : first + ((last - first) * index) / (count - 1),
+    });
+  });
+}
+
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -131,6 +206,33 @@ function answerWeighInRead(searchParams: URLSearchParams): Promise<Response> {
   const limit = Number(searchParams.get("limit") ?? weightBackend.weighIns.length);
 
   return Promise.resolve(jsonResponse(weightBackend.weighIns.slice(offset, offset + limit)));
+}
+
+async function answerBodyMeasurementRead(searchParams: URLSearchParams): Promise<Response> {
+  weightBackend.bodyRequestCount += 1;
+  const requestedKind = (searchParams.get("kind") ?? "").replace("eq.", "");
+  weightBackend.bodyRequestCountByKind[requestedKind] =
+    (weightBackend.bodyRequestCountByKind[requestedKind] ?? 0) + 1;
+  await weightBackend.bodyKindGates[requestedKind];
+  if (weightBackend.bodyReadsHang) {
+    return new Promise(() => undefined);
+  }
+  const kind = requestedKind;
+  if (weightBackend.bodyReadsFail || weightBackend.bodyKindsFail.includes(kind)) {
+    return Promise.resolve(
+      jsonResponse(
+        { code: "XX000", message: LEAKY_DATABASE_MESSAGE, details: null, hint: null },
+        500,
+      ),
+    );
+  }
+  const rows = weightBackend.bodyMeasurements
+    .filter((row) => row.kind === kind)
+    .sort((first, second) => String(second.local_date).localeCompare(String(first.local_date)));
+  const offset = Number(searchParams.get("offset") ?? 0);
+  const limit = Number(searchParams.get("limit") ?? rows.length);
+
+  return Promise.resolve(jsonResponse(rows.slice(offset, offset + limit)));
 }
 
 const READ_COLUMNS = ["id", "measured_at", "local_date", "tz", "weight_kg", "source", "note"];
@@ -229,6 +331,8 @@ function fakeFetch(input: string | URL | Request, init?: RequestInit): Promise<R
         return answerWeighInUpdate(searchParams, init.body);
       }
       return answerWeighInRead(searchParams);
+    case "body_measurements":
+      return answerBodyMeasurementRead(searchParams);
     default:
       return Promise.resolve(jsonResponse({ message: "unexpected request" }, 404));
   }

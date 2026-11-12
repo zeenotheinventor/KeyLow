@@ -9,6 +9,7 @@ import {
   describeRecipeUpdatedTitle,
   describeRecipesCount,
 } from "../copy/assistantRecipeCards";
+import { describeSetUpdatedTitle, describeSetsPutBack } from "../copy/assistantTrainingCards";
 import { formatCalories, formatGrams } from "../format/numbers";
 
 import type { AssistantCard, AssistantCardKind } from "./card";
@@ -39,6 +40,17 @@ export const ASSISTANT_WRITE_TOOL_CARD_KINDS = {
   archive_recipe: "recipe_archived",
   create_custom_food: "food_created",
   update_targets: "targets_changed",
+  edit_routine: "routine_updated",
+  set_active_routine: "routine_active",
+  archive_routine: "routine_archived",
+  create_routine: "routine_created",
+  update_training_goals: "goals_updated",
+  // The tool adds an exercise or renames one, and this is the kind of its plain words. The card says which.
+  save_custom_exercise: "exercise_created",
+  archive_custom_exercise: "exercise_archived",
+  update_past_set: "set_updated",
+  delete_workout: "workout_deleted",
+  request_feature: "feature_requested",
 } as const satisfies Record<string, AssistantCardKind>;
 
 export type AssistantWriteTool = keyof typeof ASSISTANT_WRITE_TOOL_CARD_KINDS;
@@ -48,11 +60,40 @@ export const isAssistantWriteTool = (tool: string): tool is AssistantWriteTool =
 
 /**
  * The write tools whose Undo is off in M8 (ADR 0006, Guards): an edit keeps no previous value to go
- * back to. The thread and the changes list both read this one set.
+ * back to, and a client cannot delete a feature request it sent. The thread and the changes list both read
+ * this one set.
  */
 export const ASSISTANT_TOOLS_WITHOUT_UNDO: ReadonlySet<string> = new Set([
   "update_entry",
   "update_recipe",
+  "request_feature",
+]);
+
+/**
+ * The training write tools whose Undo needs the value the turn stored (`previousValueOf`), or the
+ * fingerprint it stored to tell that the person has not changed the row since. Once the conversation is
+ * deleted its turns go, the actions keep a null `turn_id`, and Undo on these answers unavailable on every
+ * press. The tools left out undo from the row alone: `archive_routine` and `archive_custom_exercise`
+ * restore the row, `update_training_goals` reads the goals history and `delete_workout` restores the
+ * session, so their Undo still works with no turn.
+ */
+export const ASSISTANT_TOOLS_NEEDING_STORED_UNDO: ReadonlySet<string> = new Set([
+  "edit_routine",
+  "set_active_routine",
+  "create_routine",
+  "update_past_set",
+  "save_custom_exercise",
+]);
+
+/**
+ * The other training writes, which undo from the row alone and so keep Undo once the conversation is
+ * deleted. Every training write is in one of the two sets, which a test pins, so a new tool has to say.
+ */
+export const ASSISTANT_TOOLS_WITHOUT_STORED_UNDO: ReadonlySet<string> = new Set([
+  "archive_routine",
+  "archive_custom_exercise",
+  "update_training_goals",
+  "delete_workout",
 ]);
 
 /** The kinds of card those tools build. */
@@ -262,7 +303,40 @@ const cardMergers: Readonly<Partial<Record<AssistantCardKind, AssistantCardMerge
   recipe_created: mergeRecipeCards,
   recipe_updated: mergeRecipeCards,
   recipe_archived: mergeRecipeCards,
+  set_updated: mergeSetUpdatedCards,
 };
+
+const setUpdatedTitlePattern = /^Changed a set in (.+)$/;
+
+// Several `update_past_set` calls of one workout are one card: "Changed 3 sets in Legs", the rows joined
+// and one Undo over all the action ids. Each call's title is taken apart again for the place, as a log's is.
+// Sets of different workouts have no one day or session to name, so they are worded plainly.
+function mergeSetUpdatedCards(cards: readonly AssistantCard[]): AssistantCard {
+  const merged = plainMerge(cards);
+  const count = merged.actionIds.length;
+  const [first] = cards;
+  const place = first === undefined ? undefined : setUpdatedTitlePattern.exec(first.title)?.[1];
+  const isOneWorkout =
+    first !== undefined &&
+    place !== undefined &&
+    cards.every(
+      (card) =>
+        setUpdatedTitlePattern.exec(card.title)?.[1] === place &&
+        card.sub === first.sub &&
+        JSON.stringify(card.link) === JSON.stringify(first.link),
+    );
+  if (!isOneWorkout) {
+    return { ...merged, undoneSub: describeSetsPutBack(count, null) };
+  }
+  return {
+    ...merged,
+    title: describeSetUpdatedTitle(place, count),
+    sub: first.sub,
+    changeDetail: first.changeDetail ?? null,
+    link: first.link,
+    undoneSub: describeSetsPutBack(count, place),
+  };
+}
 
 const plainTitles: Record<AssistantCardKind, (count: number) => string> = {
   logged: (count) => `Logged ${entries(count)}`,
@@ -276,6 +350,17 @@ const plainTitles: Record<AssistantCardKind, (count: number) => string> = {
   recipe_archived: (count) => (count === 1 ? "Archived a recipe" : `Archived ${count} recipes`),
   food_created: describeFoodsCount,
   targets_changed: () => "Changed your targets",
+  routine_updated: () => "Updated a routine",
+  routine_active: () => "Changed your active routine",
+  routine_archived: () => "Archived a routine",
+  routine_created: () => "Built a routine",
+  goals_updated: () => "Updated your training goals",
+  exercise_created: () => "Saved an exercise",
+  exercise_updated: () => "Updated an exercise",
+  exercise_archived: () => "Archived an exercise",
+  set_updated: (count) => (count === 1 ? "Changed a set" : `Changed ${count} sets`),
+  workout_deleted: () => "Deleted a workout",
+  feature_requested: () => "Sent a feature request",
 };
 
 /** The title and detail of one row of "What the assistant changed". */
@@ -323,6 +408,8 @@ function plainMerge(cards: readonly AssistantCard[]): AssistantCard {
     title: plainTitles[first.kind](actionIds.length),
     sub: null,
     rows: cards.flatMap((card) => card.rows),
+    days: null,
+    changeDetail: null,
     totalText: null,
     note: null,
     link: null,

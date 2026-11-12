@@ -23,8 +23,9 @@ export type RecipeIngredientInput = {
  * `portion_id` is the portion's id for a portion that is a table row and null for every other unit
  * and for a spoon, which is not a database row.
  *
- * Throws a `RangeError` for a quantity that is negative or not finite, and what `buildFoodSnapshot`
- * throws for the `portion` unit without a portion and for a portion that does not have exactly one of
+ * A food per portion is counted in portions and has 0 grams (ADR 0003, Amendment 19). Throws a `RangeError`
+ * for a quantity that is negative or not finite, and what `buildFoodSnapshot` throws for grams of a food per
+ * portion, for the `portion` unit without a portion and for a portion that does not have exactly one of
  * `grams` and `ml`. The message states the rule and never the amount (ADR 0003, Amendment 8, "Health
  * data"). The stored-row rules (an amount above 0, the grams bounds) are in `recipeIngredientSchema`.
  */

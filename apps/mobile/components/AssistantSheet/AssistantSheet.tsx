@@ -11,9 +11,11 @@ import {
   canAnswerAssistantQuestion,
   canSendAssistantMessage,
   describeAssistantComposer,
+  isAssistantSheetOpening,
   isAssistantStatusKnown,
   isSentTurnStored,
   isStaleStreamGateNotice,
+  replyWords,
   resolveAssistantSheetAccess,
   resolveAssistantTimeZone,
 } from "@keylow/core";
@@ -27,6 +29,7 @@ import { AssistantEmpty } from "./AssistantEmpty";
 import { AssistantThread } from "./AssistantThread";
 import { Composer } from "./Composer";
 import { ConsentCard } from "./ConsentCard";
+import { OpeningPlaceholder } from "./OpeningPlaceholder";
 import { assistantCardHref } from "../../lib/assistantCardRoutes";
 import { useIsOnline } from "../../lib/connectivity";
 import { Badge, Banner, BottomSheet, SheetHeader, SheetScrollView, Text, useToast } from "../ui";
@@ -34,6 +37,7 @@ import { Badge, Banner, BottomSheet, SheetHeader, SheetScrollView, Text, useToas
 import type { AssistantSheetProps } from "./types";
 import type { AssistantCardLink, AssistantSheetSent } from "@keylow/core";
 import type { ComponentRef } from "react";
+import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native";
 
 const deviceTimeZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
 
@@ -45,6 +49,17 @@ const SNAP_POINTS = ["87%", "94%"];
 // (`assistant · recipe-import`, `recipe-unresolved`), so its ingredient list shows.
 const OPEN_SNAP_INDEX = 0;
 const FULL_HEIGHT_SNAP_INDEX = 1;
+
+// How far from the end of the thread, in points, the person can scroll and still be reading the end of it.
+const NEAR_THE_END_DISTANCE = 40;
+// How far from the top of the thread, in points, a scroll of the person's own starts loading older turns.
+const NEAR_THE_TOP_DISTANCE = 300;
+// Scroll events carry on after a finger is lifted, while the flick settles. The library's scroll view does not
+// pass on the end of that, so the scroll counts as the person's until no event has arrived for this long.
+const SCROLL_SETTLED_MS = 150;
+
+const distanceFromEnd = ({ contentOffset, contentSize, layoutMeasurement }: NativeScrollEvent) =>
+  contentSize.height - layoutMeasurement.height - contentOffset.y;
 
 // The thread grows up from the composer once there is a conversation, and starts at the top when it is the
 // empty state's words.
@@ -62,7 +77,13 @@ const threadClassNames = {
  * card, a disabled composer under a limit) is `resolveAssistantSheetAccess`. The status is read again each
  * time the sheet opens.
  */
-export function AssistantSheet({ open, onClose, localDate, describeAt }: AssistantSheetProps) {
+export function AssistantSheet({
+  open,
+  onClose,
+  localDate,
+  describeAt,
+  from,
+}: AssistantSheetProps) {
   const isOnline = useIsOnline();
   const router = useRouter();
   const conversation = useAssistantConversation({ enabled: open });
@@ -75,6 +96,14 @@ export function AssistantSheet({ open, onClose, localDate, describeAt }: Assista
   const [draft, setDraft] = useState("");
   const [sent, setSent] = useState<AssistantSheetSent | null>(null);
   const scrollRef = useRef<ComponentRef<typeof SheetScrollView>>(null);
+  // Whether a growing thread is followed to its end. It is on until the person's own drag takes them away from
+  // the end, and on again when they come back, send a message, start a new conversation or open the sheet.
+  // Opening a day of a routine grows the thread in the middle, and someone reading up the thread is left where
+  // they are. Only the person's own scroll changes it, never a scroll event the sheet's own scrollToEnd causes,
+  // which can report an offset behind the end while the content grows under it.
+  const isFollowingEnd = useRef(true);
+  const isUserScrolling = useRef(false);
+  const scrollSettledTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const items = conversation.data?.items;
   const timeZone = resolveAssistantTimeZone(profileTimeZone.data, deviceTimeZone());
@@ -102,8 +131,51 @@ export function AssistantSheet({ open, onClose, localDate, describeAt }: Assista
     isOnline,
     timeZone,
     describeAt,
+    from,
     fieldHint: thread.fieldHint,
   });
+
+  useEffect(() => {
+    if (open) {
+      isFollowingEnd.current = true;
+    }
+  }, [open]);
+  useEffect(
+    () => () => {
+      clearTimeout(scrollSettledTimer.current);
+    },
+    [],
+  );
+
+  function readUserScroll(event: NativeSyntheticEvent<NativeScrollEvent>) {
+    isFollowingEnd.current = distanceFromEnd(event.nativeEvent) <= NEAR_THE_END_DISTANCE;
+    // Reading up towards older turns is never followed back to the end, even in a thread short enough for
+    // the top and the end to be within reach of each other, and the turns that load must not pull the view.
+    if (conversation.hasOlder && event.nativeEvent.contentOffset.y <= NEAR_THE_TOP_DISTANCE) {
+      isFollowingEnd.current = false;
+      if (!conversation.isLoadingOlder) {
+        conversation.loadOlder();
+      }
+    }
+  }
+
+  // Scroll events count as the person's from the touch down to a quiet moment after the finger lifts.
+  function startUserScroll(event: NativeSyntheticEvent<NativeScrollEvent>) {
+    clearTimeout(scrollSettledTimer.current);
+    isUserScrolling.current = true;
+    readUserScroll(event);
+  }
+
+  function continueUserScroll(event: NativeSyntheticEvent<NativeScrollEvent>) {
+    if (!isUserScrolling.current) {
+      return;
+    }
+    readUserScroll(event);
+    clearTimeout(scrollSettledTimer.current);
+    scrollSettledTimer.current = setTimeout(() => {
+      isUserScrolling.current = false;
+    }, SCROLL_SETTLED_MS);
+  }
 
   // The turn on screen and what it left, for the read on open below, which finishes after the render that
   // started it.
@@ -160,19 +232,26 @@ export function AssistantSheet({ open, onClose, localDate, describeAt }: Assista
     isOnline,
     isThreadKnown,
     isThreadFetching: conversation.isFetching,
-    // The turn's status clears with its next event, so the reading is over as soon as anything else arrives.
-    isReadingRecipe: (live?.status ?? null) !== null,
+    // The turn's step clears with its next event, so it is over as soon as anything else arrives.
+    isWorking: (live?.status ?? null) !== null,
     access,
   };
   const canSendWords = (words: string) => canSendAssistantMessage({ text: words, ...sendState });
 
   // The streaming message is not a live region (Android would read all of it again for each chunk, and iOS
   // ignores a live region), so a screen reader hears the finished answer once, on both, when it is complete.
-  // An answer that was stopped by closing the sheet is not read, because the person closed it.
+  // The working line before it announces itself, once, and is not a live region either.
+  // An answer that was stopped by closing the sheet is not read, because the person closed it. A stop has no
+  // outcome, and a turn stopped after a card ends in the saved-change words and is not marked stopped
+  // (`stoppedTurn`), so a turn with no outcome is not read either.
   const wasStreaming = useRef(false);
   useEffect(() => {
     if (wasStreaming.current && !isStreaming) {
-      const answer = live === null || live.stopped ? "" : live.text.trim();
+      // It is read as the words without the markers the model wrote, as the message's own name is.
+      const answer =
+        live === null || live.stopped || live.outcome === null
+          ? ""
+          : replyWords(live.text.trim(), { isPartial: false });
       if (answer !== "") {
         AccessibilityInfo.announceForAccessibility(answer);
       }
@@ -185,6 +264,7 @@ export function AssistantSheet({ open, onClose, localDate, describeAt }: Assista
     if (!canSendWords(text)) {
       return;
     }
+    isFollowingEnd.current = true;
     setSent({ text, afterItemId: items?.at(-1)?.id ?? null });
     // A settled read is the truth, so after Delete all conversations it is null and the dead id the live turn
     // still holds is not reused. The one the first turn started stands in only while the read is unknown or failed.
@@ -215,6 +295,7 @@ export function AssistantSheet({ open, onClose, localDate, describeAt }: Assista
       // Nothing was cleared, and the thread stays as it was.
       return;
     }
+    isFollowingEnd.current = true;
     setSent(null);
     setDraft("");
   }
@@ -248,12 +329,20 @@ export function AssistantSheet({ open, onClose, localDate, describeAt }: Assista
     );
   }
 
+  // The placeholder (`assistant · opening`) stands in until the status and the conversation are read, so
+  // the sheet is never blank. The composer shows under it with Send off, and New conversation is dimmed.
+  const isOpening = isAssistantSheetOpening({ access, isEmpty, isThreadKnown });
   const isNewDisabled =
-    isEmpty || isStreaming || !isOnline || newConversation.isPending || access.kind === "consent";
+    isEmpty ||
+    isOpening ||
+    isStreaming ||
+    !isOnline ||
+    newConversation.isPending ||
+    access.kind === "consent";
 
   function renderBody() {
-    if (access.kind === "checking") {
-      return null;
+    if (isOpening) {
+      return <OpeningPlaceholder />;
     }
     if (access.kind === "consent") {
       return (
@@ -266,24 +355,28 @@ export function AssistantSheet({ open, onClose, localDate, describeAt }: Assista
       );
     }
     if (isEmpty) {
-      return isThreadKnown ? (
+      return (
         <AssistantEmpty
           describeAt={describeAt}
+          from={from}
           isDisabled={!isOnline || conversation.isFetching}
           onStarterPress={sendMessage}
         />
-      ) : null;
+      );
     }
     return (
-      <AssistantThread
-        thread={thread}
-        timeZone={timeZone}
-        onAskAgain={sendLastMessageAgain}
-        onTryAgain={sendLastMessageAgain}
-        onOpenCardLink={openCardLink}
-        canAnswer={canAnswerAssistantQuestion(sendState)}
-        onAnswer={sendMessage}
-      />
+      <>
+        {conversation.isLoadingOlder ? <OpeningPlaceholder key="older-turns-placeholder" /> : null}
+        <AssistantThread
+          thread={thread}
+          timeZone={timeZone}
+          onAskAgain={sendLastMessageAgain}
+          onTryAgain={sendLastMessageAgain}
+          onOpenCardLink={openCardLink}
+          canAnswer={canAnswerAssistantQuestion(sendState)}
+          onAnswer={sendMessage}
+        />
+      </>
     );
   }
 
@@ -319,14 +412,29 @@ export function AssistantSheet({ open, onClose, localDate, describeAt }: Assista
         <SheetScrollView
           className="flex-1"
           contentContainerClassName={
-            threadClassNames[isEmpty || access.kind === "consent" ? "empty" : "conversation"]
+            threadClassNames[
+              !isOpening && (isEmpty || access.kind === "consent") ? "empty" : "conversation"
+            ]
           }
           keyboardDismissMode="on-drag"
           keyboardShouldPersistTaps="handled"
+          maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
           ref={scrollRef}
-          onContentSizeChange={() => {
-            scrollRef.current?.scrollToEnd({ animated: false });
+          onLayout={() => {
+            // The scroll view gets its height after a cached thread has already settled its size, and again
+            // when the sheet changes snap point, and each time the end has to be scrolled to once more.
+            if (isFollowingEnd.current) {
+              scrollRef.current?.scrollToEnd({ animated: false });
+            }
           }}
+          onContentSizeChange={() => {
+            if (isFollowingEnd.current) {
+              scrollRef.current?.scrollToEnd({ animated: false });
+            }
+          }}
+          onScroll={continueUserScroll}
+          onScrollBeginDrag={startUserScroll}
+          onScrollEndDrag={continueUserScroll}
         >
           {renderBody()}
         </SheetScrollView>

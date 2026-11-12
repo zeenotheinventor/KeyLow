@@ -76,7 +76,12 @@ function ActionControl({ action, className }: { action: BannerAction; className:
   }
 
   return (
-    <button type="button" onClick={action.onClick} className={className}>
+    <button
+      type="button"
+      aria-disabled={action.disabled === true ? true : undefined}
+      onClick={action.disabled === true ? undefined : action.onClick}
+      className={cn(className, action.disabled === true && "opacity-40")}
+    >
       {action.label}
     </button>
   );

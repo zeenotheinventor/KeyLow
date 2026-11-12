@@ -5,4 +5,5 @@ export const storyStates = [
   "CompactHeader",
   "WithNotice",
   "SingleRow",
+  "TitleHidden",
 ];

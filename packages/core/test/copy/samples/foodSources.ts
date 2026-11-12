@@ -4,5 +4,5 @@ import * as copy from "../../../src/copy";
 // a function has no row, so no sentence escapes the sweep.
 export const samples: Record<string, () => string[]> = {
   describeFoodSource: () =>
-    (["off", "cofid", "usda", "user"] as const).map(copy.describeFoodSource),
+    (["off", "cofid", "usda", "restaurant", "user"] as const).map(copy.describeFoodSource),
 };

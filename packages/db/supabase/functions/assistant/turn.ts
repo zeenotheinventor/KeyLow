@@ -10,22 +10,37 @@
 // - A tool call is made once. A thrown `McpClientError` ends the turn, so a write is never repeated.
 // - Each tool result is stored the moment its call returns, as its own user row. `toApiMessages` joins the
 //   rows of one role, so the model still reads one user message holding all the results of a response.
+// - The press of a confirm button makes no model call: `runConfirmedCall` makes the stored call itself (KEY-840).
 // - Nothing here logs or reports message text, a tool argument or a result.
 import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 
 import { toAnthropicTools } from "../_shared/assistant/adapters/anthropic.ts";
+import { undoOutcomeSchema } from "../_shared/assistant/store.ts";
 import { askUserTool } from "../_shared/assistant/tools/askUser.ts";
 import { wrapUntrusted } from "../_shared/assistant/untrusted.ts";
-import { assistantCardSchema, mergeAssistantCards, withActionIds } from "../_shared/core.ts";
+import {
+  assistantCardLinkSchema,
+  assistantCardSchema,
+  assistantExerciseFormMediaSchema,
+  assistantExerciseMusclesSchema,
+  describeTurnEndedAfterWrite,
+  describeWorkoutInProgressRefusal,
+  isConfirmAnswer,
+  mergeAssistantCards,
+  safeWordsToShow,
+  withActionIds,
+} from "../_shared/core.ts";
 import { allowedToolsFor } from "./allowlist.ts";
 import { COMPACTION_TIMEOUT_MILLISECONDS, planCompaction, promptTokensOf } from "./compact.ts";
+import { confirmedCallOf } from "./confirmedCall.ts";
 import { confirmWordsFor } from "./confirmWords.ts";
 import {
   buildTurnRequest,
   contextBlock,
   MODEL,
   openToolUses,
+  resultForOpenToolUse,
   toApiMessagesWithNote,
   userContent,
 } from "./prompt.ts";
@@ -39,25 +54,30 @@ import type {
   ToolCallResult,
   ToolConnection,
 } from "../_shared/assistant/mcpClient.ts";
-import type { AssistantCard, AssistantStreamEvent } from "../_shared/core.ts";
+import type {
+  AssistantCard,
+  AssistantExerciseFormMedia,
+  AssistantExerciseMuscles,
+  AssistantStreamEvent,
+} from "../_shared/core.ts";
 import type { Json } from "../_shared/core/database.types.ts";
 import type { ReportError } from "../_shared/report.ts";
 import type { AllowlistTool } from "./allowlist.ts";
 import type { RunTurn, TurnContext } from "./runTurn.ts";
 import type { EventStream } from "./sse.ts";
-import type { FinalTurnStatus, TurnStore } from "./turnStore.ts";
+import type { FinalTurnStatus, PreviousTurn, StoredMessage, TurnStore } from "./turnStore.ts";
 import type { UsageToRecord } from "./usage.ts";
 
 // A turn with ten writes needs eleven model calls (one for each write and the answer), and the reads before
 // the writes take a few more. More than this is a loop, and each call is a few seconds of the Edge Function's
-// wall-clock limit, so the turn ends failed.
+// wall-clock limit, so the turn ends failed, or complete with the saved words when a write landed (`conclude`).
 export const MAX_MODEL_CALLS = 12;
 
 // The MCP client's default is 60 s per attempt, and a connect, a list or a read call retries once, so a hung
 // connect could take 120 s. 20 s is far more than most tools take (the `mcp` function measured a few
-// milliseconds on loopback). The one exception is `import_recipe_from_url`, which fetches a page and makes a
-// model call. It keeps itself inside 15 s (fetch 5 s, parse 9 s, a cutoff before it saves), so it needs no
-// longer timeout here.
+// milliseconds on loopback). The one exception is `import_recipe_from_url`, which fetches a page and makes two
+// model calls. It keeps itself inside 18 s (fetch 5 s, parse 9 s, pick 4 s, a cutoff before it saves), so it
+// needs no longer timeout here.
 export const MCP_REQUEST_TIMEOUT_MILLISECONDS = 20_000;
 
 // Supabase Edge Functions stop a worker after 150 s of wall-clock time on the free plan and 400 s on paid
@@ -107,6 +127,15 @@ const DEFAULT_LIMITS: TurnLimits = {
   streamIdleMilliseconds: MODEL_STREAM_IDLE_MILLISECONDS,
 };
 
+// The most figures of muscles one turn draws. The loop has no cap on the reads inside one response, so "show me
+// every exercise in my routine" could draw thirty figures of about 400 points each. It lives here because the
+// tool runs per call in the `mcp` function and cannot see the turn. 4 is the tech lead's number, for Zee to change.
+export const MAX_EXERCISE_MUSCLES_CARDS = 4;
+
+// The most form cards (a video or two photos) one turn draws, for the same reason as the figures above. 2 is the
+// tech lead's number, for Zee to change.
+export const MAX_EXERCISE_FORM_CARDS = 2;
+
 // The SDK parses a streamed tool input as it arrives, and a model that emits invalid JSON makes the stream
 // fail with a plain `AnthropicError` whose cause is a `SyntaxError`, never an API error. That one failure
 // is re-issued, a few times, and only while the app has been shown none of the call's text.
@@ -117,6 +146,9 @@ const CLARIFY_FIELD_HINT = "Or say it your way";
 
 const ASK_USER_TOOL = "ask_user";
 const IMPORT_RECIPE_TOOL = "import_recipe_from_url";
+const SEARCH_FOODS_TOOL = "search_foods";
+const SHOW_EXERCISE_MUSCLES_TOOL = "show_exercise_muscles";
+const SHOW_EXERCISE_FORM_TOOL = "show_exercise_form";
 
 // Made per turn, so a missing key ends that turn and never stops the function booting.
 export function createModelClient(read: (name: string) => string | undefined): Anthropic | null {
@@ -198,11 +230,22 @@ type Run = {
   limitCode: LimitCode | null;
   dependencies: TurnDependencies;
   counts: { modelCalls: number; toolCalls: number };
+  // Writes that landed this turn: the answers that hold an action (a write that changed nothing holds none).
+  landedWrites: number;
+  // The code of the last tool error the loop read, so a press that wrote nothing can tell a refusal from a fault.
+  lastErrorCode: string | null;
+  // Whether a write of this turn was refused for a workout in progress, so the turn ends with Ask again. Set
+  // by the first such refusal, which is also the only one that stores it, so a reopened turn draws one chip.
+  askAgain: boolean;
   // The prompt of the last model call that answered, which is what the next request's size will start from.
   lastPromptTokens: number | null;
   unparseableInputRetries: number;
   // Consecutive cards of one kind with nothing said between them, merged when they are written.
   pendingCards: AssistantCard[];
+  // The muscles of each exercise shown, held to the end of the turn so the figures land under the finished reply.
+  pendingExerciseMuscles: AssistantExerciseMuscles[];
+  // The form card of each exercise shown, held to the end of the turn for the same reason.
+  pendingExerciseFormMedia: AssistantExerciseFormMedia[];
   citations: (string | null)[];
   estimates: (string | null)[];
 };
@@ -268,6 +311,9 @@ function distinctLine(values: readonly (string | null)[]): string | null {
 }
 
 const nonBlank = (text: string): boolean => text.trim() !== "";
+
+// What a call needs to run: the model's `tool_use` block, or the one the loop makes after a confirm button.
+type CalledTool = Pick<Anthropic.ToolUseBlock, "id" | "name" | "input">;
 
 const isToolUse = (block: Anthropic.ContentBlock): block is Anthropic.ToolUseBlock =>
   block.type === "tool_use";
@@ -428,8 +474,12 @@ async function callModel(
 
 const structuredSchema = z.looseObject({
   card: z.unknown().optional(),
+  link: z.unknown().optional(),
   citation: z.string().min(1).nullish(),
   estimate: z.string().min(1).nullish(),
+  undo: z.unknown().optional(),
+  exerciseMuscles: z.unknown().optional(),
+  exerciseFormMedia: z.unknown().optional(),
 });
 const cardDraftSchema = assistantCardSchema.omit({ actionIds: true });
 
@@ -438,7 +488,7 @@ type Display = { [key: string]: Json };
 
 async function finishCall(
   run: Run,
-  toolUse: Anthropic.ToolUseBlock,
+  toolUse: CalledTool,
   result: ToolCallResult,
   responseText: string,
 ): Promise<Ending | null> {
@@ -446,9 +496,16 @@ async function finishCall(
   const { outcome } = result;
   if (outcome.status === "needs_confirmation") {
     const words = confirmWordsFor(toolUse.name, toolUse.input);
-    const question = responseText.trim();
+    // The model's own words when it wrote some, and the tool's otherwise, so a model that wrote no
+    // question does not fail the turn. The tool's words are the board's, built from the person's own rows.
+    // When the confirmation is asked again, the model's text is never the question, because a model that
+    // misread "Keep them" may have written "Deleting those now." That text has already streamed, so it
+    // stays above the question.
+    const modelWords = outcome.asksAgain === true ? "" : responseText.trim();
+    const question = modelWords === "" ? (outcome.question ?? "") : modelWords;
     if (words === null || question === "") {
-      // A bug the evals catch: the model did not word the question, or the tool has no buttons yet.
+      // A bug the evals catch: neither the model nor the tool worded the question, or the tool has no
+      // buttons yet. The tool's words are missing only while the `mcp` function is the old one (a deploy).
       await storeToolResult(run, block, null);
       run.dependencies.report(
         "assistant",
@@ -458,8 +515,8 @@ async function finishCall(
       return failedEnding("confirm_unavailable");
     }
     // The model worded the question before the tool answered, so a line the tool wrote (the figures the
-    // model could not know) is added after it, as its own paragraph. The guard above tests the model's own text, so a note
-    // alone never makes a confirmation.
+    // model could not know) is added after it, as its own paragraph. The guard above tests the question, so
+    // a note alone never makes a confirmation.
     const confirm = {
       confirmationId: outcome.confirmationId,
       question: outcome.note === undefined ? question : `${question}\n\n${outcome.note}`,
@@ -471,8 +528,17 @@ async function finishCall(
     return ending("confirm");
   }
   if (outcome.status === "error") {
-    await storeToolResult(run, block, null);
+    run.lastErrorCode = outcome.code;
+    // A write refused for a workout in progress is answered by the model's words and then Ask again
+    // (`assistant · workout-in-progress`), with no notice and no failed turn. The chip is stored on the first
+    // such result only, because the app draws one for each entry that holds it.
+    const storesAskAgain = outcome.code === "workout_in_progress" && !run.askAgain;
+    run.askAgain ||= outcome.code === "workout_in_progress";
+    await storeToolResult(run, block, storesAskAgain ? { [toolUse.id]: { askAgain: true } } : null);
     return null;
+  }
+  if (outcome.actionId !== null) {
+    run.landedWrites += 1;
   }
   const structured = structuredSchema.safeParse(outcome.structured);
   if (!structured.success && outcome.structured !== null) {
@@ -485,6 +551,8 @@ async function finishCall(
   }
   const entry: Display = {};
   let card: AssistantCard | null = null;
+  let figure: AssistantExerciseMuscles | null = null;
+  let formCard: AssistantExerciseFormMedia | null = null;
   if (structured.success) {
     const { citation = null, estimate = null } = structured.data;
     run.citations.push(citation);
@@ -505,6 +573,62 @@ async function finishCall(
         run.dependencies.report("assistant", "internal_error", new Error("a card cannot be drawn"));
       }
     }
+    // The figure of an exercise's muscles, in the same row. It is a read, so it has no action and no Undo.
+    if (structured.data.exerciseMuscles !== undefined) {
+      const parsed = assistantExerciseMusclesSchema.safeParse(structured.data.exerciseMuscles);
+      if (parsed.success) {
+        figure = parsed.data;
+        entry["exerciseMuscles"] = toJson(parsed.data);
+      } else {
+        // Fixed words only. A parse failure's own message is not reported, because it can quote the exercise.
+        run.dependencies.report(
+          "assistant",
+          "internal_error",
+          new Error("exercise muscles cannot be drawn"),
+        );
+      }
+    }
+    // The form card of an exercise, in the same row. A read too, so no action and no Undo.
+    if (structured.data.exerciseFormMedia !== undefined) {
+      const parsed = assistantExerciseFormMediaSchema.safeParse(structured.data.exerciseFormMedia);
+      if (parsed.success) {
+        formCard = parsed.data;
+        entry["exerciseFormMedia"] = toJson(parsed.data);
+      } else {
+        // Fixed words only. A parse failure's own message is not reported, because it can quote the exercise.
+        run.dependencies.report(
+          "assistant",
+          "internal_error",
+          new Error("exercise form media cannot be drawn"),
+        );
+      }
+    }
+    // A link on its own, under the words of an answer that changed nothing (a day that cannot be removed here).
+    if (structured.data.link !== undefined) {
+      const link = assistantCardLinkSchema.safeParse(structured.data.link);
+      if (link.success) {
+        entry["link"] = toJson(link.data);
+        emit(run, { type: "link", link: link.data });
+      } else {
+        // Fixed words only. A parse failure's own message is not reported, because it can quote the value.
+        run.dependencies.report("assistant", "internal_error", new Error("a link cannot be drawn"));
+      }
+    }
+    // After the card, in the same row. The previous value is the person's own data, so it is kept here beside
+    // the card for Undo and goes nowhere else. A write that landed nothing has no action to undo.
+    if (structured.data.undo !== undefined && outcome.actionId !== null) {
+      const undo = undoOutcomeSchema.safeParse(structured.data.undo);
+      if (undo.success) {
+        entry["undo"] = toJson({ actionId: outcome.actionId, ...undo.data });
+      } else {
+        // Fixed words only. A parse failure's own message is not reported, because it can quote the value.
+        run.dependencies.report(
+          "assistant",
+          "internal_error",
+          new Error("an undo cannot be stored"),
+        );
+      }
+    }
   }
   await storeToolResult(
     run,
@@ -513,6 +637,13 @@ async function finishCall(
   );
   if (card !== null) {
     addCard(run, card);
+  }
+  // After the store, as for a card: a row that failed to store must not leave a figure that is sent and gone on reopening.
+  if (figure !== null) {
+    run.pendingExerciseMuscles.push(figure);
+  }
+  if (formCard !== null) {
+    run.pendingExerciseFormMedia.push(formCard);
   }
   return null;
 }
@@ -535,12 +666,14 @@ function hostOf(input: Record<string, unknown>): string | null {
   }
 }
 
-// One call of a response. Answers the ending when this call ends the turn, or null to go on.
+// One call of a response. Answers the ending when this call ends the turn, or null to go on. `isConfirmed` is
+// true only for the call a button press makes, so the working line says "Removing" and not "Looking at".
 async function runToolUse(
   run: Run,
   session: Session,
-  toolUse: Anthropic.ToolUseBlock,
+  toolUse: CalledTool,
   responseText: string,
+  isConfirmed = false,
 ): Promise<Ending | null> {
   const { id, name, input } = toolUse;
   const interrupted = interruption(run);
@@ -574,6 +707,28 @@ async function runToolUse(
     );
     return null;
   }
+  if (
+    name === SHOW_EXERCISE_MUSCLES_TOOL &&
+    run.pendingExerciseMuscles.length >= MAX_EXERCISE_MUSCLES_CARDS
+  ) {
+    await storeToolResult(
+      run,
+      toolResultBlock(id, wrapUntrusted(name, { error: "card_limit" }), true),
+      null,
+    );
+    return null;
+  }
+  if (
+    name === SHOW_EXERCISE_FORM_TOOL &&
+    run.pendingExerciseFormMedia.length >= MAX_EXERCISE_FORM_CARDS
+  ) {
+    await storeToolResult(
+      run,
+      toolResultBlock(id, wrapUntrusted(name, { error: "card_limit" }), true),
+      null,
+    );
+    return null;
+  }
   if (!isRecord(input)) {
     // Neither the executor nor the model sees the input twice: it is handed back as it was received.
     await storeToolResult(
@@ -583,12 +738,21 @@ async function runToolUse(
     );
     return null;
   }
+  // Before the call, because a hint that came back with the result would arrive after the fetch. Only the
+  // tool's name and the cleaned words of a search go out: the stream is not stored and the model never reads it.
   if (name === IMPORT_RECIPE_TOOL) {
-    // Before the call, because a hint that came back with the result would arrive after the fetch.
     const host = hostOf(input);
     if (host !== null) {
       emit(run, { type: "status", code: "reading_recipe", host });
     }
+  } else {
+    emit(run, {
+      type: "status",
+      code: "tool",
+      tool: name,
+      food: name === SEARCH_FOODS_TOOL ? safeWordsToShow(input["q"]) : null,
+      isConfirmed,
+    });
   }
   run.counts.toolCalls += 1;
   // Once. A throw is a `McpClientError`, the turn ends, and the call is not made again.
@@ -608,6 +772,11 @@ async function runModelCalls(run: Run, session: Session): Promise<Ending> {
     const interrupted = interruption(run);
     if (interrupted !== null) {
       return interrupted;
+    }
+    // After a tool the app cannot tell the model has started again, and the first call is covered by the
+    // app's own "Thinking" from the press. A retry draws the same words again.
+    if (run.counts.modelCalls > 0) {
+      emit(run, { type: "status", code: "thinking" });
     }
     const { messages, compaction } = await turns.readConversation(userId, conversationId, {
       excludeMessageId: NO_MESSAGE_ID,
@@ -654,6 +823,81 @@ async function runModelCalls(run: Run, session: Session): Promise<Ending> {
   return failedEnding("model_call_limit");
 }
 
+// The executor's refusals that a person can cause on a press, and that the notice already answers. A workout in
+// progress is answered in words of its own, before this is read.
+const PRESS_REFUSALS: ReadonlySet<string> = new Set([
+  "confirmation_invalid",
+  "write_limit_reached",
+]);
+
+// The press of a confirm button (KEY-840). The person has decided, so the loop makes the stored call itself and
+// no model is asked: a model that answered in prose would leave a press that does nothing, under words that
+// may say it is done. The executor stays the guard, because `runToolUse` sends the same call a model's would,
+// and `runWrite` checks the tool, the hash, the id, the person's stored words and the slot, and spends the
+// confirmation once. The card is the answer. Anything else ends the turn with the failed-turn notice, so a
+// press never ends in a claim that something happened. No model call is made, so `lastPromptTokens` stays
+// null and no compaction is planned. Nothing here logs or reports the input.
+async function runConfirmedCall(
+  run: Run,
+  session: Session,
+  history: readonly StoredMessage[],
+  previousTurn: PreviousTurn,
+): Promise<Ending> {
+  const call = confirmedCallOf(history, previousTurn);
+  if (call === null) {
+    run.dependencies.report(
+      "assistant",
+      "internal_error",
+      new Error("a confirmed call cannot be found"),
+    );
+    return failedEnding("confirm_input_missing");
+  }
+  // Stored as an assistant row before it runs, so the history reads as a call the model made.
+  await storeAssistantContent(run, [toJson(call)]);
+  const finished = await runToolUse(run, session, call, "", true);
+  if (finished !== null) {
+    return finished;
+  }
+  if (run.lastErrorCode === "workout_in_progress") {
+    // A workout started after the question was asked. No model answers a press, so the words are core's, and the
+    // turn ends complete with Ask again, as a refusal that a model words does. Nothing was written or spent.
+    const words = describeWorkoutInProgressRefusal();
+    await storeAssistantContent(run, [{ type: "text", text: words }]);
+    emit(run, { type: "text", delta: words });
+    return ending("complete", "confirm_refused_workout");
+  }
+  if (run.pendingCards.length > 0) {
+    return ending("complete");
+  }
+  if (run.landedWrites > 0) {
+    // The write landed and the app cannot draw its card (a tool or a deploy that disagrees on the card). The
+    // failed-turn notice says nothing was changed, which would be untrue, so the turn ends complete with the
+    // words that say it was saved, and the report says what happened.
+    run.dependencies.report(
+      "assistant",
+      "internal_error",
+      new Error("a confirmed write landed without a card"),
+    );
+    const words = describeTurnEndedAfterWrite(run.landedWrites);
+    await storeAssistantContent(run, [{ type: "text", text: words }]);
+    emit(run, { type: "text", delta: words });
+    return ending("complete", "confirm_written_no_card");
+  }
+  // An error, `not_found` and a write that changed nothing all end here. Only what is unexpected is reported: a
+  // call that never ran, or an error that is not a refusal the person can cause. `not_found` and a state already
+  // in place are answers and not errors, and a spent confirmation, the write limit or a workout in progress is a refusal.
+  const refused = run.lastErrorCode !== null && PRESS_REFUSALS.has(run.lastErrorCode);
+  const benign = run.counts.toolCalls > 0 && (run.lastErrorCode === null || refused);
+  if (!benign) {
+    run.dependencies.report(
+      "assistant",
+      "internal_error",
+      new Error("a confirmed call wrote nothing"),
+    );
+  }
+  return failedEnding("confirm_nothing_written");
+}
+
 function bearerToken(request: Request): string | null {
   const header = request.headers.get("Authorization");
   return header === null ? null : header.replace(/^Bearer\s+/i, "");
@@ -697,9 +941,12 @@ async function takeTurn(run: Run): Promise<Ending> {
     );
     return failedEnding("not_configured");
   }
+  const pressedConfirm = isConfirmAnswer(context.text, previousTurn?.pendingConfirmLabel ?? null);
   const allowedTools = allowedToolsFor({
     text: context.text,
-    pendingConfirmationTool: previousTurn?.pendingTool ?? null,
+    // A confirmation adds its own tool only when the person's message is the button's words, so a
+    // read-looking message after one no longer has the write at all.
+    pendingConfirmationTool: pressedConfirm ? (previousTurn?.pendingTool ?? null) : null,
     tools: dependencies.availableTools,
   });
   const cachedTools = dependencies.toolListCache.read();
@@ -724,13 +971,18 @@ async function takeTurn(run: Run): Promise<Ending> {
         dependencies.toolListCache.write(listedTools);
       }
     }
-    const tools = toAnthropicTools(listedTools);
-    return await runModelCalls(run, {
+    const session: Session = {
       client,
       connection,
       allowedTools: new Set(allowedTools),
-      tools,
-    });
+      tools: toAnthropicTools(listedTools),
+    };
+    // The button's words, on a turn that ended asking for that confirmation, are the person's decision.
+    // Every other message, the cancel button and typed words included, is a model turn.
+    if (pressedConfirm && previousTurn?.status === "confirm") {
+      return await runConfirmedCall(run, session, history, previousTurn);
+    }
+    return await runModelCalls(run, session);
   } finally {
     await connection.close();
   }
@@ -753,22 +1005,109 @@ async function planTurnCompaction(run: Run): Promise<(() => Promise<void>) | nul
   });
 }
 
+const endsEarly = ({ status }: Ending): boolean =>
+  status === "failed" || status === "refused" || status === "stopped";
+
+// Whether a write of the turn landed. The loop counts the answers that hold an action. A call that threw
+// (`McpClientError` on the 20 s timeout) never answered and may have landed, so when none was counted and a
+// call was made, the turn's actions are asked once. A lookup that fails counts as none.
+async function writeLanded(run: Run): Promise<boolean> {
+  if (run.landedWrites > 0) {
+    return true;
+  }
+  if (run.counts.toolCalls === 0) {
+    return false;
+  }
+  try {
+    const landed = await run.dependencies.turns.turnHasAction(run.context.turnId);
+    run.landedWrites = landed ? 1 : 0;
+    return landed;
+  } catch (caught) {
+    run.dependencies.report("assistant", "internal_error", caught);
+    return false;
+  }
+}
+
+// Reads the rows and stores the words in one insert, after a result for each call that has none. A response
+// with two calls where the first landed and the second never ran leaves one open, and `openToolUses` looks
+// only at the last assistant row, so a plain text row stored after it would hide the call and every later
+// request would carry a `tool_use` with no result and be refused. Nothing is stored unless the read worked.
+async function storeWordsAfterWrite(run: Run, words: string): Promise<void> {
+  const { userId, conversationId, turnId } = run.context;
+  const { turns } = run.dependencies;
+  const { messages } = await turns.readConversation(userId, conversationId, {
+    excludeMessageId: NO_MESSAGE_ID,
+  });
+  const open = openToolUses(messages);
+  await turns.appendMessages(userId, conversationId, turnId, [
+    ...(open.length === 0
+      ? []
+      : [
+          {
+            role: "user" as const,
+            content: open.map(resultForOpenToolUse).map(toJson),
+            display: null,
+          },
+        ]),
+    { role: "assistant", content: [{ type: "text", text: words }] },
+  ]);
+}
+
+// A turn that was going to end failed, refused or stopped, and landed a write, ends complete with fixed words as
+// its reply (KEY-926). The failed-turn notice says "Nothing was changed" and offers Try again, which would send
+// the message again and could repeat the write. The model's half-written text stays above the words. The
+// report keeps the cause apart from the ending, and a stop is not a fault.
+async function endWithWordsAfterWrite(run: Run, early: Ending): Promise<Ending> {
+  const words = describeTurnEndedAfterWrite(run.landedWrites);
+  let failedToStore = false;
+  try {
+    await storeWordsAfterWrite(run, words);
+  } catch (caught) {
+    failedToStore = true;
+    run.dependencies.report("assistant", "internal_error", caught);
+  }
+  if (!failedToStore && early.status !== "stopped") {
+    run.dependencies.report(
+      "assistant",
+      "internal_error",
+      new Error(`a turn ended early after a write landed: ${early.code}`),
+    );
+  }
+  emit(run, { type: "text", delta: `\n\n${words}` });
+  return ending("complete", `written_then_${early.code}`);
+}
+
 // The cards, the answer meta, the status and the closing events. The status is final before `done` is
 // written, so the app that reads the thread on `done` finds it. A `finishTurn` that throws is reported and
 // does not change how the turn ended.
 async function conclude(run: Run, reached: Ending): Promise<Ending> {
   const { stream, context, dependencies } = run;
   // An event that broke the contract has already ended the stream as failed.
-  const final =
+  const early =
     stream.done && reached.status !== "stopped" ? failedEnding("invalid_event") : reached;
-  if (final.status !== "stopped") {
+  const endedAfterWrite = endsEarly(early) && (await writeLanded(run));
+  if (early.status !== "stopped") {
     flushCards(run);
+    for (const exercise of run.pendingExerciseMuscles) {
+      emit(run, { type: "exercise_muscles", exercise });
+    }
+    run.pendingExerciseMuscles = [];
+    for (const exercise of run.pendingExerciseFormMedia) {
+      emit(run, { type: "exercise_form_media", exercise });
+    }
+    run.pendingExerciseFormMedia = [];
   }
+  const final = endedAfterWrite ? await endWithWordsAfterWrite(run, early) : early;
   if (final.status === "complete") {
     const citation = distinctLine(run.citations);
     const estimate = distinctLine(run.estimates);
     if (citation !== null || estimate !== null) {
       emit(run, { type: "answer_meta", citation, estimate });
+    }
+    // Once, however many writes of the turn were refused, and after the words that led to it. Not when a write of
+    // the turn landed: sending the message again would repeat it, and the model's words say what waits.
+    if (run.askAgain && run.landedWrites === 0) {
+      emit(run, { type: "ask_again" });
     }
   }
   try {
@@ -778,7 +1117,9 @@ async function conclude(run: Run, reached: Ending): Promise<Ending> {
   }
   // Decided before `done`, so the person cannot start the next turn before the conversation is read, and run
   // after it, so the person never waits.
-  const compaction = final.status === "complete" ? await planTurnCompaction(run) : null;
+  // Not after words that ended a turn early: a failed turn plans none, and the next complete turn does it.
+  const compaction =
+    final.status === "complete" && !endedAfterWrite ? await planTurnCompaction(run) : null;
   switch (final.status) {
     case "complete":
     case "clarify":
@@ -816,9 +1157,14 @@ export function createRunTurn(
       limitCode: null,
       dependencies,
       counts: { modelCalls: 0, toolCalls: 0 },
+      landedWrites: 0,
+      lastErrorCode: null,
+      askAgain: false,
       lastPromptTokens: null,
       unparseableInputRetries: 0,
       pendingCards: [],
+      pendingExerciseMuscles: [],
+      pendingExerciseFormMedia: [],
       citations: [],
       estimates: [],
     };

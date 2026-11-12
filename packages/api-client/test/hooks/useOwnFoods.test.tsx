@@ -47,16 +47,13 @@ beforeEach(() => {
     http.get(AUTH_USER_URL, () =>
       HttpResponse.json({ id: SIGNED_IN_USER_ID, aud: "authenticated", role: "authenticated" }),
     ),
-    http.post(`${REST_URL}/foods`, ({ request }) =>
-      postgrestRows(request, [foodRow({ name: "Protein flapjack" })], 201),
-    ),
-    http.post(`${REST_URL}/food_portions`, ({ request }) =>
-      postgrestRows(request, [portionRow()], 201),
+    http.post(`${REST_URL}/rpc/create_food`, () =>
+      HttpResponse.json({ food: foodRow({ name: "Protein flapjack" }), portions: [portionRow()] }),
     ),
     http.patch(`${REST_URL}/foods`, ({ request }) =>
       postgrestRows(request, [foodRow({ name: "Renamed flapjack" })]),
     ),
-    http.delete(`${REST_URL}/food_portions`, () => new Response(null, { status: 204 })),
+    http.post(`${REST_URL}/rpc/replace_food_portions`, () => HttpResponse.json([portionRow()])),
   );
 });
 afterEach(() => {

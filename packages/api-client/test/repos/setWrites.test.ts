@@ -1,9 +1,18 @@
 import { buildSetSnapshot } from "@keylow/core/training";
+import { http } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
-import { addSet, removeSet, reorderSets, restoreSet, updateSet } from "../../src/repos/setWrites";
+import {
+  addSet,
+  getSet,
+  removeSet,
+  reorderSets,
+  restoreSet,
+  updateSet,
+} from "../../src/repos/setWrites";
 import { createTestClient } from "../createTestClient";
+import { REST_URL, postgrestError } from "../support/postgrest";
 import {
   NOT_A_ROW,
   OTHER_SESSION_ID,
@@ -274,6 +283,63 @@ describe("addSet", () => {
     expect(error?.cause).toEqual({ code: "23514" });
     expect(textOf(error)).not.toContain(RECOGNISABLE_EXERCISE_NAME);
     expect(textOf(error)).not.toContain(String(RECOGNISABLE_WEIGHT));
+  });
+});
+
+describe("getSet", () => {
+  it("should resolve to the set as stored, with its session and its snapshot", async () => {
+    const set = storedSet({ reps: 6, load_kg: 100 });
+    installSetWritesFake(server, { sets: [set] });
+
+    const found = await getSet(createTestClient(), set.id);
+
+    expect(found).toMatchObject({
+      id: set.id,
+      session_id: SET_SESSION_ID,
+      reps: 6,
+      load_kg: 100,
+      deleted_at: null,
+    });
+    expect(found?.snapshot.name).toBe(RECOGNISABLE_EXERCISE_NAME);
+  });
+
+  it("should resolve to a removed set with its deleted_at, so a caller can tell it is gone", async () => {
+    const removed = storedSet({ deleted_at: "2026-10-18T09:00:00+00:00" });
+    installSetWritesFake(server, { sets: [removed] });
+
+    const found = await getSet(createTestClient(), removed.id);
+
+    expect(found?.deleted_at).toBe("2026-10-18T09:00:00+00:00");
+  });
+
+  it("should resolve to null for a set that does not exist or is not the caller's", async () => {
+    installSetWritesFake(server);
+
+    expect(await getSet(createTestClient(), NOT_A_ROW)).toBeNull();
+  });
+
+  it("should carry the action and the code only when the database fails", async () => {
+    const set = storedSet();
+    installSetWritesFake(server, { sets: [set] });
+    server.use(
+      http.get(`${REST_URL}/workout_sets`, () =>
+        postgrestError(403, "42501", `failing row contains ${RECOGNISABLE_EXERCISE_NAME}`),
+      ),
+    );
+
+    const error = await rejectionOf(getSet(createTestClient(), set.id));
+
+    expect(error?.message).toBe("Could not load the set (42501)");
+    expect(textOf(error)).not.toContain(String(RECOGNISABLE_WEIGHT));
+  });
+
+  it("should throw a RangeError before any request for an id that is not a UUID", async () => {
+    const fake = installSetWritesFake(server);
+
+    const error = await rejectionOf(getSet(createTestClient(), "nope"));
+
+    expect(error).toBeInstanceOf(RangeError);
+    expect(fake.requests).toEqual([]);
   });
 });
 

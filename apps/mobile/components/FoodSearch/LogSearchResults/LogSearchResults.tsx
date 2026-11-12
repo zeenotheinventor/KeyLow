@@ -27,6 +27,8 @@ import type { LogSearchResultsProps } from "./types";
 export function LogSearchResults({
   query,
   logging,
+  visibleRowCount,
+  onMoreRowsChange,
   onOpenFood,
   onCreateFood,
   onPlateAdded,
@@ -103,6 +105,8 @@ export function LogSearchResults({
           },
         }}
         query={query}
+        visibleRowCount={visibleRowCount}
+        onMoreRowsChange={onMoreRowsChange}
         onCreateFood={onCreateFood}
         onOpenFood={onOpenFood}
       />

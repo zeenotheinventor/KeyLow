@@ -14,7 +14,8 @@ import type { AssistantActionsRead } from "../repos/assistantConversations";
  * "What the assistant changed": the signed in user's `assistant_actions`, newest first, one row per card
  * and grouped by day (`Today`, `Yesterday`, then the date as the diary writes it), with the number of
  * rows as `count`. Days and times are read in the time zone of the profile, UTC when it has none, so the
- * read waits for the profile. Key `keys.assistant.changes`.
+ * read waits for the profile. A training row is worded from the card its turn stored, which the read holds
+ * as the words of the card alone. Key `keys.assistant.changes`.
  */
 export function useAssistantChanges({ enabled = true }: DiaryReadOptions = {}) {
   const client = useSupabase();
@@ -26,14 +27,14 @@ export function useAssistantChanges({ enabled = true }: DiaryReadOptions = {}) {
       ? profileTimeZone.data
       : "UTC";
   const group = useCallback(
-    ({ actions, targets }: AssistantActionsRead) =>
-      assistantChangesFromActions(actions, { now: new Date(), timeZone, targets }),
+    ({ actions, targets, cards }: AssistantActionsRead) =>
+      assistantChangesFromActions(actions, { now: new Date(), timeZone, targets, cards }),
     [timeZone],
   );
 
   return useQuery({
     queryKey: keys.assistant.changes,
-    queryFn: () => readAssistantActions(client),
+    queryFn: () => readAssistantActions(client, { withCards: true }),
     select: group,
     enabled: enabled && profileTimeZone.isFetched,
   });

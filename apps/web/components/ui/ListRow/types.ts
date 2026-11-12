@@ -1,5 +1,5 @@
 import type { BadgeTone } from "@/components/ui/Badge";
-import type { ComponentType } from "react";
+import type { ComponentType, MouseEvent } from "react";
 
 /** What the row needs of an icon: the props it sets. A `lucide-react` icon fits. */
 export type ListRowIcon = ComponentType<{
@@ -8,10 +8,18 @@ export type ListRowIcon = ComponentType<{
   "aria-hidden"?: boolean;
 }>;
 
+/** The four figures a macro key can colour: the calories and the three macros. */
+export type ListRowMacro = "calories" | "protein" | "carbs" | "fat";
+
 type ListRowContent = {
   /** A leading icon, such as `Shield` from `lucide-react`, in a small tile. It is decorative: the title names the row. */
   icon?: ListRowIcon;
   title: string;
+  /**
+   * Draws the macro's colour as an 8 px square before the title, as the Targets page's four figures do, and sets the
+   * title in the body weight, not the strong one. It is decoration, so the row's accessible name is unchanged.
+   */
+  macro?: ListRowMacro | undefined;
   subtitle?: string | undefined;
   /**
    * A short status drawn between the text and the value, such as the weigh-in list's "Left out of trend" in
@@ -30,6 +38,11 @@ type ListRowContent = {
   valueLook?: "quiet" | "numeral" | undefined;
   /** `muted` draws the value in the muted text colour, as the weigh-in the trend left out. */
   valueTone?: "muted" | undefined;
+  /**
+   * A tick at the end of the row for something that is done, such as the export's file row once it is ready. It is
+   * a picture with the label as its name, so the row's state is read out, and it is drawn after the value, before any chevron, and a row that is loading draws its spinner instead.
+   */
+  trailing?: { kind: "tick"; label: string } | undefined;
   /** The chevron marks a row that goes somewhere. Leave it off for an action such as signing out. */
   chevron?: boolean;
   disabled?: boolean;
@@ -39,8 +52,18 @@ type ListRowContent = {
 /** A row goes to a page, runs an action, submits the form around it, or is plain text. It cannot do two of these. */
 export type ListRowProps = ListRowContent &
   (
-    | { href: string; onClick?: never; submit?: never }
-    | { onClick: () => void; href?: never; submit?: never }
-    | { submit: true; href?: never; onClick?: never }
-    | { href?: never; onClick?: never; submit?: never }
+    | { href: string; onClick?: never; submit?: never; loading?: never }
+    | {
+        /** The click's event is passed on, so an owner can keep the button that was pressed, such as to return focus to it. */
+        onClick: (event: MouseEvent<HTMLButtonElement>) => void;
+        href?: never;
+        submit?: never;
+        /**
+         * Shows a spinner in place of the chevron and marks the row busy, for a row whose press is being
+         * worked on. The row stays enabled, so focus is kept, but a press does nothing until it clears.
+         */
+        loading?: boolean;
+      }
+    | { submit: true; href?: never; onClick?: never; loading?: never }
+    | { href?: never; onClick?: never; submit?: never; loading?: never }
   );

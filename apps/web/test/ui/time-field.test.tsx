@@ -2,6 +2,8 @@ import { cleanup, fireEvent, render, screen, within } from "@testing-library/rea
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { compileUtilities } from "./compileUtilities";
+
 import type { TimeFieldProps } from "@/components/ui/TimeField";
 
 import { Dialog } from "@/components/ui/Dialog";
@@ -73,6 +75,84 @@ describe("TimeField", () => {
       render(<TimeField compact value="12:40" isNow onChange={() => undefined} />);
 
       expect(screen.queryByText("Now")).toBeNull();
+    });
+  });
+
+  describe("the row", () => {
+    it("should be named Time, now, the time and change while it is now", () => {
+      render(<TimeField row value="19:20" isNow onChange={() => undefined} />);
+
+      expect(screen.getByRole("button", { name: "Time, now, 19:20, change" })).toBeTruthy();
+    });
+
+    it("should be named Time, the time and change once it is chosen", () => {
+      render(<TimeField row value="19:00" onChange={() => undefined} />);
+
+      expect(screen.getByRole("button", { name: "Time, 19:00, change" })).toBeTruthy();
+    });
+
+    it("should read Time, then Now and the time on one line", () => {
+      render(<TimeField row value="19:20" isNow onChange={() => undefined} />);
+      const row = screen.getByRole("button", { name: "Time, now, 19:20, change" });
+
+      expect(Array.from(row.querySelectorAll("span")).map((part) => part.textContent)).toEqual([
+        "Time",
+        "Now · 19:20",
+      ]);
+    });
+
+    it("should say the time alone once it is chosen", () => {
+      render(<TimeField row value="19:00" onChange={() => undefined} />);
+
+      expect(screen.getByText("19:00")).toBeTruthy();
+      expect(screen.queryByText(/Now/)).toBeNull();
+    });
+
+    it("should draw no Now helper under itself", () => {
+      render(<TimeField row value="19:20" isNow onChange={() => undefined} />);
+
+      expect(screen.queryByText("Now")).toBeNull();
+    });
+
+    it("should open the picker on a press and give the focus back on Done", () => {
+      const onChange = vi.fn<(time: string) => void>();
+      render(<TimeField row value="12:40" onChange={onChange} />);
+      const row = screen.getByRole("button", { name: "Time, 12:40, change" });
+
+      fireEvent.click(row);
+
+      expect(row.getAttribute("aria-expanded")).toBe("true");
+
+      fireEvent.click(screen.getByRole("button", { name: "Done" }));
+
+      expect(onChange).toHaveBeenCalledExactlyOnceWith("12:40");
+      expect(document.activeElement).toBe(row);
+    });
+
+    it("should be 44 high and as wide as its container", async () => {
+      render(<TimeField row value="12:40" onChange={() => undefined} />);
+      const row = screen.getByRole("button", { name: "Time, 12:40, change" });
+      const css = await compileUtilities(row.className);
+
+      expect(css).toContain("height: 44px");
+      expect(css).toContain("width: 100%");
+    });
+  });
+
+  describe("disabled", () => {
+    it.each([
+      ["full", { value: "12:40" }, "Time 12:40"],
+      ["compact", { compact: true, value: "12:40" }, "Time, 12:40, change"],
+      ["row", { row: true, value: "12:40" }, "Time, 12:40, change"],
+    ] as const)("should dim the %s form and not open the picker", (_form, props, name) => {
+      render(<TimeField {...props} disabled onChange={() => undefined} />);
+      const field = screen.getByRole("button", { name });
+
+      fireEvent.click(field);
+
+      expect(field.hasAttribute("disabled")).toBe(true);
+      expect(field.className).toContain("disabled:opacity-40");
+      expect(screen.queryByRole("dialog", { name: "Choose a time" })).toBeNull();
     });
   });
 

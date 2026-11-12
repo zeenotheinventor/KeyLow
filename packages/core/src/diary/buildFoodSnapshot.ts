@@ -44,7 +44,14 @@ const buildPer100 = (food: Food): NullableNutrients => {
 
 const toSnapshotPortion = (
   portion: Pick<FoodPortion, "label" | "grams" | "ml">,
+  basis: Food["basis"],
 ): SnapshotPortion => {
+  if (basis === "per_portion") {
+    if (portion.grams !== null || portion.ml !== null) {
+      throw new RangeError("The portion of a food per portion has no size");
+    }
+    return { label: portion.label };
+  }
   if (portion.grams !== null && portion.ml === null) {
     return { label: portion.label, grams: portion.grams };
   }
@@ -62,8 +69,12 @@ const toSnapshotPortion = (
  * the food does not record are left out of `per100` (ADR 0003, Amendment 2), and micronutrients are
  * never carried.
  *
- * Throws a `RangeError` for a negative quantity, for the `portion` unit without a portion, and for a
- * portion that does not have exactly one of `grams` and `ml`.
+ * A food per portion is frozen with its one portion's values in `per100`, no density, `resolvedGrams` of 0
+ * and the portion as its label alone.
+ *
+ * Throws a `RangeError` for a negative quantity, for the `portion` unit without a portion, for a portion
+ * that does not have exactly one of `grams` and `ml` (and, for a food per portion, for a portion that has
+ * either) and for a unit other than `portion` on a food per portion.
  */
 export const buildFoodSnapshot = (food: Food, input: FoodSnapshotInput): FoodSnapshot =>
   withQuantity(
@@ -74,14 +85,14 @@ export const buildFoodSnapshot = (food: Food, input: FoodSnapshotInput): FoodSna
       name: food.name,
       basis: food.basis,
       per100: buildPer100(food),
-      density: densityForLogging(food, input.foodPortions),
+      density: food.basis === "per_portion" ? null : densityForLogging(food, input.foodPortions),
     },
     {
       quantity: input.quantity,
       unit: input.unit,
       portion:
         input.unit === "portion" && input.portion !== undefined
-          ? toSnapshotPortion(input.portion)
+          ? toSnapshotPortion(input.portion, food.basis)
           : null,
     },
   );

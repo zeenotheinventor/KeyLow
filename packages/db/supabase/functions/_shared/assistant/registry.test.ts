@@ -76,7 +76,7 @@ Deno.test("a name that is not lower snake case is refused", () => {
 });
 
 Deno.test(
-  "the real registry lists the food reads, the diary reads, the diary, day, recipe, food, targets and recipe import writes and then ask_user in order",
+  "the real registry lists the food reads, the diary reads, the diary, day, recipe, food, targets and recipe import writes, the training reads, estimate_portions, request_feature and then ask_user in order",
   () => {
     assertEquals(
       toolRegistry.list.map((tool) => [tool.name, tool.kind]),
@@ -99,6 +99,26 @@ Deno.test(
         ["create_custom_food", "write"],
         ["update_targets", "write"],
         ["import_recipe_from_url", "write"],
+        ["search_exercises", "read"],
+        ["get_routines", "read"],
+        ["get_training_goals", "read"],
+        ["get_workouts", "read"],
+        ["get_exercise_progress", "read"],
+        ["show_exercise_muscles", "read"],
+        ["get_muscle_state", "read"],
+        ["suggest_next_session", "read"],
+        ["set_active_routine", "write"],
+        ["archive_routine", "write"],
+        ["edit_routine", "write"],
+        ["update_past_set", "write"],
+        ["update_training_goals", "write"],
+        ["create_routine", "write"],
+        ["save_custom_exercise", "write"],
+        ["archive_custom_exercise", "write"],
+        ["delete_workout", "write"],
+        ["show_exercise_form", "read"],
+        ["estimate_portions", "read"],
+        ["request_feature", "write"],
         ["ask_user", "read"],
       ],
     );
@@ -112,8 +132,10 @@ Deno.test(
 // The Messages API caps what the strict tools of one request hold together: 20 tools, 24 optional
 // parameters and 16 parameters with a union type (`anyOf` or a type array), counted across all of
 // their schemas. https://platform.claude.com/docs/en/build-with-claude/structured-outputs.md
-// (section "Explicit limits"). A tool that would break a cap sets `strict: false`.
-const strictLimits = { tools: 20, optionalParameters: 24, unionParameters: 16 } as const;
+// (section "Explicit limits"). A tool that would break a cap sets `strict: false`. The union limit here
+// is 14 and not the documented 16, because a registry at 16 was refused live (KEY-967, ADR 0006
+// Amendment 3), and 14 is the figure observed to work.
+const strictLimits = { tools: 20, optionalParameters: 24, unionParameters: 14 } as const;
 
 type Schema = Record<string, unknown>;
 const isSchema = (value: unknown): value is Schema =>
@@ -163,6 +185,57 @@ Deno.test("the strict tools of the registry stay inside what one request may hol
   assert(budget.unionParameters <= strictLimits.unionParameters, JSON.stringify(budget));
 });
 
+// The keywords a strict schema refuses, which the renderer leaves out of what the model sees.
+const keywordsLeftOut = [
+  "minimum",
+  "maximum",
+  "minLength",
+  "maxLength",
+  "minItems",
+  "maxItems",
+  "pattern",
+  "format",
+];
+
+function strictSchemaProblems(schema: unknown, place: string): string[] {
+  if (!isSchema(schema)) {
+    return [];
+  }
+  const problems = keywordsLeftOut
+    .filter((keyword) => keyword in schema)
+    .map((keyword) => `${place} has ${keyword}`);
+  const properties = isSchema(schema["properties"]) ? schema["properties"] : undefined;
+  if (properties !== undefined) {
+    const required = Array.isArray(schema["required"]) ? schema["required"] : [];
+    if (JSON.stringify([...required].sort()) !== JSON.stringify(Object.keys(properties).sort())) {
+      problems.push(`${place} does not require every property`);
+    }
+    if (schema["additionalProperties"] !== false) {
+      problems.push(`${place} is not closed`);
+    }
+  }
+  const children = [
+    ...Object.entries(properties ?? {}).map(([key, child]) => [`${place}.${key}`, child] as const),
+    [`${place}[]`, schema["items"]] as const,
+    ...(Array.isArray(schema["anyOf"])
+      ? schema["anyOf"].map((branch, index) => [`${place}|${index}`, branch] as const)
+      : []),
+  ];
+  return [
+    ...problems,
+    ...children.flatMap(([childPlace, child]) => strictSchemaProblems(child, childPlace)),
+  ];
+}
+
+Deno.test(
+  "every strict tool is sent with every property required, objects closed and no refused keyword",
+  () => {
+    for (const tool of toolRegistry.list.filter((candidate) => candidate.strict !== false)) {
+      assertEquals(strictSchemaProblems(toJsonSchema(tool), tool.name), []);
+    }
+  },
+);
+
 Deno.test("update_recipe opts out of strict mode and the other recipe writes do not", () => {
   const strictOf = (name: string) => toolRegistry.get(name)?.strict;
 
@@ -170,6 +243,13 @@ Deno.test("update_recipe opts out of strict mode and the other recipe writes do 
   assertEquals(strictOf("create_recipe"), undefined);
   assertEquals(strictOf("archive_recipe"), undefined);
 });
+
+Deno.test(
+  "get_food opts out of strict mode, which keeps the union budget off the API's cap",
+  () => {
+    assertEquals(toolRegistry.get("get_food")?.strict, false);
+  },
+);
 
 Deno.test("create_custom_food opts out of strict mode and update_targets does not", () => {
   const strictOf = (name: string) => toolRegistry.get(name)?.strict;
@@ -179,10 +259,83 @@ Deno.test("create_custom_food opts out of strict mode and update_targets does no
 });
 
 Deno.test(
-  "the strict budget of the real registry is 16 tools, 0 optional and 14 union parameters",
+  "the training reads opt out of strict mode, so they take nothing from the strict budget",
+  () => {
+    for (const name of [
+      "search_exercises",
+      "get_routines",
+      "get_training_goals",
+      "get_workouts",
+      "get_exercise_progress",
+      "show_exercise_muscles",
+      "show_exercise_form",
+    ]) {
+      assertEquals(toolRegistry.get(name)?.strict, false, name);
+    }
+  },
+);
+
+Deno.test(
+  "the routine state writes opt out of strict mode, so they take nothing from the strict budget",
+  () => {
+    for (const name of ["set_active_routine", "archive_routine", "create_routine"]) {
+      assertEquals(toolRegistry.get(name)?.strict, false, name);
+    }
+  },
+);
+
+Deno.test(
+  "edit_routine opts out of strict mode, so it takes nothing from the strict budget",
+  () => {
+    assertEquals(toolRegistry.get("edit_routine")?.strict, false);
+  },
+);
+
+Deno.test(
+  "the custom exercise writes opt out of strict mode, so they take nothing from the strict budget",
+  () => {
+    for (const name of ["save_custom_exercise", "archive_custom_exercise"]) {
+      assertEquals(toolRegistry.get(name)?.strict, false, name);
+      assertEquals(toolRegistry.get(name)?.annotations.readOnlyHint, false, name);
+    }
+  },
+);
+
+Deno.test(
+  "the muscle and suggestion reads are read-only and opt out of strict mode, so they take nothing from the strict budget",
+  () => {
+    for (const name of ["get_muscle_state", "suggest_next_session"]) {
+      assertEquals(toolRegistry.get(name)?.strict, false, name);
+      assertEquals(toolRegistry.get(name)?.annotations.readOnlyHint, true, name);
+    }
+  },
+);
+
+Deno.test(
+  "update_past_set opts out of strict mode, so it takes nothing from the strict budget",
+  () => {
+    const tool = toolRegistry.get("update_past_set");
+
+    assertEquals(tool?.strict, false);
+    assertEquals(tool?.kind, "write");
+  },
+);
+
+Deno.test(
+  "request_feature is a write that opts out of strict mode, because its confirmation id would pass the union cap",
+  () => {
+    const tool = toolRegistry.get("request_feature");
+
+    assertEquals(tool?.strict, false);
+    assertEquals(tool?.kind, "write");
+  },
+);
+
+Deno.test(
+  "the strict budget of the real registry is 15 tools, 0 optional and 14 union parameters",
   () => {
     assertEquals(strictBudgetOf(toolRegistry.list), {
-      tools: 16,
+      tools: 15,
       optionalParameters: 0,
       unionParameters: 14,
     });
@@ -199,7 +352,10 @@ Deno.test(
         nested: z.object({ n: z.number().nullable() }),
       }),
     };
-    const confirmed = { ...write("confirmed_tool"), needsConfirmation: () => true };
+    const confirmed = {
+      ...write("confirmed_tool"),
+      needsConfirmation: () => ({ question: "Do it?", confirmLabel: "Do it" }),
+    };
 
     assertEquals(strictBudgetOf([nullable]), {
       tools: 1,
@@ -271,5 +427,77 @@ Deno.test(
       optionalParameters: 0,
       unionParameters: 1,
     });
+  },
+);
+
+// The tables of the training feature. A write to one of them must not run while a workout is in progress,
+// so its tool carries `refusesDuringWorkout` and the executor and Undo refuse it (KEY-899).
+const trainingTables: ReadonlySet<string> = new Set([
+  "exercises",
+  "exercise_muscles",
+  "routines",
+  "routine_days",
+  "routine_exercises",
+  "training_goals",
+  "workout_sessions",
+  "workout_sets",
+]);
+
+const trainingWritesWithoutTheGuard = (tools: readonly ToolDefinition[]): string[] =>
+  tools
+    .filter(
+      (tool) =>
+        tool.kind === "write" &&
+        trainingTables.has(tool.targetTable) &&
+        tool.refusesDuringWorkout !== true,
+    )
+    .map((tool) => tool.name);
+
+Deno.test(
+  "every write tool of the registry that changes a training table refuses a live workout",
+  () => {
+    assertEquals(trainingWritesWithoutTheGuard(toolRegistry.list), []);
+  },
+);
+
+Deno.test("the check names a training write that lacks the guard and spares the rest", () => {
+  const guarded: WriteToolDefinition<Record<string, never>> = {
+    ...write("log_set"),
+    targetTable: "workout_sets",
+    refusesDuringWorkout: true,
+  };
+
+  assertEquals(
+    trainingWritesWithoutTheGuard([
+      guarded,
+      { ...write("remove_set"), targetTable: "workout_sets" },
+      { ...write("archive_routine"), targetTable: "routines" },
+      write("log_entry"),
+      read("get_workouts"),
+    ]),
+    ["remove_set", "archive_routine"],
+  );
+});
+
+Deno.test(
+  "update_training_goals is a write that opts out of strict, so the strict budget does not move",
+  () => {
+    const goals = toolRegistry.get("update_training_goals");
+
+    assertEquals(goals?.kind, "write");
+    assertEquals(goals?.strict, false);
+    assertEquals(goals?.kind === "write" ? goals.refusesDuringWorkout : undefined, true);
+  },
+);
+
+Deno.test(
+  "delete_workout is a destructive write that opts out of strict, so the strict budget does not move",
+  () => {
+    const tool = toolRegistry.get("delete_workout");
+
+    assertEquals(tool?.kind, "write");
+    assertEquals(tool?.strict, false);
+    assertEquals(tool?.kind === "write" ? tool.refusesDuringWorkout : undefined, true);
+    assertEquals(tool?.annotations, { readOnlyHint: false, destructiveHint: true });
   },
 );

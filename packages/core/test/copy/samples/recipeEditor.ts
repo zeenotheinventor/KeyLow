@@ -9,6 +9,7 @@ const problemCodes: RecipeDraftProblem[] = [
   "servings_too_many",
   "cooked_weight_invalid",
   "cooked_weight_too_large",
+  "cooked_weight_with_food_per_portion",
   "ingredients_none",
   "ingredients_too_many",
   "ingredient_invalid",

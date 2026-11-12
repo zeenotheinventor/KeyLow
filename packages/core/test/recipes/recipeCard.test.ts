@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { computeRecipe, recipeCardOf } from "../../src/recipes";
-import { buildChickenAndRiceRecipe } from "../../src/testing";
+import { buildBucketAndFriesRecipe, buildChickenAndRiceRecipe } from "../../src/testing";
 
 import type { RecipeDraft } from "../../src/recipes";
 
@@ -25,6 +25,37 @@ const cardOf = (overrides: Partial<RecipeDraft> = {}) => {
 };
 
 describe("recipeCardOf", () => {
+  describe("a recipe with a food per portion", () => {
+    const card = cardOf({
+      ingredients: buildBucketAndFriesRecipe().ingredients,
+      cookedWeight: "",
+    });
+
+    it("should give a quarter of the total per serving", () => {
+      expect(card.perServing.kcal).toBeCloseTo(650, 9);
+    });
+
+    it("should say it is servings only and give no weight of a serving or per 100 g", () => {
+      expect(card.servingsOnly).toBe(true);
+      expect(card.servingGrams).toBeNull();
+      expect(card.per100gBasis).toBeNull();
+    });
+
+    it("should ignore a cooked weight left in the draft", () => {
+      const withWeight = cardOf({
+        ingredients: buildBucketAndFriesRecipe().ingredients,
+        cookedWeight: "900",
+      });
+
+      expect(withWeight.servingsOnly).toBe(true);
+      expect(withWeight.perServing.kcal).toBeCloseTo(650, 9);
+    });
+  });
+
+  it("should not be servings only without a food per portion", () => {
+    expect(cardOf().servingsOnly).toBe(false);
+  });
+
   describe("the chicken and rice golden", () => {
     it("should give the per serving figures of four servings", () => {
       const card = cardOf();

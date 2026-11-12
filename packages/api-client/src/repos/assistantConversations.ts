@@ -1,3 +1,9 @@
+import {
+  ASSISTANT_THREAD_PAGE_TURNS,
+  assistantChangeCardsOfDisplay,
+  isTrainingWriteTool,
+  pageOfAssistantTurns,
+} from "@keylow/core";
 import { formatClockTime, isValidTimeZone } from "@keylow/core/dates";
 import { z } from "zod";
 
@@ -9,8 +15,10 @@ import { getMyTimeZone } from "./targets";
 import type { Database } from "../database.types";
 import type {
   AssistantChangeAction,
+  AssistantChangeStoredCard,
   AssistantChangeTarget,
   AssistantStoredMessage,
+  AssistantThreadCursor,
 } from "@keylow/core";
 import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
 
@@ -64,6 +72,8 @@ const chunksOf = <Item>(items: readonly Item[], size: number): Item[][] =>
 const turnRowSchema = z.object({
   id: z.string(),
   status: z.enum(["open", "complete", "clarify", "confirm", "stopped", "failed", "refused"]),
+  created_at: z.string(),
+  assistant_messages: z.array(messageRowSchema),
 });
 
 const actionColumns =
@@ -198,6 +208,8 @@ export const assistantTargetSources: ReadonlyMap<string, AssistantTargetSource> 
 export type AssistantActionsRead = {
   actions: AssistantChangeAction[];
   targets: AssistantChangeTarget[];
+  /** The words of the training cards stored with the actions' turns, and nothing else the turns hold. Empty unless asked for. */
+  cards: AssistantChangeStoredCard[];
 };
 
 const targetIdsOf = (row: ActionRow): string[] => [
@@ -232,24 +244,67 @@ async function readTargetsByTable(
 }
 
 /**
+ * The training cards the turns of `rows` stored, for the changes list, which has no card for a training
+ * write in the action row. One select reads the messages of the turns of the training writes (at most 100
+ * turns to a request, to keep its URL short, and a person's own, since row level security shows no one
+ * else's). Only `turn_id` and `display` are read, `display` is parsed here for the words of its cards, and
+ * the rest of it is dropped on the spot: it also holds the value an Undo puts back, which must never reach
+ * the query cache or a log. A turn that is gone, with its conversation, has no card.
+ */
+async function readStoredCards(
+  client: SupabaseClient<Database>,
+  rows: readonly ActionRow[],
+): Promise<AssistantChangeStoredCard[]> {
+  const turnIds = new Set(
+    rows.flatMap((row) =>
+      row.turn_id !== null && isTrainingWriteTool(row.tool) ? [row.turn_id] : [],
+    ),
+  );
+  const reads = await Promise.all(
+    chunksOf([...turnIds], TARGET_CHUNK_SIZE).map((chunk) =>
+      readAllRows("load what the assistant changed", (from, to) =>
+        client
+          .from("assistant_messages")
+          .select("id, display")
+          .in("turn_id", chunk)
+          .not("display", "is", null)
+          .order("id", { ascending: true })
+          .range(from, to),
+      ),
+    ),
+  );
+  return reads.flat().flatMap((message) => assistantChangeCardsOfDisplay(message.display));
+}
+
+/**
  * The caller's `assistant_actions`, newest first, with what their target rows read now. Row level security
- * shows a person their own rows. `conversationId` limits the read to one conversation's actions.
+ * shows a person their own rows. `turnIds` limits the read to the actions of those turns, and an empty
+ * list reads nothing. `withCards` also reads the training cards of the actions' turns, which only the
+ * changes list words from.
  */
 export async function readAssistantActions(
   client: SupabaseClient<Database>,
-  { conversationId }: { conversationId?: string } = {},
+  { turnIds, withCards = false }: { turnIds?: readonly string[]; withCards?: boolean } = {},
   sources: ReadonlyMap<string, AssistantTargetSource> = assistantTargetSources,
 ): Promise<AssistantActionsRead> {
-  const data = await readAllRows("load what the assistant changed", (from, to) => {
-    const query = client.from("assistant_actions").select(actionColumns);
-    return (conversationId === undefined ? query : query.eq("conversation_id", conversationId))
-      .order("created_at", { ascending: false })
-      .order("turn_seq", { ascending: false })
-      .order("id", { ascending: false })
-      .range(from, to);
-  });
+  const readRows = (turnIdChunk: readonly string[] | null) =>
+    readAllRows("load what the assistant changed", (from, to) => {
+      const query = client.from("assistant_actions").select(actionColumns);
+      return (turnIdChunk === null ? query : query.in("turn_id", turnIdChunk))
+        .order("created_at", { ascending: false })
+        .order("turn_seq", { ascending: false })
+        .order("id", { ascending: false })
+        .range(from, to);
+    });
+  const data =
+    turnIds === undefined
+      ? await readRows(null)
+      : (await Promise.all(chunksOf(turnIds, TARGET_CHUNK_SIZE).map(readRows))).flat();
 
-  const targetsByTable = await readTargetsByTable(client, data, sources);
+  const [targetsByTable, cards] = await Promise.all([
+    readTargetsByTable(client, data, sources),
+    withCards ? readStoredCards(client, data) : Promise.resolve([]),
+  ]);
   const actions = data.map((row): AssistantChangeAction => {
     const ids = targetIdsOf(row);
     const read = targetsByTable.get(row.target_table);
@@ -278,82 +333,100 @@ export async function readAssistantActions(
       return { id, row: target?.row ?? null };
     }),
   );
-  return { actions, targets };
+  return { actions, targets, cards };
 }
 
-export type AssistantConversationRead = {
-  conversationId: string;
+export type AssistantConversationPage = {
+  /** Null while the person has no conversation. */
+  conversationId: string | null;
+  /** The page's messages in `seq` order, each with the status of its turn. */
   messages: AssistantStoredMessage[];
+  /** The actions of the page's turns only. */
   actions: AssistantChangeAction[];
+  /** Where the next older page starts, or null when no turn is older than this page. */
+  olderCursor: AssistantThreadCursor | null;
+};
+
+const noConversation: AssistantConversationPage = {
+  conversationId: null,
+  messages: [],
+  actions: [],
+  olderCursor: null,
 };
 
 /**
- * The newest conversation of the caller by `updated_at` (the function bumps it on every turn), its
- * messages in `seq` order with the status of each message's turn, and its actions. Null when the caller
- * has no conversation.
+ * One page of a conversation's thread: its newest `ASSISTANT_THREAD_PAGE_TURNS` turns, or with a cursor the
+ * turns before it. `null` reads the caller's newest conversation by `updated_at` (the function bumps it on
+ * every turn), and a cursor reads the conversation it names. The turns come with their messages in one
+ * request, so a message never arrives without its turn's status. One turn more than a page is asked for,
+ * which says whether an older page exists. A page is whole turns, and its actions are those of its turns.
  */
-export async function getLatestAssistantConversation(
+export async function getAssistantConversationPage(
   client: SupabaseClient<Database>,
-): Promise<AssistantConversationRead | null> {
-  const newest = await client
-    .from("assistant_conversations")
-    .select("id")
-    .order("updated_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (newest.error) {
-    throw repoError("load your conversation", newest.error);
+  cursor: AssistantThreadCursor | null,
+): Promise<AssistantConversationPage> {
+  let conversationId: string;
+  if (cursor === null) {
+    const newest = await client
+      .from("assistant_conversations")
+      .select("id")
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (newest.error) {
+      throw repoError("load your conversation", newest.error);
+    }
+    if (newest.data === null) {
+      return noConversation;
+    }
+    conversationId = newest.data.id;
+  } else {
+    conversationId = cursor.conversationId;
   }
-  if (newest.data === null) {
-    return null;
+
+  const turnQuery = client
+    .from("assistant_turns")
+    .select("id, status, created_at, assistant_messages(id, turn_id, role, content, display, seq)")
+    .eq("conversation_id", conversationId);
+  const { data, error } = await (
+    cursor === null
+      ? turnQuery
+      : turnQuery.or(
+          `created_at.lt."${cursor.createdAt}",and(created_at.eq."${cursor.createdAt}",id.lt.${cursor.turnId})`,
+        )
+  )
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false })
+    .order("seq", { ascending: true, referencedTable: "assistant_messages" })
+    .limit(ASSISTANT_THREAD_PAGE_TURNS + 1);
+  if (error) {
+    throw repoError("load your conversation", error);
   }
-  const conversationId = newest.data.id;
 
-  const [messages, turns, actions] = await Promise.all([
-    readAllRows("load your conversation", (from, to) =>
-      client
-        .from("assistant_messages")
-        .select("id, turn_id, role, content, display")
-        .eq("conversation_id", conversationId)
-        .order("seq", { ascending: true })
-        .range(from, to),
-    ),
-    readAllRows("load your conversation", (from, to) =>
-      client
-        .from("assistant_turns")
-        .select("id, status")
-        .eq("conversation_id", conversationId)
-        .order("created_at", { ascending: true })
-        .order("id", { ascending: true })
-        .range(from, to),
-    ),
-    readAssistantActions(client, { conversationId }),
-  ]);
-
-  const statusOfTurn = new Map(
-    turns.map((turn) => {
-      const parsed = turnRowSchema.parse(turn);
-      return [parsed.id, parsed.status] as const;
+  const page = pageOfAssistantTurns(
+    conversationId,
+    data.map((row) => {
+      const turn = turnRowSchema.parse(row);
+      return { ...turn, createdAt: turn.created_at };
     }),
   );
+  const actions = await readAssistantActions(client, {
+    turnIds: page.turns.map((turn) => turn.id),
+  });
   return {
     conversationId,
-    messages: messages.map((row) => {
-      const message = messageRowSchema.parse(row);
-      // The three reads are not one snapshot. A turn that starts after the turns were read has a message
-      // here and no status, and it is a live turn, so it reads as open. Paging means a status is never
-      // missing because the list was cut short.
-      const turnStatus = statusOfTurn.get(message.turn_id) ?? "open";
-      return {
+    messages: page.turns.flatMap((turn) =>
+      turn.assistant_messages.map((message) => ({
         id: message.id,
         turnId: message.turn_id,
         role: message.role,
         content: message.content,
         display: message.display,
-        turnStatus,
-      };
-    }),
+        turnStatus: turn.status,
+      })),
+    ),
     actions: actions.actions,
+    olderCursor: page.olderCursor,
   };
 }
 
@@ -387,6 +460,11 @@ const undoAnswerSchema = z.object({
     z.object({
       actionId: z.guid(),
       result: z.enum(["undone", "already_undone", "undo_unavailable", "not_found"]),
+      // Why an Undo was refused. A reason this app does not know is read as none, so a server that is ahead never fails an Undo.
+      reason: z
+        .enum(["changed", "active", "logged", "used", "workout_in_progress"])
+        .optional()
+        .catch(undefined),
     }),
   ),
 });

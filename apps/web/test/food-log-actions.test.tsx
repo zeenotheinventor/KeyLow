@@ -3,7 +3,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AddFoodDialogProps } from "@/components/diary/AddFoodDialog";
 import type { EditEntryDialogProps } from "@/components/diary/EditEntryDialog";
-import type { QuickAddDialogProps } from "@/components/diary/QuickAddDialog";
 
 import { FoodLogActionsProvider, useFoodLogActions } from "@/lib/foodLogActions";
 
@@ -12,10 +11,23 @@ const { pathname } = vi.hoisted(() => ({ pathname: { current: "/diary" } }));
 vi.mock("next/navigation", () => ({ usePathname: () => pathname.current }));
 
 vi.mock("@/components/diary/AddFoodDialog", () => ({
-  AddFoodDialog: ({ request, opener, onClose, onQuickAdd }: AddFoodDialogProps) => (
+  AddFoodDialog: ({ request, opener, onClose, onHoldsPlateChange }: AddFoodDialogProps) => (
     <div role="dialog" aria-label="Add food" data-opener={opener?.textContent ?? "none"}>
-      <button type="button" onClick={onQuickAdd}>
-        Open quick add
+      <button
+        type="button"
+        onClick={() => {
+          onHoldsPlateChange?.(true);
+        }}
+      >
+        Put food on the plate
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          onHoldsPlateChange?.(false);
+        }}
+      >
+        Empty the plate
       </button>
       <p>{`Adding on ${request.date}${request.time === undefined ? "" : ` at ${request.time}`}`}</p>
       {request.foodId !== undefined && <p>{`Starting on food ${request.foodId}`}</p>}
@@ -32,17 +44,6 @@ vi.mock("@/components/diary/EditEntryDialog", () => ({
       <p>{`Editing ${entryId} on ${date}`}</p>
       <button type="button" onClick={onClose}>
         Close the edit dialog
-      </button>
-    </div>
-  ),
-}));
-
-vi.mock("@/components/diary/QuickAddDialog", () => ({
-  QuickAddDialog: ({ request, opener, onClose }: QuickAddDialogProps) => (
-    <div role="dialog" aria-label="Quick add" data-opener={opener?.textContent ?? "none"}>
-      <p>{`Quick adding on ${request.date}${request.time === undefined ? "" : ` at ${request.time}`}`}</p>
-      <button type="button" onClick={onClose}>
-        Close the quick add dialog
       </button>
     </div>
   ),
@@ -72,7 +73,6 @@ describe("FoodLogActionsProvider", () => {
 
       expect(result.current.openAddFood).toBe(before.openAddFood);
       expect(result.current.openAddFoodOnNextPage).toBe(before.openAddFoodOnNextPage);
-      expect(result.current.openQuickAdd).toBe(before.openQuickAdd);
     });
   });
 
@@ -132,6 +132,58 @@ describe("FoodLogActionsProvider", () => {
       pathname.current = "/foods/food-1";
       rerender();
       expect(screen.queryByRole("dialog")).toBeNull();
+    });
+
+    it("should keep the dialog open when the page changes while it holds a plate, so the plate is not lost", () => {
+      const { result, rerender } = renderHook(() => useFoodLogActions(), { wrapper });
+      act(() => {
+        result.current.openAddFood({ date: "2026-10-15" });
+      });
+      act(() => {
+        screen.getByRole("button", { name: "Put food on the plate" }).click();
+      });
+
+      pathname.current = "/dashboard";
+      rerender();
+
+      expect(screen.getByRole("dialog", { name: "Add food" })).toBeTruthy();
+    });
+
+    it("should close the dialog on the next page change once the plate is empty again", () => {
+      const { result, rerender } = renderHook(() => useFoodLogActions(), { wrapper });
+      act(() => {
+        result.current.openAddFood({ date: "2026-10-15" });
+      });
+      act(() => {
+        screen.getByRole("button", { name: "Put food on the plate" }).click();
+      });
+      act(() => {
+        screen.getByRole("button", { name: "Empty the plate" }).click();
+      });
+
+      pathname.current = "/dashboard";
+      rerender();
+
+      expect(screen.queryByRole("dialog")).toBeNull();
+    });
+
+    it("should not let a waiting request replace a dialog that holds a plate", () => {
+      const { result, rerender } = renderHook(() => useFoodLogActions(), { wrapper });
+      act(() => {
+        result.current.openAddFood({ date: "2026-10-15" });
+      });
+      act(() => {
+        screen.getByRole("button", { name: "Put food on the plate" }).click();
+      });
+      act(() => {
+        result.current.openAddFoodOnNextPage({ foodId: "food-1" }, "/foods/food-1");
+      });
+
+      pathname.current = "/foods/food-1";
+      rerender();
+
+      expect(screen.queryByText("Starting on food food-1")).toBeNull();
+      expect(screen.getByRole("dialog", { name: "Add food" })).toBeTruthy();
     });
 
     it("should still close a dialog that was open when the page changed without a waiting request", () => {
@@ -267,32 +319,6 @@ describe("FoodLogActionsProvider", () => {
     });
   });
 
-  describe("openQuickAdd", () => {
-    it("should open the quick add dialog with the day and the hour", () => {
-      const { result } = renderHook(() => useFoodLogActions(), { wrapper });
-
-      act(() => {
-        result.current.openQuickAdd({ date: "2026-10-15", time: "12:00" });
-      });
-
-      expect(screen.getByText("Quick adding on 2026-10-15 at 12:00")).toBeTruthy();
-    });
-
-    it("should have one dialog open at a time", () => {
-      const { result } = renderHook(() => useFoodLogActions(), { wrapper });
-      act(() => {
-        result.current.openAddFood({ date: "2026-10-15" });
-      });
-
-      act(() => {
-        result.current.openQuickAdd({ date: "2026-10-15" });
-      });
-
-      expect(screen.getAllByRole("dialog")).toHaveLength(1);
-      expect(screen.getByRole("dialog", { name: "Quick add" })).toBeTruthy();
-    });
-  });
-
   describe("the control a dialog was opened from", () => {
     function Triggers() {
       const { openAddFood, openEditEntry, setViewedDate } = useFoodLogActions();
@@ -334,39 +360,6 @@ describe("FoodLogActionsProvider", () => {
       expect(screen.getByRole("dialog", { name: "Add food" }).getAttribute("data-opener")).toBe(
         "Hour plus",
       );
-    });
-
-    it("should carry that control to quick add when it is opened from inside the add dialog", () => {
-      render(
-        <FoodLogActionsProvider>
-          <Triggers />
-        </FoodLogActionsProvider>,
-      );
-      const plus = screen.getByRole("button", { name: "Hour plus" });
-      plus.focus();
-      fireEvent.click(plus);
-      // Focus is inside the add dialog by now, as it is for a person.
-      const quickRow = screen.getByRole("button", { name: "Open quick add" });
-      quickRow.focus();
-
-      fireEvent.click(quickRow);
-
-      expect(screen.getByRole("dialog", { name: "Quick add" }).getAttribute("data-opener")).toBe(
-        "Hour plus",
-      );
-    });
-
-    it("should open quick add for the same day and hour as the add dialog", () => {
-      render(
-        <FoodLogActionsProvider>
-          <Triggers />
-        </FoodLogActionsProvider>,
-      );
-      fireEvent.click(screen.getByRole("button", { name: "Hour plus" }));
-
-      fireEvent.click(screen.getByRole("button", { name: "Open quick add" }));
-
-      expect(screen.getByText("Quick adding on 2026-10-15 at 12:00")).toBeTruthy();
     });
 
     it("should forget the control once the dialog is closed, so the next one has its own", () => {

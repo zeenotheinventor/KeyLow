@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>Web, setup-activity (proposal)</title>
+<link rel="stylesheet" href="../../../../packages/tokens/css/kilo-tokens.css">
+<link rel="stylesheet" href="../../tokens/kilo-proposals.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+.t-h1{font-size:var(--type-h1-size);line-height:var(--type-h1-line);font-weight:var(--type-h1-weight);letter-spacing:var(--type-h1-tracking)}
+.t-body{font-size:var(--type-body-size);line-height:var(--type-body-line);font-weight:var(--type-body-weight);letter-spacing:var(--type-body-tracking)}
+.t-bs{font-size:var(--type-body-strong-size);line-height:var(--type-body-strong-line);font-weight:var(--type-body-strong-weight);letter-spacing:var(--type-body-strong-tracking)}
+.t-cap{font-size:var(--type-caption-size);line-height:var(--type-caption-line);font-weight:var(--type-caption-weight);letter-spacing:var(--type-caption-tracking)}
+.t-dn{font-size:var(--type-display-numeral-size);line-height:var(--type-display-numeral-line);font-weight:var(--type-display-numeral-weight);letter-spacing:var(--type-display-numeral-tracking);font-variant-numeric:tabular-nums}
+.t-num-small{font-size:var(--type-numeral-small-size);line-height:var(--type-numeral-small-line);font-weight:var(--type-numeral-small-weight);letter-spacing:var(--type-numeral-small-tracking);font-variant-numeric:tabular-nums;margin:0}
+.tab{font-variant-numeric:tabular-nums}
+.c-sec{color:var(--text-secondary)}
+.c-mut{color:var(--text-muted)}
+.c-danger{color:var(--danger)}
+p,h1{margin:0}
+.dim{opacity:.4}
+.full{width:100%}
+.stack-1{display:flex;flex-direction:column;gap:var(--space-1)}
+.stack-2{display:flex;flex-direction:column;gap:var(--space-2)}
+.stack-3{display:flex;flex-direction:column;gap:var(--space-3)}
+.stack-6px{display:flex;flex-direction:column;gap:6px}
+.kl-frame{box-sizing:border-box;position:relative;display:flex;flex-direction:column;overflow:hidden;font-family:var(--font-sans);font-size:var(--type-body-size);line-height:var(--type-body-line);background:var(--background);color:var(--text-primary);min-height:900px}
+.kl-column{width:100%;max-width:560px;display:flex;flex-direction:column}
+.kl-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-large);box-shadow:var(--elevation-card);box-sizing:border-box}
+.kl-wizard{display:flex;flex-direction:column;gap:var(--space-3);overflow:hidden}
+.kl-wizard.wide{padding:var(--space-8)}
+.kl-wizard.narrow{padding:var(--space-4)}
+.kl-question{margin-top:var(--space-2)}
+.kl-progress{height:4px;overflow:hidden;border-radius:2px;background:var(--surface-raised)}
+.kl-progress>span{display:block;height:4px;background:var(--accent)}
+.kl-footer{margin-top:var(--space-2);display:flex;justify-content:flex-end;gap:var(--space-2)}
+.kl-btn{height:var(--control-height-md);min-width:var(--touch-target);box-sizing:border-box;position:relative;display:inline-flex;flex-shrink:0;align-items:center;justify-content:center;gap:var(--space-2);white-space:nowrap;padding:0 var(--space-4);border-radius:var(--radius-medium);border:1px solid transparent;font-family:var(--font-sans);font-size:var(--type-body-strong-size);line-height:var(--type-body-strong-line);font-weight:var(--type-body-strong-weight);letter-spacing:var(--type-body-strong-tracking)}
+.kl-primary{background:var(--accent);color:var(--accent-foreground)}
+.kl-secondary{background:var(--surface-raised);border-color:var(--border);color:var(--text-primary)}
+.kl-ghost{background:transparent;color:var(--text-primary)}
+.kl-ghost.c-sec{color:var(--text-secondary)}
+.kl-spinner{position:absolute;width:18px;height:18px;box-sizing:border-box;border-radius:var(--radius-pill);border:2px solid currentColor;border-right-color:transparent}
+.kl-option{position:relative;display:flex;width:100%;min-height:64px;box-sizing:border-box;align-items:center;gap:var(--space-3);padding:var(--space-3);border-radius:var(--radius-medium);border:1.5px solid var(--border);background:var(--surface);color:var(--text-primary);font-family:var(--font-sans);text-align:left}
+.kl-option.on{border-color:var(--accent);background:var(--accent-muted)}
+.kl-option-text{display:flex;min-width:0;flex:1;flex-direction:column;gap:2px}
+.kl-option-title{display:flex;align-items:center;gap:var(--space-2)}
+.kl-option-value{display:flex;flex-shrink:0;flex-direction:column;align-items:flex-end}
+.kl-reason{display:flex;align-items:center;gap:6px}
+.kl-badge{height:20px;box-sizing:border-box;display:inline-flex;align-items:center;white-space:nowrap;padding:0 var(--space-2);border-radius:var(--radius-pill);border:1px solid transparent;background:var(--surface-sheet);color:var(--text-secondary)}
+.kl-badge-accent{background:var(--accent-muted);color:var(--accent)}
+[data-theme="light"] .kl-badge-accent{color:var(--text-primary)}
+.kl-field{display:flex;flex-direction:column;gap:var(--space-1);min-width:0}
+.kl-input{height:var(--control-height-md);box-sizing:border-box;display:flex;flex:1;min-width:0;align-items:center;gap:var(--space-2);padding:0 var(--space-4);border-radius:var(--radius-medium);border:1px solid var(--border);background:var(--surface-raised)}
+.kl-input.invalid{border-color:var(--danger)}
+.kl-input input{flex:1;min-width:0;height:40px;border:0;outline:none;background:transparent;padding:0;text-align:right;font-family:var(--font-sans);color:var(--text-primary)}
+.kl-input input.left{text-align:left}
+.kl-input input::placeholder{color:var(--text-muted)}
+.kl-dob{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1.6fr);gap:var(--space-2)}
+.kl-row-2{display:flex;gap:var(--space-2)}
+.kl-seg{height:var(--control-height-sm);box-sizing:border-box;display:grid;grid-auto-columns:1fr;grid-auto-flow:column;padding:2px;border-radius:var(--radius-medium);border:1px solid var(--border);background:var(--surface-raised)}
+.kl-seg-item{display:flex;align-items:center;justify-content:center;white-space:nowrap;padding:0 var(--space-1);border-radius:calc(var(--radius-medium) - 2px);font-size:12px;line-height:20px;font-weight:600;color:var(--text-secondary)}
+.kl-seg-item.on{background:var(--text-primary);color:var(--background)}
+.kl-banner{display:flex;align-items:flex-start;gap:var(--space-3);border-radius:var(--radius-medium);border:1px solid var(--border);color:var(--text-primary)}
+.kl-banner-info{background:var(--surface-raised);padding:var(--space-3)}
+.kl-banner-error{background:var(--danger-muted);border-color:var(--danger);padding:var(--space-3) var(--space-4)}
+.kl-banner-icon{display:flex;padding-top:2px}
+.kl-banner-text{display:flex;min-width:0;flex:1;flex-direction:column;gap:2px}
+.kl-banner-action{display:flex;flex-shrink:0;align-items:center;min-height:var(--control-height-sm);padding:0;background:transparent;border:0;font-family:var(--font-sans);font-size:14px;line-height:20px;font-weight:600;color:var(--text-primary)}
+.kl-est{display:flex;flex-direction:column;gap:var(--space-2);padding:var(--space-4)}
+.kl-est-head{display:flex;align-items:center;justify-content:space-between}
+.kl-est-numeral{display:flex;align-items:baseline;gap:6px}
+.kl-guardrail{display:flex;align-items:flex-start;gap:var(--space-2)}
+.kl-tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--space-2);margin:var(--space-2) 0 0}
+.kl-tile{display:flex;flex-direction:column;gap:var(--space-1);padding:10px var(--space-3);border-radius:var(--radius-medium);background:var(--surface-raised);min-width:0}
+.kl-tile-label{display:flex;align-items:center;gap:6px}
+.kl-dot{width:8px;height:8px;flex-shrink:0;border-radius:2px}
+.kl-row{display:flex;min-height:56px;width:100%;box-sizing:border-box;align-items:center;gap:var(--space-3);padding:var(--space-2) var(--space-3);color:var(--text-primary);text-decoration:none}
+.kl-row-text{display:flex;min-width:0;flex:1;flex-direction:column;gap:2px}
+.kl-row-value{display:flex;flex-shrink:0;align-items:baseline;gap:var(--space-1)}
+.kl-row-icon{width:var(--control-height-sm);height:var(--control-height-sm);flex-shrink:0;display:flex;align-items:center;justify-content:center;border-radius:var(--radius-small);background:var(--surface-raised)}
+.kl-bone{display:block;border-radius:var(--radius-small);background:var(--skeleton-base)}
+.b-eyebrow{height:12px;width:40%}
+.b-question{height:28px;width:70%;margin-top:var(--space-2)}
+.b-helper{height:14px;width:100%}
+.b-option{height:64px;border-radius:var(--radius-medium)}
+.b-button{height:var(--control-height-md);width:112px;border-radius:var(--radius-medium)}
+.kl-targets{display:flex;flex-direction:column;gap:var(--space-4)}
+.kl-targets-form{display:flex;flex-direction:column;gap:var(--space-4);padding:20px}
+.kl-macros-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--space-2)}
+.kl-form-footer{display:flex;align-items:center;justify-content:flex-end;gap:var(--space-4)}
+.kl-cancel{display:flex;min-height:var(--touch-target);align-items:center;border-radius:var(--radius-small);font-size:14px;line-height:20px;font-weight:600;color:var(--text-secondary);text-decoration:none}
+.kl-crumb{color:var(--text-primary);text-decoration:none}
+</style>
+</head>
+<body>
+<div id="board" style="width:3430px;display:flex;align-items:flex-start;gap:40px;background:var(--border-strong);font-family:var(--font-sans)"><div data-screen="WebSetupScreen" data-frame="dark-1280"><div data-theme="dark" class="kl-frame" style="width:1280px;height:900px;"><header data-kilo="WebTopBar (proposed)" style="flex-shrink: 0; display: flex; flex-direction: column; gap: var(--space-3); padding: 14px 32px; background: var(--surface); border-bottom: 1px solid var(--border);"><div style="display: flex; align-items: center; gap: var(--space-6);"><a href="#home" aria-label="Ki-Lo" style="display: flex; align-items: center; gap: var(--space-2); text-decoration: none; color: var(--text-primary);"><img src="../../source/brand/mark.svg" alt="" style="width: 28px; height: 28px;"><span style="font-size: var(--type-h2-size); line-height: var(--type-h2-line); font-weight: var(--type-h2-weight); letter-spacing: var(--type-h2-tracking);">Ki-Lo</span></a><nav data-kilo="WebNav (proposed)" aria-label="Main" style="display: flex; align-items: center; gap: var(--space-1);"><a href="#dashboard" aria-current="false" style="height: 36px; display: flex; align-items: center; padding: 0 var(--space-3); border-radius: var(--radius-small); text-decoration: none; background: transparent; color: var(--text-secondary); font-size: 14px; line-height: 20px; font-weight: 600;"><span>Dashboard</span></a><a href="#diary" aria-current="false" style="height: 36px; display: flex; align-items: center; padding: 0 var(--space-3); border-radius: var(--radius-small); text-decoration: none; background: transparent; color: var(--text-secondary); font-size: 14px; line-height: 20px; font-weight: 600;"><span>Diary</span></a><a href="#train" aria-current="false" style="height: 36px; display: flex; align-items: center; padding: 0 var(--space-3); border-radius: var(--radius-small); text-decoration: none; background: transparent; color: var(--text-secondary); font-size: 14px; line-height: 20px; font-weight: 600;"><span>Train</span></a><a href="#more" aria-current="page" style="height: 36px; display: flex; align-items: center; padding: 0 var(--space-3); border-radius: var(--radius-small); text-decoration: none; background: var(--surface-raised); color: var(--text-primary); font-size: 14px; line-height: 20px; font-weight: 600;"><span>More</span></a></nav><div data-kilo="SearchLauncher (proposed: SearchField used as a button)" style="margin-left: auto; width: 320px; height: 36px; box-sizing: border-box; display: flex; align-items: center; padding: 0 var(--space-1) 0 var(--space-3); background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius-medium); box-shadow: none;"><button data-kilo="Button ghost" type="button" style="flex: 1 1 0%; height: 34px; display: flex; align-items: center; gap: var(--space-2); padding: 0px; background: transparent; border: 0px; font-family: var(--font-sans); font-size: 14px; line-height: 20px; color: var(--text-muted); text-align: left;"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+Search for a food
+</button><button data-kilo="Button ghost icon" type="button" aria-label="Look up a barcode" style="width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; padding: 0px; background: transparent; border: 0px; border-radius: var(--radius-small); color: var(--text-primary);"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"></path><path d="M17 3h2a2 2 0 0 1 2 2v2"></path><path d="M21 17v2a2 2 0 0 1-2 2h-2"></path><path d="M7 21H5a2 2 0 0 1-2-2v-2"></path><path d="M8 7v10"></path><path d="M12 7v10"></path><path d="M17 7v10"></path></svg></button></div></div></header><main style="flex:1 1 0%;min-height:0;display:flex;justify-content:center;padding:24px 32px"><div class="kl-column"><section data-kilo="Card, QuestionStepper shape" aria-label="How active are you?" class="kl-card kl-wizard wide">
+<span class="t-cap tab c-sec">Activity · Step 4 of 8</span>
+<div role="progressbar" aria-label="Step 4 of 8" aria-valuemin="0" aria-valuemax="100" aria-valuenow="44" class="kl-progress"><span style="width:44.4%"></span></div>
+<h1 class="t-h1 kl-question">How active are you?</h1>
+<p class="t-body c-sec">Think of a normal week: your job, getting about and exercise.</p>
+<div data-kilo="OptionCardGroup" role="radiogroup" aria-label="How active are you?" class="stack-2"><button data-kilo="OptionCard" type="button" role="radio" aria-checked="false" class="kl-option">
+<span class="kl-option-text"><span class="kl-option-title"><span class="t-bs tab">Sedentary</span></span><span class="t-cap c-sec">Mostly sitting, with little or no exercise.</span></span>
+</button>
+<button data-kilo="OptionCard" type="button" role="radio" aria-checked="true" class="kl-option on">
+<span class="kl-option-text"><span class="kl-option-title"><span class="t-bs tab">Lightly active</span></span><span class="t-cap c-sec">Some walking, or exercise 1 to 3 days a week.</span></span>
+</button>
+<button data-kilo="OptionCard" type="button" role="radio" aria-checked="false" class="kl-option">
+<span class="kl-option-text"><span class="kl-option-title"><span class="t-bs tab">Moderately active</span></span><span class="t-cap c-sec">On your feet a lot, or exercise 3 to 5 days a week.</span></span>
+</button>
+<button data-kilo="OptionCard" type="button" role="radio" aria-checked="false" class="kl-option">
+<span class="kl-option-text"><span class="kl-option-title"><span class="t-bs tab">Very active</span></span><span class="t-cap c-sec">A physical job, or hard exercise 6 or 7 days a week.</span></span>
+</button>
+<button data-kilo="OptionCard" type="button" role="radio" aria-checked="false" class="kl-option">
+<span class="kl-option-text"><span class="kl-option-title"><span class="t-bs tab">Extra active</span></span><span class="t-cap c-sec">A physical job and daily training, or training twice a day.</span></span>
+</button></div>
+
+<div class="kl-footer"><button data-kilo="Button secondary" type="button" class="kl-btn kl-secondary">Back</button><button data-kilo="Button primary" type="button" class="kl-btn kl-primary">Continue</button></div>
+</section></div></main></div></div><div data-screen="WebSetupScreen" data-frame="light-1280"><div data-theme="light" class="kl-frame" style="width:1280px;height:900px;"><header data-kilo="WebTopBar (proposed)" style="flex-shrink: 0; display: flex; flex-direction: column; gap: var(--space-3); padding: 14px 32px; background: var(--surface); border-bottom: 1px solid var(--border);"><div style="display: flex; align-items: center; gap: var(--space-6);"><a href="#home" aria-label="Ki-Lo" style="display: flex; align-items: center; gap: var(--space-2); text-decoration: none; color: var(--text-primary);"><img src="../../source/brand/mark-on-light.svg" alt="" style="width: 28px; height: 28px;"><span style="font-size: var(--type-h2-size); line-height: var(--type-h2-line); font-weight: var(--type-h2-weight); letter-spacing: var(--type-h2-tracking);">Ki-Lo</span></a><nav data-kilo="WebNav (proposed)" aria-label="Main" style="display: flex; align-items: center; gap: var(--space-1);"><a href="#dashboard" aria-current="false" style="height: 36px; display: flex; align-items: center; padding: 0 var(--space-3); border-radius: var(--radius-small); text-decoration: none; background: transparent; color: var(--text-secondary); font-size: 14px; line-height: 20px; font-weight: 600;"><span>Dashboard</span></a><a href="#diary" aria-current="false" style="height: 36px; display: flex; align-items: center; padding: 0 var(--space-3); border-radius: var(--radius-small); text-decoration: none; background: transparent; color: var(--text-secondary); font-size: 14px; line-height: 20px; font-weight: 600;"><span>Diary</span></a><a href="#train" aria-current="false" style="height: 36px; display: flex; align-items: center; padding: 0 var(--space-3); border-radius: var(--radius-small); text-decoration: none; background: transparent; color: var(--text-secondary); font-size: 14px; line-height: 20px; font-weight: 600;"><span>Train</span></a><a href="#more" aria-current="page" style="height: 36px; display: flex; align-items: center; padding: 0 var(--space-3); border-radius: var(--radius-small); text-decoration: none; background: var(--surface-raised); color: var(--text-primary); font-size: 14px; line-height: 20px; font-weight: 600;"><span>More</span></a></nav><div data-kilo="SearchLauncher (proposed: SearchField used as a button)" style="margin-left: auto; width: 320px; height: 36px; box-sizing: border-box; display: flex; align-items: center; padding: 0 var(--space-1) 0 var(--space-3); background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius-medium); box-shadow: none;"><button data-kilo="Button ghost" type="button" style="flex: 1 1 0%; height: 34px; display: flex; align-items: center; gap: var(--space-2); padding: 0px; background: transparent; border: 0px; font-family: var(--font-sans); font-size: 14px; line-height: 20px; color: var(--text-muted); text-align: left;"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+Search for a food
+</button><button data-kilo="Button ghost icon" type="button" aria-label="Look up a barcode" style="width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; padding: 0px; background: transparent; border: 0px; border-radius: var(--radius-small); color: var(--text-primary);"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"></path><path d="M17 3h2a2 2 0 0 1 2 2v2"></path><path d="M21 17v2a2 2 0 0 1-2 2h-2"></path><path d="M7 21H5a2 2 0 0 1-2-2v-2"></path><path d="M8 7v10"></path><path d="M12 7v10"></path><path d="M17 7v10"></path></svg></button></div></div></header><main style="flex:1 1 0%;min-height:0;display:flex;justify-content:center;padding:24px 32px"><div class="kl-column"><section data-kilo="Card, QuestionStepper shape" aria-label="How active are you?" class="kl-card kl-wizard wide">
+<span class="t-cap tab c-sec">Activity · Step 4 of 8</span>
+<div role="progressbar" aria-label="Step 4 of 8" aria-valuemin="0" aria-valuemax="100" aria-valuenow="44" class="kl-progress"><span style="width:44.4%"></span></div>
+<h1 class="t-h1 kl-question">How active are you?</h1>
+<p class="t-body c-sec">Think of a normal week: your job, getting about and exercise.</p>
+<div data-kilo="OptionCardGroup" role="radiogroup" aria-label="How active are you?" class="stack-2"><button data-kilo="OptionCard" type="button" role="radio" aria-checked="false" class="kl-option">
+<span class="kl-option-text"><span class="kl-option-title"><span class="t-bs tab">Sedentary</span></span><span class="t-cap c-sec">Mostly sitting, with little or no exercise.</span></span>
+</button>
+<button data-kilo="OptionCard" type="button" role="radio" aria-checked="true" class="kl-option on">
+<span class="kl-option-text"><span class="kl-option-title"><span class="t-bs tab">Lightly active</span></span><span class="t-cap c-sec">Some walking, or exercise 1 to 3 days a week.</span></span>
+</button>
+<button data-kilo="OptionCard" type="button" role="radio" aria-checked="false" class="kl-option">
+<span class="kl-option-text"><span class="kl-option-title"><span class="t-bs tab">Moderately active</span></span><span class="t-cap c-sec">On your feet a lot, or exercise 3 to 5 days a week.</span></span>
+</button>
+<button data-kilo="OptionCard" type="button" role="radio" aria-checked="false" class="kl-option">
+<span class="kl-option-text"><span class="kl-option-title"><span class="t-bs tab">Very active</span></span><span class="t-cap c-sec">A physical job, or hard exercise 6 or 7 days a week.</span></span>
+</button>
+<button data-kilo="OptionCard" type="button" role="radio" aria-checked="false" class="kl-option">
+<span class="kl-option-text"><span class="kl-option-title"><span class="t-bs tab">Extra active</span></span><span class="t-cap c-sec">A physical job and daily training, or training twice a day.</span></span>
+</button></div>
+
+<div class="kl-footer"><button data-kilo="Button secondary" type="button" class="kl-btn kl-secondary">Back</button><button data-kilo="Button primary" type="button" class="kl-btn kl-primary">Continue</button></div>
+</section></div></main></div></div><div data-screen="WebSetupScreen" data-frame="dark-375"><div data-theme="dark" class="kl-frame" style="width:375px;height:900px;"><header data-kilo="WebTopBar (proposed)" style="flex-shrink: 0; display: flex; flex-direction: column; gap: var(--space-3); padding: 16px; background: var(--surface); border-bottom: 1px solid var(--border);"><div style="display: flex; align-items: center; gap: var(--space-6);"><a href="#home" aria-label="Ki-Lo" style="display: flex; align-items: center; gap: var(--space-2); text-decoration: none; color: var(--text-primary);"><img src="../../source/brand/mark.svg" alt="" style="width: 28px; height: 28px;"><span style="font-size: var(--type-h2-size); line-height: var(--type-h2-line); font-weight: var(--type-h2-weight); letter-spacing: var(--type-h2-tracking);">Ki-Lo</span></a><button data-kilo="Button secondary icon" type="button" aria-label="Menu" aria-expanded="false" style="margin-left: auto; width: var(--touch-target); height: var(--control-height-md); display: flex; align-items: center; justify-content: center; padding: 0px; background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius-medium); color: var(--text-primary);"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="12" y2="12"></line><line x1="4" x2="20" y1="6" y2="6"></line><line x1="4" x2="20" y1="18" y2="18"></line></svg></button></div><div data-kilo="SearchLauncher (proposed: SearchField used as a button)" style="height: var(--control-height-md); box-sizing: border-box; display: flex; align-items: center; padding: 0 var(--space-1) 0 var(--space-4); background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius-medium);"><button data-kilo="Button ghost" type="button" style="flex: 1 1 0%; height: 42px; display: flex; align-items: center; gap: var(--space-2); padding: 0px; background: transparent; border: 0px; font-family: var(--font-sans); font-size: var(--type-body-size); line-height: var(--type-body-line); color: var(--text-muted); text-align: left;"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+Search for a food
+</button><button data-kilo="Button ghost icon" type="button" aria-label="Look up a barcode" style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; padding: 0px; background: transparent; border: 0px; border-radius: var(--radius-small); color: var(--text-primary);"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"></path><path d="M17 3h2a2 2 0 0 1 2 2v2"></path><path d="M21 17v2a2 2 0 0 1-2 2h-2"></path><path d="M7 21H5a2 2 0 0 1-2-2v-2"></path><path d="M8 7v10"></path><path d="M12 7v10"></path><path d="M17 7v10"></path></svg></button></div></header><main style="flex:1 1 0%;min-height:0;display:flex;justify-content:center;padding:16px 16px"><div class="kl-column"><section data-kilo="Card, QuestionStepper shape" aria-label="How active are you?" class="kl-card kl-wizard narrow">
+<span class="t-cap tab c-sec">Activity · Step 4 of 8</span>
+<div role="progressbar" aria-label="Step 4 of 8" aria-valuemin="0" aria-valuemax="100" aria-valuenow="44" class="kl-progress"><span style="width:44.4%"></span></div>
+<h1 class="t-h1 kl-question">How active are you?</h1>
+<p class="t-body c-sec">Think of a normal week: your job, getting about and exercise.</p>
+<div data-kilo="OptionCardGroup" role="radiogroup" aria-label="How active are you?" class="stack-2"><button data-kilo="OptionCard" type="button" role="radio" aria-checked="false" class="kl-option">
+<span class="kl-option-text"><span class="kl-option-title"><span class="t-bs tab">Sedentary</span></span><span class="t-cap c-sec">Mostly sitting, with little or no exercise.</span></span>
+</button>
+<button data-kilo="OptionCard" type="button" role="radio" aria-checked="true" class="kl-option on">
+<span class="kl-option-text"><span class="kl-option-title"><span class="t-bs tab">Lightly active</span></span><span class="t-cap c-sec">Some walking, or exercise 1 to 3 days a week.</span></span>
+</button>
+<button data-kilo="OptionCard" type="button" role="radio" aria-checked="false" class="kl-option">
+<span class="kl-option-text"><span class="kl-option-title"><span class="t-bs tab">Moderately active</span></span><span class="t-cap c-sec">On your feet a lot, or exercise 3 to 5 days a week.</span></span>
+</button>
+<button data-kilo="OptionCard" type="button" role="radio" aria-checked="false" class="kl-option">
+<span class="kl-option-text"><span class="kl-option-title"><span class="t-bs tab">Very active</span></span><span class="t-cap c-sec">A physical job, or hard exercise 6 or 7 days a week.</span></span>
+</button>
+<button data-kilo="OptionCard" type="button" role="radio" aria-checked="false" class="kl-option">
+<span class="kl-option-text"><span class="kl-option-title"><span class="t-bs tab">Extra active</span></span><span class="t-cap c-sec">A physical job and daily training, or training twice a day.</span></span>
+</button></div>
+
+<div class="kl-footer"><button data-kilo="Button secondary" type="button" class="kl-btn kl-secondary">Back</button><button data-kilo="Button primary" type="button" class="kl-btn kl-primary">Continue</button></div>
+</section></div></main></div></div><div data-screen="WebSetupScreen" data-frame="light-375"><div data-theme="light" class="kl-frame" style="width:375px;height:900px;"><header data-kilo="WebTopBar (proposed)" style="flex-shrink: 0; display: flex; flex-direction: column; gap: var(--space-3); padding: 16px; background: var(--surface); border-bottom: 1px solid var(--border);"><div style="display: flex; align-items: center; gap: var(--space-6);"><a href="#home" aria-label="Ki-Lo" style="display: flex; align-items: center; gap: var(--space-2); text-decoration: none; color: var(--text-primary);"><img src="../../source/brand/mark-on-light.svg" alt="" style="width: 28px; height: 28px;"><span style="font-size: var(--type-h2-size); line-height: var(--type-h2-line); font-weight: var(--type-h2-weight); letter-spacing: var(--type-h2-tracking);">Ki-Lo</span></a><button data-kilo="Button secondary icon" type="button" aria-label="Menu" aria-expanded="false" style="margin-left: auto; width: var(--touch-target); height: var(--control-height-md); display: flex; align-items: center; justify-content: center; padding: 0px; background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius-medium); color: var(--text-primary);"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="12" y2="12"></line><line x1="4" x2="20" y1="6" y2="6"></line><line x1="4" x2="20" y1="18" y2="18"></line></svg></button></div><div data-kilo="SearchLauncher (proposed: SearchField used as a button)" style="height: var(--control-height-md); box-sizing: border-box; display: flex; align-items: center; padding: 0 var(--space-1) 0 var(--space-4); background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius-medium);"><button data-kilo="Button ghost" type="button" style="flex: 1 1 0%; height: 42px; display: flex; align-items: center; gap: var(--space-2); padding: 0px; background: transparent; border: 0px; font-family: var(--font-sans); font-size: var(--type-body-size); line-height: var(--type-body-line); color: var(--text-muted); text-align: left;"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+Search for a food
+</button><button data-kilo="Button ghost icon" type="button" aria-label="Look up a barcode" style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; padding: 0px; background: transparent; border: 0px; border-radius: var(--radius-small); color: var(--text-primary);"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"></path><path d="M17 3h2a2 2 0 0 1 2 2v2"></path><path d="M21 17v2a2 2 0 0 1-2 2h-2"></path><path d="M7 21H5a2 2 0 0 1-2-2v-2"></path><path d="M8 7v10"></path><path d="M12 7v10"></path><path d="M17 7v10"></path></svg></button></div></header><main style="flex:1 1 0%;min-height:0;display:flex;justify-content:center;padding:16px 16px"><div class="kl-column"><section data-kilo="Card, QuestionStepper shape" aria-label="How active are you?" class="kl-card kl-wizard narrow">
+<span class="t-cap tab c-sec">Activity · Step 4 of 8</span>
+<div role="progressbar" aria-label="Step 4 of 8" aria-valuemin="0" aria-valuemax="100" aria-valuenow="44" class="kl-progress"><span style="width:44.4%"></span></div>
+<h1 class="t-h1 kl-question">How active are you?</h1>
+<p class="t-body c-sec">Think of a normal week: your job, getting about and exercise.</p>
+<div data-kilo="OptionCardGroup" role="radiogroup" aria-label="How active are you?" class="stack-2"><button data-kilo="OptionCard" type="button" role="radio" aria-checked="false" class="kl-option">
+<span class="kl-option-text"><span class="kl-option-title"><span class="t-bs tab">Sedentary</span></span><span class="t-cap c-sec">Mostly sitting, with little or no exercise.</span></span>
+</button>
+<button data-kilo="OptionCard" type="button" role="radio" aria-checked="true" class="kl-option on">
+<span class="kl-option-text"><span class="kl-option-title"><span class="t-bs tab">Lightly active</span></span><span class="t-cap c-sec">Some walking, or exercise 1 to 3 days a week.</span></span>
+</button>
+<button data-kilo="OptionCard" type="button" role="radio" aria-checked="false" class="kl-option">
+<span class="kl-option-text"><span class="kl-option-title"><span class="t-bs tab">Moderately active</span></span><span class="t-cap c-sec">On your feet a lot, or exercise 3 to 5 days a week.</span></span>
+</button>
+<button data-kilo="OptionCard" type="button" role="radio" aria-checked="false" class="kl-option">
+<span class="kl-option-text"><span class="kl-option-title"><span class="t-bs tab">Very active</span></span><span class="t-cap c-sec">A physical job, or hard exercise 6 or 7 days a week.</span></span>
+</button>
+<button data-kilo="OptionCard" type="button" role="radio" aria-checked="false" class="kl-option">
+<span class="kl-option-text"><span class="kl-option-title"><span class="t-bs tab">Extra active</span></span><span class="t-cap c-sec">A physical job and daily training, or training twice a day.</span></span>
+</button></div>
+
+<div class="kl-footer"><button data-kilo="Button secondary" type="button" class="kl-btn kl-secondary">Back</button><button data-kilo="Button primary" type="button" class="kl-btn kl-primary">Continue</button></div>
+</section></div></main></div></div></div>
+</body>
+</html>

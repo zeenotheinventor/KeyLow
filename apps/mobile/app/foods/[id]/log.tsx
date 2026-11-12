@@ -14,13 +14,14 @@ import {
 } from "@keylow/core/copy";
 import { describeDay } from "@keylow/core/dates";
 import {
+  amountForPicker,
+  amountLastLogged,
   clockTimeOn,
   openingLoggedAt,
   pickerChoices,
-  usualQuantityOfUnit,
 } from "@keylow/core/diary";
 import { isFoodId } from "@keylow/core/foods";
-import { isPlateItemValid, plateFoodAmount, plateItemOfPickedFood } from "@keylow/core/plate";
+import { plateFoodRowStart, plateItemOfPickedFood } from "@keylow/core/plate";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { AccessibilityInfo } from "react-native";
@@ -28,7 +29,6 @@ import { AccessibilityInfo } from "react-native";
 import { FoodLoadState } from "../../../components/FoodLoadState";
 import { FavouriteFoodPortionPicker } from "../../../components/PortionPicker";
 import { useToast } from "../../../components/ui";
-import { amountForPicker, amountLastLogged } from "../../../lib/amountLastLogged";
 import { useIsOnline } from "../../../lib/connectivity";
 import {
   readLogContext,
@@ -218,13 +218,7 @@ export default function PortionPickerRoute() {
   if (plateRow?.kind === "food") {
     // The row's amount as the food is now: a portion that has gone comes as the grams or millilitres it was.
     // A row with no valid amount keeps its unit and starts at that unit's usual amount (1, or 100 g or ml).
-    const startQuantity = usualQuantityOfUnit(plateRow.unit.kind);
-    const rowAmount = plateFoodAmount(
-      isPlateItemValid(plateRow)
-        ? plateRow
-        : { ...plateRow, quantity: startQuantity, quantityText: String(startQuantity) },
-      portions,
-    );
+    const rowAmount = plateFoodRowStart(plateRow, portions);
 
     return (
       <FavouriteFoodPortionPicker

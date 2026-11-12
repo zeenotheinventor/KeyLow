@@ -100,3 +100,113 @@ export const WithEstimate: Story = {
     />
   ),
 };
+
+// The words the model writes as markdown, which the message draws as bold, a bullet and a numbered item.
+const formattedReply =
+  "Two things I can do here:\n- **Log food:** say what you ate and when.\n- **Copy a day:** repeat one day onto another.\n\n## Steps\n1. Say it your way.\n2. Check the entry.";
+
+// The formatted board: bold lead-ins, bullets with a hanging indent, a numbered list and a heading at body size.
+export const Formatted: Story = {
+  render: () => (
+    <ChatMessage
+      paragraphs={formattedReply.split("\n\n")}
+      role="assistant"
+      speakerLabel={assistant}
+    />
+  ),
+};
+
+// The same reply cut short in the middle of a bold word: no asterisk shows and the caret stays after the last word.
+export const FormattedStreaming: Story = {
+  render: () => (
+    <ChatMessage
+      isStreaming
+      paragraphs={[
+        "Two things I can do here:\n- **Log food:** say what you ate and when.\n- **Copy a d",
+      ]}
+      role="assistant"
+      speakerLabel={assistant}
+    />
+  ),
+};
+
+// The Christmas market reply: an introduction, a wide table and the words after it.
+const christmasMarketIntro =
+  "Your Christmas market total: 2,024 kcal, 67 g protein, 86 g fat, 233 g carbs and 19 g fibre.";
+const christmasMarketTable = [
+  "| Entry | Amount | kcal | Protein (g) | Fat (g) | Carbs (g) | Fibre (g) |",
+  "| --- | --- | --- | --- | --- | --- | --- |",
+  "| Potato wedges, with skin, cooked in sunflower oil | 300 g | 435 | 8.7 | 11 | 80 | 9 |",
+  "| Chicken breast strips, stir-fried | 100 g | 145 | 28 | 5 | 0 | 0 |",
+  "| Bratwurst roll | 1 roll (190 g) | 520 | 21 | 34 | 44 | 4 |",
+  "| Mulled wine | 200 ml | 170 | 0 | 0 | 20 | 0 |",
+  "| Chocolate crêpe | 180 g | 675 | 9.3 | 36 | 89 | 6 |",
+  "| Baileys Original Irish Cream | 25 ml | 79 | – | – | – | – |",
+  "| **Total** | | **2,024** | **67** | **86** | **233** | **19** |",
+];
+const christmasMarketAfter =
+  "The Baileys has no macros in its food data, so its cells show – and the totals leave it out.";
+
+// The assistant · table board, at rest: wider than the thread, so Entry is fixed, the right edge is open with
+// the fade and the platform's indicator flashes once on mount.
+export const Table: Story = {
+  render: () => (
+    <ChatMessage
+      paragraphs={[christmasMarketIntro, christmasMarketTable.join("\n"), christmasMarketAfter]}
+      role="assistant"
+      speakerLabel={assistant}
+    />
+  ),
+};
+
+// The assistant · table board, scrolled to the last columns: the same reply. A story cannot scroll its own
+// table, so scroll it by hand to the right to see the border close and the fade go.
+export const TableScrolled: Story = {
+  render: () => (
+    <ChatMessage
+      paragraphs={[christmasMarketIntro, christmasMarketTable.join("\n"), christmasMarketAfter]}
+      role="assistant"
+      speakerLabel={assistant}
+    />
+  ),
+};
+
+// The assistant · table-streaming board, on the left: the table arriving, three rows in, with the empty row
+// under them and the caret in its first cell.
+export const TableStreaming: Story = {
+  render: () => (
+    <ChatMessage
+      isStreaming
+      paragraphs={[christmasMarketIntro, `${christmasMarketTable.slice(0, 5).join("\n")}\n`]}
+      role="assistant"
+      speakerLabel={assistant}
+    />
+  ),
+};
+
+// The assistant · table-streaming board, on the right: a table of three columns that fits, filling the thread
+// with no scrolling, and the words after it arriving with the caret at their end.
+export const TableFits: Story = {
+  render: () => (
+    <ChatMessage
+      isStreaming
+      paragraphs={[
+        "Your calories and protein each day this week, against your targets of 2,140 kcal and 140 g:",
+        [
+          "| Day | kcal | Protein (g) |",
+          "| --- | --- | --- |",
+          "| Mon 19 Oct | 2,080 | 138 |",
+          "| Tue 20 Oct | 2,150 | 142 |",
+          "| Wed 21 Oct | 1,960 | 121 |",
+          "| Thu 22 Oct | 2,210 | 147 |",
+          "| Fri 23 Oct | 2,030 | 129 |",
+          "| Sat 24 Oct | 1,940 | 118 |",
+          "| Today, *so far* | 447 | 23 |",
+        ].join("\n"),
+        "Protein reached 140 g on 2 of the 6 full days, Tuesday and Thursday. Calories stayed within",
+      ]}
+      role="assistant"
+      speakerLabel={assistant}
+    />
+  ),
+};

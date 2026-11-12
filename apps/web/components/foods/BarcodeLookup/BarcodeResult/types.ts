@@ -4,4 +4,6 @@ import type { UseFoodByBarcodeReturn } from "@keylow/api-client";
 export type BarcodeResultProps = UseFoodByBarcodeReturn & {
   /** The day to carry to the form that creates a food for a code that was not found. */
   day?: string | undefined;
+  /** The page must not be left, so the link to create the food opens in a new tab and says why. */
+  createsInNewTab?: boolean | undefined;
 };

@@ -4,8 +4,16 @@ import { nutrientAmountSchema, gramsPer100InputSchema, kcalPer100InputSchema } f
 import { FOOD_FORM } from "../copy/foodForm";
 import { normaliseBarcode } from "../foods/barcode";
 
-export const foodSourceSchema = z.enum(["off", "cofid", "usda", "user"]);
-export const nutrientBasisSchema = z.enum(["per_100g", "per_100ml"]);
+export const foodSourceSchema = z.enum(["off", "cofid", "usda", "restaurant", "user"]);
+
+/**
+ * What a food's nutrient columns are per. `per_portion` is the values of exactly one default portion, for a
+ * restaurant food whose chain publishes no weight (ADR 0003, Amendment 17).
+ */
+export const nutrientBasisSchema = z.enum(["per_100g", "per_100ml", "per_portion"]);
+
+/** The bases a person can give a food of their own: only a restaurant food is per portion. */
+export const customFoodBasisSchema = z.enum(["per_100g", "per_100ml"]);
 
 /**
  * The `foods.quality` key set (ADR 0003, Amendment 1). Every key is optional: an absent
@@ -13,6 +21,8 @@ export const nutrientBasisSchema = z.enum(["per_100g", "per_100ml"]);
  * `carbs_convention` describes the stored `carbs_g`, `us_total` only when it could not be converted.
  * For OFF rows an explicit `eu` means the value was converted from a US-style label, absent means no
  * conversion happened, and `us_total` means the label was US-style and could not be converted.
+ * `macros_estimated` marks a restaurant food whose energy is published but whose protein, fat, carbohydrate
+ * and the rest were estimated from the dish's ingredients (Amendment 20).
  */
 export const foodQualitySchema = z.object({
   kcal_derived: z.boolean().optional(),
@@ -22,6 +32,7 @@ export const foodQualitySchema = z.object({
   trace_fields: z.array(z.string()).optional(),
   per_serving_converted: z.boolean().optional(),
   carbs_convention: z.enum(["eu", "us_total"]).optional(),
+  macros_estimated: z.boolean().optional(),
 });
 
 // z.guid() rather than z.uuid(): seed files use fixed literal ids that are not RFC 4122 variants.
@@ -56,7 +67,11 @@ export const foodRowSchema = z.object({
   created_at: timestampSchema,
 });
 
-/** A `food_portions` row: exactly one of `grams` and `ml` is set, and it is positive. */
+/**
+ * A `food_portions` row: at most one of `grams` and `ml` is set, and it is positive. Neither is a count
+ * portion, the only portion of a per portion food. Which foods may have one is the database's rule, kept by
+ * a trigger.
+ */
 export const foodPortionSchema = z
   .object({
     id: rowIdSchema,
@@ -69,8 +84,8 @@ export const foodPortionSchema = z
     position: z.number().int(),
     created_at: timestampSchema,
   })
-  .refine((portion) => (portion.grams === null) !== (portion.ml === null), {
-    message: "Exactly one of grams and ml must be set",
+  .refine((portion) => portion.grams === null || portion.ml === null, {
+    message: "A portion cannot have both grams and ml",
   });
 
 const customFoodPortionInputSchema = z
@@ -108,7 +123,7 @@ export const customFoodInputSchema = z
       .transform((brand) => (brand === "" ? undefined : brand))
       .optional(),
     barcode: canonicalBarcodeSchema.optional(),
-    basis: nutrientBasisSchema,
+    basis: customFoodBasisSchema,
     density_g_per_ml: z.number().positive().optional(),
     kcal: kcalPer100InputSchema,
     protein_g: gramsPer100InputSchema,
@@ -132,6 +147,7 @@ export const customFoodInputSchema = z
 
 export type FoodSource = z.infer<typeof foodSourceSchema>;
 export type NutrientBasis = z.infer<typeof nutrientBasisSchema>;
+export type CustomFoodBasis = z.infer<typeof customFoodBasisSchema>;
 export type FoodQuality = z.infer<typeof foodQualitySchema>;
 export type Food = z.infer<typeof foodRowSchema>;
 export type FoodPortion = z.infer<typeof foodPortionSchema>;

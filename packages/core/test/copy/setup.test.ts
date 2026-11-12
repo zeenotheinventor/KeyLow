@@ -40,8 +40,12 @@ import {
   describeRateLine,
   describeRateOptionName,
   describeRateTitle,
+  describeSetupCaption,
   describeSetupStepLabel,
   describeSetupWeightProblem,
+  setupGoalCardsFor,
+  setupGoalNoteFor,
+  setupQuestionFor,
   describeWeighInSource,
   WEIGH_IN_SHEET,
 } from "../../src/copy";
@@ -455,6 +459,29 @@ describe("setup: goal · under-18", () => {
   it("should count seven steps once Maintain is chosen", () => {
     expect(describeSetupStepLabel(5, 7)).toBe(words.maintainStepLabel);
     expectOnSetupCanvas([words.maintainStepLabel]);
+  });
+});
+
+describe("the goal cards and the note under them", () => {
+  it("should give every goal its line of words when all three are offered", () => {
+    expect(setupGoalCardsFor(GOALS)).toEqual([
+      { goal: "lose", ...SETUP_GOAL_OPTIONS.lose },
+      { goal: "maintain", ...SETUP_GOAL_OPTIONS.maintain },
+      { goal: "gain", ...SETUP_GOAL_OPTIONS.gain },
+    ]);
+  });
+
+  it("should swap the line of a goal that is not offered for the reason, and keep its title", () => {
+    expect(setupGoalCardsFor(["maintain", "gain"])).toEqual([
+      { goal: "lose", title: "Lose weight", disabledReason: SETUP_GOAL_NOT_OFFERED_UNDER_18 },
+      { goal: "maintain", ...SETUP_GOAL_OPTIONS.maintain },
+      { goal: "gain", ...SETUP_GOAL_OPTIONS.gain },
+    ]);
+  });
+
+  it("should give the pregnancy note while Lose is offered and the under 18 note when it is not", () => {
+    expect(setupGoalNoteFor(GOALS)).toBe(SETUP_GOAL_NOTES.default);
+    expect(setupGoalNoteFor(["maintain", "gain"])).toBe(SETUP_GOAL_NOTES.under18);
   });
 });
 
@@ -996,6 +1023,64 @@ describe("the steps", () => {
       diet: "Macros",
       estimate: "Your estimate",
     });
+  });
+});
+
+describe("the shell's caption", () => {
+  it("should join the group and the step, as the web boards draw it", () => {
+    expect(describeSetupCaption({}, "sex")).toBe("About you · Step 1 of 8");
+    expect(describeSetupCaption({}, "body")).toBe("About you · Step 3 of 8");
+    expect(describeSetupCaption({ goal: "gain" }, "protein")).toBe("Macros · Step 7 of 8");
+  });
+
+  it("should count seven steps once Maintain skips the rate", () => {
+    expect(describeSetupCaption({ goal: "maintain" }, "protein")).toBe("Macros · Step 6 of 7");
+  });
+
+  it("should give the estimate its title alone, since it is not a question", () => {
+    expect(describeSetupCaption({}, "estimate")).toBe("Your estimate");
+  });
+});
+
+describe("the question of a step", () => {
+  it("should be the question and helper of the step", () => {
+    expect(setupQuestionFor("birthDate", {})).toEqual(SETUP_QUESTIONS.birthDate);
+    expect(setupQuestionFor("diet", {})).toEqual(SETUP_QUESTIONS.diet);
+  });
+
+  it("should name the direction on the rate step", () => {
+    expect(setupQuestionFor("rate", { goal: "lose" })).toEqual(SETUP_QUESTIONS.rate.lose);
+    expect(setupQuestionFor("rate", { goal: "gain" })).toEqual(SETUP_QUESTIONS.rate.gain);
+  });
+
+  it("should have none for the estimate, or for a rate no goal asks", () => {
+    expect(setupQuestionFor("estimate", {})).toBeUndefined();
+    expect(setupQuestionFor("rate", { goal: "maintain" })).toBeUndefined();
+    expect(setupQuestionFor("rate", {})).toBeUndefined();
+  });
+});
+
+describe("the words for reading the saved answers", () => {
+  it("should name the skeleton and say the read failed", () => {
+    expect(SETUP_SHELL.loadingName).toBe("Loading your answers");
+    expect(SETUP_SHELL.readFailed).toBe(
+      "Couldn't load your saved answers. You can still answer here.",
+    );
+  });
+});
+
+describe("the words for the estimate's two holds on the web", () => {
+  it("should say the saved answers are needed before saving, and that offline the answers stay", () => {
+    expect(SETUP_ESTIMATE.readFailedBody).toBe(
+      "Couldn't load your saved answers. Ki-Lo needs them before it can save.",
+    );
+    expect(SETUP_ESTIMATE.offlineBody).toBe(
+      "Your answers stay on this page. Saving needs a connection.",
+    );
+  });
+
+  it("should not talk of the diary in the offline sentence", () => {
+    expect(SETUP_ESTIMATE.offlineBody).not.toMatch(/diary/i);
   });
 });
 

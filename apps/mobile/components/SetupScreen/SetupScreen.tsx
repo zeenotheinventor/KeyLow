@@ -2,31 +2,39 @@ import {
   useExpenditureHistory,
   useProfileTimeZone,
   useSaveSetup,
+  useSetupDraft,
   useSetupState,
   useSkipSetup,
   useWeightTrend,
 } from "@keylow/api-client";
 import {
+  describeStepProgress,
   SAVE_FAILED_BANNER,
   SETUP_GROUP_TITLES,
-  SETUP_QUESTIONS,
+  setupQuestionFor,
   SETUP_SHELL,
   TARGETS_SAVED_TOAST,
 } from "@keylow/core/copy";
 import {
+  allowedGoalsOf,
   entryWeightUnit,
+  ESTIMATE_HISTORY_WEEKS,
+  fallbackWeightKgOf,
+  isProgrammeKnown,
   isRateGoal,
+  isStepComplete,
+  isWaitingForProgramme,
+  measuredEstimateOf,
   previousStep,
   setupAnswersSchemaFor,
   startingPlan,
+  storedWeightUnitOf,
 } from "@keylow/core/setup";
 import { getLocales } from "expo-localization";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BackHandler } from "react-native";
 
-import { measuredEstimateOf } from "./measuredEstimate";
-import { allowedGoalsOf, describeStepProgress, isStepComplete } from "./setupDraftReducer";
 import { SetupShell } from "./SetupShell";
 import { ActivityStep } from "./steps/ActivityStep";
 import { BirthDateStep } from "./steps/BirthDateStep";
@@ -37,8 +45,6 @@ import { GoalStep } from "./steps/GoalStep";
 import { ProteinStep } from "./steps/ProteinStep";
 import { RateStep } from "./steps/RateStep";
 import { SexStep } from "./steps/SexStep";
-import { storedWeightUnitOf } from "./storedWeightUnit";
-import { useSetupDraft } from "./useSetupDraft";
 import { timeZoneOrDevice, useToday } from "./useToday";
 import { useIsOnline } from "../../lib/connectivity";
 import { diaryHref } from "../../lib/navigation";
@@ -46,36 +52,6 @@ import { useReadsEnabled } from "../../lib/useReadsEnabled";
 import { Banner, useToast } from "../ui";
 
 import type { SetupScreenProps } from "./types";
-import type { SetupDraft, SetupStep } from "@keylow/core/setup";
-
-// The rate is only asked for a goal that moves the weight, and its question names the direction.
-function questionWordsOf(step: SetupStep, draft: SetupDraft) {
-  switch (step) {
-    case "sex":
-      return SETUP_QUESTIONS.sex;
-    case "birthDate":
-      return SETUP_QUESTIONS.birthDate;
-    case "body":
-      return SETUP_QUESTIONS.body;
-    case "activity":
-      return SETUP_QUESTIONS.activity;
-    case "goal":
-      return SETUP_QUESTIONS.goal;
-    case "rate":
-      return isRateGoal(draft.goal) ? SETUP_QUESTIONS.rate[draft.goal] : undefined;
-    case "protein":
-      return SETUP_QUESTIONS.protein;
-    case "diet":
-      return SETUP_QUESTIONS.diet;
-    case "estimate":
-      return undefined;
-  }
-}
-
-// How far back the expenditure history is read, a year of weekly check-ins. The newest snapshot decides whether
-// the recompute keeps its mean (28 days at most), and the same list holds the newest check-in that measured,
-// which can be much older.
-const EXPENDITURE_HISTORY_WEEKS = 52;
 
 /**
  * The setup wizard. Steps and their order come from core, the answers are kept in a reducer so Back
@@ -111,12 +87,15 @@ export function SetupScreen({ mode }: SetupScreenProps) {
   // A new account has no programme, and its first run reads none of it.
   const areProgrammeReadsEnabled = isReadEnabled && isRecalculating;
   const expenditureHistory = useExpenditureHistory({
-    weeks: EXPENDITURE_HISTORY_WEEKS,
+    weeks: ESTIMATE_HISTORY_WEEKS,
     enabled: areProgrammeReadsEnabled,
   });
   const weightTrend = useWeightTrend({ enabled: areProgrammeReadsEnabled });
-  const isWaitingForProgramme =
-    isRecalculating && (expenditureHistory.isPending || weightTrend.isLoading);
+  const isProgrammeWaited = isWaitingForProgramme({
+    isRecalculating,
+    isHistoryPending: expenditureHistory.isPending,
+    isTrendLoading: weightTrend.isLoading,
+  });
   // The first run's one way out of step 1. A recalculation has Close, and later steps have Back.
   const isFirstRunEscapeShown = !isRecalculating && !hasPreviousStep;
   // Busy from the press until the screen has gone, so the moment between the save settling and the
@@ -194,9 +173,10 @@ export function SetupScreen({ mode }: SetupScreenProps) {
     const history = expenditureHistory.data;
     if (
       estimate === undefined ||
-      history === undefined ||
-      weightTrend.isLoading ||
-      weightTrend.isError
+      !isProgrammeKnown(history, {
+        isLoading: weightTrend.isLoading,
+        isError: weightTrend.isError,
+      })
     ) {
       return undefined;
     }
@@ -206,7 +186,10 @@ export function SetupScreen({ mode }: SetupScreenProps) {
       today: estimateToday,
       history,
       trendPoints: weightTrend.points,
-      fallbackWeightKg: setupState.data?.latestWeighIn?.weightKg ?? estimate.answers.weightKg,
+      fallbackWeightKg: fallbackWeightKgOf(
+        setupState.data?.latestWeighIn?.weightKg,
+        estimate.answers,
+      ),
     });
   }, [
     estimate,
@@ -270,7 +253,7 @@ export function SetupScreen({ mode }: SetupScreenProps) {
   }
 
   const progress = describeStepProgress(draft, step);
-  const words = questionWordsOf(step, draft);
+  const words = setupQuestionFor(step, draft);
   // Until the saved answers arrive the draft has no unit, and the fields start from the stored one or the region's.
   const weightUnit =
     draft.weightUnit ?? entryWeightUnit(setupState.data?.stats.weightUnit ?? null, regionCode);
@@ -373,7 +356,7 @@ export function SetupScreen({ mode }: SetupScreenProps) {
         answers={(measuredEstimate ?? estimate).answers}
         isOffline={!isOnline}
         isSaving={isSaving}
-        isWaitingForProgramme={isWaitingForProgramme}
+        isWaitingForProgramme={isProgrammeWaited}
         measurement={measuredEstimate?.measurement}
         mode={mode}
         plan={(measuredEstimate ?? estimate).plan}

@@ -1,9 +1,13 @@
-import { MORE_SCREEN, TAB_TITLES } from "@keylow/core/copy";
+import { ACCOUNT_EXPORT_COPY, MORE_SCREEN, TAB_TITLES } from "@keylow/core/copy";
 import { cookies } from "next/headers";
 
 import { signOut } from "../actions";
 import { PageFrame } from "../PageFrame";
 import { AppearanceSetting } from "./AppearanceSetting";
+import { BodyMapRendererSetting } from "./BodyMapRendererSetting";
+import { DashboardBodyChartSetting } from "./DashboardBodyChartSetting";
+import { GoalRow } from "./GoalRow";
+import { ProgramRow } from "./ProgramRow";
 import { TargetsRow } from "./TargetsRow";
 
 import { GroupedList } from "@/components/ui/GroupedList";
@@ -33,17 +37,26 @@ export default async function MorePage() {
         </GroupedList>
         <GroupedList title={MORE_SCREEN.nutrition.title} headerSize="compact">
           <TargetsRow />
+          <ProgramRow />
           <ListRow title={MORE_SCREEN.nutrition.recipes.title} href={recipesPath()} />
         </GroupedList>
         <GroupedList title={MORE_SCREEN.body.title} headerSize="compact">
           <ListRow title={MORE_SCREEN.body.weight.title} href="/weight" />
+          <GoalRow />
         </GroupedList>
         <GroupedList title={MORE_SCREEN.settings.title} headerSize="compact">
           <AppearanceSetting initialPreference={themePreference} />
+          <BodyMapRendererSetting />
+          <DashboardBodyChartSetting />
           <ListRow title={MORE_SCREEN.settings.about.title} href="/about" />
         </GroupedList>
         <form action={signOut}>
           <GroupedList title={MORE_SCREEN.account.title} headerSize="compact">
+            <ListRow
+              title={ACCOUNT_EXPORT_COPY.moreRow.title}
+              subtitle={ACCOUNT_EXPORT_COPY.moreRow.subtitle}
+              href="/more/export"
+            />
             <ListRow
               title={MORE_SCREEN.account.signOut}
               subtitle={user?.email}

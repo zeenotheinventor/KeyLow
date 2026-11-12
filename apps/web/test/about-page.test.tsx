@@ -40,6 +40,15 @@ describe("About page", () => {
     expect(within(card).getByRole("link", { name: credit.url })).toBeTruthy();
   });
 
+  it("should credit the restaurant chains' own published figures, in one sentence and with no link", () => {
+    render(<AboutPage />);
+
+    const card = screen.getByRole("region", { name: dataSources.restaurant.name });
+    expect(within(card).getByText(dataSources.restaurant.text)).toBeTruthy();
+    expect(within(card).queryByRole("link")).toBeNull();
+    expect(screen.queryByText(/connected/i)).toBeNull();
+  });
+
   it.each([
     ["CoFID", dataSources.cofid],
     ["USDA FoodData Central", dataSources.usda],
@@ -64,6 +73,7 @@ describe("About page", () => {
     expect(names).toEqual([
       dataSources.cofid.name,
       dataSources.usda.name,
+      dataSources.restaurant.name,
       dataSources.off.name,
       dataSources.bodyParts3d.name,
       dataSources.zAnatomy.name,
@@ -123,6 +133,7 @@ describe("About page", () => {
         dataSources.title,
         dataSources.cofid.name,
         dataSources.usda.name,
+        dataSources.restaurant.name,
         dataSources.off.name,
         dataSources.bodyParts3d.name,
         dataSources.zAnatomy.name,

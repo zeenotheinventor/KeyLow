@@ -13,4 +13,6 @@ export type MuscleSheetBodyProps = {
   now: string;
   /** The seven days of the week, whose planned ones the sheet names as the sessions still to come. */
   days: readonly BodyMapDay[];
+  /** Opens the routine editor. The Not trained sheet draws its Edit routine button only when this is given. */
+  onEditRoutine?: (() => void) | undefined;
 };

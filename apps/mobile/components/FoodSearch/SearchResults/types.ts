@@ -1,10 +1,13 @@
 import type { FoodSearchHit, RecipeSummary } from "@keylow/api-client";
-import type { FoodSearchGroupKey } from "@keylow/core/search";
 import type { ReactNode } from "react";
 
 export type SearchResultsProps = {
   /** What the user has typed, untrimmed. */
   query: string;
+  /** How many food rows to draw, across Your foods, Common foods and Branded foods in that order. The recipes and Open Food Facts products are not counted. */
+  visibleRowCount: number;
+  /** Says whether food rows are left to reveal, once the results are in, so the list reveals more only when there is something to show. */
+  onMoreRowsChange: (hasMoreRows: boolean) => void;
   onOpenFood: (foodId: string) => void;
   /** Offers to create a food when nothing is found. Leave it out where creating one would leave the screen, such as a recipe's ingredient search. */
   onCreateFood?: (() => void) | undefined;
@@ -40,6 +43,3 @@ export type LogRows = {
   /** Leave it out for a log search that offers no recipes. */
   recipes?: LogRecipes | undefined;
 };
-
-/** The groups the user has opened with "See N more", and the query they were opened for. */
-export type Expansion = { query: string; groups: readonly FoodSearchGroupKey[] };

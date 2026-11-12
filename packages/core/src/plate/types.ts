@@ -11,7 +11,7 @@ export type PlateValues = {
 
 /**
  * What a food on the plate is counted in: grams, millilitres, or a count of one of its portions. A portion
- * keeps its label and its size, so the row scales and is worded with no food loaded, and `portionId` is null
+ * keeps its label and its size (a food per portion has none), so the row scales and is worded with no food loaded, and `portionId` is null
  * for a portion that was replaced since a Recent entry was logged.
  */
 export type PlateFoodUnit =
@@ -21,7 +21,8 @@ export type PlateFoodUnit =
       kind: "portion";
       portionId: string | null;
       label: string;
-      size: { amount: number; unit: "g" | "ml" };
+      /** Left out for the count portion of a food per portion, which has no size. */
+      size?: { amount: number; unit: "g" | "ml" };
     };
 
 type PlateItemBase = {
@@ -50,3 +51,6 @@ export type PlateRecipeItem = PlateItemBase & {
 };
 
 export type PlateItem = PlateFoodItem | PlateRecipeItem;
+
+/** When the plate is logged: the moment Log foods is pressed, or a clock time (`HH:mm`) on the plate's day. */
+export type PlateTime = { isNow: true } | { isNow: false; time: string };

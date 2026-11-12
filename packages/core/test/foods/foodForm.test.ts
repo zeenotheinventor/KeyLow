@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { estimatedPortion } from "../../src/foods/estimatedPortion";
 import {
   REQUIRED_FOOD_NUTRIENTS,
   amountUnit,
@@ -9,6 +10,7 @@ import {
   parseFormNumber,
   portionAmountKey,
   portionToFormFields,
+  portionsToFormFields,
 } from "../../src/foods/foodForm";
 import { customFoodInputSchema } from "../../src/schemas/food";
 import { buildFood, buildFoodPortion } from "../../src/testing";
@@ -230,6 +232,10 @@ describe("customFoodInputFrom", () => {
 });
 
 describe("foodToFormFields", () => {
+  it("should refuse a food per portion, which no form can hold and no person can create", () => {
+    expect(() => foodToFormFields(buildFood({ basis: "per_portion" }))).toThrow(RangeError);
+  });
+
   it("should turn a food row into the text the form shows, keyed as the schema is", () => {
     const food = buildFood({
       name: "Oat bar",
@@ -278,6 +284,40 @@ describe("portionToFormFields", () => {
     expect(
       portionToFormFields(buildFoodPortion({ label: "1 glass", grams: null, ml: 250 })),
     ).toEqual({ label: "1 glass", amount: "250", isDefault: false });
+  });
+});
+
+describe("portionsToFormFields", () => {
+  const food = buildFood({ basis: "per_100g", kcal: 400, food_group: null });
+  const generated = estimatedPortion({ basis: "per_100g", kcal: 400 });
+  const estimate = buildFoodPortion({
+    label: generated.label,
+    grams: generated.grams,
+    is_default: true,
+  });
+
+  it("should leave the generated estimate out, so the form shows only what the person typed", () => {
+    expect(portionsToFormFields(food, [estimate])).toEqual([]);
+  });
+
+  it("should show every portion the person typed", () => {
+    const portions = [
+      buildFoodPortion({ label: "1 bar", grams: 45, is_default: true }),
+      buildFoodPortion({ label: "1 pack", grams: 90, is_default: false }),
+    ];
+
+    expect(portionsToFormFields(food, portions)).toEqual([
+      { label: "1 bar", amount: "45", isDefault: true },
+      { label: "1 pack", amount: "90", isDefault: false },
+    ]);
+  });
+
+  it("should keep a portion the person typed as 1 typical slice, so saving does not delete it", () => {
+    const typed = buildFoodPortion({ label: "1 typical slice", grams: 35, is_default: true });
+
+    expect(portionsToFormFields(food, [typed])).toEqual([
+      { label: "1 typical slice", amount: "35", isDefault: true },
+    ]);
   });
 });
 

@@ -1,7 +1,9 @@
+import { useExpenditureChart } from "@keylow/api-client";
 import { PROGRAM_CHART, PROGRAM_ERROR } from "@keylow/core/copy";
 import { View } from "react-native";
 
-import { useExpenditureChart } from "./useExpenditureChart";
+import { useNow } from "../../../lib/useNow";
+import { useReadsEnabled } from "../../../lib/useReadsEnabled";
 import { Card, EmptyState, ErrorState, LineChart, Text } from "../../ui";
 
 /**
@@ -11,7 +13,7 @@ import { Card, EmptyState, ErrorState, LineChart, Text } from "../../ui";
  * place, so the rest of the screen stands. It draws nothing while the history is being read.
  */
 export function ExpenditureChartCard() {
-  const state = useExpenditureChart();
+  const state = useExpenditureChart({ enabled: useReadsEnabled(), now: useNow() });
 
   switch (state.status) {
     case "pending":

@@ -9,6 +9,8 @@ import {
   spyOnConsole,
   userId,
 } from "./testing.ts";
+import { stubCaller } from "./tools/testing.ts";
+import { sessionRow } from "./tools/trainingFixtures.ts";
 import { undoAction } from "./undo.ts";
 
 import type { FakeToolOptions } from "./testing.ts";
@@ -190,3 +192,135 @@ Deno.test("a slot that was only reserved has nothing to undo", async () => {
     code: "undo_unavailable",
   });
 });
+
+// The guard that keeps the Undo of a training write out of a workout in progress (KEY-899).
+const workoutInProgress = () =>
+  stubCaller({ tables: { workout_sessions: [sessionRow(1, { ended_at: null })] } });
+const noWorkoutInProgress = () => stubCaller({ tables: { workout_sessions: [sessionRow(1)] } });
+
+// A flagged write that landed while no workout was in progress.
+async function flaggedWriteThenContext(inverse: () => Promise<"undone">) {
+  const write = fakeWriteTool({ refusesDuringWorkout: true, inverse });
+  const made = createFakeContext([write.definition]);
+  const result = await executeTool(
+    { ...made.ctx, caller: noWorkoutInProgress().caller },
+    "fake_write",
+    input,
+  );
+  if (result.status !== "ok" || result.actionId === null) {
+    throw new Error("expected a recorded action");
+  }
+  return { ...made, actionId: result.actionId };
+}
+
+Deno.test(
+  "undo of a flagged write during a workout answers undo_unavailable with the reason, takes no claim and works after the workout",
+  async () => {
+    let inverses = 0;
+    const { ctx, store, actionId } = await flaggedWriteThenContext(() => {
+      inverses += 1;
+      return Promise.resolve("undone");
+    });
+
+    const during = await undoAction({ ...ctx, caller: workoutInProgress().caller }, actionId);
+
+    assertEquals(during, {
+      status: "error",
+      code: "undo_unavailable",
+      reason: "workout_in_progress",
+    });
+    assertEquals(inverses, 0);
+    assertEquals(store.actions[0]?.undoneAt, null);
+    assertEquals(store.calls["claimUndo"], undefined);
+
+    const after = await undoAction({ ...ctx, caller: noWorkoutInProgress().caller }, actionId);
+
+    assertEquals(after, { status: "undone", actionId });
+    assertEquals(inverses, 1);
+    assertEquals(store.actions[0]?.undoneAt === null, false);
+  },
+);
+
+Deno.test("undo of a write without the flag ignores a live workout", async () => {
+  const { ctx, actionId } = await writeThenContext();
+  const live = workoutInProgress();
+
+  const result = await undoAction({ ...ctx, caller: live.caller }, actionId);
+
+  assertEquals(result, { status: "undone", actionId });
+  assertEquals(live.calls, []);
+});
+
+Deno.test(
+  "undo of a flagged write whose session read fails answers undo_failed, reports it and takes no claim",
+  async () => {
+    const { ctx, store, actionId, reported } = await flaggedWriteThenContext(() =>
+      Promise.resolve("undone"),
+    );
+    const broken = stubCaller({ failingTables: { workout_sessions: "57014" } });
+
+    const result = await undoAction({ ...ctx, caller: broken.caller }, actionId);
+
+    assertEquals(result, { status: "error", code: "undo_failed" });
+    assertEquals(store.actions[0]?.undoneAt, null);
+    assertEquals(store.calls["claimUndo"], undefined);
+    assertEquals(
+      reported.map(({ functionName, code }) => [functionName, code]),
+      [["assistant tool fake_write", "internal_error"]],
+    );
+  },
+);
+
+Deno.test("an inverse that gives a reason has it passed on with undo_unavailable", async () => {
+  const { ctx, store, actionId } = await writeThenContext({
+    inverse: () => Promise.resolve({ status: "unavailable", reason: "changed" }),
+  });
+
+  const result = await undoAction(ctx, actionId);
+
+  assertEquals(result, { status: "error", code: "undo_unavailable", reason: "changed" });
+  assertEquals(store.actions[0]?.undoneAt, null);
+});
+
+Deno.test("an inverse that gives no reason leaves the reason out", async () => {
+  const { ctx, actionId } = await writeThenContext({
+    inverse: () => Promise.resolve("unavailable"),
+  });
+
+  const result = await undoAction(ctx, actionId);
+
+  assertEquals(result, { status: "error", code: "undo_unavailable" });
+});
+
+// An inverse that needs the old value and answers `unavailable` without it, as the training tools do.
+const needsPreviousValue: FakeToolOptions["inverse"] = async (ctx, action) => {
+  const stored = await ctx.previousValueOf(action);
+  return stored?.fingerprint === "fingerprint-1" ? "undone" : "unavailable";
+};
+
+Deno.test(
+  "an inverse is handed the previous value and the fingerprint stored for its action",
+  async () => {
+    const { ctx, store, actionId } = await writeThenContext({ inverse: needsPreviousValue });
+    store.previousValues.set(actionId, {
+      previous: { name: "Push day" },
+      fingerprint: "fingerprint-1",
+    });
+
+    const result = await undoAction(ctx, actionId);
+
+    assertEquals(result, { status: "undone", actionId });
+  },
+);
+
+Deno.test(
+  "an inverse that is handed null answers unavailable and the action stays undoable",
+  async () => {
+    const { ctx, store, actionId } = await writeThenContext({ inverse: needsPreviousValue });
+
+    const result = await undoAction(ctx, actionId);
+
+    assertEquals(result, { status: "error", code: "undo_unavailable" });
+    assertEquals(store.actions[0]?.undoneAt, null);
+  },
+);

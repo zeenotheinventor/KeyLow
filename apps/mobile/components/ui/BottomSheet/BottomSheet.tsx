@@ -14,12 +14,16 @@ import { SheetBackground } from "./SheetBackground";
 import { SheetBackdropContext } from "./SheetCloseContext";
 import { SheetHandle } from "./SheetHandle";
 import { IsInsideSheetContext } from "./SheetInputContext";
+import { SheetScrollView } from "./SheetScrollView";
 
 import type { BottomSheetProps } from "./types";
 import type { ComponentRef } from "react";
 
 // The design's `--space-6`, which the sheet keeps under its contents before the safe area.
 const bottomPadding = Number.parseInt(spacing["6"], 10);
+
+// A sideways swipe inside a sheet always belongs to its contents, so the sheet's own drag starts on vertical movement only.
+const sheetDragActiveOffsetY: [number, number] = [-10, 10];
 
 // The design slams the sheet up with `--ease-spring` over `--duration-flourish` and takes it down with
 // `--ease-exit` over `--duration-standard`. The bezier overshoots on the way up and settles.
@@ -46,6 +50,7 @@ export function BottomSheet({
   isTitleCentred = false,
   isDismissible = true,
   isContentDraggable = true,
+  isScrollable = false,
   label,
   snapPoints,
   snapIndex = 0,
@@ -54,7 +59,7 @@ export function BottomSheet({
   const isFixedHeight = snapPoints !== undefined;
   const sheetRef = useRef<ComponentRef<typeof GorhomBottomSheet>>(null);
   const titleRef = useRef<View>(null);
-  const { bottom: safeAreaBottom } = useSafeAreaInsets();
+  const { top: safeAreaTop, bottom: safeAreaBottom } = useSafeAreaInsets();
   const isReducedMotion = useReducedMotion();
   const [isMounted, setIsMounted] = useState(open);
   const isOpenRef = useRef(open);
@@ -157,6 +162,7 @@ export function BottomSheet({
       <GorhomBottomSheet
         ref={sheetRef}
         accessible={false}
+        activeOffsetY={sheetDragActiveOffsetY}
         animationConfigs={open ? enterAnimation : exitAnimation}
         backdropComponent={SheetBackdrop}
         backgroundComponent={SheetBackground}
@@ -165,6 +171,8 @@ export function BottomSheet({
         enablePanDownToClose={isDismissible}
         handleComponent={SheetHandle}
         index={snapIndex}
+        // A scrollable sheet stops below the status bar, as the library caps a sheet at its container's height.
+        topInset={isScrollable && !isFixedHeight ? safeAreaTop : 0}
         {...(snapPoints === undefined ? {} : { snapPoints })}
         // A field in the sheet (the library's own input, which `TextArea` draws inside a sheet) lifts the
         // sheet with the keyboard, and the sheet goes back down when the keyboard is hidden. Android 15
@@ -186,6 +194,9 @@ export function BottomSheet({
           // scroll, nor shrink for the keyboard. The sheet sizes its content area itself in a fixed height
           // sheet, so a plain view fills that.
           <View className="flex-1">{dialog}</View>
+        ) : isScrollable ? (
+          // The library's scroll view gives the sheet the contents' height, up to its container's, and then scrolls.
+          <SheetScrollView>{dialog}</SheetScrollView>
         ) : (
           <BottomSheetView>{dialog}</BottomSheetView>
         )}

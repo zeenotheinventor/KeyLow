@@ -1,3 +1,5 @@
+import { Info } from "lucide-react";
+
 import { GroupedList } from "./GroupedList";
 
 import type { Meta, StoryObj } from "@storybook/nextjs";
@@ -84,5 +86,13 @@ export const SingleRow: Story = {
         chevron={false}
       />
     ),
+  },
+};
+
+export const TitleHidden: Story = {
+  args: {
+    title: "Programme",
+    hidesTitle: true,
+    children: [<ListRow key="how" title="How it works" icon={Info} onClick={() => undefined} />],
   },
 };

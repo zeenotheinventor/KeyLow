@@ -90,7 +90,7 @@ export const OptionCard = React.forwardRef<
     >
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
         <span className={cn("flex items-center gap-2", dimClassName)}>
-          <span className="text-body-strong">{title}</span>
+          <span className="text-body-strong tabular-nums">{title}</span>
           {badge === undefined ? null : <Badge {...badge} />}
         </span>
         {description === undefined ? null : (
@@ -107,7 +107,7 @@ export const OptionCard = React.forwardRef<
       </span>
       {value === undefined ? null : (
         <span className={cn("flex shrink-0 flex-col items-end", dimClassName)}>
-          <span className="text-body-strong">{value}</span>
+          <span className="text-body-strong tabular-nums">{value}</span>
           {valueCaption === undefined ? null : (
             <span className="text-caption text-text-muted">{valueCaption}</span>
           )}

@@ -2,11 +2,11 @@ import "../../test/support/gestureHandler";
 
 import { addCalendarDays } from "@keylow/core/dates";
 import { computeTrend } from "@keylow/core/engine";
+import { prepareWeightChart } from "@keylow/core/weight";
 import { themes } from "@keylow/tokens";
 import { isHiddenFromAccessibility, screen } from "@testing-library/react-native";
 
 import { plotPadding } from "./layout";
-import { prepareWeightChart } from "./prepareWeightChart";
 import { WeightChart } from "./WeightChart";
 import { renderChart } from "../../test/support/chartRender";
 

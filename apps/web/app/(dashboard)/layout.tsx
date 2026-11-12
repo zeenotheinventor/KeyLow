@@ -1,7 +1,10 @@
 import { redirect } from "next/navigation";
 
+import { CheckinRunner } from "./CheckinRunner";
 import { DashboardNav } from "./DashboardNav";
 import { Providers } from "./Providers";
+import { SessionBarFrame } from "./SessionBar";
+import { SetupGate } from "./SetupGate";
 
 import type { ReactNode } from "react";
 
@@ -28,8 +31,12 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   return (
     <Providers>
       <SentryUser userId={user.id} />
+      <CheckinRunner />
+      <SetupGate />
       <DashboardNav />
-      <main className="px-4 lg:px-8">{children}</main>
+      <SessionBarFrame>
+        <main className="px-4 lg:px-8">{children}</main>
+      </SessionBarFrame>
     </Providers>
   );
 }

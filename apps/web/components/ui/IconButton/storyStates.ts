@@ -6,4 +6,11 @@ export const storyStates = [
   "Disabled",
   "StepControls",
   "RowActions",
+  "Card",
+  "CardSelected",
+  "Selected",
+  "CardDisabled",
+  "FavouriteOff",
+  "FavouriteOn",
+  "FavouriteDisabled",
 ];

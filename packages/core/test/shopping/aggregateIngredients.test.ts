@@ -46,6 +46,25 @@ const recipe = (
 });
 
 describe("aggregateIngredients", () => {
+  it("should leave out an ingredient with no weight, because a restaurant food is not bought in a shop", () => {
+    const bucket = {
+      foodId: SALT_ID,
+      name: "Chicken bucket",
+      food: { name: "Chicken bucket", food_group: null },
+      quantity: 1,
+      unit: "portion",
+      resolvedGrams: 0,
+      portionLabel: "1 bucket",
+    } satisfies ShoppingIngredient;
+
+    const { items, staples } = aggregateIngredients([
+      recipe(CHILLI_ID, "Meal deal", [bucket, grams(BEEF_ID, "Fries", 200)]),
+    ]);
+
+    expect(items.map(({ name }) => name)).toEqual(["Fries"]);
+    expect(staples).toEqual([]);
+  });
+
   it("should sum one food across two recipes and name both", () => {
     const { items } = aggregateIngredients([
       recipe(CHILLI_ID, "Chilli", [grams(BEEF_ID, "Beef mince", 500)]),

@@ -1,4 +1,4 @@
-import { MACRO_NAMES, describePlateDay } from "@keylow/core/copy";
+import { MACRO_NAMES, PLATE, describePlateDay } from "@keylow/core/copy";
 import { formatCalories, formatGrams } from "@keylow/core/format";
 import { View } from "react-native";
 
@@ -24,7 +24,7 @@ export function PlateTotalsCard({ day }: PlateTotalsCardProps) {
   const dayBars = usePlateDayBars(day);
 
   return (
-    <Card aria-label="Totals" padding={0}>
+    <Card aria-label={PLATE.totalsLabel} padding={0}>
       <View className="gap-2 px-4 py-3">
         <View className="flex-row items-baseline justify-between">
           <Text variant="body-strong">On your plate</Text>

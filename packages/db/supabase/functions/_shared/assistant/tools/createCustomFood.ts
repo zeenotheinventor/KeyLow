@@ -4,8 +4,13 @@
 // foods and leaves any diary entry logged from it alone, because an entry keeps its own snapshot.
 import { z } from "zod";
 
-import { buildFoodCreatedCard, labelFoodInput, roundCalories } from "../../core.ts";
-import { FoodsPartialWriteError, createFood, getFood, softDeleteFood } from "../../repos.ts";
+import {
+  buildFoodCreatedCard,
+  isGeneratedEstimate,
+  labelFoodInput,
+  roundCalories,
+} from "../../core.ts";
+import { createFood, getFood, softDeleteFood } from "../../repos.ts";
 
 import type { WriteRunOutput, WriteToolDefinition } from "../tool.ts";
 
@@ -88,21 +93,16 @@ export const createCustomFoodTool: WriteToolDefinition<CreateCustomFoodInput> = 
     let created;
     try {
       created = await createFood(ctx.caller, ctx.userId, label.food);
-    } catch (caught) {
-      // The food was written and its portion was not. The food cannot be deleted, so it is hidden, and the
-      // model may try again. The repo's message can quote the row, so it is not passed on.
-      if (caught instanceof FoodsPartialWriteError) {
-        try {
-          await softDeleteFood(ctx.caller, caught.foodId);
-        } catch (cleanup) {
-          ctx.reportError("assistant tool create_custom_food", "internal_error", cleanup);
-        }
-      }
+    } catch {
+      // The food and its portions are written in one transaction, so a failure leaves nothing to clean up, and
+      // the model may try again. The repo's message can quote the row, so it is not passed on.
       throw new Error("create_custom_food could not save the food");
     }
 
     // The write has landed. Nothing below may throw, or the model would save the food a second time.
-    const [portion] = created.portions;
+    // The estimate the app generated is not a portion the person gave, so the model is not handed its id to
+    // log. A portion the person gave stays, even one they worded like an estimate.
+    const [portion] = isGeneratedEstimate(created.food, created.portions) ? [] : created.portions;
     return {
       data: {
         created: {

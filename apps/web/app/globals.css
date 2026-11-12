@@ -7,6 +7,11 @@
     @apply border-border;
   }
 
+  /* While the session bar shows it covers the top of the window, so a focused link is scrolled below it. */
+  html:has([data-session-bar]) {
+    scroll-padding-top: theme(height.control-lg);
+  }
+
   body {
     @apply bg-background font-sans text-body tabular-nums text-text-primary;
   }

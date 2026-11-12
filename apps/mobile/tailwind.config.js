@@ -14,6 +14,7 @@ const themeVariablesPlugin = plugin((api) => {
     ":root": {
       ...themeVariables("dark"),
       "--kl-skeleton-shine-gradient": `linear-gradient(100deg, transparent, ${themes.dark["skeleton-shine"]}, transparent)`,
+      "--kl-sheet-edge-fade-gradient": `linear-gradient(to right, ${themes.dark["surface-sheet"]}00, ${themes.dark["surface-sheet"]})`,
     },
   });
 });
@@ -74,6 +75,17 @@ const skeletonShinePlugin = plugin((api) => {
   });
 });
 
+// The fade at the right edge of a table that has more columns to scroll to: clear to the sheet colour, written
+// as the same colour at no opacity so the middle of the ramp does not go grey. The ThemeProvider holds the
+// gradient for both schemes in one variable, as it does for the shine.
+const sheetEdgeFadePlugin = plugin((api) => {
+  api.addUtilities({
+    ".sheet-edge-fade": {
+      "-rn-experimental_background-image": "var(--kl-sheet-edge-fade-gradient)",
+    },
+  });
+});
+
 // The dim over the camera outside the viewfinder's frame: the frame's own shadow, spread far enough to
 // cover the preview, which the camera view's parent clips. Its colour is the `viewfinder-dim` token, the
 // same in both themes, written with the spaces React Native's colour parser is given elsewhere. The value
@@ -102,6 +114,7 @@ module.exports = {
     tabularNumbersPlugin,
     elevationPlugin,
     skeletonShinePlugin,
+    sheetEdgeFadePlugin,
     viewfinderDimPlugin,
   ],
 };

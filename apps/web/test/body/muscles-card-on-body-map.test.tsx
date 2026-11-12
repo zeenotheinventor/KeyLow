@@ -33,6 +33,8 @@ vi.mock("@keylow/api-client", async (importOriginal) => ({
     reads.listAsked.push(options);
     return reads.list;
   },
+  // Volume's and Gap's rows have their own test file.
+  useMuscleScaleList: () => read<undefined>(undefined),
   useMuscleDetail: () => ({
     data: hamstringsDetail,
     isPending: false,
@@ -93,6 +95,8 @@ describe("the Muscles card on the body map", () => {
   beforeEach(() => {
     window.localStorage.clear();
     window.localStorage.setItem("bodyMap.figure", "male");
+    // The first-open hint was dismissed on an earlier visit, so only its own tests see it.
+    window.localStorage.setItem("bodyMap.hintSeen", "true");
     resetBodyFigureForTests();
     onlineManager.setOnline(true);
     vi.useFakeTimers({ toFake: ["Date"] });

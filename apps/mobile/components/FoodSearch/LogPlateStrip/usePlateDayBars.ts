@@ -1,17 +1,13 @@
 import { useDiaryDay, useProfileTimeZone, useTargets } from "@keylow/api-client";
-import { describeDay, instantAtLocalTime } from "@keylow/core/dates";
-import { progressBars, sumEntries } from "@keylow/core/diary";
+import { plateDayBars } from "@keylow/core/plate";
 
 import { usePlate } from "../../../lib/plate";
 import { useNow } from "../../../lib/useNow";
 import { useReadsEnabled } from "../../../lib/useReadsEnabled";
 
-import type { ProgressBar } from "@keylow/core/diary";
+import type { PlateDayBars } from "@keylow/core/plate";
 
-const NOON = 12;
-
-/** The day's four bars with the plate's share after what was eaten, and the day's title: Today, Yesterday or "Wed 14 Oct". */
-export type PlateDayBars = { bars: ProgressBar[]; dayTitle: string };
+export type { PlateDayBars };
 
 /**
  * What the search's strip and the plate sheet's totals card both show: what was eaten on the day (read as the
@@ -29,10 +25,13 @@ export function usePlateDayBars(day: string): PlateDayBars | undefined {
   if (eaten === undefined || targets === undefined || profileTimeZone === undefined) {
     return undefined;
   }
-  const timeZone = profileTimeZone ?? "UTC";
 
-  return {
-    bars: progressBars(sumEntries(eaten.entries), targets, totals),
-    dayTitle: describeDay(instantAtLocalTime(day, NOON, 0, timeZone), now, timeZone).label,
-  };
+  return plateDayBars({
+    entries: eaten.entries,
+    targets,
+    totals,
+    day,
+    timeZone: profileTimeZone,
+    now,
+  });
 }

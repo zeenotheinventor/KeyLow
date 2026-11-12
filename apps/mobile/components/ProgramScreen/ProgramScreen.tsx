@@ -1,3 +1,4 @@
+import { useProgramScreen } from "@keylow/api-client";
 import { PROGRAM_ERROR, PROGRAM_SCREEN } from "@keylow/core/copy";
 import { useRouter } from "expo-router";
 import { vars } from "nativewind";
@@ -10,12 +11,13 @@ import { ExpenditureChartCard } from "./ExpenditureChartCard";
 import { ExpenditureHeroCard } from "./ExpenditureHeroCard";
 import { NoProgramView } from "./NoProgramView";
 import { SettlingChecklist } from "./SettlingChecklist";
-import { useProgramScreen } from "./useProgramScreen";
 import { WeekTargetsCard } from "./WeekTargetsCard";
 import { YourProgramme } from "./YourProgramme";
 import { useCheckinArrival } from "../../lib/checkinSeen";
 import { haptic } from "../../lib/haptics";
+import { useNow } from "../../lib/useNow";
 import { useOpenOnce } from "../../lib/useOpenOnce";
+import { useReadsEnabled } from "../../lib/useReadsEnabled";
 import { ErrorState, GroupedList, ListRow, SheetHeader, Skeleton, Text } from "../ui";
 
 /**
@@ -31,7 +33,7 @@ export function ProgramScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const openOnce = useOpenOnce();
-  const state = useProgramScreen();
+  const state = useProgramScreen({ enabled: useReadsEnabled(), now: useNow() });
   const { isRead: isCheckinRead, isNew: isCheckinNew } = useCheckinArrival(
     state.status === "program" ? (state.view.checkin?.date ?? null) : null,
   );

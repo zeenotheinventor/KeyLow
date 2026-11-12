@@ -1,8 +1,8 @@
 import { iconStroke } from "@keylow/tokens";
-import { ChevronRight } from "lucide-react";
+import { Check, ChevronRight } from "lucide-react";
 import Link from "next/link";
 
-import type { ListRowProps } from "./types";
+import type { ListRowMacro, ListRowProps } from "./types";
 
 import { Badge } from "@/components/ui/Badge";
 import { cn } from "@/lib/utils";
@@ -24,21 +24,32 @@ const valueClasses = {
   },
 } as const;
 
+// Each class is written out whole so Tailwind can see it.
+const macroKeyClasses = {
+  calories: "bg-calories",
+  protein: "bg-protein",
+  carbs: "bg-carbs",
+  fat: "bg-fat",
+} as const satisfies Record<ListRowMacro, string>;
+
 /** A row of a settings or menu list: a title, an optional subtitle and a chevron when it navigates. Put it inside a `GroupedList`. */
 export function ListRow({
   icon: Icon,
   title,
+  macro,
   subtitle,
   badge,
   value,
   unit,
   valueLook = "quiet",
   valueTone,
+  trailing,
   href,
   onClick,
   submit,
   chevron = true,
   disabled = false,
+  loading = false,
   className,
 }: ListRowProps) {
   const interactive = href !== undefined || onClick !== undefined || submit === true;
@@ -50,7 +61,14 @@ export function ListRow({
   );
   const textLines = (
     <>
-      <span className="text-body-strong">{title}</span>
+      <span
+        className={cn(
+          macro === undefined ? "text-body-strong" : "text-body",
+          "[overflow-wrap:anywhere]",
+        )}
+      >
+        {title}
+      </span>
       {subtitle !== undefined && <span className="text-caption text-text-muted">{subtitle}</span>}
     </>
   );
@@ -61,6 +79,9 @@ export function ListRow({
         <span className="flex h-control-sm w-control-sm shrink-0 items-center justify-center rounded-small bg-surface-raised text-text-secondary">
           <Icon aria-hidden className="size-5" strokeWidth={iconStroke} />
         </span>
+      )}
+      {macro !== undefined && (
+        <span aria-hidden className={cn("size-2 shrink-0 rounded-[2px]", macroKeyClasses[macro])} />
       )}
       {badge === undefined ? (
         text
@@ -82,7 +103,22 @@ export function ListRow({
           {unit !== undefined && <span className="text-caption text-text-muted">{unit}</span>}
         </span>
       )}
-      {interactive && chevron && (
+      {loading ? (
+        // The ring is the size of the button spinner's, in a box of its own so the row keeps its height.
+        <span className="relative size-[18px] shrink-0">
+          <span
+            role="img"
+            aria-label="Loading"
+            className="absolute inset-0 animate-spin rounded-pill border-2 border-text-muted border-r-transparent motion-reduce:animate-pulse"
+          />
+        </span>
+      ) : null}
+      {!loading && trailing !== undefined && (
+        <span role="img" aria-label={trailing.label} className="flex shrink-0">
+          <Check aria-hidden className="size-5 stroke-success" strokeWidth={iconStroke} />
+        </span>
+      )}
+      {!loading && interactive && chevron && (
         <ChevronRight
           aria-hidden
           className="size-4 shrink-0 text-text-muted"
@@ -117,8 +153,10 @@ export function ListRow({
         <button
           type={submit === true ? "submit" : "button"}
           className={classes}
-          onClick={onClick}
+          // A busy row stays enabled so focus is kept, and ignores a press until it clears.
+          onClick={loading ? undefined : onClick}
           disabled={disabled}
+          aria-busy={loading || undefined}
         >
           {content}
         </button>

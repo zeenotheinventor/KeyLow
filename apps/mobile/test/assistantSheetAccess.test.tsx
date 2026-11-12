@@ -179,11 +179,11 @@ describe("the assistant sheet's access states", () => {
       expect(sheetWords()).toEqual([
         ...headerWords,
         "Turn on the assistant",
-        "The assistant answers questions about your diary, weight and targets, and logs, copies and changes entries for you. Every change shows as a card with Undo.",
+        "The assistant answers questions about your diary, weight, targets and training. It logs, copies and changes entries for you, builds and changes your routines, and changes your training goals, custom exercises and past workouts. Every change shows as a card with Undo.",
         "To do this, your messages and the Ki-Lo data the assistant reads are sent to Anthropic, the company that runs its AI model, as Ki-Lo's processor. Anthropic keeps them for up to 30 days. Ki-Lo keeps your conversations until you delete them.",
         "Privacy policy",
         "Privacy policy",
-        "The assistant's answers are not medical advice. Speak to a doctor before you make big changes to your diet or your weight. You can turn the assistant off in More, Assistant.",
+        "The assistant's answers are not medical advice. Speak to a doctor before you make big changes to your diet, your weight or your training. You can turn the assistant off in More, Assistant.",
         "Turn on",
         "Not now",
       ]);
@@ -348,11 +348,83 @@ describe("the assistant sheet's access states", () => {
   });
 
   describe("while the status is read", () => {
-    it("should draw neither the consent card, the empty sheet nor a composer", async () => {
+    it("should draw neither the consent card nor the empty sheet, but the loading placeholder and the composer", async () => {
       mockAssistant.status = unreadStatus();
       await renderSheet();
 
-      expect(sheetWords()).toEqual(headerWords);
+      expect(sheetWords()).toEqual([
+        ...headerWords,
+        "Loading your conversation",
+        "Message",
+        "Send",
+      ]);
+    });
+
+    it("should draw the placeholder with the field on, Send off and New conversation off", async () => {
+      mockAssistant.status = unreadStatus();
+      loadedConversation(earlierThread);
+      await renderSheet();
+
+      expect(screen.getByRole("status", { name: "Loading your conversation" })).toBeOnTheScreen();
+      expect(screen.getByLabelText("Message")).toBeEnabled();
+      expect(screen.getByRole("button", { name: "Send" })).toBeDisabled();
+      expect(screen.getByRole("button", { name: "New conversation" })).toBeDisabled();
+    });
+
+    it("should keep Send off for words typed while the status is read", async () => {
+      mockAssistant.status = unreadStatus();
+      loadedConversation(earlierThread);
+      await renderSheet();
+
+      await userSetup().type(screen.getByLabelText("Message"), "Log a banana");
+
+      expect(screen.getByRole("button", { name: "Send" })).toBeDisabled();
+    });
+
+    it("should be replaced by the thread once the status is known", async () => {
+      mockAssistant.status = unreadStatus();
+      loadedConversation(earlierThread);
+      const rendered = await renderSheet();
+      statusRead(null);
+
+      await rendered.rerender(sheetTree());
+
+      expect(
+        screen.queryByRole("status", { name: "Loading your conversation" }),
+      ).not.toBeOnTheScreen();
+      expect(screen.getByText("What's left for today?")).toBeOnTheScreen();
+    });
+
+    it("should give way to the consent card with no composer and no way to send", async () => {
+      mockAssistant.status = unreadStatus();
+      const rendered = await renderSheet();
+      await userSetup().type(screen.getByLabelText("Message"), "Log a banana");
+      expect(screen.getByRole("button", { name: "Send" })).toBeDisabled();
+
+      statusRead({ code: "consent_needed" });
+      await rendered.rerender(sheetTree());
+
+      expect(screen.getByText("Turn on the assistant")).toBeOnTheScreen();
+      expect(
+        screen.queryByRole("status", { name: "Loading your conversation" }),
+      ).not.toBeOnTheScreen();
+      expect(screen.queryByLabelText("Message")).not.toBeOnTheScreen();
+      expect(screen.queryByRole("button", { name: "Send" })).not.toBeOnTheScreen();
+    });
+
+    it("should give way to a limit's notice with the field off", async () => {
+      mockAssistant.status = unreadStatus();
+      const rendered = await renderSheet();
+      await userSetup().type(screen.getByLabelText("Message"), "Log a banana");
+
+      statusRead({ code: "plus" });
+      await rendered.rerender(sheetTree());
+
+      expect(
+        screen.queryByRole("status", { name: "Loading your conversation" }),
+      ).not.toBeOnTheScreen();
+      expect(screen.getByLabelText("Message")).toHaveProp("editable", false);
+      expect(screen.getByRole("button", { name: "Send" })).toBeDisabled();
     });
 
     it("should treat a status that could not be read as open, because the turn stays the authority", async () => {
@@ -360,6 +432,10 @@ describe("the assistant sheet's access states", () => {
       await renderSheet();
 
       expect(screen.getByLabelText("Message")).toBeOnTheScreen();
+      expect(
+        screen.queryByRole("status", { name: "Loading your conversation" }),
+      ).not.toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Copy yesterday to today" })).toBeOnTheScreen();
     });
 
     it("should stop waiting after the first failed read, which is retried for seconds", async () => {
@@ -367,12 +443,16 @@ describe("the assistant sheet's access states", () => {
       await renderSheet();
 
       expect(screen.getByLabelText("Message")).toBeOnTheScreen();
+      expect(
+        screen.queryByRole("status", { name: "Loading your conversation" }),
+      ).not.toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Copy yesterday to today" })).toBeOnTheScreen();
     });
 
     it("should stop waiting offline for a status that was never read", async () => {
       mockAssistant.status = unreadStatus();
       await renderSheet();
-      expect(sheetWords()).toEqual(headerWords);
+      expect(screen.getByRole("status", { name: "Loading your conversation" })).toBeOnTheScreen();
 
       await act(() => {
         onlineManager.setOnline(false);
@@ -380,6 +460,10 @@ describe("the assistant sheet's access states", () => {
 
       expect(screen.getByLabelText("Message")).toHaveProp("editable", false);
       expect(screen.getByPlaceholderText("Needs a connection")).toBeOnTheScreen();
+      expect(
+        screen.queryByRole("status", { name: "Loading your conversation" }),
+      ).not.toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Copy yesterday to today" })).toBeOnTheScreen();
     });
   });
 
@@ -608,6 +692,10 @@ const liveWithNotice = (notice: AssistantNotice): AssistantLiveTurn => ({
   clarify: null,
   confirm: null,
   answerMeta: null,
+  link: null,
+  exerciseMuscles: [],
+  exerciseFormMedia: [],
+  askAgain: false,
   status: null,
   notice,
   stopped: false,

@@ -14,7 +14,7 @@ import {
   recipeSchema,
   storedRecipeIngredientSchema,
 } from "../../src/recipes";
-import { buildFood } from "../../src/testing";
+import { buildBucketAndFriesRecipe, buildFood } from "../../src/testing";
 
 const food = buildFood();
 const snapshot = buildFoodSnapshot(food, { quantity: 150, unit: "g" });
@@ -281,6 +281,35 @@ describe("storedRecipeIngredientSchema", () => {
   });
 });
 
+describe("an ingredient with no weight (ADR 0003, Amendment 19)", () => {
+  const [bucket] = buildBucketAndFriesRecipe().ingredients;
+  if (bucket === undefined) {
+    throw new Error("The recipe must have a bucket");
+  }
+
+  it("should accept a food per portion with 0 grams, counted in portions", () => {
+    expect(recipeIngredientSchema.safeParse(bucket).success).toBe(true);
+    expect(storedRecipeIngredientSchema.safeParse({ ...bucket, position: 0 }).success).toBe(true);
+  });
+
+  it("should refuse a food per portion with grams", () => {
+    expect(recipeIngredientSchema.safeParse({ ...bucket, resolved_grams: 100 }).success).toBe(
+      false,
+    );
+  });
+
+  it("should still refuse 0 grams for a food with a weight", () => {
+    expect(
+      recipeIngredientSchema.safeParse({
+        ...validIngredient,
+        quantity: 0,
+        resolved_grams: 0,
+        snapshot: buildFoodSnapshot(food, { quantity: 0, unit: "g" }),
+      }).success,
+    ).toBe(false);
+  });
+});
+
 describe("recipeComputedSchema", () => {
   const computed = {
     total: { ...noNutrients, kcal: 1496.8 },
@@ -292,7 +321,15 @@ describe("recipeComputedSchema", () => {
   };
 
   it("should accept the cache of a recipe", () => {
-    expect(recipeComputedSchema.parse(computed)).toEqual(computed);
+    expect(recipeComputedSchema.parse(computed)).toEqual({ ...computed, servingsOnly: false });
+  });
+
+  it("should read a cache written before servings only existed as not servings only", () => {
+    expect(recipeComputedSchema.parse(computed).servingsOnly).toBe(false);
+  });
+
+  it("should keep servings only when the cache says it", () => {
+    expect(recipeComputedSchema.parse({ ...computed, servingsOnly: true }).servingsOnly).toBe(true);
   });
 
   it("should accept the cache of a recipe with no ingredients", () => {

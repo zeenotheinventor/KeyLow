@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { View } from "react-native";
 
 import { Banner } from "../Banner";
@@ -6,7 +5,6 @@ import { FoodRow } from "../FoodRow";
 import { ListRow } from "../ListRow";
 import { GroupedList } from "./GroupedList";
 
-import type { GroupedListProps } from "./types";
 import type { Meta, StoryObj } from "@storybook/react-native";
 
 const meta = {
@@ -85,31 +83,6 @@ function foodRows(count: number) {
 export const Default: Story = {
   render: (args) => <GroupedList {...args}>{foodRows(3)}</GroupedList>,
 };
-
-function RevealingGroupedList(props: GroupedListProps) {
-  const [isRevealed, setIsRevealed] = useState(false);
-
-  return (
-    <GroupedList
-      {...props}
-      seeMore={
-        isRevealed
-          ? undefined
-          : {
-              hiddenCount: 1,
-              onPress: () => {
-                setIsRevealed(true);
-              },
-            }
-      }
-    >
-      {foodRows(isRevealed ? 3 : 2)}
-    </GroupedList>
-  );
-}
-
-// Two of the three rows are shown and "See 1 more" reveals the rest, after which the button goes.
-export const WithSeeMore: Story = { render: (args) => <RevealingGroupedList {...args} /> };
 
 // A group with a title and no source, of plain rows.
 export const TitleOnly: Story = {

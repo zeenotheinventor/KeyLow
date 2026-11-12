@@ -26,13 +26,20 @@ import type { ReportError } from "../_shared/report.ts";
 import type { CompactionState, TurnStore } from "./turnStore.ts";
 import type { UsageToRecord } from "./usage.ts";
 
-// A prompt of exactly this many tokens is not compacted, one more is.
-const DEFAULT_COMPACT_AT_TOKENS = 20_000;
+// A prompt of exactly this many tokens is not compacted, one more is. The prompt of a call is the tools, the
+// system prompt and the conversation, so the tools and the system prompt come off this figure before the
+// conversation gets any room. They are about 26,400 tokens now, which leaves about 19,600 for the
+// conversation. It was 42,000 until KEY-964 (the tool and prompt text was not trimmed, so the room comes from here), 40,000 until KEY-952 added the Training questions section, and
+// 20,000 before KEY-927, when they were the whole of it and every turn compacted.
+// `promptPrefix.test.ts` fails when the prefix passes 60 % of this figure.
+export const DEFAULT_COMPACT_AT_TOKENS = 46_000;
 
-// The background call has no turn deadline around it. A note for 20,000 tokens of prompt takes a few seconds
-// on Haiku, so 30 s is several times what it needs and short enough that the worker (150 s on the free plan)
-// is not held for long. The call is made once: a failed one is tried again by the next complete turn, which is
-// cheaper than a retry that holds the worker.
+// The background call has no turn deadline around it. Its input is the conversation since the last note and
+// not the tools or the system prompt, so normally about 17,000 tokens for a prompt at the threshold, and its
+// output stops at COMPACTION_MAX_TOKENS (2,000), so a note takes several seconds on Haiku. 30 s is several
+// times what it needs and short enough that the worker (150 s on the free plan) is not held for long. The
+// call is made once: a failed one is tried again by the next complete turn, which is cheaper than a retry
+// that holds the worker.
 export const COMPACTION_TIMEOUT_MILLISECONDS = 30_000;
 
 // What a compaction must not start without: its own timeout still inside the worker's wall clock.

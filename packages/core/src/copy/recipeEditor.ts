@@ -81,6 +81,9 @@ export const RECIPE_PROBLEMS = {
   servingsTooMany: `Enter ${formatScaledCount(MAX_RECIPE_SERVINGS)} servings or fewer.`,
   cookedWeight: "Enter a cooked weight above 0, or leave it blank.",
   cookedWeightTooLarge: `Enter ${formatScaledCount(MAX_RECIPE_YIELD_GRAMS)} g or less.`,
+  /** A recipe holding a food per portion has no weight, so a cooked weight is refused (ADR 0003, Amendment 19). */
+  cookedWeightWithRestaurantFood:
+    "Remove the cooked weight. A recipe with a restaurant food is logged by servings.",
   noIngredient: "Add at least one ingredient.",
   /** The caption under the disabled Add ingredient row. */
   ingredientLimit: `Up to ${formatScaledCount(MAX_RECIPE_INGREDIENTS)} ingredients`,
@@ -124,6 +127,8 @@ export const describeRecipeProblem = (problem: RecipeDraftProblem): string => {
       return RECIPE_PROBLEMS.cookedWeight;
     case "cooked_weight_too_large":
       return RECIPE_PROBLEMS.cookedWeightTooLarge;
+    case "cooked_weight_with_food_per_portion":
+      return RECIPE_PROBLEMS.cookedWeightWithRestaurantFood;
     case "ingredients_none":
       return RECIPE_PROBLEMS.noIngredient;
     case "ingredients_too_many":
@@ -157,9 +162,9 @@ export const describeCookedWeightHelper = (
   return `${explanation} (${formatGroupedGrams(Math.round(totalGrams))} g).`;
 };
 
-/** The caption on the right of the Per serving card: "Per serving (275 g)". */
-export const describeRecipePerServing = (servingGrams: number): string =>
-  `${PER_SERVING} (${formatGroupedGrams(servingGrams)} g)`;
+/** The caption on the right of the Per serving card: "Per serving (275 g)", or "Per serving" for a recipe with no weight. */
+export const describeRecipePerServing = (servingGrams: number | null): string =>
+  servingGrams === null ? PER_SERVING : `${PER_SERVING} (${formatGroupedGrams(servingGrams)} g)`;
 
 /**
  * The line under the card's tiles: "Per 100 g cooked: 136 kcal", or "Per 100 g raw: 208 kcal" when the
@@ -295,6 +300,7 @@ export const problemSentences = (problems: readonly RecipeDraftProblem[]): Probl
         break;
       case "cooked_weight_invalid":
       case "cooked_weight_too_large":
+      case "cooked_weight_with_food_per_portion":
         sentences.cookedWeight ??= sentence;
         break;
       case "ingredients_none":

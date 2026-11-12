@@ -1,4 +1,5 @@
--- Asserts the fourth food source of KEY-757: public.food_source lists usda after off, cofid and user,
+-- Asserts the fourth food source of KEY-757: public.food_source lists usda after off, cofid and user (and
+-- restaurant after it since KEY-939),
 -- a usda row is a global row (a source_ref, no owner), and a usda row with an owner is refused by the
 -- same frozen rule that keeps cofid and off rows ownerless.
 --
@@ -12,8 +13,8 @@ select plan(4);
 select enum_has_labels(
   'public',
   'food_source',
-  array['off', 'cofid', 'user', 'usda'],
-  'food_source is off, cofid, user and usda'
+  array['off', 'cofid', 'user', 'usda', 'restaurant'],
+  'food_source is off, cofid, user, usda and restaurant'
 );
 
 select lives_ok(

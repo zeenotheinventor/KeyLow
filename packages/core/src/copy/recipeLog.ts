@@ -2,7 +2,7 @@ import {
   describeOneServing,
   describeSpokenGrams,
   describeSpokenNutrients,
-  gramsOfOneServing,
+  describeSpokenOneServing,
 } from "./recipeWording";
 import { nutrientsOfRecipeSnapshot } from "../diary/recipeSnapshotQuantity";
 import { formatGroupedGrams } from "../format/groupedGrams";
@@ -43,7 +43,7 @@ export const describeRecipeServing = (recipe: RecipeServings): string => describ
 export const describeRecipeLoggedAmount = (amount: RecipeAmountWording): string =>
   amount.unit === "g"
     ? `${formatGroupedGrams(amount.quantity)} g`
-    : `${formatScaledCount(amount.quantity)} ${describeServingSuffix(amount.quantity)} (${formatGroupedGrams(amount.resolvedGrams)} g)`;
+    : `${formatScaledCount(amount.quantity)} ${describeServingSuffix(amount.quantity)}${amount.resolvedGrams === 0 ? "" : ` (${formatGroupedGrams(amount.resolvedGrams)} g)`}`;
 
 /** The hero's caption: "For 1 serving (275 g)", "For 1.5 servings (413 g)" or "For 300 g". */
 export const describeRecipeAmountBasis = (amount: RecipeAmountWording): string =>
@@ -59,6 +59,10 @@ export const describeRecipeYield = (servings: number, yieldGrams: number | null)
       ? "no cooked weight"
       : `${formatGroupedGrams(Math.round(yieldGrams))} g cooked`
   }`;
+
+/** The yield line of a recipe that is servings only, which has no weight to give: "Makes 4". */
+export const describeServingsOnlyYield = (servings: number): string =>
+  `Makes ${formatScaledCount(servings)}`;
 
 /** The heading of the per 100 g card: the grams are of the cooked dish, or of the raw ingredients without a cooked weight. */
 export const describeRecipePer100Heading = (yieldGrams: number | null): string =>
@@ -93,7 +97,7 @@ export const describeRecipeSearchRowName = (
   [
     name,
     "recipe",
-    `1 serving ${describeSpokenGrams(gramsOfOneServing(recipe))}`,
+    describeSpokenOneServing(recipe),
     describeSpokenNutrients(recipe.computed.perServing),
     ...(choosesAmount ? ["choose amount"] : []),
   ].join(", ");
@@ -110,7 +114,7 @@ export const describeRecipeLoggedRowName = (
   const amount =
     snapshot.unit === "g"
       ? describeSpokenGrams(snapshot.quantity)
-      : `${formatScaledCount(snapshot.quantity)} ${describeServingSuffix(snapshot.quantity)} ${describeSpokenGrams(snapshot.resolvedGrams)}`;
+      : `${formatScaledCount(snapshot.quantity)} ${describeServingSuffix(snapshot.quantity)}${snapshot.resolvedGrams === 0 ? "" : ` ${describeSpokenGrams(snapshot.resolvedGrams)}`}`;
 
   return [
     clockTime,

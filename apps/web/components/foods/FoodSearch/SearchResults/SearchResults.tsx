@@ -2,7 +2,7 @@
 
 import { MIN_SEARCH_LENGTH, useFoodSearch } from "@keylow/api-client";
 import {
-  OPEN_FOOD_FACTS_BUSY,
+  SEARCH_RATE_LIMITED,
   OPEN_FOOD_FACTS_SEARCH_FAILED,
   SEARCH_EMPTY,
   SEARCH_FAILED_WEB,
@@ -42,7 +42,7 @@ function limitsFor(
 
 function OpenFoodFactsNotice({ error }: { error: FoodSearchOffError }) {
   return error.kind === "rate_limited" ? (
-    <Banner tone="info" icon={CloudOff} title={OPEN_FOOD_FACTS_BUSY}>
+    <Banner tone="info" icon={CloudOff} title={SEARCH_RATE_LIMITED}>
       {describeRateLimit(error.retryAfterSeconds)}
     </Banner>
   ) : (

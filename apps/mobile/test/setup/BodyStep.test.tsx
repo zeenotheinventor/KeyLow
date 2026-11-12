@@ -1,10 +1,7 @@
+import { initialSetupWizardState, setupWizardReducer } from "@keylow/core/setup";
 import { cleanup, fireEvent, render, screen, userEvent } from "@testing-library/react-native";
 import { useReducer } from "react";
 
-import {
-  initialSetupWizardState,
-  setupWizardReducer,
-} from "../../components/SetupScreen/setupDraftReducer";
 import { BodyStep } from "../../components/SetupScreen/steps/BodyStep";
 import { ThemeProvider } from "../../lib/theme";
 import { compileKitStyles } from "../support/kitStyles";

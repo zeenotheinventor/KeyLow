@@ -8,6 +8,8 @@ import { renderWithRouter } from "../ui/appRouter";
 import type { ExerciseMuscleEntry } from "@keylow/core/schemas";
 import type { ReactElement } from "react";
 
+import { ToastProvider } from "@/components/ui/Toast";
+
 type Row = Record<string, unknown>;
 
 /** What the session detail reads of a fake database, and how it answers. */
@@ -21,7 +23,37 @@ export const detailBackend: {
   hung: boolean;
   /** The tables read, in order. */
   reads: string[];
-} = { sessions: [], weightUnit: "kg", failing: false, hung: false, reads: [] };
+  /** The writes made, in order: the table or function, the verb and the body. */
+  writes: { target: string; method: string; body: Row }[];
+  /** Fails every write with a database error. */
+  failingWrites: boolean;
+  /** Holds every write until it is released, as a slow connection does. */
+  writeGate: Promise<void> | null;
+  /** The exercises the picker and the set write can read, by id. */
+  exercises: Row[];
+  /** The sets of earlier sessions that the last-time read answers with, whatever exercise it asks for. */
+  lastTime: Row[];
+  /** Fails the last-time read with a database error. */
+  failingLastTime: boolean;
+  /** When set, the count of live sets the session is said to hold, whatever it holds. */
+  liveSetCount: number | null;
+  /** The bodies of the sets inserted, in order. */
+  inserts: Row[];
+} = {
+  sessions: [],
+  weightUnit: "kg",
+  failing: false,
+  hung: false,
+  reads: [],
+  writes: [],
+  failingWrites: false,
+  writeGate: null,
+  exercises: [],
+  lastTime: [],
+  failingLastTime: false,
+  liveSetCount: null,
+  inserts: [],
+};
 
 export function resetDetailBackend(): void {
   detailBackend.sessions = [];
@@ -29,7 +61,18 @@ export function resetDetailBackend(): void {
   detailBackend.failing = false;
   detailBackend.hung = false;
   detailBackend.reads = [];
+  detailBackend.writes = [];
+  detailBackend.failingWrites = false;
+  detailBackend.writeGate = null;
+  detailBackend.exercises = [];
+  detailBackend.lastTime = [];
+  detailBackend.failingLastTime = false;
+  detailBackend.liveSetCount = null;
+  detailBackend.inserts = [];
+  insertedCount = 0;
 }
+
+let insertedCount = 0;
 
 const idWith = (group: number, n: number): string =>
   `0000000${group}-0000-4000-8000-${String(n).padStart(12, "0")}`;
@@ -116,9 +159,72 @@ const jsonResponse = (body: unknown, status = 200): Response =>
     headers: { "Content-Type": "application/json" },
   });
 
+const isRow = (value: unknown): value is Row =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const liveSets = (session: Row): Row[] =>
+  (Array.isArray(session["workout_sets"]) ? session["workout_sets"] : []).filter(
+    (set): set is Row => isRow(set) && set["deleted_at"] === null,
+  );
+
+const allSets = (): Row[] =>
+  detailBackend.sessions.flatMap((session) =>
+    Array.isArray(session["workout_sets"]) ? session["workout_sets"].filter(isRow) : [],
+  );
+
+/** The writes: a set changed, removed or restored, and a session deleted. They change the rows the reads answer from. */
+async function write(request: Request, pathname: string, searchParams: URLSearchParams) {
+  const target = pathname.split("/").pop() ?? "";
+  const body: unknown = request.method === "GET" ? {} : await request.json();
+  detailBackend.writes.push({ target, method: request.method, body: isRow(body) ? body : {} });
+  await detailBackend.writeGate;
+  if (detailBackend.failingWrites) {
+    return jsonResponse(
+      { code: "XX000", message: "raw database text", details: null, hint: null },
+      500,
+    );
+  }
+  if (target === "workout_sets" && request.method === "POST" && isRow(body)) {
+    detailBackend.inserts.push(body);
+    insertedCount += 1;
+    const inserted = {
+      ...body,
+      id: idWith(8, insertedCount),
+      deleted_at: null,
+    };
+    const session = detailBackend.sessions.find((entry) => entry["id"] === body["session_id"]);
+    if (session !== undefined) {
+      const sets = Array.isArray(session["workout_sets"])
+        ? session["workout_sets"].filter(isRow)
+        : [];
+      session["workout_sets"] = [...sets, inserted];
+    }
+    return jsonResponse(inserted, 201);
+  }
+  if (target === "delete_workout_session" && isRow(body)) {
+    for (const session of detailBackend.sessions) {
+      if (session["id"] === body["p_session_id"]) {
+        session["deleted_at"] = "2026-10-14T09:00:00+00:00";
+      }
+    }
+    return jsonResponse(null);
+  }
+  const id = (searchParams.get("id") ?? "").replace("eq.", "");
+  const set = allSets().find((row) => row["id"] === id);
+  if (set === undefined || !isRow(body)) {
+    return jsonResponse({ code: "PGRST116", message: "no row", details: null, hint: null }, 406);
+  }
+  Object.assign(set, body);
+  const wantsObject = request.headers.get("accept")?.includes("vnd.pgrst.object") === true;
+  return jsonResponse(wantsObject ? set : [set]);
+}
+
 async function respond(input: string | URL | Request, init?: RequestInit): Promise<Response> {
   const request = new Request(input, init);
   const { pathname, searchParams } = new URL(request.url);
+  if (request.method !== "GET" && request.method !== "HEAD") {
+    return write(request, pathname, searchParams);
+  }
   detailBackend.reads.push(pathname.split("/").pop() ?? "");
   const wantsObject = request.headers.get("accept")?.includes("vnd.pgrst.object") === true;
   const answer = (rows: Row[]): Response => {
@@ -148,10 +254,45 @@ async function respond(input: string | URL | Request, init?: RequestInit): Promi
     }
     const id = (searchParams.get("id") ?? "").replace("eq.", "");
     return answer(
-      detailBackend.sessions.filter(
-        (session) => session["id"] === id && session["deleted_at"] === null,
-      ),
+      detailBackend.sessions
+        .filter((session) => session["id"] === id && session["deleted_at"] === null)
+        .map((session) => ({ ...session, workout_sets: liveSets(session) })),
     );
+  }
+  if (pathname.endsWith("/workout_sets")) {
+    // A restore or an added set counts the session's live sets first, and reads the highest position.
+    if (searchParams.get("select") === "position") {
+      const live = detailBackend.sessions.flatMap(liveSets);
+      const highestFirst = [...live].sort((a, b) => Number(b["position"]) - Number(a["position"]));
+      return new Response(
+        JSON.stringify(highestFirst.slice(0, 1).map((row) => ({ position: row["position"] }))),
+        {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json",
+            "Content-Range": `0-0/${detailBackend.liveSetCount ?? live.length}`,
+          },
+        },
+      );
+    }
+    if (searchParams.has("exercise_id")) {
+      return detailBackend.failingLastTime
+        ? jsonResponse(
+            { code: "XX000", message: "raw database text", details: null, hint: null },
+            500,
+          )
+        : jsonResponse(detailBackend.lastTime);
+    }
+    const id = (searchParams.get("id") ?? "").replace("eq.", "");
+    return answer(allSets().filter((row) => row["id"] === id));
+  }
+  if (pathname.endsWith("/exercises")) {
+    // A search is answered with every exercise the test set, whatever was typed.
+    if (searchParams.has("name")) {
+      return jsonResponse(detailBackend.exercises);
+    }
+    const id = (searchParams.get("id") ?? "").replace("eq.", "");
+    return answer(detailBackend.exercises.filter((exercise) => exercise["id"] === id));
   }
   return jsonResponse({ message: "unexpected request" }, 404);
 }
@@ -168,7 +309,7 @@ export function renderWithDetail(ui: ReactElement) {
 
   return renderWithRouter(
     <KeyLowProvider client={client} queryClient={queryClient}>
-      {ui}
+      <ToastProvider>{ui}</ToastProvider>
     </KeyLowProvider>,
   );
 }

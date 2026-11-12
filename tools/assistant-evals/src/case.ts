@@ -1,7 +1,17 @@
 import type { EvalSetName } from "./thresholds.ts";
 import type { EvalDatabase, RowQuery, TurnResult } from "./types.ts";
 
-export type GradeOutcome = Readonly<{ passed: boolean; reason: string }>;
+export type GradeOutcome = Readonly<{
+  passed: boolean;
+  reason: string;
+  /** A failed critical outcome fails its whole set, whatever the set's percentage (see `EvalCase.mustPass`). */
+  critical?: true;
+  /**
+   * A failed soft outcome counts as a miss in the set's percentage, and does not make a must-pass case a missed
+   * must-pass. It is for a rule of style, such as the first person, whose slip harms nobody.
+   */
+  soft?: true;
+}>;
 
 /** What a grader reads: the turns of one case, in order, and the database as the eval user. */
 export type GradeContext = Readonly<{
@@ -15,19 +25,35 @@ export type Grader = (context: GradeContext) => Promise<GradeOutcome>;
 /** One earlier turn of a seeded conversation: the person's words and the assistant's reply, as plain text. */
 export type SeedTurn = Readonly<{ user: string; assistant: string }>;
 
+/**
+ * What the Undo route answers for one action: `undone`, or why it did not undo (`already_undone`,
+ * `undo_unavailable`, `not_found`).
+ */
+export type UndoOutcome = "undone" | "already_undone" | "undo_unavailable" | "not_found";
+
 /** What a case may do besides send messages, for the eval user of the run. */
 export type CaseEnvironment = Readonly<{
   /** Stores complete, text-only turns as a new conversation of the eval user and answers its id. */
   seedConversation: (turns: readonly SeedTurn[]) => Promise<string>;
   /** Resolves once the conversation has a compaction note, and rejects when none is stored in time. */
   waitForCompaction: (conversationId: string) => Promise<void>;
+  /**
+   * Presses Undo, as the app's card does, for every action the turn wrote, and answers the outcome of each in
+   * the order they were written. A turn that wrote nothing answers an empty list.
+   */
+  undoTurn: (turnId: string) => Promise<readonly UndoOutcome[]>;
+  /** Puts the eval user's calorie and macro targets back to what the run started with. */
+  restoreTargets: () => Promise<void>;
 }>;
 
 export type EvalCase = Readonly<{
   id: string;
   set: EvalSetName;
-  /** Runs before the first message and answers the conversation it goes into. Left out, the first message opens one. */
-  setup?: (environment: CaseEnvironment) => Promise<string>;
+  /**
+   * Runs before the first message and answers the conversation it goes into, or null when the case only needs
+   * something started (such as the page server) and the first message should open one. Left out, the same.
+   */
+  setup?: (environment: CaseEnvironment) => Promise<string | null>;
   /** Runs after each turn has been read, for a case that must wait for something before its next message. */
   afterTurn?: (
     turn: Readonly<{ index: number; result: TurnResult }>,
@@ -37,6 +63,22 @@ export type EvalCase = Readonly<{
   messages: readonly [string, ...string[]];
   /** The case passes when every grader passes. */
   expect: readonly Grader[];
+  /**
+   * True when a miss of this case, whether it fails, errors or is not run, fails its set whatever the set's
+   * percentage. The set's other cases still count towards the percentage.
+   */
+  mustPass?: true;
+  /**
+   * Runs before the case's ceiling starts, and so outside it, for work that is slow and that every later case
+   * shares (writing a history). A failure ends the case in error. It runs once for each case, so it has to do
+   * nothing when it has run before.
+   */
+  prepare?: () => Promise<void>;
+  /**
+   * Runs after the graders, and also when a turn failed, so a case that wrote to rows the other sets read
+   * (today's diary, the targets) puts them back. It gets the turns sent so far.
+   */
+  cleanUp?: (turns: readonly TurnResult[], environment: CaseEnvironment) => Promise<void>;
 }>;
 
 const pass = (reason: string): GradeOutcome => ({ passed: true, reason });
@@ -60,7 +102,7 @@ export function toolCalled(name: string, matchesArguments?: (input: unknown) => 
   };
 }
 
-/** Passes when no tool that writes was called. A tool with no `readOnlyHint` counts as one that writes. */
+/** Passes when no tool that writes was called. The HTTP driver sets no `readOnlyHint`, so sets use a name set (`onlyTheseTools`). */
 export function noWrite(): Grader {
   return (context) => {
     const write = context.turns
@@ -162,7 +204,8 @@ export const refused = (): Grader => lastTurnEnded("refused");
 /**
  * Passes when the first model call of the second turn read from the prompt cache (`cache_read_input_tokens`
  * above 0 in `assistant_usage`). Later calls of a turn's tool rounds read the cache of the call before them, so
- * only the first call shows whether the conversation's prefix was cached.
+ * only the first call shows whether the conversation's prefix was cached. The press of a confirm button makes no
+ * model call (KEY-840) and so has no row, which fails here. Grade a turn that asks the model instead.
  */
 export function cacheReadOnSecondTurn(): Grader {
   return async (context) => {

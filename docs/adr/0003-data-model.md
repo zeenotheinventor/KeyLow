@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted, 2026-09-22. Amendment 1 appended 2026-10-07. Amendment 2 appended 2026-10-15. Amendment 3 appended 2026-10-15. Amendment 4 appended 2026-10-15. Amendment 5 appended 2026-10-15. Amendment 6 appended 2026-10-15. Amendment 7 appended 2026-10-15. Amendment 8 appended 2026-10-16. Amendment 9 appended 2026-10-18. Amendment 10 appended 2026-10-23. Amendment 11 appended 2026-10-23. Amendment 12 appended 2026-10-23. Amendment 13 appended 2026-10-23. Amendment 14 appended 2026-10-26, with addenda of 2026-11-03. Amendment 15 appended 2026-10-29.
+Accepted, 2026-09-22. Amendment 1 appended 2026-10-07. Amendment 2 appended 2026-10-15. Amendment 3 appended 2026-10-15. Amendment 4 appended 2026-10-15. Amendment 5 appended 2026-10-15. Amendment 6 appended 2026-10-15. Amendment 7 appended 2026-10-15. Amendment 8 appended 2026-10-16. Amendment 9 appended 2026-10-18. Amendment 10 appended 2026-10-23. Amendment 11 appended 2026-10-23. Amendment 12 appended 2026-10-23. Amendment 13 appended 2026-10-23. Amendment 14 appended 2026-10-26, with addenda of 2026-11-03 and 2026-11-07. Amendment 15 appended 2026-10-29. Amendment 16 appended 2026-11-10. Amendment 17 appended 2026-11-10. Amendment 18 appended 2026-11-10. Amendment 19 appended 2026-11-11. Amendment 20 appended 2026-11-11.
 
 ## Context
 
@@ -51,11 +51,12 @@ Every new table carries these two columns, with these exact definitions:
 - `id uuid primary key default gen_random_uuid()`
 - `created_at timestamptz not null default now()`
 
-There are three exceptions (the third was added with the diary migration, KEY-181):
+There are four exceptions (the third was added with the diary migration, KEY-181, and the fourth with the Open Food Facts search store, Amendment 16):
 
 - `food_source_data` is keyed by `food_id` and has no `id`.
 - `rate_limits` has the composite primary key `(bucket, window_start)` and has neither `id` nor `created_at`.
 - `day_logs` has the frozen primary key `(user_id, local_date)` and so has no `id`. It keeps `created_at`.
+- `off_search_results` has the natural key `query_key` and has neither `id` nor `created_at` (Amendment 16).
 
 There is no `updated_at` on any table, matching `profiles`.
 
@@ -218,12 +219,12 @@ New function `public.consume_rate_limit(p_bucket text, p_max integer, p_window_s
 
 Limits are not stored in the database. They live in Edge Function environment variables with defaults in code, so they can be retuned without a migration (decision Q7):
 
-| Environment variable           | Default per minute |
-| ------------------------------ | ------------------ |
-| `OFF_SEARCH_PER_USER_PER_MIN`  | 4                  |
-| `OFF_SEARCH_GLOBAL_PER_MIN`    | 8                  |
-| `OFF_PRODUCT_PER_USER_PER_MIN` | 30                 |
-| `OFF_PRODUCT_GLOBAL_PER_MIN`   | 80                 |
+| Environment variable           | Default per minute        |
+| ------------------------------ | ------------------------- |
+| `OFF_SEARCH_PER_USER_PER_MIN`  | 30 (was 4, Amendment 16)  |
+| `OFF_SEARCH_GLOBAL_PER_MIN`    | 120 (was 8, Amendment 16) |
+| `OFF_PRODUCT_PER_USER_PER_MIN` | 30                        |
+| `OFF_PRODUCT_GLOBAL_PER_MIN`   | 80                        |
 
 ### Migration file naming and the schema lane
 
@@ -553,7 +554,7 @@ Recorded on 2026-10-15 under KEY-60. It replaces the three separate writes the `
 - that the database, not the caller, sets `fetched_at`, and from the statement clock (`clock_timestamp()`), not the transaction start;
 - that the writers of one barcode are serialised by the row lock of the food upsert, with no advisory lock, and that the portions are replaced by delete and insert and not by a diff;
 - that a payload which is not an object, is not an `off` food, has an owner, has no `source_ref` or has more than one default portion is refused with `22023` before anything is written, and that every other bad value is left to the table's own check;
-- that an empty portions array is valid and clears the food's portions, and a null one is refused;
+- that an empty portions array is valid and clears the food's portions, and a null one is refused (superseded by Amendment 17: an empty array, or one with no default, is refused too);
 - that `execute` is held by `service_role` alone;
 - that the stale-refresh claim stays in the Edge Function.
 
@@ -1215,7 +1216,7 @@ Recorded on 2026-10-23 under KEY-521, part of KEY-516. It adds a rule to the `of
 
 ### The rule
 
-Portions are written when an Open Food Facts product is stored, so a product stored before the pack portion (KEY-518) and the borrowed natural units (KEY-520) lacks them. Core exports `OFF_PORTION_RULES_FROM`, an ISO instant, and `isBeforePortionRules(fetchedAt)`, which is true when the fetch time is before it or cannot be parsed. The constant is `2026-10-23T02:16:15Z`: the moment the Deploy Supabase run for KEY-520, which also carried KEY-518, completed in production.
+Portions are written when an Open Food Facts product is stored, so a product stored before the pack portion (KEY-518) and the borrowed natural units (KEY-520) lacks them. Core exports `OFF_PORTION_RULES_FROM`, an ISO instant, and `isBeforePortionRules(fetchedAt)`, which is true when the fetch time is before it or cannot be parsed. The constant is `2026-10-23T02:16:15Z`: the moment the Deploy Supabase run for KEY-520, which also carried KEY-518, completed in production. It was moved to `2026-11-10T16:25:42Z` under KEY-932, the moment the Deploy Supabase run for KEY-930 completed, as "Changing the portion rules" below describes.
 
 When `off-product` finds a cached food with `isBeforePortionRules(fetched_at)`, it fetches and stores the product inline, with the same call a first lookup makes, and charges the user and the global bucket as a first lookup does. The response carries the new portions and the new `fetched_at`. The store sets `fetched_at` from the database clock, which is after the constant, so each product is fetched again once. Re-requesting the product also brings its `packaging_tags`, so a refreshed product gets the best pack name.
 
@@ -1859,7 +1860,7 @@ Recorded on 2026-10-26 under KEY-662, part of KEY-185 (the M8 brief, with its Am
 - that the 10 slots of a turn count write tool calls and not rows, and the two columns of `assistant_actions` that make that work (`target_ids` and `target_local_date`).
 - that `assistant_messages` carries a `seq` per conversation for ordering.
 - the privileges, the policies, the view's column names and the definition of `assistant_spend_this_month()` as a calendar month in UTC.
-- that `assistant_consent_version` holds the `TERMS_VERSION` the person saw when they switched the assistant on.
+- that `assistant_consent_version` holds the `TERMS_VERSION` the person saw when they switched the assistant on (changed on 2026-11-07, see the addendum of that date).
 - the column grants on `profiles` and `recipes` that carry the three new columns.
 - the export and account deletion contract and the health data rules.
 - that `TERMS_VERSION` does not change here (KEY-663 changes it).
@@ -1916,7 +1917,7 @@ Decided by the author of this amendment on reading the tickets and the plan, 202
 | `user_id`              | `uuid not null references auth.users (id) on delete cascade`.                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | `user_message_id`      | `uuid not null`. The id of the user's message in `assistant_messages` that started the turn. No foreign key, because that row names this turn and a key each way would make the tables reference each other. The writer generates the id, stores the turn first, then the message.                                                                                                                                                                                                                 |
 | `status`               | `text not null default 'open'`. Check: `status in ('open', 'complete', 'clarify', 'confirm', 'stopped', 'failed', 'refused')`. `open` while the turn runs. `complete` when it ended with an answer or a card, `clarify` when it ended with a question, `confirm` when it ended asking for a confirmation, `stopped` when the request was aborted, `failed` when an error ended it, and `refused` when the model stopped with a refusal. Both `failed` and `refused` send the `turn_failed` notice. |
-| `pending_confirmation` | `jsonb`, nullable. The confirmation the turn is waiting on, as data: its id, the tool name and a hash of the input (KEY-670), and no health value. Null otherwise.                                                                                                                                                                                                                                                                                                                                 |
+| `pending_confirmation` | `jsonb`, nullable. The confirmation the turn is waiting on, as data: its id, the tool name, a hash of the input (KEY-670) and the words of the confirm button (`confirm_label`, such as "Delete 2 entries", fixed words and a count of rows), and no health value. Null otherwise.                                                                                                                                                                                                                 |
 | `created_at`           | `timestamptz not null default now()`. The `mcp` function's turn binding measures its 5 minutes from here.                                                                                                                                                                                                                                                                                                                                                                                          |
 | `finished_at`          | `timestamptz`, nullable. Null while the turn is open.                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 
@@ -2014,7 +2015,7 @@ Decided by the author of this amendment on reading the tickets and the plan, 202
 
 ### `profiles` and `recipes`
 
-- `profiles.assistant_consent_at timestamptz` and `profiles.assistant_consent_version text`, both nullable and both null for every existing and new profile, so the assistant is off by default. A check, in the style of `profiles_terms_acceptance_paired` (Amendment 3), requires `(assistant_consent_at is null) = (assistant_consent_version is null)`. The version is the `TERMS_VERSION` the person saw when they switched the assistant on. The owner sets both to turn the assistant on and sets both to null to turn it off. The database does not know which version is current, as in Amendment 3. Unlike the terms columns of Amendment 3, which only the trigger and `accept_terms` write, these are written by the owner's client with the client's clock (a deliberate departure, orchestrator decision, 2026-10-26). Consent here only gates the person's own use of the assistant, so a client that claims a consent it did not give harms nobody but that person.
+- `profiles.assistant_consent_at timestamptz` and `profiles.assistant_consent_version text`, both nullable and both null for every existing and new profile, so the assistant is off by default. A check, in the style of `profiles_terms_acceptance_paired` (Amendment 3), requires `(assistant_consent_at is null) = (assistant_consent_version is null)`. The version is the `TERMS_VERSION` the person saw when they switched the assistant on (changed on 2026-11-07, see the addendum of that date). The owner sets both to turn the assistant on and sets both to null to turn it off. The database does not know which version is current, as in Amendment 3. Unlike the terms columns of Amendment 3, which only the trigger and `accept_terms` write, these are written by the owner's client with the client's clock (a deliberate departure, orchestrator decision, 2026-10-26). Consent here only gates the person's own use of the assistant, so a client that claims a consent it did not give harms nobody but that person.
 - **Column grants.** Amendment 3 made the `profiles` column lists explicit, and a column added later is not writable until its migration grants it. KEY-666 adds the two consent columns to the `update` grant on `profiles` for `authenticated`, and not to `insert`, because the signup trigger creates the row with both null. The existing `profiles_update_own` policy applies unchanged.
 - `recipes.source_url text`, nullable, with the check `source_url is null or source_url ~ '^https?://'`, which refuses a `javascript:` address. It holds the page a recipe was imported from (Q3), since `recipes.notes` no longer exists (Amendment 8). The `recipes` grants are explicit column lists too, so KEY-666 adds `source_url` to both the `insert` and the `update` grant for `authenticated`, and the exact-privilege assertions in the recipes pgTAP change with it.
 - **`save_recipe` carries it (orchestrator decision, 2026-10-26).** Recipes are saved through `public.save_recipe(uuid, jsonb, jsonb)` (Amendment 8), which builds each column from named keys, so a column grant alone would leave `source_url` unwritable. KEY-666's migration replaces that function, same signature, so that it reads an optional `source_url` key from the recipe object, validates it against `^https?://`, and on update keeps the stored value when the key is absent, as `is_archived` behaves. An explicit JSON null on update clears the link, and on create means no link. An absent key keeps it on update. KEY-666's pgTAP asserts both. The recipes pgTAP is updated with it.
@@ -2040,7 +2041,7 @@ In the style of Amendments 9, 12 and 13: `revoke all` on each table from `anon`,
 
 ### Health data
 
-A conversation is health data: the text a person typed, what the tools returned (diary rows, weights, targets), and the compaction note. They are owner-only under RLS, never written to a log, an error message, a Sentry event or an analytics event, and never in a committed fixture (the eval user's diary is synthetic). A turn's `pending_confirmation` holds an id, a tool name and a hash and no health value. `assistant_actions` holds ids and one diary date, and `assistant_usage` holds counts, and neither holds a health value. Conversation text is sent to Anthropic as a processor, which the Privacy Policy names (KEY-663).
+A conversation is health data: the text a person typed, what the tools returned (diary rows, weights, targets), and the compaction note. They are owner-only under RLS, never written to a log, an error message, a Sentry event or an analytics event, and never in a committed fixture (the eval user's diary is synthetic). A turn's `pending_confirmation` holds an id, a tool name, a hash and the confirm button's words and no health value. `assistant_actions` holds ids and one diary date, and `assistant_usage` holds counts, and neither holds a health value. Conversation text is sent to Anthropic as a processor, which the Privacy Policy names (KEY-663).
 
 ### Export and account deletion
 
@@ -2072,7 +2073,7 @@ From ADR 0003, the decision (e) of KEY-185 (conversations stored per user, with 
 
 ### Addendum to Amendment 14 (`assistant_messages.display`, 2026-11-03)
 
-Recorded under the KEY-686 review. The executor puts only a tool's model-facing `data` in the `text` of a result, and the card, the confirmation, the citation and the estimate live in the structured outcome that never reaches the model, so the raw `content` of a stored message can never rebuild the thread. `assistant_messages` therefore gains `display jsonb null`. On the user-role message that carries `tool_result` blocks it is a map keyed by `tool_use_id`, `{ [toolUseId]: { card?, confirm?, citation?, estimate? } }`, where `confirm` is `{ confirmationId, question, confirmLabel, cancelLabel, tone }` from the executor's `needs_confirmation` outcome and the write tool's words. It is null on every other message and is never replayed to the model, so the prompt cache is unaffected. It is health data, like `content`. The service role already holds `select`, `insert` and `update` on the table and the owner `select` policy covers every column, so no grant or policy changes. The migration adds the column only, inserts no row and applies to any data. The turn loop (KEY-682) writes it with the message, and `useAssistantConversation` (KEY-686) reads it.
+Recorded under the KEY-686 review. The executor puts only a tool's model-facing `data` in the `text` of a result, and the card, the confirmation, the citation and the estimate live in the structured outcome that never reaches the model, so the raw `content` of a stored message can never rebuild the thread. `assistant_messages` therefore gains `display jsonb null`. On the user-role message that carries `tool_result` blocks it is a map keyed by `tool_use_id`, `{ [toolUseId]: { card?, confirm?, citation?, estimate?, undo? } }`, where `undo` is `{ actionId, previous, fingerprint }` from a training write's structured outcome (the previous value its Undo restores, ADR 0006, Amendment 1, added 2026-11-07), and `confirm` is `{ confirmationId, question, confirmLabel, cancelLabel, tone }` from the executor's `needs_confirmation` outcome and the write tool's words. It is null on every other message and is never replayed to the model, so the prompt cache is unaffected. It is health data, like `content`, and `undo` is the only place a previous value is kept: `assistant_actions` still holds ids and one date and never a value, and deleting a conversation deletes the value with it. The service role already holds `select`, `insert` and `update` on the table and the owner `select` policy covers every column, so no grant or policy changes. The migration adds the column only, inserts no row and applies to any data. The turn loop (KEY-682) writes it with the message, and `useAssistantConversation` (KEY-686) reads it.
 
 ### Addendum to Amendment 14 (`food_log_entries.updated_at`, 2026-11-03)
 
@@ -2081,6 +2082,10 @@ Recorded under KEY-688 (the assistant's diary write tools). This deviates from A
 `food_log_entries` therefore gains `updated_at timestamptz not null default now()`, set to `now()` by a `before update` trigger (`food_log_entries_stamp_updated_at`, security invoker, empty `search_path`, execute revoked from every role). Every writer is covered, including a restore, and a client cannot choose the value: the column has no insert or update grant. One `update` statement over several rows gives them all the transaction's one `now()`, and the repo `softDeleteLogEntries` is written as one such statement, so a multi-row assistant action records one `target_updated_at` that equals every row's `updated_at`. The assistant's tools read the stamp back after the write and record it, and the changes list reads `updated_at` back through `assistantTargetSources`. A mismatch means the person changed the entry since, and Undo answers `undo_unavailable`.
 
 It is not a health value. The migration adds one column with a default, so the existing rows are filled with the migration's time and it applies to a database that holds any data. No other table gains the column. `update_entry` has no Undo in M8, so it records the stamp only so that its changes row can read "changed since" like the others.
+
+### Addendum to Amendment 14 (`assistant_consent_version`, 2026-11-07)
+
+Recorded under KEY-883, for ADR 0006, Amendment 1 and KEY-885. This changes the meaning of one column and no schema. Amendment 14 says that `profiles.assistant_consent_version` holds the `TERMS_VERSION` the person saw when they switched the assistant on. From KEY-885 it holds `ASSISTANT_CONSENT_VERSION`, a date in core that moves only when the assistant's own consent words change, so a later change to the Terms does not switch the assistant off. The gate answers `consent_needed` when the stored version is older than the constant, and `assistant_consent_at` alone is no longer enough. The column is still `text`, the check that pairs the two consent columns still holds, and no migration, grant or policy changes. Existing rows keep their old `TERMS_VERSION` value, which reads as older, so every account that has the assistant on accepts again.
 
 ### Consequences of Amendment 14
 
@@ -2168,3 +2173,385 @@ The list holds nothing the Privacy Policy does not already cover for recipes. Th
 ### Consequences of Amendment 15
 
 The migration creates the table, the checks, the indexes, the grants, the policies and the function, and `packages/db/src/types.gen.ts` gains them. It inserts no row, so it copes with any database. Any further deviation from the frozen Decision, from Amendments 1 to 14 or from this amendment needs an Amendment 16 before the migration or code that implements it lands.
+
+## Amendment 16 (A shared store of Open Food Facts search results, 2026-11-10)
+
+### Status
+
+Recorded on 2026-11-10 under KEY-937. Until now `off-search` wrote nothing: every search that passed the limiter called Open Food Facts, and most of the "Open Food Facts is busy" notices were Ki-Lo's own limiter answering `rate_limited`. This amendment adds one table, `off_search_results`, and one function, `store_off_search_results`, so that a search someone else already made costs nothing, and so that a stored answer is served when Open Food Facts fails or the limiter refuses. The frozen Decision names no such table, so by the rule at the top of this ADR it needs an amendment before its migration. The details are interpretations made for implementation, and Zee confirms them by approving the pull request that carries this amendment. They are, in full:
+
+- that the table is a fourth exception to Amendment 1's `id` and `created_at` columns, because it is a keyed cache row that is replaced whole.
+- that the row holds no user id, ever, and that the result is shared across people on purpose.
+- that a row holds normalised candidates and not upstream hits.
+- that the key is the cleaned search text (`normaliseOffSearchTerms`), and that text which cleans to fewer than 2 or more than 100 characters is neither read nor stored.
+- that the table is bounded by a 14 day horizon, enforced by the writer in the same call and not by a scheduled job.
+- the ages in "When a row can be served", the rule that a row exactly at a boundary counts as the older state, and the absence of a version column.
+- that an empty row is reused for an hour and is never served as stale.
+- that a row that does not parse is a miss.
+- that a read or store failure never fails a search, and is reported once.
+- the order of the steps in "How `off-search` uses the store", including that only a search that reaches Open Food Facts spends a limit.
+- the new limit defaults of 30 and 120.
+- that the stored search words are not personal data once detached from every person, so the table is not exported, is not touched by account deletion and changes no Privacy Policy copy.
+
+The frozen Decision and Amendments 1 to 15 are unchanged, except that the two `off-search` rows of Amendment 1's limits table now carry the new defaults and say so. Amendment 1's `id` and `created_at` columns apply to every table but the exceptions it lists, and this table is now one of them.
+
+### `off_search_results`
+
+| Column       | Type                                                    |
+| ------------ | ------------------------------------------------------- |
+| `query_key`  | `text` primary key, with a check of 2 to 100 characters |
+| `candidates` | `jsonb not null`, with a check that it is an array      |
+| `fetched_at` | `timestamptz not null default now()`                    |
+
+There is a plain index on `fetched_at`, which serves the horizon delete.
+
+- **Why no `id` or `created_at`.** Like `rate_limits` and `food_source_data`, the row has a natural key. It is never edited, only replaced whole by the next successful search for the same words, so `fetched_at` is the only time that means anything and a surrogate key would be unused.
+- **No user id, ever.** A row says only that someone in the world searched these words. Nothing links it to a person, a session or a device, and no later column may. The answer is shared across people on purpose, which is the point of the table. Until this amendment `off-search` wrote nothing, so this is the first time the function stores anything.
+- **Normalised candidates.** The row holds what the function answers with: the list of candidates in the `offSearchResponseSchema` shape, at most 20. It is about 10 KB a row, and the row is ready to answer with and needs no second normalisation. Upstream hits are not stored.
+- **The key.** It is the output of `normaliseOffSearchTerms`, so `Oat  Milk` and `(oat milk` share a row. Text that cleans to fewer than 2 characters would fail the check, and text that Unicode normalisation grew past 100 would too. Rather than let the store fail on those, the function neither reads nor stores them and searches as it did before. The length is counted in characters and not in UTF-16 units, as Postgres counts it.
+- **Size.** The worst case is on the order of 150 MB, at 500 distinct queries a day held for 14 days. The real figure is far lower, because most days repeat most queries.
+
+### Privileges and row level security
+
+In the style of Amendments 9, 12 and 13: `revoke all` from `anon`, `authenticated` and `service_role`, then explicit grants. RLS is enabled with no policies.
+
+- `anon` and `authenticated` hold no privilege on the table or the function.
+- `service_role` holds `select` on the table and nothing else, so it cannot insert, update or delete a row directly. Every write goes through the function.
+
+### `store_off_search_results(p_query_key text, p_candidates jsonb, p_keep_seconds integer)`
+
+- `security definer`, `set search_path = ''`, `volatile`. `execute` is revoked from `public`, `anon` and `authenticated` and granted to `service_role` only, like `consume_rate_limit`. A caller able to execute it could fill the store with chosen answers.
+- It upserts the row for `p_query_key` with `candidates = p_candidates` and `fetched_at = now()`, so a repeat store moves `fetched_at`.
+- In the same call it deletes at most 100 rows whose `fetched_at` is older than `p_keep_seconds` before now, oldest first. There is no `pg_cron` in this project, and `consume_rate_limit` already cleans up after itself in the same way. A backlog is therefore cleared 100 rows a store, which is far faster than rows arrive.
+- It refuses, with `22023` and a message that quotes no value, a `p_candidates` that is not a JSON array and a `p_keep_seconds` below 1. A null or out of range key fails the table's own checks.
+- The horizon is not in the database. The function passes it from core (`OFF_SEARCH_KEEP_SECONDS`, 14 days), so it can move without a migration.
+
+### When a row can be served
+
+These are pure functions of the row's age and its candidate count, in `packages/core/src/foods/offSearchStore.ts`. The caller passes `now`, because core never reads the clock.
+
+| Row            | Age                 | State      |
+| -------------- | ------------------- | ---------- |
+| Has candidates | under 24 hours      | fresh      |
+| Has candidates | 24 hours to 14 days | stale      |
+| Empty          | under 1 hour        | fresh      |
+| Empty          | 1 hour or more      | not usable |
+| Anything       | 14 days or more     | not usable |
+
+- A row exactly at a boundary counts as the older state, as `offFreshness` does at 90 days. A `fetched_at` that cannot be read is not usable.
+- A day matches the proposal in KEY-132, and it is short enough that a change to the normaliser or the candidate shape reaches every row by itself. So there is no version column.
+- An empty row is never served as stale, because "no results" in place of a failure would be a lie. A fresh empty row is a real answer for an hour, because Open Food Facts did answer.
+- Every row read is checked with `offSearchResponseSchema.safeParse`. A row that does not parse is a miss and never a 500, which is what lets the candidate schema change later.
+
+### How `off-search` uses the store
+
+In this order:
+
+1. Authenticate and validate. Clean the words. Words that clean to nothing answer `{candidates: []}`, with nothing read, charged or called.
+2. Read the row. A read failure is reported once and treated as a miss. It never fails the search.
+3. A fresh row is answered. No limit is charged and Open Food Facts is not called.
+4. Charge the limits. If a charge is refused and a stale row exists, answer the stale row with 200. If none exists, answer the 429 as before.
+5. Call Open Food Facts, with the one short retry of KEY-936.
+6. On success, store, then answer. A store failure is reported once and the search still answers. A failure is never stored, so a failed search leaves the old row and its `fetched_at` as they were.
+7. On failure with a stale row, answer the stale row with 200. `reportError` has already fired for the failure, so outages stay visible in Sentry. With no stale row, answer the error as before.
+
+The response contract is unchanged. A stale answer looks like any other answer.
+
+### Limits
+
+Only a search that reaches Open Food Facts is charged now, so the defaults rise and the table in Amendment 1's `rate_limits` section carries them:
+
+| Environment variable          | Default per minute |
+| ----------------------------- | ------------------ |
+| `OFF_SEARCH_PER_USER_PER_MIN` | 30                 |
+| `OFF_SEARCH_GLOBAL_PER_MIN`   | 120                |
+
+30 means a new, uncached, settled search every two seconds for a whole minute, which typing does not do, and it stays out of reach while the client still searches after 250 ms of quiet. 120 is two a second to Open Food Facts. The limits were not raised before KEY-936 moved the search to Search-a-licious, because `/cgi/search.pl` allows 10 requests a minute per IP. Both stay environment variables. The test configuration keeps its small per-user value.
+
+### Health data
+
+Search words are not health data on their own, and here they are detached from every person. No log or report written by Ki-Lo carries the words: not a log line, an error message, a Sentry event or an analytics event. The function reports a failure by its name and code, never by the words or the database's message. The platform's own request log does carry them, because the function reads a row with a PostgREST `GET` filtered on `query_key`, so the read URL holds the words. That is no new exposure, since the same words already go to Open Food Facts.
+
+### Export and account deletion
+
+- **Export.** The table is not part of the whole-account export (KEY-707 and KEY-708), because no row belongs to an account.
+- **Account deletion** does not touch it, for the same reason.
+
+### Terms
+
+The store holds words typed into a food search, with nothing that identifies who typed them. This amendment changes no copy and no constant, and Zee's approval of it also confirms that the Privacy Policy needs no change.
+
+### Implemented by
+
+- The migration `20261110120000_off_search_results.sql`: the table, its checks and index, the grants and `store_off_search_results`, with pgTAP in `off_search_results.test.sql` and the regenerated `packages/db/src/types.gen.ts`.
+- Core, `packages/core/src/foods/offSearchStore.ts`: the ages, `offSearchRowState`, `readStoredOffSearch` and `offSearchQueryKey`, with tests at both sides of every boundary.
+- The `off-search` function: reading, charging only misses, storing and the stale fallbacks.
+
+### Consequences of Amendment 16
+
+The migration creates the table, the index, the grants and the function, and `packages/db/src/types.gen.ts` gains them. It inserts no row, so it copes with any database and needs no reset. Deploying it does nothing until the limits in production are removed or raised, so the deploy check is to list the secret names with `supabase secrets list` and remove `OFF_BASE_URL`, and remove or raise `OFF_SEARCH_PER_USER_PER_MIN` and `OFF_SEARCH_GLOBAL_PER_MIN`, if any is set. Any further deviation from the frozen Decision, from Amendments 1 to 15 or from this amendment needs a later amendment before the migration or code that implements it lands.
+
+## Amendment 17 (Every food keeps one default portion: atomic portion writes, 2026-11-10)
+
+### Status
+
+Recorded on 2026-11-10 under KEY-946, which came from the close-out review of KEY-935. KEY-934 gave every existing food a default portion through a generated migration, and nothing kept it that way. A food with no default opens on a silent 100 g. Four gaps remained: `createFood` wrote the food and then its portions as separate requests, so a failed portions insert left a food with none. `replaceFoodPortions` deleted and then inserted as separate requests, so a failed insert left a healthy food with none. `store_off_product` refused a second default but not none. A bulk import inserted foods and nothing else. This amendment adds
+
+- that a person's own food and its portions are written in one transaction, by two security invoker functions.
+- that `store_off_product` refuses a portions list with no default.
+- the invariant that every food, of any source, has exactly one default portion, and how it is kept.
+- one service role function that gives a default to every food that has none, which the food imports call.
+
+The frozen Decision and Amendments 1 to 16 are unchanged, except for one pointer in Amendment 7. Its statement that an empty portions array is valid is superseded by this amendment. No table, column, index, policy or grant changes. The remaining details are interpretations made for implementation. They are the error codes, the choice of `P0002` for a food that is not visible, and the choice to answer another person's food and a missing food the same way. Zee confirms them by approving the PR that carries this amendment.
+
+### The invariant
+
+Every row of `foods`, whatever its `source`, has exactly one `food_portions` row with `is_default`. The one-per-food half is the partial unique index of Amendment 1. The at-least-one half was a one-off backfill (KEY-934) and is now kept by the writers below. The database does not enforce the at-least-one half with a constraint, because a food is inserted before its portions and a deferred constraint trigger would add a cost to every food write. The functions and the import step enforce it instead, and a pgTAP test creates its own foods of every source and asserts it.
+
+### `replace_food_portions(p_food_id uuid, p_portions jsonb)`
+
+- `security invoker`, `set search_path = ''`, `volatile`, returning `jsonb`, the stored portions in order as an array of `food_portions` rows. `execute` is revoked from `public` and `anon` and granted to `authenticated`. Row level security and the `delete` and `insert` grants of Amendment 1 apply exactly as they did to the two requests it replaces.
+- `p_portions` is an array of `{ label, grams, ml, is_default }`, stored in the order sent, with `position` set from that order and `owner_id` set from the food. It must hold exactly one default, so an empty list and a list with no default are refused with `22023`, as is one that is not an array.
+- A food the caller cannot see is `P0002`. Another person's food and a missing food answer the same way. A food with no owner is `42501`. Anything a table refuses, such as a portion with both grams and ml, is the table's own error.
+- It deletes the food's portions and inserts the new ones in one transaction, so a failed insert rolls the delete back and the old portions stay. This is the delete and reinsert pattern of Amendment 1 and Amendment 2, so every portion still comes back with a new id and `portion_id` on a log entry still clears through `on delete set null`.
+
+### `create_food(p_food jsonb, p_portions jsonb)`
+
+- `security invoker`, `set search_path = ''`, `volatile`, returning `jsonb`. The grants are those of `replace_food_portions`.
+- `p_food` carries the columns the form writes plus `source` and `owner_id`. The insert lists a subset of the columns Amendment 1 grants to `authenticated`: the ones the form writes, plus `source`, `owner_id` and `micros`. It leaves out `food_group` and `deleted_at`, and no other key of `p_food` is read. Row level security decides who may write the food, so a source other than `user` or another person's `owner_id` is `42501`. `micros` defaults to `{}`.
+- It then calls `replace_food_portions`, so the same rules apply to the portions. It returns `{ food, portions }`, the stored food without the generated `search` column and its portions in order.
+- A failure anywhere rolls back the whole call. A failed create leaves nothing behind, neither a food nor a food with no portions.
+
+`FoodsPartialWriteError` stays for `updateFood`, which still changes the food row and then replaces its portions as two calls. It now means the food was updated and its previous portions were kept, never that portions are missing. `createFood` no longer throws it.
+
+### `store_off_product`
+
+It now also refuses, with `22023` and the message "store_off_product needs a default portion", a portions list that has no default, an empty list included. It still refuses more than one default. This supersedes the part of Amendment 7 that said an empty array is valid and clears the food's portions. The refusal happens before anything is written, so a refused refresh leaves the stored product as it was. The `off-product` function always sends one default, because `deriveOffPortions` in core ends on an estimate.
+
+### `give_foods_default_portions(p_food_ids uuid[] default null)`
+
+- `security definer`, `set search_path = ''`, `set row_security = off`, returning `void`. `execute` is revoked from `public`, `anon` and `authenticated` and granted to `service_role` only. It writes global portions, which no signed in role may. `replace_food_portions` and `create_food` are also granted to `service_role` explicitly, so no privilege check relies on default privileges.
+- `p_food_ids` limits it to those foods, and null means every food. Each of the four statements carries the same filter, `p_food_ids is null or <food id> = any (p_food_ids)`. A bulk import passes the ids it wrote, so it never gives a default to a food it did not write, which matters on a stack shared by several test suites. The estimated portions migration and seed carry no filter, because they run on every food.
+- Its body is the four statements of `20261110210000_estimated_portions.sql`, generated from the estimate table in `@keylow/core` by `emit-estimated-portions.ts --function`. A food of any source that has portions and no default promotes its first portion, a shared default that is only a measure is relabelled, a CoFID food with no default gets the row of its food group, and any food with no portions gets the row for its energy. A food that already has a default keeps it, nothing is deleted and running it twice changes nothing.
+- A change to the estimate table is a new generated migration that replaces the function. A unit test regenerates the newest one from core and fails when they differ.
+- `pnpm --filter @keylow/db import:cofid import` against a database calls it with the ids of each batch right after that batch is written, so the foods of a run that later fails are already defaulted, and a failure of the call leaves the run unfinished. `import:usda emit-migration` ends the migration it writes with a call with no ids. The CoFID `--emit-sql` seed does not call it, because the curated portions of seed 30 bring their own default and the table allows one per food, so seed 90 gives the rest after every seed has loaded.
+
+### Consequences of Amendment 17
+
+Two migrations add the three functions and replace `store_off_product`. They insert no row, so they are safe on live data, and existing foods are already defaulted by KEY-934. Nothing runs `give_foods_default_portions()` at deploy time. `packages/db/src/types.gen.ts` gains the three functions. A caller outside this repository that sends `store_off_product` an empty portions list is refused from this migration on.
+
+## Amendment 18 (Restaurant foods: the restaurant source and the per portion basis, 2026-11-10)
+
+### Status
+
+Recorded on 2026-11-10 under KEY-939 for Zee's rulings of the same day. On a note that each restaurant food should not need a line saying Ki-Lo is not connected with the chains: "You don't need to add a 'not connected to these companies' line." On the default: "You have to launch with it. I don't care if fast food etc has 100g, you always eat the standard portions so it's more important that everything has standard default portions. 100g means nothing and shouldn't be the default."
+
+So KFC, Burger King and Nando's are in, every restaurant food opens on its standard portion, and where a chain publishes no weight, none is invented.
+
+The frozen Decision names no restaurant source and only two bases, so by the rule at the top of this ADR the enums need an amendment before the migrations that change them. The two food shapes, the five rules and the reading of the snapshot below are interpretations. Zee confirms them by approving the pull request that implements this amendment.
+
+The frozen Decision and Amendments 1 to 17 are unchanged except where "What this supersedes" says so.
+
+### The enums
+
+- `food_source` gains `restaurant`. It already holds `usda`, which KEY-757 added in `20261029000000_food_source_usda.sql` without an amendment, so this amendment records it too. The type reads `off`, `cofid`, `user`, `usda`, `restaurant`.
+- `nutrient_basis` gains `per_portion`. It reads `per_100g`, `per_100ml`, `per_portion`.
+
+Both values are added by their own migration, `20261111000000_restaurant_enums.sql`, which holds nothing else, because a new enum value cannot be used in the transaction that adds it. A client that does not know a value fails every search that returns it, because `foodSourceSchema` and `nutrientBasisSchema` are closed enums. So web must be deployed and the mobile update published before any restaurant row exists.
+
+### The two shapes
+
+A restaurant food is stored in one of two shapes.
+
+| The chain publishes a weight | `basis`       | Nutrient columns                                                          | Default portion                                       |
+| ---------------------------- | ------------- | ------------------------------------------------------------------------- | ----------------------------------------------------- |
+| Yes                          | `per_100g`    | Per 100 g, worked out from the chain's per portion figures and the weight | "1 burger", with its grams                            |
+| No                           | `per_portion` | The values of exactly one portion, as the chain publishes them            | "1 bucket", with no grams and no ml (a count portion) |
+
+Both open on the portion. Only the second needs anything new.
+
+Rejected: a nominal 100 g portion that carries per portion values under `per_100g`, because it stores a weight that is false and every caption, gram chip and recipe yield would then show it or hide it. An estimated weight, because Zee ruled it out and the repository holds only facts. `per_portion` for every restaurant food, because it would lose the gram chip and recipe use for the foods that have a real weight, for no gain.
+
+### The rules for `per_portion`
+
+1. The nutrient columns of a `per_portion` food are the values of one default portion.
+2. Only a restaurant food may be `per_portion`. The check `foods_per_portion_only_restaurant` is `basis <> 'per_portion' or source = 'restaurant'`. A person cannot create one, because the column grants and policies already allow only `source = 'user'` rows, and this check refuses the basis for those. Widening it later is a new amendment.
+3. Its only portion is a count portion: one `food_portions` row, the default, with `grams` and `ml` both null. The table's check is now `food_portions_at_most_one_of_grams_ml`, `num_nonnulls(grams, ml) <= 1`, replacing `food_portions_exactly_one_of_grams_ml`, whose name would no longer be true. A trigger, `food_portions_size_matches_basis`, on `food_portions` insert and update, refuses a portion with neither on a food that is not `per_portion` and a portion with either on one that is. Row level security lets a person write portions on their own foods, so a check alone would let them store a weightless portion. The trigger runs as the caller, so it binds the service role as well. It holds no `execute` privilege for anyone, as firing a trigger needs none.
+4. It is logged only as a count of portions: the unit `portion` and a quantity such as 0.5, 1 or 2. Never g, ml, oz or fl oz, because there is nothing to convert from. Core's `resolveQuantity` throws a `RangeError` for any other unit.
+5. It is never a recipe ingredient. A recipe's weight and yield are sums of grams, and `recipe_ingredients.resolved_grams > 0` already refuses it in the database. Core's `canBeRecipeIngredient` is false for it, so the ingredient search and the assistant's recipe import leave it out and nobody reaches the database error. This rule is temporary. Zee ruled on 2026-11-10 that a per portion food may later be an ingredient counted in portions, with such a recipe logged by servings only. That is KEY-944, and it needs its own amendment and lifts both the check and `canBeRecipeIngredient`, which is the one place in core that holds the filter.
+6. `day_totals` needs no change. It sums each entry's `nutrients`, which core computes at write time as it does now.
+
+### The snapshot
+
+The snapshot stays version 1. The change is additive, so a stored v1 snapshot of any existing shape parses unchanged, no logged entry changes, and `NUTRITION_ENGINE_VERSION` stays.
+
+- `basis` may be `"per_portion"`. `per100` then holds the values of one portion. The field name is loose for this basis. Renaming it would be a version 2 snapshot with an upgrade step, which is not worth it for one basis.
+- `snapshotPortionSchema` gains a third member, `{ label }` with no `grams` and no `ml`. It is valid only for this basis, and this basis allows only it, with the unit `portion`.
+- `resolvedGrams` is `0` and means "no weight". No copy shows it for this basis, and a logged entry's `resolved_grams` column repeats it.
+- `density` is null.
+
+Core computes the numbers through one helper, the scale of a basis: the amount over 100 for `per_100g` and `per_100ml`, and the count for `per_portion`. `scaleNutrients` and everything that calls it use it.
+
+### What this supersedes
+
+- Amendment 1's `food_portions` check `num_nonnulls(grams, ml) = 1`, as rule 3 above says. A portion has exactly one of `grams` and `ml` unless its food is `per_portion`.
+- Amendment 2's statement that a snapshot `portion` is `{ label, grams }` or `{ label, ml }`, and the check it mirrors. A snapshot `portion` may also be `{ label }`, for the basis `per_portion` only.
+
+### The default portion
+
+Amendment 17's invariant, that every food has exactly one default portion, holds for a `per_portion` food through its count portion, which is its default. The statements that give a food a default (the generated estimated portions migration, the seed and `give_foods_default_portions`) never give a `per_portion` food an estimate, because it has no weight to size one from. Promoting the first portion of a food that has portions and no default still applies to it, and the relabel of a measure only default cannot match a count portion. The estimate statement for a food with no portions at all now carries `food.basis <> 'per_portion'`. By Amendment 17's own rule that a change to the estimate generator is a new generated migration, this is `20261111000200_estimated_portions.sql`, with `20261111000300_give_foods_default_portions.sql` replacing the function and the seed regenerated. In core, `estimatedPortion` throws for the basis, and `isGeneratedEstimate` and `isOurEstimate` never take its count portion for an estimate, so the assistant never marks it as one.
+
+### Data sources credit
+
+The About screen credits restaurant food as one more data source, "Restaurant chains' published nutrition", with the sentence "Nutrition for restaurant food comes from each chain's own published figures." It has no licence and no address, because no single chain is the source. There is no line saying Ki-Lo is not connected with the chains, by Zee's ruling above.
+
+### Implemented by
+
+- The migrations `20261111000000_restaurant_enums.sql` and `20261111000100_restaurant_data_model.sql` (the check, the relaxed check and the trigger), then the generated `20261111000200_estimated_portions.sql` and `20261111000300_give_foods_default_portions.sql` and the regenerated seed `90_estimated_portions.sql` (see "The default portion"), with pgTAP in `restaurant_data_model.test.sql` and the regenerated `packages/db/src/types.gen.ts`.
+- Core: the two enums, the count portion in `foodPortionSchema` and `snapshotPortionSchema`, `scaleOfBasis`, `resolveQuantity`, the snapshot builders, the serving of a search hit, the picker's amount and its starting amount, "log again", the wording of the basis and of a portion with no size, `describeFoodSource` and the Common foods group, and `canBeRecipeIngredient`.
+- The credit in `DATA_SOURCE_ATTRIBUTION`, drawn by the About screens on mobile and web.
+
+### Consequences of Amendment 18
+
+No row of either new value exists until the restaurant foods ticket (KEY-940) loads them, so the migrations cope with any database and a reset is not needed. The screens that show and log a per portion food, and the assistant's reading of one, are KEY-942. Any further deviation from the frozen Decision, from Amendments 1 to 17 or from this amendment needs an Amendment 19 before the migration or code that implements it lands.
+
+## Amendment 19 (A recipe may hold a food per portion: servings only recipes, 2026-11-11)
+
+### Status
+
+Recorded on 2026-11-11 under KEY-944 for Zee's ruling of 2026-11-10. Offered "A recipe that includes a KFC bucket adds the bucket's calories and macros as usual, but adds nothing to the recipe's weight. Any recipe holding one of these foods is logged by servings only", with the cost that grams of such a recipe cannot be weighed out, Zee replied: "Yeah that's fine. Serving is way more natural and important anyways".
+
+This amendment lifts rule 5 of Amendment 18, that a food per portion is never a recipe ingredient. It removes the check that refused it and core's `canBeRecipeIngredient`, which was the one place in core that held the screens' filter. The frozen Decision and Amendments 1 to 18 are unchanged except for that rule. The remaining details are interpretations made for implementation. They are, in full: the checks below, the choice that `per100g` stays an object of null values and is not itself null, the refusal of a cooked weight by core and by `save_recipe`, the shape of the relaxed snapshot, the units a servings only recipe offers, the shopping list rule, and the wording of the cooked weight sentence. Zee confirms them by approving the pull request that carries this amendment.
+
+### Definitions
+
+- A weightless ingredient is an ingredient whose snapshot has `basis: "per_portion"`.
+- A servings only recipe is a recipe with at least one weightless ingredient.
+
+### The ingredient row
+
+- `recipe_ingredients_resolved_grams_check` is now "`resolved_grams > 0 and resolved_grams <= 100000`, or `resolved_grams = 0` when `snapshot ->> 'basis'` is `per_portion`". A snapshot with no basis reads as not per portion, so a row of 0 grams with one is still refused.
+- A new check, `recipe_ingredients_per_portion_is_portion_check`, requires the unit `portion` for such a row. Both read only the row, so they are plain checks. The 0 matches the `resolvedGrams` of the food snapshot of Amendment 18.
+- `save_recipe` refuses a non-null `yield_grams` when any ingredient sent is weightless, with `22023` and a message that quotes no value. The cached `computed` stays written by the client and is not verified, as Amendment 8 says.
+- `day_totals`, `food_log_entries` and the shopping list need no column change. Existing rows all have grams above 0, so no stored row changes.
+
+### The cache
+
+`recipes.computed` gains the key `servingsOnly: boolean`. A cache written before this amendment has no key and reads as false (a zod default), so no stored recipe changes. When it is true:
+
+- `total` counts every ingredient. A weightless one counts its portions times its per portion values, through the basis scale of Amendment 18.
+- `totalGrams` is the weight of the weighed ingredients only. It is no longer the recipe's weight.
+- `effectiveGrams` is 0 and `per100g` has every key null. `yieldGrams` must be null, and core's `computeRecipe` throws for one.
+- `perServing` is `total / servings` as before.
+
+A recipe with no weightless ingredient computes exactly as before, the golden recipes are unchanged and `NUTRITION_ENGINE_VERSION` stays. Scaling a recipe scales portion counts. The recipe card and view show no grams of a serving, no cooked weight and no values per 100 g.
+
+### Logging a servings only recipe
+
+- The diary offers the unit `serving` only, with any quantity above 0. Grams are refused in core.
+- The recipe snapshot stays version 1 and the change is additive. `effectiveGrams` may be 0 only together with the new optional `servingsOnly: true`, and then the unit is `serving`. `resolvedGrams` is 0. The nutrients are `total x quantity / servings`, the existing serving path. Old snapshots parse unchanged, and editing an entry recomputes from its snapshot alone and keeps the unit `serving`.
+- No copy writes grams for such an entry: "1 serving", "0.5 servings".
+- A recipe as an ingredient of another recipe does not exist, because `recipe_ingredients` holds foods only. There is nothing to change.
+
+### The editor
+
+A recipe with a weightless ingredient shows no Cooked weight field. A cooked weight typed before such an ingredient was added is kept, the save is refused, and the field shows "Remove the cooked weight. A recipe with a restaurant food is logged by servings." through its error slot. Nothing is cleared silently.
+
+### The shopping list
+
+Adding a servings only recipe leaves out its weightless ingredients, as store cupboard items are left out, because a restaurant bucket is not bought in a shop. Its weighed ingredients are added as usual.
+
+### The assistant
+
+`create_recipe` and `update_recipe` accept a weightless food counted in portions and refuse grams or millilitres of it. `get_recipes` reports `servings_only` and no grams. Logging a recipe through the assistant is by servings. `importRecipeFromUrl` keeps skipping weightless foods, because a web recipe is home cooking and a match to a chain's item would be wrong far more often than right.
+
+### Implemented by
+
+The migration `20261111070000_recipe_weightless_ingredients.sql` with pgTAP in `recipe_weightless_ingredients.test.sql`. Core: `computeRecipe`, `recipeComputedSchema`, `recipeIngredientSchema`, `recipeSnapshotSchema`, `withRecipeQuantity`, `recipeCardOf`, `recipeViewOf`, `validateRecipeDraft`, `showsCookedWeight`, `recipeUnitsOf` and `aggregateIngredients`. The recipe editor, the recipe view and the recipe amount step on phone and web.
+
+### Consequences of Amendment 19
+
+No column, table or enum changes, so `packages/db/src/types.gen.ts` is unchanged. A client that does not know `servingsOnly` reads such a recipe as one with no cooked weight and an `effectiveGrams` of 0, which its grams chip would refuse to log, so phone and web ship together. Any further deviation from the frozen Decision or from Amendments 1 to 18 needs an Amendment 20 before the migration or code that implements it lands.
+
+## Amendment 20 (Restaurant foods: macros estimated from a dish's ingredients, 2026-11-11)
+
+### Status
+
+Recorded on 2026-11-11 under KEY-955 for Zee's ruling of the same day. Nando's UK publishes one energy figure per item and no protein, fat, carbohydrate, sugars, fibre or salt (see `data/restaurants/VERIFICATION.md`), so under the rule of KEY-940 it had no complete row. On leaving it at calories only: "nah it needs macros, i want you to estimate it based on ingeridents".
+
+Amendment 19 is KEY-944's and is not on `main` yet, so this one is numbered 20. The frozen Decision and Amendments 1 to 18 are unchanged. The key, the method and the marking below are interpretations. Zee confirms them by approving the pull request that carries this amendment.
+
+### The `quality` key
+
+`foods.quality` gains one key, `macros_estimated`, a boolean. Like every other key it is optional, and absent reads as false, so `'{}'` stays the neutral value. It is true for a food whose energy is as the chain publishes it and whose protein, fat, saturates, carbohydrate, sugars, fibre and salt were estimated from the dish's ingredients. The key set in Amendment 1 is the frozen list, and this adds to it. The zod `foodQualitySchema` in `@keylow/core` stays the source of truth and gains the same key. No column, constraint or grant changes, because `quality` is `jsonb` with no check on its keys.
+
+### The method
+
+Every Nando's food is stored per portion (Amendment 18), with one default count portion and no weight, because Nando's publishes none. For each item:
+
+1. `kcal` is the figure printed on `https://www.nandos.co.uk/food/menu`. It is fact and is never changed by the estimate.
+2. The components are what the dish is made of, read from the item's page under `https://www.nandos.co.uk/allergens/`, with an assumed weight for each. No third-party nutrition source is used.
+3. Each component is a CoFID food already in the repository, so its nutrients are the ones the CoFID import maps.
+4. The components' energy is added up and every component is scaled by one factor so that the total equals the published kcal exactly. The scaled protein, fat, saturates, carbohydrate, sugars, fibre and salt are the stored figures, rounded to one decimal place (salt to two).
+5. The components, reference codes, assumed weights and scale factor of every item are in `data/restaurants/nandos-estimates.json`. `import:restaurant nandos-rows` derives the CSV rows from it, and a unit test recomputes them, so the CSV cannot drift from the estimates.
+
+A food gets the mark from its chain. `deriveFood` returns `quality: { macros_estimated: true }` for a Nando's row, and the generated migration writes `quality` for such a row only, so every other restaurant food's statements are unchanged.
+
+### What this supersedes
+
+Nothing. The sentence in `VERIFICATION.md` that left Nando's out for want of macros is replaced by the method above. KEY-940's rule that the chain's own UK figures are the only source still holds for the energy. The estimated figures are not the chain's, and the mark is how they are told apart.
+
+### Implemented by
+
+- Core: `macros_estimated` in `foodQualitySchema`.
+- Scripts: `estimateNandosMacros.ts`, the `nandos-rows` command of `import-restaurant.ts`, `quality` in `deriveFood` and in `renderRestaurantMigration`.
+- Data: `nandos-estimates.json` and the Nando's rows of `restaurant-foods.csv` (wave 4).
+- The wave 4 migration `20261111080000_restaurant_foods.sql`, with pgTAP in `restaurant_foods_wave4.test.sql`.
+
+### Consequences of Amendment 20
+
+No screen says a figure is estimated. An in-app "estimated" label is a follow-up for Zee to decide, and until then the mark is in the data only. No row carries the key until the wave 4 migration is applied, so no reset is needed. Any further deviation from the frozen Decision, from Amendments 1 to 18 or from this amendment needs an Amendment 21 before the migration or code that implements it lands.
+
+## Amendment 21 (Feature requests: one table for what people ask the app to do, 2026-11-11)
+
+### Status
+
+Recorded on 2026-11-11 under KEY-976 for Zee's ruling of the same day: when the assistant cannot do something because the app does not support it, it asks the person whether to send it as a feature request, with the context it was raised in, and More gets a place to type one in directly. The frozen Decision and Amendments 1 to 20 are unchanged. The table, the cap and the context shape below are interpretations. Zee confirms them by approving the pull request that carries this amendment.
+
+### The table
+
+`public.feature_requests`, one row per request:
+
+- `id uuid` primary key, default `gen_random_uuid()`.
+- `user_id uuid` not null, default `auth.uid()`, references `auth.users (id)` on delete cascade, so account deletion removes the rows.
+- `source text` not null, check `source in ('assistant', 'more_menu')`.
+- `request text` not null, check `char_length(btrim(request)) between 3 and 1000`.
+- `context jsonb` null. A `more_menu` row has a null context. An `assistant` row has a context that is a JSON object of at most 16384 bytes (`pg_column_size`).
+- `created_at timestamptz` not null, default `now()`.
+- An index on `(user_id, created_at)`, which serves the cascade and the daily cap.
+
+### The context shape
+
+Written only by the assistant, and validated in `@keylow/core` as `featureRequestContextSchema` so both sides share it: `{ version: 1, ask: string (max 500), unsupported: string (max 200), recent: Array<{ role: 'user' | 'assistant', text: string (max 500) }> (max 6) }`. It holds no ids, no tool calls, no tool results and no diary rows. The database checks only that it is an object under 16 KB, because the shape belongs to core.
+
+### Privileges and row level security
+
+Following Amendment 14: `revoke all` from `anon`, `authenticated` and `service_role`, then `select` and a column-level `insert (source, request, context)` to `authenticated`, and `select` to `service_role` so Zee can read requests from the dashboard. A client cannot set `user_id`, `id` or `created_at`. No role can update or delete. Two policies, `feature_requests_select_own` and `feature_requests_insert_own`, both on `user_id = (select auth.uid())`.
+
+### The daily cap
+
+At most 20 rows per person in any rolling 24 hours, enforced by a `before insert` trigger (`security invoker`, `set search_path = ''`) that counts the caller's rows since `now() - interval '24 hours'` and raises SQLSTATE `54000` with the message `feature_requests_daily_cap`. The repository maps it to the code `rate_limited`. The count is its own audit, so `consume_rate_limit()` is not used.
+
+### Health data
+
+`request` and `context` can hold diary talk, so they are health data under Amendment 9. They never appear in a log, an error message, a Sentry event or an analytics call. A repository error carries the action and a code only. The whole-account export includes the table (`exported`, owner column `user_id`), because the row is the person's own data. Deleting a conversation does not delete a request filed from it: the request is a separate record the person chose to send.
+
+### Implemented by
+
+- Migration `20261111120000_feature_requests.sql`, with pgTAP in `feature_requests_rls.test.sql`.
+- Core: `packages/core/src/featureRequests/schemas.ts`.
+- Api-client: `createFeatureRequest` in `repos/featureRequests.ts`, and the export coverage entries.
+
+### Consequences of Amendment 21
+
+`packages/db/src/types.gen.ts` gains the table. The export gains a table and keeps `export_version` at 1, as every earlier added table did. The assistant tool (KEY-977) and the More screen (KEY-978) write through `createFeatureRequest`. Any further deviation from the frozen Decision, from Amendments 1 to 20 or from this amendment needs an Amendment 22 before the migration or code that implements it lands.

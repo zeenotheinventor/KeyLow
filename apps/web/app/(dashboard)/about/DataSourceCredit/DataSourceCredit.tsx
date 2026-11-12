@@ -4,7 +4,7 @@ import type { DataSourceCreditProps } from "./types";
 
 import { Card } from "@/components/ui/Card";
 
-/** One source's credit on a card: its name, the statement its licence asks for and its address, which opens in a new tab. */
+/** One source's credit on a card: its name, the statement its licence asks for and its address, which opens in a new tab. A source with no address has no link. */
 export function DataSourceCredit({ name, text, url }: DataSourceCreditProps) {
   const nameId = useId();
 
@@ -15,14 +15,16 @@ export function DataSourceCredit({ name, text, url }: DataSourceCreditProps) {
           {name}
         </h3>
         <p className="text-body text-text-secondary">{text}</p>
-        <a
-          href={url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex min-h-touch-target items-center break-all rounded-small text-caption text-text-secondary underline outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
-        >
-          {url}
-        </a>
+        {url !== undefined && (
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex min-h-touch-target items-center break-all rounded-small text-caption text-text-secondary underline outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+          >
+            {url}
+          </a>
+        )}
       </section>
     </Card>
   );

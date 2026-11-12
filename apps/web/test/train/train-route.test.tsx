@@ -1,4 +1,4 @@
-import { TRAIN_START_FAILED } from "@keylow/core/copy";
+import { TRAIN_FIRST_TIME, TRAIN_START_FAILED } from "@keylow/core/copy";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -15,6 +15,7 @@ import {
   trainBackend,
   tuesdayPull,
 } from "./support";
+import { storedGoalRow } from "../goals/support";
 
 import { TrainRoute } from "@/components/train";
 import { ToastProvider } from "@/components/ui/Toast";
@@ -111,5 +112,70 @@ describe("the Train page's buttons", () => {
         name: "Start Legs",
       }),
     ).toBeTruthy();
+  });
+});
+
+describe("the first-time card's Set your goal", () => {
+  beforeEach(() => {
+    resetTrainBackend();
+    router.push.mockReset();
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(THURSDAY_1755);
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.useRealTimers();
+  });
+
+  const setYourGoal = () => screen.findByRole("button", { name: TRAIN_FIRST_TIME.goalAction });
+
+  it("should open the first question when there is no goal", async () => {
+    const { queryClient } = renderRoute();
+    const button = await setYourGoal();
+    await waitFor(() => {
+      expect(queryClient.isFetching()).toBe(0);
+    });
+
+    await userEvent.click(button);
+
+    expect(router.push).toHaveBeenCalledExactlyOnceWith("/goal/1");
+  });
+
+  it("should open the Goal page when a goal was read", async () => {
+    trainBackend.goal = storedGoalRow;
+    const { queryClient } = renderRoute();
+    const button = await setYourGoal();
+    await waitFor(() => {
+      expect(queryClient.isFetching()).toBe(0);
+    });
+
+    await userEvent.click(button);
+
+    expect(router.push).toHaveBeenCalledExactlyOnceWith("/goal?from=train");
+  });
+
+  it("should open the first question while the goal is not yet known", async () => {
+    trainBackend.goal = storedGoalRow;
+    trainBackend.hangingReads.add("training_goals");
+    renderRoute();
+
+    await userEvent.click(await setYourGoal());
+
+    expect(router.push).toHaveBeenCalledExactlyOnceWith("/goal/1");
+  });
+
+  it("should open the first question when the goal could not be read", async () => {
+    trainBackend.goal = storedGoalRow;
+    trainBackend.failingReads.add("training_goals");
+    const { queryClient } = renderRoute();
+    const button = await setYourGoal();
+    await waitFor(() => {
+      expect(queryClient.isFetching()).toBe(0);
+    });
+
+    await userEvent.click(button);
+
+    expect(router.push).toHaveBeenCalledExactlyOnceWith("/goal/1");
   });
 });

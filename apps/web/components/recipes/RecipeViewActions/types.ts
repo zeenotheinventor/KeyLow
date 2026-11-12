@@ -1,3 +1,5 @@
+import type { IconButtonProps } from "@/components/ui/IconButton";
+
 export type RecipeViewActionsProps = {
   /** The recipe's name, which each button's name carries. */
   name: string;
@@ -13,6 +15,8 @@ export type RecipeViewActionsProps = {
   isDuplicating: boolean;
   /** The recipe is being put away, so Archive is busy and does not respond. */
   isArchiving: boolean;
+  /** The favourite heart, first in the row. It says when it is disabled, as offline, and does nothing then. */
+  favouriteHeart?: IconButtonProps | undefined;
   /** Opens the refresh dialog, where the recipe's foods are checked for changes. */
   onRefresh: () => void;
   /** Opens the dialog that adds the recipe's ingredients to the shopping list. */

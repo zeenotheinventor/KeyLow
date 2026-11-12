@@ -14,6 +14,7 @@ import {
   describeRecipeSearchRowName,
   describeRecipeServing,
   describeRecipeYield,
+  describeServingsOnlyYield,
   describeServingSuffix,
 } from "../../src/copy";
 import { freezeRecipe, withRecipeQuantity } from "../../src/diary/recipeSnapshotQuantity";
@@ -135,6 +136,12 @@ describe("describeRecipeAmountBasis", () => {
   });
 });
 
+describe("describeServingsOnlyYield", () => {
+  it("should say how many a recipe makes and nothing of its weight", () => {
+    expect(describeServingsOnlyYield(4)).toBe("Makes 4");
+  });
+});
+
 describe("describeRecipeYield", () => {
   it.each([
     [4, 1100, "Makes 4 · 1,100 g cooked"],
@@ -243,5 +250,59 @@ describe("describeRecipeLoggedRowName", () => {
     expect(describeRecipeLoggedRowName("18:00", snapshot)).toBe(
       "18:00, Chicken and rice, recipe, 1.5 servings 413 grams, 561 kilocalories, protein 47 grams, carbohydrate 64 grams, fat 12 grams",
     );
+  });
+});
+
+describe("a recipe with no weight (ADR 0003, Amendment 19)", () => {
+  const noWeight: RecipeForSearch = {
+    servings: 4,
+    computed: {
+      effectiveGrams: 0,
+      perServing: { kcal: 650, protein_g: 27, carbs_g: 50, fat_g: 34, fibre_g: null },
+    },
+  };
+  const entry = (quantity: number): LoggedAmount => ({
+    unit: "serving",
+    quantity,
+    resolvedGrams: 0,
+  });
+
+  it("should write one serving without grams", () => {
+    expect(describeRecipeServing(noWeight)).toBe("1 serving");
+  });
+
+  it("should read a search row without grams", () => {
+    expect(describeRecipeSearchRowName("Meal deal", noWeight)).toBe(
+      "Meal deal, recipe, 1 serving, 650 kilocalories, protein 27 grams, carbohydrate 50 grams, fat 34 grams, choose amount",
+    );
+  });
+
+  it("should read a logged row without grams", () => {
+    const snapshot = withRecipeQuantity(
+      freezeRecipe({
+        id: "00000000-0000-4000-8000-0000000000b1",
+        name: "Meal deal",
+        servings: 4,
+        yield_grams: null,
+        computed: {
+          effectiveGrams: 0,
+          servingsOnly: true,
+          total: { kcal: 2600, protein_g: 108, carbs_g: 156, fat_g: 150, fibre_g: null },
+        },
+      }),
+      { unit: "serving", quantity: 1 },
+    );
+
+    expect(describeRecipeLoggedRowName("18:00", snapshot)).toBe(
+      "18:00, Meal deal, recipe, 1 serving, 650 kilocalories, protein 27 grams, carbohydrate 39 grams, fat 38 grams",
+    );
+  });
+
+  it.each([
+    [1, "1 serving"],
+    [0.5, "0.5 servings"],
+  ])("should write %s servings logged without grams", (quantity, expected) => {
+    expect(describeRecipeLoggedAmount(entry(quantity))).toBe(expected);
+    expect(describeRecipeAmountBasis(entry(quantity))).toBe(`For ${expected}`);
   });
 });

@@ -18,13 +18,24 @@ export type RecipeServings = {
 export const gramsOfOneServing = (recipe: RecipeServings): number =>
   recipe.computed.effectiveGrams / recipe.servings;
 
-/** One serving with its weight: "1 serving (275 g)". */
+/**
+ * One serving with its weight: "1 serving (275 g)". A recipe with no weight (ADR 0003, Amendment 19) has
+ * none to give: "1 serving".
+ */
 export const describeOneServing = (recipe: RecipeServings): string =>
-  `1 serving (${formatGroupedGrams(gramsOfOneServing(recipe))} g)`;
+  recipe.computed.effectiveGrams === 0
+    ? "1 serving"
+    : `1 serving (${formatGroupedGrams(gramsOfOneServing(recipe))} g)`;
 
 /** Grams for a screen reader, in whole grams with a separator and "1 gram" in the singular: "275 grams". */
 export const describeSpokenGrams = (grams: number): string =>
   spokenAmount(formatGroupedGrams(grams), "gram", "grams");
+
+/** One serving for a screen reader, with its weight when it has one: "1 serving 275 grams", or "1 serving". */
+export const describeSpokenOneServing = (recipe: RecipeServings): string =>
+  recipe.computed.effectiveGrams === 0
+    ? "1 serving"
+    : `1 serving ${describeSpokenGrams(gramsOfOneServing(recipe))}`;
 
 /** The energy and macros of an amount for a screen reader, the way a food row reads them. */
 export const describeSpokenNutrients = (

@@ -510,6 +510,7 @@ describe("the edit set sheet", () => {
       effectHint: "Changing a past set updates that day's heat and the week's sets.",
       deleteSetAction: "Delete set",
       saveAction: "Save changes",
+      offline: "Changing or deleting a set needs a connection.",
     });
   });
 });
@@ -520,6 +521,7 @@ describe("the delete session confirmation", () => {
       title: "Delete this session?",
       confirmAction: "Delete session",
       cancelAction: "Keep it",
+      offline: "Deleting a session needs a connection.",
       failed: "The session was not deleted, check your connection and try again",
     });
   });

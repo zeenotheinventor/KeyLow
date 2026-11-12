@@ -8,6 +8,7 @@
 // and the real slot loop against the local database under Node.
 import { z } from "zod";
 
+import type { JsonValue } from "./untrusted.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 // ADR 0006: at most ten write tool calls per turn. The table's check on `turn_seq` is the backstop.
@@ -58,16 +59,40 @@ export type ActionRecord = {
   undoneAt: string | null;
 };
 
-// What `assistant_turns.pending_confirmation` holds: an id, a tool name and a hash. No health value.
-export type PendingConfirmation = { id: string; tool: string; inputHash: string };
+// What `assistant_turns.pending_confirmation` holds: an id, a tool name, a hash and the words of the confirm
+// button ("Delete 2 entries", "Copy 3 entries", "Archive recipe", "Change target"). Those are fixed words and
+// a count of rows, so no health value. The cancel button's words are not stored, because "Keep 2,140" holds a
+// calorie figure.
+export type PendingConfirmation = {
+  id: string;
+  tool: string;
+  inputHash: string;
+  confirmLabel: string;
+};
+
+// The confirmation as it is read back. A row written before the button's words were stored has none, and
+// it can never be confirmed: the next call asks again.
+export type StoredConfirmation = Omit<PendingConfirmation, "confirmLabel"> & {
+  confirmLabel: string | null;
+};
 
 const pendingConfirmationSchema = z.object({
   id: z.string(),
   tool: z.string(),
   input_hash: z.string(),
+  confirm_label: z.string().optional(),
 });
 
-export type PreviousPendingConfirmation = { turnId: string; confirmation: PendingConfirmation };
+export type PreviousPendingConfirmation = { turnId: string; confirmation: StoredConfirmation };
+
+// What a write tool puts in its `structured` outcome so that Undo can put the old value back (KEY-900). The turn
+// loop keeps it in `assistant_messages.display`, which the model never reads, beside the card and with the action
+// id. `fingerprint` is the tool's own and is stored untouched.
+export const undoOutcomeSchema = z.object({ previous: z.json(), fingerprint: z.json() });
+const undoEntrySchema = undoOutcomeSchema.extend({ actionId: z.string() });
+
+// What `previousValueOf` answers: the tool's `previous` and `fingerprint`, as it stored them.
+export type StoredUndo = { previous: JsonValue; fingerprint: JsonValue };
 
 export type SlotRequest = {
   userId: string;
@@ -89,6 +114,11 @@ export type ActionStore = {
   // True for the one caller that moved the action from not undone to undone.
   claimUndo(actionId: string, userId: string, undoneAt: string): Promise<boolean>;
   releaseUndoClaim(actionId: string, userId: string): Promise<void>;
+  // The `previous` and `fingerprint` the action's turn stored beside its card, or null when the turn is gone (the
+  // conversation was deleted and `turn_id` was set null), the entry is missing or it cannot be read. Filtered by
+  // the verified user id, so another person's action answers null. A stored `previous` that is JSON null comes
+  // back as `{ previous: null, ... }`, so only the whole answer being null means there is nothing.
+  previousValueOf(action: ActionRecord, userId: string): Promise<StoredUndo | null>;
   previousPendingConfirmation(
     conversationId: string,
     userId: string,
@@ -234,6 +264,32 @@ export function createActionStore(client: SupabaseClient): ActionStore {
       }
     },
 
+    async previousValueOf(action, userId) {
+      if (action.turnId === null) {
+        return null;
+      }
+      // The failure carries the code only. Both the rows and a message that quotes them can hold the value.
+      const { data, error } = await client
+        .from("assistant_messages")
+        .select("display")
+        .eq("turn_id", action.turnId)
+        .eq("user_id", userId);
+      if (error !== null) {
+        throw failure("read previous value", error);
+      }
+      for (const row of z.array(z.object({ display: z.unknown() })).parse(data)) {
+        const entries = z.record(z.string(), z.unknown()).safeParse(row.display);
+        for (const entry of entries.success ? Object.values(entries.data) : []) {
+          const undo = z.looseObject({ undo: undoEntrySchema }).safeParse(entry);
+          if (undo.success && undo.data.undo.actionId === action.id) {
+            const { previous, fingerprint } = undo.data.undo;
+            return { previous, fingerprint };
+          }
+        }
+      }
+      return null;
+    },
+
     async previousPendingConfirmation(conversationId, userId, currentTurnId) {
       // The previous turn is the latest one made before the current turn, so an older open turn can
       // never see a confirmation that a later turn asked for.
@@ -271,8 +327,11 @@ export function createActionStore(client: SupabaseClient): ActionStore {
       if (previous === undefined || !parsed.success) {
         return null;
       }
-      const { id, tool, input_hash: inputHash } = parsed.data;
-      return { turnId: previous.id, confirmation: { id, tool, inputHash } };
+      const { id, tool, input_hash: inputHash, confirm_label: confirmLabel } = parsed.data;
+      return {
+        turnId: previous.id,
+        confirmation: { id, tool, inputHash, confirmLabel: confirmLabel ?? null },
+      };
     },
 
     async storePendingConfirmation(turnId, userId, confirmation) {
@@ -283,6 +342,7 @@ export function createActionStore(client: SupabaseClient): ActionStore {
             id: confirmation.id,
             tool: confirmation.tool,
             input_hash: confirmation.inputHash,
+            confirm_label: confirmation.confirmLabel,
           },
         })
         .eq("id", turnId)

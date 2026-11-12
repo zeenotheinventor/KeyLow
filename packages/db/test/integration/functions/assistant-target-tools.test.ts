@@ -8,6 +8,7 @@ import { callAssistant, eventsOf, newAssistantUser, turnBody } from "../support/
 import { requireServedFunction } from "../support/functionsLane";
 import { adminClient } from "../support/stack";
 import { deleteCreatedTestUsers } from "../support/users";
+import { withoutIdsAndDates } from "../support/withoutIdsAndDates";
 
 import type { ScriptedReply } from "../support/anthropicMock";
 import type { TestUser } from "../support/users";
@@ -40,24 +41,47 @@ const finish = (text: string): ScriptedReply => ({
 
 const turnMarkers: string[] = [];
 
+type PlacedTurn = {
+  events: AssistantStreamEvent[];
+  turnMarker: string;
+  // Every reply scripted for the conversation so far.
+  replies: ScriptedReply[];
+  turnId: string;
+  conversationId: string;
+};
+
+// A turn that starts a conversation carries a marker in its text, and the mock answers by it. A turn that
+// follows `after` sends the person's exact words with no marker, because a confirmation is spent only on the
+// words of its button and a marker would make them something else (KEY-839). The mock answers by the first
+// marker it finds in the request, which is the earlier turn's, still in the history, so the follow-up's
+// replies continue that turn's script.
 async function turn(
   user: TestUser,
   text: string,
   replies: ScriptedReply[],
-  conversationId: string | null = null,
+  after: PlacedTurn | null = null,
 ) {
-  const turnMarker = `${marker}${crypto.randomUUID().replaceAll("-", "").slice(0, 6)}`;
-  turnMarkers.push(turnMarker);
-  await anthropicMock.script(turnMarker, replies);
+  const turnMarker =
+    after?.turnMarker ?? `${marker}${crypto.randomUUID().replaceAll("-", "").slice(0, 6)}`;
+  if (after === null) {
+    turnMarkers.push(turnMarker);
+  }
+  const script = [...(after?.replies ?? []), ...replies];
+  await anthropicMock.script(turnMarker, script);
   const response = await callAssistant("turn", {
     user,
-    body: { ...turnBody(`${text} ${turnMarker}`), conversationId, localDate: "2026-11-03" },
+    body: {
+      ...turnBody(after === null ? `${text} ${turnMarker}` : text),
+      conversationId: after?.conversationId ?? null,
+      localDate: "2026-11-03",
+    },
   });
   const events = eventsOf(response);
   const first = events[0];
   return {
     events,
     turnMarker,
+    replies: script,
     turnId: first?.type === "turn" ? first.turnId : "",
     conversationId: first?.type === "turn" ? first.conversationId : "",
   };
@@ -150,10 +174,34 @@ let bob: TestUser;
 let programId = "";
 let foodEvents: AssistantStreamEvent[];
 let askEvents: AssistantStreamEvent[];
+let silentAskEvents: AssistantStreamEvent[];
+let keepEvents: AssistantStreamEvent[];
+// What Alice's targets and programme were after she answered "Keep 2,140" and the model still called the tool.
+let keptTargets: Awaited<ReturnType<typeof getMyTargets>>;
+let keptProgramId: string | undefined;
 let changeEvents: AssistantStreamEvent[];
+let carol: TestUser;
+let carolProgramId = "";
+let noModelStepEvents: AssistantStreamEvent[];
 // What the person's targets and programme were when the asking turn had ended.
 let askedTargets: Awaited<ReturnType<typeof getMyTargets>>;
 let askedProgramId: string | undefined;
+
+// The id of the confirmation a turn left waiting.
+async function pendingConfirmationIdOf(turnId: string): Promise<string> {
+  const { data } = await adminClient()
+    .from("assistant_turns")
+    .select("pending_confirmation")
+    .eq("id", turnId)
+    .single();
+  const pending = data?.pending_confirmation;
+  return typeof pending === "object" &&
+    pending !== null &&
+    "id" in pending &&
+    typeof pending.id === "string"
+    ? pending.id
+    : "";
+}
 
 beforeAll(async () => {
   await requireServedFunction(inject("stack"), "assistant");
@@ -177,32 +225,40 @@ beforeAll(async () => {
   askEvents = asked.events;
   askedTargets = await getMyTargets(alice.client);
   askedProgramId = (await getMyProgramSummary(alice.client)).program?.id;
-  // The next turn repeats this one in its history, and the mock would find this marker first.
-  await anthropicMock.forget(asked.turnMarker);
-  const { data: askedTurn } = await adminClient()
-    .from("assistant_turns")
-    .select("pending_confirmation")
-    .eq("id", asked.turnId)
-    .single();
-  const pending = askedTurn?.pending_confirmation;
-  const confirmationId =
-    typeof pending === "object" &&
-    pending !== null &&
-    "id" in pending &&
-    typeof pending.id === "string"
-      ? pending.id
-      : "";
-  changeEvents = (
+  // A model that calls the tool and writes no question (KEY-839). It asks in a conversation of its own, and
+  // changes nothing, so the turn that follows a yes below still finds Alice as the asking turn left her.
+  const silent = await turn(alice, "Please set my calories to 2,000", [
+    useTool("update_targets", newTargets),
+  ]);
+  silentAskEvents = silent.events;
+  // She answers with the cancel button's words, and a model that misreads that still calls the tool with the
+  // id (KEY-839). The code refuses to spend it and asks again, so nothing changes.
+  keepEvents = (
     await turn(
       alice,
-      "Change target",
+      "Keep 2,140",
       [
-        useTool("update_targets", { ...newTargets, confirmation_id: confirmationId }),
-        finish("Done."),
+        useTool("update_targets", {
+          ...newTargets,
+          confirmation_id: await pendingConfirmationIdOf(silent.turnId),
+        }),
       ],
-      asked.conversationId,
+      silent,
     )
   ).events;
+  keptTargets = await getMyTargets(alice.client);
+  keptProgramId = (await getMyProgramSummary(alice.client)).program?.id;
+  // The button's words run the write in code and the script holds no model step for them (KEY-840). A model
+  // that forgot the id, or answered in prose (live runs 42110720568 and 42115161699), can no longer stop it.
+  changeEvents = (await turn(alice, "Change target", [], asked)).events;
+
+  // The same press for another person. Carol's change does not touch Alice's.
+  carol = await newAssistantUser("assistant-target-tools");
+  carolProgramId = await giveProgram(carol);
+  const carolAsked = await turn(carol, "Set my calories to 2,000", [
+    useTool("update_targets", newTargets, "Change your calorie target from 2,140 to 2,000 kcal?"),
+  ]);
+  noModelStepEvents = (await turn(carol, "Change target", [], carolAsked)).events;
 }, 240_000);
 
 afterAll(async () => {
@@ -255,7 +311,7 @@ describe("a turn that calls create_custom_food", () => {
       target_local_date: null,
       target_updated_at: null,
     });
-    const written = JSON.stringify(data);
+    const written = withoutIdsAndDates(data);
     for (const word of [marker, "protein", "210", "bar"]) {
       expect(written).not.toContain(word);
     }
@@ -277,7 +333,70 @@ describe("a turn that asks to change the targets", () => {
   });
 });
 
+describe("a turn that asks to change the targets and the model wrote no question", () => {
+  it("ends asking with the board's question, followed by the line about the macros", () => {
+    expect(silentAskEvents.find((event) => event.type === "confirm")).toMatchObject({
+      type: "confirm",
+      question: `Change your calorie target from 2,140 to 2,000 kcal? This ends your programme and its weekly check-in. Today and later days use your own targets.\n\n${macrosNote}`,
+      confirmLabel: "Change target",
+      cancelLabel: "Keep 2,140",
+      tone: "primary",
+    });
+    expect(silentAskEvents.at(-1)).toEqual({ type: "done", outcome: "confirm" });
+  });
+});
+
+describe("a turn that answers Keep 2,140 while the model calls the tool with the confirmation", () => {
+  it("ends asking again, with the buttons, and changes nothing", () => {
+    expect(keepEvents.find((event) => event.type === "confirm")).toMatchObject({
+      type: "confirm",
+      confirmLabel: "Change target",
+      cancelLabel: "Keep 2,140",
+      tone: "primary",
+    });
+    expect(keepEvents.at(-1)).toEqual({ type: "done", outcome: "confirm" });
+    expect(cardOf(keepEvents)).toBeUndefined();
+  });
+
+  it("leaves the targets as they were and the programme active", () => {
+    expect(keptTargets).toMatchObject({ source: "engine", kcal: 2140 });
+    expect(keptProgramId).toBe(programId);
+  });
+});
+
+describe("the turn that follows a yes for another person, with no model step scripted", () => {
+  it("streams the targets-changed card, once", () => {
+    expect(noModelStepEvents.filter((event) => event.type === "card")).toHaveLength(1);
+    expect(cardOf(noModelStepEvents)).toMatchObject({
+      kind: "targets_changed",
+      title: "Changed your calorie target to 2,000 kcal",
+    });
+  });
+
+  it("saves the targets, ends the programme and records one action", async () => {
+    expect(await getMyTargets(carol.client)).toMatchObject({ source: "manual", kcal: 2000 });
+    expect((await getMyProgramSummary(carol.client)).program).toBeNull();
+    const { data } = await carol.client
+      .from("assistant_actions")
+      .select("target_id")
+      .eq("tool", "update_targets");
+    expect(data).toEqual([{ target_id: carolProgramId }]);
+  });
+});
+
 describe("the turn that follows a yes", () => {
+  it("streams the card alone, with no reply under it", () => {
+    expect(changeEvents.map((event) => event.type)).toEqual(["turn", "status", "card", "done"]);
+    expect(changeEvents[1]).toEqual({
+      type: "status",
+      code: "tool",
+      tool: "update_targets",
+      food: null,
+      isConfirmed: true,
+    });
+    expect(changeEvents.at(-1)).toEqual({ type: "done", outcome: "complete" });
+  });
+
   it("streams the board's targets-changed card", () => {
     expect(cardOf(changeEvents)).toMatchObject({
       kind: "targets_changed",
@@ -320,7 +439,7 @@ describe("the turn that follows a yes", () => {
       target_local_date: null,
     });
     expect(data?.[0]?.target_updated_at).not.toBeNull();
-    const written = JSON.stringify(data);
+    const written = withoutIdsAndDates(data);
     for (const word of [
       "2000",
       "2140",

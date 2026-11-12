@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { Shield } from "lucide-react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -128,6 +128,111 @@ describe("ListRow", () => {
     });
   });
 
+  describe("loading", () => {
+    it("should be busy and draw a spinner in place of the chevron", () => {
+      renderInList(<ListRow title="Pull" onClick={() => undefined} loading />);
+
+      const button = screen.getByRole("button", { name: /^Pull/ });
+
+      expect(button.getAttribute("aria-busy")).toBe("true");
+      expect(button.querySelector("svg")).toBeNull();
+      expect(within(button).getByRole("img", { name: "Loading" })).toBeTruthy();
+    });
+
+    it("should ignore a press while it works, and report one again once it clears", () => {
+      const onClick = vi.fn();
+      const { rerender } = renderInList(<ListRow title="Pull" onClick={onClick} loading />);
+
+      fireEvent.click(screen.getByRole("button", { name: /^Pull/ }));
+      expect(onClick).not.toHaveBeenCalled();
+
+      rerender(
+        <ul>
+          <ListRow title="Pull" onClick={onClick} />
+        </ul>,
+      );
+      fireEvent.click(screen.getByRole("button", { name: "Pull" }));
+      expect(onClick).toHaveBeenCalledTimes(1);
+    });
+
+    it("should stay enabled, so focus is not lost while it works", () => {
+      renderInList(<ListRow title="Pull" onClick={() => undefined} loading />);
+
+      expect(screen.getByRole("button", { name: /^Pull/ })).toHaveProperty("disabled", false);
+    });
+
+    it("should not be busy and keep its chevron when not loading", () => {
+      renderInList(<ListRow title="Pull" onClick={() => undefined} />);
+
+      const button = screen.getByRole("button", { name: "Pull" });
+
+      expect(button.getAttribute("aria-busy")).toBeNull();
+      expect(button.querySelector("svg")).not.toBeNull();
+    });
+  });
+
+  describe("trailing tick", () => {
+    it("should draw a tick named by its label, in the success colour, at the end of the row", () => {
+      renderInList(
+        <ListRow
+          title="ki-lo-export-2026-10-25.json"
+          trailing={{ kind: "tick", label: "Ready" }}
+        />,
+      );
+
+      const tick = screen.getByRole("img", { name: "Ready" });
+
+      const icon = tick.querySelector("svg");
+      expect(icon?.getAttribute("class")).toContain("stroke-success");
+      expect(icon?.getAttribute("class")).toContain("size-5");
+      expect(tick.parentElement?.lastElementChild).toBe(tick);
+    });
+
+    it("should draw the spinner alone while the row is loading, not a done tick beside it", () => {
+      renderInList(
+        <ListRow
+          title="Pull"
+          onClick={() => undefined}
+          loading
+          trailing={{ kind: "tick", label: "Ready" }}
+        />,
+      );
+
+      expect(screen.getByRole("img", { name: "Loading" })).toBeTruthy();
+      expect(screen.queryByRole("img", { name: "Ready" })).toBeNull();
+    });
+
+    it("should keep the tick before the chevron on a row that goes somewhere", () => {
+      renderWithRouter(
+        <ul>
+          <ListRow title="Export" href="/more/export" trailing={{ kind: "tick", label: "Ready" }} />
+        </ul>,
+      );
+
+      const link = screen.getByRole("link", { name: /Export/ });
+      const tick = screen.getByRole("img", { name: "Ready" });
+
+      expect(tick.nextElementSibling?.tagName.toLowerCase()).toBe("svg");
+      expect(link.lastElementChild).toBe(tick.nextElementSibling);
+    });
+
+    it("should draw no tick on a row that has none", () => {
+      renderInList(<ListRow title="Expenditure" />);
+
+      expect(screen.queryByRole("img")).toBeNull();
+    });
+  });
+
+  describe("a long title", () => {
+    it("should break anywhere, so a long file name wraps inside the row", () => {
+      renderInList(<ListRow title="ki-lo-export-2026-10-25.json" />);
+
+      expect(screen.getByText("ki-lo-export-2026-10-25.json").className).toContain(
+        "[overflow-wrap:anywhere]",
+      );
+    });
+  });
+
   describe("chevron", () => {
     it("should show a decorative chevron on a row that goes somewhere", () => {
       renderInList(<ListRow title="Your foods" href="/foods" />);
@@ -246,6 +351,95 @@ describe("ListRow", () => {
       renderInList(<ListRow title="Targets" value="2,200 kcal" />);
 
       expect(screen.getByText("2,200 kcal").className).toContain("text-text-secondary");
+    });
+  });
+
+  describe("a macro key", () => {
+    // The key is decoration, so the only way to find it is by what it is: a hidden square before the title.
+    const keyOf = (item: HTMLElement) => item.querySelector("span[aria-hidden='true']");
+
+    it.each([
+      ["calories", "bg-calories"],
+      ["protein", "bg-protein"],
+      ["carbs", "bg-carbs"],
+      ["fat", "bg-fat"],
+    ] as const)(
+      "should draw the %s colour as an 8 px square with a 2 px radius",
+      (macro, colour) => {
+        renderInList(<ListRow macro={macro} title="Protein" value="126" unit="g" />);
+
+        const key = keyOf(screen.getByRole("listitem"));
+
+        expect(key?.className).toContain(colour);
+        expect(key?.className).toContain("size-2");
+        expect(key?.className).toContain("rounded-[2px]");
+        expect(key?.className).toContain("shrink-0");
+      },
+    );
+
+    it("should come before the title and leave the row named by its title alone", () => {
+      renderInList(<ListRow macro="protein" title="Protein" value="126" unit="g" />);
+
+      const item = screen.getByRole("listitem");
+
+      expect(keyOf(item)?.nextElementSibling?.textContent).toBe("Protein");
+      expect(item.textContent).toBe("Protein126g");
+    });
+
+    it("should set the title in the body weight, where a row without a key sets it strong", () => {
+      renderInList(
+        <>
+          <ListRow macro="fat" title="Fat" />
+          <ListRow title="Plain" />
+        </>,
+      );
+
+      expect(screen.getByText("Fat").className).toContain("text-body");
+      expect(screen.getByText("Fat").className).not.toContain("text-body-strong");
+      expect(screen.getByText("Plain").className).toContain("text-body-strong");
+    });
+
+    it("should draw no key on a row that has no macro", () => {
+      renderInList(<ListRow title="Plain" value="2,200" unit="kcal" />);
+
+      expect(keyOf(screen.getByRole("listitem"))).toBeNull();
+    });
+
+    it("should come after a leading icon, before the title", () => {
+      renderInList(<ListRow icon={Shield} macro="carbs" title="Carbohydrate" />);
+
+      const key = keyOf(screen.getByRole("listitem"));
+
+      expect(key?.className).toContain("bg-carbs");
+      expect(key?.previousElementSibling?.querySelector("svg")).not.toBeNull();
+      expect(key?.nextElementSibling?.textContent).toBe("Carbohydrate");
+    });
+
+    it("should stay on a row that goes somewhere, and on one that is loading", () => {
+      renderWithRouter(
+        <ul>
+          <ListRow macro="protein" title="Linked" href="/somewhere" />
+          <ListRow macro="fat" title="Busy" onClick={() => undefined} loading />
+        </ul>,
+      );
+
+      expect(keyOf(screen.getByRole("link", { name: "Linked" }))?.className).toContain(
+        "bg-protein",
+      );
+      const busy = screen.getByRole("button", { name: /^Busy/ });
+      expect(keyOf(busy)?.className).toContain("bg-fat");
+      expect(within(busy).getByRole("img", { name: "Loading" })).toBeTruthy();
+    });
+
+    it("should leave a done tick at the end of the row", () => {
+      renderInList(
+        <ListRow macro="calories" title="Calories" trailing={{ kind: "tick", label: "Set" }} />,
+      );
+
+      const tick = screen.getByRole("img", { name: "Set" });
+
+      expect(keyOf(screen.getByRole("listitem"))?.className).toContain("bg-calories");
+      expect(tick.parentElement?.lastElementChild).toBe(tick);
     });
   });
 

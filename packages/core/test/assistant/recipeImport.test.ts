@@ -1,12 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  IMPORT_GUESS_MAX_AMOUNT,
-  IMPORT_MATCH_MIN_SCORE,
-  importedAmountOf,
-  isConfidentFoodMatch,
-  simplerFoodWord,
-} from "../../src/assistant";
+import { IMPORT_GUESS_MAX_AMOUNT, importedAmountOf, simplerFoodWord } from "../../src/assistant";
 
 import type { ImportedLineMeasure } from "../../src/assistant";
 
@@ -15,6 +9,7 @@ const food = (overrides: Record<string, unknown> = {}) => ({
   source: "cofid" as const,
   source_ref: null,
   food_group: null,
+  kcal: 400 as number | null,
   density_g_per_ml: null as number | null,
   ...overrides,
 });
@@ -26,6 +21,7 @@ const portion = (id: string, label: string, grams: number, isDefault = false, po
   ml: null,
   is_default: isDefault,
   position,
+  owner_id: null as string | null,
 });
 
 const measure = (overrides: Partial<ImportedLineMeasure> = {}): ImportedLineMeasure => ({
@@ -34,16 +30,6 @@ const measure = (overrides: Partial<ImportedLineMeasure> = {}): ImportedLineMeas
   guessAmount: null,
   guessUnit: null,
   ...overrides,
-});
-
-describe("isConfidentFoodMatch", () => {
-  it("should take the scores of a food that has every word of the query, and refuse the trigram guesses", () => {
-    // Measured on the local stack with the full CoFID import: "olive oil" 2.189, "double cream" 1.818,
-    // "mascarpone" 2.009 against "red onion" 0.8, "cornflour" 0.9 and "plain flour" 1.179.
-    expect([2.189, 1.818, 2.009].every(isConfidentFoodMatch)).toBe(true);
-    expect([0.8, 0.9, 1.179].some(isConfidentFoodMatch)).toBe(false);
-    expect(IMPORT_MATCH_MIN_SCORE).toBe(1.5);
-  });
 });
 
 describe("simplerFoodWord", () => {
@@ -141,6 +127,32 @@ describe("importedAmountOf", () => {
       importedAmountOf(measure({ quantity: 2 }), food(), [portion("p2", "1 medium", 60, false, 1)])
         ?.input,
     ).toMatchObject({ portion: { id: "p2" } });
+  });
+
+  it("should not count in an estimate Ki-Lo generated, because 3 onions would become 3 guessed servings", () => {
+    // 400 kcal per 100 g is in the 300 kcal band, so the app's own estimate is 40 g.
+    const estimate = portion("p0", "1 typical serving", 40, true, 0);
+
+    expect(importedAmountOf(measure({ quantity: 3 }), food(), [estimate])).toBeNull();
+  });
+
+  it("should count in the pack chip and not the estimate that sits beside it", () => {
+    const estimate = portion("p0", "1 typical serving", 75, true, 0);
+    const bag = portion("p1", "1 bag", 2000, false, 1);
+
+    expect(
+      importedAmountOf(measure({ quantity: 3 }), food(), [estimate, bag])?.input,
+    ).toMatchObject({ portion: { id: "p1" } });
+  });
+
+  it("should count in a portion the person typed, even when it starts 1 typical", () => {
+    const typed = { ...portion("p0", "1 typical slice", 35, true, 0), owner_id: "person-1" };
+
+    expect(importedAmountOf(measure({ quantity: 3 }), food(), [typed])?.input).toMatchObject({
+      quantity: 3,
+      unit: "portion",
+      portion: { id: "p0" },
+    });
   });
 
   it("should count only in a portion whose label names the thing, never in a measure like 100 g", () => {

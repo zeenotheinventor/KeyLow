@@ -1,3 +1,5 @@
+import { describeBasis } from "./nutrition";
+import { isEstimatedPortion } from "../foods/estimatedPortion";
 import { formatGrams } from "../format/numbers";
 
 import type { NutrientBasis } from "../schemas/food";
@@ -18,10 +20,6 @@ export const PORTION_PICKER = {
 /** The words of the food search sheet while food is being logged to a day. */
 export const LOG_SEARCH = {
   title: "Log food",
-  /** The toast's action after a plus: it removes the entry that plus logged. */
-  undo: "Undo",
-  /** The toast when Undo could not remove the entry. */
-  undoFailed: "Couldn't undo. Try again.",
   /** What Recent says when it could not be loaded, in place of its rows. */
   recentFailed: {
     title: "Couldn't load recent foods",
@@ -29,9 +27,15 @@ export const LOG_SEARCH = {
   },
 };
 
-/** The heading of the per 100 list under the hero: "Per 100 g", or "Per 100 ml" for a drink. */
-export const describePer100Heading = (basis: NutrientBasis): string =>
-  basis === "per_100g" ? "Per 100 g" : "Per 100 ml";
+/**
+ * The heading of the per 100 list under the hero: "Per 100 g", or "Per 100 ml" for a drink, and for a food per
+ * portion the name of its portion, "Per bucket" (`portionLabel` is read only for that basis).
+ */
+export const describePer100Heading = (basis: NutrientBasis, portionLabel?: string): string => {
+  const heading = describeBasis(basis, portionLabel);
+
+  return `${heading.charAt(0).toUpperCase()}${heading.slice(1)}`;
+};
 
 /** The line under the hero of a food found by barcode: "Scanned 5201054013410". */
 export const describeScannedCode = (code: string): string => `Scanned ${code}`;
@@ -43,8 +47,8 @@ export type AmountBasisInput =
       quantity: number;
       /** The portion as the food names it, such as "1 medium". */
       portionLabel: string;
-      /** The size of one portion, in grams or millilitres. */
-      portionSize: { amount: number; unit: "g" | "ml" };
+      /** The size of one portion, in grams or millilitres. Left out for a food per portion, whose portion has none. */
+      portionSize?: { amount: number; unit: "g" | "ml" };
     };
 
 const squash = (text: string): string => text.replace(/\s+/g, "").toLowerCase();
@@ -54,15 +58,23 @@ const escapeForPattern = (text: string): string => text.replace(/[.*+?^${}()|[\]
 const labelSays = (label: string, written: string): boolean =>
   new RegExp(`(?:^|[^0-9.])${escapeForPattern(squash(written))}`).test(squash(label));
 
+/** The size as it is written after a portion: "about 150 g" for an estimate, "150 g" for any other. */
+export const describeSizeOfPortion = (label: string, written: string): string =>
+  isEstimatedPortion(label) ? `about ${written}` : written;
+
 /**
  * A portion with its size, such as "1 medium (100 g)" for the portion "1 medium". A label that already
- * says its size, such as the "30 g" Open Food Facts gives a serving, is left as it is.
+ * says its size, such as the "30 g" Open Food Facts gives a serving, is left as it is. An estimated portion
+ * ("1 typical serving") says "about" before its size, "1 typical serving (about 150 g)".
  */
 export const describePortionWithSize = (
   label: string,
   size: { amount: number; unit: "g" | "ml" },
 ): string => {
   const written = `${formatGrams(size.amount)} ${size.unit}`;
+  if (isEstimatedPortion(label)) {
+    return `${label} (${describeSizeOfPortion(label, written)})`;
+  }
 
   return labelSays(label, written) ? label : `${label} (${written})`;
 };
@@ -70,17 +82,26 @@ export const describePortionWithSize = (
 /**
  * The hero's caption for the chosen amount: "For 150 g", "For 1 medium (100 g)" for one portion and
  * "For 2 × 1 medium (200 g)" for more. The portion's size is the whole amount, so it is the
- * portion's size times the quantity.
+ * portion's size times the quantity. A portion with no size, as a food per portion has, is written with
+ * no brackets: "For 1 bucket", "For 2 × 1 bucket".
  */
 export const describeAmountBasis = (input: AmountBasisInput): string => {
   if (input.unit !== "portion") {
     return `For ${formatGrams(input.quantity)} ${input.unit}`;
   }
   const { quantity, portionLabel, portionSize } = input;
+  if (portionSize === undefined) {
+    return quantity === 1
+      ? `For ${portionLabel}`
+      : `For ${formatGrams(quantity)} × ${portionLabel}`;
+  }
   if (quantity === 1) {
     return `For ${describePortionWithSize(portionLabel, portionSize)}`;
   }
-  const total = `${formatGrams(quantity * portionSize.amount)} ${portionSize.unit}`;
+  const total = describeSizeOfPortion(
+    portionLabel,
+    `${formatGrams(quantity * portionSize.amount)} ${portionSize.unit}`,
+  );
 
   return `For ${formatGrams(quantity)} × ${portionLabel} (${total})`;
 };
@@ -100,7 +121,9 @@ export type VolumeBasisInput = { quantity: number; weightInGrams: number | null 
  * The hero's caption for an amount measured by volume: "For 250 ml (258 g)", and for a spoon its
  * millilitres first, "For 2 tbsp (30 ml, 28 g)". The weight is left out when the food has no density to
  * work it out with, as for a drink measured per 100 ml: "For 250 ml", "For 2 tbsp (30 ml)". It is the
- * weight itself and never "about" it, because a logged entry freezes the same figure.
+ * weight itself and never "about" it, because a logged entry freezes the same figure. An estimated portion
+ * is different (see `describePortionWithSize`): the weight logged is exact too, but whether it is what was on
+ * the plate is not, so only the estimate says "about".
  */
 export const describeVolumeBasis = (input: VolumeBasisInput): string => {
   const weight = input.weightInGrams === null ? [] : [`${formatGrams(input.weightInGrams)} g`];

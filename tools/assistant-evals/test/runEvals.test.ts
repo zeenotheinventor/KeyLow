@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { fakeEnvironment } from "./fakeEnvironment.ts";
 import { costing, readTool, scriptedStack, turnResult, writeTool } from "./helpers.ts";
 import {
   cacheReadOnSecondTurn,
@@ -50,6 +51,49 @@ describe("runEvals", () => {
 
     expect(report.cases).toEqual([
       { id: "reads", set: "ask", status: "passed", failures: [], tokens: 40 },
+    ]);
+  });
+
+  it("should flag a case that is must-pass and a case whose critical grader failed", async () => {
+    const { report } = await run(
+      [
+        simpleCase("important", {
+          mustPass: true,
+          expect: [() => Promise.resolve({ passed: true, reason: "fine" })],
+        }),
+        simpleCase("wrote", {
+          expect: [() => Promise.resolve({ passed: false, reason: "wrote", critical: true })],
+        }),
+        simpleCase("ordinary", {
+          expect: [() => Promise.resolve({ passed: false, reason: "missed" })],
+        }),
+      ],
+      [costing(1), costing(1), costing(1)],
+    );
+
+    expect(report.cases.map(({ id, mustPass, critical }) => [id, mustPass, critical])).toEqual([
+      ["important", true, undefined],
+      ["wrote", undefined, true],
+      ["ordinary", undefined, undefined],
+    ]);
+  });
+
+  it("should mark a case that failed on soft graders only, and not one that also failed on another", async () => {
+    const soft = () => Promise.resolve({ passed: false, reason: "style", soft: true as const });
+    const hard = () => Promise.resolve({ passed: false, reason: "wrong" });
+    const { report } = await run(
+      [
+        simpleCase("slip", { mustPass: true, expect: [soft] }),
+        simpleCase("slip-and-wrong", { mustPass: true, expect: [soft, hard] }),
+        simpleCase("wrong", { expect: [hard] }),
+      ],
+      [costing(1), costing(1), costing(1)],
+    );
+
+    expect(report.cases.map(({ id, status, softOnly }) => [id, status, softOnly])).toEqual([
+      ["slip", "failed", true],
+      ["slip-and-wrong", "failed", undefined],
+      ["wrong", "failed", undefined],
     ]);
   });
 
@@ -226,6 +270,63 @@ describe("runEvals", () => {
       expect(report.cases[0]?.failures).toEqual(["no assistant_usage rows for the turn"]);
     });
 
+    describe("a turn with no usage row", () => {
+      const asking = (label = "Archive recipe") =>
+        costing(30, {
+          status: "confirm",
+          conversationId: "conversation-a",
+          confirmation: { question: "Archive it?", confirmLabel: label, cancelLabel: "Keep it" },
+        });
+      const press = (): ScriptedTurn => ({
+        result: turnResult({ conversationId: "conversation-a" }),
+      });
+      const pressCase = (message: string) =>
+        simpleCase("press", { messages: ["Archive my recipe.", message] });
+
+      it("should be allowed for the press of the confirm button, which makes no model call", async () => {
+        const { report } = await run([pressCase("Archive recipe")], [asking(), press()]);
+
+        expect(report.cases[0]).toMatchObject({ status: "passed", failures: [] });
+      });
+
+      it("should be allowed for the button's words in any case and with spaces around them", async () => {
+        const { report } = await run([pressCase("  archive RECIPE ")], [asking(), press()]);
+
+        expect(report.cases[0]?.status).toBe("passed");
+      });
+
+      it("should still be an error for a typed answer after a confirmation", async () => {
+        const { report } = await run([pressCase("yes please")], [asking(), press()]);
+
+        expect(report.cases[0]).toMatchObject({
+          status: "error",
+          failures: ["no assistant_usage rows for the turn"],
+        });
+      });
+
+      it("should still be an error for the cancel button's words", async () => {
+        const { report } = await run([pressCase("Keep it")], [asking(), press()]);
+
+        expect(report.cases[0]?.status).toBe("error");
+      });
+
+      it("should still be an error for the button's words when the turn before did not ask", async () => {
+        const answered = costing(30, { conversationId: "conversation-a" });
+        const { report } = await run([pressCase("Archive recipe")], [answered, press()]);
+
+        expect(report.cases[0]?.status).toBe("error");
+      });
+
+      it("should still be an error for the first turn of a case", async () => {
+        const { report } = await run(
+          [simpleCase("first", { messages: ["Archive recipe"] })],
+          [press()],
+        );
+
+        expect(report.cases[0]?.status).toBe("error");
+      });
+    });
+
     it("should stop the run when the spend of the user cannot be read", async () => {
       const stack = scriptedStack([costing(10), costing(10)]);
       const database = {
@@ -320,6 +421,113 @@ describe("runEvals", () => {
       expect(report.cases[1]?.tokens).toBe(7);
     });
 
+    it("should wait for the clean up of a case that hit its ceiling before the next case starts", async () => {
+      const events: string[] = [];
+      const stack = scriptedStack([{ ...costing(5), delayMs: 60 }, costing(7)]);
+
+      const report = await runEvals({
+        cases: [
+          simpleCase("slow", {
+            setup: () => {
+              events.push("slow setup");
+              return Promise.resolve(null);
+            },
+            cleanUp: async () => {
+              await new Promise((resolve) => setTimeout(resolve, 20));
+              events.push("slow clean up");
+            },
+          }),
+          simpleCase("next", {
+            setup: () => {
+              events.push("next setup");
+              return Promise.resolve(null);
+            },
+          }),
+        ],
+        ...stack,
+        environment: fakeEnvironment(),
+        budgetTokens: 1_000,
+        caseTimeoutMs: 30,
+      });
+
+      expect(events).toEqual(["slow setup", "slow clean up", "next setup"]);
+      expect(report.cases.map(({ id, status }) => [id, status])).toEqual([
+        ["slow", "error"],
+        ["next", "passed"],
+      ]);
+    });
+
+    it("should not wait for ever for a case that never comes back", async () => {
+      const stack = scriptedStack([{ ...costing(5), hangs: true }, costing(7)]);
+
+      const report = await runEvals({
+        cases: [simpleCase("hung"), simpleCase("next")],
+        ...stack,
+        budgetTokens: 1_000,
+        caseTimeoutMs: 20,
+        cleanUpGraceMs: 20,
+      });
+
+      expect(report.cases.map(({ status }) => status)).toEqual(["error", "passed"]);
+    });
+
+    it("should run the prepare of a case outside its ceiling", async () => {
+      const stack = scriptedStack([costing(5)]);
+
+      const report = await runEvals({
+        cases: [
+          simpleCase("prepared", {
+            prepare: () => new Promise((resolve) => setTimeout(resolve, 80)),
+          }),
+        ],
+        ...stack,
+        budgetTokens: 1_000,
+        caseTimeoutMs: 30,
+      });
+
+      expect(report.cases.map(({ status }) => status)).toEqual(["passed"]);
+    });
+
+    it("should end a case in error when its prepare hangs, and not wait for it again for the next case", async () => {
+      const stack = scriptedStack([costing(5), costing(5)]);
+      let attempts = 0;
+      const prepare = () => {
+        attempts += 1;
+        return new Promise<void>(() => undefined);
+      };
+
+      const report = await runEvals({
+        cases: [simpleCase("first", { prepare }), simpleCase("second", { prepare })],
+        ...stack,
+        budgetTokens: 1_000,
+        prepareTimeoutMs: 20,
+      });
+
+      expect(report.cases.map(({ status }) => status)).toEqual(["error", "error"]);
+      expect(report.cases[0]?.failures).toEqual([
+        "the case could not be prepared: took longer than 20 ms",
+      ]);
+      expect(report.cases[1]?.failures[0]).toContain("an earlier case's prepare hung");
+      expect(attempts).toBe(1);
+      expect(stack.driver.sent).toEqual([]);
+    });
+
+    it("should end a case in error when its prepare fails, and send nothing", async () => {
+      const stack = scriptedStack([costing(5)]);
+
+      const report = await runEvals({
+        cases: [simpleCase("unprepared", { prepare: () => Promise.reject(new Error("no stack")) })],
+        ...stack,
+        budgetTokens: 1_000,
+      });
+
+      expect(report.cases[0]).toMatchObject({
+        status: "error",
+        failures: ["the case could not be prepared: no stack"],
+      });
+      expect(stack.driver.sent).toEqual([]);
+    });
+
     it("should record a driver error as an error, not a failure, and carry on", async () => {
       const { report } = await run(
         [simpleCase("broken"), simpleCase("fine")],
@@ -368,7 +576,10 @@ describe("runEvals", () => {
         [costing(5, { status: "failed" })],
       );
 
-      expect(report.cases[0]).toMatchObject({ status: "error", failures: ["the turn failed"] });
+      expect(report.cases[0]).toMatchObject({
+        status: "error",
+        failures: ["the turn failed (no notice)"],
+      });
     });
 
     it("should end a case whose driver never answers after the wall-clock ceiling, and carry on", async () => {
@@ -382,6 +593,7 @@ describe("runEvals", () => {
         ...stack,
         budgetTokens: 1_000,
         caseTimeoutMs: 30,
+        cleanUpGraceMs: 10,
       });
 
       expect(report.cases.map(({ id, status }) => [id, status])).toEqual([
@@ -403,6 +615,8 @@ describe("runEvals with a case that sets up and waits", () => {
       log.push(`wait ${conversationId}`);
       return Promise.resolve();
     },
+    undoTurn: () => Promise.resolve([]),
+    restoreTargets: () => Promise.resolve(),
   });
 
   it("should send the first message into the conversation that setup answered", async () => {
@@ -495,5 +709,74 @@ describe("runEvals with a case that sets up and waits", () => {
       failures: ["the case needs a session with a case environment"],
     });
     expect(stack.driver.sent).toHaveLength(0);
+  });
+  describe("the size of the cached prompt", () => {
+    it("should report the tokens of the first model call of the first case", async () => {
+      const { report } = await run(
+        [simpleCase("first"), simpleCase("second")],
+        [
+          {
+            result: turnResult(),
+            usage: { inputTokens: 12, cacheCreationInputTokens: 2_500, cacheReadInputTokens: 0 },
+          },
+          {
+            result: turnResult(),
+            usage: { inputTokens: 99, cacheCreationInputTokens: 0, cacheReadInputTokens: 2_500 },
+          },
+        ],
+      );
+
+      expect(report.firstModelCall).toEqual({
+        inputTokens: 12,
+        cacheCreationInputTokens: 2_500,
+        cacheReadInputTokens: 0,
+      });
+    });
+
+    it("should take the first turn of the case and not a later one", async () => {
+      const { report } = await run(
+        [simpleCase("two-turns", { messages: ["first", "second"] })],
+        [
+          { result: turnResult({ conversationId: "c" }), usage: { inputTokens: 5 } },
+          { result: turnResult({ conversationId: "c" }), usage: { inputTokens: 700 } },
+        ],
+      );
+
+      expect(report.firstModelCall?.inputTokens).toBe(5);
+    });
+
+    it("should never decide a verdict: a call that cannot be read leaves the line empty and the case passing", async () => {
+      const stack = scriptedStack([{ result: turnResult(), usage: { inputTokens: 40 } }]);
+      const database = {
+        ...stack.database,
+        firstModelCallOfTurn: () =>
+          Promise.reject(new Error("Could not read assistant_usage (42501)")),
+      };
+
+      const report = await runEvals({
+        cases: [simpleCase("reads", { expect: [noWrite()] })],
+        driver: stack.driver,
+        database,
+        budgetTokens: 1_000_000,
+      });
+
+      expect(report.cases[0]).toMatchObject({ status: "passed", failures: [] });
+      expect(report.firstModelCall).toBeNull();
+    });
+
+    it("should be null when no case ran", async () => {
+      const { report } = await run([], []);
+
+      expect(report.firstModelCall).toBeNull();
+    });
+
+    it("should be null when the first turn of the first case failed before it billed a call", async () => {
+      const { report } = await run(
+        [simpleCase("fails")],
+        [{ result: turnResult(), throws: new Error("the stream broke") }],
+      );
+
+      expect(report.firstModelCall).toBeNull();
+    });
   });
 });

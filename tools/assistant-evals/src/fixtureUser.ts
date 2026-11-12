@@ -3,6 +3,8 @@ import { buildRecipeIngredient } from "@keylow/core/recipes";
 import { buildManualWeighIn } from "@keylow/core/weight";
 import { createClient } from "@supabase/supabase-js";
 
+import { repoError } from "../../../packages/api-client/src/repos/repoError.ts";
+import { retryOnStaleConnection } from "../../../packages/db/test/support/retryOnStaleConnection.ts";
 import {
   DIARY_DAY_COUNT,
   FIXTURE_FOODS,
@@ -39,8 +41,12 @@ export type FixtureUser = Readonly<{
   remove: () => Promise<void>;
 }>;
 
-// Sessions are never persisted or refreshed, so each client is a self-contained caller.
-const stateless = { auth: { persistSession: false, autoRefreshToken: false } };
+// Sessions are never persisted or refreshed, so each client is a self-contained caller. Every request goes
+// through the retry for the local gateway's stale keepalive connection (KEY-796), as the db suites' clients do.
+const stateless = {
+  auth: { persistSession: false, autoRefreshToken: false },
+  global: { fetch: retryOnStaleConnection() },
+};
 
 const DEFAULT_NAME_PREFIX = "assistant-eval";
 const WEIGH_IN_TIME = "07:00";
@@ -153,8 +159,21 @@ async function writeDiaryDay(
     // No repo writes a day's note yet, so this is the one plain update, through the user's own client.
     const { error } = await client.from("day_logs").update({ note }).eq("local_date", localDate);
     if (error) {
-      throw new Error(`Could not write the day note (${error.code})`);
+      throw repoError("write the day note", error);
     }
+  }
+}
+
+/**
+ * The free plan allows 15 assistant turns a day, so turn 16 of a run would answer `day_limit` and look like a
+ * low pass rate. Only the service role writes `entitlements`, and the stack is local (see `assertLocalStack`).
+ */
+async function grantUnlimitedAssistant(admin: SupabaseClient, userId: string): Promise<void> {
+  const { error } = await admin
+    .from("entitlements")
+    .insert({ user_id: userId, feature: "assistant", plan: "unlimited", source: "eval" });
+  if (error) {
+    throw new Error(`Could not grant the eval user an unlimited plan (${error.code})`);
   }
 }
 
@@ -214,6 +233,7 @@ export async function createFixtureUser(
   };
 
   try {
+    await grantUnlimitedAssistant(admin, id);
     const client = createClient<Database>(stack.apiUrl, stack.anonKey, stateless);
     const { error: signInError } = await client.auth.signInWithPassword({ email, password });
     if (signInError) {

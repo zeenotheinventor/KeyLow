@@ -28,12 +28,11 @@ export type RegisterSearchProduct = Pick<RegisterProduct, "code" | "productOverr
   fixture: string;
 };
 
-export type RegisterSearch = {
-  /** The `search_terms` the mock answers for. A test uses words of its own, so searches never mix. */
-  searchTerms: string;
-  /** The products to serve, in order, inside the search envelope. */
+/** What the mock answers to one search request. */
+export type RegisterSearchAnswer = {
+  /** The products to serve, in order, as hits in the search envelope. */
   products?: RegisterSearchProduct[];
-  /** A raw JSON response body, sent as it is. Use it for answers that are not a product list. */
+  /** A raw JSON response body, sent as it is. Use it for answers that are not a hit list. */
   body?: unknown;
   /** A raw text response body, sent as it is with a text/html content type (OFF's busy page). */
   rawBody?: string;
@@ -41,6 +40,19 @@ export type RegisterSearch = {
   status?: number;
   /** Holds the response back for this long, after the request is recorded. */
   delayMilliseconds?: number;
+};
+
+export type RegisterSearch = RegisterSearchAnswer & {
+  /**
+   * The words the mock answers for: the `q` the function sends, without its filter clauses. A test
+   * uses words of its own, so searches never mix. They are lower case, as the function sends them.
+   */
+  searchTerms: string;
+  /**
+   * What the second request for the same words answers, then the third, and so on. The last answer
+   * repeats. Without it every request gets the answer above.
+   */
+  followedBy?: RegisterSearchAnswer[];
 };
 
 export type RecordedCall = {
@@ -52,7 +64,7 @@ export type RecordedCall = {
   headers: Record<string, string>;
 };
 
-/** A search request. `code` is empty and `searchTerms` is the `search_terms` it carried. */
+/** A search request. `searchTerms` is the `q` it carried, without the filter clauses. */
 export type RecordedSearchCall = Omit<RecordedCall, "code"> & { searchTerms: string };
 
 export type OffMockClient = {

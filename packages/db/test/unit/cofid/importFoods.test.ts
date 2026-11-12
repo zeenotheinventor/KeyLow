@@ -9,11 +9,12 @@ import type { ImportStore } from "../../../scripts/cofid/importFoods";
 type Call =
   | { call: "startRun"; label: string; fileSha256: string }
   | { call: "writeBatch"; runId: string; codes: string[]; raws: Record<string, string | null>[] }
+  | { call: "giveDefaultPortions"; foodIds: readonly string[] }
   | { call: "finishRun"; runId: string; rowCount: number }
   | { call: "recordRowCount"; runId: string; rowCount: number };
 
 /** An in-memory store that records what the import asks of it. */
-function recordingStore(options: { failOnBatch?: number } = {}): {
+function recordingStore(options: { failOnBatch?: number; failOnDefaults?: boolean } = {}): {
   store: ImportStore;
   calls: Call[];
 } {
@@ -35,7 +36,13 @@ function recordingStore(options: { failOnBatch?: number } = {}): {
         codes: batch.map(({ sourceRef }) => sourceRef),
         raws: batch.map(({ raw }) => raw),
       });
-      return Promise.resolve();
+      return Promise.resolve(batch.map(({ sourceRef }) => `id-${sourceRef}`));
+    },
+    giveDefaultPortions: (foodIds) => {
+      calls.push({ call: "giveDefaultPortions", foodIds });
+      return options.failOnDefaults === true
+        ? Promise.reject(new Error("The database refused the defaults"))
+        : Promise.resolve();
     },
     finishRun: (runId, { rowCount }) => {
       calls.push({ call: "finishRun", runId, rowCount });
@@ -67,7 +74,7 @@ const baseOptions = {
 };
 
 describe("importCofid", () => {
-  it("should record the run, write the foods, then finish the run with the count", async () => {
+  it("should record the run, write the foods, give them defaults, then finish the run with the count", async () => {
     const { store, calls } = recordingStore();
 
     const summary = await importCofid(store, {
@@ -76,9 +83,14 @@ describe("importCofid", () => {
     });
 
     expect(summary).toMatchObject({ runId: "run-1", rowCount: 2, skippedDuplicateCodes: [] });
-    expect(calls.map((entry) => entry.call)).toEqual(["startRun", "writeBatch", "finishRun"]);
+    expect(calls.map((entry) => entry.call)).toEqual([
+      "startRun",
+      "writeBatch",
+      "giveDefaultPortions",
+      "finishRun",
+    ]);
     expect(calls[0]).toEqual({ call: "startRun", label: "unit-test", fileSha256: "a".repeat(64) });
-    expect(calls[2]).toEqual({ call: "finishRun", runId: "run-1", rowCount: 2 });
+    expect(calls[3]).toEqual({ call: "finishRun", runId: "run-1", rowCount: 2 });
   });
 
   it("should hand the store the run id and each food's whole source row", async () => {
@@ -258,6 +270,74 @@ describe("importCofid", () => {
       expect(codesWritten(calls)).toEqual([["11-1", "11-2"]]);
       expect(calls.at(-1)).toEqual({ call: "recordRowCount", runId: "run-1", rowCount: 2 });
       expect(calls.some((entry) => entry.call === "finishRun")).toBe(false);
+    });
+  });
+
+  describe("the default portions", () => {
+    it("should give defaults to the foods of each batch, naming their ids and no others", async () => {
+      const { store, calls } = recordingStore();
+
+      await importCofid(store, {
+        ...baseOptions,
+        batchSize: 2,
+        csv: csvOf(food("11-1"), food("11-2"), food("11-3")),
+      });
+
+      expect(calls.map((entry) => entry.call)).toEqual([
+        "startRun",
+        "writeBatch",
+        "giveDefaultPortions",
+        "writeBatch",
+        "giveDefaultPortions",
+        "finishRun",
+      ]);
+      expect(
+        calls.flatMap((entry) => (entry.call === "giveDefaultPortions" ? [entry.foodIds] : [])),
+      ).toEqual([["id-11-1", "id-11-2"], ["id-11-3"]]);
+    });
+
+    it("should have given defaults to the foods already written when a later batch fails, so none is left with no portion", async () => {
+      const { store, calls } = recordingStore({ failOnBatch: 2 });
+
+      await importCofid(store, {
+        ...baseOptions,
+        batchSize: 1,
+        csv: csvOf(food("11-1"), food("11-2")),
+      }).catch(() => undefined);
+
+      expect(calls.map((entry) => entry.call)).toEqual([
+        "startRun",
+        "writeBatch",
+        "giveDefaultPortions",
+        "recordRowCount",
+      ]);
+    });
+
+    it("should not ask for defaults when nothing was written", async () => {
+      const { store, calls } = recordingStore({ failOnBatch: 1 });
+
+      await importCofid(store, { ...baseOptions, csv: csvOf(food("11-1")) }).catch(() => undefined);
+
+      expect(calls.some((entry) => entry.call === "giveDefaultPortions")).toBe(false);
+    });
+
+    it("should leave the run unfinished and report the failure when the defaults cannot be written", async () => {
+      const { store, calls } = recordingStore({ failOnDefaults: true });
+
+      await expect(
+        importCofid(store, { ...baseOptions, csv: csvOf(food("11-1")) }),
+      ).rejects.toThrow("The database refused the defaults");
+
+      expect(calls.some((entry) => entry.call === "finishRun")).toBe(false);
+      expect(calls.at(-1)).toEqual({ call: "recordRowCount", runId: "run-1", rowCount: 1 });
+    });
+
+    it("should not ask for defaults on a dry run", async () => {
+      const { store, calls } = recordingStore();
+
+      await importCofid(store, { ...baseOptions, dryRun: true, csv: csvOf(food("11-1")) });
+
+      expect(calls).toEqual([]);
     });
   });
 

@@ -1,9 +1,12 @@
+import { useState } from "react";
 import { View } from "react-native";
 
 import { Badge } from "../Badge";
 import { Icon } from "../Icon";
 import { PressableSurface } from "../PressableSurface";
 import { Text } from "../Text";
+import { AssistantLinkRow } from "./AssistantLinkRow";
+import { RoutineDayRow } from "./RoutineDayRow";
 
 import type {
   AssistantActionCardProps,
@@ -13,8 +16,8 @@ import type {
 
 /**
  * What the assistant did, as a card in the thread: an icon tile, a title and its Undo, then the entries
- * it made, a total, a note and a link to what it made. Every word and every amount is the caller's and
- * is drawn exactly as given. The Undo is the diary toast's action: the accent ink, 36 points high. The
+ * it made, the days of a routine it built, a total, a note and a link to what it made. The days open one at
+ * a time, and the card holds which. Every word and every amount is the caller's and is drawn exactly as given. The Undo is the diary toast's action: the accent ink, 36 points high. The
  * card stays in the thread after an Undo, with the title muted and no action, so the history reads true.
  */
 export function AssistantActionCard({
@@ -23,11 +26,15 @@ export function AssistantActionCard({
   title,
   subtitle,
   rows = [],
+  days = [],
+  initiallyOpenDay,
   total,
   note,
   link,
   undo,
 }: AssistantActionCardProps) {
+  const [openDayIndex, setOpenDayIndex] = useState(initiallyOpenDay);
+
   return (
     // The board draws the card flat, as the notice is, so this is Card's surface without its elevation.
     <View className="overflow-hidden rounded-large border border-border bg-surface">
@@ -50,6 +57,16 @@ export function AssistantActionCard({
       {rows.map((row, index) => (
         <Row key={`${index}-${row.name}`} row={row} />
       ))}
+      {days.map((day, index) => (
+        <RoutineDayRow
+          key={`${index}-${day.name}`}
+          day={day}
+          isOpen={openDayIndex === index}
+          onPress={() => {
+            setOpenDayIndex(openDayIndex === index ? undefined : index);
+          }}
+        />
+      ))}
       {total === undefined ? null : (
         <View className="border-t border-border bg-surface-raised px-3 py-[10px]">
           <Text tone="secondary" variant="caption">
@@ -64,18 +81,7 @@ export function AssistantActionCard({
           </Text>
         </View>
       )}
-      {link === undefined ? null : (
-        <PressableSurface
-          className="min-h-touch-target flex-row items-center gap-2 border-t border-border px-3"
-          label={link.label}
-          onPress={link.onPress}
-        >
-          <Text className="flex-1" tone="accent-ink" variant="body-strong">
-            {link.label}
-          </Text>
-          <Icon name="ChevronRight" size="sm" tone="accent-ink" />
-        </PressableSurface>
-      )}
+      {link === undefined ? null : <AssistantLinkRow label={link.label} onPress={link.onPress} />}
     </View>
   );
 }

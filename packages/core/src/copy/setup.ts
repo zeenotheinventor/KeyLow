@@ -3,12 +3,17 @@ import { NOT_MEDICAL_ADVICE } from "./legal";
 import { describeWeightProblem, WEIGH_IN_SHEET } from "./weight";
 import { formatCalories, formatGrams } from "../format/numbers";
 import {
+  bindingCalorieClamp,
   DEFAULT_RATE_PCT_PER_WEEK,
   HEIGHT_MAX_CM,
   HEIGHT_MIN_CM,
   MAX_AGE_YEARS,
+  GOALS,
+  progressFraction,
   PROTEIN_G_PER_KG,
   ratePerWeekKg,
+  stepCount as countSetupSteps,
+  stepNumber as numberOfSetupStep,
 } from "../setup";
 import { displayWeight, kgToLb, WEIGH_IN_MAX_KG, WEIGH_IN_MIN_KG } from "../weight";
 
@@ -20,8 +25,11 @@ import type {
   HeightUnit,
   ProteinPreset,
   RateGoal,
+  SetupAnswers,
+  SetupDraft,
   SetupGoal,
   SetupStep,
+  StartingPlan,
 } from "../setup";
 import type { WeightDisplayUnit, WeightInputReason } from "../weight";
 
@@ -41,6 +49,10 @@ export const SETUP_SHELL = {
   setOwnTargetsLabel: "I'll set my own targets",
   /** The progress bar's name on the estimate, which stands one stop after the last question. */
   setupCompleteName: "Setup complete",
+  /** Spoken only: the name of the web's skeleton while the saved answers are first read. */
+  loadingName: "Loading your answers",
+  /** The web's banner on steps 1 to 8 when the saved answers could not be read, beside Try again. */
+  readFailed: "Couldn't load your saved answers. You can still answer here.",
 } as const;
 
 /** The header's title on each step: the group the step belongs to. The rate belongs to Goal. */
@@ -59,6 +71,35 @@ export const SETUP_GROUP_TITLES: Readonly<Record<SetupStep, string>> = {
 /** The header's subtitle and the progress bar's name: "Step 3 of 8", or "of 7" once Maintain skips the rate. */
 export const describeSetupStepLabel = (stepNumber: number, stepCount: number): string =>
   `Step ${stepNumber} of ${stepCount}`;
+
+/** The header's subtitle, the progress bar's name and how full the bar is, from 0 to 100. */
+export type SetupStepProgress = Readonly<{
+  /** "Step 3 of 8". The estimate is not a question, so it has none. */
+  subtitle: string | undefined;
+  progressName: string;
+  percent: number;
+}>;
+
+export function describeStepProgress(draft: SetupDraft, step: SetupStep): SetupStepProgress {
+  const number = numberOfSetupStep(draft, step);
+  const percent = progressFraction(draft, step) * 100;
+  if (number === undefined) {
+    return { subtitle: undefined, progressName: SETUP_SHELL.setupCompleteName, percent };
+  }
+  const label = describeSetupStepLabel(number, countSetupSteps(draft));
+  return { subtitle: label, progressName: label, percent };
+}
+
+/**
+ * The web shell's caption above the progress bar: the group and the step, "About you · Step 1 of 8". The
+ * estimate is not a question, so its caption is its title alone.
+ */
+export function describeSetupCaption(draft: SetupDraft, step: SetupStep): string {
+  const { subtitle } = describeStepProgress(draft, step);
+  return subtitle === undefined
+    ? SETUP_GROUP_TITLES[step]
+    : `${SETUP_GROUP_TITLES[step]} · ${subtitle}`;
+}
 
 type Question = Readonly<{ question: string; helper: string }>;
 
@@ -113,6 +154,29 @@ export const SETUP_QUESTIONS: SetupQuestions = {
   },
 };
 
+/**
+ * The question and helper a step asks, or undefined for the estimate, which is not a question, and for a
+ * rate no goal asks. The rate is only asked for a goal that moves the weight, and its question names the direction.
+ */
+export function setupQuestionFor(step: SetupStep, draft: SetupDraft): Question | undefined {
+  switch (step) {
+    case "sex":
+    case "birthDate":
+    case "body":
+    case "activity":
+    case "goal":
+    case "protein":
+    case "diet":
+      return SETUP_QUESTIONS[step];
+    case "rate":
+      return draft.goal === undefined || draft.goal === "maintain"
+        ? undefined
+        : SETUP_QUESTIONS.rate[draft.goal];
+    case "estimate":
+      return undefined;
+  }
+}
+
 /** An option card's title, and the line under it when there is one. */
 export type SetupOptionWords = Readonly<{ title: string; description?: string }>;
 
@@ -164,6 +228,36 @@ export const SETUP_GOAL_NOTES = {
     body: "If you are under 18 and want to lose weight, or you are pregnant or breastfeeding, talk to a doctor, midwife or dietitian first.",
   },
 } as const;
+
+/** A goal card: the goal, its title, and either its line of words or the reason it is not offered. */
+export type SetupGoalCard = Readonly<{
+  goal: SetupGoal;
+  title: string;
+  description?: string;
+  disabledReason?: string;
+}>;
+
+/**
+ * The three goal cards, in the order drawn. A goal that is not allowed keeps its title and swaps its line of
+ * words for the reason it is not offered, which is what a card draws disabled.
+ */
+export function setupGoalCardsFor(allowedGoals: readonly SetupGoal[]): readonly SetupGoalCard[] {
+  return GOALS.map((goal) =>
+    allowedGoals.includes(goal)
+      ? { goal, ...SETUP_GOAL_OPTIONS[goal] }
+      : {
+          goal,
+          title: SETUP_GOAL_OPTIONS[goal].title,
+          disabledReason: SETUP_GOAL_NOT_OFFERED_UNDER_18,
+        },
+  );
+}
+
+/** The note under the goal cards: the under 18 one when Lose is not offered, the pregnancy one otherwise. */
+export const setupGoalNoteFor = (
+  allowedGoals: readonly SetupGoal[],
+): (typeof SETUP_GOAL_NOTES)[keyof typeof SETUP_GOAL_NOTES] =>
+  allowedGoals.includes("lose") ? SETUP_GOAL_NOTES.default : SETUP_GOAL_NOTES.under18;
 
 /** The badge on the rate that is chosen on arrival. */
 export const SETUP_SUGGESTED_BADGE = "Suggested";
@@ -516,6 +610,10 @@ export const SETUP_ESTIMATE = {
   },
   /** Under the accuracy line. It is the legal copy's own sentence, not a second copy of it. */
   notMedicalAdvice: NOT_MEDICAL_ADVICE,
+  /** The web's banner on the estimate when the saved answers could not be read, beside Try again. Saving is held until they are. */
+  readFailedBody: "Couldn't load your saved answers. Ki-Lo needs them before it can save.",
+  /** The web's banner on the estimate offline, under the offline banner's title. The phone says the diary's words, which are not true here. */
+  offlineBody: "Your answers stay on this page. Saving needs a connection.",
 } as const;
 
 type RateLineInput = Readonly<{
@@ -539,6 +637,83 @@ export const describeRateLine = ({
   const amount = describeRateAmount(ratePctPerWeek, weightKg, unit);
   return `To ${goal} about ${amount} a week (${formatRatePercent(ratePctPerWeek)}% of your weight).`;
 };
+
+/** The words under the calorie numeral: the rate line, or the guardrail lines that replace it. */
+export type EstimateLines = Readonly<{
+  /** What the chosen rate is worth a week. Undefined when a guardrail changed the result. */
+  rateLine: string | undefined;
+  /** The line of the guardrail that set the calories, then the macro fit line when it applies. */
+  guardrailLines: readonly string[];
+}>;
+
+/**
+ * The words under the calorie numeral. The guardrail that set the calories, found by `bindingCalorieClamp`,
+ * replaces the rate line with its own, and a macro fit line follows it. The figures are read from the plan
+ * and the answers as they are, and the words come from this file.
+ */
+export function describeEstimateLines(answers: SetupAnswers, plan: StartingPlan): EstimateLines {
+  const { caloriesKcal, proteinG, fatG } = plan.targets;
+  const rate = {
+    weightKg: answers.weightKg,
+    effectiveRatePctPerWeek: plan.effectiveRatePctPerWeek,
+    wantedRatePctPerWeek: answers.ratePctPerWeek,
+    unit: answers.weightUnit,
+  };
+  const macroFitLines = plan.clamps.includes("macro_fit")
+    ? [
+        SETUP_GUARDRAIL_LINES.macro_fit({
+          proteinGrams: proteinG,
+          caloriesKcal,
+          fatGrams: fatG,
+        }),
+      ]
+    : [];
+
+  switch (bindingCalorieClamp(plan.clamps)) {
+    case "floor": {
+      const floorLine = SETUP_GUARDRAIL_LINES.floor({
+        ...rate,
+        caloriesKcal,
+        expenditureKcal: plan.estimate.expenditureKcal,
+      });
+      // A floor above expenditure is a gain, and the line after it tells the person to talk to someone. The
+      // `describeFloorOutcome` above makes the same test for the words before it, so keep the two in step.
+      const line =
+        plan.effectiveRatePctPerWeek > 0
+          ? floorLine
+          : `${floorLine} ${SETUP_FLOOR_ABOVE_EXPENDITURE_ADVICE}`;
+      return { rateLine: undefined, guardrailLines: [line, ...macroFitLines] };
+    }
+    case "max_deficit":
+      return {
+        rateLine: undefined,
+        guardrailLines: [SETUP_GUARDRAIL_LINES.max_deficit(rate), ...macroFitLines],
+      };
+    case "max_surplus":
+      return {
+        rateLine: undefined,
+        guardrailLines: [SETUP_GUARDRAIL_LINES.max_surplus(rate), ...macroFitLines],
+      };
+    case "profile_max":
+      return {
+        rateLine: undefined,
+        guardrailLines: [
+          SETUP_GUARDRAIL_LINES.profile_max({ ...rate, caloriesKcal }),
+          ...macroFitLines,
+        ],
+      };
+    case undefined:
+      return {
+        rateLine: describeRateLine({
+          goal: answers.goal,
+          ratePctPerWeek: answers.ratePctPerWeek,
+          weightKg: answers.weightKg,
+          unit: answers.weightUnit,
+        }),
+        guardrailLines: macroFitLines,
+      };
+  }
+}
 
 /** The Targets screen's row that opens the wizard in recalculate mode. */
 export const SETUP_TARGETS_ROW = {

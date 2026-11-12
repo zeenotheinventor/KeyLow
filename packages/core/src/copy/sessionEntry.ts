@@ -108,6 +108,8 @@ export const SET_ENTRY = {
   logSetAction: "Log set",
   /** The line when there is nothing to fill the set from. The boards do not draw it. */
   noHistory: "Nothing logged for this exercise yet.",
+  /** The web dialog's line while there is no connection: Log set is off. The boards do not draw it. */
+  offline: "Logging a set needs a connection.",
   /** The line after a write that failed. The boards do not draw it. */
   saveFailed: "Your set did not save. Check your connection, then try again.",
   /** The line when a set is refused because the session already holds its most sets. The boards do not draw it. */

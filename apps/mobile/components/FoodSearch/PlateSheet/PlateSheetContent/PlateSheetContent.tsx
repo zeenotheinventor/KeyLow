@@ -20,8 +20,6 @@ import { PlateTotalsCard } from "../PlateTotalsCard";
 import type { PlateSheetContentProps } from "./types";
 import type { PlateItem } from "@keylow/core/plate";
 
-const ROWS_LABEL = "Foods on your plate";
-
 /**
  * What Your plate holds while it is open: the heading with the count and Clear plate, the rows with their
  * amounts, the totals, the plate's one Time row and Log foods. The rows and the totals scroll, so a long plate
@@ -106,7 +104,7 @@ export function PlateSheetContent({
         contentContainerClassName="gap-3"
         keyboardShouldPersistTaps="handled"
       >
-        <GroupedList hidesTitle label={ROWS_LABEL} title={ROWS_LABEL}>
+        <GroupedList hidesTitle label={PLATE.rowsLabel} title={PLATE.rowsLabel}>
           {items.map((item) => (
             <PlateSheetRow
               key={item.key}

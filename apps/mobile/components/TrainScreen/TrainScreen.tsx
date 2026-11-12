@@ -1,5 +1,6 @@
 import { useTrainHome } from "@keylow/api-client";
 import {
+  ASSISTANT_SHEET,
   TRAIN_ERROR,
   TRAIN_HOME,
   TRAIN_LOADING_NAME,
@@ -17,11 +18,13 @@ import { useReadsEnabled } from "../../lib/useReadsEnabled";
 import { PickDaySheet } from "../PickDaySheet";
 import { PlanWeekStrip } from "../PlanWeekStrip";
 import { ScreenHeader } from "../ScreenHeader";
+import { SuggestionCard, SuggestionDetailSheet } from "../SuggestionCard";
 import { TodayCard } from "../TodayCard";
-import { Banner, Button, ErrorState, Skeleton } from "../ui";
+import { Banner, ErrorState, IconButton, Skeleton } from "../ui";
 import { TrainBodyMap } from "./TrainBodyMap";
 import { TrainFirstTime } from "./TrainFirstTime";
 import { TrainNoRoutine } from "./TrainNoRoutine";
+import { useTrainSuggestion } from "./useTrainSuggestion";
 
 import type { TrainScreenProps, TrainSessionStart } from "./types";
 
@@ -46,7 +49,8 @@ function bindViewSession(handler: (sessionId: string) => void, sessionId: string
 
 /**
  * The Train tab: the Today card, or the first visit or no routine card when today has no card, under the
- * title, and the week strip under them when the week has a routine day or a session. It stays mounted under
+ * title and its three icon buttons (Assistant, History and Routines, each drawn when it is given its handler,
+ * and Routines not on the first visit), and the week strip under them when the week has a routine day or a session. It stays mounted under
  * the terms gate's cover, so its reads wait until the account has accepted the current Terms. Offline it
  * shows what the phone saved, under a notice that says when. Starting a session needs a connection, so the
  * buttons that log or reopen one are dimmed offline. A button is drawn only when its handler is given, and
@@ -54,7 +58,9 @@ function bindViewSession(handler: (sessionId: string) => void, sessionId: string
  * of the week strip pass the id of the session they open. Pick day, under Start on the Today card, opens a
  * sheet of the routine's days and starts the one pressed the way Start does. The body map card sits under the
  * Today card or the no routine card and above the week strip, on every home but the first visit's, and
- * opens the body map when it is given a handler.
+ * opens the body map when it is given a handler. The suggestion card sits between them, as the boards
+ * compose it, and is drawn only when it is given the notices that show its toast. Its heading opens the
+ * suggestion detail, a sheet mounted here with the other sheets, which shows the offer the card holds.
  */
 export function TrainScreen({
   isStarting = false,
@@ -65,8 +71,10 @@ export function TrainScreen({
   onStart,
   onResume,
   onViewSession,
+  onOpenAssistant,
   onOpenHistory,
   onOpenBodyMap,
+  suggestionNotices,
 }: TrainScreenProps) {
   const now = useNow();
   const enabled = useReadsEnabled();
@@ -74,6 +82,19 @@ export function TrainScreen({
   const isOnline = useIsOnline();
   const [isPickDayOpen, setIsPickDayOpen] = useState(false);
   const [pickedDayId, setPickedDayId] = useState<string | null>(null);
+  const suggestion = useTrainSuggestion({
+    home,
+    now,
+    enabled,
+    isOnline,
+    notices: suggestionNotices,
+  });
+  // The day whose suggestion the detail sheet is open on, or null for closed. The sheet shows the offer the card
+  // holds, so it is open only while that offer is there for that day with its detail.
+  const [suggestionDetailDay, setSuggestionDetailDay] = useState<string | null>(null);
+  const suggestionOffer = suggestion.state.status === "offer" ? suggestion.state : undefined;
+  const isSuggestionDetailOpen =
+    suggestionOffer?.detail !== undefined && suggestionOffer.day === suggestionDetailDay;
   // The day pressed first in this tick. Neither `isStarting` nor the state is new to a second press in the same
   // moment, so this is what keeps that press from moving the spinner. A press after the tick sees `isStarting`.
   const pickedDayRef = useRef<string | null>(null);
@@ -89,6 +110,12 @@ export function TrainScreen({
     home.routineDays.length > 0;
   if (!canPickDay && isPickDayOpen) {
     setIsPickDayOpen(false);
+  }
+
+  // The offer goes when the phone goes offline, when the day is put off or accepted, or when the day moves on.
+  // The sheet is closed then, so it does not come back open when the offer returns.
+  if (suggestionDetailDay !== null && !isSuggestionDetailOpen) {
+    setSuggestionDetailDay(null);
   }
 
   if (home.status === "error") {
@@ -107,6 +134,7 @@ export function TrainScreen({
   // The board draws the Routines link on every Train home but the first visit's, and not while it loads or fails.
   const isFirstTime =
     home.status === "ready" && home.today === null && !home.hasRoutine && !home.hasLoggedSession;
+  const hasAssistantButton = onOpenAssistant !== undefined;
   const hasHistoryLink = onOpenHistory !== undefined;
   const hasRoutinesLink = home.status === "ready" && !isFirstTime && onOpenRoutines !== undefined;
 
@@ -115,19 +143,26 @@ export function TrainScreen({
       <ScreenHeader
         title={TRAIN_HOME.title}
         trailing={
-          hasHistoryLink || hasRoutinesLink ? (
-            // History first, then Routines: a row that wraps under the title when large text leaves no room, and
-            // takes at most 70 percent of the header so the title keeps the rest.
-            <View className="max-w-[70%] shrink flex-row flex-wrap justify-end gap-2">
+          hasAssistantButton || hasHistoryLink || hasRoutinesLink ? (
+            // Assistant, History, then Routines: three 44 point icon buttons, 148 points with the gaps, so the row
+            // fits beside the title on any phone at any text size and names itself to a screen reader.
+            <View className="flex-row gap-2">
+              {hasAssistantButton ? (
+                <IconButton
+                  icon="Sparkles"
+                  label={ASSISTANT_SHEET.title}
+                  onPress={onOpenAssistant}
+                />
+              ) : null}
               {hasHistoryLink ? (
-                <Button icon="History" size="sm" variant="secondary" onPress={onOpenHistory}>
-                  {TRAIN_HOME.historyLink}
-                </Button>
+                <IconButton icon="History" label={TRAIN_HOME.historyLink} onPress={onOpenHistory} />
               ) : null}
               {hasRoutinesLink ? (
-                <Button icon="Calendar" size="sm" variant="secondary" onPress={onOpenRoutines}>
-                  {TRAIN_HOME.routinesLink}
-                </Button>
+                <IconButton
+                  icon="Calendar"
+                  label={TRAIN_HOME.routinesLink}
+                  onPress={onOpenRoutines}
+                />
               ) : null}
             </View>
           ) : undefined
@@ -204,6 +239,19 @@ export function TrainScreen({
             />
           )
         ) : null}
+        <SuggestionCard
+          isStarting={isStarting}
+          state={suggestion.state}
+          onDismiss={suggestion.dismiss}
+          onOpenDetail={
+            suggestionOffer === undefined
+              ? undefined
+              : () => {
+                  setSuggestionDetailDay(suggestionOffer.day);
+                }
+          }
+          onSetGoal={onSetGoal}
+        />
         {home.status === "ready" && !isFirstTime ? (
           <TrainBodyMap
             savedAt={home.savedAt}
@@ -219,6 +267,14 @@ export function TrainScreen({
           />
         ) : null}
       </ScrollView>
+      <SuggestionDetailSheet
+        offer={suggestionOffer}
+        open={isSuggestionDetailOpen}
+        onClose={() => {
+          setSuggestionDetailDay(null);
+        }}
+        onDismiss={suggestion.dismiss}
+      />
       {home.status === "ready" ? (
         <PickDaySheet
           days={home.routineDays}

@@ -1,7 +1,11 @@
-import { describePortionUnit, describePortionWithSize } from "./portionPicker";
+import {
+  describePortionUnit,
+  describePortionWithSize,
+  describeSizeOfPortion,
+} from "./portionPicker";
 import { formatGroupedGrams } from "../format/groupedGrams";
 import { formatScaledCount } from "../format/scaledCount";
-import { spoonPortionOf } from "../nutrition/volume";
+import { measureOfLoggedPortion, spoonPortionOf } from "../nutrition/volume";
 
 import type { LoggedAmount } from "./diary";
 import type { QuantityUnit } from "../nutrition/units";
@@ -44,15 +48,26 @@ export const describeScaledAmount = (amount: LoggedAmount): string => {
 
     return `${writeCount(amount.quantity)} ${describePortionUnit(spoon.label, amount.quantity)} (${volume})`;
   }
+  // A portion with no size and no weight is the count portion of a food per portion: nothing goes in brackets.
+  if (
+    amount.resolvedGrams === 0 &&
+    amount.portion.grams === undefined &&
+    amount.portion.ml === undefined
+  ) {
+    const count = writeCount(amount.quantity);
+
+    return count === "1" ? amount.portion.label : `${count} × ${amount.portion.label}`;
+  }
+  const measure = measureOfLoggedPortion({ ...amount, portion: amount.portion });
   // A label that already says its size, such as "30 g", is not given it twice.
   const labelSaysItsSize =
     describePortionWithSize(amount.portion.label, {
-      amount: roundedHalvesUp(amount.resolvedGrams),
-      unit: "g",
+      amount: roundedHalvesUp(measure.amount),
+      unit: measure.unit,
     }) === amount.portion.label;
   const portion = labelSaysItsSize
     ? amount.portion.label
-    : `${amount.portion.label} (${writeGrams(amount.resolvedGrams)} g)`;
+    : `${amount.portion.label} (${describeSizeOfPortion(amount.portion.label, `${writeGrams(measure.amount)} ${measure.unit}`)})`;
   const count = writeCount(amount.quantity);
 
   return count === "1" ? portion : `${count} × ${portion}`;

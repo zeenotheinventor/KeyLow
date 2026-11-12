@@ -6,6 +6,7 @@ import { act, render, screen, waitFor } from "@testing-library/react-native";
 import { WeightScreen } from "../../components/WeightScreen";
 import { ThemeProvider } from "../../lib/theme";
 import { resetRouterMock } from "../support/expoRouterMock";
+import { pinClock } from "../support/weighInSheetHarness";
 import {
   createWeightQueryClient,
   resetWeightBackend,
@@ -34,25 +35,7 @@ jest.mock(
 // At 23:30 UTC on 23 October it is already the 24th in London (British Summer Time), so a reading dated the
 // 23rd is today in UTC and yesterday in London.
 function freezeClockAtLateEveningUtc() {
-  jest.useFakeTimers({
-    now: new Date("2026-10-23T23:30:00Z"),
-    doNotFake: [
-      "hrtime",
-      "nextTick",
-      "performance",
-      "queueMicrotask",
-      "requestAnimationFrame",
-      "cancelAnimationFrame",
-      "requestIdleCallback",
-      "cancelIdleCallback",
-      "setImmediate",
-      "clearImmediate",
-      "setInterval",
-      "clearInterval",
-      "setTimeout",
-      "clearTimeout",
-    ],
-  });
+  pinClock("2026-10-23T23:30:00Z");
 }
 
 async function renderWeightScreen() {

@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { noPlateHooks } from "./noPlateHooks";
 import {
   BRANDED_CODE,
   FETCHED_AFTER_THE_RULES,
@@ -25,6 +26,7 @@ const search = vi.hoisted((): { hits: FoodSearchHit[] } => ({ hits: [] }));
 // The search and the recipes are other tests' business. The food, its portions and the refresh are real.
 vi.mock("@keylow/api-client", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@keylow/api-client")>()),
+  ...noPlateHooks,
   useProfileTimeZone: () => ({ data: "UTC" }),
   useFoodSearch: () => ({
     local: search.hits,
@@ -48,7 +50,6 @@ function openFood(food: Food) {
           request={{ date: "2026-10-15" }}
           opener={null}
           onClose={vi.fn<() => void>()}
-          onQuickAdd={vi.fn<() => void>()}
         />
       </ToastProvider>
     </OffRefreshProvider>,
@@ -118,7 +119,7 @@ describe("the add dialog's portion step for an old branded food", () => {
 
     expect(screen.getByRole("radio", { name: "1 bottle", checked: true })).toBeTruthy();
     expect(screen.getByRole("textbox", { name: "Amount (bottle)" })).toHaveProperty("value", "2");
-    expect(screen.getByRole("button", { name: "Add" })).toHaveProperty("disabled", false);
+    expect(screen.getByRole("button", { name: "Add to plate" })).toHaveProperty("disabled", false);
   });
 
   it("should keep the amount typed on the default chip, and the chip, when the refresh makes another chip the default", async () => {

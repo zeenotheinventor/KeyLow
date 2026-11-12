@@ -169,7 +169,15 @@ describe("the fixed words of the body map, as the boards draw them", () => {
       sideSwitch: { name: "Side shown", front: "Front", back: "Back" },
       sideSwitchDescription: "Turns the body to face front or back.",
       rotateHint: "Drag to turn · Pinch to zoom · Long-press a muscle for details",
-      zoom: { reset: "Reset", resetName: "Reset zoom" },
+      rotateHintWeb:
+        "Drag to turn · Pinch or use + and − to zoom · Press and hold a muscle for details",
+      zoom: {
+        reset: "Reset",
+        resetName: "Reset zoom",
+        in: "Zoom in",
+        out: "Zoom out",
+        groupName: "Zoom",
+      },
       loading3d: "Loading 3D…",
       loading3dLabel: "3D is loading.",
       legendNames: { heat: "Heat legend", volume: "Volume legend", gap: "Gap legend" },
@@ -186,7 +194,11 @@ describe("the fixed words of the body map, as the boards draw them", () => {
         gap: "Gap compares this week's sets with your plan, so it has no Actual or Projected.",
         gapSoFar: "It counts your planned days up to yesterday, and today once you have logged it.",
       },
-      coachMark: { text: "Long-press a muscle for details", dismiss: "Got it" },
+      coachMark: {
+        text: "Long-press a muscle for details",
+        textWeb: "Press and hold a muscle for details",
+        dismiss: "Got it",
+      },
       emptyState: {
         title: "Nothing to show yet",
         body: "Log a session and the muscles you train warm up here, then cool over a day or two as they recover.",
@@ -729,7 +741,10 @@ describe("describeDashboardBodyMapCard", () => {
 describe("describeWebListCaption", () => {
   it.each([
     [{ scale: "heat", moreAtRest: 10 }, "Hottest first · 10 more at rest"],
-    [{ scale: "volume", notTrained: 7 }, "Most sets first · 7 not trained"],
+    [
+      { scale: "volume", moreMaintaining: 3, notTrained: 7 },
+      "Most sets first · 3 more maintaining, 7 not trained",
+    ],
     [
       { scale: "gap", moreOnPlan: 3, notInPlan: 7 },
       "Furthest behind first · 3 more on plan, 7 not in plan",
@@ -740,7 +755,15 @@ describe("describeWebListCaption", () => {
 
   it("should leave out a count of 0 and the dot when both are 0", () => {
     expect(describeWebListCaption({ scale: "heat", moreAtRest: 0 })).toBe("Hottest first");
-    expect(describeWebListCaption({ scale: "volume", notTrained: 0 })).toBe("Most sets first");
+    expect(describeWebListCaption({ scale: "volume", moreMaintaining: 0, notTrained: 0 })).toBe(
+      "Most sets first",
+    );
+    expect(describeWebListCaption({ scale: "volume", moreMaintaining: 3, notTrained: 0 })).toBe(
+      "Most sets first · 3 more maintaining",
+    );
+    expect(describeWebListCaption({ scale: "volume", moreMaintaining: 0, notTrained: 7 })).toBe(
+      "Most sets first · 7 not trained",
+    );
     expect(describeWebListCaption({ scale: "gap", moreOnPlan: 3, notInPlan: 0 })).toBe(
       "Furthest behind first · 3 more on plan",
     );

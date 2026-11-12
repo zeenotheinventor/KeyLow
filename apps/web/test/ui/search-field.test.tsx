@@ -64,6 +64,24 @@ describe("SearchField", () => {
   });
 
   describe("barcode button", () => {
+    it("should open nothing and say it is disabled when switched off, and stay in the tab order", () => {
+      const onClick = vi.fn();
+      render(
+        <SearchField
+          label="Search foods"
+          barcodeButton={{ label: "Look up a barcode", disabled: true, onClick }}
+        />,
+      );
+
+      const button = screen.getByRole("button", { name: "Look up a barcode" });
+      fireEvent.click(button);
+
+      expect(onClick).not.toHaveBeenCalled();
+      expect(button.getAttribute("aria-disabled")).toBe("true");
+      expect(button.hasAttribute("disabled")).toBe(false);
+      expect(button.classList.contains("opacity-50")).toBe(true);
+    });
+
     it("should be named and call its handler", () => {
       const onClick = vi.fn();
       render(

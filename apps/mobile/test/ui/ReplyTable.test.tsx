@@ -1,0 +1,386 @@
+import { parseReplyText } from "@keylow/core";
+import { fireEvent, render, screen } from "@testing-library/react-native";
+import { ScrollView, View } from "react-native";
+
+import { ReplyTable } from "../../components/ui";
+import { ThemeProvider } from "../../lib/theme";
+import { compileKitStyles } from "../support/kitStyles";
+import { registerAppStyles } from "../support/nativeWindStyles";
+import { resolvedColor } from "../support/themeColor";
+import { viewsDrawn } from "../support/viewsDrawn";
+
+import type { ReplyTableProps } from "../../components/ui";
+
+jest.mock("@react-native-async-storage/async-storage", () => ({
+  __esModule: true,
+  default: { getItem: () => Promise.resolve(null), setItem: () => Promise.resolve() },
+}));
+
+const christmasMarket = [
+  "| Entry | Amount | kcal | Protein (g) |",
+  "| --- | --- | --- | --- |",
+  "| Potato wedges, with skin, cooked in sunflower oil | 300 g | 435 | 8.7 |",
+  "| Baileys Original Irish Cream | 25 ml | 79 | – |",
+  "| **Total** | | **2,024** | **67** |",
+].join("\n");
+
+function tableOf(markdown: string): ReplyTableProps["table"] {
+  const table = parseReplyText(markdown, { isPartial: false }).find(
+    (block) => block.kind === "table",
+  );
+  if (table === undefined) {
+    throw new Error("The markdown held no table");
+  }
+  return table;
+}
+
+function renderTable(props: Partial<ReplyTableProps> = {}) {
+  return render(
+    <ThemeProvider fixedPreference="dark">
+      <ReplyTable table={tableOf(christmasMarket)} {...props} />
+    </ThemeProvider>,
+  );
+}
+
+const hidden = { includeHiddenElements: true };
+
+const layoutEvent = (width: number, height = 40) => ({
+  nativeEvent: { layout: { x: 0, y: 0, width, height } },
+});
+
+// Jest does not lay anything out, so a test says how wide each part came out, as a phone would.
+async function measure({ container, first, columns, viewport }: Record<string, number>) {
+  await fireEvent(screen.getByTestId("reply-table"), "layout", layoutEvent(container ?? 358));
+  await fireEvent(
+    screen.getByText("Potato wedges, with skin, cooked in sunflower oil"),
+    "layout",
+    layoutEvent((first ?? 127) - 1),
+  );
+  await fireEvent(screen.getByTestId("reply-table-columns"), "layout", layoutEvent(columns ?? 500));
+  await fireEvent(screen.getByTestId("reply-table-scroll"), "layout", layoutEvent(viewport ?? 204));
+}
+
+async function scrollToEnd() {
+  await fireEvent.scroll(screen.getByTestId("reply-table-scroll"), {
+    nativeEvent: {
+      contentOffset: { x: 296, y: 0 },
+      contentSize: { width: 500, height: 300 },
+      layoutMeasurement: { width: 204, height: 300 },
+    },
+  });
+}
+
+describe("ReplyTable", () => {
+  let kitStyles: string;
+
+  beforeAll(async () => {
+    kitStyles = await compileKitStyles();
+  });
+
+  beforeEach(() => {
+    registerAppStyles(kitStyles);
+  });
+
+  it("should draw every heading and cell before anything is measured, with no pipe", async () => {
+    await renderTable();
+
+    for (const words of [
+      "Entry",
+      "Amount",
+      "kcal",
+      "Protein (g)",
+      "Potato wedges, with skin, cooked in sunflower oil",
+      "300 g",
+      "435",
+      "8.7",
+      "Baileys Original Irish Cream",
+      "25 ml",
+      "79",
+      "Total",
+      "2,024",
+      "67",
+    ]) {
+      expect(screen.getByText(words)).toBeOnTheScreen();
+    }
+    expect(screen.queryByText(/\|/)).not.toBeOnTheScreen();
+  });
+
+  it("should draw the headings in the caption look and the cells in the body look", async () => {
+    await renderTable();
+
+    expect(screen.getByText("Amount")).toHaveStyle({
+      color: resolvedColor("dark", "text-secondary"),
+      fontSize: 12,
+    });
+    expect(screen.getByText("300 g")).toHaveStyle({
+      color: resolvedColor("dark", "text-primary"),
+      fontSize: 16,
+    });
+  });
+
+  it("should draw a bold cell in the strong look", async () => {
+    await renderTable();
+
+    expect(screen.getByText("Total")).toHaveStyle({ fontFamily: "Geist-SemiBold" });
+  });
+
+  it("should draw a cell that is only a dash muted", async () => {
+    await renderTable();
+
+    expect(screen.getByText("–")).toHaveStyle({ color: resolvedColor("dark", "text-muted") });
+  });
+
+  it("should align a numeric column and its heading to the right, and the others to the left", async () => {
+    await renderTable();
+
+    expect(screen.getByText("kcal")).toHaveStyle({ textAlign: "right" });
+    expect(screen.getByText("435")).toHaveStyle({ textAlign: "right" });
+    expect(screen.getByText("Entry")).not.toHaveStyle({ textAlign: "right" });
+    expect(screen.getByText("Baileys Original Irish Cream")).not.toHaveStyle({
+      textAlign: "right",
+    });
+  });
+
+  it("should align a column of words to the left, and one with a word among its numbers", async () => {
+    await renderTable({
+      table: tableOf("| Day | Note |\n| --- | --- |\n| Mon | 2 big meals |\n| Tue | fasted |"),
+    });
+
+    expect(screen.getByText("Note")).not.toHaveStyle({ textAlign: "right" });
+    expect(screen.getByText("fasted")).not.toHaveStyle({ textAlign: "right" });
+  });
+
+  it("should hold each cell to one line, and the first column to two", async () => {
+    await renderTable();
+
+    expect(screen.getByText("300 g")).toHaveProp("numberOfLines", 1);
+    expect(screen.getByText("Potato wedges, with skin, cooked in sunflower oil")).toHaveProp(
+      "numberOfLines",
+      2,
+    );
+  });
+
+  it("should draw no fade and keep its border closed until it has been measured", async () => {
+    await renderTable();
+
+    expect(screen.queryByTestId("reply-table-fade", hidden)).not.toBeOnTheScreen();
+    expect(screen.getByTestId("reply-table")).not.toHaveStyle({ borderRightWidth: 0 });
+  });
+
+  describe("wider than the thread", () => {
+    it("should open its right edge and draw the fade while columns are left to see", async () => {
+      await renderTable();
+      await measure({});
+
+      expect(screen.getByTestId("reply-table-fade", hidden)).toBeOnTheScreen();
+      expect(screen.getByTestId("reply-table")).toHaveStyle({
+        borderWidth: 1,
+        borderRightColor: "#00000000",
+        borderTopLeftRadius: 12,
+        borderBottomLeftRadius: 12,
+      });
+      expect(screen.getByTestId("reply-table")).not.toHaveStyle({ borderRightWidth: 0 });
+      expect(screen.getByTestId("reply-table")).not.toHaveStyle({ borderRadius: 12 });
+    });
+
+    it("should draw the fade as the sheet colour from clear, 24 points wide", async () => {
+      await renderTable();
+      await measure({});
+
+      expect(screen.getByTestId("reply-table-fade", hidden)).toHaveStyle({
+        width: 24,
+        experimental_backgroundImage: "linear-gradient(to right, #232A3700, #232A37)",
+      });
+    });
+
+    it("should close the border and drop the fade at the last column", async () => {
+      await renderTable();
+      await measure({});
+
+      await fireEvent.scroll(screen.getByTestId("reply-table-scroll"), {
+        nativeEvent: {
+          contentOffset: { x: 296, y: 0 },
+          contentSize: { width: 500, height: 300 },
+          layoutMeasurement: { width: 204, height: 300 },
+        },
+      });
+
+      expect(screen.queryByTestId("reply-table-fade", hidden)).not.toBeOnTheScreen();
+      expect(screen.getByTestId("reply-table")).toHaveStyle({ borderRadius: 12 });
+    });
+
+    it("should keep the right border 1 point wide when it reaches the end, so the scroll view keeps its width", async () => {
+      await renderTable();
+      await measure({});
+
+      expect(screen.getByTestId("reply-table")).toHaveStyle({
+        borderWidth: 1,
+        borderRightColor: "#00000000",
+      });
+
+      await scrollToEnd();
+
+      expect(screen.getByTestId("reply-table")).toHaveStyle({
+        borderWidth: 1,
+        borderColor: resolvedColor("dark", "border"),
+      });
+      expect(screen.getByTestId("reply-table")).not.toHaveStyle({ borderRightColor: "#00000000" });
+      expect(screen.getByTestId("reply-table")).not.toHaveStyle({ borderRightWidth: 0 });
+    });
+
+    it("should not bring the fade back when the scroll view is 1 point narrower at the end", async () => {
+      await renderTable();
+      await measure({});
+      await scrollToEnd();
+
+      await fireEvent(screen.getByTestId("reply-table-scroll"), "layout", layoutEvent(203));
+
+      expect(screen.queryByTestId("reply-table-fade", hidden)).not.toBeOnTheScreen();
+    });
+
+    it("should fix the first column at 152 points with a line on its right", async () => {
+      await renderTable();
+      await measure({});
+
+      expect(screen.getByTestId("reply-table-first-column")).toHaveStyle({
+        maxWidth: 152,
+        borderRightWidth: 1,
+      });
+    });
+
+    it("should flash the platform's scroll indicator once when it first shows as wider", async () => {
+      const flash = jest.spyOn(ScrollView.prototype, "flashScrollIndicators");
+      try {
+        await renderTable();
+        // Tables left mounted by earlier tests can answer a restyle with a flash of their own, so this counts
+        // only what measuring this table adds.
+        const flashesBefore = flash.mock.calls.length;
+        await measure({});
+        const flashesWhenFirstWide = flash.mock.calls.length - flashesBefore;
+        await measure({ columns: 520 });
+
+        expect(flashesWhenFirstWide).toBe(1);
+        expect(flash).toHaveBeenCalledTimes(flashesBefore + 1);
+      } finally {
+        flash.mockRestore();
+      }
+    });
+
+    it("should scroll sideways, with the platform's indicator", async () => {
+      await renderTable();
+      await measure({});
+
+      expect(screen.getByTestId("reply-table-scroll")).toHaveProp("horizontal", true);
+      expect(screen.getByTestId("reply-table-scroll")).toHaveProp("scrollEnabled", true);
+    });
+
+    it("should scroll in the gesture handler's scroll view, so the sheet's drag cannot take a sideways swipe", async () => {
+      await renderTable();
+      await measure({});
+
+      expect(screen.getByTestId("reply-table-scroll")).toHaveProp(
+        "handlerType",
+        "NativeViewGestureHandler",
+      );
+    });
+  });
+
+  describe("narrower than the thread", () => {
+    it("should neither scroll, nor fade, nor fix its first column, which takes the spare width", async () => {
+      await renderTable();
+      await measure({ columns: 150 });
+
+      expect(screen.queryByTestId("reply-table-fade", hidden)).not.toBeOnTheScreen();
+      expect(screen.getByTestId("reply-table-scroll")).toHaveProp("scrollEnabled", false);
+      expect(screen.getByTestId("reply-table-first-column")).toHaveStyle({ flexGrow: 1 });
+      expect(screen.getByTestId("reply-table-first-column")).not.toHaveStyle({
+        borderRightWidth: 1,
+      });
+      expect(screen.getByTestId("reply-table")).toHaveStyle({ borderRadius: 12 });
+    });
+  });
+
+  describe("the first column's words", () => {
+    const longName = "Potato wedges, with skin, cooked in sunflower oil";
+
+    it("should keep to 127 points and 2 lines while the table is wide", async () => {
+      await renderTable();
+      await measure({});
+
+      expect(screen.getByText(longName)).toHaveStyle({ maxWidth: 127 });
+      expect(screen.getByText(longName)).toHaveProp("numberOfLines", 2);
+    });
+
+    it("should take the spare width, with no cap and no line limit, when the table fits", async () => {
+      await renderTable();
+      await measure({ columns: 150 });
+
+      expect(screen.getByText(longName)).not.toHaveStyle({ maxWidth: 127 });
+      expect(screen.getByText(longName)).not.toHaveProp("numberOfLines", 2);
+    });
+
+    it("should settle in wide when wrapped words measure narrow, and not flip back and forth", async () => {
+      await renderTable();
+      const firstWords = screen.getByText(longName);
+      // Wide is the table whose first column's words keep to the cap.
+      const expectWide = (isWide: boolean) => {
+        if (isWide) {
+          expect(firstWords).toHaveStyle({ maxWidth: 127 });
+        } else {
+          expect(firstWords).not.toHaveStyle({ maxWidth: 127 });
+        }
+      };
+      await fireEvent(screen.getByTestId("reply-table"), "layout", layoutEvent(358));
+      await fireEvent(screen.getByTestId("reply-table-columns"), "layout", layoutEvent(240));
+      await fireEvent(screen.getByTestId("reply-table-scroll"), "layout", layoutEvent(240));
+
+      // Capped and wrapped, the words measure 90, so the table first looks as if it fits.
+      await fireEvent(firstWords, "layout", layoutEvent(90));
+      expectWide(false);
+      // Given the spare width they count as the full cap, so it is wide, and it stays wide.
+      await fireEvent(firstWords, "layout", layoutEvent(200));
+      expectWide(true);
+      for (const width of [90, 200, 90, 90, 200]) {
+        await fireEvent(firstWords, "layout", layoutEvent(width));
+        expectWide(true);
+      }
+    });
+
+    it("should stay fitting when its words widen to the spare width", async () => {
+      await renderTable();
+      await measure({ columns: 150 });
+      await fireEvent(screen.getByText(longName), "layout", layoutEvent(200));
+
+      expect(screen.getByTestId("reply-table-first-column")).toHaveStyle({ flexGrow: 1 });
+    });
+  });
+
+  describe("row heights", () => {
+    it("should give every cell in a row the height of the tallest, in both parts", async () => {
+      await renderTable();
+      await fireEvent(
+        screen.getByText("Potato wedges, with skin, cooked in sunflower oil"),
+        "layout",
+        layoutEvent(100, 48),
+      );
+
+      const tall = viewsDrawn({ minHeight: 64 });
+      // The first cell and the four others in its row, as each part draws it.
+      expect(tall).toHaveLength(4);
+    });
+  });
+
+  describe("while it arrives", () => {
+    it("should draw an empty row with the caret in its first cell only when asked", async () => {
+      await renderTable({ pendingMark: <View aria-hidden className="h-[18px] w-[8px]" /> });
+
+      expect(viewsDrawn({ width: 8, height: 18 })).toHaveLength(1);
+    });
+
+    it("should draw no empty row and no caret otherwise", async () => {
+      await renderTable();
+
+      expect(viewsDrawn({ width: 8, height: 18 })).toHaveLength(0);
+    });
+  });
+});

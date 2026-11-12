@@ -107,6 +107,8 @@ export { SET_SNAPSHOT_VERSION } from "./versions";
 export { displayLoad, loadToKg } from "./loads";
 export type { LoadUnit } from "./loads";
 export {
+  exactKilogramsText,
+  loggedLoad,
   parseEffortInput,
   parseLoadInput,
   parseRepsInput,
@@ -158,15 +160,33 @@ export type {
   RoutineDraftPath,
   RoutineDraftRule,
 } from "./routineDraft";
+export { applyRoutineChanges, routineFingerprint } from "./routineChanges";
+export type {
+  RoutineChange,
+  RoutineChangeProblem,
+  RoutineChangeRule,
+  RoutineChangesResult,
+} from "./routineChanges";
 export { routinePayload } from "./routinePayload";
 export type { RoutinePayload } from "./routinePayload";
-export { scaffoldSession } from "./scaffoldSession";
+export { scaffoldSession, scaffoldSessionWithAdditions } from "./scaffoldSession";
 export type {
   ScaffoldedExercise,
   ScaffoldRoutineDay,
   ScaffoldRoutineExercise,
+  SessionIdentity,
+  SessionPlanJoin,
   SessionScaffold,
 } from "./scaffoldSession";
+export { buildRoutineDraft, summariseBuiltRoutine } from "./buildRoutineDraft";
+export type {
+  BuildRoutineProblem,
+  BuildRoutineResult,
+  BuildRoutineRule,
+  BuiltRoutineDaySummary,
+  BuiltRoutineSummary,
+  RoutineToBuild,
+} from "./buildRoutineDraft";
 export { summariseRoutine } from "./summariseRoutine";
 export type { RoutineDaySummary, RoutineSummary, SummarisedRoutine } from "./summariseRoutine";
 export { estimateSessionMinutes, SESSION_TIME_PARAMS_V1 } from "./sessionTime";
@@ -188,13 +208,29 @@ export { exerciseRoleValues, musclesByRole, ROLE_FIGURE_VALUES } from "./exercis
 export type { MuscleRoleEntry, MusclesOfRole } from "./exerciseRoles";
 export { readMuscleValue } from "./bodyFigureReading";
 export type { BodyFigureScale, BodyFigureTone, MuscleValueReading } from "./bodyFigureReading";
+export { bodyMapScaleOf } from "./bodyMapLink";
+export type { BodyMapLinkScale } from "./bodyMapLink";
+export {
+  actualReadDateOf,
+  bodyMapViewOf,
+  heatDateOf,
+  plannedSessionsOf,
+  selectedDateOf,
+} from "./bodyMapDay";
+export type { PlannedSessionSource } from "./bodyMapDay";
 export { dayMoments } from "./bodyMapMoments";
 export type { DayMoment, DayMoments, DayMomentsInput } from "./bodyMapMoments";
 
 export { goalAnswersSchema } from "./goalAnswers";
 export type { GoalAnswers } from "./goalAnswers";
-export { deriveMusclePriority, GOAL_PRESETS_V1, goalTargetedMuscles } from "./goalPresets";
+export {
+  deriveMusclePriority,
+  exerciseTargetFor,
+  GOAL_PRESETS_V1,
+  goalTargetedMuscles,
+} from "./goalPresets";
 export type {
+  ExercisePrescription,
   ExerciseTarget,
   FocusOverlay,
   GoalPresets,
@@ -219,6 +255,13 @@ export { setsBarPositionsOf, upcomingSessionsOf, weightingExampleOf } from "./mu
 export type { SetsBarPositions } from "./muscleSheetContext";
 export { filterMuscleListGroups, muscleListGroups, musclesAboveRest } from "./muscleList";
 export type { MuscleListGroup, MuscleListRow, MusclesAboveRest } from "./muscleList";
+export { musclesAgainstPlan, musclesByVolume } from "./scaleMuscleList";
+export type {
+  GapMuscleRow,
+  MusclesAgainstPlan,
+  MusclesByVolume,
+  VolumeMuscleRow,
+} from "./scaleMuscleList";
 
 export {
   BODY_ARTWORK,
@@ -294,6 +337,25 @@ export type {
 } from "./nutritionProposal";
 export { PRIORITY_GROUP_VOLUME_STATUS, summarisePriorities } from "./prioritySummary";
 export type { PrioritySummary } from "./prioritySummary";
+export { currentMuscleState } from "./suggest/currentMuscleState";
+export { muscleStateRows } from "./muscleStateRows";
+export { suggestionTargetOf, todayCardOf, withSessionInProgress } from "./suggestionTarget";
+export type {
+  SuggestionTarget,
+  SuggestionTargetInput,
+  SuggestionTargetRead,
+  TodayPlanInput,
+} from "./suggestionTarget";
+export type { MuscleStateRow, MuscleStateRows } from "./muscleStateRows";
+export { nextSessionSuggestion } from "./suggest/nextSessionSuggestion";
+export type {
+  NextSessionSuggestionInput,
+  SuggestionRead,
+  SuggestionUnavailableReason,
+} from "./suggest/nextSessionSuggestion";
+export { plannedDayOf } from "./suggest/plannedDayOf";
+export { planRoutineOf } from "./suggest/planRoutineOf";
+export type { StoredPlanRoutine } from "./suggest/planRoutineOf";
 export { SUGGEST_PARAMS_V2 } from "./suggest/suggestParams";
 export type { ExerciseTieBreak, SuggestParams } from "./suggest/suggestParams";
 export { suggestSession } from "./suggest/suggestSession";
@@ -347,7 +409,13 @@ export type {
   SessionRowEntry,
   SetRowState,
 } from "./exerciseRows";
-export { TREND_RANGES, TREND_RANGE_WEEKS, exerciseWeeklyTrend } from "./exerciseTrend";
+export {
+  TREND_RANGES,
+  TREND_RANGE_WEEKS,
+  exerciseWeeklyTrend,
+  trendReadWindow,
+  weeksWithoutProgress,
+} from "./exerciseTrend";
 export type {
   ExerciseTrend,
   TrendChange,
@@ -382,11 +450,31 @@ export type {
 export { weekDayLookOf, type WeekDayLook } from "./weekDayLook";
 export { workingNumberOfRow } from "./exerciseRows";
 export {
+  changedGoalAnswers,
   firstUnansweredStep,
   goalAnswersOfRow,
+  GOAL_STARTING_ANSWERS,
   goalDraftReducer,
   hasGoalDraftChanged,
   initialGoalDraft,
   isGoalStepAnswered,
 } from "./goalDraft";
 export type { GoalDraft, GoalDraftAction, GoalDraftAnswers } from "./goalDraft";
+export { priorityFigureValues } from "./priorityFigureValues";
+export { sessionHeatReadingTime } from "./sessionProgress";
+export {
+  FREE_EXERCISE_DB_COMMIT,
+  exerciseFormMediaDisplayOf,
+  exerciseFormMediaOf,
+  freeExerciseDbImagePathSchema,
+  freeExerciseDbImageUrl,
+  shownExerciseFormMediaSchema,
+  youtubeThumbnailUrl,
+  youtubeVideoIdSchema,
+  youtubeWatchUrl,
+} from "./formMedia";
+export type {
+  ExerciseFormMedia,
+  ExerciseFormMediaDisplay,
+  ExerciseFormMediaRow,
+} from "./formMedia";

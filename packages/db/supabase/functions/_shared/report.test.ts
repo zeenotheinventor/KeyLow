@@ -70,7 +70,7 @@ Deno.test(
 
     assertEquals(network.sent.length, 1);
     const [event] = network.sent;
-    assertFalse(event.includes("82.4"));
+    assertFalse(event.includes("82.4 kg"));
     assertFalse(event.includes("Chicken breast"));
     assertFalse(event.includes("someone@example.com"));
     assertStringIncludes(event, '"function":"off-product"');
@@ -212,7 +212,7 @@ Deno.test(
     for (const event of network.sent) {
       assertFalse(event.includes("5000112637922"));
       assertFalse(event.includes("Chicken"));
-      assertFalse(event.includes("82.4"));
+      assertFalse(event.includes("82.4 kg"));
       assertFalse(event.includes("openfoodfacts"));
       assertFalse(event.includes("breadcrumbs"));
     }

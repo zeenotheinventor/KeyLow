@@ -6,7 +6,10 @@ import { undoAction } from "../undo.ts";
 import { logEntryTool } from "./logEntry.ts";
 import { payloadOf } from "./testing.ts";
 import {
+  bucketId,
+  bucketPortionId,
   deletedFoodId,
+  dietWithBucket,
   eggId,
   largeEggId,
   sliceId,
@@ -132,7 +135,7 @@ Deno.test(
       targetUpdatedAt: row?.["updated_at"],
     });
     assertFalse(JSON.stringify(store.actions).includes("Egg"));
-    assertFalse(JSON.stringify(store.actions).includes("144"));
+    assertFalse(JSON.stringify(store.actions).includes("kcal"));
   },
 );
 
@@ -180,6 +183,145 @@ Deno.test(
   },
 );
 
+Deno.test(
+  "estimated grams write the same entry as grams the person said, and the card row says Estimate",
+  async () => {
+    const said = setUp();
+    const estimated = setUp();
+
+    await executeTool(said.ctx, "log_entry", {
+      ...none,
+      kind: "grams",
+      food_id: toastId,
+      grams: 60,
+    });
+    const result = await executeTool(estimated.ctx, "log_entry", {
+      ...none,
+      kind: "grams",
+      food_id: toastId,
+      grams: 60,
+      estimated: true,
+    });
+
+    assertEquals(estimated.stub.tables["food_log_entries"]?.length, 1);
+    const [saidRow] = said.stub.tables["food_log_entries"] ?? [];
+    const [estimatedRow] = estimated.stub.tables["food_log_entries"] ?? [];
+    const withoutIds = ({ id: _id, updated_at: _updated, ...rest }: Record<string, unknown>) =>
+      rest;
+    assertEquals(withoutIds(estimatedRow ?? {}), withoutIds(saidRow ?? {}));
+    assertObjectMatch(structuredOf(result), { card: { rows: [{ estimate: true }] } });
+  },
+);
+
+Deno.test("a call without estimated logs as before, and a null estimated is the same", async () => {
+  const { ctx, stub } = setUp();
+
+  const without = await executeTool(ctx, "log_entry", {
+    ...none,
+    kind: "grams",
+    food_id: toastId,
+    grams: 60,
+  });
+  const withNull = await executeTool(ctx, "log_entry", {
+    ...none,
+    kind: "grams",
+    food_id: toastId,
+    grams: 60,
+    estimated: null,
+  });
+
+  for (const result of [without, withNull]) {
+    assertEquals(result.status, "ok");
+    assertObjectMatch(structuredOf(result), { card: { rows: [{ estimate: false }] } });
+  }
+  assertEquals(stub.tables["food_log_entries"]?.length, 2);
+});
+
+Deno.test("estimated ml is allowed, and false or null leaves the row unmarked", async () => {
+  const { ctx } = setUp();
+
+  const ml = await executeTool(ctx, "log_entry", {
+    ...none,
+    kind: "ml",
+    food_id: toastId,
+    ml: 250,
+    estimated: true,
+  });
+  const notEstimated = await executeTool(ctx, "log_entry", {
+    ...none,
+    kind: "grams",
+    food_id: toastId,
+    grams: 60,
+    estimated: false,
+  });
+  const unset = await executeTool(ctx, "log_entry", {
+    ...none,
+    kind: "grams",
+    food_id: toastId,
+    grams: 60,
+  });
+
+  assertEquals(ml.status, "ok");
+  assertObjectMatch(structuredOf(ml), { card: { rows: [{ estimate: true }] } });
+  assertObjectMatch(structuredOf(notEstimated), { card: { rows: [{ estimate: false }] } });
+  assertObjectMatch(structuredOf(unset), { card: { rows: [{ estimate: false }] } });
+});
+
+Deno.test("estimated is refused, naming the field, on any kind but grams and ml", async () => {
+  const { ctx, stub } = setUp();
+  const cases: Record<string, unknown>[] = [
+    { ...twoEggs, estimated: true },
+    { ...none, kind: "quick", kcal: 300, estimated: true },
+    { ...none, kind: "recipe", recipe_id: eggId, servings: 1, estimated: true },
+  ];
+  for (const input of cases) {
+    const result = await executeTool(ctx, "log_entry", input);
+
+    assertEquals(result.status, "error");
+    assertEquals(payloadOf(result), { error: "invalid_input", fields: ["estimated"] });
+  }
+  assertEquals(stub.tables["food_log_entries"] ?? [], []);
+});
+
+Deno.test(
+  "a count of a bucket with no published weight is logged as portions, with no grams",
+  async () => {
+    const { ctx, stub } = writeContext([logEntryTool], { rows: dietWithBucket() });
+
+    const result = await executeTool(ctx, "log_entry", {
+      ...none,
+      kind: "portion",
+      food_id: bucketId,
+      portion_id: bucketPortionId,
+      count: 1.5,
+    });
+
+    assertEquals(result.status, "ok");
+    const [row] = stub.tables["food_log_entries"] ?? [];
+    assertObjectMatch(row ?? {}, { unit: "portion", quantity: 1.5, resolved_grams: 0 });
+    assertObjectMatch(row?.["nutrients"] ?? {}, { kcal: 750 });
+    assertFalse(JSON.stringify(payloadOf(result)).includes("100 g"));
+  },
+);
+
+Deno.test(
+  "a bucket with no published weight logged in grams is refused as invalid_input",
+  async () => {
+    const { ctx, stub, store } = writeContext([logEntryTool], { rows: dietWithBucket() });
+
+    const result = await executeTool(ctx, "log_entry", {
+      ...none,
+      kind: "grams",
+      food_id: bucketId,
+      grams: 400,
+    });
+
+    assertEquals(payloadOf(result), { error: "invalid_input", fields: ["grams"] });
+    assertEquals(stub.tables["food_log_entries"] ?? [], []);
+    assertEquals(store.actions.length, 0);
+  },
+);
+
 Deno.test("undo removes the entry once, then answers already_undone", async () => {
   const { ctx, stub } = setUp();
   const logged = await executeTool(ctx, "log_entry", twoEggs);
@@ -224,7 +366,7 @@ Deno.test("no name and no nutrient reaches a log line", async () => {
 
   const lines = spy.lines.join("\n");
   assertFalse(lines.includes("Egg"));
-  assertFalse(lines.includes("144"));
+  assertFalse(lines.includes("kcal"));
 });
 
 Deno.test("a failed stamp read still lands the entry, but the card offers no Undo", async () => {

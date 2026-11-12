@@ -93,6 +93,7 @@ function readyState(recipe: RecipeEditorExisting): RecipeState {
         per100g: { kcal: 0, protein_g: 0, carbs_g: 0, fat_g: 0, fibre_g: 0 },
         totalGrams: 720,
         effectiveGrams: 1100,
+        servingsOnly: false,
         engineVersion: 1,
       },
     },

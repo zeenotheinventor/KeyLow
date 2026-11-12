@@ -76,7 +76,7 @@ describe("runCli arguments", () => {
     [["--budget", "1.5"], "--budget must be a whole number of tokens above 0"],
     [
       ["--set", "nonsense"],
-      'Unknown set "nonsense". The sets are ask, describe, redTeam, compaction.',
+      'Unknown set "nonsense". The sets are ask, describe, redTeam, compaction, writes, recipes, trainingAdvice, trainingEdits, trainingKnowledge, mealEstimate, featureRequest.',
     ],
     [["--surprise"], "Unknown or incomplete option."],
   ])("should refuse %j with a clear message", async (argv, message) => {
@@ -272,5 +272,32 @@ describe("runCli run", () => {
     expect(output.stderr).toContain(
       "Could not start the eval session: The local stack is not running",
     );
+  });
+});
+
+describe("runCli and the opt-in training edits set", () => {
+  it("should leave the training edits set out of a run with no --set, so the default budget is not spent on it", async () => {
+    const { session, driver } = sessionCosting([1]);
+
+    const output = await runCli([], withKey, {
+      cases: [caseOf("a", "ask"), caseOf("b", "trainingEdits")],
+      openSession: () => Promise.resolve(session),
+    });
+
+    expect(driver.sent).toHaveLength(1);
+    expect(output.stdout).toContain("ask: 1 of 1 passed");
+    expect(output.stdout).not.toContain("trainingEdits");
+  });
+
+  it("should run the training edits set when it is named", async () => {
+    const { session, driver } = sessionCosting([1]);
+
+    const output = await runCli(["--set", "trainingEdits"], withKey, {
+      cases: [caseOf("a", "ask"), caseOf("b", "trainingEdits")],
+      openSession: () => Promise.resolve(session),
+    });
+
+    expect(driver.sent).toHaveLength(1);
+    expect(output.stdout).toContain("trainingEdits: 1 of 1 passed");
   });
 });

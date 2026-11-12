@@ -7,6 +7,7 @@ export const storyStates = [
   "ReviewWithAction",
   "ErrorMessage",
   "ErrorWithTitle",
+  "ErrorWithDisabledAction",
   "ErrorSentence",
   "ReviewSentence",
   "ReviewWithLinkBelow",

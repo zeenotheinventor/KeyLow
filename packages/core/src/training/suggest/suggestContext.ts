@@ -71,7 +71,6 @@ const EXERCISE_COMPARISONS: Record<
 export type SuggestContext = Readonly<{
   /** The library exercises the user can do with their equipment. */
   pool: readonly Candidate[];
-  setsPerExercise: number;
   isHot: (muscle: MuscleId) => boolean;
   heatOf: (muscle: MuscleId) => number;
   priorityOf: (muscle: MuscleId) => number;
@@ -121,7 +120,6 @@ export const createSuggestContext = (
 
   return {
     pool: library.filter((exercise) => equipment.includes(exercise.equipment)).map(candidateOf),
-    setsPerExercise: params.presets.setsPerExercise[goals.experience],
     isHot: (muscle) => heatOf(muscle) > params.hotHeatThreshold,
     heatOf,
     priorityOf,

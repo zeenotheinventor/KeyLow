@@ -7,7 +7,7 @@ export type { BuildRecipeLogEntryInput } from "./buildRecipeLogEntry";
 export { canLogRecipe } from "./canLogRecipe";
 export { favouriteTiles } from "./favouriteTiles";
 export type { FavouriteFoodInput, FavouriteRecipeInput, FavouriteTile } from "./favouriteTiles";
-export { previewRecipeAmount, recipeAmountStart } from "./previewRecipeAmount";
+export { previewRecipeAmount, recipeAmountStart, recipeUnitsOf } from "./previewRecipeAmount";
 export type { RecipeAmountValues } from "./previewRecipeAmount";
 export { previewTypedRecipeAmount } from "./previewTypedRecipeAmount";
 export type { TypedRecipeAmount } from "./previewTypedRecipeAmount";
@@ -80,8 +80,10 @@ export {
   usualQuantityOfUnit,
 } from "./startingAmount";
 export type { UnitOption } from "./startingAmount";
-export { foodNeedsReview, missingFieldsOf } from "./foodNeedsReview";
+export { foodNeedsReview, missingFieldsOf, snapshotNeedsReview } from "./foodNeedsReview";
 export { isNumberBeingTyped } from "./isNumberBeingTyped";
+export { amountForPicker, amountLastLogged } from "./amountLastLogged";
+export type { LastLoggedFood, LoggableAmount } from "./amountLastLogged";
 export { amountInPickerUnits } from "./amountInPickerUnits";
 export type { MeasuredAmount } from "./amountInPickerUnits";
 export { changedQuickValues } from "./changedQuickValues";

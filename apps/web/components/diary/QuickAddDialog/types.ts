@@ -10,4 +10,9 @@ export type QuickAddDialogProps = {
   opener: Element | null;
   /** Called to close the dialog: Cancel, Close, Escape, or after Add. */
   onClose: () => void;
+  /**
+   * Called instead of `onClose` after the entry was logged, for a caller that answers a log differently from a
+   * close, such as the Add food dialog, which returns to its search when the plate has food and closes when not.
+   */
+  onLogged?: (() => void) | undefined;
 };

@@ -1,4 +1,4 @@
-import { FileText, Heart, Pencil, Shield } from "lucide-react";
+import { FileJson, FileText, Heart, Pencil, Shield } from "lucide-react";
 import { userEvent } from "storybook/test";
 
 import { ListRow } from "./ListRow";
@@ -88,6 +88,63 @@ export const WeighIns: Story = {
         valueLook="numeral"
         valueTone="muted"
       />
+    </>
+  ),
+};
+
+// A button row whose press is being worked on, such as a routine day picked to start: a spinner in place of the
+// chevron, busy and enabled so focus stays, and a press does nothing until it clears.
+export const Loading: Story = {
+  render: () => (
+    <>
+      <ListRow
+        title="Pull"
+        subtitle="1 exercise · 3 sets"
+        value="Tuesday"
+        onClick={() => undefined}
+        loading
+      />
+      <ListRow
+        title="Legs"
+        subtitle="5 exercises · 16 sets"
+        value="Thursday"
+        onClick={() => undefined}
+        disabled
+      />
+    </>
+  ),
+};
+
+// A row that is done has a tick at its end, named by its label, as the export's file row shows it. A long name
+// wraps inside the row.
+export const WithTick: Story = {
+  render: () => (
+    <>
+      <ListRow
+        icon={FileJson}
+        title="ki-lo-export-2026-10-25.json"
+        subtitle="1.8 MB · Ready to save"
+        trailing={{ kind: "tick", label: "Ready" }}
+      />
+      <ListRow
+        icon={FileJson}
+        title="ki-lo-export-2026-10-25-with-a-very-long-name-that-wraps-inside-the-row.json"
+        subtitle="1.8 MB · Downloaded"
+        trailing={{ kind: "tick", label: "Downloaded" }}
+      />
+    </>
+  ),
+};
+
+// The Targets page's four figures while a programme runs: the macro's colour as a key before the title, which is
+// set in the body weight, and the figure strong with its unit after it. The row goes nowhere.
+export const WithMacro: Story = {
+  render: () => (
+    <>
+      <ListRow macro="calories" title="Calories" value="2,140" unit="kcal" valueLook="numeral" />
+      <ListRow macro="protein" title="Protein" value="126" unit="g" valueLook="numeral" />
+      <ListRow macro="carbs" title="Carbohydrate" value="245" unit="g" valueLook="numeral" />
+      <ListRow macro="fat" title="Fat" value="73" unit="g" valueLook="numeral" />
     </>
   ),
 };

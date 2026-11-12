@@ -1,23 +1,28 @@
 "use client";
 
 import { useWeightTrend } from "@keylow/api-client";
-import { TREND_EXPLAINER, describeSettlingBanner } from "@keylow/core/copy";
+import {
+  TREND_EXPLAINER,
+  TREND_EXPLAINER_BODY_SECTION,
+  describeSettlingBanner,
+} from "@keylow/core/copy";
 import { TREND_SETTLED_OBS } from "@keylow/core/weight";
-
-import { SettlingProgress } from "./SettlingProgress";
 
 import type { TrendExplainerDialogProps } from "./types";
 
 import { Banner } from "@/components/ui/Banner";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
+import { SettlingProgressBar } from "@/components/ui/SettlingProgressBar";
+
+const SECTIONS = [...TREND_EXPLAINER.sections, TREND_EXPLAINER_BODY_SECTION];
 
 /**
- * The dialog that explains the trend weight, as the `web-weight` explainer boards draw it: the five sections
- * and the line that the trend is an estimate, with Done in the footer. While the trend is settling a warning
- * banner over the sections says how many of the 7 weigh-ins it has, with a progress bar. The body fat and
- * lean mass section is left out, since the web has no Composition. A short window scrolls the dialog's
- * contents and keeps its header and Done in view.
+ * The dialog that explains the trend weight, as the `web-weight` explainer boards draw it: the six sections,
+ * the sixth on body fat and lean mass after Weekly rate, and the line that the trend is an estimate, with Done
+ * in the footer. While the trend is settling a warning banner over the sections says how many of the 7
+ * weigh-ins it has, with a progress bar. A short window scrolls the dialog's contents and keeps its header
+ * and Done in view.
  *
  * The explanation does not wait for the weigh-ins. Still reading, or offline with nothing read, the trend has
  * no points and is not settling, so the dialog draws as it does for a settled trend or none: the sections
@@ -43,14 +48,17 @@ export function TrendExplainerDialog({ onClose, returnFocusTo }: TrendExplainerD
             hasIcon={false}
             title={describeSettlingBanner(lastPoint.nObs)}
           >
-            <SettlingProgress
+            {/* The banner's own words say the count, so the track has no caption. The board keeps 8 under the title, 2 of them the banner's. */}
+            <SettlingProgressBar
+              className="mt-1.5"
+              hasCaption={false}
               count={lastPoint.nObs}
               target={TREND_SETTLED_OBS}
               label={TREND_EXPLAINER.progressName}
             />
           </Banner>
         )}
-        {TREND_EXPLAINER.sections.map((section) => (
+        {SECTIONS.map((section) => (
           <section key={section.title} className="flex flex-col gap-1">
             <h3 className="text-body-strong">{section.title}</h3>
             {/* The board sets the paragraphs at 14 over 21 in the regular weight, which no type class has. */}

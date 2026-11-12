@@ -19,6 +19,7 @@ export {
   parseFormNumber,
   portionAmountKey,
   portionToFormFields,
+  portionsToFormFields,
 } from "./foodForm";
 export type {
   CopyFormStart,
@@ -38,13 +39,67 @@ export {
 export type { OffFreshness } from "./freshness";
 export { normaliseOffCandidate, normaliseOffProduct, offProductPayloadSchema } from "./off";
 export type { NormaliseOffResult, OffFoodInput, OffPortionInput, OffProductPayload } from "./off";
-export { deriveOffPortions } from "./deriveOffPortions";
+export {
+  OFF_SEARCH_FIELDS,
+  buildOffSearchQuery,
+  normaliseOffSearchHit,
+  normaliseOffSearchTerms,
+} from "./offSearchHit";
+export {
+  OFF_SEARCH_EMPTY_FRESH_MS,
+  OFF_SEARCH_FRESH_MS,
+  OFF_SEARCH_KEEP_MS,
+  OFF_SEARCH_KEEP_SECONDS,
+  offSearchQueryKey,
+  offSearchRowState,
+  readStoredOffSearch,
+} from "./offSearchStore";
+export type { OffSearchRowState, StoredOffSearch } from "./offSearchStore";
+export { MEASURE_ONLY_PORTION_LABEL, deriveOffPortions } from "./deriveOffPortions";
+export { hasStrongFoodMatch } from "./strongFoodMatch";
+export { withDefaultPortion } from "./withDefaultPortion";
 export { NATURAL_UNIT_PROCESSED_TAGS, NATURAL_UNIT_TYPES, naturalUnitsFor } from "./naturalUnits";
 export type { NaturalUnitPortion, NaturalUnitType } from "./naturalUnits";
+export {
+  ESTIMATE_CATEGORY_ROWS,
+  ESTIMATE_DRY_KCAL_PER_100,
+  ESTIMATE_ENERGY_BANDS_PER_100G,
+  ESTIMATE_ENERGY_BANDS_PER_100ML,
+  ESTIMATE_GENERIC_NOUN,
+  ESTIMATE_UNKNOWN_ENERGY_SIZE,
+  estimatedPortion,
+  estimatedPortionLabel,
+  isEstimatedPortion,
+  isGeneratedEstimate,
+  isOurEstimate,
+} from "./estimatedPortion";
+export type { EnergyBand, EstimateCategoryRow, EstimateSize } from "./estimatedPortion";
 export { readPackSize } from "./packSize";
 export type { PackSize } from "./packSize";
 export { packPortion } from "./packPortion";
+export { canBeCopiedToYourFoods } from "./canBeCopiedToYourFoods";
+export { portionLabelOfFoodPerPortion } from "./portionLabelOfFoodPerPortion";
 export { requiresConfirmation } from "./quality";
 export { resolveCarbs } from "./offRules";
 export { LABEL_KCAL_TOLERANCE, labelFoodInput, macroKcalOf } from "./labelFood";
 export type { LabelFoodResult, LabelFoodValues } from "./labelFood";
+export {
+  PORTION_ESTIMATE_BOWLS,
+  PORTION_ESTIMATE_CONTAINERS,
+  PORTION_ESTIMATE_FILLS,
+  PORTION_ESTIMATE_FOOD_TYPES,
+  PORTION_ESTIMATE_PLATES,
+  estimatePortions,
+  portionEstimateProblems,
+} from "./portionEstimate";
+export type {
+  PortionEstimateContainer,
+  PortionEstimateFill,
+  PortionEstimateFoodType,
+  PortionEstimateInput,
+  PortionEstimateItemError,
+  PortionEstimateItemInput,
+  PortionEstimateItemResult,
+  PortionEstimateNutrients,
+  PortionEstimateResult,
+} from "./portionEstimate";

@@ -1,6 +1,6 @@
 import { FOOD_FORM, describeNutritionHeading } from "@keylow/core/copy";
 import { REQUIRED_FOOD_NUTRIENTS } from "@keylow/core/foods";
-import { nutrientBasisSchema } from "@keylow/core/schemas";
+import { customFoodBasisSchema } from "@keylow/core/schemas";
 import { useId } from "react";
 
 import { DENSE_FRAME_CLASS_NAME } from "../denseField";
@@ -29,7 +29,7 @@ const NUTRIENT_FIELDS: readonly NutrientFieldConfig[] = [
 
 const REQUIRED_NUTRIENTS: ReadonlySet<NutrientField> = new Set(REQUIRED_FOOD_NUTRIENTS);
 
-const BASIS_OPTIONS = nutrientBasisSchema.options.map((basis) => ({
+const BASIS_OPTIONS = customFoodBasisSchema.options.map((basis) => ({
   value: basis,
   label: FOOD_FORM.basisOptions[basis],
 }));

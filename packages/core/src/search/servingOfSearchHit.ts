@@ -2,6 +2,7 @@ import { describePortionWithSize } from "../copy/portionPicker";
 import { scaleNutrients } from "../nutrition/scale";
 
 import type { Food } from "../schemas/food";
+import type { OffCandidatePortion } from "../schemas/off";
 
 export type ServingSource = Pick<Food, "basis" | "kcal" | "protein_g" | "fat_g" | "carbs_g"> & {
   /** The default portion's id and label, or null when the food has none. */
@@ -31,37 +32,83 @@ export const AMOUNT_OF_THE_BASIS = 100;
 /** The amount a serving or a chip starts at when it is a portion or a spoon. */
 export const AMOUNT_OF_A_PORTION = 1;
 
+type WholePortion = { label: string; amount: number; unit: "g" | "ml"; id: string | null };
+type ServingNutrients = Pick<Food, "basis" | "kcal" | "protein_g" | "fat_g" | "carbs_g">;
+
+/** What a food per portion's one portion is called when the row has no label for it. */
+const UNNAMED_PORTION = "portion";
+
 /**
  * The serving a result row of the food log search shows, its plus logs and the portion picker starts at:
  * one of the food's default portion, or 100 of the food's basis (100 g, or 100 ml for a drink) when it has
  * none. The row, the plus and the picker all take it from here, so they cannot drift apart. It reads the lean
  * row the search returns, which carries the default portion but not the food's density, so a portion
  * measured in the other dimension than the food's basis counts as if 1 g were 1 ml. The values are the
- * food's, scaled the way a logged entry's are.
+ * food's, scaled the way a logged entry's are. A food per portion is always one of its portion, which has no
+ * size, so its caption is the portion's label alone, "1 bucket".
  */
 export function servingOfSearchHit(hit: ServingSource): SearchServing {
-  const portionSize = wholePortionSize(hit);
-  const amount = portionSize?.amount ?? AMOUNT_OF_THE_BASIS;
-  const unit = portionSize?.unit ?? (hit.basis === "per_100ml" ? "ml" : "g");
+  if (hit.basis === "per_portion") {
+    return servingOfPerPortion(hit, hit.default_portion_label, hit.default_portion_id);
+  }
+  const portion =
+    hit.default_portion_id === null
+      ? undefined
+      : wholePortion(
+          hit.default_portion_label,
+          hit.default_portion_grams,
+          hit.default_portion_ml,
+          hit.default_portion_id,
+        );
+
+  return servingOf(hit, portion);
+}
+
+/**
+ * The serving a live Open Food Facts row of the search shows: the same arithmetic and caption as
+ * `servingOfSearchHit`, for a product that is not stored yet. The portion it would open on comes with
+ * the candidate and has no id, so the serving has no `portionId`. A candidate with no default portion,
+ * from a function or a stored answer that predates it, is 100 g or 100 ml.
+ */
+export function servingOfCandidate(
+  candidate: ServingNutrients & { default_portion?: OffCandidatePortion | null | undefined },
+): SearchServing {
+  const portion = candidate.default_portion;
+
+  return servingOf(
+    candidate,
+    portion === undefined || portion === null
+      ? undefined
+      : wholePortion(portion.label, portion.grams, portion.ml, null),
+  );
+}
+
+function servingOf(food: ServingNutrients, portion: WholePortion | undefined): SearchServing {
+  if (food.basis === "per_portion") {
+    return servingOfPerPortion(food, portion?.label ?? null, portion?.id ?? null);
+  }
+  const amount = portion?.amount ?? AMOUNT_OF_THE_BASIS;
+  const unit = portion?.unit ?? (food.basis === "per_100ml" ? "ml" : "g");
   const scaled = scaleNutrients(
     {
-      kcal: hit.kcal,
-      protein_g: hit.protein_g,
-      fat_g: hit.fat_g,
-      carbs_g: hit.carbs_g,
+      kcal: food.kcal,
+      protein_g: food.protein_g,
+      fat_g: food.fat_g,
+      carbs_g: food.carbs_g,
       fibre_g: null,
     },
     amount,
+    food.basis,
   );
 
   return {
-    quantity: portionSize === undefined ? AMOUNT_OF_THE_BASIS : AMOUNT_OF_A_PORTION,
-    unit: portionSize === undefined ? unit : "portion",
-    portionId: portionSize === undefined ? null : hit.default_portion_id,
+    quantity: portion === undefined ? AMOUNT_OF_THE_BASIS : AMOUNT_OF_A_PORTION,
+    unit: portion === undefined ? unit : "portion",
+    portionId: portion?.id ?? null,
     caption:
-      portionSize === undefined || hit.default_portion_label === null
+      portion === undefined
         ? `${AMOUNT_OF_THE_BASIS} ${unit}`
-        : describePortionWithSize(hit.default_portion_label, portionSize),
+        : describePortionWithSize(portion.label, { amount, unit }),
     kcal: scaled.kcal,
     protein_g: scaled.protein_g,
     fat_g: scaled.fat_g,
@@ -69,16 +116,51 @@ export function servingOfSearchHit(hit: ServingSource): SearchServing {
   };
 }
 
-// A portion has an id, a label and exactly one of grams and millilitres. Anything less is not a portion to show.
-function wholePortionSize(hit: ServingSource): { amount: number; unit: "g" | "ml" } | undefined {
-  if (hit.default_portion_label === null || hit.default_portion_id === null) {
+// A food per portion is always one of its count portion, which has no size to put in brackets.
+function servingOfPerPortion(
+  food: ServingNutrients,
+  label: string | null,
+  id: string | null,
+): SearchServing {
+  const scaled = scaleNutrients(
+    {
+      kcal: food.kcal,
+      protein_g: food.protein_g,
+      fat_g: food.fat_g,
+      carbs_g: food.carbs_g,
+      fibre_g: null,
+    },
+    AMOUNT_OF_A_PORTION,
+    food.basis,
+  );
+
+  return {
+    quantity: AMOUNT_OF_A_PORTION,
+    unit: "portion",
+    portionId: id,
+    caption: label ?? `${AMOUNT_OF_A_PORTION} ${UNNAMED_PORTION}`,
+    kcal: scaled.kcal,
+    protein_g: scaled.protein_g,
+    fat_g: scaled.fat_g,
+    carbs_g: scaled.carbs_g,
+  };
+}
+
+// A portion has a label and exactly one of grams and millilitres. Anything less is not a portion to show.
+function wholePortion(
+  label: string | null,
+  grams: number | null,
+  ml: number | null,
+  id: string | null,
+): WholePortion | undefined {
+  if (label === null) {
     return undefined;
   }
-  if (hit.default_portion_grams !== null && hit.default_portion_ml === null) {
-    return { amount: hit.default_portion_grams, unit: "g" };
+  if (grams !== null && ml === null) {
+    return { label, amount: grams, unit: "g", id };
   }
-  if (hit.default_portion_ml !== null && hit.default_portion_grams === null) {
-    return { amount: hit.default_portion_ml, unit: "ml" };
+  if (ml !== null && grams === null) {
+    return { label, amount: ml, unit: "ml", id };
   }
   return undefined;
 }

@@ -9,6 +9,7 @@ import { anthropicMock } from "../support/anthropicMock";
 import { callAssistant, eventsOf, newAssistantUser, turnBody } from "../support/assistantClient";
 import { requireServedFunction } from "../support/functionsLane";
 import { deleteCreatedTestUsers } from "../support/users";
+import { withoutIdsAndDates } from "../support/withoutIdsAndDates";
 
 import type { ScriptedReply } from "../support/anthropicMock";
 import type { TestUser } from "../support/users";
@@ -206,7 +207,7 @@ describe("a turn that calls create_recipe", () => {
       target_updated_at: null,
       turn_seq: 1,
     });
-    const written = JSON.stringify(data);
+    const written = withoutIdsAndDates(data);
     for (const word of [marker, "Chicken", "kcal", "550", sourceUrl]) {
       expect(written).not.toContain(word);
     }

@@ -4,21 +4,41 @@ import { archiveRecipeTool } from "./tools/archiveRecipe.ts";
 import { copyDayTool } from "./tools/copyDay.ts";
 import { createCustomFoodTool } from "./tools/createCustomFood.ts";
 import { createRecipeTool } from "./tools/createRecipe.ts";
+import { createRoutineTool } from "./tools/createRoutine.ts";
 import { deleteEntryTool } from "./tools/deleteEntry.ts";
+import { editRoutineTool } from "./tools/editRoutine.ts";
 import { askUserTool } from "./tools/askUser.ts";
+import { estimatePortionsTool } from "./tools/estimatePortions.ts";
 import { getDayTool } from "./tools/getDay.ts";
 import { getEntriesTool } from "./tools/getEntries.ts";
+import { getExerciseProgressTool } from "./tools/getExerciseProgress.ts";
 import { getFoodTool } from "./tools/getFood.ts";
 import { getRangeTotalsTool } from "./tools/getRangeTotals.ts";
 import { getRecipesTool } from "./tools/getRecipes.ts";
+import { getMuscleStateTool } from "./tools/getMuscleState.ts";
+import { getRoutinesTool } from "./tools/getRoutines.ts";
+import { getTrainingGoalsTool } from "./tools/getTrainingGoals.ts";
 import { getWeighInsTool } from "./tools/getWeighIns.ts";
+import { getWorkoutsTool } from "./tools/getWorkouts.ts";
 import { importRecipeFromUrlTool } from "./tools/importRecipeFromUrl.ts";
 import { logEntryTool } from "./tools/logEntry.ts";
+import { searchExercisesTool } from "./tools/searchExercises.ts";
 import { searchFoodsTool } from "./tools/searchFoods.ts";
 import { setDayCompleteTool } from "./tools/setDayComplete.ts";
+import { suggestNextSessionTool } from "./tools/suggestNextSession.ts";
 import { updateEntryTool } from "./tools/updateEntry.ts";
 import { updateRecipeTool } from "./tools/updateRecipe.ts";
 import { updateTargetsTool } from "./tools/updateTargets.ts";
+import { showExerciseMusclesTool } from "./tools/showExerciseMuscles.ts";
+import { setActiveRoutineTool } from "./tools/setActiveRoutine.ts";
+import { archiveRoutineTool } from "./tools/archiveRoutine.ts";
+import { updatePastSetTool } from "./tools/updatePastSet.ts";
+import { updateTrainingGoalsTool } from "./tools/updateTrainingGoals.ts";
+import { archiveCustomExerciseTool } from "./tools/archiveCustomExercise.ts";
+import { requestFeatureTool } from "./tools/requestFeature.ts";
+import { saveCustomExerciseTool } from "./tools/saveCustomExercise.ts";
+import { deleteWorkoutTool } from "./tools/deleteWorkout.ts";
+import { showExerciseFormTool } from "./tools/showExerciseForm.ts";
 import { strictSchemaProblem } from "./tool.ts";
 
 import type { ToolDefinition, ToolRegistry } from "./tool.ts";
@@ -69,6 +89,26 @@ const toolDefinitions: readonly ToolDefinition[] = [
   createCustomFoodTool,
   updateTargetsTool,
   importRecipeFromUrlTool,
+  searchExercisesTool,
+  getRoutinesTool,
+  getTrainingGoalsTool,
+  getWorkoutsTool,
+  getExerciseProgressTool,
+  showExerciseMusclesTool,
+  getMuscleStateTool,
+  suggestNextSessionTool,
+  setActiveRoutineTool,
+  archiveRoutineTool,
+  editRoutineTool,
+  updatePastSetTool,
+  updateTrainingGoalsTool,
+  createRoutineTool,
+  saveCustomExerciseTool,
+  archiveCustomExerciseTool,
+  deleteWorkoutTool,
+  showExerciseFormTool,
+  estimatePortionsTool,
+  requestFeatureTool,
   askUserTool,
 ];
 

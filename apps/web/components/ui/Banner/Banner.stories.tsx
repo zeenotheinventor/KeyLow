@@ -84,6 +84,15 @@ export const ErrorMessage: Story = {
   },
 };
 
+// The setup wizard's read failure while Try again runs: the action is dimmed to 40 percent and ignores a press.
+export const ErrorWithDisabledAction: Story = {
+  args: {
+    tone: "error",
+    children: "Couldn't load your saved answers. You can still answer here.",
+    action: { label: "Try again", onClick: () => undefined, disabled: true },
+  },
+};
+
 export const ErrorWithTitle: Story = {
   args: {
     tone: "error",

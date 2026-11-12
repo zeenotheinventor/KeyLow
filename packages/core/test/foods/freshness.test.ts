@@ -60,8 +60,8 @@ describe("offFreshness", () => {
 });
 
 describe("OFF_PORTION_RULES_FROM", () => {
-  it("should be the moment the pack and borrowed portion rules went live in production", () => {
-    expect(OFF_PORTION_RULES_FROM).toBe("2026-10-23T02:16:15Z");
+  it("should be the moment the portion rules of KEY-930 went live in production", () => {
+    expect(OFF_PORTION_RULES_FROM).toBe("2026-11-10T16:25:42Z");
   });
 });
 
@@ -85,8 +85,8 @@ describe("isBeforePortionRules", () => {
   });
 
   it("should accept an ISO timestamp string as returned by PostgREST", () => {
-    expect(isBeforePortionRules("2026-10-22T12:00:00+00:00")).toBe(true);
-    expect(isBeforePortionRules("2026-10-23T12:00:00.123456+00:00")).toBe(false);
+    expect(isBeforePortionRules("2026-11-10T12:00:00+00:00")).toBe(true);
+    expect(isBeforePortionRules("2026-11-10T18:00:00.123456+00:00")).toBe(false);
   });
 
   it("should be true when the timestamp cannot be parsed, so the food is refetched", () => {

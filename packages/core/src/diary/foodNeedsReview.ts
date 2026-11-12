@@ -1,5 +1,6 @@
 import { requiresConfirmation } from "../foods/quality";
 
+import type { FoodSnapshot } from "./schemas";
 import type { Food } from "../schemas/food";
 
 /**
@@ -17,6 +18,15 @@ export function foodNeedsReview(
     food.carbs_g === null
   );
 }
+
+/**
+ * Whether the food an entry was logged from was missing energy or a macro when it was logged, which is what a
+ * Recent row can tell without loading the food: the row then shows "Needs review" and a chevron in place of the
+ * plus, as a search result does, and a press opens the amount step, which says what to do. The snapshot keeps no
+ * quality flag, so a food flagged suspect since it was logged is found by the amount step, not here.
+ */
+export const snapshotNeedsReview = (snapshot: FoodSnapshot): boolean =>
+  foodNeedsReview({ ...snapshot.per100, quality: {} });
 
 const NUTRIENT_FIELDS = ["kcal", "protein_g", "carbs_g", "fat_g"] as const;
 

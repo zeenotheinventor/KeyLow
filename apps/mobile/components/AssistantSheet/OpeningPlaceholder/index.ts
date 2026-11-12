@@ -1,0 +1,1 @@
+export { OpeningPlaceholder } from "./OpeningPlaceholder";

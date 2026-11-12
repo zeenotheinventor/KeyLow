@@ -2,8 +2,13 @@ import { parseAssistantEvent } from "@keylow/core";
 import { localToday } from "@keylow/core/engine";
 
 import type { SendMessageInput, TurnDriver } from "./driver.ts";
-import type { ToolCall, TurnResult, TurnStatus } from "./types.ts";
-import type { AssistantStreamEvent } from "@keylow/core";
+import type { AnswerMeta, Confirmation, ToolCall, TurnResult, TurnStatus } from "./types.ts";
+import type {
+  AssistantCard,
+  AssistantExerciseFormMedia,
+  AssistantExerciseMuscles,
+  AssistantStreamEvent,
+} from "@keylow/core";
 
 export type HttpDriverOptions = Readonly<{
   /** The project's API address, such as `http://127.0.0.1:54321`. */
@@ -89,6 +94,11 @@ export function createHttpDriver(options: HttpDriverOptions): TurnDriver {
     let turn: { turnId: string; conversationId: string } | null = null;
     let answer = "";
     let lastNoticeCode: string | null = null;
+    let answerMeta: AnswerMeta | undefined;
+    let confirmation: Confirmation | undefined;
+    const cards: AssistantCard[] = [];
+    const exerciseMuscles: AssistantExerciseMuscles[] = [];
+    const exerciseFormMedia: AssistantExerciseFormMedia[] = [];
     let buffer = "";
     const decoder = new TextDecoder();
     const reader = response.body.getReader();
@@ -103,6 +113,17 @@ export function createHttpDriver(options: HttpDriverOptions): TurnDriver {
             turn = { turnId: event.turnId, conversationId: event.conversationId };
           } else if (event.type === "text") {
             answer += event.delta;
+          } else if (event.type === "answer_meta") {
+            answerMeta = { citation: event.citation, estimate: event.estimate };
+          } else if (event.type === "card") {
+            cards.push(event.card);
+          } else if (event.type === "exercise_muscles") {
+            exerciseMuscles.push(event.exercise);
+          } else if (event.type === "exercise_form_media") {
+            exerciseFormMedia.push(event.exercise);
+          } else if (event.type === "confirm") {
+            const { question, confirmLabel, cancelLabel } = event;
+            confirmation = { question, confirmLabel, cancelLabel };
           } else if (event.type === "notice") {
             // The code only, so a gate refusal is readable and nothing else of the notice is kept.
             lastNoticeCode = event.notice.code;
@@ -115,6 +136,12 @@ export function createHttpDriver(options: HttpDriverOptions): TurnDriver {
               status: statusOf(event.outcome),
               answer,
               toolCalls: await readToolCalls(turn.turnId),
+              ...(answerMeta === undefined ? {} : { answerMeta }),
+              ...(confirmation === undefined ? {} : { confirmation }),
+              ...(cards.length === 0 ? {} : { cards }),
+              ...(exerciseMuscles.length === 0 ? {} : { exerciseMuscles }),
+              ...(exerciseFormMedia.length === 0 ? {} : { exerciseFormMedia }),
+              ...(lastNoticeCode === null ? {} : { noticeCode: lastNoticeCode }),
             };
           }
         }

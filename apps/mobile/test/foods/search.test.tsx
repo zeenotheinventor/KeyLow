@@ -1,7 +1,16 @@
 import { OffProductNotFoundError, RateLimitedError } from "@keylow/api-client";
+import { buildOffCandidate } from "@keylow/core/testing";
 import { touchTarget } from "@keylow/tokens";
-import { act, fireEvent, screen, userEvent, waitFor, within } from "@testing-library/react-native";
-import { AccessibilityInfo } from "react-native";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  userEvent,
+  waitFor,
+  within,
+} from "@testing-library/react-native";
+import { AccessibilityInfo, FlatList } from "react-native";
 import { getAnimatedStyle, setUpTests } from "react-native-reanimated";
 
 import { foodFixture, resetApiClientMock } from "./support/apiClientMock";
@@ -15,6 +24,8 @@ import {
   resetSearchApiClientMock,
   searchResult,
 } from "./support/searchApiClientMock";
+import { FoodSearch } from "../../components/FoodSearch";
+import { ThemeProvider } from "../../lib/theme";
 import { animatedRotation } from "../support/animatedStyle";
 import { resetRouterMock, routerMock } from "../support/expoRouterMock";
 import { registerAppStyles } from "../support/nativeWindStyles";
@@ -98,6 +109,23 @@ async function advance(milliseconds: number) {
 }
 
 const field = () => screen.getByRole("searchbox", { name: "Search foods" });
+
+// Scrolls the list the way the device reports it: the list says how tall it is, then it is scrolled.
+// `element` is anything inside the list, since the event reaches the list the way a touch on it would.
+async function scrollList(
+  element: ReturnType<typeof screen.getByRole>,
+  offset: number,
+  contentHeight: number,
+) {
+  await fireEvent(element, "contentSizeChange", 400, contentHeight);
+  await fireEvent.scroll(element, {
+    nativeEvent: {
+      contentOffset: { x: 0, y: offset },
+      contentSize: { width: 400, height: contentHeight },
+      layoutMeasurement: { width: 400, height: 600 },
+    },
+  });
+}
 
 async function renderSearch(typed = "oat") {
   const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
@@ -235,7 +263,7 @@ describe("food search sheet", () => {
     it("should search for the trimmed text and leave the waiting to the search hook", async () => {
       await renderSearch("  oat  ");
 
-      expect(mockUseFoodSearch).toHaveBeenLastCalledWith("oat");
+      expect(mockUseFoodSearch).toHaveBeenLastCalledWith("oat", { limit: 50 });
     });
   });
 
@@ -443,61 +471,236 @@ describe("food search sheet", () => {
     });
   });
 
-  describe("See N more", () => {
+  describe("loading more as you scroll", () => {
     const own = (index: number) => hit({ id: `own-${index}`, name: `Oat ${index}`, brand: null });
     const shared = (index: number) =>
-      hit({
-        id: `shared-${index}`,
-        name: `Oat meal ${index}`,
-        brand: null,
-        source: "cofid",
-      });
+      hit({ id: `shared-${index}`, name: `Oat meal ${index}`, brand: null, source: "cofid" });
+    const branded = (index: number) =>
+      hit({ id: `branded-${index}`, name: `Oat biscuit ${index}`, brand: null, source: "off" });
+    const range = (count: number) => Array.from({ length: count }, (_, index) => index + 1);
 
-    beforeEach(() => {
+    // Five of Your foods, twenty of Common foods and ten of Branded foods: 35 rows in all.
+    const showThirtyFiveRows = () => {
       Object.assign(searchResult, {
-        // Five of Your foods against a limit of three, seven of Common foods against five.
-        local: [1, 2, 3, 4, 5].map(own).concat([1, 2, 3, 4, 5, 6, 7].map(shared)),
+        local: range(5).map(own).concat(range(20).map(shared), range(10).map(branded)),
       });
-    });
+    };
 
-    it("should show three of Your foods and five of Common foods, with the hidden count beside each heading", async () => {
+    const rowsNamed = (name: RegExp) => screen.queryAllByRole("button", { name });
+    const firstRow = () => {
+      const [row] = screen.getAllByRole("button", { name: /^Oat / });
+      if (row === undefined) {
+        throw new Error("No row to scroll");
+      }
+      return row;
+    };
+    const scrollToEnd = (contentHeight: number) =>
+      scrollList(firstRow(), contentHeight - 600, contentHeight);
+
+    it("should show the first 15 rows across the groups in order, with no See more button", async () => {
+      showThirtyFiveRows();
+
       await renderSearch();
 
-      expect(screen.getAllByRole("button", { name: /^Oat \d/ })).toHaveLength(3);
-      expect(screen.getAllByRole("button", { name: /^Oat meal \d/ })).toHaveLength(5);
-      expect(screen.getByRole("button", { name: "See 2 more in Your foods" })).toBeOnTheScreen();
-      expect(screen.getByRole("button", { name: "See 2 more in Common foods" })).toBeOnTheScreen();
+      expect(rowsNamed(/^Oat \d/)).toHaveLength(5);
+      expect(rowsNamed(/^Oat meal \d/)).toHaveLength(10);
+      expect(rowsNamed(/^Oat biscuit \d/)).toHaveLength(0);
+      expect(screen.queryByRole("button", { name: /^See \d+ more/ })).not.toBeOnTheScreen();
     });
 
-    it("should reveal only its own group, then offer nothing more there", async () => {
-      const user = await renderSearch();
+    it("should leave out the heading of a group that has no rows to show yet", async () => {
+      showThirtyFiveRows();
 
-      await user.press(screen.getByRole("button", { name: "See 2 more in Your foods" }));
+      await renderSearch();
 
-      expect(screen.getAllByRole("button", { name: /^Oat \d/ })).toHaveLength(5);
-      expect(screen.getAllByRole("button", { name: /^Oat meal \d/ })).toHaveLength(5);
-      expect(
-        screen.queryByRole("button", { name: "See 2 more in Your foods" }),
-      ).not.toBeOnTheScreen();
-      expect(screen.getByRole("button", { name: "See 2 more in Common foods" })).toBeOnTheScreen();
+      expect(screen.getByRole("heading", { name: /^Common foods/ })).toBeOnTheScreen();
+      expect(screen.queryByRole("heading", { name: /^Branded foods/ })).not.toBeOnTheScreen();
     });
 
-    it("should fold back when the user searches for something else", async () => {
-      const user = await renderSearch();
-      await user.press(screen.getByRole("button", { name: "See 2 more in Your foods" }));
+    it("should reveal the next 15 rows near the end of the list, then the remainder", async () => {
+      showThirtyFiveRows();
+      await renderSearch();
+
+      await scrollToEnd(1000);
+
+      expect(rowsNamed(/^Oat meal \d/)).toHaveLength(20);
+      expect(rowsNamed(/^Oat biscuit \d/)).toHaveLength(5);
+      expect(screen.getByRole("heading", { name: /^Branded foods/ })).toBeOnTheScreen();
+
+      await scrollToEnd(2000);
+
+      expect(rowsNamed(/^Oat \d/)).toHaveLength(5);
+      expect(rowsNamed(/^Oat meal \d/)).toHaveLength(20);
+      expect(rowsNamed(/^Oat biscuit \d/)).toHaveLength(10);
+    });
+
+    it("should not reveal anything while the end of the list is still far away", async () => {
+      showThirtyFiveRows();
+      await renderSearch();
+
+      await scrollList(firstRow(), 0, 5000);
+
+      expect(rowsNamed(/^Oat /)).toHaveLength(15);
+    });
+
+    it("should keep revealing rows when the rows shown do not fill the screen", async () => {
+      showThirtyFiveRows();
+      await renderSearch();
+
+      // The list is 300 tall in a 600 tall screen, so there is nothing to scroll and the end is already in view.
+      await scrollList(firstRow(), 0, 300);
+
+      expect(rowsNamed(/^Oat /)).toHaveLength(30);
+
+      // More rows still wait, so the next growth of the list reveals the rest.
+      await scrollList(firstRow(), 0, 320);
+
+      expect(rowsNamed(/^Oat /)).toHaveLength(35);
+    });
+
+    it("should not reveal anything while a short skeleton is on the screen", async () => {
+      Object.assign(searchResult, { isLoadingLocal: true });
+      await renderSearch();
+
+      // The skeleton is short, so the list reports its end before any result has arrived.
+      await scrollList(screen.getByRole("status", { name: "Searching your foods" }), 0, 300);
+      showThirtyFiveRows();
+      Object.assign(searchResult, { isLoadingLocal: false });
+      await screen.rerender(sheet());
+
+      expect(rowsNamed(/^Oat /)).toHaveLength(15);
+    });
+
+    it("should not reveal anything while the results are still being searched for", async () => {
+      showThirtyFiveRows();
+      Object.assign(searchResult, { isLoadingLocal: true });
+      await renderSearch();
+
+      await scrollToEnd(1000);
+
+      expect(rowsNamed(/^Oat /)).toHaveLength(15);
+    });
+
+    it("should stop counting once every row is shown", async () => {
+      Object.assign(searchResult, { local: range(20).map(shared) });
+      await renderSearch();
+      await scrollToEnd(1000);
+      await scrollToEnd(2000);
+      await scrollToEnd(3000);
+
+      Object.assign(searchResult, { local: range(60).map(shared) });
+      await screen.rerender(sheet());
+
+      expect(rowsNamed(/^Oat meal \d/)).toHaveLength(30);
+    });
+
+    it("should start from 15 rows for every query it has not just shown, not the last one revealed", async () => {
+      showThirtyFiveRows();
+      await renderSearch("chi");
+      await scrollToEnd(1000);
+      expect(rowsNamed(/^Oat /)).toHaveLength(30);
+
+      await fireEvent.changeText(field(), "chic");
+      await fireEvent.changeText(field(), "chi");
+
+      expect(rowsNamed(/^Oat /)).toHaveLength(15);
+    });
+
+    it("should go back to the top when the query changes", async () => {
+      const scrollToOffset = jest.spyOn(FlatList.prototype, "scrollToOffset");
+      showThirtyFiveRows();
+      await renderSearch();
+      await scrollToEnd(1000);
 
       await fireEvent.changeText(field(), "oats");
 
-      expect(screen.getAllByRole("button", { name: /^Oat \d/ })).toHaveLength(3);
-      expect(screen.getByRole("button", { name: "See 2 more in Your foods" })).toBeOnTheScreen();
+      expect(scrollToOffset).toHaveBeenLastCalledWith({ offset: 0, animated: false });
     });
 
-    it("should offer nothing for a group that shows every row", async () => {
-      Object.assign(searchResult, { local: [own(1), own(2)] });
+    it("should keep the results' spacing and fill the screen with them", async () => {
+      showThirtyFiveRows();
+      await renderSearch();
+
+      // The cell the list wraps its item in carries the gap and the grow the content container would.
+      expect(screen.getByLabelText("Search results").parent).toHaveStyle({
+        flexGrow: 1,
+        rowGap: 16,
+      });
+    });
+
+    it("should fold back to 15 rows when the user searches for something else", async () => {
+      showThirtyFiveRows();
+      await renderSearch();
+      await scrollToEnd(1000);
+
+      await fireEvent.changeText(field(), "oats");
+
+      expect(rowsNamed(/^Oat /)).toHaveLength(15);
+    });
+
+    it("should change nothing when there are fewer than 15 rows", async () => {
+      Object.assign(searchResult, { local: range(4).map(own) });
+      await renderSearch();
+
+      await scrollToEnd(1000);
+
+      expect(rowsNamed(/^Oat /)).toHaveLength(4);
+    });
+
+    it("should show every Open Food Facts product, whatever the local rows revealed", async () => {
+      Object.assign(searchResult, {
+        local: range(20).map(shared),
+        off: range(20).map((index) =>
+          buildOffCandidate({
+            code: `500016800${String(index).padStart(4, "0")}`,
+            name: `Oat drink ${index}`,
+          }),
+        ),
+      });
 
       await renderSearch();
 
-      expect(screen.queryByRole("button", { name: /See \d+ more/ })).not.toBeOnTheScreen();
+      expect(rowsNamed(/^Oat meal \d/)).toHaveLength(15);
+      expect(
+        within(screen.getByLabelText("From Open Food Facts")).getAllByRole("button"),
+      ).toHaveLength(20);
+    });
+
+    it("should ask for 50 rows", async () => {
+      await renderSearch();
+
+      expect(mockUseFoodSearch).toHaveBeenCalledWith("oat", { limit: 50 });
+    });
+
+    it("should reveal more rows in the log search too", async () => {
+      Object.assign(searchResult, { local: range(20).map(shared) });
+      routerMock.searchParams = { day: "2026-10-14", time: "12:00" };
+      await renderSearch();
+      expect(rowsNamed(/^Oat meal \d/)).toHaveLength(15);
+
+      await scrollToEnd(1000);
+
+      expect(rowsNamed(/^Oat meal \d/)).toHaveLength(20);
+    });
+
+    it("should reveal more rows in the ingredient search too", async () => {
+      Object.assign(searchResult, { local: range(20).map(shared) });
+      await render(
+        <ThemeProvider fixedPreference="dark">
+          <FoodSearch
+            ingredient={{ onOpenRecent: jest.fn() }}
+            onClose={jest.fn()}
+            onOpenFood={jest.fn()}
+            onScanBarcode={jest.fn()}
+          />
+        </ThemeProvider>,
+      );
+      await fireEvent.changeText(field(), "oat");
+      expect(rowsNamed(/^Oat meal \d/)).toHaveLength(15);
+
+      await scrollToEnd(1000);
+
+      expect(rowsNamed(/^Oat meal \d/)).toHaveLength(20);
     });
   });
 
@@ -605,6 +808,59 @@ describe("food search sheet", () => {
       expect(mockMaterialiseOffProduct).toHaveBeenCalledWith({ code: "5000168001234" });
       expect(routerMock.push).toHaveBeenCalledTimes(1);
       expect(routerMock.push).toHaveBeenCalledWith(`/foods/${materialisedFoodId}`);
+    });
+
+    describe("in the ingredient search", () => {
+      const burger = buildOffCandidate({
+        code: "5000168009999",
+        name: "Big Mac",
+        brand: "McDonald's",
+        kcal: 250,
+        protein_g: 13,
+        fat_g: 12,
+        carbs_g: 25,
+        default_portion: { label: "1 burger", grams: 240, ml: null },
+      });
+
+      async function renderIngredientSearch() {
+        Object.assign(searchResult, { off: [burger] });
+        await render(
+          <ThemeProvider fixedPreference="dark">
+            <FoodSearch
+              ingredient={{ onOpenRecent: jest.fn() }}
+              onClose={jest.fn()}
+              onOpenFood={jest.fn()}
+              onScanBarcode={jest.fn()}
+            />
+          </ThemeProvider>,
+        );
+        await fireEvent.changeText(field(), "big");
+      }
+
+      it("should show the serving the product opens on, with its values", async () => {
+        await renderIngredientSearch();
+
+        expect(
+          screen.getByRole("button", {
+            name: /^Big Mac, McDonald's, 1 burger \(240 g\), 600 kilocalories, protein 31 grams/,
+          }),
+        ).toBeOnTheScreen();
+        expect(screen.queryByText("Values per 100 g unless marked")).not.toBeOnTheScreen();
+      });
+
+      it("should say servings are confirmed when a product is opened", async () => {
+        await renderIngredientSearch();
+
+        expect(
+          screen.getByText("Servings are confirmed when you open a product"),
+        ).toBeOnTheScreen();
+      });
+
+      it("should have no plus", async () => {
+        await renderIngredientSearch();
+
+        expect(screen.queryByRole("button", { name: /^Add Big Mac/ })).not.toBeOnTheScreen();
+      });
     });
 
     it("should hold back a second press that lands before the first has settled", async () => {
@@ -744,12 +1000,12 @@ describe("food search sheet", () => {
       expect(screen.queryByText(/socket hang up/)).not.toBeOnTheScreen();
     });
 
-    it("should say how long to wait when Open Food Facts is rate limited", async () => {
+    it("should say how long to wait when the search is rate limited", async () => {
       await failToAdd(new RateLimitedError("slow down", 20, new Error("429")));
 
       expect(
         await screen.findByRole("alert", {
-          name: "Open Food Facts is busy. Try again in 20 seconds.",
+          name: "Too many lookups just now. Try again in 20 seconds.",
         }),
       ).toBeOnTheScreen();
     });
@@ -759,7 +1015,7 @@ describe("food search sheet", () => {
 
       expect(
         await screen.findByRole("alert", {
-          name: "Open Food Facts is busy. Try again in 1 second.",
+          name: "Too many lookups just now. Try again in 1 second.",
         }),
       ).toBeOnTheScreen();
     });
@@ -769,7 +1025,7 @@ describe("food search sheet", () => {
 
       expect(
         await screen.findByRole("alert", {
-          name: "Open Food Facts is busy. Try again in a moment.",
+          name: "Too many lookups just now. Try again in a moment.",
         }),
       ).toBeOnTheScreen();
     });
@@ -840,7 +1096,9 @@ describe("food search sheet", () => {
       await renderSearch();
 
       expect(
-        screen.getByRole("status", { name: "Open Food Facts is busy. Try again in 30 seconds." }),
+        screen.getByRole("status", {
+          name: "Too many searches just now. Try again in 30 seconds.",
+        }),
       ).toBeOnTheScreen();
       expect(screen.queryByRole("button", { name: /try again|retry/i })).not.toBeOnTheScreen();
       expect(screen.getByRole("button", { name: ownRowName })).toBeOnTheScreen();
@@ -852,7 +1110,7 @@ describe("food search sheet", () => {
       await renderSearch();
 
       expect(
-        screen.getByRole("status", { name: "Open Food Facts is busy. Try again in 1 second." }),
+        screen.getByRole("status", { name: "Too many searches just now. Try again in 1 second." }),
       ).toBeOnTheScreen();
     });
 
@@ -862,7 +1120,7 @@ describe("food search sheet", () => {
       await renderSearch();
 
       expect(
-        screen.getByRole("status", { name: "Open Food Facts is busy. Try again in a moment." }),
+        screen.getByRole("status", { name: "Too many searches just now. Try again in a moment." }),
       ).toBeOnTheScreen();
     });
   });
@@ -903,6 +1161,15 @@ describe("food search sheet", () => {
       await renderSearch();
 
       expect(screen.queryByRole("heading", { name: "No foods found" })).not.toBeOnTheScreen();
+    });
+
+    it("should say Open Food Facts is being searched, not that no foods were found, while it waits to be asked", async () => {
+      Object.assign(searchResult, { isLoadingOff: true, isDebouncing: false });
+
+      await renderSearch("zzqx");
+
+      expect(screen.queryByRole("heading", { name: "No foods found" })).not.toBeOnTheScreen();
+      expect(screen.getByText("Searching Open Food Facts")).toBeOnTheScreen();
     });
 
     it("should not say so while the search is still waiting to start", async () => {

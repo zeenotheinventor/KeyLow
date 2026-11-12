@@ -80,22 +80,28 @@ describe("Trend explainer dialog", () => {
         within(dialog)
           .getAllByRole("heading", { level: 3 })
           .map((heading) => heading.textContent),
-      ).toEqual(TREND_EXPLAINER.sections.map((section) => section.title));
-      for (const section of TREND_EXPLAINER.sections) {
+      ).toEqual(
+        [...TREND_EXPLAINER.sections, TREND_EXPLAINER_BODY_SECTION].map((section) => section.title),
+      );
+      for (const section of [...TREND_EXPLAINER.sections, TREND_EXPLAINER_BODY_SECTION]) {
         expect(within(dialog).getByText(section.text)).toBeTruthy();
       }
       expect(within(dialog).getByText(TREND_EXPLAINER.footer)).toBeTruthy();
     });
 
-    it("should leave out the body fat and lean mass section, which the web has no Composition for", async () => {
+    it("should end with the body fat and lean mass section, after Weekly rate", async () => {
       renderWithWeight(<WeightScreen />);
       await screen.findByRole("region", { name: "Weigh-ins" });
       await openExplainer();
 
-      expect(
-        within(explainer()).queryByRole("heading", { name: TREND_EXPLAINER_BODY_SECTION.title }),
-      ).toBeNull();
-      expect(within(explainer()).queryByText(TREND_EXPLAINER_BODY_SECTION.text)).toBeNull();
+      const headings = within(explainer())
+        .getAllByRole("heading", { level: 3 })
+        .map((heading) => heading.textContent);
+      expect(headings.slice(-2)).toEqual([
+        TREND_EXPLAINER.sections.at(-1)?.title,
+        TREND_EXPLAINER_BODY_SECTION.title,
+      ]);
+      expect(within(explainer()).getByText(TREND_EXPLAINER_BODY_SECTION.text)).toBeTruthy();
     });
 
     it("should close on Done", async () => {
@@ -184,7 +190,7 @@ describe("Trend explainer dialog", () => {
 
       const dialog = explainer();
       expect(within(dialog).getAllByRole("heading", { level: 3 })).toHaveLength(
-        TREND_EXPLAINER.sections.length,
+        TREND_EXPLAINER.sections.length + 1,
       );
       expect(within(dialog).queryByText(/is settling/)).toBeNull();
       expect(within(dialog).queryByRole("progressbar")).toBeNull();
@@ -198,7 +204,7 @@ describe("Trend explainer dialog", () => {
 
       const dialog = explainer();
       expect(within(dialog).getAllByRole("heading", { level: 3 })).toHaveLength(
-        TREND_EXPLAINER.sections.length,
+        TREND_EXPLAINER.sections.length + 1,
       );
       expect(within(dialog).queryByText(/is settling/)).toBeNull();
       expect(within(dialog).queryByRole("status")).toBeNull();

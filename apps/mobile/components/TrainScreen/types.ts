@@ -1,3 +1,5 @@
+import type { SuggestionNotices } from "@keylow/api-client";
+
 /** What a start needs besides the moment: the routine day to follow, or null for a free session, and the profile's zone. */
 export type TrainSessionStart = {
   routineDayId: string | null;
@@ -15,7 +17,7 @@ export type TrainScreenProps = {
   onLogSession?: ((start: TrainSessionStart) => void) | undefined;
   /** Opens the routine editor: "Create routine". Drawn only when it is given. */
   onCreateRoutine?: (() => void) | undefined;
-  /** Opens the routines list: the "Routines" button in the header. Drawn only when it is given. */
+  /** Opens the routines list: the "Routines" button in the header, last of the three. Drawn only when it is given. */
   onOpenRoutines?: (() => void) | undefined;
   /** Opens the goal questionnaire: "Set your goal". Drawn only when it is given. */
   onSetGoal?: (() => void) | undefined;
@@ -31,8 +33,15 @@ export type TrainScreenProps = {
    * last) and a logged day of the week strip (that day's). Drawn, and pressable, only when it is given.
    */
   onViewSession?: ((sessionId: string) => void) | undefined;
-  /** Opens the history list: "History" in the header. Drawn only when it is given. */
+  /** Opens the assistant: the "Assistant" button in the header, first of the three. Drawn only when it is given. */
+  onOpenAssistant?: (() => void) | undefined;
+  /** Opens the history list: the "History" button in the header. Drawn only when it is given. */
   onOpenHistory?: (() => void) | undefined;
   /** Opens the body map: the chevron button on the body map card. Drawn only when it is given. */
   onOpenBodyMap?: (() => void) | undefined;
+  /**
+   * What the suggestion card does with the toast: one with Undo for an add, and a failure sentence. The
+   * card is drawn only when it is given.
+   */
+  suggestionNotices?: SuggestionNotices | undefined;
 };

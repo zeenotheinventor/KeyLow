@@ -132,6 +132,55 @@ describe("threadFromMessages, a failed turn", () => {
       expect(thread[1]).toMatchObject({ kind: "notice", notice: { code: "turn_failed" } });
     },
   );
+
+  // A worker killed mid-turn leaves a card and no words, and `refuseWhileBusy` marks the turn failed later.
+  // The notice says nothing was changed and offers Try again, so it is not drawn beside a card.
+  const turnWithCard = (turnStatus: "failed" | "refused") => [
+    message({ ...userMessage("m1", firstTurnId, "Log 2 eggs"), turnStatus }),
+    message({
+      ...toolUseMessage("m2", firstTurnId, [{ id: "c1", name: "log_entry" }]),
+      turnStatus,
+    }),
+    message({
+      ...toolResultMessage("m3", firstTurnId, [
+        { toolUseId: "c1", source: "log_entry", outcome: { card: loggedCard } },
+      ]),
+      turnStatus,
+    }),
+  ];
+
+  it.each(["failed", "refused"] as const)(
+    "should draw no notice on a %s turn that holds a card",
+    (turnStatus) => {
+      const thread = threadFromMessages(turnWithCard(turnStatus), availableActions);
+
+      expect(kinds(thread)).toEqual(["user", "card"]);
+    },
+  );
+
+  it.each(["failed", "refused"] as const)(
+    "should still draw the notice on a %s turn that holds only a read",
+    (turnStatus) => {
+      const thread = threadFromMessages(
+        [
+          message({ ...userMessage("m1", firstTurnId, "What did I eat?"), turnStatus }),
+          message({
+            ...toolUseMessage("m2", firstTurnId, [{ id: "r1", name: "get_day" }]),
+            turnStatus,
+          }),
+          message({
+            ...toolResultMessage("m3", firstTurnId, [
+              { toolUseId: "r1", source: "get_day", outcome: { citation: "Based on 4 entries" } },
+            ]),
+            turnStatus,
+          }),
+        ],
+        [],
+      );
+
+      expect(kinds(thread)).toEqual(["user", "notice"]);
+    },
+  );
 });
 
 describe("threadFromMessages, the undo state of a card", () => {
@@ -344,6 +393,46 @@ describe("threadFromMessages, a question and a confirmation", () => {
   });
 });
 
+describe("threadFromMessages, a confirm button pressed and run in code", () => {
+  const confirmTurn = [
+    userMessage("m1", firstTurnId, "Delete everything from lunch today"),
+    toolUseMessage("m2", firstTurnId, [{ id: "call-1", name: "delete_entry" }]),
+    toolResultMessage("m3", firstTurnId, [
+      {
+        toolUseId: "call-1",
+        source: "delete_entry",
+        outcome: {
+          confirm: {
+            confirmationId: "00000000-0000-4000-8000-0000000000c1",
+            question: "Delete 3 entries at 13:00 today?",
+            confirmLabel: "Delete 3 entries",
+            cancelLabel: "Keep them",
+            tone: "danger",
+          },
+        },
+      },
+    ]),
+  ];
+  // The turn the loop ran with no model call: the person's words, the call it made, and the card.
+  const pressTurn = [
+    userMessage("m4", secondTurnId, "Delete 3 entries"),
+    toolUseMessage("m5", secondTurnId, [{ id: "toolu_pressed", name: "delete_entry" }]),
+    toolResultMessage("m6", secondTurnId, [
+      { toolUseId: "toolu_pressed", source: "delete_entry", outcome: { card: loggedCard } },
+    ]),
+  ];
+  const thread = threadFromMessages([...confirmTurn, ...pressTurn], availableActions);
+
+  it("should draw the question, the person's words and the card, with no reply under it", () => {
+    expect(kinds(thread)).toEqual(["user", "confirm", "user", "card"]);
+    expect(thread[2]).toMatchObject({ kind: "user", text: "Delete 3 entries" });
+  });
+
+  it("should answer the earlier confirmation", () => {
+    expect(thread[1]).toMatchObject({ kind: "confirm", answered: true });
+  });
+});
+
 describe("threadFromMessages, the meta of an answer", () => {
   const answerTurn = (outcomes: Record<string, unknown>[]) => [
     userMessage("m1", firstTurnId, "How fast is my weight going down?"),
@@ -487,5 +576,51 @@ describe("threadFromMessages, the display of a message", () => {
     const thread = threadFromMessages(boardConversation, reserved);
 
     expect(thread[1]).toMatchObject({ kind: "card", card: { undo: "unavailable" } });
+  });
+});
+
+describe("threadFromMessages, a display entry that holds an undo", () => {
+  const undo = {
+    actionId: firstActionId,
+    previous: {
+      routineName: "Sentinel routine 4471",
+      deletedAt: "2026-11-03T08:10:00.123456+00:00",
+    },
+    fingerprint: "fingerprint-8832",
+  };
+  const withUndo = boardConversation.map((row) =>
+    row.id === "m3"
+      ? toolResultMessage("m3", firstTurnId, [
+          { toolUseId: "call-1", source: "log_entry", outcome: { card: loggedCard, undo } },
+        ])
+      : row,
+  );
+
+  it("should draw the card exactly as it does without the undo", () => {
+    expect(threadFromMessages(withUndo, availableActions)).toEqual(
+      threadFromMessages(boardConversation, availableActions),
+    );
+  });
+
+  it("should keep the previous value out of every item", () => {
+    const text = JSON.stringify(threadFromMessages(withUndo, availableActions));
+
+    expect(text).not.toContain("Sentinel routine 4471");
+    expect(text).not.toContain("fingerprint-8832");
+  });
+
+  it("should draw a card whose entry holds only an undo as nothing", () => {
+    const thread = threadFromMessages(
+      [
+        userMessage("m1", firstTurnId, "Change my routine"),
+        toolUseMessage("m2", firstTurnId, [{ id: "call-1", name: "edit_routine" }]),
+        toolResultMessage("m3", firstTurnId, [
+          { toolUseId: "call-1", source: "edit_routine", outcome: { undo } },
+        ]),
+      ],
+      availableActions,
+    );
+
+    expect(kinds(thread)).toEqual(["user"]);
   });
 });

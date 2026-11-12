@@ -1,11 +1,15 @@
 import { z } from "zod";
 
-import { assistantCardSchema } from "./card";
+import { assistantCardLinkSchema, assistantCardSchema } from "./card";
+import { assistantExerciseFormMediaSchema } from "./exerciseFormCard";
+import { assistantExerciseMusclesSchema } from "./exerciseMusclesCard";
 import { assistantNoticeSchema } from "./notice";
 import { undoStateOfActions } from "./undoState";
 import { ASSISTANT_CARD_KINDS_WITHOUT_UNDO, mergeAssistantCards } from "./writeToolWords";
 
-import type { AssistantCard } from "./card";
+import type { AssistantCard, AssistantCardLink } from "./card";
+import type { AssistantExerciseFormMedia } from "./exerciseFormCard";
+import type { AssistantExerciseMuscles } from "./exerciseMusclesCard";
 import type { AssistantNotice } from "./notice";
 import type { AssistantActionState } from "./undoState";
 
@@ -69,7 +73,15 @@ export type AssistantThreadItem =
       tone: "danger" | "primary";
       answered: boolean;
     }
-  | { kind: "notice"; id: string; notice: AssistantNotice };
+  | { kind: "notice"; id: string; notice: AssistantNotice }
+  /** A link on its own, under the words of an answer that changed nothing (`assistant-card · routine-updated`, Removing a day). */
+  | { kind: "link"; id: string; link: AssistantCardLink }
+  /** The muscles an exercise works, drawn as a figure under the reply (`assistant-card · exercise-muscles`). One item for each exercise, in call order, never merged. */
+  | { kind: "exercise_muscles"; id: string; exercise: AssistantExerciseMuscles }
+  /** The form video or photos of an exercise, drawn as the form media card under the reply (`assistant-card · exercise-form`). One item for each exercise, in call order, never merged. */
+  | { kind: "exercise_form_media"; id: string; exercise: AssistantExerciseFormMedia }
+  /** The Ask again quick reply at the end of a turn (`assistant · workout-in-progress`). `answered` once a later turn exists, and then the chip is gone. */
+  | { kind: "ask_again"; id: string; answered: boolean };
 
 /** The words under the field when the assistant asks a question (`assistant · clarify`). */
 const CLARIFY_FIELD_HINT = "Or say it your way";
@@ -113,6 +125,12 @@ const displayEntrySchema = z.object({
       tone: z.enum(["danger", "primary"]),
     })
     .optional(),
+  link: assistantCardLinkSchema.optional(),
+  // A non-strict object, so an older app reading a stored row drops this key and draws nothing.
+  exerciseMuscles: assistantExerciseMusclesSchema.optional(),
+  // Also non-strict, for the same reason.
+  exerciseFormMedia: assistantExerciseFormMediaSchema.optional(),
+  askAgain: z.boolean().optional(),
   citation: z.string().min(1).nullish(),
   estimate: z.string().min(1).nullish(),
 });
@@ -178,6 +196,12 @@ function itemsOfTurn(
   context: TurnContext,
 ): AssistantThreadItem[] {
   const items: DraftItem[] = [];
+  // The muscles and the form media of an exercise, a link and Ask again are drawn at the end of the turn, under its words, as
+  // the boards show them: the reply, the muscles, the form media, the link, a notice, then Ask again.
+  const exerciseMuscles: AssistantThreadItem[] = [];
+  const exerciseFormMedia: AssistantThreadItem[] = [];
+  const links: AssistantThreadItem[] = [];
+  const askAgains: AssistantThreadItem[] = [];
   const citations: (string | null | undefined)[] = [];
   const estimates: (string | null | undefined)[] = [];
 
@@ -236,14 +260,37 @@ function itemsOfTurn(
         if (outcome.confirm !== undefined) {
           items.push({ kind: "confirm", id, ...outcome.confirm, answered: context.answered });
         }
+        if (outcome.exerciseMuscles !== undefined) {
+          exerciseMuscles.push({
+            kind: "exercise_muscles",
+            id: `${id}:exerciseMuscles`,
+            exercise: outcome.exerciseMuscles,
+          });
+        }
+        if (outcome.exerciseFormMedia !== undefined) {
+          exerciseFormMedia.push({
+            kind: "exercise_form_media",
+            id: `${id}:exerciseFormMedia`,
+            exercise: outcome.exerciseFormMedia,
+          });
+        }
+        if (outcome.link !== undefined) {
+          links.push({ kind: "link", id: `${id}:link`, link: outcome.link });
+        }
+        if (outcome.askAgain === true) {
+          askAgains.push({ kind: "ask_again", id: `${id}:askAgain`, answered: context.answered });
+        }
       }
     }
   }
 
-  return finishTurn(items, turn, context, {
-    citation: distinct(citations),
-    estimate: distinct(estimates),
-  });
+  return finishTurn(
+    items,
+    turn,
+    context,
+    { citation: distinct(citations), estimate: distinct(estimates) },
+    { exerciseMuscles, exerciseFormMedia, links, askAgains },
+  );
 }
 
 function finishTurn(
@@ -251,6 +298,12 @@ function finishTurn(
   turn: readonly AssistantStoredMessage[],
   context: TurnContext,
   meta: AssistantAnswerMeta,
+  trailing: {
+    exerciseMuscles: AssistantThreadItem[];
+    exerciseFormMedia: AssistantThreadItem[];
+    links: AssistantThreadItem[];
+    askAgains: AssistantThreadItem[];
+  },
 ): AssistantThreadItem[] {
   const status = turn[0]?.turnStatus;
   const items = drafts.map((item): AssistantThreadItem => {
@@ -276,8 +329,19 @@ function finishTurn(
       stopped: status === "stopped",
     };
   }
-  if (status === "failed" || status === "refused") {
+  items.push(...trailing.exerciseMuscles, ...trailing.exerciseFormMedia, ...trailing.links);
+  const wroteSomething = drafts.some((item) => item.kind === "draft_card");
+  // The notice says nothing was changed and offers Try again, so a turn that holds a card never draws it. The
+  // server ends such a turn complete with words of its own (KEY-926). This covers the rows it cannot write: a
+  // worker killed mid-turn, whose open turn is marked failed later, and a `finishTurn` that threw.
+  if ((status === "failed" || status === "refused") && !wroteSomething) {
     items.push({ kind: "notice", id: `${turn[0]?.turnId}:notice`, notice: failedTurnNotice });
+  }
+  // Ask again is a convenience for a turn that ended complete with nothing written: the live turn sends it
+  // only then, so a reopened turn draws it only then too. Sending the message again after a write landed
+  // would repeat that write, and a question or a failed turn has its own way on.
+  if (status === "complete" && !wroteSomething) {
+    items.push(...trailing.askAgains);
   }
   return items;
 }

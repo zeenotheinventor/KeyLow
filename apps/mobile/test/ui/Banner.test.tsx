@@ -167,9 +167,9 @@ describe("Banner", () => {
     );
 
     it("should keep a title with no body in strong body text, as the design system card draws it", async () => {
-      await renderBanner({ title: "Open Food Facts is busy", body: undefined });
+      await renderBanner({ title: "Too many searches just now", body: undefined });
 
-      expect(screen.getByText("Open Food Facts is busy")).toHaveStyle({
+      expect(screen.getByText("Too many searches just now")).toHaveStyle({
         fontFamily: "Geist-SemiBold",
         fontSize: 16,
         lineHeight: 24,

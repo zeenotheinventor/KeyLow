@@ -1,4 +1,5 @@
 import { KeyLowProvider } from "@keylow/api-client";
+import { ASSISTANT_CONSENT_VERSION } from "@keylow/core";
 import { act, render, screen, userEvent, within } from "@testing-library/react-native";
 import { Text } from "react-native";
 
@@ -706,12 +707,29 @@ describe("the More screen", () => {
     });
 
     it("should say On, with what the assistant does, once the person has turned it on", async () => {
-      Object.assign(diaryBackend.terms, { assistant_consent_at: "2026-10-26T10:00:00Z" });
+      Object.assign(diaryBackend.terms, {
+        assistant_consent_at: `${ASSISTANT_CONSENT_VERSION}T10:00:00Z`,
+        assistant_consent_version: ASSISTANT_CONSENT_VERSION,
+      });
       await renderMore();
 
       expect(
         await within(screen.getByLabelText("Settings")).findByRole("button", {
           name: "Assistant, Log and ask in your own words, On",
+        }),
+      ).toBeOnTheScreen();
+    });
+
+    it("should say Off when the person turned it on under older words, as the assistant asks them again", async () => {
+      Object.assign(diaryBackend.terms, {
+        assistant_consent_at: "2026-10-26T10:00:00Z",
+        assistant_consent_version: "2026-10-26",
+      });
+      await renderMore();
+
+      expect(
+        await within(screen.getByLabelText("Settings")).findByRole("button", {
+          name: "Assistant, Off until you turn it on, Off",
         }),
       ).toBeOnTheScreen();
     });
@@ -771,6 +789,30 @@ describe("the More screen", () => {
       await user.press(screen.getByRole("button", { name: "About" }));
 
       expect(routerMock.push).toHaveBeenCalledWith("/about");
+    });
+  });
+
+  describe("Request a feature", () => {
+    it("should be the last row in Settings, after About, with its icon and a chevron", async () => {
+      await renderMore();
+
+      const settings = within(screen.getByLabelText("Settings"));
+      const row = settings.getByRole("button", { name: /^Request a feature/ });
+
+      expect(row).toBeEnabled();
+      expect(drawingsIn(row)).toHaveLength(2);
+      const rows = settings.getAllByRole("button");
+      expect(rows[rows.length - 1]).toBe(row);
+    });
+
+    it("should open the Request a feature screen once when pressed", async () => {
+      const user = userEvent.setup();
+      await renderMore();
+
+      await user.press(screen.getByRole("button", { name: /^Request a feature/ }));
+
+      expect(routerMock.push).toHaveBeenCalledWith("/more/feature-request");
+      expect(routerMock.push).toHaveBeenCalledTimes(1);
     });
   });
 

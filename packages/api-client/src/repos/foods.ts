@@ -1,3 +1,4 @@
+import { withDefaultPortion } from "@keylow/core/foods";
 import { foodPortionSchema, foodRowSchema } from "@keylow/core/schemas";
 import { z } from "zod";
 
@@ -8,7 +9,6 @@ import type { CustomFoodInput, Food, FoodPortion } from "@keylow/core/schemas";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 type FoodInsert = Database["public"]["Tables"]["foods"]["Insert"];
-type FoodPortionInsert = Database["public"]["Tables"]["food_portions"]["Insert"];
 
 // The generated `search` column is a database-only tsvector, so it is never selected.
 export const FOOD_COLUMNS = Object.keys(foodRowSchema.shape).join(",");
@@ -55,9 +55,11 @@ const DEFAULT_SEARCH_LIMIT = 25;
 const MAX_SEARCH_LIMIT = 50;
 
 /**
- * Thrown when a write stopped half way and left the food and its portions out of step: the food
- * row was written but its portions were not. Callers should refresh what they cache for `foodId`,
- * because the database no longer matches what they last read.
+ * Thrown when `updateFood` changed the food but could not replace its portions. The portions are replaced
+ * in one transaction, so they are exactly as they were before the edit and never missing, but they no longer
+ * match the edited food. Callers should refresh what they cache for `foodId`, because the database no longer
+ * matches what they last read. `createFood` never throws this: it writes the food and its portions together,
+ * so a failure leaves nothing behind.
  */
 export class FoodsPartialWriteError extends Error {
   readonly foodId: string;
@@ -80,7 +82,7 @@ export type CreatedFood = { food: Food; portions: FoodPortion[] };
  * `sat_fat_g`, `sugars_g` and `salt_g` are written separately, by `carriedColumns`. `food_group`
  * and `micros` are not part of the form, so an update intentionally leaves them untouched.
  */
-const editableColumns = (input: CustomFoodInput): Omit<FoodInsert, "source" | "owner_id"> => ({
+const editableColumns = (input: CustomFoodInput) => ({
   name: input.name,
   brand: input.brand ?? null,
   barcode: input.barcode ?? null,
@@ -106,20 +108,20 @@ const carriedColumns = (
   ...(input.salt_g !== undefined && { salt_g: input.salt_g }),
 });
 
-const portionRows = (
-  foodId: string,
-  ownerId: string,
-  portions: CustomFoodInput["portions"],
-): FoodPortionInsert[] =>
-  portions.map((portion, position) => ({
-    owner_id: ownerId,
-    food_id: foodId,
+// What the database functions read for each portion. The order sent is the order stored, and the function sets
+// the owner and the position, so the caller cannot get either wrong.
+const portionPayload = (portions: CustomFoodInput["portions"]) =>
+  portions.map((portion) => ({
     label: portion.label,
     grams: portion.grams ?? null,
     ml: portion.ml ?? null,
     is_default: portion.isDefault,
-    position,
   }));
+
+const createdFoodSchema = z.object({
+  food: foodRowSchema,
+  portions: z.array(foodPortionSchema),
+});
 
 /**
  * Loads one food by id. Deleted foods are deliberately still returned, with `deleted_at` set,
@@ -218,59 +220,42 @@ export async function listFoodPortions(
 }
 
 /**
- * Replaces a food's portions by deleting its rows and inserting the new ones, which is the
- * pattern the schema grants allow. The two steps are not atomic: if the insert fails after the
- * delete, the old portions are gone and a `FoodsPartialWriteError` says so.
- *
- * Called directly on a food the caller cannot edit, it deletes nothing and returns [] for an
- * empty list, because RLS filters the delete silently. That is why `updateFood` writes the food
- * first and only then replaces its portions.
+ * Replaces a food's portions with the given list in one transaction, through the `replace_food_portions`
+ * database function, so a failed insert keeps the old portions and a food is never left with none. The list
+ * must hold exactly one default (`withDefaultPortion` makes it so), and the database refuses one that does
+ * not. It runs as the caller, so row level security still decides whose food it may change: a shared food, or
+ * one that is not visible, is refused.
  */
 export async function replaceFoodPortions(
   client: SupabaseClient<Database>,
   foodId: string,
-  ownerId: string,
   portions: CustomFoodInput["portions"],
 ): Promise<FoodPortion[]> {
-  const { error: deleteError } = await client.from("food_portions").delete().eq("food_id", foodId);
-
-  if (deleteError) {
-    throw repoError(`remove the old portions of the food ${foodId}`, deleteError);
-  }
-
-  if (portions.length === 0) {
-    return [];
-  }
-
-  const { data, error } = await client
-    .from("food_portions")
-    .insert(portionRows(foodId, ownerId, portions))
-    .select("*")
-    .order("position", { ascending: true });
+  const { data, error } = await client.rpc("replace_food_portions", {
+    p_food_id: foodId,
+    p_portions: portionPayload(portions),
+  });
 
   if (error) {
-    throw new FoodsPartialWriteError(
-      foodId,
-      `The old portions of the food ${foodId} were removed but the new portions were not saved (${error.code})`,
-      { code: error.code },
-    );
+    throw repoError(`replace the portions of the food ${foodId}`, error);
   }
 
-  return data.map((row) => foodPortionSchema.parse(row));
+  return z.array(foodPortionSchema).parse(data);
 }
 
 /**
- * Creates a custom food and then its portions. There is no delete grant on `foods`, so when the
- * portions insert fails the food cannot be rolled back, and a `FoodsPartialWriteError` says so.
+ * Creates a custom food and its portions in one transaction, through the `create_food` database function.
+ * The portions always include a default: the person's own, or one estimate when they gave none (see
+ * `withDefaultPortion`). When anything fails the whole create rolls back, so nothing is left behind, neither
+ * a food with no portions nor a half written one.
  */
 export async function createFood(
   client: SupabaseClient<Database>,
   ownerId: string,
   input: CustomFoodInput,
 ): Promise<CreatedFood> {
-  const { data, error } = await client
-    .from("foods")
-    .insert({
+  const { data, error } = await client.rpc("create_food", {
+    p_food: {
       ...editableColumns(input),
       sat_fat_g: null,
       sugars_g: null,
@@ -279,41 +264,22 @@ export async function createFood(
       source: "user",
       owner_id: ownerId,
       micros: {},
-    })
-    .select(FOOD_COLUMNS)
-    .single();
+    },
+    p_portions: portionPayload(withDefaultPortion(input, input.portions)),
+  });
 
   if (error) {
     throw repoError("create the food", error);
   }
 
-  const food = foodRowSchema.parse(data);
-
-  if (input.portions.length === 0) {
-    return { food, portions: [] };
-  }
-
-  const { data: portionData, error: portionsError } = await client
-    .from("food_portions")
-    .insert(portionRows(food.id, ownerId, input.portions))
-    .select("*")
-    .order("position", { ascending: true });
-
-  if (portionsError) {
-    throw new FoodsPartialWriteError(
-      food.id,
-      `The food ${food.id} was created but its portions were not saved (${portionsError.code})`,
-      { code: portionsError.code },
-    );
-  }
-
-  return { food, portions: portionData.map((row) => foodPortionSchema.parse(row)) };
+  return createdFoodSchema.parse(data);
 }
 
 /**
- * Updates a custom food's columns and then replaces its portions. Throws when the food is not
- * visible to the caller or is not theirs to edit, before touching the portions. If replacing the
- * portions fails, the food stays updated and a `FoodsPartialWriteError` says so.
+ * Updates a custom food's columns and then replaces its portions, deriving the default again as
+ * `createFood` does. Throws when the food is not visible to the caller or is not theirs to edit, before
+ * touching the portions. If replacing the portions fails, the food stays updated, its previous portions are
+ * kept (the replace is one transaction), and a `FoodsPartialWriteError` says so.
  */
 export async function updateFood(
   client: SupabaseClient<Database>,
@@ -342,12 +308,12 @@ export async function updateFood(
   }
 
   try {
-    await replaceFoodPortions(client, id, food.owner_id, input.portions);
+    await replaceFoodPortions(client, id, withDefaultPortion(food, input.portions));
   } catch (cause) {
     const detail = cause instanceof Error ? cause.message : String(cause);
     throw new FoodsPartialWriteError(
       id,
-      `The food ${id} was updated but its portions were not replaced. ${detail}`,
+      `The food ${id} was updated but its portions were not replaced, so its previous portions are kept. ${detail}`,
       cause,
     );
   }

@@ -1,4 +1,7 @@
 import * as copy from "../../../src/copy";
+import { startingPlan } from "../../../src/setup";
+
+import type { SetupAnswers } from "../../../src/setup";
 
 // Every function `src/copy/setup.ts` exports, called with representative arguments. The voice test fails when
 // a function has no row, so no sentence escapes the sweep. A field that says nothing gives null, which is left out.
@@ -13,11 +16,33 @@ export const samples: Record<string, () => string[]> = {
     copy.describeSetupStepLabel(3, 8),
     copy.describeSetupStepLabel(5, 7),
   ],
+  describeSetupCaption: () => [
+    copy.describeSetupCaption({}, "sex"),
+    copy.describeSetupCaption({ goal: "maintain" }, "protein"),
+    copy.describeSetupCaption({}, "estimate"),
+  ],
+  setupQuestionFor: () =>
+    [
+      copy.setupQuestionFor("rate", { goal: "lose" }),
+      copy.setupQuestionFor("rate", { goal: "gain" }),
+      copy.setupQuestionFor("sex", {}),
+    ].flatMap((question) => (question === undefined ? [] : [question.question, question.helper])),
   describeSetupOptionName: () => [
     copy.describeSetupOptionName("Female"),
     copy.describeSetupOptionName("Lose weight", copy.SETUP_GOAL_NOT_OFFERED_UNDER_18),
     copy.describeSetupOptionName("Prefer not to say", copy.SETUP_SEX_OPTIONS.other.description),
   ],
+  setupGoalCardsFor: () =>
+    [copy.setupGoalCardsFor(["lose", "maintain", "gain"]), copy.setupGoalCardsFor(["maintain"])]
+      .flat()
+      .flatMap((card) =>
+        sentencesOf(card.title, card.description ?? null, card.disabledReason ?? null),
+      ),
+  setupGoalNoteFor: () =>
+    [
+      copy.setupGoalNoteFor(["lose", "maintain", "gain"]),
+      copy.setupGoalNoteFor(["maintain"]),
+    ].flatMap((note) => [note.title, note.body]),
   describeRateTitle: () => [copy.describeRateTitle(0.5), copy.describeRateTitle(1.0)],
   describeRateAmount: () => [
     copy.describeRateAmount(0.5, 80, "kg"),
@@ -79,4 +104,29 @@ export const samples: Record<string, () => string[]> = {
     (["lose", "maintain", "gain"] as const).map((goal) =>
       copy.describeRateLine({ goal, ratePctPerWeek: 0.5, weightKg: 80, unit: "kg" }),
     ),
+  describeStepProgress: () =>
+    (["sex", "body", "goal", "estimate"] as const).flatMap((step) => {
+      const { subtitle, progressName } = copy.describeStepProgress({}, step);
+      return sentencesOf(subtitle ?? null, progressName);
+    }),
+  describeEstimateLines: () => {
+    const answers: SetupAnswers = {
+      sex: "male",
+      birthDate: "1991-03-14",
+      heightCm: 180,
+      weightKg: 80,
+      weightUnit: "kg",
+      heightUnit: "cm",
+      activity: "light",
+      goal: "lose",
+      ratePctPerWeek: 0.5,
+      proteinPreset: "moderate",
+      dietStyle: "balanced",
+    };
+    const { rateLine, guardrailLines } = copy.describeEstimateLines(
+      answers,
+      startingPlan(answers, "2026-10-23", null),
+    );
+    return [...sentencesOf(rateLine ?? null), ...guardrailLines];
+  },
 };

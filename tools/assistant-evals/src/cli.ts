@@ -2,7 +2,7 @@ import { parseArgs } from "node:util";
 
 import { exitCodeOf, formatReport, summariseSets } from "./report.ts";
 import { runEvals } from "./runEvals.ts";
-import { EVAL_SET_NAMES } from "./thresholds.ts";
+import { EVAL_SET_NAMES, OPT_IN_SET_NAMES } from "./thresholds.ts";
 
 import type { CaseEnvironment, EvalCase } from "./case.ts";
 import type { TurnDriver } from "./driver.ts";
@@ -14,12 +14,12 @@ import type { EvalDatabase } from "./types.ts";
 export const DEFAULT_BUDGET_TOKENS = 300_000;
 
 const USAGE =
-  "Usage: check:assistant [--set ask|describe|redTeam|compaction]... [--budget <tokens>] [--help]";
+  "Usage: check:assistant [--set ask|describe|redTeam|compaction|writes|recipes|trainingAdvice|trainingEdits|trainingKnowledge|mealEstimate|featureRequest]... [--budget <tokens>] [--help]";
 
 const HELP = [
   USAGE,
   "",
-  "  --set <name>        Run only this set. Repeat it for more. The default is every set.",
+  "  --set <name>        Run only this set. Repeat it for more. The default is every set but trainingEdits, trainingKnowledge, mealEstimate and featureRequest, which are named to run.",
   `  --budget <tokens>   Stop before the case that would pass this many tokens. The default is ${DEFAULT_BUDGET_TOKENS}.`,
   "",
   "The budget counts input, output and cache creation tokens. Cache read tokens are reported but not counted.",
@@ -113,7 +113,10 @@ export async function runCli(
     );
   }
 
-  const selectedSets = options.sets.length === 0 ? EVAL_SET_NAMES : options.sets;
+  const selectedSets =
+    options.sets.length === 0
+      ? EVAL_SET_NAMES.filter((name) => !OPT_IN_SET_NAMES.includes(name))
+      : options.sets;
   const selectedCases = cases.filter(({ set }) => selectedSets.includes(set));
   if (selectedCases.length === 0) {
     return failure(`No eval cases are registered for ${selectedSets.join(", ")}.`);

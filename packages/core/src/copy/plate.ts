@@ -17,6 +17,10 @@ export const PLATE = {
   addToPlate: "Add to plate",
   /** The toast after Clear plate, which carries Undo. */
   cleared: "Plate cleared",
+  /** The name of the list of rows on the plate. It is a label for a screen reader, the list has no visible title. */
+  rowsLabel: "Foods on your plate",
+  /** The name of the totals card on the plate. */
+  totalsLabel: "Totals",
   /** The toast and the sheet's banner when the plate could not be logged. It never quotes a food or an amount. */
   notLogged: "Not logged. Check your connection and try again.",
   /** What sits under the offline banner's title while foods are being put on the plate. */

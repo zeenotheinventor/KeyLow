@@ -69,6 +69,7 @@ jest.mock("@keylow/api-client", () => ({
   useSetAssistantConsent: () => ({ mutate: jest.fn(), isPending: false }),
   useProfileTimeZone: () => ({ data: "Europe/London" }),
   useUndoAssistantAction: () => ({ mutateAsync: jest.fn(), isPending: false }),
+  useActiveSession: () => ({ data: null }),
 }));
 
 setUpTests();
@@ -181,6 +182,10 @@ const liveTurn = (overrides: Partial<AssistantLiveTurn> = {}): AssistantLiveTurn
   clarify: null,
   confirm: null,
   answerMeta: null,
+  link: null,
+  exerciseMuscles: [],
+  exerciseFormMedia: [],
+  askAgain: false,
   status: null,
   notice: null,
   stopped: false,

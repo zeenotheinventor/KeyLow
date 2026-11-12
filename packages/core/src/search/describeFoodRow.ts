@@ -9,7 +9,10 @@ import type { Food } from "../schemas/food";
 export type FoodRowSource = Pick<
   Food,
   "name" | "brand" | "kcal" | "basis" | "protein_g" | "fat_g" | "carbs_g"
->;
+> & {
+  /** The default portion's label, which names what a food per portion is per ("per bucket"). */
+  default_portion_label?: string | null;
+};
 
 export type FoodRowDescription = {
   /** The name cut into the parts that match the query and the parts that do not. */
@@ -31,14 +34,17 @@ const MACRO_NOT_GIVEN = "-";
 /**
  * What a food row shows for a food or an Open Food Facts candidate, as plain text for both apps
  * to hand to their own row component: the name with the query's words marked, the brand, the
- * energy and macros, and the basis when it is not 100 g. A food with no energy gets the note
+ * energy and macros, and the basis when it is not 100 g ("per 100 ml", "per bucket"). A food with no energy gets the note
  * "Energy not given" in place of the energy and macros. Absent parts are left out of the result,
  * not set to undefined.
  */
 export const describeFoodRow = (food: FoodRowSource, query: string): FoodRowDescription => {
   const nameSegments = highlightMatch(food.name, query);
   const brand = food.brand === null ? {} : { brand: food.brand };
-  const basis = food.basis === "per_100g" ? {} : { basis: describeBasis(food.basis) };
+  const basis =
+    food.basis === "per_100g"
+      ? {}
+      : { basis: describeBasis(food.basis, food.default_portion_label ?? undefined) };
 
   if (food.kcal === null) {
     return { nameSegments, ...brand, ...basis, note: ENERGY_NOT_GIVEN };

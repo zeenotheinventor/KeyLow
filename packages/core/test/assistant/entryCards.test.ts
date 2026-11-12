@@ -9,6 +9,7 @@ import {
   buildLoggedCard,
   buildUpdatedCard,
   confirmDeleteButtons,
+  confirmDeleteDayWord,
   confirmDeleteQuestion,
 } from "../../src/assistant";
 import { buildLogEntry, buildQuickEntry } from "../../src/diary";
@@ -125,6 +126,53 @@ describe("buildLoggedCard", () => {
     });
     expect(card.undoneSub).toBe("Removed white rice from 13:00");
   });
+
+  it("should mark every row an estimate when the amount was estimated, and no row otherwise", () => {
+    const rice = buildFood({
+      id: "00000000-0000-4000-8000-0000000000a3",
+      name: "White rice, boiled",
+      kcal: 138,
+    });
+    const row = stored(
+      "00000000-0000-4000-8000-0000000000c3",
+      buildLogEntry({ food: rice, quantity: 180, unit: "g", ...timing("13:00") }),
+    );
+    const entries = [mustEntry(row, London)];
+
+    expect(buildLoggedCard(entries, { estimated: true }).rows[0]?.estimate).toBe(true);
+    expect(buildLoggedCard(entries, { estimated: false }).rows[0]?.estimate).toBe(false);
+    expect(buildLoggedCard(entries).rows[0]?.estimate).toBe(false);
+  });
+
+  it.each([
+    ["Bucket", 1, "1 Bucket"],
+    ["Bucket", 2, "2 Buckets"],
+    ["1 bucket", 1, "1 bucket"],
+    ["1 bucket", 2, "2 × 1 bucket"],
+  ])(
+    "should word a count of the portion '%s' with no size when the food is per portion",
+    (label, quantity, expected) => {
+      const bucket = buildFood({
+        id: "00000000-0000-4000-8000-0000000000a9",
+        source: "restaurant",
+        name: "Bargain bucket",
+        basis: "per_portion",
+        kcal: 500,
+      });
+      const row = stored(
+        "00000000-0000-4000-8000-0000000000c9",
+        buildLogEntry({
+          food: bucket,
+          quantity,
+          unit: "portion",
+          portion: buildFoodPortion({ label, grams: null, ml: null }),
+          ...timing("13:00"),
+        }),
+      );
+
+      expect(buildLoggedCard([mustEntry(row, London)]).rows[0]?.amountText).toBe(expected);
+    },
+  );
 
   it("should leave the time out of the title when the entries are at different times", () => {
     const later = mustEntry(
@@ -262,6 +310,28 @@ describe("confirmDelete", () => {
 
     expect(question).toBe(
       "Delete 3 entries at 13:00 today? Chicken and rice, Greek yoghurt and apple.",
+    );
+  });
+});
+
+describe("confirmDeleteDayWord", () => {
+  const today = "2026-11-03";
+
+  it("should call the person's own today today", () => {
+    expect(confirmDeleteDayWord(["2026-11-03", "2026-11-03"], today)).toBe("today");
+  });
+
+  it("should call the day before it yesterday", () => {
+    expect(confirmDeleteDayWord(["2026-11-02"], today)).toBe("yesterday");
+  });
+
+  it("should name any other day by its short date", () => {
+    expect(confirmDeleteDayWord(["2026-10-27", "2026-10-27"], today)).toBe("on Tue 27 Oct");
+  });
+
+  it("should count the days when the entries are on several", () => {
+    expect(confirmDeleteDayWord(["2026-11-03", "2026-11-02", "2026-11-03"], today)).toBe(
+      "across 2 days",
     );
   });
 });

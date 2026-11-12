@@ -1,4 +1,4 @@
-import type { ExpenditureHeroView } from "../types";
+import type { ExpenditureHeroView } from "@keylow/core/program";
 
 /** A check-in has just arrived: the numeral counts up from the estimate before it. */
 export type ExpenditureHeroArrival = {

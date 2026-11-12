@@ -15,8 +15,18 @@ export type BannerAction = { label: string } & (
       /** Opens the link in a new tab, for a screen whose unsaved work a page change would lose. Say so in the label. */
       newTab?: boolean | undefined;
       onClick?: never;
+      disabled?: never;
     }
-  | { onClick: () => void; href?: never; newTab?: never }
+  | {
+      onClick: () => void;
+      /**
+       * Dims the action to 40 percent and ignores a press, as Try again does while its retry runs. It is
+       * `aria-disabled` and not `disabled`, so it keeps its place in the tab order. A link cannot be disabled.
+       */
+      disabled?: boolean | undefined;
+      href?: never;
+      newTab?: never;
+    }
 );
 
 export type BannerProps = {

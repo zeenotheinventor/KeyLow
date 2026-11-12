@@ -74,6 +74,7 @@ jest.mock("@keylow/api-client", () => ({
   useProfileTimeZone: () => ({ data: "Europe/London" }),
   // The card's Undo is tested with the real hook in assistantActionCards.test.tsx.
   useUndoAssistantAction: () => ({ mutateAsync: jest.fn(), isPending: false }),
+  useActiveSession: () => ({ data: null }),
 }));
 
 setUpTests();
@@ -89,6 +90,10 @@ const liveTurn = (overrides: Partial<AssistantLiveTurn> = {}): AssistantLiveTurn
   clarify: null,
   confirm: null,
   answerMeta: null,
+  link: null,
+  exerciseMuscles: [],
+  exerciseFormMedia: [],
+  askAgain: false,
   status: null,
   notice: null,
   stopped: false,
@@ -201,7 +206,7 @@ describe("the assistant sheet", () => {
         "Copy yesterday to today",
         "Add a recipe from a link",
         "Add a recipe from a link",
-        "The assistant's answers are not medical advice. Speak to a doctor before you make big changes to your diet or your weight.",
+        "The assistant's answers are not medical advice. Speak to a doctor before you make big changes to your diet, your weight or your training.",
         "Message",
         "Send",
       ]);
@@ -305,6 +310,109 @@ describe("the assistant sheet", () => {
     });
   });
 
+  describe("opening, assistant · opening", () => {
+    // The conversation has not been read, and the status is known to be open (the status mock above).
+    const loadingStatus = () => screen.getByRole("status", { name: "Loading your conversation" });
+
+    it("should draw the loading placeholder with the field on, and no starters", async () => {
+      await renderSheet();
+
+      expect(loadingStatus()).toBeOnTheScreen();
+      expect(screen.getByLabelText("Message")).toBeEnabled();
+      expect(
+        screen.queryByRole("heading", { name: "Log food or ask about your diary" }),
+      ).not.toBeOnTheScreen();
+      expect(
+        screen.queryByRole("button", { name: "Copy yesterday to today" }),
+      ).not.toBeOnTheScreen();
+    });
+
+    it("should have Send and New conversation off, even with words typed", async () => {
+      await renderSheet();
+      await typeMessage("Log a banana");
+
+      expect(sendButton()).toBeDisabled();
+      expect(newConversationButton()).toBeDisabled();
+    });
+
+    it("should draw every word of the board and nothing the board does not", async () => {
+      await renderSheet();
+
+      expect(sheetWords()).toEqual([
+        "Assistant",
+        "New conversation",
+        "Assistant",
+        "Close",
+        "Loading your conversation",
+        "Message",
+        "Send",
+      ]);
+    });
+
+    it("should be replaced by the thread once the conversation is known", async () => {
+      const rendered = await renderSheet();
+      loadedConversation(earlierThread);
+
+      await rendered.rerender(sheetTree());
+
+      expect(
+        screen.queryByRole("status", { name: "Loading your conversation" }),
+      ).not.toBeOnTheScreen();
+      expect(screen.getByText("What's left for today?")).toBeOnTheScreen();
+    });
+
+    it("should not come back over a stored thread that is being read again", async () => {
+      loadedConversation(earlierThread);
+      mockAssistant.conversation.isFetching = true;
+      await renderSheet();
+
+      expect(
+        screen.queryByRole("status", { name: "Loading your conversation" }),
+      ).not.toBeOnTheScreen();
+      expect(screen.getByText("What's left for today?")).toBeOnTheScreen();
+    });
+
+    it("should go straight to the starters when the conversation has no messages", async () => {
+      const rendered = await renderSheet();
+      expect(loadingStatus()).toBeOnTheScreen();
+      loadedConversation([]);
+
+      await rendered.rerender(sheetTree());
+
+      expect(
+        screen.queryByRole("status", { name: "Loading your conversation" }),
+      ).not.toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Copy yesterday to today" })).toBeOnTheScreen();
+    });
+
+    it("should be replaced by the starters when the conversation could not be read", async () => {
+      mockAssistant.conversation = {
+        data: undefined,
+        isSuccess: false,
+        isError: true,
+        isFetching: false,
+      };
+      await renderSheet();
+
+      expect(
+        screen.queryByRole("status", { name: "Loading your conversation" }),
+      ).not.toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Copy yesterday to today" })).toBeOnTheScreen();
+    });
+
+    it("should show the offline banner over the field, still with the placeholder, while offline", async () => {
+      await renderSheet();
+
+      await act(() => {
+        onlineManager.setOnline(false);
+      });
+
+      expect(screen.getByText("You're offline")).toBeOnTheScreen();
+      expect(loadingStatus()).toBeOnTheScreen();
+      expect(screen.getByLabelText("Message")).toHaveProp("editable", false);
+    });
+  });
+
   describe("streaming, assistant · streaming (left)", () => {
     const question = "What did I eat yesterday?";
     const arrived =
@@ -383,14 +491,15 @@ describe("the assistant sheet", () => {
       expect(newConversationButton()).toBeDisabled();
     });
 
-    it("should draw the caret alone before the first words arrive", async () => {
+    it("should draw the working line, not a lone caret, before the first words arrive", async () => {
       loadedConversation([]);
       const rendered = await renderSheet();
       await sendFromSheet(rendered, question);
       mockAssistant.turn = { ...mockAssistant.turn, live: liveTurn(), isStreaming: true };
       await rendered.rerender(sheetTree());
 
-      expect(screen.getByLabelText("Assistant:")).toBeOnTheScreen();
+      expect(screen.getByRole("status", { name: "Thinking" })).toBeOnTheScreen();
+      expect(screen.queryByLabelText("Assistant:")).toBeNull();
     });
 
     it("should read the finished answer to a screen reader once on iOS, where a live region is ignored", async () => {
@@ -407,6 +516,21 @@ describe("the assistant sheet", () => {
 
       expect(announce).toHaveBeenCalledTimes(1);
       expect(announce).toHaveBeenCalledWith(arrived);
+    });
+
+    it("should read a finished answer without the markdown the model wrote", async () => {
+      const announce = jest.spyOn(AccessibilityInfo, "announceForAccessibility");
+      announce.mockClear();
+      const rendered = await renderStreaming();
+      mockAssistant.turn = {
+        ...mockAssistant.turn,
+        live: liveTurn({ text: "**Log food:**\n- Two eggs\n- Toast", outcome: "complete" }),
+        isStreaming: false,
+      };
+      await rendered.rerender(sheetTree());
+
+      expect(announce).toHaveBeenCalledTimes(1);
+      expect(announce).toHaveBeenCalledWith("Log food: Two eggs Toast");
     });
 
     it("should read the finished answer on Android too, where the streaming message is not a live region", async () => {
@@ -437,6 +561,21 @@ describe("the assistant sheet", () => {
       mockAssistant.turn = {
         ...mockAssistant.turn,
         live: liveTurn({ text: arrived, stopped: true }),
+        isStreaming: false,
+      };
+      await rendered.rerender(sheetTree());
+
+      expect(announce).not.toHaveBeenCalled();
+    });
+
+    it("should not announce the saved-change words of a turn the person stopped after a card", async () => {
+      const announce = jest.spyOn(AccessibilityInfo, "announceForAccessibility");
+      announce.mockClear();
+      const rendered = await renderStreaming();
+      // `stoppedTurn` ends a turn that drew a card in these words, not marked stopped and with no outcome.
+      mockAssistant.turn = {
+        ...mockAssistant.turn,
+        live: liveTurn({ text: arrived, outcome: null, stopped: false }),
         isStreaming: false,
       };
       await rendered.rerender(sheetTree());

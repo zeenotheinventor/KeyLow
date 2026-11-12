@@ -5,6 +5,8 @@ import { spyOnConsole } from "../testing.ts";
 import { undoAction } from "../undo.ts";
 import { createRecipeTool } from "./createRecipe.ts";
 import {
+  bucketId,
+  bucketPortionId,
   chickenAndRice,
   chickenAndRiceIngredients,
   chickenId,
@@ -365,3 +367,49 @@ Deno.test("no health value reaches the console or the reported errors", async ()
   assertEquals(spy.lines, []);
   assertEquals(reported, []);
 });
+
+Deno.test(
+  "a food per portion is saved as a count of its portion with no grams, and the recipe has no weight",
+  async () => {
+    const { ctx, stub } = setUp();
+
+    const result = await executeTool(ctx, "create_recipe", {
+      ...chickenAndRice,
+      ingredients: [
+        { food_id: bucketId, unit: "portion", amount: 1, portion_id: bucketPortionId },
+        { food_id: riceId, unit: "g", amount: 200, portion_id: null },
+      ],
+    });
+
+    assertEquals(result.status, "ok");
+    const [row] = recipesOf(stub);
+    const [bucket, rice] = (row?.["recipe_ingredients"] ?? []) as Record<string, unknown>[];
+    assertObjectMatch(bucket ?? {}, {
+      food_id: bucketId,
+      unit: "portion",
+      quantity: 1,
+      portion_id: bucketPortionId,
+      resolved_grams: 0,
+    });
+    assertEquals(rice?.["resolved_grams"], 200);
+    assertEquals(row?.["yield_grams"], null);
+    assertObjectMatch(row?.["computed"] as object, { servingsOnly: true, effectiveGrams: 0 });
+  },
+);
+
+Deno.test(
+  "grams or millilitres of a food per portion are invalid_input and nothing is written",
+  async () => {
+    const { ctx, stub } = setUp();
+
+    for (const unit of ["g", "ml"]) {
+      const result = await executeTool(ctx, "create_recipe", {
+        ...chickenAndRice,
+        ingredients: [{ food_id: bucketId, unit, amount: 100, portion_id: null }],
+      });
+
+      assertEquals(payloadOf(result), { error: "invalid_input", fields: ["ingredients.0.amount"] });
+    }
+    assertEquals(recipesOf(stub), []);
+  },
+);

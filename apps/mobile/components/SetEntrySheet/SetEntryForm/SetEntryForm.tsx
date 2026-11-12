@@ -9,7 +9,14 @@ import {
   describeSetTypeSheet,
   isWordedSetInputRule,
 } from "@keylow/core/copy";
-import { SET_TYPES, displayLoad, sameAgain, validateSetDraft } from "@keylow/core/training";
+import {
+  SET_TYPES,
+  displayLoad,
+  exactKilogramsText,
+  loggedLoad,
+  sameAgain,
+  validateSetDraft,
+} from "@keylow/core/training";
 import { useRef, useState } from "react";
 import { View } from "react-native";
 
@@ -31,14 +38,10 @@ function openingDraft(prefill: SetPrefill, unit: SetEntryFormProps["unit"]) {
   };
 }
 
-// Same again repeats a stored load in kilograms, to the gram. A load such as 102.058 would be refused as a
-// thousands separator typed by hand, so it is written with a fourth decimal, which the rule leaves alone.
-const exactKilograms = (kilograms: number): string => kilograms.toFixed(4);
-
 function sameAgainDraft(values: SetValues, setType: SetType): SetDraft {
   return {
     setType,
-    load: values.loadKg === null ? "" : exactKilograms(values.loadKg),
+    load: values.loadKg === null ? "" : exactKilogramsText(values.loadKg),
     reps: String(values.reps),
     rir: values.rir === null ? "" : String(values.rir),
     rpe: "",
@@ -215,12 +218,7 @@ export function SetEntryForm({
           haptic="confirm"
           loading={isLogging}
           onPress={() => {
-            // A load left as it was filled is the prefill's own kilograms, which the unit's rounded text may not be.
-            log(
-              edited.load || prefill.load_kg === null
-                ? { draft, unit }
-                : { draft: { ...draft, load: exactKilograms(prefill.load_kg) }, unit: "kg" },
-            );
+            log(loggedLoad(draft, { edited: edited.load, prefillKg: prefill.load_kg, unit }));
           }}
         >
           {SET_ENTRY.logSetAction}

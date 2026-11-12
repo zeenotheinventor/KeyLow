@@ -43,9 +43,9 @@ export const FOOD_MACRO_LABELS = {
   fat: "Fat",
 };
 
-/** The heading of the nutrition table: "Nutrition per 100 g". */
-export const describeNutritionHeading = (basis: NutrientBasis): string =>
-  `Nutrition ${describeBasis(basis)}`;
+/** The heading of the nutrition table: "Nutrition per 100 g", or "Nutrition per bucket" for a food per portion. */
+export const describeNutritionHeading = (basis: NutrientBasis, portionLabel?: string): string =>
+  `Nutrition ${describeBasis(basis, portionLabel)}`;
 
 // In the order of the nutrition table, so the sentence reads the way the table does.
 const MISSING_NUTRIENT_NAMES = [

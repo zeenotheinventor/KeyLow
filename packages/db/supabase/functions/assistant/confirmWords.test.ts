@@ -78,3 +78,62 @@ Deno.test("an archive_recipe input with no id gives no words", () => {
   assertEquals(confirmWordsFor("archive_recipe", { id: 3 }), null);
   assertEquals(confirmWordsFor("archive_recipe", null), null);
 });
+
+Deno.test("archive_routine gets the board's archive buttons and the primary tone", () => {
+  assertEquals(confirmWordsFor("archive_routine", { routine_id: ids[0] }), {
+    confirmLabel: "Archive routine",
+    cancelLabel: "Keep it",
+    tone: "primary",
+  });
+});
+
+Deno.test("an archive_routine input with no routine_id gives no words", () => {
+  assertEquals(confirmWordsFor("archive_routine", {}), null);
+  assertEquals(confirmWordsFor("archive_routine", { routine_id: 3 }), null);
+  assertEquals(confirmWordsFor("archive_routine", null), null);
+});
+Deno.test(
+  "edit_routine gets the board's remove buttons for the removals of the call, and the danger tone",
+  () => {
+    const remove = { op: "remove" };
+
+    assertEquals(confirmWordsFor("edit_routine", { changes: [remove, remove, { op: "add" }] }), {
+      confirmLabel: "Remove 2",
+      cancelLabel: "Keep them",
+      tone: "danger",
+    });
+    assertEquals(confirmWordsFor("edit_routine", { changes: [remove, remove, remove] }), {
+      confirmLabel: "Remove 3",
+      cancelLabel: "Keep them",
+      tone: "danger",
+    });
+  },
+);
+
+Deno.test(
+  "an edit_routine call with fewer than two removals, or none readable, gives no words",
+  () => {
+    assertEquals(
+      confirmWordsFor("edit_routine", { changes: [{ op: "remove" }, { op: "add" }] }),
+      null,
+    );
+    assertEquals(confirmWordsFor("edit_routine", { changes: [] }), null);
+    assertEquals(confirmWordsFor("edit_routine", {}), null);
+    assertEquals(confirmWordsFor("edit_routine", null), null);
+  },
+);
+
+Deno.test("request_feature gets the board's Send request buttons and the primary tone", () => {
+  assertEquals(
+    confirmWordsFor("request_feature", {
+      request: "Track my water intake",
+      unsupported: "Ki-Lo does not track water",
+    }),
+    { confirmLabel: "Send request", cancelLabel: "No thanks", tone: "primary" },
+  );
+});
+
+Deno.test("a request_feature input that is not a request gives no words", () => {
+  assertEquals(confirmWordsFor("request_feature", {}), null);
+  assertEquals(confirmWordsFor("request_feature", "not an object"), null);
+});

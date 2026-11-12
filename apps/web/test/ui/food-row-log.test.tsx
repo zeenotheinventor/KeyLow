@@ -1,4 +1,4 @@
-import { describeAddFood } from "@keylow/core/copy";
+import { describeAddFood, describeAddToPlateName } from "@keylow/core/copy";
 import { controlHeight, touchTarget } from "@keylow/tokens";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -278,6 +278,19 @@ describe("FoodRow search", () => {
       }),
     ).toBeTruthy();
     expect(screen.getByRole("button", { name: addName })).toBeTruthy();
+  });
+
+  it("should name the add button for the plate when it is given a name", () => {
+    renderSearch({
+      addLabel: describeAddToPlateName("Chicken breast, grilled", "1 breast (150 g)"),
+    });
+
+    expect(
+      screen.getByRole("button", {
+        name: "Add Chicken breast, grilled, 1 breast (150 g), to your plate",
+      }),
+    ).toBeTruthy();
+    expect(screen.queryByRole("button", { name: addName })).toBeNull();
   });
 
   it("should not open the row when the add button is pressed", () => {

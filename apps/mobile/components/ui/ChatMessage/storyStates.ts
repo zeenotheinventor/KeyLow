@@ -5,4 +5,10 @@ export const storyStates = [
   "Stopped",
   "WithCitation",
   "WithEstimate",
+  "Formatted",
+  "FormattedStreaming",
+  "Table",
+  "TableScrolled",
+  "TableStreaming",
+  "TableFits",
 ];

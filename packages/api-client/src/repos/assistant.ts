@@ -1,4 +1,8 @@
-import { TERMS_VERSION, assistantNoticeSchema } from "@keylow/core";
+import {
+  ASSISTANT_CONSENT_VERSION,
+  assistantNoticeSchema,
+  isAssistantConsentCurrent,
+} from "@keylow/core";
 import { z } from "zod";
 
 import { repoError } from "./repoError";
@@ -7,7 +11,7 @@ import type { Database } from "../database.types";
 import type { AssistantNotice } from "@keylow/core";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-/** Whether the signed in user turned the assistant on, and when and under which Terms version. */
+/** Whether the signed in user has the assistant on, and when and under which consent version they turned it on. */
 export type AssistantConsent = {
   isOn: boolean;
   consentedAt: string | null;
@@ -16,8 +20,9 @@ export type AssistantConsent = {
 
 /**
  * Reads the assistant consent on the signed in user's own profile. Row level security only shows a user
- * their own row, so no id is needed. The two columns are set together, so `isOn` is whether the time is
- * set. A user with no profile row reads as off.
+ * their own row, so no id is needed. `isOn` is whether the stored version is the current one or later, as
+ * the assistant's gate decides, so a person who turned it on under older words reads as off. The time and
+ * the version stay as stored. A user with no profile row reads as off.
  */
 export async function getAssistantConsent(
   client: SupabaseClient<Database>,
@@ -32,7 +37,7 @@ export async function getAssistantConsent(
   }
 
   return {
-    isOn: data?.assistant_consent_at != null,
+    isOn: isAssistantConsentCurrent(data?.assistant_consent_version ?? null),
     consentedAt: data?.assistant_consent_at ?? null,
     version: data?.assistant_consent_version ?? null,
   };
@@ -40,7 +45,7 @@ export async function getAssistantConsent(
 
 /**
  * Turns the assistant on for the user, by setting the consent time to now and the version to the current
- * `TERMS_VERSION`, or off, by clearing both. Only those two columns are written (the column grant allows
+ * `ASSISTANT_CONSENT_VERSION`, or off, by clearing both. Only those two columns are written (the column grant allows
  * it), and row level security limits the update to the user's own row. An update that reaches no row
  * (someone else's id, or no profile) changes nothing, so it throws rather than reporting a success.
  */
@@ -53,7 +58,7 @@ export async function setAssistantConsent(
     .from("profiles")
     .update({
       assistant_consent_at: on ? new Date().toISOString() : null,
-      assistant_consent_version: on ? TERMS_VERSION : null,
+      assistant_consent_version: on ? ASSISTANT_CONSENT_VERSION : null,
     })
     .eq("id", userId)
     .select("id");

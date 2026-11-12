@@ -432,6 +432,14 @@ describe("keys.training, the exercise reads", () => {
     expect(keys.training.exercise(EXERCISE_ID)).toEqual(["training", "exercise", EXERCISE_ID]);
   });
 
+  it("should build a form media key scoped to the exercise id", () => {
+    expect(keys.training.exerciseFormMedia(EXERCISE_ID)).toEqual([
+      "training",
+      "exercise-form-media",
+      EXERCISE_ID,
+    ]);
+  });
+
   it("should expose the prefix of every search key, to refresh them all after a save", () => {
     expect(keys.training.exerciseSearchAll).toEqual(["training", "exercise-search"]);
     expect(keys.training.exerciseSearch("raise").slice(0, 2)).toEqual(

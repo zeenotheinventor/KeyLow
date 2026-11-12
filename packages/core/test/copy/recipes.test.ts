@@ -303,3 +303,17 @@ describe("describeDuplicateName", () => {
     expect(describeDuplicateName("Chicken  and rice", [])).toBe("Chicken  and rice (copy)");
   });
 });
+
+describe("a recipe with no weight (ADR 0003, Amendment 19)", () => {
+  const noWeight = libraryRecipe(4, 0, { kcal: 650 });
+
+  it("should write the caption without grams", () => {
+    expect(describeRecipeServingCaption(noWeight)).toBe("1 serving · makes 4");
+  });
+
+  it("should read the row without grams", () => {
+    expect(describeRecipeRowName("Meal deal", noWeight)).toMatch(
+      /^Meal deal, 1 serving, makes 4, 650 kilocalories/,
+    );
+  });
+});

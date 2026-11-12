@@ -5,6 +5,8 @@ import { assistantCardHref } from "../lib/assistantCardRoutes";
 
 const RECIPE_ID = "00000000-0000-4000-8000-0000000000e1";
 const FOOD_ID = "00000000-0000-4000-8000-0000000000f1";
+const ROUTINE_ID = "00000000-0000-4000-8000-0000000000e2";
+const SESSION_ID = "00000000-0000-4000-8000-0000000000e3";
 
 // The files an address needs under app/, so a rename that leaves a card's link opening the not-found screen fails here.
 const appDirectory = join(__dirname, "..", "app");
@@ -42,5 +44,19 @@ describe("assistantCardHref", () => {
       "/diary?day=2026-10-24",
     );
     expect(routeFileExists("(tabs)", "diary")).toBe(true);
+  });
+
+  it("should open the routine in its editor", () => {
+    expect(assistantCardHref({ screen: "routine_editor", routineId: ROUTINE_ID })).toBe(
+      `/train/routines/${ROUTINE_ID}`,
+    );
+    expect(routeFileExists("(tabs)", "train", "routines", "[id]")).toBe(true);
+  });
+
+  it("should open the logged session", () => {
+    expect(assistantCardHref({ screen: "session_detail", sessionId: SESSION_ID })).toBe(
+      `/train/history/${SESSION_ID}`,
+    );
+    expect(routeFileExists("(tabs)", "train", "history", "[id]")).toBe(true);
   });
 });

@@ -79,6 +79,8 @@ export function targetsContexts(
   const contextOn = (turnId: string): ToolContext => {
     const made = createFakeContext(tools, {
       store,
+      // The person pressed the button, so the turn that follows a question is the button's words.
+      personsWords: "Change target",
       turn: { id: turnId, conversationId: store.turns[0]?.conversationId ?? "" },
     });
     return {

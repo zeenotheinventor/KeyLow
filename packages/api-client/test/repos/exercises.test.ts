@@ -1,7 +1,7 @@
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
-import { getExercise, searchExercises } from "../../src/repos/exercises";
+import { getExercise, readExercisesById, searchExercises } from "../../src/repos/exercises";
 import { createTestClient } from "../createTestClient";
 import {
   GLOBAL_EXERCISE_ID,
@@ -112,6 +112,31 @@ describe("searchExercises", () => {
     await searchExercises(client, "raise", { limit: 0 });
 
     expect(fake.reads.map((url) => url.searchParams.get("limit"))).toEqual(["25", "10", "50", "1"]);
+  });
+
+  it("should read only the equipment the person has when a list is given", async () => {
+    const fake = installExercisesFake(server);
+
+    await searchExercises(createTestClient(), "press", { equipment: ["barbell", "dumbbell"] });
+
+    expect(fake.reads[0]?.searchParams.get("equipment")).toBe("in.(barbell,dumbbell)");
+  });
+
+  it("should not filter by equipment when none is given, or when it is null", async () => {
+    const fake = installExercisesFake(server);
+    const client = createTestClient();
+
+    await searchExercises(client, "press");
+    await searchExercises(client, "press", { equipment: null });
+
+    expect(fake.reads.map((url) => url.searchParams.has("equipment"))).toEqual([false, false]);
+  });
+
+  it("should make no request when the list of equipment is empty, because nothing is allowed", async () => {
+    const fake = installExercisesFake(server);
+
+    expect(await searchExercises(createTestClient(), "press", { equipment: [] })).toEqual([]);
+    expect(fake.requestCount).toBe(0);
   });
 
   it("should make no request for a query shorter than 2 characters once trimmed", async () => {
@@ -288,6 +313,75 @@ describe("getExercise", () => {
     const error = await rejectionOf(getExercise(createTestClient(), OWN_EXERCISE_ID));
 
     expect(error).toBeInstanceOf(Error);
+    expect(textOf(error)).not.toContain(RECOGNISABLE_EXERCISE_NAME);
+  });
+});
+
+describe("readExercisesById", () => {
+  it("should read the ids in one request, live exercises only, and ask for the four columns", async () => {
+    const fake = installExercisesFake(server, { rows: [] });
+
+    await readExercisesById(createTestClient(), [OWN_EXERCISE_ID, GLOBAL_EXERCISE_ID]);
+
+    expect(fake.reads).toHaveLength(1);
+    const url = fake.reads[0];
+    expect(url?.searchParams.get("id")).toBe(`in.(${OWN_EXERCISE_ID},${GLOBAL_EXERCISE_ID})`);
+    expect(url?.searchParams.get("deleted_at")).toBe("is.null");
+    expect(url?.searchParams.get("select")).toBe("id,name,equipment,mechanic");
+  });
+
+  it("should answer the id, name, equipment and mechanic of each exercise and nothing else", async () => {
+    installExercisesFake(server, { rows: [globalExerciseRow()] });
+
+    const exercises = await readExercisesById(createTestClient(), [GLOBAL_EXERCISE_ID]);
+
+    expect(exercises).toStrictEqual([
+      {
+        id: GLOBAL_EXERCISE_ID,
+        name: "Cable lateral raise",
+        equipment: "cable",
+        mechanic: "isolation",
+      },
+    ]);
+  });
+
+  it("should leave out an id that is not visible, which looks like one that does not exist", async () => {
+    installExercisesFake(server, { rows: [globalExerciseRow()] });
+
+    const exercises = await readExercisesById(createTestClient(), [
+      GLOBAL_EXERCISE_ID,
+      OWN_EXERCISE_ID,
+    ]);
+
+    expect(exercises.map(({ id }) => id)).toStrictEqual([GLOBAL_EXERCISE_ID]);
+  });
+
+  it("should send no request for no ids", async () => {
+    const fake = installExercisesFake(server);
+
+    expect(await readExercisesById(createTestClient(), [])).toStrictEqual([]);
+    expect(fake.requestCount).toBe(0);
+  });
+
+  it("should throw a RangeError before any request when an id is not a UUID", async () => {
+    const fake = installExercisesFake(server);
+
+    const error = await rejectionOf(
+      readExercisesById(createTestClient(), [OWN_EXERCISE_ID, "not-a-uuid"]),
+    );
+
+    expect(error).toBeInstanceOf(RangeError);
+    expect(fake.requestCount).toBe(0);
+  });
+
+  it("should throw an error naming the action and the code only", async () => {
+    const fake = installExercisesFake(server);
+    fake.failReadsWith("XX000");
+
+    const error = await rejectionOf(readExercisesById(createTestClient(), [OWN_EXERCISE_ID]));
+
+    expect(error?.message).toBe("Could not read the exercises (XX000)");
+    expect(error?.cause).toEqual({ code: "XX000" });
     expect(textOf(error)).not.toContain(RECOGNISABLE_EXERCISE_NAME);
   });
 });

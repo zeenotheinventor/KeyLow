@@ -24,6 +24,7 @@ export {
   useArchiveRecipe,
   useCompleteDays,
   useCopyDay,
+  useCreateFeatureRequest,
   useCreateFood,
   useCreateRecipe,
   useDebouncedValue,
@@ -163,6 +164,7 @@ export type {
   Targets,
 } from "./repos";
 export { useSaveSetup, useSetupState, useSkipSetup } from "./hooks";
+export { useSetupDraft } from "./hooks";
 export type { SaveSetupInput } from "./hooks";
 export { getMySetupState, markMySetupDone, saveMySetup } from "./repos";
 export type {
@@ -175,6 +177,7 @@ export type {
   SetupWeighIn,
 } from "./repos";
 export { useLogRecipeServing } from "./hooks";
+export { isDailyLimitFailure } from "./repos";
 export { logRecipe } from "./repos";
 export type { LogRecipeInput, RecipeLogEntry } from "./repos";
 export { useRecipeRefreshPreview, useRefreshRecipeIngredients } from "./hooks";
@@ -200,7 +203,13 @@ export {
   updateWeighIn,
 } from "./repos";
 export type { ImportResult, WeighIn, WeighInChange } from "./repos";
-export { useBodyMeasurements, useBodyTrend, useImportBodyMeasurements } from "./hooks";
+export {
+  useBodyCompositionKind,
+  useBodyMeasurements,
+  useBodyTrend,
+  useImportBodyMeasurements,
+} from "./hooks";
+export type { BodyCompositionKind } from "./hooks";
 export { importBodyMeasurements, listBodyMeasurements } from "./repos";
 export type { BodyMeasurement, BodyMeasurementImportResult } from "./repos";
 export {
@@ -208,15 +217,19 @@ export {
   useActiveSession,
   useBodyMap,
   useDashboardBodyMap,
+  useExerciseProgress,
   useExerciseTrendSets,
   useHasLoggedSession,
   useHeatSets,
   useLastPerformance,
   useMuscleDetail,
   useMuscleList,
+  useMuscleScaleList,
   useMuscleState,
+  useRoutineProgress,
   useRoutineTrendSets,
   useSession,
+  useSessionBarView,
   useTrainHome,
   useWeekComparison,
   useWeekSessionRows,
@@ -225,10 +238,13 @@ export {
 export {
   describeFinishDetails,
   describeSessionDetail,
+  heatSetsOf,
   isPendingSetId,
+  useAddToPastSession,
   useAddedExercises,
   useChangeSetType,
   useDiscardSession,
+  useEditSet,
   usePendingSets,
   useRemoveSetWithUndo,
   useSessionDetail,
@@ -237,16 +253,24 @@ export {
   useStartSessionAction,
 } from "./hooks";
 export type {
+  AddSetEntry,
+  AddToPastSession,
+  AddToPastSessionOpening,
   AddedExercise,
   ChangeSetTypeRequest,
+  EditSet,
+  EditSetOpening,
+  EditSetOpeningState,
   ExercisePlan,
   FinishDetails,
   LogSetRequest,
   PendingSet,
   PendingSets,
+  PickedExercise,
   PlannedExerciseName,
   RemoveSetRequest,
   ScreenSet,
+  SessionBarView,
   SessionDetailContent,
   SessionDetailExercise,
   SessionDetailMuscles,
@@ -256,6 +280,8 @@ export type {
   SessionStartRequest,
   SessionView,
   SessionViewExercise,
+  SetChanges,
+  SetLogRequest,
   SetLogging,
   SetNotices,
 } from "./hooks";
@@ -281,6 +307,7 @@ export type {
   UseLastPerformanceOptions,
   UseMuscleDetailInput,
   UseMuscleListInput,
+  UseMuscleScaleListInput,
 } from "./hooks";
 export {
   getActiveRoutine,
@@ -307,10 +334,24 @@ export {
   useArchiveRoutine,
   useRoutine,
   useRoutines,
+  useArchiveRoutineWithUndo,
+  useMakeRoutineActive,
+  useRestoreRoutine,
   useSaveRoutine,
   useSetActiveRoutine,
 } from "./hooks";
+export type { RoutineNotices } from "./hooks";
 export type { UseRoutinesOptions, UseTrendSetsOptions } from "./hooks";
+export type {
+  ExerciseChartData,
+  ExerciseProgress,
+  ExerciseProgressBody,
+  ExerciseWeekItem,
+  RoutineProgress,
+  RoutineProgressDayItem,
+  RoutineProgressExercise,
+  RoutineProgressState,
+} from "./hooks";
 export { RoutineRuleError } from "./errors";
 export type { RoutineRule } from "./errors";
 export {
@@ -344,11 +385,13 @@ export { getCurrentTrainingGoals, listTrainingGoalsHistory, saveTrainingGoals } 
 export {
   useArchiveExercise,
   useExercise,
+  useExerciseFormMedia,
   useExerciseMuscles,
   useExerciseSearch,
   useSaveExercise,
 } from "./hooks";
 export type {
+  ExerciseFormMediaState,
   ExerciseMusclesState,
   ExerciseSearchError,
   ExerciseSearchResult,
@@ -357,6 +400,8 @@ export type {
 } from "./hooks";
 export { useSuggestion } from "./hooks";
 export type { SuggestionRead, SuggestionUnavailableReason, UseSuggestionInput } from "./hooks";
+export { useSuggestionCard } from "./hooks";
+export type { SuggestionCardState, SuggestionNotices, UseSuggestionCardInput } from "./hooks";
 export { listSuggestionLibrary } from "./repos";
 export type { SuggestionLibraryOptions } from "./repos";
 export { useAcceptedSuggestions, useAcceptSuggestion, useUndoAcceptedSuggestion } from "./hooks";
@@ -374,6 +419,7 @@ export {
   archiveExercise,
   exerciseHitOf,
   getExercise,
+  getExerciseFormMedia,
   saveExercise,
   searchExercises,
 } from "./repos";
@@ -391,6 +437,22 @@ export {
   useTargetsHistory,
 } from "./hooks";
 export type { EditProgramInput, ProgramHistoryOptions } from "./hooks";
+export {
+  useCheckinSummary,
+  useExpenditureChart,
+  useProgramScreen,
+  useRunCheckinsIfDue,
+  useSettlingChecklist,
+} from "./hooks";
+export type {
+  ExpenditureChartState,
+  ProgramScreenState,
+  UseCheckinSummaryOptions,
+  UseExpenditureChartOptions,
+  UseProgramScreenOptions,
+  UseSettlingChecklistOptions,
+  UseRunCheckinsIfDueOptions,
+} from "./hooks";
 export {
   getMyCheckinSchedule,
   getMyProgramSummary,
@@ -453,12 +515,27 @@ export type { AssistantConversation, UndoAssistantActionInput } from "./hooks";
 export {
   createAssistantConversation,
   deleteAllAssistantConversations,
-  getLatestAssistantConversation,
+  getAssistantConversationPage,
   readAssistantActions,
   undoAssistantActions,
 } from "./repos";
-export type { AssistantActionsRead, AssistantConversationRead, AssistantUndoResult } from "./repos";
+export type { AssistantActionsRead, AssistantConversationPage, AssistantUndoResult } from "./repos";
 export type { AssistantLiveTurn } from "./assistantLiveTurn";
 export type { StreamingFetch, StreamingResponse } from "./runAssistantTurn";
 
 export { AccountExportError, exportMyData, readMyDataByTable } from "./repos";
+export { useAccountExportFile } from "./hooks";
+export type {
+  AccountExportFile,
+  AccountExportScreenEvent,
+  UseAccountExportFile,
+  UseAccountExportFileInput,
+} from "./hooks";
+
+export {
+  PlateFoodGoneError,
+  PlateFoodNeedsReviewError,
+  plateEntriesOf,
+  useLogPlateEntries,
+} from "./hooks";
+export type { LogPlateEntriesInput, PlateFoodReaders, PlateLoggedWhen } from "./hooks";

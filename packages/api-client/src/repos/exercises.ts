@@ -13,7 +13,7 @@ import { repoError } from "./repoError";
 
 import type { Database } from "../database.types";
 import type { ExerciseMuscleEntry } from "@keylow/core/schemas";
-import type { MuscleId, MuscleRole } from "@keylow/core/training";
+import type { Equipment, MuscleId, MuscleRole } from "@keylow/core/training";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 // An exercise name and its muscle map are health data. A failure here names the action and the error
@@ -65,6 +65,16 @@ const exerciseDetailSchema = z
     muscles: [...exercise_muscles].sort(inListOrder),
   }));
 
+const exerciseLineSchema = z.object({
+  id: exerciseShape.id,
+  name: exerciseShape.name,
+  equipment: exerciseShape.equipment,
+  mechanic: exerciseShape.mechanic,
+});
+
+/** One exercise as a built routine needs it: what it is called, what it uses and whether it is a compound. */
+export type ExerciseLine = z.output<typeof exerciseLineSchema>;
+
 /**
  * One exercise of a search, for its row. `source` is `user` for the signed in user's own exercise and
  * `free_exercise_db` for the library. The muscle ids are for the row's chips: the primary muscles first
@@ -95,6 +105,11 @@ export function exerciseHitOf({ muscles, ...exercise }: ExerciseDetail): Exercis
 export type ExerciseSearchOptions = {
   /** How many exercises to ask for, 1 to 50. Defaults to 25. */
   limit?: number;
+  /**
+   * The equipment the person has: only exercises that use one of these are read. Null or absent reads
+   * every exercise, and an empty list reads none.
+   */
+  equipment?: readonly Equipment[] | null;
 };
 
 export function assertExerciseId(id: string): void {
@@ -109,24 +124,28 @@ export function assertExerciseId(id: string): void {
  * `%` and `_` in the query escaped so they match literally (a `*` is the exception, see
  * `escapeLikePattern`). Row level security shows a user the library and their own exercises only, and an
  * archived exercise is left out. A query shorter than `MIN_SEARCH_LENGTH` once trimmed is answered with
- * no exercises and no request. `limit` is kept between 1 and 50.
+ * no exercises and no request, and so is an empty `equipment` list. `limit` is kept between 1 and 50.
  */
 export async function searchExercises(
   client: SupabaseClient<Database>,
   query: string,
-  { limit = DEFAULT_SEARCH_LIMIT }: ExerciseSearchOptions = {},
+  { limit = DEFAULT_SEARCH_LIMIT, equipment = null }: ExerciseSearchOptions = {},
 ): Promise<ExerciseSearchHit[]> {
   const trimmedQuery = query.trim();
 
-  if (trimmedQuery.length < MIN_SEARCH_LENGTH) {
+  if (trimmedQuery.length < MIN_SEARCH_LENGTH || equipment?.length === 0) {
     return [];
   }
 
-  const { data, error } = await client
+  const matching = client
     .from("exercises")
     .select(EXERCISE_COLUMNS)
     .ilike("name", `%${escapeLikePattern(trimmedQuery)}%`)
-    .is("deleted_at", null)
+    .is("deleted_at", null);
+
+  const { data, error } = await (
+    equipment === null ? matching : matching.in("equipment", equipment)
+  )
     .in("exercise_muscles.role", ["primary", "secondary"])
     .order("owner_id", { ascending: true, nullsFirst: false })
     .order("name", { ascending: true })
@@ -162,4 +181,33 @@ export async function getExercise(
   }
 
   return data === null ? null : parseRow(exerciseDetailSchema, data, "load the exercise", idOfRow);
+}
+
+/**
+ * The live exercises with these ids, in one request: the id, name, equipment and mechanic of each, in no
+ * particular order. An id that is not in the answer does not exist, is archived, or is another user's
+ * private exercise, which all look the same because row level security shows a user the library and their
+ * own exercises only. No ids means no request.
+ */
+export async function readExercisesById(
+  client: SupabaseClient<Database>,
+  ids: readonly string[],
+): Promise<ExerciseLine[]> {
+  ids.forEach(assertExerciseId);
+
+  if (ids.length === 0) {
+    return [];
+  }
+
+  const { data, error } = await client
+    .from("exercises")
+    .select("id,name,equipment,mechanic")
+    .in("id", ids)
+    .is("deleted_at", null);
+
+  if (error) {
+    throw repoError("read the exercises", error);
+  }
+
+  return data.map((row) => parseRow(exerciseLineSchema, row, "read the exercises", idOfRow));
 }

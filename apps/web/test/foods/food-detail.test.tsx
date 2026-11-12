@@ -3,11 +3,14 @@ import { act, cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { makeFood, makePortion } from "./support";
+import { noPlateHooks } from "../diary/noPlateHooks";
+import { noFavouriteHooks } from "../favourites/noFavouriteHooks";
 
 import type { FoodWithPortionsState } from "@keylow/api-client";
 import type { Food } from "@keylow/core/schemas";
 
 import { FoodDetail } from "@/components/foods/FoodDetail";
+import { ToastProvider } from "@/components/ui/Toast";
 
 const { useFoodWithPortions, useRefreshOutdatedOffFood } = vi.hoisted(() => ({
   useFoodWithPortions: vi.fn<(id: string) => FoodWithPortionsState>(),
@@ -16,6 +19,8 @@ const { useFoodWithPortions, useRefreshOutdatedOffFood } = vi.hoisted(() => ({
 
 vi.mock("@keylow/api-client", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@keylow/api-client")>()),
+  ...noFavouriteHooks,
+  ...noPlateHooks,
   useFoodWithPortions,
   useRefreshOutdatedOffFood,
 }));
@@ -24,12 +29,20 @@ const RAW_FAILURE = "Could not load the food: JWT expired for role authenticated
 
 function showFood(food = makeFood(), portions = [makePortion()]) {
   useFoodWithPortions.mockReturnValue({ status: "ready", food, portions });
-  render(<FoodDetail id={food.id} />);
+  render(
+    <ToastProvider>
+      <FoodDetail id={food.id} />
+    </ToastProvider>,
+  );
 }
 
 function showState(state: FoodWithPortionsState) {
   useFoodWithPortions.mockReturnValue(state);
-  render(<FoodDetail id="food-1" />);
+  render(
+    <ToastProvider>
+      <FoodDetail id="food-1" />
+    </ToastProvider>,
+  );
 }
 
 const hero = () => screen.getByRole("region", { name: "Energy and macros" });
@@ -473,7 +486,10 @@ describe("FoodDetail", () => {
       expect(screen.getAllByRole("link").map((link) => link.textContent)).toEqual([
         "Back to foods",
       ]);
-      expect(screen.queryByRole("button")).toBeNull();
+      // The favourite heart is the one button, and nothing offers to review the food.
+      expect(
+        screen.getAllByRole("button").map((button) => button.getAttribute("aria-label")),
+      ).toEqual(["Add to favourites"]);
     });
   });
 });

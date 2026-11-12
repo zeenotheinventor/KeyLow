@@ -49,6 +49,8 @@ export function RoutineEditorScreen({ id }: RoutineEditorScreenProps) {
         exerciseNames={exerciseNamesOfStoredRoutine(routine.data)}
         initialDraft={draftOfStoredRoutine(routine.data)}
         routineId={routine.data.id}
+        isActive={routine.data.is_active}
+        isArchived={routine.data.is_archived}
       />
     );
   }

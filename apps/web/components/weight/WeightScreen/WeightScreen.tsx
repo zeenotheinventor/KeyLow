@@ -6,28 +6,45 @@ import { toLocalDate } from "@keylow/core/dates";
 import { Plus, Weight } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
+import { BodyCompositionSection } from "../BodyCompositionSection";
+import { BodyCompositionView } from "../BodyCompositionView";
 import { WeighInDialog } from "../WeighInDialog";
 import { WeightHeader } from "../WeightHeader";
 import { WeightList } from "../WeightList";
+import { WeightTrendCard } from "../WeightTrendCard";
 
 import type { WeighIn } from "@keylow/api-client";
+import type { WeightRange } from "@keylow/core/weight";
 
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { Skeleton, SkeletonBone } from "@/components/ui/Skeleton";
 import { useIsOnline } from "@/lib/useIsOnline";
 import { useNow } from "@/lib/useNow";
+import { useWeightChartView } from "@/lib/weightChartView";
+
+const DEFAULT_RANGE: WeightRange = 90;
+
+// The page's two columns: the trend card, the range control and the chart on the left, the weigh-ins on the
+// right from the large breakpoint, and one column under it. The loaded page and its skeleton share them.
+const COLUMNS_CLASS_NAME = "grid gap-4 lg:grid-cols-[minmax(0,1fr)_400px] lg:items-start lg:gap-6";
 
 /**
- * What the loading board draws on the right: the Weigh-ins heading and its card, as the board sizes them
- * as drawn, its 1 px borders included. The board's left column, the trend card, the range control and the
- * chart, comes back with the chart, since the loaded page has nothing there to jump to until then.
+ * What the loading board draws, as the board sizes it as drawn, its 1 px borders included: the trend card,
+ * the range control and the chart on the left, and the Weigh-ins heading and its card on the right.
  */
 function WeightLoading() {
   return (
-    <Skeleton label={WEIGHT_SCREEN.loadingLabel} className="flex flex-col gap-3">
-      <SkeletonBone className="h-5 w-[122px]" />
-      <SkeletonBone className="h-[338px] rounded-large" />
+    <Skeleton label={WEIGHT_SCREEN.loadingLabel} className={COLUMNS_CLASS_NAME}>
+      <div className="flex flex-col gap-4">
+        <SkeletonBone className="h-[114px] rounded-large" />
+        <SkeletonBone className="h-[46px] rounded-medium" />
+        <SkeletonBone className="h-[234px] rounded-large lg:h-[282px]" />
+      </div>
+      <div className="flex flex-col gap-3">
+        <SkeletonBone className="h-5 w-[122px]" />
+        <SkeletonBone className="h-[338px] rounded-large" />
+      </div>
     </Skeleton>
   );
 }
@@ -42,8 +59,9 @@ function WeightLoading() {
  * read, a weigh-in list that never loaded is the error board with no Try again, which would do nothing:
  * the read goes ahead by itself when the connection returns.
  *
- * The list is the page's first column. The trend card and the chart join it, before the list in the page's
- * order and beside it from the large breakpoint, when they are built. Add weigh-in, in the header and on the
+ * The trend card, the chart and the Body composition cards are the page's first column and the list is its second, beside it from the
+ * large breakpoint and under it before. The card draws the weight chart or the Composition view, as the page's
+ * Chart view choice says, which this browser keeps with the kg or % choice. Add weigh-in, in the header and on the
  * empty board, and a row of the list open the weigh-in dialog, which this screen holds open or closed. It is
  * not a route, so the page behind it keeps its place.
  */
@@ -53,6 +71,9 @@ export function WeightScreen() {
   const timeZone = useProfileTimeZone();
   const now = useNow();
   const isOnline = useIsOnline();
+  const chartView = useWeightChartView();
+  // One range for the trend chart and both body cards. It starts on 90 days and is not kept.
+  const [range, setRange] = useState<WeightRange>(DEFAULT_RANGE);
   // The weigh-in the dialog is open on, or `undefined` for a new one. Closed is `null`.
   const [openWeighIn, setOpenWeighIn] = useState<{ weighIn: WeighIn | undefined } | null>(null);
   const addButton = useRef<HTMLButtonElement>(null);
@@ -94,14 +115,41 @@ export function WeightScreen() {
       const today = toLocalDate(now, timeZone.data ?? "UTC");
 
       return (
-        <WeightList
-          weighIns={weighIns.data}
-          today={today}
-          isLeftOut={(localDate) => trend.byDate.get(localDate)?.rejected === true}
-          onOpen={(weighIn) => {
-            setOpenWeighIn({ weighIn });
-          }}
-        />
+        <div className={COLUMNS_CLASS_NAME}>
+          <div className="flex flex-col gap-4">
+            <WeightTrendCard
+              weighIns={weighIns.data}
+              trend={trend}
+              today={today}
+              range={range}
+              onRangeChange={setRange}
+              view={chartView.view}
+              onViewChange={chartView.setView}
+              composition={
+                <BodyCompositionView
+                  weightPoints={trend.points}
+                  range={range}
+                  today={today}
+                  unit={chartView.unit}
+                  onUnitChange={chartView.setUnit}
+                />
+              }
+            />
+            <BodyCompositionSection
+              range={range}
+              today={today}
+              isUnderComposition={chartView.view === "composition"}
+            />
+          </div>
+          <WeightList
+            weighIns={weighIns.data}
+            today={today}
+            isLeftOut={(localDate) => trend.byDate.get(localDate)?.rejected === true}
+            onOpen={(weighIn) => {
+              setOpenWeighIn({ weighIn });
+            }}
+          />
+        </div>
       );
     }
     if (weighIns.isError) {

@@ -11,11 +11,13 @@ import {
   describeRecipePer100Heading,
   describeRecipeYield,
   describeServingSuffix,
+  describeServingsOnlyYield,
 } from "@keylow/core/copy";
 import {
   amountOnUnitChange,
   previewTypedRecipeAmount,
   recipeAmountStart,
+  recipeUnitsOf,
 } from "@keylow/core/diary";
 import { useState } from "react";
 import { View } from "react-native";
@@ -34,11 +36,11 @@ import type {
 } from "../types";
 import type { RecipeEntryUnit } from "@keylow/core/diary";
 
-// The two chips of a recipe, a number of servings first because it is the recipe's own unit.
-const UNIT_OPTIONS: readonly { value: RecipeEntryUnit; label: string }[] = [
-  { value: "serving", label: RECIPE_UNITS.serving },
-  { value: "g", label: RECIPE_UNITS.grams },
-];
+// The chips of a recipe, a number of servings first because it is the recipe's own unit.
+const UNIT_LABELS: Record<RecipeEntryUnit, string> = {
+  serving: RECIPE_UNITS.serving,
+  g: RECIPE_UNITS.grams,
+};
 
 /**
  * The amount step of a recipe, as portion · recipe-serving, recipe-grams and recipe-grams-no-cooked-weight
@@ -88,6 +90,9 @@ export function RecipePortionPicker(
 
   const typed = previewTypedRecipeAmount(recipe, unit, quantityText);
   const { servings, yield_grams: yieldGrams } = recipe;
+  // A recipe with a restaurant food has no weight, so it is logged by servings alone (ADR 0003, Amendment 19).
+  const isServingsOnly = recipe.computed.servingsOnly;
+  const unitOptions = recipeUnitsOf(recipe).map((value) => ({ value, label: UNIT_LABELS[value] }));
   // Grams of a recipe with no cooked weight are of the raw ingredients, which the screen says.
   const isRawGrams = yieldGrams === null && unit === "g";
   const hero =
@@ -122,7 +127,7 @@ export function RecipePortionPicker(
           <ChipGroup
             className="-mr-4"
             label={PORTION_PICKER.unitLabel}
-            options={UNIT_OPTIONS}
+            options={unitOptions}
             value={unit}
             onChange={chooseUnit}
             onChipPress={onChipPress}
@@ -184,7 +189,9 @@ export function RecipePortionPicker(
       <View className="flex-row items-center gap-2">
         <Badge outlined>{RECIPE_BADGE}</Badge>
         <Text tone="muted" variant="caption">
-          {describeRecipeYield(servings, yieldGrams)}
+          {isServingsOnly
+            ? describeServingsOnlyYield(servings)
+            : describeRecipeYield(servings, yieldGrams)}
         </Text>
       </View>
       {entry?.caption === undefined ? null : (
@@ -202,10 +209,12 @@ export function RecipePortionPicker(
           </Text>
         </View>
       ) : null}
-      <PerHundredList
-        heading={describeRecipePer100Heading(yieldGrams)}
-        values={recipe.computed.per100g}
-      />
+      {isServingsOnly ? null : (
+        <PerHundredList
+          heading={describeRecipePer100Heading(yieldGrams)}
+          values={recipe.computed.per100g}
+        />
+      )}
     </PortionPickerShell>
   );
 }

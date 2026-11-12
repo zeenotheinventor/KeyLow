@@ -1,5 +1,6 @@
 import {
   SEARCH_GROUP_HEADINGS,
+  describeAddToPlateName,
   describeRecipeSearchRowName,
   describeRecipeServing,
 } from "@keylow/core/copy";
@@ -13,7 +14,7 @@ import { GroupedList } from "@/components/ui/GroupedList";
 /**
  * "Your recipes · Per serving": the recipes the search found, first in the add dialog. Each row is the search
  * row of a recipe with the serving its plus logs. A press on the row opens the amount step for the recipe,
- * which its name says ("choose amount"), and a press on the plus logs one serving at once.
+ * which its name says ("choose amount"), and a press on the plus puts one serving on the plate.
  */
 export function RecipeLogGroup({
   recipes,
@@ -28,13 +29,15 @@ export function RecipeLogGroup({
     <GroupedList title={title} source={caption} label={label}>
       {recipes.map((recipe) => {
         const { nameSegments, energy, macros } = recipeRowFields(recipe, query);
+        const serving = describeRecipeServing(recipe);
 
         return (
           <FoodRow
             key={recipe.id}
             layout="search"
             nameSegments={nameSegments}
-            caption={describeRecipeServing(recipe)}
+            caption={serving}
+            addLabel={describeAddToPlateName(recipe.name, serving)}
             energy={energy}
             macros={macros}
             recipeRowName={describeRecipeSearchRowName(recipe.name, recipe)}
