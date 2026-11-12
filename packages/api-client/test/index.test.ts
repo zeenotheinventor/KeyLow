@@ -55,6 +55,7 @@ describe("the package index", () => {
     "useOwnFoods",
     "useProfileTimeZone",
     "useTargets",
+    "targetsForDay",
     "useTermsAcceptance",
     "useUpdateTargets",
     "TargetsValidationError",

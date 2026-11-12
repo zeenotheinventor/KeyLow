@@ -6,6 +6,8 @@ export type WeekGridDay = {
   /** What the day added up to. Null when it has no entries. */
   totals: WeekDayTotals | null;
   isComplete: boolean;
+  /** The day's own calorie target. Null shows the day's calories without a bar. */
+  calorieTarget: number | null;
 };
 
 export type WeekGridProps = {
@@ -15,7 +17,7 @@ export type WeekGridProps = {
   days: readonly WeekGridDay[];
   /** Today, `YYYY-MM-DD`. It is framed, the days after it are dimmed and the average leaves it out, covering Monday to yesterday. */
   today: string;
-  /** The daily calorie target. Null shows the calories without a bar. */
+  /** The calorie target the Average is set against, the week's figure. Null shows its calories without a bar. */
   calorieTarget: number | null;
   /** Where a day's date leads: the day on view. */
   dayHref: (localDate: string) => string;

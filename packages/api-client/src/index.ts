@@ -66,6 +66,7 @@ export {
   useUpdateTargets,
 } from "./hooks";
 export { TargetsValidationError } from "./hooks";
+export { targetsForDay } from "./hooks";
 export type {
   DiaryReadOptions,
   FoodByBarcodeError,

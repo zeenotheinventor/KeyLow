@@ -289,6 +289,33 @@ describe("the week view", () => {
       ).toBe("2,260 of 2,200 kilocalories, over target");
     });
 
+    it("should set each day against its own calorie target, and the Average against the week's", () => {
+      backend.targets = settled({
+        kcal: 2200,
+        protein_g: 160,
+        carbs_g: 220,
+        fat_g: 70,
+        // The golden programme: Monday's figure is 2,140 and the week's is 2,200.
+        dowCaloriesKcal: [2140, 2200, 1900, 2000, 2200, 1900, 2100],
+        source: "engine",
+      });
+      renderWeek();
+
+      expect(within(cellOf("Mon 12")).getByText("/ 2,140 kcal")).toBeTruthy();
+      expect(within(cellOf("Tue 13")).getByText("/ 2,200 kcal")).toBeTruthy();
+      expect(within(cellOf("Wed 14")).getByText("/ 1,900 kcal")).toBeTruthy();
+      expect(within(cellOf("Thu 15")).getByText("/ 2,000 kcal")).toBeTruthy();
+      expect(within(cellOf("Average")).getByText("/ 2,200 kcal")).toBeTruthy();
+    });
+
+    it("should set every day and the Average against the same figure for manual targets", () => {
+      renderWeek();
+
+      for (const name of ["Mon 12", "Tue 13", "Wed 14", "Thu 15", "Average"]) {
+        expect(within(cellOf(name)).getByText("/ 2,200 kcal")).toBeTruthy();
+      }
+    });
+
     it("should draw no bars when there is no calorie target", () => {
       backend.targets = settled({
         kcal: null,

@@ -12,8 +12,10 @@ const day = (
   localDate: string,
   totals: [number, number, number, number] | null,
   isComplete = false,
+  calorieTarget: number | null = 2200,
 ): WeekGridDay => ({
   localDate,
+  calorieTarget,
   totals:
     totals === null
       ? null
@@ -30,6 +32,8 @@ const fullWeek: WeekGridDay[] = [
   day("2026-10-17", null),
   day("2026-10-18", null),
 ];
+
+const withoutTargets = fullWeek.map((weekDay) => ({ ...weekDay, calorieTarget: null }));
 
 function renderGrid(props: Partial<WeekGridProps> = {}) {
   const onCopyToToday = vi.fn<(localDate: string) => void>();
@@ -110,6 +114,34 @@ describe("WeekGrid", () => {
       expect(monday.getByText("/ 2,200 kcal")).toBeTruthy();
     });
 
+    it("should print each day against its own target, and the average against the grid's", () => {
+      renderGrid({
+        days: [
+          day("2026-10-12", [2140, 158, 214, 66], true, 2140),
+          day("2026-10-13", [2260, 149, 231, 74], true, 1900),
+          ...fullWeek.slice(2),
+        ],
+        calorieTarget: 2200,
+      });
+
+      expect(within(cellOf("Mon 12")).getByText("/ 2,140 kcal")).toBeTruthy();
+      expect(within(cellOf("Tue 13")).getByText("/ 1,900 kcal")).toBeTruthy();
+      expect(within(cellOf("Wed 14")).getByText("/ 2,200 kcal")).toBeTruthy();
+      expect(within(cellOf("Average")).getByText("/ 2,200 kcal")).toBeTruthy();
+    });
+
+    it("should draw each day's bar against its own target", () => {
+      renderGrid({
+        days: [day("2026-10-12", [2140, 158, 214, 66], true, 1900), ...fullWeek.slice(1)],
+        calorieTarget: 2200,
+      });
+
+      const meter = within(cellOf("Mon 12")).getByRole("meter", { name: "Mon 12 calories" });
+
+      expect(meter.getAttribute("aria-valuemax")).toBe("1900");
+      expect(meter.getAttribute("aria-valuetext")).toBe("2,140 of 1,900 kilocalories, over target");
+    });
+
     it("should print the macros on one line, always P, C, F", () => {
       renderGrid();
 
@@ -118,7 +150,7 @@ describe("WeekGrid", () => {
     });
 
     it("should print the calories alone when there is no target", () => {
-      renderGrid({ calorieTarget: null });
+      renderGrid({ days: withoutTargets, calorieTarget: null });
 
       const monday = within(cellOf("Mon 12"));
 
@@ -149,7 +181,7 @@ describe("WeekGrid", () => {
     });
 
     it("should draw no bar for a day without entries or without a target", () => {
-      renderGrid({ calorieTarget: null });
+      renderGrid({ days: withoutTargets, calorieTarget: null });
 
       expect(screen.queryAllByRole("meter")).toHaveLength(0);
     });

@@ -1,6 +1,5 @@
 import { dayTarget } from "@keylow/core/engine";
 import { useQuery } from "@tanstack/react-query";
-import { useCallback } from "react";
 
 import { useSupabase } from "../KeyLowProvider";
 import { keys } from "../queryKeys";
@@ -20,6 +19,25 @@ export type UseTargetsOptions = DiaryReadOptions & {
 };
 
 /**
+ * The targets with `kcal` set to that day's figure, `localDate` being `YYYY-MM-DD`: core's `dayTarget`, so
+ * a program with day by day figures gives that weekday's, and manual targets give the same figure every
+ * day. A missing calorie target stays missing. It is the rule `useTargets` applies for a `localDate`, so a
+ * screen that shows several days can read the targets once and call this for each.
+ */
+export function targetsForDay(targets: Targets, localDate: string): Targets {
+  const { kcal } = targets;
+  if (kcal === null) {
+    return targets;
+  }
+
+  const week =
+    targets.source === "engine"
+      ? { caloriesKcal: kcal, dowCaloriesKcal: targets.dowCaloriesKcal }
+      : { caloriesKcal: kcal };
+  return { ...targets, kcal: dayTarget(week, localDate) };
+}
+
+/**
  * Loads the signed in user's calorie and macro targets: the current `targets` row while a program is
  * active (`source` `engine`), otherwise the manual targets on the profile (`source` `manual`), see
  * `getMyTargets`. Each is null when not set, so a null `kcal` is the diary's no-target state. They are
@@ -27,26 +45,10 @@ export type UseTargetsOptions = DiaryReadOptions & {
  */
 export function useTargets({ enabled = true, localDate }: UseTargetsOptions = {}) {
   const client = useSupabase();
-  const selectDay = useCallback(
-    (targets: Targets): Targets => {
-      const { kcal } = targets;
-      if (localDate === undefined || kcal === null) {
-        return targets;
-      }
-
-      const week =
-        targets.source === "engine"
-          ? { caloriesKcal: kcal, dowCaloriesKcal: targets.dowCaloriesKcal }
-          : { caloriesKcal: kcal };
-      return { ...targets, kcal: dayTarget(week, localDate) };
-    },
-    [localDate],
-  );
-
   return useQuery({
     queryKey: keys.profiles.targets,
     queryFn: () => getMyTargets(client),
-    select: selectDay,
+    select: (targets) => (localDate === undefined ? targets : targetsForDay(targets, localDate)),
     enabled,
   });
 }
