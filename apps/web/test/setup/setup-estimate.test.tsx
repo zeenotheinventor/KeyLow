@@ -77,6 +77,10 @@ function givenMeasuredSample() {
 }
 
 async function openEstimate(address = ESTIMATE_RECALCULATE) {
+  if (address === ESTIMATE_FIRST_RUN) {
+    // The first run is for an account that is not set up: on a set-up one it is replaced with the Diary.
+    setupBackend.profile = { ...setupBackend.profile, onboarding_completed_at: null };
+  }
   await signInSetupClient();
   const view = renderSetupFlow(router, address);
   await screen.findByRole("group", { name: "Calorie target, estimate" });
@@ -114,6 +118,8 @@ beforeEach(() => {
   vi.setSystemTime(new Date("2026-10-23T12:00:00Z"));
   vi.spyOn(navigator, "language", "get").mockReturnValue("en-GB");
   resetSetupBackend();
+  // A saved recalculation leaves a mark for the tab, which would send the next test's recalculation to Targets.
+  window.sessionStorage.clear();
   motion.isReduced = true;
   router.push.mockReset();
   router.replace.mockReset();

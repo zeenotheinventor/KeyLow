@@ -10,6 +10,9 @@ import { SetupFlow, SetupRoute, useSetupFlow } from "@/components/setup";
 import { ToastProvider } from "@/components/ui/Toast";
 import { readSetupMode } from "@/lib/setupRoutes";
 
+/** A new account's profile row: nothing answered and not set up, which is what the first run is for. */
+const NEW_ACCOUNT_PROFILE = { onboarding_completed_at: null };
+
 /** The saved setup as the database holds it, which a test changes between renders. */
 export const setupBackend: {
   /** `ready` answers, `pending` never answers, `error` fails. */
@@ -45,7 +48,7 @@ export const setupBackend: {
   releaseWrite: (() => void) | undefined;
 } = {
   status: "ready",
-  profile: null,
+  profile: NEW_ACCOUNT_PROFILE,
   program: null,
   weighIn: null,
   reads: 0,
@@ -65,7 +68,7 @@ export const setupBackend: {
 
 export function resetSetupBackend(): void {
   setupBackend.status = "ready";
-  setupBackend.profile = null;
+  setupBackend.profile = NEW_ACCOUNT_PROFILE;
   setupBackend.program = null;
   setupBackend.weighIn = null;
   setupBackend.reads = 0;
@@ -172,6 +175,10 @@ async function answerWrite(request: Request, table: string): Promise<Response> {
           ? "program-insert"
           : "program-update";
   setupBackend.writes.push({ kind, body });
+  if (kind === "profile" && setupBackend.profile !== null && !setupBackend.failingWrite) {
+    // The profile row keeps what was written, so a read after the save says the account is set up.
+    setupBackend.profile = { ...setupBackend.profile, ...body };
+  }
   if (setupBackend.holdingWrite) {
     await new Promise<void>((resolve) => {
       setupBackend.releaseWrite = resolve;

@@ -62,3 +62,41 @@ export function stepToRedirectTo(
     (isSkipped ? nextStep(draft, step) : undefined)
   );
 }
+
+/**
+ * A per-tab mark that a recalculation has been saved. The browser's Back would otherwise reopen the wizard on
+ * an answered step, so a recalculation address that finds the mark sends itself on to Targets. Targets'
+ * Estimate my targets (the Targets row and the programme page's Start) clears it as it opens a new
+ * recalculation. Step 1 cannot clear it, since it is also where the browser's Back ends. A way in that skips
+ * those links, such as a middle click, can leave a stale mark: that only sends the person to Targets, where
+ * the next press clears it, so it fails safe. Every read and write is guarded: with no
+ * storage (a private window, blocked site data) the page behaves as it did before, and no mark is ever found.
+ */
+const RECALCULATION_SAVED_KEY = "keylow.setup.recalculationSaved";
+
+/** Marks this tab's recalculation as saved. */
+export function rememberRecalculationSaved(): void {
+  try {
+    window.sessionStorage.setItem(RECALCULATION_SAVED_KEY, "1");
+  } catch {
+    // No storage: the page behaves as it did before.
+  }
+}
+
+/** Clears the mark, as a new recalculation opens. */
+export function forgetRecalculationSaved(): void {
+  try {
+    window.sessionStorage.removeItem(RECALCULATION_SAVED_KEY);
+  } catch {
+    // No storage: there is no mark to clear.
+  }
+}
+
+/** Whether this tab has saved a recalculation that no new one has followed. */
+export function wasRecalculationSaved(): boolean {
+  try {
+    return window.sessionStorage.getItem(RECALCULATION_SAVED_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
