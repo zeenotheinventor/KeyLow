@@ -32,9 +32,12 @@ jest.mock("@react-native-async-storage/async-storage", () => ({
 }));
 jest.mock("expo-status-bar", () => ({ StatusBar: () => null }));
 jest.mock("react-native-gesture-handler", () => {
-  const { View: GestureView } = jest.requireActual<typeof import("react-native")>("react-native");
+  const { ScrollView, View: GestureView } =
+    jest.requireActual<typeof import("react-native")>("react-native");
 
   return {
+    // The assistant sheet's reply table scrolls in the library's scroll view, which this root never draws.
+    ScrollView,
     // Marks where the gesture root is, which draws nothing of its own.
     GestureHandlerRootView: ({ children }: { children: ReactNode }) => (
       <GestureView accessible aria-label="Gesture root">
