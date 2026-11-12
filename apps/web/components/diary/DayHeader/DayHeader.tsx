@@ -14,7 +14,7 @@ const VIEW_OPTIONS = [
 /**
  * The top of the diary, as the board draws it: the title (Today, or the day) with the calendar button
  * that opens the date picker, and the Day | Week control. The week view draws the day stepper it is given
- * in their place, and the control stays.
+ * in their place, and the control stays. The day view can draw an action after the calendar button.
  */
 export function DayHeader({
   title,
@@ -22,15 +22,17 @@ export function DayHeader({
   today,
   view,
   weekStepper,
+  action,
   onSelectDate,
   onViewChange,
 }: DayHeaderProps) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-4">
       {view === "day" && (
-        <div className="relative flex items-center gap-3">
+        <div className="relative flex flex-wrap items-center gap-x-3 gap-y-2">
           <h1 className="text-h1">{title}</h1>
           <ChooseDate selectedDate={selectedDate} today={today} onSelectDate={onSelectDate} />
+          {action}
         </div>
       )}
       {view === "week" && weekStepper}
