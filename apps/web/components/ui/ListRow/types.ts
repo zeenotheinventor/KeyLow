@@ -43,27 +43,52 @@ type ListRowContent = {
    * a picture with the label as its name, so the row's state is read out, and it is drawn after the value, before any chevron, and a row that is loading draws its spinner instead.
    */
   trailing?: { kind: "tick"; label: string } | undefined;
+  /** `danger` draws the title in the danger colour, for an action that deletes, such as Delete all conversations. */
+  titleTone?: "danger" | undefined;
   /** The chevron marks a row that goes somewhere. Leave it off for an action such as signing out. */
   chevron?: boolean;
   disabled?: boolean;
   className?: string;
 };
 
-/** A row goes to a page, runs an action, submits the form around it, or is plain text. It cannot do two of these. */
+/** The switch at the end of a row that turns something on or off. */
+export type ListRowToggle = {
+  isOn: boolean;
+  /** The switch's accessible name. The row's title is hidden from assistive technology, so this says all of it. */
+  label: string;
+  /** Called with the state the press asks for. The owner decides whether the row follows, so a refused write leaves it as it was. */
+  onValueChange: (next: boolean) => void;
+  /** Dims the switch and ignores a press, such as until the setting is read or while a change is being saved. Focus is kept. */
+  disabled?: boolean | undefined;
+};
+
+/**
+ * A row goes to a page, runs an action, submits the form around it, carries a switch, or is plain text. It cannot
+ * do two of these.
+ */
 export type ListRowProps = ListRowContent &
   (
-    | { href: string; onClick?: never; submit?: never; loading?: never }
+    | { href: string; onClick?: never; submit?: never; loading?: never; toggle?: never }
     | {
         /** The click's event is passed on, so an owner can keep the button that was pressed, such as to return focus to it. */
         onClick: (event: MouseEvent<HTMLButtonElement>) => void;
         href?: never;
         submit?: never;
+        toggle?: never;
         /**
          * Shows a spinner in place of the chevron and marks the row busy, for a row whose press is being
          * worked on. The row stays enabled, so focus is kept, but a press does nothing until it clears.
          */
         loading?: boolean;
       }
-    | { submit: true; href?: never; onClick?: never; loading?: never }
-    | { href?: never; onClick?: never; submit?: never; loading?: never }
+    | { submit: true; href?: never; onClick?: never; loading?: never; toggle?: never }
+    | {
+        /** The switch is the row's one control, so the row goes nowhere and has no chevron. */
+        toggle: ListRowToggle;
+        href?: never;
+        onClick?: never;
+        submit?: never;
+        loading?: never;
+      }
+    | { href?: never; onClick?: never; submit?: never; loading?: never; toggle?: never }
   );

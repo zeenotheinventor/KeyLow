@@ -223,6 +223,97 @@ describe("ListRow", () => {
     });
   });
 
+  describe("a danger title", () => {
+    it("should draw the title in the danger colour and keep its weight, for a destructive action", () => {
+      renderInList(
+        <ListRow
+          title="Delete all conversations"
+          titleTone="danger"
+          onClick={vi.fn()}
+          chevron={false}
+        />,
+      );
+
+      const title = screen.getByText("Delete all conversations");
+
+      expect(title.className).toContain("text-danger");
+      expect(title.className).toContain("text-body-strong");
+    });
+
+    it("should draw the title in the primary colour when no tone is given", () => {
+      renderInList(<ListRow title="Weight" />);
+
+      expect(screen.getByText("Weight").className).not.toContain("text-danger");
+    });
+  });
+
+  describe("with a toggle", () => {
+    it("should be a switch named by the toggle label that reports the state a press asks for", () => {
+      const onValueChange = vi.fn();
+      renderInList(
+        <ListRow
+          title="Use the assistant"
+          toggle={{ isOn: false, label: "Use the assistant", onValueChange }}
+        />,
+      );
+
+      const toggle = screen.getByRole("switch", { name: "Use the assistant" });
+      fireEvent.click(toggle);
+
+      expect(toggle.getAttribute("aria-checked")).toBe("false");
+      expect(onValueChange).toHaveBeenCalledExactlyOnceWith(true);
+    });
+
+    it("should say it is on, and ask to turn off when pressed", () => {
+      const onValueChange = vi.fn();
+      renderInList(<ListRow title="Use" toggle={{ isOn: true, label: "Use", onValueChange }} />);
+
+      const toggle = screen.getByRole("switch", { name: "Use" });
+      fireEvent.click(toggle);
+
+      expect(toggle.getAttribute("aria-checked")).toBe("true");
+      expect(onValueChange).toHaveBeenCalledExactlyOnceWith(false);
+    });
+
+    it("should have the switch as its one control, with no button or link around it", () => {
+      renderInList(
+        <ListRow title="Use" toggle={{ isOn: false, label: "Use", onValueChange: vi.fn() }} />,
+      );
+
+      expect(screen.getAllByRole("switch")).toHaveLength(1);
+      expect(screen.queryByRole("button")).toBeNull();
+      expect(screen.queryByRole("link")).toBeNull();
+    });
+
+    it("should hide the visible title from assistive technology so the name is not read twice", () => {
+      renderInList(
+        <ListRow title="Use" toggle={{ isOn: false, label: "Use", onValueChange: vi.fn() }} />,
+      );
+
+      expect(screen.getByText("Use").closest("[aria-hidden]")?.getAttribute("aria-hidden")).toBe(
+        "true",
+      );
+    });
+
+    it("should ignore a press and say it is disabled, keeping focus, when disabled", () => {
+      const onValueChange = vi.fn();
+      renderInList(
+        <ListRow
+          title="Use"
+          toggle={{ isOn: false, label: "Use", onValueChange, disabled: true }}
+        />,
+      );
+
+      const toggle = screen.getByRole("switch", { name: "Use" });
+      toggle.focus();
+      fireEvent.click(toggle);
+
+      expect(onValueChange).not.toHaveBeenCalled();
+      expect(toggle.getAttribute("aria-disabled")).toBe("true");
+      expect(document.activeElement).toBe(toggle);
+    });
+  });
+
   describe("a long title", () => {
     it("should break anywhere, so a long file name wraps inside the row", () => {
       renderInList(<ListRow title="ki-lo-export-2026-10-25.json" />);
