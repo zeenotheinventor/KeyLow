@@ -22,6 +22,7 @@ export const storyStates = [
   "SearchNeedsReview",
   "SearchAddDisabled",
   "SearchDisabled",
+  "SearchBusy",
   "SearchAddPressed",
   "SearchAddFocused",
   "Table",

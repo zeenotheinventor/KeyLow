@@ -260,7 +260,7 @@ describe("the add food dialog", () => {
       expect(onClose).toHaveBeenCalledTimes(2);
     });
 
-    it("should search only the foods in the database, never Open Food Facts", () => {
+    it("should search for what was typed", () => {
       renderDialog();
 
       search("chicken");

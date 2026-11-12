@@ -13,7 +13,7 @@ import {
   SEARCH_STATUS,
   describeRateLimit,
 } from "@keylow/core/copy";
-import { describeFoodRow } from "@keylow/core/search";
+import { describeLiveFoodRow } from "@keylow/core/search";
 import { useRouter } from "next/navigation";
 import { useRef } from "react";
 
@@ -24,10 +24,17 @@ import { FoodRow } from "@/components/ui/FoodRow";
 import { GroupedList } from "@/components/ui/GroupedList";
 
 /**
- * The live Open Food Facts results. Choosing one saves it as a food, once, and opens the food.
- * While it is saved its row is busy and the others wait. A failure is said above the rows.
+ * The live Open Food Facts results. Choosing one saves it as a food, once, and opens the food: its page,
+ * or where `onOpenFood` says. While it is saved its row is busy and the others wait. A failure is said above
+ * the rows. With `showsServings` a row shows the serving its product opens on, with no plus because the
+ * product is not stored yet, and a row with no serving to show stays per 100 g.
  */
-export function OffCandidateList({ candidates, query }: OffCandidateListProps) {
+export function OffCandidateList({
+  candidates,
+  query,
+  showsServings = false,
+  onOpenFood,
+}: OffCandidateListProps) {
   const router = useRouter();
   const materialise = useMaterialiseOffProduct();
   const { title, caption } = SEARCH_GROUP_HEADINGS.live;
@@ -49,7 +56,11 @@ export function OffCandidateList({ candidates, query }: OffCandidateListProps) {
       { code },
       {
         onSuccess: (food) => {
-          router.push(`/foods/${food.id}`);
+          if (onOpenFood === undefined) {
+            router.push(`/foods/${food.id}`);
+          } else {
+            onOpenFood(food);
+          }
         },
         onError: () => {
           isSaving.current = false;
@@ -80,17 +91,25 @@ export function OffCandidateList({ candidates, query }: OffCandidateListProps) {
         )
       }
     >
-      {candidates.map((candidate) => (
-        <FoodRow
-          key={candidate.code}
-          {...describeFoodRow(candidate, query)}
-          {...(candidate.code === addingCode ? { busyLabel: SEARCH_STATUS.addingProduct } : {})}
-          disabled={addingCode !== undefined && candidate.code !== addingCode}
-          onClick={() => {
+      {candidates.map((candidate) => {
+        const { caption, ...description } = describeLiveFoodRow(candidate, query, {
+          showsServings,
+        });
+        const rowProps = {
+          ...description,
+          ...(candidate.code === addingCode ? { busyLabel: SEARCH_STATUS.addingProduct } : {}),
+          disabled: addingCode !== undefined && candidate.code !== addingCode,
+          onClick: () => {
             choose(candidate.code);
-          }}
-        />
-      ))}
+          },
+        };
+
+        return caption === undefined ? (
+          <FoodRow key={candidate.code} {...rowProps} />
+        ) : (
+          <FoodRow key={candidate.code} {...rowProps} layout="search" caption={caption} />
+        );
+      })}
     </GroupedList>
   );
 }

@@ -329,6 +329,11 @@ export const SearchAddDisabled: Story = {
   render: () => <FoodRow {...searchChicken} addDisabled />,
 };
 
+// A live Open Food Facts result being saved: the label in place of the stats, a spinner in place of the chevron.
+export const SearchBusy: Story = {
+  render: () => <FoodRow {...searchChicken} onAdd={undefined} busyLabel="Adding to your foods" />,
+};
+
 export const SearchDisabled: Story = {
   render: () => <FoodRow {...searchChicken} disabled />,
 };

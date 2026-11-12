@@ -1,6 +1,6 @@
 import { describeAddFood } from "@keylow/core/copy";
 import { iconStroke } from "@keylow/tokens";
-import { ChefHat, ChevronRight, Plus, Utensils } from "lucide-react";
+import { ChefHat, ChevronRight, LoaderCircle, Plus, Utensils } from "lucide-react";
 
 import { RecipeName } from "../RecipeName";
 import { RecipeTile } from "../RecipeTile";
@@ -41,6 +41,7 @@ export function FoodLogRow({
   recipeRowName,
   needsReview = false,
   disabled = false,
+  busyLabel,
   className,
   onClick,
   onAdd,
@@ -51,6 +52,9 @@ export function FoodLogRow({
   const name = nameSegments.map((segment) => segment.text).join("");
   const isSearch = layout === "search";
   const isRecipe = recipeRowName !== undefined;
+  const isBusy = busyLabel !== undefined;
+  // A busy row keeps full strength, as the plain list row does: the rows around it are the ones dimmed.
+  const isInert = disabled || isBusy;
   const showsAdd = isSearch && onAdd !== undefined && !needsReview;
   const isAddInert = addDisabled || disabled;
   const rowClasses =
@@ -112,9 +116,24 @@ export function FoodLogRow({
         {caption !== undefined && (
           <span className="truncate text-caption tabular-nums text-text-muted">{caption}</span>
         )}
-        <StatsLine energy={energy} macros={macros} needsReview={needsReview} />
+        {isBusy ? (
+          <span className="text-caption text-text-secondary">{busyLabel}</span>
+        ) : (
+          <StatsLine energy={energy} macros={macros} needsReview={needsReview} />
+        )}
       </span>
-      {!showsAdd && isPressable && (
+      {isBusy && (
+        <span
+          aria-hidden
+          className="mr-1 flex h-control-md w-control-md shrink-0 items-center justify-center"
+        >
+          <LoaderCircle
+            className="size-5 animate-spin text-accent motion-reduce:animate-pulse light-theme:text-text-primary"
+            strokeWidth={iconStroke}
+          />
+        </span>
+      )}
+      {!isBusy && !showsAdd && isPressable && (
         // Where the add button would be, the chevron sits in a box of the same 44 px so the rows line up.
         <span
           aria-hidden
@@ -135,11 +154,12 @@ export function FoodLogRow({
       className={cn(
         rowButtonClasses,
         rowClasses,
-        !disabled && interactiveClasses,
-        disabled && "pointer-events-none",
+        !isInert && interactiveClasses,
+        isInert && "pointer-events-none",
       )}
-      onClick={disabled ? undefined : onClick}
-      aria-disabled={disabled || undefined}
+      onClick={isInert ? undefined : onClick}
+      aria-disabled={isInert || undefined}
+      aria-busy={isBusy || undefined}
     >
       {content}
     </button>

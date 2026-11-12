@@ -159,7 +159,7 @@ describe("FoodSearch", () => {
 
       search("  chicken breast ");
 
-      expect(useFoodSearch).toHaveBeenLastCalledWith("chicken breast");
+      expect(useFoodSearch).toHaveBeenLastCalledWith("chicken breast", { limit: 50 });
     });
 
     it("should stop showing results once the field is cleared", () => {
@@ -365,6 +365,25 @@ describe("FoodSearch", () => {
       expect(screen.queryByRole("button", { name: /See \d+ more/ })).toBeNull();
     });
 
+    it("should reach all 50 matches by pressing See more on each group", () => {
+      const many = (source: "cofid" | "off", count: number) =>
+        Array.from({ length: count }, (_, index) =>
+          makeSearchHit({ id: `${source}-${index}`, name: `Chicken ${source} ${index}`, source }),
+        );
+      useFoodSearch.mockReturnValue(
+        resultWith({ local: [...many("cofid", 25), ...many("off", 25)] }),
+      );
+      render(<FoodSearch />);
+      search("chicken");
+      const rowCount = () => rowsOf("Common foods").length + rowsOf("Branded foods").length;
+      expect(rowCount()).toBe(10);
+
+      fireEvent.click(screen.getByRole("button", { name: "See 20 more in Common foods" }));
+      fireEvent.click(screen.getByRole("button", { name: "See 20 more in Branded foods" }));
+
+      expect(rowCount()).toBe(50);
+    });
+
     it("should fold the group again when the query changes", () => {
       const many = Array.from({ length: 7 }, (_, index) =>
         makeSearchHit({ id: `c-${index}`, name: `Common food ${index}`, source: "cofid" }),
@@ -422,6 +441,28 @@ describe("FoodSearch", () => {
       expect(materialise).toHaveBeenCalledWith({ code: "5000159484695" }, expect.anything());
       expect(push).toHaveBeenCalledTimes(1);
       expect(push).toHaveBeenCalledWith("/foods/saved-food");
+    });
+
+    it("should keep a candidate that has a serving per 100 g, as the phone's browse search does", () => {
+      useFoodSearch.mockReturnValue(
+        resultWith({
+          off: [
+            makeOffCandidate({
+              name: "Chicken Burger",
+              kcal: 200,
+              default_portion: { label: "1 burger", grams: 120, ml: null },
+            }),
+          ],
+        }),
+      );
+      render(<FoodSearch />);
+
+      search("chicken");
+
+      const row = screen.getByRole("button", { name: /^Chicken\s*Burger/ });
+      expect(within(row).queryByText("1 burger (120 g)")).toBeNull();
+      expect(within(row).getByText("200")).toBeTruthy();
+      expect(screen.getByText("Values per 100 g unless marked")).toBeTruthy();
     });
 
     it("should mark the chosen candidate as being added and hold the others still", () => {
