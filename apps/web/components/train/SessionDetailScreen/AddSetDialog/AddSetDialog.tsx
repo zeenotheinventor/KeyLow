@@ -2,11 +2,12 @@
 
 import {
   SET_ENTRY,
+  SET_TYPE_OPTIONS,
   describePrefillLine,
   describeSetEntryName,
   describeSetEntrySubtitle,
 } from "@keylow/core/copy";
-import { displayLoad, loggedLoad } from "@keylow/core/training";
+import { SET_TYPES, displayLoad, loggedLoad } from "@keylow/core/training";
 import { useId, useRef, useState } from "react";
 
 import { SetNumbersFields, useTypedSet } from "../SetNumbersFields";
@@ -16,11 +17,18 @@ import type { AddSetDialogProps } from "./types";
 import { Banner } from "@/components/ui/Banner";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { useIsOnline } from "@/lib/useIsOnline";
+
+const setTypeOptions = SET_TYPES.map((type) => ({
+  value: type,
+  label: SET_TYPE_OPTIONS[type].name,
+}));
 
 /**
  * The dialog that adds a set to a past session, in the shape of the one that changes a set (no board draws
- * it, the phone's set entry sheet is its twin): the exercise and the set's number, the load and reps as large
+ * it, the phone's set entry sheet is its twin): the exercise and the set's number, the Set type control (the
+ * screen holds the type, so a change leaves what was typed alone), the load and reps as large
  * numbers, the RIR as chips, the line that says where the numbers came from, and Log set. The fields start
  * with the numbers of the last set (`entry.prefill`) in the person's unit and follow the rules of logging. A
  * load left as it was filled is stored as the exact kilograms it came from, so the pounds it was shown in do
@@ -29,8 +37,16 @@ import { useIsOnline } from "@/lib/useIsOnline";
  * does one thing however many arrive before the first is answered. Render it only while it is open, so each
  * opening starts from its own set.
  */
-export function AddSetDialog({ entry, unit, returnFocusTo, onLogSet, onClose }: AddSetDialogProps) {
-  const { exerciseName, setType, setNumber, prefill } = entry;
+export function AddSetDialog({
+  entry,
+  unit,
+  setType,
+  onSetTypeChange,
+  returnFocusTo,
+  onLogSet,
+  onClose,
+}: AddSetDialogProps) {
+  const { exerciseName, setNumber, prefill } = entry;
   const { draft, checked, edited, fields } = useTypedSet(
     {
       load: prefill.load_kg === null ? "" : displayLoad(prefill.load_kg, unit),
@@ -95,6 +111,12 @@ export function AddSetDialog({ entry, unit, returnFocusTo, onLogSet, onClose }: 
         <p className="text-caption text-text-secondary">
           {describeSetEntrySubtitle({ setType, setNumber, plannedSets: null, target: null })}
         </p>
+        <SegmentedControl
+          label={SET_ENTRY.setTypeGroupName}
+          options={setTypeOptions}
+          value={setType}
+          onChange={onSetTypeChange}
+        />
         <SetNumbersFields
           {...fields}
           rirHelp={SET_ENTRY.rirHelp}

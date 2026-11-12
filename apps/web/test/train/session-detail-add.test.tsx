@@ -182,6 +182,110 @@ describe("the session detail, adding to a past session", () => {
       expect(document.activeElement).toBe(await addSetOf("Wide-grip lat pulldown"));
     });
 
+    describe("the Set type control", () => {
+      const typeControl = (dialog: HTMLElement) =>
+        within(dialog).getByRole("radiogroup", { name: SET_ENTRY.setTypeGroupName });
+      const chooseType = (dialog: HTMLElement, name: string) =>
+        userEvent.click(within(typeControl(dialog)).getByRole("radio", { name }));
+      const setsCard = () => within(screen.getByRole("group", { name: "Sets" }));
+
+      it("should start on the entry's type, Working, with the four types to choose from", async () => {
+        renderDetail();
+
+        const dialog = await openAddPulldownSet();
+
+        for (const name of ["Warm-up", "Working", "Drop", "Failure"]) {
+          expect(within(typeControl(dialog)).getByRole("radio", { name })).toBeTruthy();
+        }
+        expect(within(typeControl(dialog)).getByRole("radio", { name: "Working" })).toHaveProperty(
+          "checked",
+          true,
+        );
+      });
+
+      it("should name the entry after the chosen type", async () => {
+        renderDetail();
+        const dialog = await openAddPulldownSet();
+
+        await chooseType(dialog, "Warm-up");
+
+        expect(
+          within(dialog).getByRole("form", { name: "Wide-grip lat pulldown, warm-up set" }),
+        ).toBeTruthy();
+      });
+
+      it("should store a warm-up and leave the session's working count where it was", async () => {
+        renderDetail();
+        const dialog = await openAddPulldownSet();
+        await chooseType(dialog, "Warm-up");
+
+        await userEvent.click(logSet(dialog));
+
+        await waitFor(() => {
+          expect(inserts()).toHaveLength(1);
+        });
+        expect(inserts()[0]?.body).toMatchObject({ set_type: "warmup", load_kg: 60, reps: 9 });
+        await waitFor(() => {
+          expect(screen.queryByRole("dialog")).toBeNull();
+        });
+        expect(setsCard().getByText("17")).toBeTruthy();
+        expect(setsCard().getByText("and 2 warm-ups")).toBeTruthy();
+      });
+
+      it("should store a drop set, which counts as a working set", async () => {
+        renderDetail();
+        const dialog = await openAddPulldownSet();
+        await chooseType(dialog, "Drop");
+
+        await userEvent.click(logSet(dialog));
+
+        await waitFor(() => {
+          expect(inserts()).toHaveLength(1);
+        });
+        expect(inserts()[0]?.body).toMatchObject({ set_type: "drop" });
+        expect(await setsCard().findByText("18")).toBeTruthy();
+      });
+
+      it("should show the chosen type as the checked one, and move it on a second change", async () => {
+        renderDetail();
+        const dialog = await openAddPulldownSet();
+        const radio = (name: string) => within(typeControl(dialog)).getByRole("radio", { name });
+
+        await chooseType(dialog, "Warm-up");
+        expect(radio("Warm-up")).toHaveProperty("checked", true);
+        expect(radio("Working")).toHaveProperty("checked", false);
+
+        await chooseType(dialog, "Drop");
+        expect(radio("Drop")).toHaveProperty("checked", true);
+        expect(radio("Warm-up")).toHaveProperty("checked", false);
+      });
+
+      it("should store a failure set", async () => {
+        renderDetail();
+        const dialog = await openAddPulldownSet();
+        await chooseType(dialog, "Failure");
+
+        await userEvent.click(logSet(dialog));
+
+        await waitFor(() => {
+          expect(inserts()).toHaveLength(1);
+        });
+        expect(inserts()[0]?.body).toMatchObject({ set_type: "failure" });
+      });
+
+      it("should keep the numbers typed when the type changes", async () => {
+        renderDetail();
+        const dialog = await openAddPulldownSet();
+        const reps = within(dialog).getByRole("textbox", { name: "Reps" });
+        await userEvent.clear(reps);
+        await userEvent.type(reps, "12");
+
+        await chooseType(dialog, "Failure");
+
+        expect(within(dialog).getByRole("textbox", { name: "Reps" })).toHaveProperty("value", "12");
+      });
+    });
+
     it("should stamp the set at the end of the session when the session ended with its last set", async () => {
       detailBackend.sessions = [goldenPullSession({ ended_at: "2026-10-13T18:19:00+01:00" })];
       renderDetail();
@@ -340,6 +444,28 @@ describe("the session detail, adding to a past session", () => {
       );
       return screen.findByRole("dialog", { name: "Side lateral raise" });
     }
+
+    it("should take the chosen type on the first set", async () => {
+      detailBackend.lastTime = [lastTimeSet];
+      renderDetail();
+      await card("Pullups");
+      const dialog = await pickSideLateralRaise();
+
+      await userEvent.click(
+        within(
+          within(dialog).getByRole("radiogroup", { name: SET_ENTRY.setTypeGroupName }),
+        ).getByRole("radio", { name: "Warm-up" }),
+      );
+      await userEvent.click(logSet(dialog));
+
+      await waitFor(() => {
+        expect(inserts()).toHaveLength(1);
+      });
+      expect(inserts()[0]?.body).toMatchObject({
+        exercise_id: SIDE_LATERAL_RAISE_ID,
+        set_type: "warmup",
+      });
+    });
 
     it("should open the entry for the first set filled from the last time it was done", async () => {
       detailBackend.lastTime = [lastTimeSet];
