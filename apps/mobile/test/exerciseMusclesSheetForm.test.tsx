@@ -163,13 +163,13 @@ describe("the Muscles it works sheet with the form card", () => {
 
   it("should draw the sheet as it was, with no card, for an exercise with no form media", async () => {
     await render(sheetOf({ exercise: squat, onClose }));
+    // The read landing and the loading mark leaving arrive independently, so both wait inside one check.
     await waitFor(() => {
       expect(formMediaBackend.reads).toBe(1);
+      expect(screen.queryByRole("status")).not.toBeOnTheScreen();
+      expect(screen.queryByRole("link")).not.toBeOnTheScreen();
     });
-    await act(() => Promise.resolve());
 
-    expect(screen.queryByRole("link")).not.toBeOnTheScreen();
-    expect(screen.queryByRole("status")).not.toBeOnTheScreen();
     expect(screen.getByText(EXERCISE_MUSCLES.caption)).toBeOnTheScreen();
     expect(screen.getAllByRole("listitem")).toHaveLength(2);
   });
