@@ -229,6 +229,7 @@ export function ReplyTable({ table, pendingMark }: ReplyTableProps) {
     ];
   }
 
+  // The right border stays 1 point wide in both states. A width change would resize the scroll view and re-run the end check, which made the table flicker at its far right.
   const outerClassName = hasMoreToTheRight
     ? "-mr-4 overflow-hidden rounded-l-medium border border-border border-r-transparent"
     : "-mr-4 overflow-hidden rounded-medium border border-border";

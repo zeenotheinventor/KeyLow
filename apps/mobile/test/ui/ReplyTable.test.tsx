@@ -224,6 +224,7 @@ describe("ReplyTable", () => {
         borderWidth: 1,
         borderColor: resolvedColor("dark", "border"),
       });
+      expect(screen.getByTestId("reply-table")).not.toHaveStyle({ borderRightColor: "#00000000" });
       expect(screen.getByTestId("reply-table")).not.toHaveStyle({ borderRightWidth: 0 });
     });
 
