@@ -309,6 +309,8 @@ export function SessionDetailScreen({ id, origin }: SessionDetailScreenProps) {
           key={add.openingId}
           entry={add.entry}
           unit={add.unit}
+          setType={add.setType}
+          onSetTypeChange={add.changeSetType}
           returnFocusTo={addButton}
           onLogSet={add.logSet}
           onClose={add.close}
