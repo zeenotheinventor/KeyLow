@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { signOut } from "../actions";
 import { PageFrame } from "../PageFrame";
 import { AppearanceSetting } from "./AppearanceSetting";
+import { AssistantRow } from "./AssistantRow";
 import { BodyMapRendererSetting } from "./BodyMapRendererSetting";
 import { DashboardBodyChartSetting } from "./DashboardBodyChartSetting";
 import { GoalRow } from "./GoalRow";
@@ -45,6 +46,7 @@ export default async function MorePage() {
           <GoalRow />
         </GroupedList>
         <GroupedList title={MORE_SCREEN.settings.title} headerSize="compact">
+          <AssistantRow />
           <AppearanceSetting initialPreference={themePreference} />
           <BodyMapRendererSetting />
           <DashboardBodyChartSetting />

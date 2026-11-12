@@ -32,11 +32,25 @@ const macroKeyClasses = {
   fat: "bg-fat",
 } as const satisfies Record<ListRowMacro, string>;
 
+// The switch is drawn as the Assistant board draws it: a 51 by 31 track with a 27 px knob. The colours follow the
+// button's own aria-checked, so it cannot draw one state while announcing the other. The button is 44 high, the
+// touch target, and the track sits in its middle. The knob is the light text colour on dark and white on light, as the
+// board draws it. Every class is written out whole so Tailwind can see it.
+const switchButtonClasses =
+  "group flex h-11 shrink-0 items-center rounded-pill outline-none focus-visible:ring-2 focus-visible:ring-focus-ring aria-disabled:cursor-not-allowed aria-disabled:opacity-50";
+
+const switchTrackClasses =
+  "relative h-[31px] w-[51px] rounded-pill bg-border-strong transition-colors duration-quick motion-reduce:transition-none group-aria-checked:bg-accent";
+
+const switchKnobClasses =
+  "absolute left-[2px] top-[2px] size-[27px] rounded-pill bg-text-primary shadow-card transition-transform duration-standard ease-spring motion-reduce:transition-none group-aria-checked:translate-x-5 group-aria-checked:bg-accent-foreground [[data-theme=light]_&]:bg-surface-raised [[data-theme=light]_&]:group-aria-checked:bg-accent-foreground";
+
 /** A row of a settings or menu list: a title, an optional subtitle and a chevron when it navigates. Put it inside a `GroupedList`. */
 export function ListRow({
   icon: Icon,
   title,
   macro,
+  titleTone,
   subtitle,
   badge,
   value,
@@ -50,6 +64,7 @@ export function ListRow({
   chevron = true,
   disabled = false,
   loading = false,
+  toggle,
   className,
 }: ListRowProps) {
   const interactive = href !== undefined || onClick !== undefined || submit === true;
@@ -64,6 +79,7 @@ export function ListRow({
       <span
         className={cn(
           macro === undefined ? "text-body-strong" : "text-body",
+          titleTone === "danger" && "text-danger",
           "[overflow-wrap:anywhere]",
         )}
       >
@@ -127,6 +143,38 @@ export function ListRow({
       )}
     </>
   );
+
+  if (toggle !== undefined) {
+    // The switch is the row's one control, so the row is plain and the switch keeps its own name. The visible
+    // words are hidden from a screen reader, which would otherwise read them and then the switch's name.
+    return (
+      <li>
+        <div className={classes}>
+          <div aria-hidden className="flex min-w-0 flex-1 items-center gap-3">
+            {content}
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={toggle.isOn}
+            aria-label={toggle.label}
+            // The switch stays enabled so focus is kept while it is busy, and ignores a press until it clears.
+            aria-disabled={toggle.disabled === true || undefined}
+            className={switchButtonClasses}
+            onClick={() => {
+              if (toggle.disabled !== true) {
+                toggle.onValueChange(!toggle.isOn);
+              }
+            }}
+          >
+            <span aria-hidden className={switchTrackClasses}>
+              <span className={switchKnobClasses} />
+            </span>
+          </button>
+        </div>
+      </li>
+    );
+  }
 
   if (href !== undefined) {
     return (

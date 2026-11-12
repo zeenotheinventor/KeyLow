@@ -59,6 +59,13 @@ export const allowlist: AllowlistEntry[] = [
   },
   {
     rule: "light-mode-coloured-text",
+    path: "apps/web/components/ui/ListRow/ListRow.tsx",
+    detail: "text-danger",
+    reason:
+      "The title of a destructive action row (titleTone danger), such as Delete all conversations on the Assistant settings page. The board web-assistant-settings · consent draws it in the danger colour in the light frames as well as the dark ones, and it twins the phone's AssistantSettingsScreen row, which draws the same title in danger. Orchestrator ruling 2026-11-12: the board wins, as for the ghost destructive Button. If the design is ever changed so the title is not coloured in light, change the tone and delete this entry.",
+  },
+  {
+    rule: "light-mode-coloured-text",
     path: "apps/web/components/ui/Banner/Banner.tsx",
     detail: "text-warning",
     reason:

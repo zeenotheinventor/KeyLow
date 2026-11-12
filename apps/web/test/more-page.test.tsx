@@ -5,18 +5,23 @@ import { pagePaddingOf } from "./pagePadding";
 
 import MorePage from "@/app/(dashboard)/more/page";
 
-const { getUser, signOut, themeCookie, useTargets, useProgramSummary } = vi.hoisted(() => ({
-  getUser: vi.fn(),
-  signOut: vi.fn(),
-  themeCookie: vi.fn<() => string | undefined>(),
-  useTargets: vi.fn<() => { data: { kcal: number | null } | undefined }>(),
-  useProgramSummary: vi.fn<
-    () => {
-      data: { program: { nextCheckinDate: string | null } | null } | undefined;
-      isError?: boolean;
-    }
-  >(),
-}));
+const { getUser, signOut, themeCookie, useTargets, useProgramSummary, useAssistantConsent } =
+  vi.hoisted(() => ({
+    getUser: vi.fn(),
+    signOut: vi.fn(),
+    themeCookie: vi.fn<() => string | undefined>(),
+    useTargets: vi.fn<() => { data: { kcal: number | null } | undefined }>(),
+    useProgramSummary: vi.fn<
+      () => {
+        data: { program: { nextCheckinDate: string | null } | null } | undefined;
+        isError?: boolean;
+      }
+    >(),
+    useAssistantConsent:
+      vi.fn<
+        () => { data: { isOn: boolean } | undefined; isPending?: boolean; fetchStatus?: string }
+      >(),
+  }));
 
 // The Goal row reads the goal and the time zone. Its own tests are in goals/goal-row.test.tsx, so here both
 // reads are paused, as they are offline, which leaves the row with no sub line.
@@ -24,6 +29,7 @@ vi.mock("@keylow/api-client", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@keylow/api-client")>()),
   useTargets,
   useProgramSummary,
+  useAssistantConsent,
   useTrainingGoals: () => ({ data: undefined, isPending: true, fetchStatus: "paused" }),
   useProfileTimeZone: () => ({ data: undefined, isPending: true, fetchStatus: "paused" }),
 }));
@@ -56,6 +62,7 @@ describe("More page", () => {
     getUser.mockResolvedValue({ data: { user: { email: "ada@example.com" } }, error: null });
     useTargets.mockReturnValue({ data: { kcal: 2200 } });
     useProgramSummary.mockReturnValue({ data: undefined });
+    useAssistantConsent.mockReturnValue({ data: { isOn: false } });
   });
 
   afterEach(() => {
@@ -231,11 +238,51 @@ describe("More page", () => {
         .getAllByRole("listitem")
         .map((row) => row.textContent),
     ).toEqual([
+      expect.stringContaining("Assistant"),
       expect.stringContaining("Appearance"),
       expect.stringContaining("Body map"),
       expect.stringContaining("Dashboard body map"),
       "About",
     ]);
+  });
+
+  describe("the Assistant row", () => {
+    const settingsRows = () =>
+      within(screen.getByRole("region", { name: "Settings" })).getAllByRole("listitem");
+
+    it("should be the first row of Settings, a link to the Assistant page, saying Off until turned on", async () => {
+      await renderPage();
+
+      const row = settingsRows()[0];
+      const link = within(row ?? document.body).getByRole("link", { name: /^Assistant/ });
+      expect(link.getAttribute("href")).toBe("/more/assistant");
+      expect(link.textContent).toBe("AssistantOff until you turn it onOff");
+    });
+
+    it("should say On, and what it is for, when the assistant is on", async () => {
+      useAssistantConsent.mockReturnValue({ data: { isOn: true } });
+      await renderPage();
+
+      expect(
+        within(screen.getByRole("region", { name: "Settings" })).getByRole("link", {
+          name: /^Assistant/,
+        }).textContent,
+      ).toBe("AssistantLog and ask in your own wordsOn");
+    });
+
+    it("should be the title alone, and still open, while the setting is not read, as it is offline", async () => {
+      useAssistantConsent.mockReturnValue({
+        data: undefined,
+        isPending: true,
+        fetchStatus: "paused",
+      });
+      await renderPage();
+
+      const link = within(screen.getByRole("region", { name: "Settings" })).getByRole("link", {
+        name: "Assistant",
+      });
+      expect(link.getAttribute("href")).toBe("/more/assistant");
+    });
   });
 
   it("should put the Body map control under Settings, after Appearance, on 2D", async () => {

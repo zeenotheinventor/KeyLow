@@ -1,4 +1,5 @@
 import { FileJson, FileText, Heart, Pencil, Shield } from "lucide-react";
+import { useState } from "react";
 import { userEvent } from "storybook/test";
 
 import { ListRow } from "./ListRow";
@@ -146,6 +147,59 @@ export const WithMacro: Story = {
       <ListRow macro="carbs" title="Carbohydrate" value="245" unit="g" valueLook="numeral" />
       <ListRow macro="fat" title="Fat" value="73" unit="g" valueLook="numeral" />
     </>
+  ),
+};
+
+// The Assistant settings page's switch row. The toggle is the row's one control, named by its label. The first
+// row is off, the second on, the third busy (a change is being saved) and so dimmed, keeping focus.
+export const WithToggle: Story = {
+  render: () => (
+    <>
+      <ListRow
+        title="Use the assistant"
+        toggle={{ isOn: false, label: "Use the assistant", onValueChange: () => undefined }}
+      />
+      <ListRow
+        title="Use the assistant"
+        toggle={{ isOn: true, label: "Use the assistant", onValueChange: () => undefined }}
+      />
+      <ListRow
+        title="Use the assistant"
+        toggle={{
+          isOn: true,
+          label: "Use the assistant",
+          onValueChange: () => undefined,
+          disabled: true,
+        }}
+      />
+    </>
+  ),
+};
+
+function InteractiveToggleRow() {
+  const [isOn, setIsOn] = useState(false);
+  return (
+    <ListRow
+      title="Use the assistant"
+      toggle={{ isOn, label: "Use the assistant", onValueChange: setIsOn }}
+    />
+  );
+}
+
+// A row that follows its own presses, to try the switch with a keyboard.
+export const ToggleInteractive: Story = {
+  render: () => <InteractiveToggleRow />,
+};
+
+// An action that deletes draws its title in the danger colour and has no chevron, as Delete all conversations does.
+export const DangerTitle: Story = {
+  render: () => (
+    <ListRow
+      title="Delete all conversations"
+      titleTone="danger"
+      onClick={() => undefined}
+      chevron={false}
+    />
   ),
 };
 
