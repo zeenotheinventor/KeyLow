@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  useAssistantChanges,
   useAssistantConsent,
   useDeleteAllAssistantConversations,
   useSetAssistantConsent,
@@ -29,6 +30,7 @@ import { useToast } from "@/components/ui/Toast";
 import { useIsOnline } from "@/lib/useIsOnline";
 
 const MORE_HREF = "/more";
+const CHANGES_HREF = "/more/assistant/changes";
 
 const saveFailedToast = {
   message: SAVE_FAILED_BANNER,
@@ -46,8 +48,8 @@ const deleteFailedToast = {
 /**
  * The Assistant settings page, opened from More (`web-assistant-settings · consent`): the switch that turns the
  * assistant on, with its caption, what it does in the consent card's own words with the Privacy policy link,
- * and Your conversations, on or off: Delete all conversations behind a confirmation. It is the twin of the
- * phone's screen, with one gap: What the assistant changed is not here until the page it opens is built.
+ * and Your conversations, on or off: What the assistant changed, with its count, which opens its page, and Delete
+ * all conversations behind a confirmation. It is the twin of the phone's screen.
  *
  * The page is drawn at once. The switch is dimmed, and the caption left out, until the setting has been read,
  * so a read that waits for a connection never leaves a skeleton. The switch is dimmed too while a change is
@@ -59,6 +61,7 @@ export function AssistantSettingsPage() {
   const toast = useToast();
   const isOnline = useIsOnline();
   const consent = useAssistantConsent();
+  const changes = useAssistantChanges();
   const setConsent = useSetAssistantConsent();
   const deleteAll = useDeleteAllAssistantConversations();
   const [isAskingToDelete, setIsAskingToDelete] = useState(false);
@@ -149,6 +152,11 @@ export function AssistantSettingsPage() {
           assistant off must still be able to. */}
       <div className="flex flex-col gap-2">
         <GroupedList title={ASSISTANT_SETTINGS.yourConversations} headerSize="compact">
+          <ListRow
+            title={ASSISTANT_SETTINGS.changesRowLabel}
+            value={changes.data?.count.toString()}
+            href={CHANGES_HREF}
+          />
           <ListRow
             title={ASSISTANT_SETTINGS.deleteAllLabel}
             titleTone="danger"

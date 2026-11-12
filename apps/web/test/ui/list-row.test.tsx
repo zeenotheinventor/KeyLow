@@ -1,4 +1,5 @@
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { Shield } from "lucide-react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -531,6 +532,115 @@ describe("ListRow", () => {
 
       expect(keyOf(screen.getByRole("listitem"))?.className).toContain("bg-calories");
       expect(tick.parentElement?.lastElementChild).toBe(tick);
+    });
+  });
+
+  describe("a row with an action or a label at the end", () => {
+    it("should draw an Undo button named by its label and the row's title, in its own tab stop", async () => {
+      const onPress = vi.fn();
+      renderInList(
+        <ListRow
+          title="Logged 2 eggs and toast at 08:10"
+          subtitle="08:11 · 2 entries"
+          trailing={{ kind: "action", label: "Undo", onPress }}
+        />,
+      );
+
+      const button = screen.getByRole("button", { name: "Undo, Logged 2 eggs and toast at 08:10" });
+      await userEvent.click(button);
+
+      expect(button.textContent).toBe("Undo");
+      expect(button.className).toContain("text-accent-ink");
+      expect(onPress).toHaveBeenCalledTimes(1);
+      expect(screen.getAllByRole("button")).toHaveLength(1);
+      expect(button.closest("button")?.parentElement?.closest("button")).toBeNull();
+      expect(screen.getByText("08:11 · 2 entries").className).toContain("tabular-nums");
+    });
+
+    it("should mark the action busy and ignore a press while it is busy, keeping focus", async () => {
+      const onPress = vi.fn();
+      renderInList(
+        <ListRow
+          title="Archived recipe"
+          trailing={{ kind: "action", label: "Undo", onPress, busy: true }}
+        />,
+      );
+
+      const button = screen.getByRole("button", { name: "Undo, Archived recipe" });
+      await userEvent.click(button);
+
+      expect(button.getAttribute("aria-busy")).toBe("true");
+      expect(button.hasAttribute("disabled")).toBe(false);
+      expect(onPress).not.toHaveBeenCalled();
+    });
+
+    it("should not mark the action busy when it is not", () => {
+      renderInList(
+        <ListRow
+          title="Archived recipe"
+          trailing={{ kind: "action", label: "Undo", onPress: vi.fn() }}
+        />,
+      );
+
+      expect(
+        screen.getByRole("button", { name: "Undo, Archived recipe" }).getAttribute("aria-busy"),
+      ).toBeNull();
+    });
+
+    it("should draw a label as muted text after the words, not as a control", () => {
+      renderInList(
+        <ListRow title="Copied 8 entries" trailing={{ kind: "label", label: "Undone" }} />,
+      );
+
+      const label = screen.getByText("Undone");
+
+      expect(screen.queryByRole("button")).toBeNull();
+      expect(label.className).toContain("text-text-muted");
+      expect(label.className).toContain("text-caption");
+      expect(screen.getByRole("listitem").textContent).toBe("Copied 8 entriesUndone");
+    });
+
+    it("should draw the secondary title tone for a row that is done", () => {
+      renderInList(
+        <ListRow
+          title="Copied 8 entries"
+          titleTone="secondary"
+          trailing={{ kind: "label", label: "Undone" }}
+        />,
+      );
+
+      expect(screen.getByText("Copied 8 entries").className).toContain("text-text-secondary");
+    });
+
+    it("should draw the primary title tone by default", () => {
+      renderInList(<ListRow title="Logged" trailing={{ kind: "label", label: "Can't undo" }} />);
+
+      expect(screen.getByText("Logged").className).not.toContain("text-text-secondary");
+    });
+
+    it("should refuse, at compile time, what the end-action row would drop", () => {
+      renderInList(
+        <>
+          {/* @ts-expect-error a value is not drawn on a row with an end label */}
+          <ListRow title="A" value="1" trailing={{ kind: "label", label: "Undone" }} />
+          {/* @ts-expect-error a chevron is not drawn on a row with an end action */}
+          <ListRow
+            title="B"
+            chevron
+            trailing={{ kind: "action", label: "Undo", onPress: vi.fn() }}
+          />
+          {/* @ts-expect-error a danger title is not drawn on a row with an end label */}
+          <ListRow title="C" titleTone="danger" trailing={{ kind: "label", label: "Undone" }} />
+        </>,
+      );
+
+      expect(screen.getAllByRole("listitem")).toHaveLength(3);
+    });
+
+    it("should be 60 high at least, as the changes board draws its rows", () => {
+      renderInList(<ListRow title="Logged" trailing={{ kind: "label", label: "Can't undo" }} />);
+
+      expect(screen.getByText("Logged").closest("div")?.className).toContain("min-h-[60px]");
     });
   });
 

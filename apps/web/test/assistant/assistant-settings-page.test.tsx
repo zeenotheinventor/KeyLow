@@ -20,8 +20,16 @@ import { renderWithRouter } from "../ui/appRouter";
 import { AssistantSettingsPage } from "@/components/assistant/AssistantSettingsPage";
 import { ToastProvider } from "@/components/ui/Toast";
 
-const { router } = vi.hoisted(() => ({ router: { push: vi.fn<(href: string) => void>() } }));
+const { router, changesRead } = vi.hoisted(() => ({
+  router: { push: vi.fn<(href: string) => void>() },
+  // What the changes list has read: the row on this page needs only its count.
+  changesRead: { data: undefined as { count: number } | undefined },
+}));
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
+vi.mock("@keylow/api-client", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  useAssistantChanges: () => changesRead,
+}));
 
 const USER_ID = "11111111-1111-4111-8111-111111111111";
 
@@ -163,6 +171,7 @@ describe("Assistant settings page", () => {
   beforeEach(async () => {
     resetDatabase();
     router.push.mockReset();
+    changesRead.data = undefined;
     onlineManager.setOnline(true);
     await signIn();
   });
@@ -197,11 +206,40 @@ describe("Assistant settings page", () => {
       ).toBe(LEGAL_PATHS.privacy);
     });
 
-    it("should not draw What the assistant changed until the page it opens exists", async () => {
+    it("should draw What the assistant changed first in Your conversations, a link to its page", async () => {
       await renderRead(true);
 
-      expect(screen.queryByText(ASSISTANT_SETTINGS.changesRowLabel)).toBeNull();
-      expect(screen.getByRole("button", { name: ASSISTANT_SETTINGS.deleteAllLabel })).toBeTruthy();
+      const group = within(
+        screen.getByRole("region", { name: ASSISTANT_SETTINGS.yourConversations }),
+      );
+      const rows = group.getAllByRole("listitem");
+
+      expect(rows[0]?.textContent).toContain(ASSISTANT_SETTINGS.changesRowLabel);
+      expect(
+        group
+          .getByRole("link", { name: new RegExp(ASSISTANT_SETTINGS.changesRowLabel) })
+          .getAttribute("href"),
+      ).toBe("/more/assistant/changes");
+      expect(rows[1]?.textContent).toBe(ASSISTANT_SETTINGS.deleteAllLabel);
+    });
+
+    it("should draw the row with the assistant off as well, so earlier changes can still be undone", async () => {
+      await renderRead(false);
+
+      expect(screen.getByRole("link", { name: /What the assistant changed/ })).toBeTruthy();
+    });
+
+    it("should show the number of changes as the row's value once it is read, and none before", async () => {
+      await renderRead(true);
+      const row = () => screen.getByRole("link", { name: /What the assistant changed/ });
+
+      expect(row().textContent).toBe(ASSISTANT_SETTINGS.changesRowLabel);
+
+      changesRead.data = { count: 5 };
+      cleanup();
+      await renderRead(true);
+
+      expect(row().textContent).toBe(`${ASSISTANT_SETTINGS.changesRowLabel}5`);
     });
   });
 

@@ -8,6 +8,7 @@ export const storyStates = [
   "WithMacro",
   "WithToggle",
   "ToggleInteractive",
+  "WithEndAction",
   "DangerTitle",
   "Plain",
   "Disabled",
