@@ -25,11 +25,12 @@ function resolveScheme(
 
 // The skeleton's shine is the design's kl-shimmer gradient (100 degrees, clear at both edges), which a
 // class cannot build from a colour variable, so the whole value is one variable for the `skeleton-shine`
-// class. The provider sets it beside the tokens' own variables, as the tailwind config does for the dark
+// class. The fade at a wide table's open edge is the same kind of value, from clear to the sheet colour. The provider sets it beside the tokens' own variables, as the tailwind config does for the dark
 // fallback.
 function proposedTokenVariables(scheme: ThemeScheme) {
   return {
     "--kl-skeleton-shine-gradient": `linear-gradient(100deg, transparent, ${themes[scheme]["skeleton-shine"]}, transparent)`,
+    "--kl-sheet-edge-fade-gradient": `linear-gradient(to right, ${themes[scheme]["surface-sheet"]}00, ${themes[scheme]["surface-sheet"]})`,
   };
 }
 

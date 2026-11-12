@@ -7,4 +7,8 @@ export const storyStates = [
   "WithEstimate",
   "Formatted",
   "FormattedStreaming",
+  "Table",
+  "TableScrolled",
+  "TableStreaming",
+  "TableFits",
 ];

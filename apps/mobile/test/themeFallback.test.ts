@@ -19,4 +19,12 @@ describe("the token variables outside a provider", () => {
       `--kl-skeleton-shine-gradient: linear-gradient(100deg, transparent, ${themes.dark["skeleton-shine"]}, transparent)`,
     );
   });
+
+  it("should fall back to the dark sheet edge fade, from clear to the sheet colour", async () => {
+    const css = await compileAppStyles("");
+
+    expect(css).toContain(
+      `--kl-sheet-edge-fade-gradient: linear-gradient(to right, ${themes.dark["surface-sheet"]}00, ${themes.dark["surface-sheet"]})`,
+    );
+  });
 });

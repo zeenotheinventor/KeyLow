@@ -1,13 +1,13 @@
 import { parseReplyText, replyWords } from "@keylow/core";
-import { Fragment } from "react";
 import { View } from "react-native";
 
 import { Badge } from "../Badge";
 import { Icon } from "../Icon";
+import { ReplySpans, ReplyTable } from "../ReplyTable";
 import { Text } from "../Text";
 
 import type { AssistantChatMessageProps, ChatMessageProps } from "./types";
-import type { ReplyBlock, ReplySpan } from "@keylow/core";
+import type { ReplyBlock } from "@keylow/core";
 
 // The board's caret: an 8 by 18 block in the accent, 2 points after the last word.
 function Caret() {
@@ -53,35 +53,19 @@ function YourParagraphs({ paragraphs }: { paragraphs: readonly string[] }) {
   ));
 }
 
-// Italic is the `italic` class on Geist Regular, because the app bundles no italic face, and code stays in
-// Geist, because it bundles no mono face. A span with no style is plain words. In a heading every span keeps
-// the strong look, so emphasis inside it does not lose its weight.
-function Spans({ spans, isHeading }: { spans: readonly ReplySpan[]; isHeading: boolean }) {
-  return spans.map((span, index) => (
-    <Fragment key={index}>
-      {span.isStrong || span.isEmphasis ? (
-        <Text
-          className={span.isEmphasis ? "italic" : ""}
-          variant={span.isStrong || isHeading ? "body-strong" : "body"}
-        >
-          {span.text}
-        </Text>
-      ) : (
-        span.text
-      )}
-    </Fragment>
-  ));
-}
-
 // An item is its marker in a column of at least 20 points and then its words, which wrap under themselves.
 function ReplyBlockView({ block, hasCaret }: { block: ReplyBlock; hasCaret: boolean }) {
-  // Placeholder until the ReplyTable draws a table (KEY-980 part B).
+  // A table is wider than the words around it: it cancels the reply's 16 points on its right itself. While
+  // the reply arrives and the table is its last line, the caret waits in an empty row under the last one, and
+  // once words follow, it goes back to the end of those words.
   if (block.kind === "table") {
-    return null;
+    return (
+      <ReplyTable pendingMark={hasCaret && block.isOpen ? <Caret /> : undefined} table={block} />
+    );
   }
   const words = (
     <>
-      <Spans isHeading={block.kind === "heading"} spans={block.spans} />
+      <ReplySpans isHeading={block.kind === "heading"} spans={block.spans} />
       {hasCaret ? <Caret /> : null}
     </>
   );
