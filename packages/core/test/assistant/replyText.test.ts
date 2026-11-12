@@ -694,6 +694,12 @@ describe("tables", () => {
       ]);
     });
 
+    it("should leave the table open while its divider has no outer pipes and is still arriving", () => {
+      expect(parsePartial("Food | kcal\n--- |")).toEqual([
+        table([words("Food"), words("kcal")], [], [false, true], true),
+      ]);
+    });
+
     it("should hold back only a line that starts with a pipe, not one with a pipe among its words", () => {
       expect(parsePartial("Eat rice | beans and then keep going")).toEqual([
         line(plain("Eat rice | beans and then keep going")),

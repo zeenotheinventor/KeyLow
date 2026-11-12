@@ -166,7 +166,16 @@ export function ReplyTable({ table, pendingMark }: ReplyTableProps) {
   const firstColumnWidth = Math.max(...firstWidths) + 2 * cellSidePadding + firstColumnLine;
   const isMeasured =
     tableWidth !== undefined && columnsWidth !== undefined && viewportWidth !== undefined;
-  const isWide = isMeasured && firstColumnWidth + columnsWidth > tableWidth - 2;
+  const isWiderThanTable = isMeasured && firstColumnWidth + columnsWidth > tableWidth - 2;
+  // Wrapped words in the capped first column can measure narrower than the same words given the spare width, so
+  // a table judged wide stays wide until its own width, its columns or its rows change, and never flips back
+  // and forth between the two layouts.
+  const shapeKey = `${tableWidth}:${columnIndexes.length}:${rowCount}`;
+  const [wideShapeKey, setWideShapeKey] = useState<string>();
+  const isWide = isWiderThanTable || wideShapeKey === shapeKey;
+  if (isWiderThanTable && wideShapeKey !== shapeKey) {
+    setWideShapeKey(shapeKey);
+  }
   const maxOffset = isMeasured ? columnsWidth - viewportWidth : undefined;
   const hasMoreToTheRight = isWide && !isAtEnd;
 

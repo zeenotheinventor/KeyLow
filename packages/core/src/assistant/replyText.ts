@@ -559,7 +559,8 @@ function readTable(
     }
     index += 1;
   }
-  let isOpen = false;
+  // A divider that is the unfinished last line leaves the table open, with no row yet.
+  let isOpen = isArriving && firstRowIndex === lines.length;
   if (isArriving && index === lastIndex) {
     const unfinished = (lines[lastIndex] ?? "").trim();
     isOpen = unfinished === "" || hasPipe(unfinished);

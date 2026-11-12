@@ -1,5 +1,5 @@
 import { parseReplyText } from "@keylow/core";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react-native";
+import { fireEvent, render, screen } from "@testing-library/react-native";
 import { ScrollView, View } from "react-native";
 
 import { ReplyTable } from "../../components/ui";
@@ -69,11 +69,6 @@ describe("ReplyTable", () => {
 
   beforeEach(() => {
     registerAppStyles(kitStyles);
-  });
-
-  // The measured tests fire events at the tables, so each starts with no table of an earlier test still mounted.
-  afterEach(async () => {
-    await cleanup();
   });
 
   it("should draw every heading and cell before anything is measured, with no pipe", async () => {
@@ -271,6 +266,33 @@ describe("ReplyTable", () => {
 
       expect(screen.getByText(longName)).not.toHaveStyle({ maxWidth: 127 });
       expect(screen.getByText(longName)).not.toHaveProp("numberOfLines", 2);
+    });
+
+    it("should settle in wide when wrapped words measure narrow, and not flip back and forth", async () => {
+      await renderTable();
+      const firstWords = screen.getByText(longName);
+      // Wide is the table whose first column's words keep to the cap.
+      const expectWide = (isWide: boolean) => {
+        if (isWide) {
+          expect(firstWords).toHaveStyle({ maxWidth: 127 });
+        } else {
+          expect(firstWords).not.toHaveStyle({ maxWidth: 127 });
+        }
+      };
+      await fireEvent(screen.getByTestId("reply-table"), "layout", layoutEvent(358));
+      await fireEvent(screen.getByTestId("reply-table-columns"), "layout", layoutEvent(240));
+      await fireEvent(screen.getByTestId("reply-table-scroll"), "layout", layoutEvent(240));
+
+      // Capped and wrapped, the words measure 90, so the table first looks as if it fits.
+      await fireEvent(firstWords, "layout", layoutEvent(90));
+      expectWide(false);
+      // Given the spare width they count as the full cap, so it is wide, and it stays wide.
+      await fireEvent(firstWords, "layout", layoutEvent(200));
+      expectWide(true);
+      for (const width of [90, 200, 90, 90, 200]) {
+        await fireEvent(firstWords, "layout", layoutEvent(width));
+        expectWide(true);
+      }
     });
 
     it("should stay fitting when its words widen to the spare width", async () => {
