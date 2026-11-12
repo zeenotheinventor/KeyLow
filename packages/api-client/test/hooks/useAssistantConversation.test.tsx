@@ -450,6 +450,69 @@ describe("useAssistantConversation, older turns", () => {
     expect(result.current.hasOlder).toBe(true);
   });
 
+  it("should keep reading as success while the thread is read again after an older page failed", async () => {
+    const { result } = await openLongConversation();
+    server.use(
+      http.get(
+        `${REST_URL}/assistant_turns`,
+        ({ request }) =>
+          new URL(request.url).searchParams.has(OLDER_READ)
+            ? postgrestError(500, "XX000", "failing")
+            : undefined,
+        { once: true },
+      ),
+    );
+    act(() => {
+      result.current.loadOlder();
+    });
+    await waitFor(() => {
+      expect(result.current.isLoadingOlder).toBe(false);
+    });
+    const release = holdTurnReads("newest");
+
+    act(() => {
+      void result.current.refetch();
+    });
+
+    await waitFor(() => {
+      expect(result.current.isFetching).toBe(true);
+    });
+    expect(result.current.isSuccess).toBe(true);
+    expect(result.current.isError).toBe(false);
+    release();
+    await waitFor(() => {
+      expect(result.current.isFetching).toBe(false);
+    });
+    expect(result.current.isSuccess).toBe(true);
+    expect(result.current.isError).toBe(false);
+  });
+
+  it("should report an error when the thread's own read fails after an older page failed", async () => {
+    const { result } = await openLongConversation();
+    server.use(
+      http.get(`${REST_URL}/assistant_turns`, () => postgrestError(500, "XX000", "failing"), {
+        once: true,
+      }),
+    );
+    act(() => {
+      result.current.loadOlder();
+    });
+    await waitFor(() => {
+      expect(result.current.isLoadingOlder).toBe(false);
+    });
+    server.use(
+      http.get(`${REST_URL}/assistant_turns`, () => postgrestError(500, "XX000", "failing")),
+    );
+
+    act(() => {
+      void result.current.refetch();
+    });
+
+    await waitFor(() => {
+      expect(result.current.isError).toBe(true);
+    });
+  });
+
   it("should load the older page again on the next ask after a failure", async () => {
     const { result } = await openLongConversation();
     server.use(

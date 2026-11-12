@@ -1,6 +1,6 @@
 import { joinAssistantThreadPages, threadFromMessages } from "@keylow/core";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { useSupabase } from "../KeyLowProvider";
 import { keys } from "../queryKeys";
@@ -28,6 +28,9 @@ export const emptyAssistantConversationPages: AssistantConversationPages = {
   pages: [{ conversationId: null, messages: [], actions: [], olderCursor: null }],
   pageParams: [null],
 };
+
+// The first page is asked for with no cursor, so the key and the stored pages hold none.
+const NEWEST_PAGE: AssistantThreadCursor | null = null;
 
 // The pages are joined first and the thread is built once over all of them, because a question is
 // answered once a later turn exists, and the last turn of an older page has its later turn on the next.
@@ -73,14 +76,21 @@ export function useAssistantConversation({
   const client = useSupabase();
   const queryClient = useQueryClient();
 
+  // The error of the last older page that failed. The query keeps it as its error until a read succeeds,
+  // so a read of the thread that starts after it must not make the thread look failed.
+  const [olderPageError, setOlderPageError] = useState<Error | null>(null);
   const query = useInfiniteQuery({
     queryKey: keys.assistant.conversation,
-    initialPageParam: null as AssistantThreadCursor | null,
+    initialPageParam: NEWEST_PAGE,
     queryFn: ({ pageParam }) => getAssistantConversationPage(client, pageParam),
     getNextPageParam: (page) => page.olderCursor ?? undefined,
     select: threadOfPages,
     enabled,
   });
+
+  if (query.isFetchNextPageError && query.error !== olderPageError) {
+    setOlderPageError(query.error);
+  }
 
   useEffect(() => {
     const cached = queryClient.getQueryState<AssistantConversationPages>(
@@ -109,7 +119,9 @@ export function useAssistantConversation({
   }, [hasNextPage, fetchNextPage, queryClient]);
 
   const { data } = query;
-  const isError = query.isError && !query.isFetchNextPageError;
+  const isOlderPageError =
+    query.isError && (query.isFetchNextPageError || query.error === olderPageError);
+  const isError = query.isError && !isOlderPageError;
   const common = {
     fetchStatus: query.fetchStatus,
     refetch: query.refetch,
@@ -118,7 +130,7 @@ export function useAssistantConversation({
     isLoadingOlder: query.isFetchingNextPage,
     loadOlder,
   };
-  return data !== undefined && !isError && (query.isSuccess || query.isFetchNextPageError)
+  return data !== undefined && !isError && (query.isSuccess || isOlderPageError)
     ? { ...common, data, isSuccess: true, isError: false }
     : { ...common, data, isSuccess: false, isError };
 }
