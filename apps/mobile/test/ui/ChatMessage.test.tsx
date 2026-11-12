@@ -584,4 +584,96 @@ describe("ChatMessage", () => {
       });
     });
   });
+
+  describe("an answer with a table", () => {
+    const christmasMarket = [
+      "Your Christmas market total: 2,024 kcal.",
+      "| Entry | Amount | kcal |\n| --- | --- | --- |\n| Potato wedges | 300 g | 435 |\n| Baileys | 25 ml | – |\n| **Total** | | **2,024** |",
+      "The Baileys has no macros.",
+    ];
+    const tableAndWords: ChatMessageProps = {
+      role: "assistant",
+      speakerLabel: "Assistant",
+      paragraphs: christmasMarket,
+    };
+    const arriving = "| Entry | kcal |\n| --- | --- |\n| Potato wedges | 435 |\n";
+    const tableIsLast: ChatMessageProps = {
+      ...answer,
+      paragraphs: ["Your total:", arriving],
+    };
+    const caretIn = (words: string) => {
+      const [caret] = viewsDrawn(caretStyle);
+      return screen.getByText(words).queryAll((node) => node === caret);
+    };
+
+    it("should draw every cell's words and no pipe", async () => {
+      await renderMessage(tableAndWords);
+
+      for (const words of [
+        "Entry",
+        "Potato wedges",
+        "300 g",
+        "435",
+        "Baileys",
+        "–",
+        "Total",
+        "2,024",
+      ]) {
+        expect(screen.getByText(words)).toBeOnTheScreen();
+      }
+      expect(screen.queryByText(/\|/)).not.toBeOnTheScreen();
+    });
+
+    it("should read the table in order inside the one group, and add no other stop", async () => {
+      await renderMessage(tableAndWords);
+
+      expect(
+        screen.getByRole("group", {
+          name: /^Assistant: Your Christmas market total: 2,024 kcal\. Table, 3 rows\. Potato wedges, Amount 300 g, kcal 435\..* The Baileys has no macros\.$/,
+        }),
+      ).toBeOnTheScreen();
+      expect(screen.getAllByRole("group")).toHaveLength(1);
+    });
+
+    it("should cancel the reply's 16 points on its right, so the table spans the thread", async () => {
+      await renderMessage(tableAndWords);
+
+      expect(screen.getByTestId("reply-table")).toHaveStyle({ marginRight: -16 });
+    });
+
+    it("should draw the caret once, in the empty row under the last, while the table arrives", async () => {
+      await renderMessage({ ...tableIsLast, isStreaming: true });
+
+      expect(viewsDrawn(caretStyle)).toHaveLength(1);
+      expect(screen.queryByText("Your total:")).toBeOnTheScreen();
+      expect(caretIn("Your total:")).toHaveLength(0);
+    });
+
+    it("should move the caret to the end of the words that follow the table", async () => {
+      await renderMessage({ ...tableAndWords, isStreaming: true });
+
+      expect(viewsDrawn(caretStyle)).toHaveLength(1);
+      expect(caretIn("The Baileys has no macros.")).toHaveLength(1);
+    });
+
+    it("should show every line of a stopped reply, a pipe among its words included", async () => {
+      await renderMessage({
+        ...answer,
+        paragraphs: ["Rice is good.\nkcal | protein per 100 g"],
+        stoppedLabel: "Stopped when you closed the assistant",
+      });
+
+      expect(screen.getByText("kcal | protein per 100 g")).toBeOnTheScreen();
+    });
+
+    it("should draw no empty row and no caret for a table that was stopped", async () => {
+      await renderMessage({
+        ...tableIsLast,
+        stoppedLabel: "Stopped when you closed the assistant",
+      });
+
+      expect(viewsDrawn(caretStyle)).toHaveLength(0);
+      expect(screen.getByText("Potato wedges")).toBeOnTheScreen();
+    });
+  });
 });

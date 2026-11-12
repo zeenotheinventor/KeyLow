@@ -1,20 +1,45 @@
+import { ASSISTANT_SHEET } from "../copy/assistantSheet";
+
 /*
- * The assistant's reply as the words the chat draws. The model writes markdown although the prompt asks for
- * plain replies, so what arrives is read here and the markers are taken out: `**bold**`, `*italic*`,
- * `code`, headings, bullets, numbered items and the words of a link. Anything the rules below do not open
- * stays as typed, so `2*3` and `5 * 6` are numbers. It is a hand-written scan with one pass over each line,
- * because the words can come from a fetched recipe page and must not be able to stall the phone.
+ * The assistant's reply as the words the chat draws. The model writes markdown, mostly plain replies but
+ * sometimes a table for a breakdown, so what arrives is read here and the markers are taken out: `**bold**`,
+ * `*italic*`, `code`, headings, bullets, numbered items, the words of a link and the pipes of a table. Anything
+ * the rules below do not open stays as typed, so `2*3` and `5 * 6` are numbers. It is a hand-written scan with
+ * one pass over the lines and one over each line's characters, because the words can come from a fetched
+ * recipe page and must not be able to stall the phone.
  */
 
 export type ReplySpan = { text: string; isStrong: boolean; isEmphasis: boolean; isCode: boolean };
 
+/**
+ * A markdown table. Each row holds exactly as many cells as there are headings, and `isNumeric` has one flag
+ * for each column. `isOpen` is for a reply still arriving whose last line is part of the table, so the chat
+ * can draw the empty row the next line goes in.
+ */
+export type ReplyTable = {
+  kind: "table";
+  headings: ReplySpan[][];
+  rows: ReplySpan[][][];
+  isNumeric: boolean[];
+  isOpen: boolean;
+};
+
 export type ReplyBlock =
   | { kind: "line" | "heading"; spans: ReplySpan[] }
-  | { kind: "item"; number: string | null; depth: 0 | 1; spans: ReplySpan[] };
+  | { kind: "item"; number: string | null; depth: 0 | 1; spans: ReplySpan[] }
+  | ReplyTable;
+
+type TextBlock = Exclude<ReplyBlock, ReplyTable>;
 
 type ParseOptions = {
   /** The words are still arriving or were cut short: the last line holds back what the next chunk decides. */
   isPartial: boolean;
+  /**
+   * The reply is still arriving, as opposed to cut short. Only then is a line that starts with a pipe held back
+   * until the next line shows whether it is a table, and a table's last line is no row until it has ended. A
+   * reply that was stopped shows every line it has, its unfinished last row included.
+   */
+  isArriving?: boolean;
 };
 
 type InlineStyle = { isStrong: boolean; isEmphasis: boolean };
@@ -384,7 +409,7 @@ function numberMarkerLength(rest: string): number {
   return isNumbered ? digits : 0;
 }
 
-function parseLine(rawLine: string, isHeldBack: boolean): ReplyBlock | null {
+function parseLine(rawLine: string, isHeldBack: boolean): TextBlock | null {
   const line = rawLine.trimEnd();
   let indent = 0;
   let start = 0;
@@ -441,28 +466,212 @@ function parseLine(rawLine: string, isHeldBack: boolean): ReplyBlock | null {
   return { kind: "line", spans: inlineSpans(rest, isHeldBack) };
 }
 
-/**
- * The blocks a reply draws, one for each line that holds words. A single line break stays a line break, and a
- * number stays as the model wrote it. `isPartial` is for a reply still arriving or cut short, and it changes
- * the last line only: an opener with no closer is drawn styled to the end of the line, and a marker that the
- * next chunk decides is held back, so no `*`, `` ` ``, `[` or line-start marker shows. A finished reply holds
- * nothing back, and an opener that never closed stays as typed.
+const dividerCharacters = "|-: ";
+// A table reads no more columns than this: the headings and cells past it are dropped, so the work and the
+// memory a table takes are its rows times this, whatever the model wrote.
+const MAX_TABLE_COLUMNS = 12;
+const noValueDash = "–";
+
+// A pipe that is not escaped. One pass.
+function hasPipe(line: string): boolean {
+  for (let position = 0; position < line.length; position += 1) {
+    if (line[position] === "\\") {
+      position += 1;
+    } else if (line[position] === "|") {
+      return true;
+    }
+  }
+  return false;
+}
+
+// Whether a line is all the characters of a divider so far, so the next chunk may turn it into one.
+function isDividerStart(line: string): boolean {
+  for (const character of line) {
+    if (!dividerCharacters.includes(character)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+// The text between the pipes of a row, outer pipes dropped, with `\|` as a pipe. One pass.
+function splitCells(row: string): string[] {
+  const cells: string[] = [];
+  let current = "";
+  let endsWithPipe = false;
+  for (let position = 0; position < row.length; position += 1) {
+    const character = row.charAt(position);
+    endsWithPipe = false;
+    if (character === "\\" && row[position + 1] === "|") {
+      current += "|";
+      position += 1;
+    } else if (character === "|") {
+      cells.push(current);
+      current = "";
+      endsWithPipe = true;
+    } else {
+      current += character;
+    }
+  }
+  if (!endsWithPipe) {
+    cells.push(current);
+  }
+  if (row.startsWith("|")) {
+    cells.shift();
+  }
+  return cells.length === 0 ? [""] : cells;
+}
+
+const spansText = (spans: readonly ReplySpan[]): string => spans.map((span) => span.text).join("");
+
+function isNumericColumn(rows: readonly ReplySpan[][][], column: number): boolean {
+  return rows.every((cells) => {
+    const words = spansText(cells[column] ?? []).trim();
+    return words === "" || words === noValueDash || /^\d/.test(words);
+  });
+}
+
+/*
+ * The table whose headings are `lines[headingIndex]`, and the index of the line after it. Rows run while a
+ * line holds a pipe. While the reply is arriving its last line has not ended, so it is no row yet, and when
+ * it is blank or holds a pipe it is the row that comes next (`isOpen`).
  */
-export function parseReplyText(text: string, { isPartial }: ParseOptions): ReplyBlock[] {
+function readTable(
+  lines: readonly string[],
+  headingIndex: number,
+  firstRowIndex: number,
+  isArriving: boolean,
+): { block: ReplyTable; nextIndex: number } {
+  const lastIndex = lines.length - 1;
+  const headingCells = splitCells((lines[headingIndex] ?? "").trim()).slice(0, MAX_TABLE_COLUMNS);
+  const rows: ReplySpan[][][] = [];
+  let index = firstRowIndex;
+  while (index < lines.length && !(isArriving && index === lastIndex)) {
+    const row = (lines[index] ?? "").trim();
+    if (!hasPipe(row)) {
+      break;
+    }
+    if (!isTableDivider(row)) {
+      const cells = splitCells(row);
+      rows.push(
+        headingCells.map((_heading, column) => inlineSpans((cells[column] ?? "").trim(), false)),
+      );
+    }
+    index += 1;
+  }
+  // A divider that is the unfinished last line leaves the table open, with no row yet.
+  let isOpen = isArriving && firstRowIndex === lines.length;
+  if (isArriving && index === lastIndex) {
+    const unfinished = (lines[lastIndex] ?? "").trim();
+    isOpen = unfinished === "" || hasPipe(unfinished);
+    index = isOpen ? lines.length : index;
+  }
+  const headings = headingCells.map((heading) => inlineSpans(heading.trim(), false));
+  const isNumeric = headings.map((_heading, column) => column > 0 && isNumericColumn(rows, column));
+  return { block: { kind: "table", headings, rows, isNumeric, isOpen }, nextIndex: index };
+}
+
+/**
+ * The blocks a reply draws, one for each line that holds words and one for each table. A single line break
+ * stays a line break, and a number stays as the model wrote it. `isPartial` is for a reply still arriving or
+ * cut short, and it changes the end only: an opener with no closer is drawn styled to the end of the line, a
+ * marker that the next chunk decides is held back, so no `*`, `` ` ``, `[` or line-start marker shows. While
+ * the reply is arriving (`isArriving`), a line that starts with a pipe also waits until the next line shows
+ * whether it is a table, so nothing jumps between a line and a table. A finished reply holds nothing back, and an opener that never closed stays as typed.
+ *
+ * A table is a heading line with a pipe, a divider, then rows, or two or more lines that start with a pipe
+ * and have no divider. One lone pipe line stays a line as typed.
+ */
+export function parseReplyText(
+  text: string,
+  { isPartial, isArriving = false }: ParseOptions,
+): ReplyBlock[] {
   const lines = text.split("\n");
+  const lastIndex = lines.length - 1;
   const blocks: ReplyBlock[] = [];
-  for (const [position, line] of lines.entries()) {
-    const block = parseLine(line, isPartial && position === lines.length - 1);
+  let index = 0;
+  while (index < lines.length) {
+    const heading = (lines[index] ?? "").trim();
+    if (hasPipe(heading) && !isTableDivider(heading)) {
+      const startsWithPipe = heading.startsWith("|");
+      if (isArriving && startsWithPipe && index === lastIndex) {
+        break;
+      }
+      const next = lines[index + 1]?.trim();
+      if (next !== undefined) {
+        const startsBoth = heading.startsWith("|") && next.startsWith("|");
+        if (
+          isArriving &&
+          startsWithPipe &&
+          index + 1 === lastIndex &&
+          (next.startsWith("|") || isDividerStart(next))
+        ) {
+          break;
+        }
+        const hasDivider = isTableDivider(next);
+        if (startsBoth || hasDivider) {
+          const table = readTable(lines, index, hasDivider ? index + 2 : index + 1, isArriving);
+          blocks.push(table.block);
+          index = table.nextIndex;
+          continue;
+        }
+      }
+    }
+    const block = parseLine(lines[index] ?? "", isPartial && index === lastIndex);
     if (block !== null && block.spans.length > 0) {
       blocks.push(block);
     }
+    index += 1;
   }
   return blocks;
 }
 
+// A heading such as `Protein (g)` as its label and its unit, so the unit can be said after the value.
+function splitUnit(heading: string): { label: string; unit: string } {
+  const opening = heading.lastIndexOf("(");
+  if (opening > 0 && heading.endsWith(")") && heading.indexOf(")") === heading.length - 1) {
+    return { label: heading.slice(0, opening).trim(), unit: heading.slice(opening + 1, -1).trim() };
+  }
+  return { label: heading, unit: "" };
+}
+
+// One sentence a row: its first cell, then each other cell as its heading and value. Blank cells are skipped.
+function rowWords(headings: readonly ReplySpan[][], cells: readonly ReplySpan[][]): string {
+  const parts: string[] = [];
+  const first = spansText(cells[0] ?? []).trim();
+  if (first !== "") {
+    parts.push(first);
+  }
+  for (const [column, spans] of cells.entries()) {
+    const value = spansText(spans).trim();
+    if (column > 0 && value !== "") {
+      const { label, unit } = splitUnit(spansText(headings[column] ?? []).trim());
+      const isMissing = value === noValueDash;
+      const valueWords = isMissing ? ASSISTANT_SHEET.tableNoValue : value;
+      parts.push(
+        [label, valueWords, isMissing ? "" : unit].filter((part) => part !== "").join(" "),
+      );
+    }
+  }
+  return parts.length === 0 ? "" : `${parts.join(", ")}.`;
+}
+
+function tableWords(table: ReplyTable): string {
+  const count = table.rows.length;
+  const opening = `${ASSISTANT_SHEET.tableLabel}, ${count} ${
+    count === 1 ? ASSISTANT_SHEET.tableRowOne : ASSISTANT_SHEET.tableRowMany
+  }.`;
+  return [opening, ...table.rows.map((cells) => rowWords(table.headings, cells))]
+    .filter((sentence) => sentence !== "")
+    .join(" ");
+}
+
 /** The words of one block as a person hears them: the number of an item stays, a bullet adds nothing. */
 export function blockWords(block: ReplyBlock): string {
-  const words = block.spans.map((span) => span.text).join("");
+  if (block.kind === "table") {
+    return tableWords(block);
+  }
+  const words = spansText(block.spans);
   return block.kind === "item" && block.number !== null ? `${block.number} ${words}` : words;
 }
 

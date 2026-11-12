@@ -25,6 +25,10 @@ describe("ASSISTANT_SHEET", () => {
       speakerYou: "You",
       speakerAssistant: "Assistant",
       openingLabel: "Loading your conversation",
+      tableLabel: "Table",
+      tableRowOne: "row",
+      tableRowMany: "rows",
+      tableNoValue: "no value",
     });
   });
 

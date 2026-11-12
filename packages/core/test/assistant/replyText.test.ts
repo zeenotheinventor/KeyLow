@@ -6,6 +6,7 @@ import type { ReplyBlock, ReplySpan } from "../../src/assistant";
 
 const finished = { isPartial: false };
 const partial = { isPartial: true };
+const arriving = { isPartial: true, isArriving: true };
 
 const plain = (text: string): ReplySpan => ({
   text,
@@ -34,8 +35,28 @@ const numbered = (number: string, ...spans: ReplySpan[]): ReplyBlock => ({
 
 const parse = (text: string) => parseReplyText(text, finished);
 
+const spansText = (spans: readonly ReplySpan[]) => spans.map((span) => span.text).join("");
+
 const allText = (blocks: readonly ReplyBlock[]) =>
-  blocks.map((block) => block.spans.map((span) => span.text).join("")).join("\n");
+  blocks
+    .map((block) =>
+      block.kind === "table"
+        ? [block.headings, ...block.rows].map((cells) => cells.map(spansText).join("\t")).join("\n")
+        : spansText(block.spans),
+    )
+    .join("\n");
+
+const textBlocks = (blocks: readonly ReplyBlock[]) =>
+  blocks.filter((block) => block.kind !== "table");
+
+const table = (
+  headings: ReplySpan[][],
+  rows: ReplySpan[][][],
+  isNumeric: boolean[],
+  isOpen = false,
+): ReplyBlock => ({ kind: "table", headings, rows, isNumeric, isOpen });
+const cell = (...spans: ReplySpan[]): ReplySpan[] => spans;
+const words = (value: string): ReplySpan[] => [plain(value)];
 
 describe("parseReplyText", () => {
   describe("the reply Zee saw on his phone", () => {
@@ -51,7 +72,7 @@ describe("parseReplyText", () => {
     });
 
     it("should leave no asterisk or dash in any span", () => {
-      const spans = parse(reply).flatMap((block) => block.spans);
+      const spans = textBlocks(parse(reply)).flatMap((block) => block.spans);
 
       expect(spans.some((span) => span.text.includes("*") || span.text.startsWith("-"))).toBe(
         false,
@@ -395,7 +416,9 @@ describe("parseReplyText", () => {
       for (let length = 0; length <= reply.length; length += 1) {
         const prefix = reply.slice(0, length);
         const blocks = parsePartial(prefix);
-        const lines = blocks.map((block) => block.spans.map((span) => span.text).join(""));
+        const lines = textBlocks(blocks).map((block) =>
+          block.spans.map((span) => span.text).join(""),
+        );
 
         for (const drawn of lines) {
           expect(drawn, `prefix ${JSON.stringify(prefix)}`).not.toMatch(
@@ -403,7 +426,7 @@ describe("parseReplyText", () => {
           );
           expect(drawn, `prefix ${JSON.stringify(prefix)}`).not.toMatch(/^\d{1,3}[.)]?$/);
         }
-        for (const block of blocks) {
+        for (const block of textBlocks(blocks)) {
           expect(block.spans.length, `prefix ${JSON.stringify(prefix)}`).toBeGreaterThan(0);
         }
       }
@@ -432,7 +455,6 @@ describe("parseReplyText", () => {
         "<b>x</b>",
         "and",
         "note",
-        "Food",
         "kcal",
         "Egg",
         "72",
@@ -528,5 +550,323 @@ describe("replyWords", () => {
   it("should hold back what a partial reply holds back", () => {
     expect(replyWords("Intro\n- **Log fo", partial)).toBe("Intro Log fo");
     expect(replyWords("Intro\n-", partial)).toBe("Intro");
+  });
+});
+
+describe("tables", () => {
+  const foodTable = "| Food | kcal |\n| --- | --- |\n| Toast | 90 |\n| Egg | 70 |";
+  const foodBlock = table(
+    [words("Food"), words("kcal")],
+    [
+      [words("Toast"), words("90")],
+      [words("Egg"), words("70")],
+    ],
+    [false, true],
+  );
+
+  describe("reading", () => {
+    it("should read a table with outer pipes", () => {
+      expect(parse(foodTable)).toEqual([foodBlock]);
+    });
+
+    it("should read a table with no outer pipes", () => {
+      expect(parse("Food | kcal\n--- | ---\nToast | 90\nEgg | 70")).toEqual([foodBlock]);
+    });
+
+    it("should ignore the colons of the divider", () => {
+      expect(parse("| Food | kcal |\n|:---|---:|\n| Toast | 90 |\n| Egg | 70 |")).toEqual([
+        foodBlock,
+      ]);
+    });
+
+    it("should read two or more lines that start with a pipe and have no divider, the first as headings", () => {
+      expect(parse("| Food | kcal |\n| Toast | 90 |\n| Egg | 70 |")).toEqual([foodBlock]);
+    });
+
+    it("should leave one lone pipe line as typed", () => {
+      expect(parse("| Food | kcal |")).toEqual([line(plain("| Food | kcal |"))]);
+    });
+
+    it("should draw nothing for a divider under a line with no pipe", () => {
+      expect(parse("Before\n| --- |\nAfter")).toEqual([
+        line(plain("Before")),
+        line(plain("After")),
+      ]);
+    });
+
+    it("should draw the lines around a table as lines", () => {
+      expect(parse(`Here:\n${foodTable}\nThat is all.`)).toEqual([
+        line(plain("Here:")),
+        foodBlock,
+        line(plain("That is all.")),
+      ]);
+    });
+
+    it("should read a table with no rows", () => {
+      expect(parse("| Food |\n| --- |")).toEqual([table([words("Food")], [], [false])]);
+    });
+
+    it("should pad a short row with blank cells", () => {
+      expect(parse("| A | B | C |\n| - | - | - |\n| x |")).toEqual([
+        table([words("A"), words("B"), words("C")], [[words("x"), [], []]], [false, true, true]),
+      ]);
+    });
+
+    it("should cut the extra cells of a long row", () => {
+      expect(parse("| A | B |\n| - | - |\n| x | y | z | w |")).toEqual([
+        table([words("A"), words("B")], [[words("x"), words("y")]], [false, false]),
+      ]);
+    });
+
+    it("should keep an escaped pipe as a literal pipe in the cell", () => {
+      expect(parse("| A | B |\n| - | - |\n| a \\| b | c |")).toEqual([
+        table([words("A"), words("B")], [[words("a | b"), words("c")]], [false, false]),
+      ]);
+    });
+
+    it("should read bold, italic and code in a cell", () => {
+      expect(parse("| A | B |\n| - | - |\n| **x** *y* | `z` |")).toEqual([
+        table(
+          [words("A"), words("B")],
+          [[cell(strong("x"), plain(" "), emphasis("y")), cell(code("z"))]],
+          [false, false],
+        ),
+      ]);
+    });
+
+    it("should leave a blank heading and a blank cell empty", () => {
+      expect(parse("| | B |\n| - | - |\n| | |")).toEqual([
+        table([[], words("B")], [[[], []]], [false, true]),
+      ]);
+    });
+  });
+
+  describe("numeric columns", () => {
+    const numericFlags = (rows: string) => {
+      const [block] = parse(`| A | B |\n| - | - |\n${rows}`);
+      return block?.kind === "table" ? block.isNumeric : [];
+    };
+
+    it("should flag a column of digits", () => {
+      expect(numericFlags("| a | 1 |\n| b | 22 |")).toEqual([false, true]);
+    });
+
+    it("should flag a column of quantities that start with a digit", () => {
+      expect(numericFlags("| a | 1 roll (190 g) |\n| b | 2 |")).toEqual([false, true]);
+    });
+
+    it("should flag a column of bold numbers", () => {
+      expect(numericFlags("| a | **2,024** |\n| b | *3* |")).toEqual([false, true]);
+    });
+
+    it("should let a dash or a blank cell stay in a numeric column", () => {
+      expect(numericFlags("| a | 1 |\n| b | – |\n| c | |")).toEqual([false, true]);
+    });
+
+    it("should leave a mixed column left aligned", () => {
+      expect(numericFlags("| a | 1 |\n| b | about 2 |")).toEqual([false, false]);
+    });
+
+    it("should never flag the first column", () => {
+      expect(numericFlags("| 1 | 1 |\n| 2 | 2 |")).toEqual([false, true]);
+    });
+  });
+
+  describe("a partial reply", () => {
+    const parsePartial = (value: string) => parseReplyText(value, arriving);
+
+    it.each([
+      ["mid heading", "Intro\n| Food | kc"],
+      ["heading ended with no next line", "Intro\n| Food | kcal |\n"],
+      ["mid divider", "Intro\n| Food | kcal |\n| --- | -"],
+      ["a pipe line after a pipe heading", "Intro\n| Food | kcal |\n| Toast"],
+    ])("should hold back the lines of a table that is not decided yet: %s", (_name, value) => {
+      expect(parsePartial(value)).toEqual([line(plain("Intro"))]);
+    });
+
+    it("should show a heading with no outer pipes as a line until its divider arrives", () => {
+      expect(parsePartial("Intro\nFood | kcal\n")).toEqual([
+        line(plain("Intro")),
+        line(plain("Food | kcal")),
+      ]);
+      expect(parsePartial("Food | kcal\n--- | ---\n")).toEqual([
+        table([words("Food"), words("kcal")], [], [false, true], true),
+      ]);
+    });
+
+    it("should leave the table open while its divider has no outer pipes and is still arriving", () => {
+      expect(parsePartial("Food | kcal\n--- |")).toEqual([
+        table([words("Food"), words("kcal")], [], [false, true], true),
+      ]);
+    });
+
+    it("should hold back only a line that starts with a pipe, not one with a pipe among its words", () => {
+      expect(parsePartial("Eat rice | beans and then keep going")).toEqual([
+        line(plain("Eat rice | beans and then keep going")),
+      ]);
+    });
+
+    it("should draw an open table with no rows when the divider has ended", () => {
+      expect(parsePartial("| Food | kcal |\n| --- | --- |\n")).toEqual([
+        table([words("Food"), words("kcal")], [], [false, true], true),
+      ]);
+    });
+
+    it("should hold back a row until its line has ended", () => {
+      const expected = table([words("Food"), words("kcal")], [], [false, true], true);
+
+      expect(parsePartial("| Food | kcal |\n| --- | --- |\n| Toa")).toEqual([expected]);
+      expect(parsePartial("| Food | kcal |\n| --- | --- |\n| Toast | 90")).toEqual([expected]);
+    });
+
+    it("should draw a row once its line has ended and stay open", () => {
+      expect(parsePartial("| Food | kcal |\n| --- | --- |\n| Toast | 90 |\n")).toEqual([
+        table([words("Food"), words("kcal")], [[words("Toast"), words("90")]], [false, true], true),
+      ]);
+    });
+
+    it("should read a table with no divider once its second line has ended", () => {
+      expect(parsePartial("| Food | kcal |\n| Toast | 90 |\n")).toEqual([
+        table([words("Food"), words("kcal")], [[words("Toast"), words("90")]], [false, true], true),
+      ]);
+    });
+
+    it("should close the table when words start after it", () => {
+      expect(parsePartial(`${foodTable}\nThat is`)).toEqual([foodBlock, line(plain("That is"))]);
+    });
+
+    it("should close the table when a line has ended after it", () => {
+      expect(parsePartial(`${foodTable}\nDone.\n`)).toEqual([foodBlock, line(plain("Done."))]);
+    });
+
+    it("should show every line of a stopped reply, its unfinished last row included", () => {
+      expect(parseReplyText("Rice is good.\nkcal | protein per 100 g", partial)).toEqual([
+        line(plain("Rice is good.")),
+        line(plain("kcal | protein per 100 g")),
+      ]);
+      expect(parseReplyText("| Food | kcal |\n| --- | --- |\n| Toast | 90", partial)).toEqual([
+        table([words("Food"), words("kcal")], [[words("Toast"), words("90")]], [false, true]),
+      ]);
+    });
+
+    it("should hold nothing back in a finished reply", () => {
+      expect(parse(`${foodTable}\n`)).toEqual([foodBlock]);
+      expect(parse("Intro\n| Food | kcal |")).toEqual([
+        line(plain("Intro")),
+        line(plain("| Food | kcal |")),
+      ]);
+    });
+
+    it("should read the same table at every length of a streaming reply without a pipe showing", () => {
+      const reply = `Here:\n${foodTable}\nThat is all.`;
+      for (let length = 0; length <= reply.length; length += 1) {
+        expect(allText(parsePartial(reply.slice(0, length)))).not.toContain("|");
+      }
+    });
+  });
+
+  describe("what a screen reader hears", () => {
+    const wordsOf = (value: string) => replyWords(value, finished);
+
+    it("should say the table, its body row count and a sentence for each row", () => {
+      expect(wordsOf(foodTable)).toBe("Table, 2 rows. Toast, kcal 90. Egg, kcal 70.");
+    });
+
+    it("should say 1 row for one", () => {
+      expect(wordsOf("| A | B |\n| - | - |\n| x | 1 |")).toBe("Table, 1 row. x, B 1.");
+    });
+
+    it("should not count the headings as a row", () => {
+      expect(wordsOf("| A | B |\n| - | - |")).toBe("Table, 0 rows.");
+    });
+
+    it("should read the board's two example rows exactly", () => {
+      const reply = [
+        "| Food | Amount (g) | kcal | Protein (g) | Fat (g) | Carbs (g) | Fibre (g) |",
+        "| --- | --- | --- | --- | --- | --- | --- |",
+        "| Potato wedges, with skin, cooked in sunflower oil | 300 | 435 | 8.7 | 11 | 80 | 9 |",
+      ].join("\n");
+      const baileys = [
+        "| Food | Amount (ml) | kcal | Protein (g) | Fat (g) | Carbs (g) | Fibre (g) |",
+        "| --- | --- | --- | --- | --- | --- | --- |",
+        "| Baileys Original Irish Cream | 25 | 79 | – | – | – | – |",
+      ].join("\n");
+
+      expect(wordsOf(reply)).toBe(
+        "Table, 1 row. Potato wedges, with skin, cooked in sunflower oil, Amount 300 g, kcal 435, Protein 8.7 g, Fat 11 g, Carbs 80 g, Fibre 9 g.",
+      );
+      expect(wordsOf(baileys)).toBe(
+        "Table, 1 row. Baileys Original Irish Cream, Amount 25 ml, kcal 79, Protein no value, Fat no value, Carbs no value, Fibre no value.",
+      );
+    });
+
+    it("should skip a blank cell", () => {
+      expect(wordsOf("| A | B | C |\n| - | - | - |\n| x | | 3 |")).toBe("Table, 1 row. x, C 3.");
+    });
+
+    it("should read a word around the table in order", () => {
+      expect(wordsOf(`Here:\n${foodTable}\nDone.`)).toBe(
+        "Here: Table, 2 rows. Toast, kcal 90. Egg, kcal 70. Done.",
+      );
+    });
+
+    it("should read a bold row as its words", () => {
+      expect(wordsOf("| A | B |\n| - | - |\n| **Total** | **160** |")).toBe(
+        "Table, 1 row. Total, B 160.",
+      );
+    });
+
+    it("should say the table words of the open table without an empty row", () => {
+      expect(replyWords("| A | B |\n| - | - |\n| x | 1 |\n", partial)).toBe(
+        "Table, 1 row. x, B 1.",
+      );
+    });
+  });
+
+  describe("a hostile table", () => {
+    const takesUnderASecond = (hostile: string) => {
+      for (const options of [finished, partial, arriving]) {
+        const startedAt = performance.now();
+
+        parseReplyText(hostile, options);
+
+        expect(performance.now() - startedAt).toBeLessThan(1_000);
+      }
+    };
+
+    it("should read one 100,000 character pipe line quickly", () => {
+      takesUnderASecond("|".repeat(100_000));
+      takesUnderASecond(`${"| a ".repeat(25_000)}|`);
+      takesUnderASecond(`${"|-".repeat(50_000)}\n${"| a ".repeat(25_000)}`);
+    });
+
+    it("should read 50,000 cells on one line quickly", () => {
+      const cells = "| a ".repeat(50_000);
+
+      takesUnderASecond(`${cells}|\n${"| - ".repeat(50_000)}|\n${cells}|`);
+    });
+
+    it("should read 20,000 rows quickly", () => {
+      takesUnderASecond(`| A | B |\n| - | - |\n${"| x | 1 |\n".repeat(20_000)}`);
+      takesUnderASecond(`| A | B |\n${"| x | 1 |\n".repeat(20_000)}`);
+    });
+
+    it("should read thousands of heading cells over thousands of short rows quickly, in at most 12 columns", () => {
+      const headings = `${"| h ".repeat(20_000)}|`;
+      const rows = "| x |\n".repeat(10_000);
+
+      takesUnderASecond(`${headings}\n${"| - ".repeat(20_000)}|\n${rows}`);
+      takesUnderASecond(`${"| h ".repeat(3_000)}|\n${"| x\n".repeat(3_000)}`);
+      const [block] = parseReplyText(`${headings}\n${"| - ".repeat(20_000)}|\n${rows}`, finished);
+      expect(block?.kind === "table" && block.headings.length).toBe(12);
+      expect(block?.kind === "table" && block.rows.every((cells) => cells.length === 12)).toBe(
+        true,
+      );
+    });
+
+    it("should read 100,000 characters of escapes in a cell quickly", () => {
+      takesUnderASecond(`| A |\n| - |\n| ${"\\|".repeat(50_000)} |`);
+      takesUnderASecond(`| A |\n| - |\n| ${"*a ".repeat(33_000)} |`);
+    });
   });
 });
