@@ -1,6 +1,6 @@
 import { describeAddFood, describeAddToPlateName } from "@keylow/core/copy";
 import { controlHeight, touchTarget } from "@keylow/tokens";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { compileUtilities } from "./compileUtilities";
@@ -402,6 +402,31 @@ describe("FoodRow search", () => {
     renderSearch({ onAdd: undefined });
 
     expect(screen.getAllByRole("button")).toHaveLength(1);
+  });
+
+  describe("while its food is being saved", () => {
+    it("should say what is happening in place of the stats, and be busy", () => {
+      renderSearch({ onAdd: undefined, busyLabel: "Adding to your foods" });
+
+      const row = screen.getByRole("button");
+      expect(row.getAttribute("aria-busy")).toBe("true");
+      expect(within(row).getByText("Adding to your foods")).toBeTruthy();
+      expect(within(row).queryByText("P")).toBeNull();
+    });
+
+    it("should not respond to a press", () => {
+      const { onClick } = renderSearch({ onAdd: undefined, busyLabel: "Adding to your foods" });
+
+      fireEvent.click(screen.getByRole("button"));
+
+      expect(onClick).not.toHaveBeenCalled();
+    });
+
+    it("should keep the stats when no label is given", () => {
+      renderSearch({ onAdd: undefined });
+
+      expect(screen.getByRole("button").getAttribute("aria-busy")).toBeNull();
+    });
   });
 });
 

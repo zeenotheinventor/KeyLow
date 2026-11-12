@@ -9,14 +9,17 @@ import {
   SEARCH_GROUP_HEADINGS,
   SEARCH_STATUS,
   describeAddToPlateName,
+  describeLiveGroupNote,
 } from "@keylow/core/copy";
 import { foodNeedsReview } from "@keylow/core/diary";
 import { formatCalories } from "@keylow/core/format";
 import {
+  FOOD_SEARCH_FETCH_LIMIT,
   FOOD_SEARCH_GROUP_LIMITS,
   describeFoodRow,
   describeMacros,
   groupFoodSearchResults,
+  liveRowShowsServing,
   servingOfSearchHit,
 } from "@keylow/core/search";
 import { SearchX, WifiOff, Zap } from "lucide-react";
@@ -31,6 +34,8 @@ import type { LogSearchStepProps, SearchStepProps } from "./types";
 import type { RecipeSummary } from "@keylow/api-client";
 import type { FoodSearchGroupKey, FoodSearchGroupLimits } from "@keylow/core/search";
 
+import { OffCandidateList } from "@/components/foods/FoodSearch/OffCandidateList";
+import { OpenFoodFactsNotice } from "@/components/foods/FoodSearch/OpenFoodFactsNotice";
 import { InlineStatus } from "@/components/foods/InlineStatus";
 import { Banner } from "@/components/ui/Banner";
 import { Card } from "@/components/ui/Card";
@@ -45,9 +50,10 @@ import { TimeField } from "@/components/ui/TimeField";
 import { useIsOnline } from "@/lib/useIsOnline";
 import { cn } from "@/lib/utils";
 
-// Only the foods in the database are searched here, so the plus has a food to put on the plate: the
-// live Open Food Facts candidates are not, because they would have to be added to the database first.
-const LOCAL_ONLY = { offThreshold: 0 };
+// The live Open Food Facts rows come in under their own group when few stored foods match, as the phone's
+// log search has them. A live row has no plus because the product is not stored yet: a press saves it and
+// opens its amount step.
+const SEARCH_OPTIONS = { limit: FOOD_SEARCH_FETCH_LIMIT };
 
 type Expansion = { query: string; groups: readonly FoodSearchGroupKey[] };
 
@@ -100,16 +106,17 @@ function SearchStepView(props: SearchStepProps & RecipeResults) {
   const isLogging = props.mode !== "ingredient" && props.isLogging;
   const isOnline = useIsOnline();
   const trimmedQuery = query.trim();
-  const { local, isLoadingLocal, isDebouncing, localError } = useFoodSearch(
-    trimmedQuery,
-    LOCAL_ONLY,
-  );
+  const { local, off, isLoadingLocal, isLoadingOff, isDebouncing, offError, localError } =
+    useFoodSearch(trimmedQuery, SEARCH_OPTIONS);
   const [expansion, setExpansion] = useState<Expansion>({ query: "", groups: [] });
 
   const isSearchable = trimmedQuery.length >= MIN_SEARCH_LENGTH;
   const isSearching = isDebouncing || isLoadingLocal || props.isSearchingRecipes;
   const expanded = expansion.query === trimmedQuery ? expansion.groups : [];
   const groups = groupFoodSearchResults(local, { limit: limitsFor(expanded, local.length) });
+  const hasRows = local.length > 0 || recipes.length > 0 || off.length > 0;
+  // A live row with no serving to show stays per 100 g, and the note above the group says so.
+  const hasPer100Rows = off.some((candidate) => !liveRowShowsServing(candidate));
 
   const renderResults = () => {
     if (!isSearchable) {
@@ -152,7 +159,7 @@ function SearchStepView(props: SearchStepProps & RecipeResults) {
         <ErrorState size="section" title={SEARCH_FAILED_WEB.title} body={SEARCH_FAILED_WEB.body} />
       );
     }
-    if (isSearching && local.length === 0 && recipes.length === 0) {
+    if (isSearching && !hasRows) {
       return (
         <>
           <InlineStatus>{SEARCH_STATUS.searchingYourFoods}</InlineStatus>
@@ -160,87 +167,114 @@ function SearchStepView(props: SearchStepProps & RecipeResults) {
         </>
       );
     }
-    if (local.length === 0 && recipes.length === 0) {
+    if (!hasRows) {
+      // "No foods found" is only said once the live search has come back too.
       return (
-        <EmptyState
-          icon={SearchX}
-          size="section"
-          title={SEARCH_EMPTY.title}
-          body={SEARCH_EMPTY.body}
-        />
+        <>
+          {isLoadingOff && <InlineStatus>{SEARCH_STATUS.searchingOpenFoodFacts}</InlineStatus>}
+          {offError !== null && <OpenFoodFactsNotice error={offError} />}
+          {!isLoadingOff && (
+            <EmptyState
+              icon={SearchX}
+              size="section"
+              title={SEARCH_EMPTY.title}
+              body={SEARCH_EMPTY.body}
+            />
+          )}
+        </>
       );
     }
 
     return (
-      <div
-        role="group"
-        aria-label="Search results"
-        aria-busy={isSearching || undefined}
-        className={cn("flex flex-col gap-3", isSearching && "opacity-50")}
-      >
-        {props.mode !== "ingredient" && recipes.length > 0 && (
-          <RecipeLogGroup
-            recipes={recipes}
-            query={trimmedQuery}
-            addDisabled={isLogging}
-            onOpen={props.onOpenRecipe}
-            onAdd={props.onAddRecipeServing}
-          />
-        )}
-        {groups.map((group) => {
-          const { title, caption } = SEARCH_GROUP_HEADINGS[group.key];
+      <>
+        <div
+          role="group"
+          aria-label="Search results"
+          aria-busy={isSearching || undefined}
+          className={cn("flex flex-col gap-3", isSearching && "opacity-50")}
+        >
+          {props.mode !== "ingredient" && recipes.length > 0 && (
+            <RecipeLogGroup
+              recipes={recipes}
+              query={trimmedQuery}
+              addDisabled={isLogging}
+              onOpen={props.onOpenRecipe}
+              onAdd={props.onAddRecipeServing}
+            />
+          )}
+          {groups.map((group) => {
+            const { title, caption } = SEARCH_GROUP_HEADINGS[group.key];
 
-          return (
-            <GroupedList
-              key={group.key}
-              title={title}
-              source={caption}
-              seeMore={{
-                hiddenCount: group.hiddenCount,
-                onClick: () => {
-                  setExpansion({ query: trimmedQuery, groups: [...expanded, group.key] });
-                },
-              }}
-            >
-              {group.visibleRows.map((hit) => {
-                const { nameSegments, brand } = describeFoodRow(hit, trimmedQuery);
-                const serving = servingOfSearchHit(hit);
-                const macros = describeMacros(serving);
+            return (
+              <GroupedList
+                key={group.key}
+                title={title}
+                source={caption}
+                seeMore={{
+                  hiddenCount: group.hiddenCount,
+                  onClick: () => {
+                    setExpansion({ query: trimmedQuery, groups: [...expanded, group.key] });
+                  },
+                }}
+              >
+                {group.visibleRows.map((hit) => {
+                  const { nameSegments, brand } = describeFoodRow(hit, trimmedQuery);
+                  const serving = servingOfSearchHit(hit);
+                  const macros = describeMacros(serving);
 
-                return (
-                  <FoodRow
-                    key={hit.id}
-                    layout="search"
-                    nameSegments={nameSegments}
-                    brand={brand}
-                    caption={serving.caption}
-                    energy={serving.kcal === null ? undefined : formatCalories(serving.kcal)}
-                    macros={{
-                      protein: macros.protein ?? "-",
-                      carbs: macros.carbs ?? "-",
-                      fat: macros.fat ?? "-",
-                      description: macros.accessibleDescription,
-                    }}
-                    needsReview={foodNeedsReview(hit)}
-                    onClick={() => {
-                      onOpenFood(hit.id);
-                    }}
-                    {...(props.mode === "ingredient"
-                      ? {}
-                      : {
-                          addDisabled: isLogging,
-                          addLabel: describeAddToPlateName(hit.name, serving.caption),
-                          onAdd: () => {
-                            props.onAddServing(hit);
-                          },
-                        })}
-                  />
-                );
-              })}
-            </GroupedList>
-          );
-        })}
-      </div>
+                  return (
+                    <FoodRow
+                      key={hit.id}
+                      layout="search"
+                      nameSegments={nameSegments}
+                      brand={brand}
+                      caption={serving.caption}
+                      energy={serving.kcal === null ? undefined : formatCalories(serving.kcal)}
+                      macros={{
+                        protein: macros.protein ?? "-",
+                        carbs: macros.carbs ?? "-",
+                        fat: macros.fat ?? "-",
+                        description: macros.accessibleDescription,
+                      }}
+                      needsReview={foodNeedsReview(hit)}
+                      onClick={() => {
+                        onOpenFood(hit.id);
+                      }}
+                      {...(props.mode === "ingredient"
+                        ? {}
+                        : {
+                            addDisabled: isLogging,
+                            addLabel: describeAddToPlateName(hit.name, serving.caption),
+                            onAdd: () => {
+                              props.onAddServing(hit);
+                            },
+                          })}
+                    />
+                  );
+                })}
+              </GroupedList>
+            );
+          })}
+          {off.length > 0 && (
+            <>
+              {/* A live row's serving is a first guess, confirmed when the product is opened. */}
+              <p className="-mb-1 text-caption text-text-muted">
+                {describeLiveGroupNote(hasPer100Rows)}
+              </p>
+              <OffCandidateList
+                candidates={off}
+                query={trimmedQuery}
+                showsServings
+                onOpenFood={(food) => {
+                  onOpenFood(food.id);
+                }}
+              />
+            </>
+          )}
+        </div>
+        {isLoadingOff && <InlineStatus>{SEARCH_STATUS.searchingOpenFoodFacts}</InlineStatus>}
+        {offError !== null && <OpenFoodFactsNotice error={offError} />}
+      </>
     );
   };
 

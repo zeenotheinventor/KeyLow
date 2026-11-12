@@ -2,31 +2,34 @@
 
 import { MIN_SEARCH_LENGTH, useFoodSearch } from "@keylow/api-client";
 import {
-  SEARCH_RATE_LIMITED,
-  OPEN_FOOD_FACTS_SEARCH_FAILED,
   SEARCH_EMPTY,
   SEARCH_FAILED_WEB,
   SEARCH_STATUS,
   VALUES_PER_100_G_NOTE,
-  describeRateLimit,
 } from "@keylow/core/copy";
-import { FOOD_SEARCH_GROUP_LIMITS, groupFoodSearchResults } from "@keylow/core/search";
-import { CloudOff, Plus, SearchX } from "lucide-react";
+import {
+  FOOD_SEARCH_FETCH_LIMIT,
+  FOOD_SEARCH_GROUP_LIMITS,
+  groupFoodSearchResults,
+} from "@keylow/core/search";
+import { Plus, SearchX } from "lucide-react";
 import { useState } from "react";
 
 import { LocalFoodList } from "../LocalFoodList";
 import { OffCandidateList } from "../OffCandidateList";
+import { OpenFoodFactsNotice } from "../OpenFoodFactsNotice";
 
 import type { Expansion, SearchResultsProps } from "./types";
-import type { FoodSearchOffError } from "@keylow/api-client";
 import type { FoodSearchGroupKey, FoodSearchGroupLimits } from "@keylow/core/search";
 
 import { InlineStatus } from "@/components/foods/InlineStatus";
-import { Banner } from "@/components/ui/Banner";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { cn } from "@/lib/utils";
+
+// The browse search shows its live rows per 100 g, as the phone's does, and asks for as many matches.
+const SEARCH_OPTIONS = { limit: FOOD_SEARCH_FETCH_LIMIT };
 
 // A group the user has opened shows every row the search returned.
 function limitsFor(
@@ -40,18 +43,6 @@ function limitsFor(
   };
 }
 
-function OpenFoodFactsNotice({ error }: { error: FoodSearchOffError }) {
-  return error.kind === "rate_limited" ? (
-    <Banner tone="info" icon={CloudOff} title={SEARCH_RATE_LIMITED}>
-      {describeRateLimit(error.retryAfterSeconds)}
-    </Banner>
-  ) : (
-    <Banner tone="info" icon={CloudOff} title={OPEN_FOOD_FACTS_SEARCH_FAILED.title}>
-      {OPEN_FOOD_FACTS_SEARCH_FAILED.body}
-    </Banner>
-  );
-}
-
 /**
  * What the food search found for the text typed so far. The search hook waits for the typing to
  * pause and says so with `isDebouncing`, which counts as searching, so "No foods found" is only
@@ -60,7 +51,7 @@ function OpenFoodFactsNotice({ error }: { error: FoodSearchOffError }) {
 export function SearchResults({ query }: SearchResultsProps) {
   const trimmedQuery = query.trim();
   const { local, off, isLoadingLocal, isLoadingOff, isDebouncing, offError, localError } =
-    useFoodSearch(trimmedQuery);
+    useFoodSearch(trimmedQuery, SEARCH_OPTIONS);
   const [expansion, setExpansion] = useState<Expansion>({ query: "", groups: [] });
 
   if (trimmedQuery.length < MIN_SEARCH_LENGTH) {

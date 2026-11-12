@@ -80,6 +80,11 @@ type FoodLogRowContent = {
   needsReview?: boolean | undefined;
   /** Dims the row and stops it, and its add button, responding. */
   disabled?: boolean | undefined;
+  /**
+   * Says what is happening to the food, such as "Adding to your foods", in place of the stats line, with a
+   * spinner in place of the chevron. The row is busy, and does not respond, while it is set.
+   */
+  busyLabel?: string | undefined;
   className?: string | undefined;
   /**
    * Opens the food: the edit dialog for a `stacked` row, the portion picker for a `search` row. Leave it
