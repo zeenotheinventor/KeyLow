@@ -120,11 +120,11 @@ export type MessageFakeRow = {
   conversation_id: string;
   seq: number;
 };
-export type TurnFakeRow = { id: string; status: string };
+export type TurnFakeRow = { id: string; status: string; created_at: string };
 
 const defaultTurns: TurnFakeRow[] = [
-  { id: FIRST_TURN_ID, status: "complete" },
-  { id: SECOND_TURN_ID, status: "complete" },
+  { id: FIRST_TURN_ID, status: "complete", created_at: "2026-10-27T08:10:00Z" },
+  { id: SECOND_TURN_ID, status: "complete", created_at: "2026-10-27T09:00:00Z" },
 ];
 
 /** The most rows a PostgREST request returns, which the stack sets with `max_rows`. */
@@ -143,6 +143,7 @@ export type AssistantFakeState = {
   conversationIds: string[];
   /** The newest conversation's messages, in `seq` order. */
   messages: MessageFakeRow[];
+  /** The newest conversation's turns, in any order. */
   turns: TurnFakeRow[];
   actions: ActionFakeRow[];
   timeZone: string | null;
@@ -158,6 +159,10 @@ export type AssistantFakeState = {
   deleteQuery: string | null;
   /** The `order` and `limit` the conversation read was sent. */
   conversationRead: URLSearchParams | null;
+  /** The query of each request for a page of turns, with the messages embedded. */
+  turnReads: URLSearchParams[];
+  /** The query of each request for actions. */
+  actionReads: URLSearchParams[];
   /** The query of each request for the messages of some turns, which the changes list makes for its cards. */
   turnMessageReads: URLSearchParams[];
 };
@@ -179,6 +184,8 @@ export const createAssistantFakeState = (
   deletedAllConversations: 0,
   deleteQuery: null,
   conversationRead: null,
+  turnReads: [],
+  actionReads: [],
   turnMessageReads: [],
   ...overrides,
 });
@@ -210,21 +217,48 @@ export function installAssistantFake(server: SetupServer, state: AssistantFakeSt
             .map(({ id, display }) => ({ id, display })),
         );
       }
-      const conversationId = searchParams.get("conversation_id");
+      return postgrestRows(request, []);
+    }),
+    http.get(`${REST_URL}/assistant_turns`, ({ request }) => {
+      const { searchParams } = new URL(request.url);
+      state.turnReads.push(searchParams);
+      const cursor =
+        /created_at\.lt\."(?<createdAt>[^"]+)",and\(created_at\.eq\."[^"]+",id\.lt\.(?<id>[^)]+)\)/.exec(
+          searchParams.get("or") ?? "",
+        )?.groups;
+      const inConversation = searchParams.get("conversation_id") === `eq.${CONVERSATION_ID}`;
+      const newestFirst = (inConversation ? state.turns : [])
+        .filter(
+          (turn) =>
+            cursor?.createdAt === undefined ||
+            turn.created_at < cursor.createdAt ||
+            (turn.created_at === cursor.createdAt && turn.id < (cursor.id ?? "")),
+        )
+        .sort((a, b) =>
+          a.created_at === b.created_at
+            ? b.id.localeCompare(a.id)
+            : b.created_at.localeCompare(a.created_at),
+        );
+      const limit = Number(searchParams.get("limit") ?? MAX_ROWS);
       return postgrestRows(
         request,
-        conversationId === `eq.${CONVERSATION_ID}` ? pageOf(request, state.messages) : [],
+        newestFirst.slice(0, limit).map((turn) => ({
+          ...turn,
+          assistant_messages: state.messages
+            .filter((message) => message.turn_id === turn.id)
+            .sort((a, b) => a.seq - b.seq),
+        })),
       );
     }),
-    http.get(`${REST_URL}/assistant_turns`, ({ request }) =>
-      postgrestRows(request, pageOf(request, state.turns)),
-    ),
     http.get(`${REST_URL}/assistant_actions`, ({ request }) => {
-      const conversationId = new URL(request.url).searchParams.get("conversation_id");
+      const { searchParams } = new URL(request.url);
+      state.actionReads.push(searchParams);
+      const turnFilter = searchParams.get("turn_id");
+      const turnIds = turnFilter?.replace(/^in\.\(|\)$/g, "").split(",") ?? null;
       const rows =
-        conversationId === null
+        turnIds === null
           ? state.actions
-          : state.actions.filter((row) => conversationId === `eq.${row.conversation_id}`);
+          : state.actions.filter((row) => row.turn_id !== null && turnIds.includes(row.turn_id));
       return postgrestRows(request, pageOf(request, rows));
     }),
     http.get(`${REST_URL}/profiles`, ({ request }) =>
@@ -260,5 +294,36 @@ export function installAssistantFake(server: SetupServer, state: AssistantFakeSt
     }),
   );
 }
+
+const uuid = (prefix: string, index: number) =>
+  `${prefix}-0000-4000-8000-${String(index).padStart(12, "0")}`;
+
+export const turnId = (index: number) => uuid("00000003", index);
+export const turnTime = (index: number) =>
+  new Date(Date.UTC(2026, 9, 1) + index * 60_000).toISOString();
+
+/** `count` turns, oldest first, each with a question and a reply, and one action on every fifth. */
+export const longConversation = (count: number) => {
+  const turns = Array.from({ length: count }, (_, index) => ({
+    id: turnId(index),
+    status: index === count - 1 ? "stopped" : "complete",
+    created_at: turnTime(index),
+  }));
+  const messages = turns.flatMap((turn, index) =>
+    ["user", "assistant"].map((role, offset) => ({
+      id: uuid("00000004", index * 2 + offset),
+      turn_id: turn.id,
+      role,
+      content: [{ type: "text", text: `${role} ${index}` }],
+      display: null,
+      conversation_id: CONVERSATION_ID,
+      seq: index * 2 + offset + 1,
+    })),
+  );
+  const actions = turns
+    .filter((_, index) => index % 5 === 0)
+    .map((turn, index) => actionRow({ id: uuid("00000005", index), turn_id: turn.id }));
+  return { turns, messages, actions };
+};
 
 export { postgrestError };

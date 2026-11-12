@@ -80,7 +80,10 @@ describe("useDeleteAllAssistantConversations", () => {
     installAssistantFake(server, createAssistantFakeState());
     const { queryClient, wrapper } = createWrapper();
     // The sheet is closed, so its read is disabled and only the thread from its last open is cached.
-    queryClient.setQueryData(keys.assistant.conversation, { conversationId: "old", items: [] });
+    queryClient.setQueryData(keys.assistant.conversation, {
+      pages: [{ conversationId: "old", messages: [], actions: [], olderCursor: null }],
+      pageParams: [null],
+    });
     renderHook(() => useAssistantConversation({ enabled: false }), { wrapper });
     const { result: deleteAll } = renderHook(() => useDeleteAllAssistantConversations(), {
       wrapper,

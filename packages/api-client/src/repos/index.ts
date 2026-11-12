@@ -198,13 +198,13 @@ export {
   assistantTargetSources,
   createAssistantConversation,
   deleteAllAssistantConversations,
-  getLatestAssistantConversation,
+  getAssistantConversationPage,
   readAssistantActions,
   undoAssistantActions,
 } from "./assistantConversations";
 export type {
   AssistantActionsRead,
-  AssistantConversationRead,
+  AssistantConversationPage,
   AssistantTargetRead,
   AssistantTargetSource,
   AssistantUndoResult,
