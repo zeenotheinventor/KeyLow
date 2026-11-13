@@ -58,6 +58,7 @@ export * from "./setup";
 export * from "./program";
 export * from "./plate";
 export * from "./shoppingList";
+export * from "./palate";
 export * from "./assistantNotices";
 export * from "./assistantSettings";
 export * from "./assistantEntryCards";
