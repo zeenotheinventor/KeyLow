@@ -474,7 +474,9 @@ export type {
 } from "./repos";
 export {
   useAddRecipesToList,
+  useAddPlanToList,
   useAddShoppingItem,
+  usePlanShoppingPreview,
   useClearTickedItems,
   useRemoveShoppingItem,
   useShoppingList,
@@ -482,6 +484,7 @@ export {
   useToggleShoppingItem,
 } from "./hooks";
 export type {
+  AddPlanToListInput,
   AddRecipesToListInput,
   ShoppingPreviewState,
   ShoppingRecipeChoice,
@@ -491,6 +494,7 @@ export {
   addShoppingItem,
   clearTickedItems,
   deleteShoppingItem,
+  getPlannedFoods,
   getShoppingSources,
   listShoppingItems,
   saveShoppingItems,

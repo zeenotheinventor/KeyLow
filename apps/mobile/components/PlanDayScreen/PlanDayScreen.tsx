@@ -3,6 +3,7 @@ import {
   MEAL_PLAN_BAND_NAMES,
   MEAL_PLAN_WORDS,
   RETRY_LABEL,
+  SHOPPING_LIST,
   describePlanConfirmCaption,
   describePlanConfirmedBody,
   describePlanDaySubtitle,
@@ -11,7 +12,12 @@ import {
   describeDateInWords,
 } from "@keylow/core/copy";
 import { progressBars } from "@keylow/core/diary";
-import { PLAN_STATUS_BADGE, planProgressTargetsOf, planShortBannerOf } from "@keylow/core/plans";
+import {
+  PLAN_STATUS_BADGE,
+  planProgressTargetsOf,
+  planShoppingOf,
+  planShortBannerOf,
+} from "@keylow/core/plans";
 import { useRouter } from "expo-router";
 import { vars } from "nativewind";
 import { ScrollView, View } from "react-native";
@@ -19,6 +25,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useIsOnline } from "../../lib/connectivity";
 import { diaryHref } from "../../lib/navigation";
+import { planAddToListPath } from "../../lib/planRoutes";
 import { useReadsEnabled } from "../../lib/useReadsEnabled";
 import { useOpenAssistant } from "../AssistantSheetHost";
 import { usePlanData } from "../PlanScreen";
@@ -45,7 +52,7 @@ import type { PlanDayScreenProps } from "./types";
  * day (which writes the items to the diary through `confirm_meal_plan_day`) and Regenerate day (which opens the
  * assistant with "Replan Wed 18 Nov: " in the composer and sends nothing). A confirmed day is final: it shows
  * a banner with a link to the diary, a tick on each item and no buttons, and cannot be confirmed again. A short day
- * can still be confirmed.
+ * can still be confirmed. Under them Add to shopping list adds this day alone to the shopping list (`plan · shopping-added`).
  */
 export function PlanDayScreen({ localDate }: PlanDayScreenProps) {
   const insets = useSafeAreaInsets();
@@ -54,7 +61,7 @@ export function PlanDayScreen({ localDate }: PlanDayScreenProps) {
   const isOnline = useIsOnline();
   const isReadEnabled = useReadsEnabled();
   const openAssistant = useOpenAssistant();
-  const { views, rawDayOf, timeZone, isError, refetch } = usePlanData();
+  const { views, planRows, rawDayOf, timeZone, isError, refetch } = usePlanData();
   const confirm = useConfirmPlanDay();
   const targets = useTargets({ enabled: isReadEnabled, localDate });
   const view = views?.find((candidate) => candidate.localDate === localDate);
@@ -122,6 +129,9 @@ export function PlanDayScreen({ localDate }: PlanDayScreenProps) {
       );
     }
 
+    const hasShopping =
+      planRows !== undefined &&
+      planShoppingOf(planRows, { start: localDate, end: localDate }) !== null;
     const badge = PLAN_STATUS_BADGE[view.status];
     const shortBanner = planShortBannerOf(view);
     const tolerance = view.status === "empty" ? null : describePlanTolerance(view.target);
@@ -245,6 +255,18 @@ export function PlanDayScreen({ localDate }: PlanDayScreenProps) {
                   {MEAL_PLAN_WORDS.regenerateDay}
                 </Button>
               </View>
+              {hasShopping ? (
+                <Button
+                  fullWidth
+                  icon="ShoppingCart"
+                  variant="ghost"
+                  onPress={() => {
+                    router.push(planAddToListPath(localDate, localDate));
+                  }}
+                >
+                  {SHOPPING_LIST.addToList}
+                </Button>
+              ) : null}
             </>
           )}
         </View>

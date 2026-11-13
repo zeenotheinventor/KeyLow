@@ -1,72 +1,29 @@
 import { keys, useAddRecipesToList, useRecipe, useShoppingPreview } from "@keylow/api-client";
 import {
-  FOOD_FORM,
   GENERIC_ERROR,
-  OFFLINE_BANNER,
   RECIPE_EDITOR,
   RECIPE_VIEW,
   RETRY_LABEL,
   SHOPPING_LIST,
-  describeAddAnyway,
-  describeLeftOutCount,
   describeServingsValue,
-  describeShoppingAmount,
 } from "@keylow/core/copy";
 import { enteredViewServings, isRecipeId, stepViewServings } from "@keylow/core/recipes";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
-import { vars } from "nativewind";
-import { useState } from "react";
-import { ScrollView, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useRef, useState } from "react";
+import { View } from "react-native";
 
+import { AddToListLayout } from "./AddToListLayout";
+import { DraftGroups } from "./DraftGroups";
 import { useIsOnline } from "../../lib/connectivity";
 import { recipePath, recipesPath } from "../../lib/recipeRoutes";
 import { useReadsEnabled } from "../../lib/useReadsEnabled";
 import { RecipeLoadState } from "../RecipeLoadState";
-import {
-  Banner,
-  Button,
-  Checkbox,
-  ErrorState,
-  GroupedList,
-  ServingsStepper,
-  SheetHeader,
-  Skeleton,
-  Text,
-  useToast,
-} from "../ui";
+import { ErrorState, ServingsStepper, Skeleton, useToast } from "../ui";
 
 import type { AddToListScreenProps } from "./types";
-import type { ShoppingDraft } from "@keylow/core/shopping";
-
-// The space under the Add button, and the least room under it for the system bar, as the recipe view keeps.
-const CONTENT_BOTTOM_GAP = 16;
-const MINIMUM_BOTTOM_PADDING = 34;
 
 type AddToListRecipe = { id: string; name: string; servings: number };
-
-const amountOf = (draft: ShoppingDraft): string | undefined =>
-  describeShoppingAmount({
-    grams: draft.grams,
-    portion_label: draft.portionLabel,
-    portion_count: draft.portionCount,
-  }) ?? undefined;
-
-function DraftText({ draft }: { draft: ShoppingDraft }) {
-  const amount = amountOf(draft);
-
-  return (
-    <View className="min-w-0 flex-1">
-      <Text variant="body-strong">{draft.name}</Text>
-      {amount === undefined ? null : (
-        <Text tone="muted" variant="caption">
-          {amount}
-        </Text>
-      )}
-    </View>
-  );
-}
 
 function AddToListBody({
   recipe,
@@ -78,8 +35,6 @@ function AddToListBody({
   onLeave: () => void;
 }) {
   const toast = useToast();
-  const isOnline = useIsOnline();
-  const insets = useSafeAreaInsets();
   const add = useAddRecipesToList();
   const [servings, setServings] = useState(initialServings);
   // What is in the field while it is being typed in, or null when it shows the servings in use.
@@ -115,7 +70,14 @@ function AddToListBody({
   const chosenStaples = preview?.staples.filter(({ foodId }) => addAnyway.includes(foodId)) ?? [];
   const isNothingToAdd = preview === null || preview.items.length + chosenStaples.length === 0;
 
+  // Set at once when Add is pressed, since two presses can come before the next render shows the write pending.
+  const isWriting = useRef(false);
+
   function submit() {
+    if (isWriting.current) {
+      return;
+    }
+    isWriting.current = true;
     add.mutate(
       {
         recipes: [{ id: recipe.id, servings }],
@@ -126,6 +88,9 @@ function AddToListBody({
           toast.show({ message: SHOPPING_LIST.added, icon: "Check", tone: "success" });
           onLeave();
         },
+        onSettled: () => {
+          isWriting.current = false;
+        },
         onError: () => {
           toast.show({ message: SHOPPING_LIST.addFailed, icon: "CircleAlert", tone: "danger" });
         },
@@ -134,117 +99,43 @@ function AddToListBody({
   }
 
   return (
-    // The insets are runtime values no class can name, so they go through variables.
-    <View
-      className="flex-1 bg-background pt-[var(--inset-top)]"
-      style={vars({
-        "--inset-top": insets.top,
-        "--content-bottom": CONTENT_BOTTOM_GAP + Math.max(insets.bottom, MINIMUM_BOTTOM_PADDING),
-      })}
+    <AddToListLayout
+      canAdd={!isNothingToAdd && !hasProblem}
+      isAdding={add.isPending}
+      subtitle={recipe.name}
+      onAdd={submit}
+      onLeave={onLeave}
     >
-      <SheetHeader
-        leading={{ icon: "ChevronLeft", label: FOOD_FORM.back, onPress: onLeave }}
-        subtitle={recipe.name}
-        title={SHOPPING_LIST.addToList}
+      <ServingsStepper
+        canDecrease={stepViewServings(servings, "minus") !== null}
+        canIncrease={stepViewServings(servings, "plus") !== null}
+        decreaseLabel={RECIPE_VIEW.fewerServings}
+        error={hasProblem ? RECIPE_VIEW.servingsProblem : undefined}
+        increaseLabel={RECIPE_VIEW.moreServings}
+        label={RECIPE_EDITOR.servings}
+        text={typedText ?? String(servings)}
+        valueText={describeServingsValue(servings)}
+        onBlur={() => {
+          setTypedText(null);
+        }}
+        onChangeText={handleChangeText}
+        onStep={handleStep}
       />
-      <ScrollView
-        className="flex-1"
-        contentContainerClassName="gap-4 px-4 pb-4 pt-1"
-        keyboardDismissMode="on-drag"
-        keyboardShouldPersistTaps="handled"
-      >
-        {isOnline ? null : (
-          <Banner body={SHOPPING_LIST.offlineBody} title={OFFLINE_BANNER.title} variant="offline" />
-        )}
-        <ServingsStepper
-          canDecrease={stepViewServings(servings, "minus") !== null}
-          canIncrease={stepViewServings(servings, "plus") !== null}
-          decreaseLabel={RECIPE_VIEW.fewerServings}
-          error={hasProblem ? RECIPE_VIEW.servingsProblem : undefined}
-          increaseLabel={RECIPE_VIEW.moreServings}
-          label={RECIPE_EDITOR.servings}
-          text={typedText ?? String(servings)}
-          valueText={describeServingsValue(servings)}
-          onBlur={() => {
-            setTypedText(null);
-          }}
-          onChangeText={handleChangeText}
-          onStep={handleStep}
-        />
 
-        {state.status === "loading" ? (
-          <View accessible aria-label={SHOPPING_LIST.loadingLabel} role="status">
-            <Skeleton rows={3} variant="group" />
-          </View>
-        ) : null}
-
-        {state.status === "error" ? (
-          <ErrorState retry={{ label: RETRY_LABEL, onPress: state.retry }} title={GENERIC_ERROR} />
-        ) : null}
-
-        {preview !== null && preview.items.length === 0 ? (
-          <Text tone="secondary">{SHOPPING_LIST.onlyStaples}</Text>
-        ) : null}
-
-        {preview !== null && preview.items.length > 0 ? (
-          <GroupedList title={SHOPPING_LIST.toBuy}>
-            {preview.items.map((draft) => (
-              <View key={draft.foodId} className="min-h-[52px] flex-row items-center px-4 py-2">
-                <DraftText draft={draft} />
-              </View>
-            ))}
-          </GroupedList>
-        ) : null}
-
-        {preview !== null && preview.staples.length > 0 ? (
-          <GroupedList
-            notice={
-              <Text className="px-1" tone="muted" variant="caption">
-                {describeLeftOutCount(preview.staples.length)}
-              </Text>
-            }
-            title={SHOPPING_LIST.leftOut}
-          >
-            {preview.staples.map((draft) => (
-              <View
-                key={draft.foodId}
-                className="min-h-[52px] flex-row items-center gap-3 px-4 py-1"
-              >
-                <DraftText draft={draft} />
-                <View className="pt-2">
-                  <Checkbox
-                    accessibilityLabel={describeAddAnyway(draft.name)}
-                    checked={addAnyway.includes(draft.foodId)}
-                    label={SHOPPING_LIST.addAnyway}
-                    onChange={(checked) => {
-                      toggleStaple(draft.foodId, checked);
-                    }}
-                  />
-                </View>
-              </View>
-            ))}
-          </GroupedList>
-        ) : null}
-      </ScrollView>
-      <View className="flex-row gap-2 px-4 pb-[var(--content-bottom)] pt-2">
-        <View className="flex-1">
-          <Button fullWidth variant="secondary" onPress={onLeave}>
-            {SHOPPING_LIST.cancel}
-          </Button>
+      {state.status === "loading" ? (
+        <View accessible aria-label={SHOPPING_LIST.loadingLabel} role="status">
+          <Skeleton rows={3} variant="group" />
         </View>
-        <View className="flex-1">
-          <Button
-            disabled={!isOnline || isNothingToAdd || hasProblem}
-            fullWidth
-            haptic="confirm"
-            loading={add.isPending}
-            onPress={submit}
-          >
-            {SHOPPING_LIST.addItem}
-          </Button>
-        </View>
-      </View>
-    </View>
+      ) : null}
+
+      {state.status === "error" ? (
+        <ErrorState retry={{ label: RETRY_LABEL, onPress: state.retry }} title={GENERIC_ERROR} />
+      ) : null}
+
+      {preview === null ? null : (
+        <DraftGroups addAnyway={addAnyway} preview={preview} onToggleStaple={toggleStaple} />
+      )}
+    </AddToListLayout>
   );
 }
 

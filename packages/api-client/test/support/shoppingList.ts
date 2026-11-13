@@ -100,6 +100,15 @@ export const sourceRecipeRows = [
   },
 ];
 
+export const RICE_ID = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
+export const OIL_ID = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
+
+/** Two foods a plan can name on their own, as the plan shopping read returns them: rice to buy and olive oil, a staple. */
+export const plannedFoodRows = [
+  { id: RICE_ID, name: "Rice, white, boiled", food_group: "DA" },
+  { id: OIL_ID, name: "Oil, olive", food_group: "FA" },
+];
+
 type Request = { method: string; url: URL; body: unknown };
 
 const isObject = (value: unknown): value is Record<string, unknown> =>
@@ -167,6 +176,22 @@ export function installShoppingListFake(server: SetupServer, seed: ShoppingItem[
       return postgrestRows(
         request,
         sourceRecipeRows.filter((recipe) => ids.includes(recipe.id)),
+      );
+    }),
+    http.get(`${REST_URL}/foods`, ({ request }) => {
+      const url = new URL(request.url);
+      requests.push({ method: "GET", url, body: undefined });
+      const failed = failure();
+      if (failed !== null) {
+        return failed;
+      }
+      const ids = (url.searchParams.get("id") ?? "")
+        .replace(/^in\.\(/, "")
+        .replace(/\)$/, "")
+        .split(",");
+      return postgrestRows(
+        request,
+        plannedFoodRows.filter((food) => ids.includes(food.id)),
       );
     }),
     http.post(`${REST_URL}/shopping_list_items`, async ({ request }) => {

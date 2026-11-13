@@ -32,6 +32,7 @@ export function usePlanData(): PlanData {
 
   return {
     views,
+    planRows,
     rawDayOf,
     timeZone: zoneName,
     today: zoneName === undefined ? undefined : toLocalDate(now, zoneName),

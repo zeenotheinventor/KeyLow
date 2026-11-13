@@ -263,3 +263,14 @@ export const FIRST_PLAN_VARIETY_WORDS = {
   body: "Leftovers count as a repeat. This is the starting limit until you choose your own.",
   action: "Change",
 } as const;
+
+/**
+ * The add screen for a plan (`plan · shopping-added`). The line says what is counted. The buttons, the groups
+ * and the toast are the shopping list's own words (`SHOPPING_LIST`).
+ */
+export const PLAN_SHOPPING_WORDS = {
+  scopeLine:
+    "The days not yet confirmed. A recipe is bought once for the servings it makes, so leftovers are not bought twice.",
+  // NOT ON THE CANVAS. No board draws a plan with nothing to buy, so these words are the engineer's until one does.
+  nothingToBuy: "Every day here is confirmed or has nothing planned, so there is nothing to buy.",
+} as const;

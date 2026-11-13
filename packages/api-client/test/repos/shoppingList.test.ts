@@ -5,6 +5,7 @@ import {
   addShoppingItem,
   clearTickedItems,
   deleteShoppingItem,
+  getPlannedFoods,
   getShoppingSources,
   listShoppingItems,
   saveShoppingItems,
@@ -15,9 +16,11 @@ import {
   BEEF_ID,
   CHILLI_ID,
   CURRY_ID,
+  OIL_ID,
   ONION_ID,
   RECOGNISABLE_GRAMS,
   RECOGNISABLE_ITEM_NAME,
+  RICE_ID,
   SALT_ID,
   installShoppingListFake,
   shoppingItemRow,
@@ -253,6 +256,41 @@ describe("deleteShoppingItem and clearTickedItems", () => {
     const error = await clearTickedItems(createTestClient()).catch((caught: unknown) => caught);
 
     expect((error as Error).message).toBe("Could not clear the ticked items (XX000)");
+    expectNoHealthData(error);
+  });
+});
+
+describe("getPlannedFoods", () => {
+  it("should read the name and group of each food asked for, once", async () => {
+    installShoppingListFake(server);
+
+    await expect(getPlannedFoods(createTestClient(), [RICE_ID, RICE_ID, OIL_ID])).resolves.toEqual([
+      { id: RICE_ID, name: "Rice, white, boiled", food_group: "DA" },
+      { id: OIL_ID, name: "Oil, olive", food_group: "FA" },
+    ]);
+  });
+
+  it("should send no request for no foods", async () => {
+    const fake = installShoppingListFake(server);
+
+    await expect(getPlannedFoods(createTestClient(), [])).resolves.toEqual([]);
+
+    expect(fake.requests).toEqual([]);
+  });
+
+  it("should name the action and the code only when the read fails", async () => {
+    const fake = installShoppingListFake(server);
+    fake.failWith("XX000");
+
+    const error: unknown = await getPlannedFoods(createTestClient(), [RICE_ID]).catch(
+      (caught: unknown) => caught,
+    );
+
+    expect(error).toHaveProperty(
+      "message",
+      "Could not load the foods for your shopping list (XX000)",
+    );
+    expect(error).toHaveProperty("cause", { code: "XX000" });
     expectNoHealthData(error);
   });
 });
