@@ -1,14 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import { foodOf, recipeOf, RULES, weekOf } from "./pools";
-import { planMeals } from "../../src/plans";
+import { PLAN_FIT_BUDGET, planMeals, replanDay } from "../../src/plans";
 
 import type { PlanBand } from "../../src/plans";
 
-// The Edge Function that runs the planner has about 2 s of CPU (M9 plan, section 5). A 7 day plan from about
-// 50 candidates has to leave most of that to everything else, so it gets a tenth of it.
-const BUDGET_MILLISECONDS = 200;
-const HEAVY_BUDGET_MILLISECONDS = 800;
+// Wall time on a shared runner is not the guarantee (the fit count is), so this is only a coarse smoke check.
+const SMOKE_MILLISECONDS = 3000;
 
 const BAND_SETS: readonly (readonly PlanBand[])[] = [
   ["morning"],
@@ -40,30 +38,32 @@ const candidates = () => {
 };
 
 describe("planMeals performance", () => {
-  it(`should plan 7 days from 50 candidates in under ${BUDGET_MILLISECONDS} ms`, () => {
+  it(`should plan 7 days from 50 candidates within the fit budget`, () => {
     const input = { ...candidates(), rules: { ...RULES, maxRepeats: null }, days: weekOf(7) };
     planMeals(input);
 
     const started = performance.now();
-    planMeals(input);
+    const { fitCalls } = planMeals(input);
     const elapsed = performance.now() - started;
 
-    expect(elapsed).toBeLessThan(BUDGET_MILLISECONDS);
+    expect(fitCalls).toBeLessThanOrEqual(PLAN_FIT_BUDGET);
+    expect(elapsed).toBeLessThan(SMOKE_MILLISECONDS);
   });
 });
 
-// What is capped is the number of fitter calls one plan may make (`PLAN_FIT_BUDGET`), not the time. A plan that
-// runs out of fits reports its remaining days short with the reason `work_limit`. The figures below were
-// measured on a loaded laptop on 2026-11-13 and the budget leaves room for slower CI. The Edge Function has
-// about 2 s of CPU. Measured with 50 foods and 20 recipes over 7 days: about 60 ms for an unmeetable shape the
-// bounds rule out at once, and about 600 ms for four named targets that the fits cannot meet, which is the
-// slowest shape found. A single fit can take over 10 ms when it cannot converge, which is why the cap counts
-// fits.
-const timeOf = (input: Parameters<typeof planMeals>[0]): number => {
+// What is capped is the number of fitter calls one plan may make (`PLAN_FIT_BUDGET`), not the time, and that
+// count is what these tests assert through `fitCalls`. A plan that runs out of fits reports its remaining days
+// short with the reason `work_limit`. Wall time depends on the machine and is only a smoke check. Measured with
+// 50 foods and 20 recipes over 7 days: about 60 ms for an unmeetable shape the bounds rule out at once, and
+// about 600 ms on the local loaded laptop for four named targets that the fits cannot meet, but 1,758 ms on the
+// CI runner with other test files running in parallel. A single fit can take over 10 ms when it cannot
+// converge, which is why the cap counts fits. The Edge Function has about 2 s of CPU, and the real figure on
+// that runtime is measured in KEY-1031.
+const measure = (input: Parameters<typeof planMeals>[0]) => {
   planMeals(input);
   const started = performance.now();
-  planMeals(input);
-  return performance.now() - started;
+  const plan = planMeals(input);
+  return { elapsed: performance.now() - started, fitCalls: plan.fitCalls };
 };
 
 /** Calories, protein, carbs and fat that add up, so four named targets are all in play. */
@@ -88,24 +88,30 @@ const manyCandidates = () => {
 };
 
 describe("planMeals work cap", () => {
-  it(`should plan 7 unmeetable days from 50 foods and 20 recipes, four named targets, in under ${HEAVY_BUDGET_MILLISECONDS} ms`, () => {
-    const elapsed = timeOf({
+  it("should cap the fits of one plan at 50", () => {
+    expect(PLAN_FIT_BUDGET).toBe(50);
+  });
+
+  it(`should plan 7 unmeetable days from 50 foods and 20 recipes, four named targets, within the fit budget`, () => {
+    const { elapsed, fitCalls } = measure({
       ...manyCandidates(),
       rules: { ...RULES, maxRepeats: 1 },
       days: weekOf(7, { kcal: 9000, protein_g: 400, carbs_g: 10, fat_g: 5 }),
     });
 
-    expect(elapsed).toBeLessThan(HEAVY_BUDGET_MILLISECONDS);
+    expect(fitCalls).toBeLessThanOrEqual(PLAN_FIT_BUDGET);
+    expect(elapsed).toBeLessThan(SMOKE_MILLISECONDS);
   });
 
-  it(`should plan 7 days with ordinary four named targets from 50 foods and 20 recipes in under ${HEAVY_BUDGET_MILLISECONDS} ms`, () => {
-    const elapsed = timeOf({
+  it(`should plan 7 days with ordinary four named targets from 50 foods and 20 recipes within the fit budget`, () => {
+    const { elapsed, fitCalls } = measure({
       ...manyCandidates(),
       rules: { ...RULES, maxRepeats: null },
       days: weekOf(7, { kcal: 1500, protein_g: 100, carbs_g: 300, fat_g: 10 }),
     });
 
-    expect(elapsed).toBeLessThan(HEAVY_BUDGET_MILLISECONDS);
+    expect(fitCalls).toBeLessThanOrEqual(PLAN_FIT_BUDGET);
+    expect(elapsed).toBeLessThan(SMOKE_MILLISECONDS);
   });
 
   it("should report the days it ran out of fits for as short with the reason work_limit", () => {
@@ -120,5 +126,17 @@ describe("planMeals work cap", () => {
     );
     expect(limited.length).toBeGreaterThan(0);
     expect(limited.every((day) => day.status === "short")).toBe(true);
+  });
+
+  it("should cap the fits of a replanned day at the budget too", () => {
+    const input = {
+      ...manyCandidates(),
+      rules: { ...RULES, maxRepeats: null },
+      days: weekOf(7, { kcal: 1500, protein_g: 100, carbs_g: 300, fat_g: 10 }),
+    };
+
+    const { fitCalls } = replanDay(planMeals(input), "2026-11-19", input);
+
+    expect(fitCalls).toBeLessThanOrEqual(PLAN_FIT_BUDGET);
   });
 });

@@ -5,8 +5,8 @@ import { preparePool } from "./preparePool";
 import type { RecipePlanItem } from "./buildDay";
 import type { Plan, PlanPool } from "./types";
 
-/** The plan with the day replaced, and the keys of the items that were kept as they were. */
-export type ReplannedDay = { plan: Plan; kept: string[] };
+/** The plan with the day replaced, the keys of the items that were kept as they were, and `fitCalls` (a diagnostic, at most `PLAN_FIT_BUDGET`). */
+export type ReplannedDay = { plan: Plan; kept: string[]; fitCalls: number };
 
 /**
  * Plans one day of `plan` again from `pool`, against that day's own target, and returns the plan with only
@@ -31,18 +31,20 @@ export const replanDay = (plan: Plan, localDate: string, pool: PlanPool): Replan
   );
 
   const { appearances, foodUse } = usageOf(others);
+  const budget = { remaining: PLAN_FIT_BUDGET };
   const { day } = buildDay({
     day: { localDate, target: replaced.target },
     pool: preparePool(pool),
     appearances,
     foodUse,
     fixed: kept,
-    budget: { remaining: PLAN_FIT_BUDGET },
+    budget,
     leftoverRoom: () => 0,
   });
 
   return {
     plan: { days: plan.days.map((existing, index) => (index === at ? day : existing)) },
     kept: kept.map(({ key }) => key),
+    fitCalls: PLAN_FIT_BUDGET - budget.remaining,
   };
 };

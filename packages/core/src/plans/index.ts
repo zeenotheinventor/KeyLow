@@ -7,6 +7,7 @@ export {
   MEAL_PLAN_NO_REPEAT_LIMIT,
   repeatLimitOfProfile,
 } from "./constants";
+export { PLAN_FIT_BUDGET } from "./buildDay";
 export { planMeals } from "./planMeals";
 export { replanDay } from "./replanDay";
 export type { ReplannedDay } from "./replanDay";
@@ -22,4 +23,5 @@ export type {
   PlanRecipeCandidate,
   PlanRules,
   PlanShortfall,
+  PlannedWeek,
 } from "./types";

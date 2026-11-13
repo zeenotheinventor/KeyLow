@@ -6,7 +6,7 @@ import { FIT_NUTRIENTS } from "../recipes/fit";
 
 import type { RecipePlanItem } from "./buildDay";
 import type { RecipeChoice } from "./preparePool";
-import type { Plan, PlanBand, PlanDay, PlanDayInput, PlanMealsInput } from "./types";
+import type { PlanBand, PlanDay, PlanDayInput, PlanMealsInput, PlannedWeek } from "./types";
 
 const validateDays = (days: readonly PlanDayInput[]): void => {
   if (days.length === 0 || days.length > MEAL_PLAN_MAX_DAYS) {
@@ -61,7 +61,7 @@ type Reserved = { band: PlanBand; recipe: RecipeChoice; cookKey: string };
  * never adjusted to look met. Throws a `RangeError` for days that are not 1 to 7 consecutive dates, a target
  * that is not a number of at least 0, and rules that cannot be planned.
  */
-export const planMeals = (input: PlanMealsInput): Plan => {
+export const planMeals = (input: PlanMealsInput): PlannedWeek => {
   validateDays(input.days);
   const pool = preparePool(input);
   const recipeById = new Map(pool.recipes.map((recipe) => [recipe.id, recipe]));
@@ -120,5 +120,5 @@ export const planMeals = (input: PlanMealsInput): Plan => {
     }
   });
 
-  return { days };
+  return { days, fitCalls: PLAN_FIT_BUDGET - budget.remaining };
 };

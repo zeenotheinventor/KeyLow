@@ -90,3 +90,9 @@ export type PlanDay = {
 };
 
 export type Plan = { days: PlanDay[] };
+
+/**
+ * What `planMeals` returns: the plan, and `fitCalls`, how many `fitRecipeToTargets` calls it made. A diagnostic
+ * only, never stored. It is at most `PLAN_FIT_BUDGET`, which is the cap on the planner's work.
+ */
+export type PlannedWeek = Plan & { fitCalls: number };

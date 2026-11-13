@@ -2,7 +2,7 @@ import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 
 import { sumNutrients } from "../../src/nutrition";
-import { planMeals, replanDay } from "../../src/plans";
+import { PLAN_FIT_BUDGET, planMeals, replanDay } from "../../src/plans";
 import { isWithinTolerance, outOfTolerance } from "../../src/recipes";
 
 import type {
@@ -225,6 +225,21 @@ describe("planMeals properties", () => {
     fc.assert(
       fc.property(inputArbitrary, (input) => {
         expect(planMeals(input)).toEqual(planMeals(structuredClone(input)));
+      }),
+      { numRuns: NUMBER_OF_RUNS },
+    );
+  });
+});
+
+describe("planMeals work cap property", () => {
+  it("should never make more fitter calls than the budget, for a plan or a replanned day", () => {
+    fc.assert(
+      fc.property(inputArbitrary, fc.nat(), (input, pick) => {
+        const plan = planMeals(input);
+        const replaced = plan.days[pick % plan.days.length]?.localDate ?? "";
+
+        expect(plan.fitCalls).toBeLessThanOrEqual(PLAN_FIT_BUDGET);
+        expect(replanDay(plan, replaced, input).fitCalls).toBeLessThanOrEqual(PLAN_FIT_BUDGET);
       }),
       { numRuns: NUMBER_OF_RUNS },
     );
