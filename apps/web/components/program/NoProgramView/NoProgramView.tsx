@@ -8,13 +8,13 @@ import type { NoProgramViewProps } from "./types";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { ListRow } from "@/components/ui/ListRow";
-import { setupPath } from "@/lib/setupRoutes";
+import { forgetRecalculationSaved, setupPath } from "@/lib/setupRoutes";
 
 /**
  * `program-no-program`, for a user on their own targets: the chart tile, what a programme does in three points,
  * and Estimate my targets, a centred medium button (full width on a phone) that opens the wizard in recalculate
  * mode. Under it the person's own calorie target stays until they start, when they have one. The
- * not-medical-advice line is at the foot.
+ * not-medical-advice line is at the foot. Start clears the mark of an earlier saved recalculation.
  */
 export function NoProgramView({ ownTargetKcal }: NoProgramViewProps) {
   return (
@@ -35,7 +35,9 @@ export function NoProgramView({ ownTargetKcal }: NoProgramViewProps) {
       </Card>
       <div className="flex justify-center">
         <Button asChild size="lg" className="w-full md:h-control-md md:w-auto md:px-4">
-          <Link href={setupPath("sex", "recalculate")}>{PROGRAM_NO_PROGRAM.startLabel}</Link>
+          <Link href={setupPath("sex", "recalculate")} onClick={forgetRecalculationSaved}>
+            {PROGRAM_NO_PROGRAM.startLabel}
+          </Link>
         </Button>
       </div>
       {ownTargetKcal === null ? null : (

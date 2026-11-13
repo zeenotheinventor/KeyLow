@@ -36,7 +36,7 @@ import { ListRow } from "@/components/ui/ListRow";
 import { useToast } from "@/components/ui/Toast";
 import { diaryHref } from "@/lib/diary";
 import { dropStaleTargetReads } from "@/lib/dropStaleTargetReads";
-import { setupExitPath, setupPath } from "@/lib/setupRoutes";
+import { rememberRecalculationSaved, setupExitPath, setupPath } from "@/lib/setupRoutes";
 import { useIsOnline } from "@/lib/useIsOnline";
 import { useNow } from "@/lib/useNow";
 
@@ -138,6 +138,8 @@ export function EstimateStep({ mode, programme }: EstimateStepProps) {
     }
     dropStaleTargetReads(queryClient);
     if (isRecalculating) {
+      // So the browser's Back cannot reopen the recalculation that has just been saved.
+      rememberRecalculationSaved();
       // The provider sits above every page, so the toast tells a person who left by Back that it saved.
       toast.show({ message: TARGETS_SAVED_TOAST, tone: "success", icon: Check });
     }
