@@ -21,12 +21,14 @@ const mixed = (kcal: number, protein_g: number) => ({
   fibre_g: 0,
 });
 
+// The smallest pool that still spends the whole fit budget. The planner's time goes on the fitter calls, so a
+// bigger pool only made the test slower on a loaded runner.
 const heavyPool = () => {
-  const foods = Array.from({ length: 30 }, (_, at) => ({
+  const foods = Array.from({ length: 7 }, (_, at) => ({
     ...foodOf(`food-${at}`, 0, 0, 40 + ((at * 25) % 200)),
     per100: mixed(40 + ((at * 37) % 400), 1 + ((at * 7) % 30)),
   }));
-  const recipes = Array.from({ length: 10 }, (_, at) => ({
+  const recipes = Array.from({ length: 3 }, (_, at) => ({
     ...recipeOf(`recipe-${at}`, 0, 0, 1 + (at % 4), ["morning", "midday", "evening"]),
     perServing: mixed(300 + ((at * 53) % 500), 15 + ((at * 11) % 40)),
   }));
@@ -39,19 +41,31 @@ describe("the fitter calls a plan makes", () => {
       name: "an easy week",
       pool: poolOf({ recipes: [recipeOf("stew", 600, 40, 2)] }),
       target: undefined,
+      spendsWholeBudget: false,
     },
     {
       name: "a heavy week",
       pool: { ...poolOf(), ...heavyPool() },
       target: { kcal: 1500, protein_g: 100, carbs_g: 300, fat_g: 10 },
+      spendsWholeBudget: true,
     },
-    { name: "an unmeetable week", pool: poolOf(), target: { kcal: 9000, protein_g: 400 } },
-    { name: "one short day", pool: poolOf(), target: { kcal: 2400, protein_g: 190 } },
+    {
+      name: "an unmeetable week",
+      pool: poolOf(),
+      target: { kcal: 9000, protein_g: 400 },
+      spendsWholeBudget: false,
+    },
+    {
+      name: "one short day",
+      pool: poolOf(),
+      target: { kcal: 2400, protein_g: 190 },
+      spendsWholeBudget: false,
+    },
   ];
 
   it.each(cases)(
     "should make exactly the calls it reports, within the budget, for $name",
-    ({ pool, target }) => {
+    ({ pool, target, spendsWholeBudget }) => {
       vi.mocked(fit.fitRecipeToTargets).mockClear();
       const input = { ...pool, rules: { ...RULES, maxRepeats: null }, days: weekOf(7, target) };
 
@@ -60,6 +74,7 @@ describe("the fitter calls a plan makes", () => {
       expect(realCalls()).toBe(plan.fitCalls);
       expect(plan.fitCalls).toBeGreaterThan(0);
       expect(plan.fitCalls).toBeLessThanOrEqual(PLAN_FIT_BUDGET);
+      if (spendsWholeBudget) expect(plan.fitCalls).toBe(PLAN_FIT_BUDGET);
 
       vi.mocked(fit.fitRecipeToTargets).mockClear();
       const replanned = replanDay(plan, "2026-11-19", input);
@@ -67,5 +82,7 @@ describe("the fitter calls a plan makes", () => {
       expect(realCalls()).toBe(replanned.fitCalls);
       expect(replanned.fitCalls).toBeLessThanOrEqual(PLAN_FIT_BUDGET);
     },
+    // The 50 fitter calls are the cost, and the shared CI runner has been about 16x slower than local.
+    45_000,
   );
 });
