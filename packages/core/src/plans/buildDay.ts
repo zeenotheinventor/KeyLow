@@ -1,4 +1,5 @@
 import { MEAL_PLAN_BAND_TIMES } from "./constants";
+import { canReach } from "./reach";
 import { scaleNutrients, sumNutrients } from "../nutrition/scale";
 import { FIT_NUTRIENTS, fitRecipeToTargets, outOfTolerance, toleranceOf } from "../recipes/fit";
 
@@ -26,7 +27,7 @@ export type DayContext = {
   /** Recipe items already on this day: leftovers due today, and cooks that other days eat from. */
   fixed: readonly RecipePlanItem[];
   /** The fits this day may still run: its fair share of the plan's `PLAN_FIT_BUDGET`. */
-  budget: { remaining: number };
+  budget: { remaining: number; refused: boolean };
   /** How many following days have this band free for a leftover. */
   leftoverRoom: (band: PlanBand) => number;
 };
@@ -245,6 +246,7 @@ const ingredientsOf = (ctx: DayContext, selection: Selection): FitIngredient[] =
 /** One fit, counted against the plan's budget. Null when the budget has run out. */
 const fitWithinBudget = (ctx: DayContext, input: FitInput): FitResult | null => {
   if (ctx.budget.remaining <= 0) {
+    ctx.budget.refused = true;
     return null;
   }
   ctx.budget.remaining -= 1;
@@ -490,11 +492,18 @@ const foodPicks = (
  * fitted again, until the cap holds. The foods that stay are fitted a last time on the 5 g grid, each at least
  * one step, and the day is judged as any other.
  */
-const allFoodsFit = (ctx: DayContext, cooks: readonly CookPick[]): Evaluation => {
-  const base: Selection = { cooks: [...cooks], foods: [] };
-  let candidates = [...unusedFoods(ctx, base)]
+const allFoodsCandidates = (ctx: DayContext, base: Selection): FoodChoice[] =>
+  [...unusedFoods(ctx, base)]
     .sort((a, b) => foodRank(ctx, a) - foodRank(ctx, b) || a.order - b.order)
     .slice(0, ALL_FOODS_FIT_LIMIT);
+
+const allFoodsFit = (
+  ctx: DayContext,
+  cooks: readonly CookPick[],
+  isThorough = true,
+): Evaluation => {
+  const base: Selection = { cooks: [...cooks], foods: [] };
+  let candidates = allFoodsCandidates(ctx, base);
   if (ctx.fixed.length + base.cooks.length + candidates.length === 0) {
     return evaluate(ctx, base);
   }
@@ -543,16 +552,91 @@ const allFoodsFit = (ctx: DayContext, cooks: readonly CookPick[]): Evaluation =>
       ]),
     ),
   );
-  return evaluate(ctx, final);
+  return evaluate(ctx, final, isThorough);
 };
 
+/** How many of the most preferred recipes of a band the search for another set of cooks offers. */
+export const COOK_SET_BAND_OFFERS = 4;
+
+/** `canReach` for a day: the locked recipes and the candidate foods of the all foods fit, with these cooks. */
+const dayCanReach = (ctx: DayContext, cooks: readonly CookPick[]): boolean => {
+  const foods = allFoodsCandidates(ctx, { cooks: [...cooks], foods: [] });
+  const locked = (nutrient: FitNutrient): number =>
+    ctx.fixed.reduce((sum, item) => sum + (item.nutrients[nutrient] ?? 0), 0) +
+    cooks.reduce((sum, { recipe }) => sum + (recipe.perServing[nutrient] ?? 0), 0);
+  const gain = (food: FoodChoice, nutrient: FitNutrient): number =>
+    ((food.per100[nutrient] ?? 0) * upperBoundOf(food.typicalGrams)) / 100;
+  const each = (read: (nutrient: FitNutrient) => number): Record<FitNutrient, number> => ({
+    kcal: read("kcal"),
+    protein_g: read("protein_g"),
+    carbs_g: read("carbs_g"),
+    fat_g: read("fat_g"),
+  });
+  return canReach(
+    ctx.day.target,
+    each(locked),
+    foods.map((food) => each((nutrient) => gain(food, nutrient))),
+  );
+};
+
+const cooksSignature = (cooks: readonly CookPick[]): string =>
+  cooks
+    .map(({ recipe, band }) => `${band}:${recipe.id}`)
+    .sort()
+    .join("|");
+
 /**
- * Builds one day: a main for each band that a leftover does not hold, foods added until the day's usual
- * amounts come near its calories, then the foods are scaled with the fitter and the day is judged with
- * `outOfTolerance` on core's sum of its items. A day that is out is tried again with a food more or less, a
- * few times, and the closest attempt is kept. A day still out gets one fit over every food it can
- * use (`allFoodsFit`) before it is reported short. A day that cannot be met says which nutrient, and why.
+ * The sets of cooked recipes to try for a day that is still out, most preferred first. The set already chosen
+ * comes first, then it with its last cook dropped one at a time, then every set that gives each free band no
+ * recipe or one of its `COOK_SET_BAND_OFFERS` most preferred recipes (within the repeat limit, each recipe once
+ * a day), ordered by how far down the ranking they go. The ranking decides the order, and a set is only tried
+ * if `canReach` lets it through and the budget lasts.
  */
+const cookSetsToTry = (ctx: DayContext, current: readonly CookPick[]): CookPick[][] => {
+  const fixedIds = new Set(ctx.fixed.map((item) => item.recipeId));
+  const freeBands = ctx.pool.slots.filter((band) => !ctx.fixed.some((item) => item.band === band));
+  const offers = (band: PlanBand): RecipeChoice[] =>
+    ctx.pool.recipes
+      .filter(
+        (recipe) =>
+          recipe.bands.includes(band) &&
+          !fixedIds.has(recipe.id) &&
+          roomForRecipe(ctx, recipe) >= 1,
+      )
+      .sort((a, b) => a.order - b.order)
+      .slice(0, COOK_SET_BAND_OFFERS);
+
+  const sets: { cooks: CookPick[]; cost: number }[] = [];
+  const build = (at: number, cooks: CookPick[], cost: number): void => {
+    const band = freeBands[at];
+    if (band === undefined) {
+      sets.push({ cooks, cost });
+      return;
+    }
+    build(at + 1, cooks, cost + COOK_SET_BAND_OFFERS);
+    offers(band).forEach((recipe, place) => {
+      if (!cooks.some((cook) => cook.recipe.id === recipe.id)) {
+        build(at + 1, [...cooks, cookOf(ctx, recipe, band)], cost + place);
+      }
+    });
+  };
+  build(0, [], 0);
+
+  const first: CookPick[][] = [];
+  for (let kept = current.length; kept >= 0; kept -= 1) {
+    first.push(current.slice(0, kept));
+  }
+  const seen = new Set<string>();
+  return [...first, ...sets.sort((a, b) => a.cost - b.cost).map(({ cooks }) => cooks)].filter(
+    (cooks) => {
+      const signature = cooksSignature(cooks);
+      const isNew = !seen.has(signature);
+      seen.add(signature);
+      return isNew;
+    },
+  );
+};
+
 const cooksOf = (ctx: DayContext, selection: Selection): Cook[] =>
   selection.cooks.map(({ recipe, band, batch }) => ({
     key: keyOf(ctx.day.localDate, band, recipe.id),
@@ -561,6 +645,13 @@ const cooksOf = (ctx: DayContext, selection: Selection): Cook[] =>
     batch,
   }));
 
+/**
+ * Builds one day: a main for each band that a leftover does not hold, foods added until the day's usual
+ * amounts come near its calories, then the foods are scaled with the fitter and the day is judged with
+ * `outOfTolerance` on core's sum of its items. A day that is out is tried again with a food more or less, a
+ * few times, and the closest attempt is kept. A day still out gets one fit over every food it can
+ * use (`allFoodsFit`) before it is reported short. A day that cannot be met says which nutrient, and why.
+ */
 export const buildDay = (ctx: DayContext): DayOutcome => {
   let tried = evaluate(ctx, grown(ctx, withMains(ctx)));
   let best = tried;
@@ -587,16 +678,43 @@ export const buildDay = (ctx: DayContext): DayOutcome => {
     }
   }
 
-  // A day the preferred foods leave out gets one fit over every food it can use, with each cook set tried in
-  // turn: all of them, then one fewer, down to none.
-  for (let cooks = best.selection.cooks; best.day.status === "short"; cooks = cooks.slice(0, -1)) {
-    const wider = allFoodsFit(ctx, cooks);
-    if (wider.distance < best.distance || wider.day.status === "within") {
-      best = wider;
-    }
-    if (cooks.length === 0) {
+  // A day the preferred foods leave out gets one fit over every food it can use, for each set of cooks in turn:
+  // the one it has, that with fewer cooks, then other recipes the free bands could cook. A set that cannot reach
+  // the targets even in principle costs no fit.
+  const sets = cookSetsToTry(ctx, best.selection.cooks);
+  let isFirstSurvivor = true;
+  let isCutShort = false;
+  for (const [at, cooks] of sets.entries()) {
+    if (best.day.status !== "short") {
       break;
     }
+    if (ctx.budget.remaining <= 0) {
+      isCutShort = sets.slice(at).some((later) => dayCanReach(ctx, later));
+      break;
+    }
+    if (!dayCanReach(ctx, cooks)) {
+      continue;
+    }
+    const wider = allFoodsFit(ctx, cooks, isFirstSurvivor);
+    isFirstSurvivor = false;
+    if (wider.day.status === "within" || wider.distance < best.distance) {
+      best = wider;
+    }
+  }
+
+  // A short day without `work_limit` must mean no set of cooks and foods was left untried. A fit the budget
+  // refused, or a set that could have fitted and was not tried, means the day only ran out of work.
+  if (best.day.status === "short" && (isCutShort || ctx.budget.refused)) {
+    return {
+      day: {
+        ...best.day,
+        shortfalls: best.day.shortfalls.map((shortfall) => ({
+          ...shortfall,
+          reason: "work_limit",
+        })),
+      },
+      cooks: cooksOf(ctx, best.selection),
+    };
   }
 
   return { day: best.day, cooks: cooksOf(ctx, best.selection) };

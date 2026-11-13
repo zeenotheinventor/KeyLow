@@ -89,7 +89,7 @@ export const planMeals = (input: PlanMealsInput): PlannedWeek => {
 
     // A day may spend its fair share of what is left, so a hard day cannot starve the days after it.
     const share = Math.ceil(budget.remaining / (input.days.length - dayAt));
-    const dayBudget = { remaining: share };
+    const dayBudget = { remaining: share, refused: false };
     const { day, cooks } = buildDay({
       day: dayInput,
       pool,

@@ -55,7 +55,10 @@ describe("planMeals performance", () => {
 
 // What is capped is the number of fitter calls one plan may make (`PLAN_FIT_BUDGET`), not the time, and that
 // count is what these tests assert through `fitCalls`. The guarantee is the fit count. A plan that runs out of
-// fits reports its remaining days short with the reason `work_limit`. Plans name calories and protein only
+// fits reports the days it could not finish as short with the reason `work_limit`, and a day short without
+// that reason was tried to the end. The week below, from 50 foods and 20 recipes with four named targets,
+// spends the whole budget and starves its last days. A single day has the budget to itself and is tried to the
+// end. Plans name calories and protein only
 // unless the person names carbs or fat, so the four named target shapes below are pathological and carry no
 // wall time check. Measured with 50 foods and 20 recipes over 7 days: about 60 ms for an unmeetable shape the
 // bounds rule out at once, and about 600 ms on the local loaded laptop for four named targets that the fits
@@ -128,18 +131,38 @@ describe("planMeals work cap", () => {
     expect(fitCalls).toBeLessThanOrEqual(PLAN_FIT_BUDGET);
   });
 
-  it("should report the days it ran out of fits for as short with the reason work_limit", () => {
+  it("should label the days it ran out of fits for work_limit, and no other day", () => {
     const plan = planMeals({
       ...manyCandidates(),
       rules: { ...RULES, maxRepeats: null },
       days: weekOf(7, { kcal: 1500, protein_g: 100, carbs_g: 300, fat_g: 10 }),
     });
 
-    const limited = plan.days.filter((day) =>
+    const starved = plan.days.filter((day) =>
       day.shortfalls.some(({ reason }) => reason === "work_limit"),
     );
-    expect(limited.length).toBeGreaterThan(0);
-    expect(limited.every((day) => day.status === "short")).toBe(true);
+    expect(plan.fitCalls).toBe(PLAN_FIT_BUDGET);
+    expect(starved.length).toBeGreaterThan(0);
+    for (const day of plan.days) {
+      if (day.status === "within") {
+        expect(day.shortfalls).toEqual([]);
+      }
+    }
+    for (const day of starved) {
+      expect(day.status).toBe("short");
+      expect(day.shortfalls.every(({ reason }) => reason === "work_limit")).toBe(true);
+    }
+  });
+
+  it("should not call a day work_limit when it was tried to the end and cannot be met", () => {
+    const [day] = planMeals({
+      ...manyCandidates(),
+      rules: { ...RULES, maxRepeats: null },
+      days: weekOf(1, { kcal: 1500, protein_g: 100, carbs_g: 300, fat_g: 10 }),
+    }).days;
+
+    expect(day?.status).toBe("short");
+    expect(day?.shortfalls.some(({ reason }) => reason === "work_limit")).toBe(false);
   });
 
   it("should cap the fits of a replanned day at the budget too", () => {

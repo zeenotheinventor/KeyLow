@@ -31,7 +31,7 @@ export const replanDay = (plan: Plan, localDate: string, pool: PlanPool): Replan
   );
 
   const { appearances, foodUse } = usageOf(others);
-  const budget = { remaining: PLAN_FIT_BUDGET };
+  const budget = { remaining: PLAN_FIT_BUDGET, refused: false };
   const { day } = buildDay({
     day: { localDate, target: replaced.target },
     pool: preparePool(pool),
