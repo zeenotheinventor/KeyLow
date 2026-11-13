@@ -45,6 +45,11 @@ export const samples: Record<string, () => string[]> = {
     copy.joinInWords(["lats", "mid traps", "biceps"]),
   ],
   describeShortDate: () => [copy.describeShortDate("2026-10-12")],
+  describeDateRange: () => [
+    copy.describeDateRange("2026-11-18", "2026-11-22"),
+    copy.describeDateRange("2026-11-27", "2026-12-06"),
+    copy.describeDateRange("2026-11-18", "2026-11-18"),
+  ],
   describeWeekRange: () => [
     copy.describeWeekRange("2026-10-12"),
     copy.describeWeekRange("2026-10-26"),

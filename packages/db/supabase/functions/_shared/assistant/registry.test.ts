@@ -526,6 +526,7 @@ Deno.test("the kitchen tools follow the visible tools in a fixed order", () => {
     [
       ["get_palate_profile", "kitchen", false],
       ["suggest_recipe", "kitchen", false],
+      ["plan_meals", "kitchen", false],
     ],
   );
   assertEquals(

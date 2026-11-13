@@ -213,6 +213,7 @@ export {
   confirmMealPlanDay,
   listMealPlans,
   replaceMealPlanDay,
+  restoreMealPlan,
   saveMealPlan,
 } from "./mealPlans";
 export type {

@@ -15,13 +15,20 @@ export type KitchenEntry = "plan" | "recipe";
 // The words of a kitchen request, as a person types them. The list is a judgement and not a measurement, so it
 // is kept narrow: a diary or recipe-saving sentence ("create a recipe called ...", "I need more protein today")
 // must not surface the kitchen rules, because the rules push a model towards the kitchen tools.
-const kitchenPhrases: readonly RegExp[] = [
+// The words that ask for a meal plan, which the allowlist also reads, so a read-shaped ask such as "What should I
+// eat this week?" can reach `plan_meals` and no other read-shaped text can.
+const planPhrases: readonly RegExp[] = [
   // Plans. "a meal plan from my dietitian" and "plan my week of training" are not asks for one.
   /\b(?:make|create|build|write|give|need|want|get|generate|plan|put together)\b[^.?!]{0,25}\bmeal[ -]?plans?\b/i,
   /\bmeal[ -]?plan(?:ning)?\s+for\b/i,
   /\bplan\s+(?:(?:my|our|the|this|next|some)\s+)?(?:(?:week'?s?|day'?s?)\s+)?(?:meals?|dinners?|lunch(?:es)?|breakfasts?|menu|food|eating)\b/i,
   /\bre-?plan\b/i,
   /\bweekly\s+(?:menu|plan)\b/i,
+  /\bwhat\s+(?:should|shall|can|could)\s+i\s+(?:cook|eat|have|make)\s+(?:this week|(?:for\s+)?the\s+week)\b/i,
+];
+
+const kitchenPhrases: readonly RegExp[] = [
+  ...planPhrases,
   // A new recipe. "give me the macros for my chicken recipe" and "any recipe I saved" are not.
   /\b(?:suggest|recommend|invent|come up with|think of)\b(?:\s+me)?\s+(?:a|an|some|another|any|new)\b[^.?!]{0,25}\b(?:recipes?|(?:dinner|lunch|breakfast|snack|meal)\s+ideas?)\b/i,
   /\b(?:recipe|dinner|lunch|breakfast|snack|meal)\s+(?:ideas?|suggestions?)\b/i,
@@ -39,6 +46,11 @@ const kitchenPhrases: readonly RegExp[] = [
   /\bmy\s+palate\b/i,
   /\bfoods?\s+(?:do\s+)?(?:i|to)\s+(?:avoid|dislike|don'?t\s+like)\b/i,
 ];
+
+export function isMealPlanRequest(text: string): boolean {
+  const plain = text.replaceAll("’", "'");
+  return planPhrases.some((phrase) => phrase.test(plain));
+}
 
 export function isKitchenRequest(text: string, entry: KitchenEntry | null | undefined): boolean {
   if (entry !== null && entry !== undefined) {
@@ -62,6 +74,7 @@ export const KITCHEN_RULES = [
   "The kitchen tools are available in this conversation. Use them for a new recipe, a change to a recipe and a meal plan, and pass on the person's own words. Never invent a recipe, an amount or a figure. Report what the tool returned, and when a kitchen tool cannot do what was asked, say so in one short sentence.",
   "For what the person usually eats, call get_palate_profile and name only what it returned: the foods, how often, and what they avoid. Never name a food, a habit or a figure it did not return. Allergies are matched by name only, so say so when one comes up.",
   "For a new recipe, call suggest_recipe with the figures the person gave for one serving. With no calories and protein, ask with ask_user and never choose figures. The card shows the recipe, so do not list it. Say how close it is, any line not matched and any food left out because they avoid it. If it could not be written (including without a food they avoid) or took too long, say so in one short sentence, and that nothing was saved.",
+  "For a meal plan, call plan_meals with the person's words only. Say which days came out short, and when no plan was made, say nothing was saved. If wishes_not_fully_kept is true, say the wishes could not all be kept.",
 ].join("\n");
 
 export type ToolAdditionBlock = {

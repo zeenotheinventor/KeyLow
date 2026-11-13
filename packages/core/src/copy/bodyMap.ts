@@ -252,6 +252,21 @@ export const describeWeekRange = (weekStart: string): string => {
   return `${start} to ${describeShortDate(weekEnd)}`;
 };
 
+/**
+ * Two calendar days as a range: "Wed 18 to Sun 22 Nov", the month named once when both ends share it and on
+ * both ends when they do not ("Fri 27 Nov to Sun 6 Dec"), and the short date alone when the ends are one day.
+ */
+export const describeDateRange = (start: string, end: string): string => {
+  if (start === end) {
+    return describeShortDate(start);
+  }
+  const sameMonth = parseCalendarDay(start).month === parseCalendarDay(end).month;
+  const first = sameMonth
+    ? `${WEEKDAY_NAMES_SHORT[weekdayIndexOf(start)]} ${parseCalendarDay(start).day}`
+    : describeShortDate(start);
+  return `${first} to ${describeShortDate(end)}`;
+};
+
 /** An instant in the user's zone as the boards write a moment: "Thu 15 Oct, 19:00". */
 export const describeMoment = (at: string, tz: string): string => {
   const instant = new Date(at);
