@@ -80,6 +80,7 @@ export function ListRow({
         className={cn(
           macro === undefined ? "text-body-strong" : "text-body",
           titleTone === "danger" && "text-danger",
+          titleTone === "secondary" && "text-text-secondary",
           "[overflow-wrap:anywhere]",
         )}
       >
@@ -129,7 +130,7 @@ export function ListRow({
           />
         </span>
       ) : null}
-      {!loading && trailing !== undefined && (
+      {!loading && trailing?.kind === "tick" && (
         <span role="img" aria-label={trailing.label} className="flex shrink-0">
           <Check aria-hidden className="size-5 stroke-success" strokeWidth={iconStroke} />
         </span>
@@ -143,6 +144,53 @@ export function ListRow({
       )}
     </>
   );
+
+  if (trailing?.kind === "action" || trailing?.kind === "label") {
+    // The row goes nowhere. The words are one group, the button is a stop of its own and a label is plain text, as
+    // `web-assistant-settings · changes` draws its rows: 60 high, with 8 beside the end and 16 before the words.
+    return (
+      <li>
+        <div
+          className={cn(
+            "flex min-h-[60px] w-full items-center gap-3 py-2 pl-4 pr-2 text-left text-text-primary",
+            className,
+          )}
+        >
+          <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+            <span
+              className={cn(
+                "text-body-strong [overflow-wrap:anywhere]",
+                titleTone === "secondary" && "text-text-secondary",
+              )}
+            >
+              {title}
+            </span>
+            {subtitle !== undefined && (
+              <span className="text-caption tabular-nums text-text-muted">{subtitle}</span>
+            )}
+          </span>
+          {trailing.kind === "label" ? (
+            <span className="shrink-0 px-3 text-caption text-text-muted">{trailing.label}</span>
+          ) : (
+            <button
+              type="button"
+              aria-label={`${trailing.label}, ${title}`}
+              aria-busy={trailing.busy === true || undefined}
+              // The button is 36 high and reaches the 44 touch target with the row's padding around it.
+              className="relative flex h-control-sm shrink-0 cursor-pointer items-center rounded-small px-3 text-label-small text-accent-ink outline-none before:absolute before:-inset-y-1 before:inset-x-0 before:content-[''] hover:bg-hover-overlay focus-visible:ring-2 focus-visible:ring-focus-ring active:bg-press-overlay"
+              onClick={() => {
+                if (trailing.busy !== true) {
+                  trailing.onPress();
+                }
+              }}
+            >
+              {trailing.label}
+            </button>
+          )}
+        </div>
+      </li>
+    );
+  }
 
   if (toggle !== undefined) {
     // The switch is the row's one control, so the row is plain and the switch keeps its own name. The visible

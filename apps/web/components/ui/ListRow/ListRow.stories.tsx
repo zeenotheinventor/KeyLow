@@ -191,6 +191,36 @@ export const ToggleInteractive: Story = {
   render: () => <InteractiveToggleRow />,
 };
 
+// The Assistant changes list's rows: Undo is a text button in the accent ink and its own tab stop, a done row has
+// its title muted with "Undone" at its end, and a row that cannot be undone says so in plain text. The last Undo is busy.
+export const WithEndAction: Story = {
+  render: () => (
+    <>
+      <ListRow
+        title="Logged 2 eggs and toast at 08:10"
+        subtitle="08:11 · 2 entries"
+        trailing={{ kind: "action", label: "Undo", onPress: () => undefined }}
+      />
+      <ListRow
+        title="Copied 8 entries from yesterday"
+        subtitle="12:30"
+        titleTone="secondary"
+        trailing={{ kind: "label", label: "Undone" }}
+      />
+      <ListRow
+        title="Logged a flat white at 07:30"
+        subtitle="07:31 · changed in your diary since"
+        trailing={{ kind: "label", label: "Can't undo" }}
+      />
+      <ListRow
+        title="Archived recipe Pasta bake"
+        subtitle="19:05"
+        trailing={{ kind: "action", label: "Undo", onPress: () => undefined, busy: true }}
+      />
+    </>
+  ),
+};
+
 // An action that deletes draws its title in the danger colour and has no chevron, as Delete all conversations does.
 export const DangerTitle: Story = {
   render: () => (
