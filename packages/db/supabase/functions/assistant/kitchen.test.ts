@@ -5,6 +5,7 @@ import {
   KITCHEN_RULES,
   holdsKitchenAddition,
   isKitchenRequest,
+  isMealPlanRequest,
   isKitchenSwitchOn,
   kitchenAdditionContent,
   planKitchen,
@@ -155,8 +156,8 @@ Deno.test(
   },
 );
 
-Deno.test("the kitchen rules are no longer than 1,400 characters", () => {
-  assert(KITCHEN_RULES.length <= 1_400);
+Deno.test("the kitchen rules are no longer than 2,000 characters", () => {
+  assert(KITCHEN_RULES.length <= 2_000);
 });
 
 Deno.test("the kitchen rules say that allergies are matched by name only", () => {
@@ -216,3 +217,31 @@ Deno.test("a conversation that had the addition but whose replay lost it appends
     append: true,
   });
 });
+
+Deno.test("isMealPlanRequest matches the plan words and not other kitchen or diary text", () => {
+  for (const text of [
+    "What should I eat this week?",
+    "Make me a meal plan",
+    "Plan my meals for the week",
+    "Replan Thursday",
+  ]) {
+    assertEquals(isMealPlanRequest(text), true, text);
+  }
+  for (const text of [
+    "Why was Tuesday so high?",
+    "Suggest a recipe for dinner",
+    "What do I usually eat?",
+    "Log my lunch",
+  ]) {
+    assertEquals(isMealPlanRequest(text), false, text);
+  }
+});
+
+Deno.test(
+  "the kitchen rules send a change to a saved recipe to adjust_recipe and say the recipe is unchanged",
+  () => {
+    assertStringIncludes(KITCHEN_RULES, "adjust_recipe");
+    assertStringIncludes(KITCHEN_RULES, "The card shows it");
+    assertStringIncludes(KITCHEN_RULES, "the recipe is unchanged");
+  },
+);

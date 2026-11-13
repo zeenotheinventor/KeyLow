@@ -57,8 +57,9 @@ const kitchenAdditionTokensOf = (tools: readonly ListedTool[]): number => {
 };
 
 // What a kitchen turn may add to the prefix, deferred tool definitions and the system message together. The
-// conversation's room is 40 % of the compaction threshold, so this is a fixed 2,500 tokens of it (KEY-1022).
-const KITCHEN_ADDITION_LIMIT_TOKENS = 2_500;
+// conversation's room is 40 % of the compaction threshold, so this is a fixed 3,500 tokens of it (KEY-1022, raised
+// from 2,500 by KEY-1032 for three more tools, recorded in ADR 0006, Amendment 5).
+const KITCHEN_ADDITION_LIMIT_TOKENS = 3_500;
 
 Deno.test(
   "the tools and the system prompt leave most of the compaction threshold to the conversation",
@@ -88,7 +89,7 @@ Deno.test("a kitchen tool does not count towards the prefix of an ordinary turn"
   assertEquals(prefixTokensOf([...visible, heavyKitchenTool(60_000)]), prefixTokensOf(visible));
 });
 
-Deno.test("the kitchen addition stays within 2,500 tokens, the kitchen probe included", () => {
+Deno.test("the kitchen addition stays within 3,500 tokens, the kitchen probe included", () => {
   const tokens = kitchenAdditionTokensOf(listedToolsOf(createToolRegistry({ kitchenProbe: true })));
 
   assert(
@@ -103,6 +104,6 @@ Deno.test("a kitchen group that is too big for its limit is measured as over it"
   assert(tokens > KITCHEN_ADDITION_LIMIT_TOKENS);
 });
 
-Deno.test("the limit of the kitchen addition is 2,500 tokens", () => {
-  assertEquals(KITCHEN_ADDITION_LIMIT_TOKENS, 2_500);
+Deno.test("the limit of the kitchen addition is 3,500 tokens", () => {
+  assertEquals(KITCHEN_ADDITION_LIMIT_TOKENS, 3_500);
 });

@@ -3,6 +3,8 @@
 // in the right one with no edit here, and anything the rules cannot tell falls to the general set, which
 // still has every executor guard. The answer keeps the tools' own order, so the `X-Kilo-Allowed-Tools`
 // header is the same for the same input.
+import { isMealPlanRequest } from "./kitchen.ts";
+
 import type { ListedTool } from "../_shared/assistant/mcpClient.ts";
 
 export type AllowlistTool = Pick<ListedTool, "name" | "readOnlyHint" | "group">;
@@ -23,6 +25,11 @@ const importToolName = "import_recipe_from_url";
 // read-shaped, and the offer to send a feature request is needed exactly then. It is safe here because it
 // writes only after the person presses its confirm button and touches no diary or training row.
 const featureRequestToolName = "request_feature";
+
+// A question about what to eat this week ("What should I eat this week?") is read-shaped, and the plan is what
+// answers it. Only a message that matches the meal plan words of `kitchen.ts` reaches it, so "Why was Tuesday so
+// high?" cannot. It is in the kitchen group, so it is in no set until the group is surfaced.
+const planMealsToolName = "plan_meals";
 
 // The tools a recipe link needs, each only if it is listed.
 const recipeImportTools: ReadonlySet<string> = new Set([
@@ -145,7 +152,11 @@ export function allowedToolsFor({
       return recipeImportTools.has(tool.name);
     }
     if (looksLikeRead(text)) {
-      return tool.readOnlyHint || tool.name === featureRequestToolName;
+      return (
+        tool.readOnlyHint ||
+        tool.name === featureRequestToolName ||
+        (tool.name === planMealsToolName && isMealPlanRequest(text))
+      );
     }
     return tool.name !== importToolName;
   };

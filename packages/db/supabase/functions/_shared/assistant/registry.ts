@@ -1,5 +1,6 @@
 // The ordered list of tools. A tool ticket adds its file under `tools/` and one line to `toolDefinitions`.
 // The order is part of the prompt cache's prefix, so a tool is only ever appended or moved on purpose.
+import { adjustRecipeTool } from "./tools/adjustRecipe.ts";
 import { archiveRecipeTool } from "./tools/archiveRecipe.ts";
 import { copyDayTool } from "./tools/copyDay.ts";
 import { createCustomFoodTool } from "./tools/createCustomFood.ts";
@@ -23,6 +24,7 @@ import { getWeighInsTool } from "./tools/getWeighIns.ts";
 import { getWorkoutsTool } from "./tools/getWorkouts.ts";
 import { importRecipeFromUrlTool } from "./tools/importRecipeFromUrl.ts";
 import { logEntryTool } from "./tools/logEntry.ts";
+import { planMealsTool } from "./tools/planMeals.ts";
 import { searchExercisesTool } from "./tools/searchExercises.ts";
 import { searchFoodsTool } from "./tools/searchFoods.ts";
 import { setDayCompleteTool } from "./tools/setDayComplete.ts";
@@ -115,6 +117,8 @@ const toolDefinitions: readonly ToolDefinition[] = [
   askUserTool,
   getPalateProfileTool,
   suggestRecipeTool,
+  planMealsTool,
+  adjustRecipeTool,
 ];
 
 // The registry of a deployment. The kitchen probe is last and present only when asked for, so the order of every
