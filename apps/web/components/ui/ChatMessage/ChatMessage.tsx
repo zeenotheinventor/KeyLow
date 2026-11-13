@@ -117,7 +117,7 @@ function AssistantLines({
     <>
       {estimate === undefined ? null : (
         <div className="flex items-center gap-2">
-          <Badge>{estimate.badgeLabel}</Badge>
+          <Badge outlined>{estimate.badgeLabel}</Badge>
           <span className="min-w-0 text-caption text-text-muted">{estimate.label}</span>
         </div>
       )}

@@ -23,6 +23,7 @@ import {
   signInPanelClient,
 } from "./assistantPanelBackend";
 import {
+  CONFIRMATION_ID,
   CONVERSATION_ID,
   TURN_ID,
   eventText,
@@ -31,8 +32,11 @@ import {
   turnResponse,
 } from "../../../../packages/api-client/test/support/assistantStream";
 
+import type { AssistantStreamEvent } from "@keylow/core";
+
 import { DashboardNav } from "@/app/(dashboard)/DashboardNav";
 import { AssistantDock, AssistantProvider } from "@/components/assistant";
+import { buttonVariants } from "@/components/ui/Button";
 import { ToastProvider } from "@/components/ui/Toast";
 
 const { pathname, viewedDate } = vi.hoisted(() => ({
@@ -857,6 +861,187 @@ describe("the assistant panel", () => {
       await screen.findByRole("group", { name: "Assistant: First part and more" });
 
       expect(writes).toHaveLength(writesBefore);
+    });
+  });
+
+  describe("quick replies and confirmation", () => {
+    const clarifyEvents = (): AssistantStreamEvent[] => [
+      { type: "turn", turnId: TURN_ID, conversationId: CONVERSATION_ID },
+      { type: "text", delta: "How much chicken and how much rice?" },
+      {
+        type: "clarify",
+        question: "How much chicken and how much rice?",
+        quickReplies: ["1 chicken breast, 150 g rice", "1 chicken breast, 200 g rice"],
+        fieldHint: null,
+      },
+      { type: "done", outcome: "clarify" },
+    ];
+    const confirmEvent = (tone: "danger" | "primary"): AssistantStreamEvent => ({
+      type: "confirm",
+      confirmationId: CONFIRMATION_ID,
+      question: "Delete 3 entries at 13:00 today?",
+      confirmLabel: "Delete 3 entries",
+      cancelLabel: "Keep them",
+      tone,
+    });
+    const quickReplies = () =>
+      screen.findByRole("group", { name: ASSISTANT_SHEET.quickRepliesLabel });
+
+    it("should send a quick reply's words as your message", async () => {
+      panelBackend.answerTurn = () => turnResponse(clarifyEvents());
+      const user = userEvent.setup();
+      await renderApp();
+      await openPanel(user);
+      await user.click(screen.getByRole("button", { name: ASSISTANT_SHEET.starters[1] }));
+      const replies = await quickReplies();
+
+      const chip = within(replies).getByRole("button", { name: "1 chicken breast, 200 g rice" });
+      await waitFor(() => {
+        expect(chip.hasAttribute("disabled")).toBe(false);
+      });
+      await user.click(chip);
+
+      await waitFor(() => {
+        expect(panelBackend.turnRequests.map(({ text }) => text)).toEqual([
+          ASSISTANT_SHEET.starters[1],
+          "1 chicken breast, 200 g rice",
+        ]);
+      });
+    });
+
+    it.each([
+      ["danger", "destructive", "primary"],
+      ["primary", "primary", "destructive"],
+    ] as const)(
+      "should send the confirm button's label, drawn in the %s tone",
+      async (tone, variant, otherVariant) => {
+        panelBackend.answerTurn = () =>
+          turnResponse([
+            { type: "turn", turnId: TURN_ID, conversationId: CONVERSATION_ID },
+            { type: "text", delta: "Delete 3 entries at 13:00 today?" },
+            confirmEvent(tone),
+            { type: "done", outcome: "confirm" },
+          ]);
+        const user = userEvent.setup();
+        await renderApp();
+        await openPanel(user);
+        await user.click(screen.getByRole("button", { name: ASSISTANT_SHEET.starters[1] }));
+        const confirm = await screen.findByRole("button", { name: "Delete 3 entries" });
+
+        // The classes the tone's variant has and the other one lacks, so the check follows the Button's own looks.
+        const otherClasses = buttonVariants({ variant: otherVariant }).split(" ");
+        const toneClasses = buttonVariants({ variant })
+          .split(" ")
+          .filter((name) => !otherClasses.includes(name));
+        expect(toneClasses.length).toBeGreaterThan(0);
+        expect(confirm.className.split(" ")).toEqual(expect.arrayContaining(toneClasses));
+        await waitFor(() => {
+          expect(confirm.hasAttribute("disabled")).toBe(false);
+        });
+        await user.click(confirm);
+
+        await waitFor(() => {
+          expect(panelBackend.turnRequests.map(({ text }) => text).at(-1)).toBe("Delete 3 entries");
+        });
+      },
+    );
+
+    it("should keep the quick replies off while the turn streams and on when it ends", async () => {
+      const stream = controlledStream();
+      panelBackend.answerTurn = () => stream.response;
+      const user = userEvent.setup();
+      await renderApp();
+      await openPanel(user);
+      await user.click(screen.getByRole("button", { name: ASSISTANT_SHEET.starters[1] }));
+      stream.push(
+        turnEvent +
+          eventText({
+            type: "clarify",
+            question: "How much?",
+            quickReplies: ["150 g", "200 g"],
+            fieldHint: null,
+          }),
+      );
+
+      const chip = await screen.findByRole("button", { name: "150 g" });
+      expect(chip.hasAttribute("disabled")).toBe(true);
+
+      stream.push(eventText({ type: "done", outcome: "clarify" }));
+
+      await waitFor(() => {
+        expect(screen.getByRole("button", { name: "150 g" }).hasAttribute("disabled")).toBe(false);
+      });
+    });
+
+    it("should send the cancel label when it is pressed", async () => {
+      panelBackend.answerTurn = () =>
+        turnResponse([
+          { type: "turn", turnId: TURN_ID, conversationId: CONVERSATION_ID },
+          { type: "text", delta: "Delete 3 entries at 13:00 today?" },
+          confirmEvent("danger"),
+          { type: "done", outcome: "confirm" },
+        ]);
+      const user = userEvent.setup();
+      await renderApp();
+      await openPanel(user);
+      await user.click(screen.getByRole("button", { name: ASSISTANT_SHEET.starters[1] }));
+
+      const cancel = await screen.findByRole("button", { name: "Keep them" });
+      await waitFor(() => {
+        expect(cancel.hasAttribute("disabled")).toBe(false);
+      });
+      await user.click(cancel);
+
+      await waitFor(() => {
+        expect(panelBackend.turnRequests.map(({ text }) => text).at(-1)).toBe("Keep them");
+      });
+    });
+
+    it("should keep the buttons off while the turn streams and on when it ends", async () => {
+      const stream = controlledStream();
+      panelBackend.answerTurn = () => stream.response;
+      const user = userEvent.setup();
+      await renderApp();
+      await openPanel(user);
+      await user.click(screen.getByRole("button", { name: ASSISTANT_SHEET.starters[1] }));
+      stream.push(turnEvent + eventText(confirmEvent("danger")));
+
+      const confirm = await screen.findByRole("button", { name: "Delete 3 entries" });
+      expect(confirm.hasAttribute("disabled")).toBe(true);
+      expect(screen.getByRole("button", { name: "Keep them" }).hasAttribute("disabled")).toBe(true);
+
+      stream.push(eventText({ type: "done", outcome: "confirm" }));
+
+      await waitFor(() => {
+        expect(
+          screen.getByRole("button", { name: "Delete 3 entries" }).hasAttribute("disabled"),
+        ).toBe(false);
+        expect(screen.getByRole("button", { name: "Keep them" }).hasAttribute("disabled")).toBe(
+          false,
+        );
+      });
+    });
+
+    it("should draw the Estimate badge and the citation under the answer", async () => {
+      panelBackend.answerTurn = () =>
+        turnResponse([
+          { type: "turn", turnId: TURN_ID, conversationId: CONVERSATION_ID },
+          { type: "text", delta: "Your trend weight fell by 0.4 kg a week." },
+          {
+            type: "answer_meta",
+            citation: "Based on 24 weigh-ins, 21 Sep to 18 Oct",
+            estimate: "Trend weight is an estimate",
+          },
+          { type: "done", outcome: "complete" },
+        ]);
+      const user = userEvent.setup();
+      await renderApp();
+      await openPanel(user);
+      await user.click(screen.getByRole("button", { name: ASSISTANT_SHEET.starters[1] }));
+
+      expect(await screen.findByText("Trend weight is an estimate")).toBeTruthy();
+      expect(screen.getByText("Estimate")).toBeTruthy();
+      expect(screen.getByText("Based on 24 weigh-ins, 21 Sep to 18 Oct")).toBeTruthy();
     });
   });
 });

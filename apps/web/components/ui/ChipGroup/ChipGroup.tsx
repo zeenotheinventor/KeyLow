@@ -25,14 +25,17 @@ function targetIndexForKey(key: string, index: number, count: number): number | 
 const selectionRoles = {
   single: { group: "radiogroup", chip: "radio" },
   multiple: { group: "group", chip: "checkbox" },
+  action: { group: "group", chip: "button" },
 } as const;
 
 function isChosen<Value extends string>(props: ChipGroupProps<Value>, value: Value): boolean {
+  if (props.selection === "action") return false;
   return props.selection === "multiple" ? props.value.includes(value) : props.value === value;
 }
 
 /** Hands the choice on after a chip is pressed: one choice moves to it, several each toggle on their own. */
 function choose<Value extends string>(props: ChipGroupProps<Value>, value: Value) {
+  if (props.selection === "action") return;
   if (props.selection === "multiple") {
     props.onChange(
       props.value.includes(value)
@@ -57,19 +60,22 @@ function choose<Value extends string>(props: ChipGroupProps<Value>, value: Value
 // of the gap without covering the next chip.
 export function ChipGroup<Value extends string>(props: ChipGroupProps<Value>) {
   const { label, options, onChipPress, className } = props;
-  const roles = selectionRoles[props.selection === "multiple" ? "multiple" : "single"];
+  const roles = selectionRoles[props.selection ?? "single"];
+  const isAction = props.selection === "action";
+  const isDisabled = props.selection === "action" && props.disabled === true;
   const chips = useRef<(HTMLButtonElement | null)[]>([]);
   const [lastFocusedIndex, setLastFocusedIndex] = useState<number | undefined>(undefined);
   const firstChosenIndex = options.findIndex((option) => isChosen(props, option.value));
-  const tabbableIndex =
-    props.selection === "multiple" && lastFocusedIndex !== undefined
+  const tabbableIndex = isAction
+    ? undefined
+    : props.selection === "multiple" && lastFocusedIndex !== undefined
       ? Math.min(lastFocusedIndex, options.length - 1)
       : Math.max(firstChosenIndex, 0);
 
   const moveTo = (nextIndex: number) => {
     const next = options[nextIndex];
     if (next) {
-      if (props.selection !== "multiple") {
+      if (props.selection === undefined || props.selection === "single") {
         props.onChange(next.value);
       }
       chips.current[nextIndex]?.focus();
@@ -86,8 +92,9 @@ export function ChipGroup<Value extends string>(props: ChipGroupProps<Value>) {
           }}
           type="button"
           role={roles.chip}
-          aria-checked={isChosen(props, option.value)}
-          tabIndex={index === tabbableIndex ? 0 : -1}
+          aria-checked={isAction ? undefined : isChosen(props, option.value)}
+          disabled={isDisabled}
+          tabIndex={isAction || index === tabbableIndex ? 0 : -1}
           onFocus={() => {
             setLastFocusedIndex(index);
           }}
@@ -96,14 +103,14 @@ export function ChipGroup<Value extends string>(props: ChipGroupProps<Value>) {
             onChipPress?.(option.value);
           }}
           onKeyDown={(event) => {
-            if (event.altKey || event.metaKey || event.ctrlKey) return;
+            if (isAction || event.altKey || event.metaKey || event.ctrlKey) return;
             const targetIndex = targetIndexForKey(event.key, index, options.length);
             if (targetIndex !== undefined) {
               event.preventDefault();
               moveTo(targetIndex);
             }
           }}
-          className="relative inline-flex h-control-sm max-w-full shrink-0 items-center whitespace-nowrap rounded-pill border border-border bg-surface-raised px-3 text-body text-text-primary outline-none transition-colors duration-quick after:absolute after:-inset-[5px] motion-reduce:transition-none aria-checked:border-accent aria-checked:bg-accent aria-checked:font-semibold aria-checked:text-accent-foreground focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-focus-ring-offset"
+          className="relative inline-flex h-control-sm max-w-full shrink-0 items-center whitespace-nowrap rounded-pill border border-border bg-surface-raised px-3 text-body text-text-primary outline-none transition-colors duration-quick after:absolute after:-inset-[5px] motion-reduce:transition-none disabled:opacity-40 aria-checked:border-accent aria-checked:bg-accent aria-checked:font-semibold aria-checked:text-accent-foreground focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-focus-ring-offset"
         >
           <span className="truncate">{option.label}</span>
         </button>

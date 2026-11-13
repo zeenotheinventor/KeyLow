@@ -88,6 +88,26 @@ describe("Badge", () => {
     });
   });
 
+  describe("outlined", () => {
+    it("should draw a hairline border and the raised fill when asked", () => {
+      render(<Badge outlined>Estimate</Badge>);
+
+      const { className } = screen.getByText("Estimate");
+      expect(className).toContain("border-border");
+      expect(className).toContain("bg-surface-raised");
+      expect(className).not.toContain("border-transparent bg-surface-sheet");
+    });
+
+    it("should stay unchanged without it", () => {
+      render(<Badge>Estimate</Badge>);
+
+      const { className } = screen.getByText("Estimate");
+      expect(className).toContain("border-transparent");
+      expect(className).toContain("bg-surface-sheet");
+      expect(className).not.toContain("bg-surface-raised");
+    });
+  });
+
   describe("props", () => {
     it("should not mix a source badge with a tone or a dot, or a status badge with a source", () => {
       render(

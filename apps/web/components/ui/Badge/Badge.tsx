@@ -61,9 +61,19 @@ export function Badge(props: BadgeProps) {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { kind, tone = "neutral", dot, className, children, ...rest } = props;
+  const { kind, tone = "neutral", dot, outlined = false, className, children, ...rest } = props;
   return (
-    <span className={cn(frame, "border-transparent", tones[tone].surface, className)} {...rest}>
+    <span
+      className={cn(
+        frame,
+        "border-transparent",
+        tones[tone].surface,
+        outlined && "border-border",
+        outlined && tone === "neutral" && "bg-surface-raised",
+        className,
+      )}
+      {...rest}
+    >
       {dot === true && (
         <span aria-hidden="true" className={cn("size-[6px] rounded-pill", tones[tone].dot)} />
       )}

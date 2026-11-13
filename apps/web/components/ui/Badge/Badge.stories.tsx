@@ -31,6 +31,10 @@ export const SourceYours: Story = { render: () => <Badge kind="source" source="u
 
 export const Neutral: Story = { render: () => <Badge tone="neutral">Estimate</Badge> };
 
+export const Outlined: Story = {
+  render: () => <Badge outlined>Estimate</Badge>,
+};
+
 export const Accent: Story = { render: () => <Badge tone="accent">New</Badge> };
 
 export const Success: Story = { render: () => <Badge tone="success">Complete</Badge> };

@@ -20,6 +20,7 @@ export type SourceBadgeProps = BadgeElementProps & {
   source: FoodSource;
   tone?: never;
   dot?: never;
+  outlined?: never;
   children?: never;
 };
 
@@ -29,6 +30,11 @@ export type StatusBadgeProps = BadgeElementProps & {
   tone?: BadgeTone;
   /** A decoration. The text carries the meaning. */
   dot?: boolean;
+  /**
+   * Draws the badge as the boards draw the assistant's Estimate: a hairline border, and for the neutral tone the
+   * raised fill instead of the sheet fill. The phone's `outlined` is the twin, which follows the board here.
+   */
+  outlined?: boolean;
   source?: never;
   children: React.ReactNode;
 };

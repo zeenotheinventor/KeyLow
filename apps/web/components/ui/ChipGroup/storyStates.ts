@@ -6,4 +6,6 @@ export const storyStates = [
   "MultipleTwoChosen",
   "MultipleNoneChosen",
   "MultipleFocused",
+  "ActionQuickReplies",
+  "ActionDisabled",
 ];

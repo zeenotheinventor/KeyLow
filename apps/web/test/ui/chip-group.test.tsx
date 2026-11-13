@@ -1,5 +1,5 @@
 import { controlHeight } from "@keylow/tokens";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -608,6 +608,84 @@ describe("ChipGroup", () => {
 
         expect(chipNamed("Barbell").className).toContain("aria-checked:bg-accent");
       });
+    });
+  });
+
+  describe("as one-shot actions", () => {
+    const replies = [
+      { value: "a", label: "1 chicken breast, 150 g rice" },
+      { value: "b", label: "1 chicken breast, 200 g rice" },
+    ] as const;
+
+    it("should be buttons in a plain group, with no chosen state", () => {
+      render(
+        <ChipGroup
+          label="Quick replies"
+          options={replies}
+          selection="action"
+          onChipPress={vi.fn()}
+        />,
+      );
+
+      const group = screen.getByRole("group", { name: "Quick replies" });
+      const buttons = within(group).getAllByRole("button");
+      expect(buttons).toHaveLength(2);
+      expect(buttons.every((button) => !button.hasAttribute("aria-checked"))).toBe(true);
+    });
+
+    it("should hand on the pressed chip's value every time it is pressed", async () => {
+      const onChipPress = vi.fn();
+      render(
+        <ChipGroup
+          label="Quick replies"
+          options={replies}
+          selection="action"
+          onChipPress={onChipPress}
+        />,
+      );
+
+      await userEvent.click(screen.getByRole("button", { name: replies[1].label }));
+      await userEvent.click(screen.getByRole("button", { name: replies[1].label }));
+
+      expect(onChipPress.mock.calls).toEqual([["b"], ["b"]]);
+    });
+
+    it("should leave every chip in the tab order and use no arrow keys", async () => {
+      render(
+        <ChipGroup
+          label="Quick replies"
+          options={replies}
+          selection="action"
+          onChipPress={vi.fn()}
+        />,
+      );
+
+      await userEvent.tab();
+      await userEvent.keyboard("{ArrowRight}");
+
+      expect(document.activeElement).toBe(screen.getByRole("button", { name: replies[0].label }));
+      await userEvent.tab();
+      expect(document.activeElement).toBe(screen.getByRole("button", { name: replies[1].label }));
+    });
+
+    it("should dim the chips and ignore presses while disabled", async () => {
+      const onChipPress = vi.fn();
+      render(
+        <ChipGroup
+          disabled
+          label="Quick replies"
+          options={replies}
+          selection="action"
+          onChipPress={onChipPress}
+        />,
+      );
+      const chip = screen.getByRole("button", { name: replies[0].label });
+
+      await userEvent.click(chip);
+
+      expect(chip.hasAttribute("disabled")).toBe(true);
+      expect(chip.className).toContain("disabled:opacity-40");
+      expect(onChipPress).not.toHaveBeenCalled();
     });
   });
 });
