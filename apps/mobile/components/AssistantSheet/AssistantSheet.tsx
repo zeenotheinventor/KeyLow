@@ -1,12 +1,4 @@
-import {
-  useAssistantChat,
-  useAssistantConversation,
-  useAssistantStatus,
-  useAssistantTurn,
-  useNewAssistantConversation,
-  useProfileTimeZone,
-  useSetAssistantConsent,
-} from "@keylow/api-client";
+import { useAssistantChat } from "@keylow/api-client";
 import { ASSISTANT_OFFLINE, ASSISTANT_SHEET, SAVE_FAILED_BANNER } from "@keylow/core/copy";
 import { fetch as streamingFetch } from "expo/fetch";
 import { useRouter } from "expo-router";
@@ -26,16 +18,6 @@ import type { AssistantSheetProps } from "./types";
 import type { AssistantCardLink } from "@keylow/core";
 import type { ComponentRef } from "react";
 import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native";
-
-// The hooks come from the package's index here, so a test that stands in for one of them there is heard.
-const chatReaders = {
-  useAssistantConversation,
-  useAssistantStatus,
-  useAssistantTurn,
-  useNewAssistantConversation,
-  useProfileTimeZone,
-  useSetAssistantConsent,
-};
 
 const deviceTimeZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
 
@@ -92,7 +74,6 @@ export function AssistantSheet({
   // which can report an offset behind the end while the content grows under it.
   const isFollowingEnd = useRef(true);
   const chat = useAssistantChat({
-    readers: chatReaders,
     open,
     localDate,
     describeAt,

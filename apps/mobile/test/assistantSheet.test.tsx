@@ -57,12 +57,19 @@ const mockAssistant: {
 // One function for every render, as the query's own `refetch` is, so the read on open runs once per open.
 const mockRefetchStatus = () => Promise.resolve({ isSuccess: true });
 
-jest.mock("@keylow/api-client", () => ({
-  ...jest.requireActual<object>("@keylow/api-client"),
+// The hooks the chat reads are mocked at their own modules, because `useAssistantChat` calls them inside
+// `@keylow/api-client`, where a mock of the package index does not reach. The index re-exports the same mocks.
+jest.mock("../../../packages/api-client/src/hooks/useAssistantConversation", () => ({
   useAssistantConversation: () => mockAssistant.conversation,
+}));
+jest.mock("../../../packages/api-client/src/hooks/useAssistantTurn", () => ({
   useAssistantTurn: () => mockAssistant.turn,
+}));
+jest.mock("../../../packages/api-client/src/hooks/useNewAssistantConversation", () => ({
   useNewAssistantConversation: () => mockAssistant.newConversation,
-  // The assistant is open for this person. The access states are tested in assistantSheetAccess.test.tsx.
+}));
+// The assistant is open for this person. The access states are tested in assistantSheetAccess.test.tsx.
+jest.mock("../../../packages/api-client/src/hooks/useAssistantStatus", () => ({
   useAssistantStatus: () => ({
     data: { notice: null },
     isSuccess: true,
@@ -70,8 +77,16 @@ jest.mock("@keylow/api-client", () => ({
     failureCount: 0,
     refetch: mockRefetchStatus,
   }),
+}));
+jest.mock("../../../packages/api-client/src/hooks/useSetAssistantConsent", () => ({
   useSetAssistantConsent: () => ({ mutate: jest.fn(), isPending: false }),
+}));
+jest.mock("../../../packages/api-client/src/hooks/useProfileTimeZone", () => ({
   useProfileTimeZone: () => ({ data: "Europe/London" }),
+}));
+
+jest.mock("@keylow/api-client", () => ({
+  ...jest.requireActual<object>("@keylow/api-client"),
   // The card's Undo is tested with the real hook in assistantActionCards.test.tsx.
   useAssistantCardUndo: jest.requireActual<{ mockAssistantCardUndo: unknown }>(
     "./support/assistantCardUndoMock",
