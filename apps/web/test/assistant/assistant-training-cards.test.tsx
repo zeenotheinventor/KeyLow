@@ -20,7 +20,11 @@ const { push } = vi.hoisted(() => ({ push: vi.fn<(href: string) => void>() }));
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 vi.mock("@/lib/foodLogActions", () => ({
-  useFoodLogActions: () => ({ openAddFood: vi.fn(), viewedDate: "2026-10-25" }),
+  useFoodLogActions: () => ({
+    openAddFood: vi.fn(),
+    setAssistantDescribeOpener: vi.fn(),
+    viewedDate: "2026-10-25",
+  }),
 }));
 
 const ROUTINE_ID = "00000000-0000-4000-8000-0000000000e2";
