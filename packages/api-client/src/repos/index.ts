@@ -195,6 +195,7 @@ export type { ShoppingSourceRecipe } from "./shoppingList";
 export {
   addPalatePreference,
   getPalateLoggedDays,
+  listPalateFoods,
   listPalatePreferences,
   listPalateStats,
   removePalatePreference,

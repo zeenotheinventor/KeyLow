@@ -1,4 +1,4 @@
-import { assert, assertEquals, assertFalse } from "@std/assert";
+import { assert, assertEquals, assertFalse, assertStringIncludes } from "@std/assert";
 
 import {
   KITCHEN_BETA,
@@ -127,6 +127,19 @@ Deno.test(
     assertFalse(KITCHEN_RULES.includes(";"));
   },
 );
+
+Deno.test(
+  "the kitchen rules send what the person usually eats to get_palate_profile and keep to what it returned",
+  () => {
+    assertStringIncludes(KITCHEN_RULES, "get_palate_profile");
+    assertStringIncludes(KITCHEN_RULES, "usually eats");
+    assertStringIncludes(KITCHEN_RULES, "did not return");
+  },
+);
+
+Deno.test("the kitchen rules say that allergies are matched by name only", () => {
+  assertStringIncludes(KITCHEN_RULES, "matched by name only");
+});
 
 Deno.test("a system message holds the addition only when it has a tool_addition block", () => {
   const addition = { role: "system", content: kitchenAdditionContent(["kitchen_one"]) };

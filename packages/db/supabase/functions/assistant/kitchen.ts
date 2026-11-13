@@ -60,6 +60,7 @@ export function isKitchenSwitchOn(value: string | undefined): boolean {
 export const KITCHEN_RULES = [
   "Kitchen tools",
   "The kitchen tools are available in this conversation. Use them for a new recipe, a change to a recipe and a meal plan, and pass on the person's own words. Never invent a recipe, an amount or a figure. Report what the tool returned, and when a kitchen tool cannot do what was asked, say so in one short sentence.",
+  "For what the person usually eats, call get_palate_profile and name only what it returned: the foods, how often, and what they avoid. Never name a food, a habit or a figure it did not return. Allergies are matched by name only, so say so when one comes up.",
 ].join("\n");
 
 export type ToolAdditionBlock = {

@@ -79,7 +79,9 @@ Deno.test(
   "the real registry lists the food reads, the diary reads, the diary, day, recipe, food, targets and recipe import writes, the training reads, estimate_portions, request_feature and then ask_user in order",
   () => {
     assertEquals(
-      toolRegistry.list.map((tool) => [tool.name, tool.kind]),
+      toolRegistry.list
+        .filter((tool) => tool.group === undefined)
+        .map((tool) => [tool.name, tool.kind]),
       [
         ["search_foods", "read"],
         ["get_food", "read"],
@@ -511,9 +513,21 @@ Deno.test("the kitchen probe is not in the registry unless it is asked for", () 
       .includes("kitchen_probe"),
     false,
   );
+});
+
+// ADR 0006, Amendment 5. The kitchen tools of M9 follow the visible tools, each added at the end of this list, and
+// the probe stays after them. A tool of the group is a read or a write, and every one opts out of strict.
+Deno.test("the kitchen tools follow the visible tools in a fixed order", () => {
+  const registry = createToolRegistry({ kitchenProbe: false });
+  const visibleCount = registry.list.filter((tool) => tool.group === undefined).length;
+
   assertEquals(
-    toolRegistry.list.map((tool) => tool.group),
-    toolRegistry.list.map(() => undefined),
+    registry.list.slice(visibleCount).map((tool) => [tool.name, tool.group, tool.strict]),
+    [["get_palate_profile", "kitchen", false]],
+  );
+  assertEquals(
+    registry.list.slice(0, visibleCount).map((tool) => tool.group),
+    registry.list.slice(0, visibleCount).map(() => undefined),
   );
 });
 

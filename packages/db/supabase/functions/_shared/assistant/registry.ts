@@ -16,6 +16,7 @@ import { getFoodTool } from "./tools/getFood.ts";
 import { getRangeTotalsTool } from "./tools/getRangeTotals.ts";
 import { getRecipesTool } from "./tools/getRecipes.ts";
 import { getMuscleStateTool } from "./tools/getMuscleState.ts";
+import { getPalateProfileTool } from "./tools/getPalateProfile.ts";
 import { getRoutinesTool } from "./tools/getRoutines.ts";
 import { getTrainingGoalsTool } from "./tools/getTrainingGoals.ts";
 import { getWeighInsTool } from "./tools/getWeighIns.ts";
@@ -111,6 +112,7 @@ const toolDefinitions: readonly ToolDefinition[] = [
   estimatePortionsTool,
   requestFeatureTool,
   askUserTool,
+  getPalateProfileTool,
 ];
 
 // The registry of a deployment. The kitchen probe is last and present only when asked for, so the order of every

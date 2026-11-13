@@ -19,7 +19,9 @@ Deno.test("ask_user is a read tool that says it is read-only, and the registry l
 });
 
 Deno.test("ask_user is listed after the tools that were there before it", () => {
-  assertEquals(toolRegistry.list.at(-1)?.name, "ask_user");
+  const visibleTools = toolRegistry.list.filter((tool) => tool.group === undefined);
+
+  assertEquals(visibleTools.at(-1)?.name, "ask_user");
 });
 
 Deno.test(
