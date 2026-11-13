@@ -53,7 +53,11 @@ const errorCodeOf = (body: string): string => {
 function readEvent(block: string): AssistantStreamEvent {
   const parsed = parseAssistantEvent(block.replace(/^data: /, ""));
   if (!parsed.ok) {
-    throw failure(`${parsed.reason} at ${parsed.fieldPaths.join(", ") || "the line"}`);
+    throw failure(
+      parsed.reason === "unknown_kind"
+        ? `${parsed.reason} (${parsed.subject} ${parsed.kind})`
+        : `${parsed.reason} at ${parsed.fieldPaths.join(", ") || "the line"}`,
+    );
   }
   return parsed.event;
 }
