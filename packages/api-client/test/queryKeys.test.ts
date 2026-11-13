@@ -153,6 +153,16 @@ describe("keys.shoppingList", () => {
   });
 });
 
+describe("keys.palate", () => {
+  it("should sit in a family of its own, so nothing about the palate is kept with another list", () => {
+    expect(keys.palate.all).toEqual(["palate"]);
+    expect(keys.palate.preferences).toEqual(["palate", "preferences"]);
+    expect(keys.palate.stats).toEqual(["palate", "stats"]);
+    expect(keys.palate.loggedDays).toEqual(["palate", "logged-days"]);
+    expect(keys.palate.all[0]).not.toBe(keys.recipes.all[0]);
+  });
+});
+
 describe("keys.recipes", () => {
   it("should expose the recipes root key", () => {
     expect(keys.recipes.all).toEqual(["recipes"]);

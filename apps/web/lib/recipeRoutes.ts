@@ -24,3 +24,10 @@ export const recipePath = (id: string): string => `${recipesPath()}/${id}`;
 
 /** The shopping list, filled from the recipes. It sits beside them, so its path is the recipes' own. */
 export const shoppingListPath = (): string => "/recipes/shopping";
+
+/** The query parameter that carries a food word to the recipe editor, which opens Add ingredient searching for it. */
+export const ADD_INGREDIENT_QUERY_PARAMETER = "addIngredient";
+
+/** The editor for a saved recipe, opened with Add ingredient already searching for a word. */
+export const editRecipeAddIngredientPath = (id: string, word: string): string =>
+  `${editRecipePath(id)}?${ADD_INGREDIENT_QUERY_PARAMETER}=${encodeURIComponent(word)}`;
