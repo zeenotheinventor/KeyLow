@@ -84,9 +84,10 @@ function RecipeNotFound() {
 
 /**
  * `/recipes/<id>/edit`: reads the recipe and opens the editor on it. A direct link or a reload lands here, so
- * the page has its own loading, failed and not found states. The text of a failure is never shown.
+ * the page has its own loading, failed and not found states. An `addIngredientQuery` opens the editor with
+ * Add ingredient searching for that word. The text of a failure is never shown.
  */
-export function RecipeEditorScreen({ id }: RecipeEditorScreenProps) {
+export function RecipeEditorScreen({ id, addIngredientQuery }: RecipeEditorScreenProps) {
   // A link that cannot be a recipe is not asked about, as the foods pages do.
   const isKnownToBeMissing = !isRecipeId(id);
   const state = useRecipe(isKnownToBeMissing ? undefined : id);
@@ -115,6 +116,12 @@ export function RecipeEditorScreen({ id }: RecipeEditorScreenProps) {
     case "notFound":
       return <RecipeNotFound />;
     case "ready":
-      return <RecipeEditor key={state.recipe.id} existing={state.recipe} />;
+      return (
+        <RecipeEditor
+          key={state.recipe.id}
+          existing={state.recipe}
+          initialIngredientSearch={addIngredientQuery}
+        />
+      );
   }
 }

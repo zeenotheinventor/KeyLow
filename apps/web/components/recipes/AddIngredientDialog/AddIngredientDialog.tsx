@@ -22,8 +22,13 @@ import { Dialog } from "@/components/ui/Dialog";
  * button opens the typed lookup panel the Foods page has: a food it finds goes to the amount step as a search
  * row does. A lookup needs a connection, so offline the button is off and says why.
  */
-export function AddIngredientDialog({ opener, onClose, onAdd }: AddIngredientDialogProps) {
-  const [query, setQuery] = useState("");
+export function AddIngredientDialog({
+  initialQuery = "",
+  opener,
+  onClose,
+  onAdd,
+}: AddIngredientDialogProps) {
+  const [query, setQuery] = useState(initialQuery);
   // The food the amount step is for. `recent` is set when it was chosen from Recent: its amount opens at the
   // one last logged.
   const [chosen, setChosen] = useState<{ foodId: string; recent?: RecentFood } | undefined>(

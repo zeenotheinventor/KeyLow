@@ -18,8 +18,9 @@ import type { Breadcrumb, ErrorEvent } from "@sentry/react-native";
 
 // The only breadcrumbs sent: moving between screens, the requests the app makes, and the app coming
 // forward or going away, the keyboard coming and going (a trail for a screen that went blank), and the
-// app starting again after a fatal error. The last three carry a state name, numbers of points or a fixed
-// word, built by code of ours, never what a person typed.
+// app starting again after a fatal error, and the assistant skipping an event type or card kind it does not
+// know. The last four carry a state name, numbers of points, a fixed word or the name of a kind from the
+// contract, built by code of ours, never what a person typed.
 const BREADCRUMB_CATEGORIES_SENT = new Set([
   "navigation",
   "xhr",
@@ -28,6 +29,7 @@ const BREADCRUMB_CATEGORIES_SENT = new Set([
   "app.state",
   "keyboard",
   "app.restart",
+  "assistant.skipped",
 ]);
 
 const REQUEST_AND_NAVIGATION_DATA_KEYS_SENT = [
@@ -49,11 +51,14 @@ const BREADCRUMB_DATA_KEYS_SENT: Record<string, string[]> = {
   "app.state": ["state"],
   keyboard: ["event", "screenY", "height"],
   "app.restart": ["reason"],
+  "assistant.skipped": ["subject", "kind"],
 };
 
 // A message that is fixed text in our own code, so no value can be in it, and is the one thing that says
 // what a report is about. Any other message is worded from what happened and is not sent.
 const FIXED_MESSAGES_SENT = new Set([KEYBOARD_LIFT_OUT_OF_RANGE_MESSAGE]);
+
+const SKIPPED_KIND_NAME = /^[a-z][a-z0-9_]{0,63}$/;
 
 const BREADCRUMB_URL_KEYS = ["url", "from", "to"];
 
@@ -90,6 +95,14 @@ export function scrubBreadcrumb(breadcrumb: Breadcrumb): Breadcrumb | null {
   for (const key of BREADCRUMB_DATA_KEYS_SENT[category] ?? []) {
     const value: unknown = data[key];
     if (value === undefined) {
+      continue;
+    }
+    // A skipped kind is sent only when it is a plain snake_case name, so a value that is not one goes with it.
+    if (
+      category === "assistant.skipped" &&
+      key === "kind" &&
+      !(typeof value === "string" && SKIPPED_KIND_NAME.test(value))
+    ) {
       continue;
     }
     scrubbedData[key] =

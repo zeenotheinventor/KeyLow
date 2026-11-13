@@ -1,11 +1,13 @@
 const MIN_QUERY_WORD_LENGTH = 3;
 
-const wordsOf = (text: string): string[] => text.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [];
+/** The lower case words (letters and digits) of a text, in order. */
+export const wordsOf = (text: string): string[] =>
+  text.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [];
 
 // The endings that make two forms of a word one: plurals, "-ed" and "-ing", a final "e" and "y". It follows
 // the English stemmer the `search_foods` RPC uses closely enough for food names, and it is only ever used
 // to compare two words, so a stem need not be a word.
-function stemOf(word: string): string {
+export function stemOf(word: string): string {
   let stem = word;
   if (stem.endsWith("sses")) {
     stem = stem.slice(0, -2);

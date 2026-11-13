@@ -1,5 +1,6 @@
 import { addBreadcrumb } from "@sentry/react-native";
 
+import type { SkippedKind } from "@keylow/api-client";
 import type { AppStateStatus } from "react-native";
 
 // The route in front, as a pattern with its parameters unfilled (`/recipes/[id]/edit`), so it holds no
@@ -27,4 +28,12 @@ export function recordKeyboard(
   { screenY, height }: { screenY: number; height: number },
 ): void {
   addBreadcrumb({ category: "keyboard", data: { event, screenY, height } });
+}
+
+/**
+ * Notes that the assistant sent an event type or a card kind this app does not know and the turn skipped it,
+ * so a report can say the app is behind the server. The name of the kind is all it holds, never the event.
+ */
+export function recordSkippedKind({ subject, kind }: SkippedKind): void {
+  addBreadcrumb({ category: "assistant.skipped", data: { subject, kind } });
 }

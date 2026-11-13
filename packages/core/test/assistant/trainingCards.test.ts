@@ -45,7 +45,7 @@ describe("assistantCardSchema, the training kinds", () => {
 
   it("should still reject a kind it does not list", () => {
     expect(
-      assistantCardSchema.safeParse({ ...routineCreatedCard, kind: "plan_created" }).success,
+      assistantCardSchema.safeParse({ ...routineCreatedCard, kind: "plan_archived" }).success,
     ).toBe(false);
   });
 

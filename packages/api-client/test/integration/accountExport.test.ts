@@ -10,6 +10,7 @@ import { createTestUser, deleteCreatedTestUsers } from "./support/users";
 import { exportMyData, readMyDataByTable } from "../../src/repos/accountExport";
 import { addFavouriteFood, addFavouriteRecipe } from "../../src/repos/favourites";
 import { createFood } from "../../src/repos/foods";
+import { addPalatePreference, setNotUsual } from "../../src/repos/palatePreferences";
 
 import type { TestUser } from "./support/users";
 import type { AccountExport, AccountExportTable } from "@keylow/core";
@@ -249,6 +250,8 @@ async function seed(user: TestUser, options: { year: boolean }): Promise<void> {
     "recipe ingredients",
   );
   await addFavouriteRecipe(client, recipeId);
+  await addPalatePreference(client, { kind: "allergy", label: "key707 made up word" });
+  await setNotUsual(client, { recipeId });
   succeeded(
     (await client.from("shopping_list_items").insert({ name: "Oats", position: 0 })).error,
     "shopping list",
@@ -480,6 +483,7 @@ const OWNED_BY_OWNER_ID: ReadonlySet<AccountExportTable> = new Set([
   "recipe_ingredients",
   "recipe_favourites",
   "shopping_list_items",
+  "palate_preferences",
   "exercises",
   "exercise_muscles",
 ]);

@@ -496,6 +496,16 @@ export {
   setShoppingItemChecked,
 } from "./repos";
 export type { ShoppingSourceRecipe } from "./repos";
+export { usePalateLoggedDays, usePalatePreferences, usePalateStats } from "./hooks";
+export {
+  addPalatePreference,
+  getPalateLoggedDays,
+  listPalatePreferences,
+  listPalateStats,
+  removePalatePreference,
+  setNotUsual,
+} from "./repos";
+export type { NotUsualTarget, PalateFoodStat, PalatePreference, PalateStatement } from "./repos";
 export type { FavouriteFood, FavouriteRecipe } from "./repos";
 export {
   useAssistantChat,
@@ -529,7 +539,7 @@ export {
 } from "./repos";
 export type { AssistantActionsRead, AssistantConversationPage, AssistantUndoResult } from "./repos";
 export type { AssistantLiveTurn } from "./assistantLiveTurn";
-export type { StreamingFetch, StreamingResponse } from "./runAssistantTurn";
+export type { SkippedKind, StreamingFetch, StreamingResponse } from "./runAssistantTurn";
 
 export { AccountExportError, exportMyData, readMyDataByTable } from "./repos";
 export { useAccountExportFile } from "./hooks";

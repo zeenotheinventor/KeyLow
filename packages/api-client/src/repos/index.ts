@@ -192,6 +192,20 @@ export {
   setShoppingItemChecked,
 } from "./shoppingList";
 export type { ShoppingSourceRecipe } from "./shoppingList";
+export {
+  addPalatePreference,
+  getPalateLoggedDays,
+  listPalatePreferences,
+  listPalateStats,
+  removePalatePreference,
+  setNotUsual,
+} from "./palatePreferences";
+export type {
+  NotUsualTarget,
+  PalateFoodStat,
+  PalatePreference,
+  PalateStatement,
+} from "./palatePreferences";
 export { getAssistantConsent, getAssistantStatus, setAssistantConsent } from "./assistant";
 export type { AssistantConsent, AssistantStatus } from "./assistant";
 export {

@@ -41,9 +41,11 @@ export function eventsOf(response: AssistantResponse): AssistantStreamEvent[] {
     .map((block) => {
       const parsed = parseAssistantEvent(block.replace(/^data: /, ""));
       if (!parsed.ok) {
-        throw new Error(
-          `The stream held an event that is not one: ${parsed.reason} ${parsed.fieldPaths.join(",")}`,
-        );
+        const detail =
+          parsed.reason === "unknown_kind"
+            ? `${parsed.subject} ${parsed.kind}`
+            : parsed.fieldPaths.join(",");
+        throw new Error(`The stream held an event that is not one: ${parsed.reason} ${detail}`);
       }
       return parsed.event;
     });

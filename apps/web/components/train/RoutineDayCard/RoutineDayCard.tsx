@@ -4,13 +4,14 @@ import {
   describeDayNameFieldName,
   describeEditorDay,
   describeExerciseFieldNames,
+  describeFormAndMusclesButton,
   describeMoveDay,
   describeMoveExercise,
   describeRemoveDay,
   describeRemoveExercise,
   describeWeekdayPickerTitle,
 } from "@keylow/core/copy";
-import { ChevronDown, ChevronUp, Plus, Trash2, X } from "lucide-react";
+import { ChevronDown, ChevronUp, PersonStanding, Plus, Trash2, X } from "lucide-react";
 
 import type { RoutineDayCardProps } from "./types";
 import type { MoveDirection } from "@keylow/core/training";
@@ -70,7 +71,8 @@ function MoveButtons({
 
 /**
  * A day of the routine editor, as the `web-routines · editor` board draws it: a card with the day's name
- * and weekday, and a row for each exercise with its sets, reps and RIR as fields. The problems core found
+ * and weekday, and a row for each exercise with its sets, reps and RIR as fields. An exercise's name and its
+ * first action, Form and muscles, open the exercise's dialog. The problems core found
  * are marked under the field they belong to, and an exercise with more than one problem has one line. The
  * rows are the board's exercise rows made editable: the board shows each target as text.
  */
@@ -88,6 +90,7 @@ export function RoutineDayCard({
   onRemove,
   onAddExercise,
   onChangeField,
+  onOpenExercise,
   onMoveExercise,
   onRemoveExercise,
 }: RoutineDayCardProps) {
@@ -167,8 +170,25 @@ export function RoutineDayCard({
                 className="flex flex-col gap-2 border-t border-border px-3 py-2"
               >
                 <div className="flex items-center justify-between gap-2">
-                  <span className="min-w-0 break-words text-body">{exercise.name}</span>
+                  {/* Out of the tab order, since the Form and muscles action beside it is the keyboard route, as on the session card. */}
+                  <button
+                    type="button"
+                    tabIndex={-1}
+                    className="min-w-0 cursor-pointer break-words rounded-small text-left text-body"
+                    onClick={(event) => {
+                      onOpenExercise(exercise, event.currentTarget);
+                    }}
+                  >
+                    {exercise.name}
+                  </button>
                   <div className="flex shrink-0 gap-2">
+                    <IconButton
+                      icon={PersonStanding}
+                      label={describeFormAndMusclesButton(exercise.name)}
+                      onClick={(event) => {
+                        onOpenExercise(exercise, event.currentTarget);
+                      }}
+                    />
                     <MoveButtons
                       scope={`exercise:${day.key}:${exercise.key}`}
                       isFirst={position === 0}

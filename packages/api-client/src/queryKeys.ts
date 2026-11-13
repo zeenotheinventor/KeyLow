@@ -74,6 +74,21 @@ export const keys = {
     sources: (recipeIds: readonly string[]) => ["shopping-list", "sources", ...recipeIds] as const,
   },
   /**
+   * The palate reads (ADR 0003, Amendment 22): what the person stated and what the diary says they
+   * eat. Health data, so a family of its own, outside every list a persisted cache keeps: nothing
+   * about the palate is stored on the device. Every key sits under `["palate"]`, so one invalidation of
+   * `keys.palate.all` refreshes both.
+   */
+  palate: {
+    all: ["palate"] as const,
+    /** The person's stated dislikes and allergies and their "not true" corrections. */
+    preferences: ["palate", "preferences"] as const,
+    /** What the person eats most over the last 90 days, one row per food or recipe. */
+    stats: ["palate", "stats"] as const,
+    /** How many of the last 90 days have anything logged. */
+    loggedDays: ["palate", "logged-days"] as const,
+  },
+  /**
    * The training reads. Unlike `recipes` and `weighIns`, these are persisted on mobile: the mobile app
    * keeps each family below by its prefix (`setsAll`, `activeRoutine`, `weekSessionsAll`), so heat, the
    * plan and the week open without a connection. The exercise search and the exercise read, at the

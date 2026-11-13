@@ -1,3 +1,4 @@
+import { ASSISTANT_KITCHEN_WORKING_WORDS } from "./assistantKitchen";
 import { MONTH_NAMES_LONG } from "./diaryDay";
 import { parseCalendarDay } from "../dates/calendarDay";
 import { isValidTimeZone } from "../dates/isValidTimeZone";
@@ -177,6 +178,10 @@ const TOOL_WORDS = new Map<string, ToolWords>([
   ["show_exercise_muscles", { words: "Checking the exercise" }],
   ["show_exercise_form", { words: "Checking the exercise" }],
   ["estimate_portions", { words: "Working out the portions" }],
+  ...Object.entries(ASSISTANT_KITCHEN_WORKING_WORDS).map(([tool, words]): [string, ToolWords] => [
+    tool,
+    { words },
+  ]),
 ]);
 
 /** The status line while no text arrives (`assistant · working`, `assistant · recipe-import`, left). */

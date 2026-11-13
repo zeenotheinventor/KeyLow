@@ -136,6 +136,29 @@ describe("applyAssistantEvent", () => {
     });
   });
 
+  describe("a recipe draft, which the app does not draw yet", () => {
+    const draft: AssistantStreamEvent = {
+      type: "recipe_draft",
+      draft: {
+        variant: "suggestion",
+        name: "Chicken and rice bowl",
+        servings: 2,
+        ingredients: [],
+        dropped: [],
+        perServing: { kcal: 520, protein_g: 38, fat_g: 14, carbs_g: 55 },
+        fit: null,
+        steps: [],
+      },
+    };
+
+    it("should leave the turn as it was, apart from ending the step", () => {
+      const thinking = { type: "status", code: "thinking" } as const;
+      const text = { type: "text", delta: "Here you go." } as const;
+
+      expect(applyAll([text, thinking, draft])).toEqual({ ...applyAll([text]), status: null });
+    });
+  });
+
   it("should offer Ask again when the event arrives", () => {
     expect(applyAll([{ type: "ask_again" }]).askAgain).toBe(true);
   });

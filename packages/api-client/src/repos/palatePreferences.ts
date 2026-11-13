@@ -1,0 +1,259 @@
+import { z } from "zod";
+
+import { idOfRow, parseRow } from "./diaryRows";
+import { repoError } from "./repoError";
+
+import type { Database } from "../database.types";
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+// A palate says what a person eats and avoids, and an allergy is special category data (ADR 0003,
+// Amendment 22). The database's own message and details can quote a failing row, so a failure here
+// names the action and the error code only, and the cause holds the code and nothing else. A row that
+// does not parse is reported by its id and the paths of the fields that failed, never by a value.
+
+const PREFERENCE_COLUMNS = "id,kind,food_id,recipe_id,label,created_at";
+
+const STATS_COLUMNS = [
+  "food_id",
+  "recipe_id",
+  "entry_count",
+  "distinct_days",
+  "first_local_date",
+  "last_local_date",
+  "median_resolved_grams",
+  "before_eleven_count",
+  "eleven_to_sixteen_count",
+  "sixteen_or_later_count",
+].join(",");
+
+/** The longest label the database accepts, as its check counts it (characters, after no trimming). */
+const LABEL_MAX_LENGTH = 100;
+
+/** What Postgres raises when the unique index on a preference collides. */
+const UNIQUE_VIOLATION_CODE = "23505";
+
+const labelSchema = z.string().trim().min(1).max(LABEL_MAX_LENGTH);
+
+const preferenceRowSchema = z
+  .object({
+    id: z.guid(),
+    kind: z.enum(["dislike", "allergy", "not_usual"]),
+    food_id: z.guid().nullable(),
+    recipe_id: z.guid().nullable(),
+    label: z.string().nullable(),
+    created_at: z.string(),
+  })
+  .transform((row): PalatePreference => ({
+    id: row.id,
+    kind: row.kind,
+    foodId: row.food_id,
+    recipeId: row.recipe_id,
+    label: row.label,
+    createdAt: row.created_at,
+  }));
+
+const loggedDaysRowSchema = z
+  .object({ logged_days: z.number().int() })
+  .transform((row) => row.logged_days);
+
+const statsRowSchema = z
+  .object({
+    food_id: z.guid().nullable(),
+    recipe_id: z.guid().nullable(),
+    entry_count: z.number().int(),
+    distinct_days: z.number().int(),
+    first_local_date: z.string(),
+    last_local_date: z.string(),
+    median_resolved_grams: z.number().nullable(),
+    before_eleven_count: z.number().int(),
+    eleven_to_sixteen_count: z.number().int(),
+    sixteen_or_later_count: z.number().int(),
+  })
+  .transform((row): PalateFoodStat => ({
+    foodId: row.food_id,
+    recipeId: row.recipe_id,
+    entryCount: row.entry_count,
+    distinctDays: row.distinct_days,
+    firstLocalDate: row.first_local_date,
+    lastLocalDate: row.last_local_date,
+    medianResolvedGrams: row.median_resolved_grams,
+    beforeElevenCount: row.before_eleven_count,
+    elevenToSixteenCount: row.eleven_to_sixteen_count,
+    sixteenOrLaterCount: row.sixteen_or_later_count,
+  }));
+
+/** What a person stated about their taste, or a correction ("not true") of what the app noticed. */
+export type PalatePreference = {
+  id: string;
+  kind: "dislike" | "allergy" | "not_usual";
+  foodId: string | null;
+  recipeId: string | null;
+  label: string | null;
+  createdAt: string;
+};
+
+/** A dislike or an allergy, named by a word that core matches against food names. */
+export type PalateStatement = { kind: "dislike" | "allergy"; label: string };
+
+/** What a "not true" correction is about: one food, one recipe or one label of the profile. */
+export type NotUsualTarget = { foodId: string } | { recipeId: string } | { label: string };
+
+/**
+ * What the diary says of one food or one recipe over the last 90 days, as the `palate_food_stats`
+ * view counts it: arithmetic only. Exactly one of `foodId` and `recipeId` is set. What counts as
+ * usual, rare or never is core's.
+ */
+export type PalateFoodStat = {
+  foodId: string | null;
+  recipeId: string | null;
+  entryCount: number;
+  distinctDays: number;
+  firstLocalDate: string;
+  lastLocalDate: string;
+  medianResolvedGrams: number | null;
+  beforeElevenCount: number;
+  elevenToSixteenCount: number;
+  sixteenOrLaterCount: number;
+};
+
+/**
+ * The signed in user's stated dislikes and allergies and their corrections, oldest first. Row level
+ * security shows a user their own rows only, so no owner is passed.
+ */
+export async function listPalatePreferences(
+  client: SupabaseClient<Database>,
+): Promise<PalatePreference[]> {
+  const action = "load your palate preferences";
+  const { data, error } = await client
+    .from("palate_preferences")
+    .select(PREFERENCE_COLUMNS)
+    .order("created_at", { ascending: true })
+    .order("id", { ascending: true });
+
+  if (error) {
+    throw repoError(action, error);
+  }
+
+  return data.map((row) => parseRow(preferenceRowSchema, row, action, idOfRow));
+}
+
+type PreferenceInsert = Database["public"]["Tables"]["palate_preferences"]["Insert"];
+
+const insertPreference = async (client: SupabaseClient<Database>, row: PreferenceInsert) => {
+  const { data, error } = await client
+    .from("palate_preferences")
+    .insert(row)
+    .select(PREFERENCE_COLUMNS)
+    .single();
+  return { data, error };
+};
+
+/**
+ * Adds a stated dislike or allergy and resolves to the row as stored. The label is trimmed and
+ * checked first, so nothing invalid is sent. Adding the same word twice under one kind fails with the
+ * code `23505`.
+ */
+export async function addPalatePreference(
+  client: SupabaseClient<Database>,
+  statement: PalateStatement,
+): Promise<PalatePreference> {
+  const action = "add to your palate";
+  const label = labelSchema.safeParse(statement.label);
+  if (!label.success) {
+    throw repoError(action, { code: "invalid" });
+  }
+
+  const { data, error } = await insertPreference(client, {
+    kind: statement.kind,
+    label: label.data,
+  });
+
+  if (error) {
+    throw repoError(action, error);
+  }
+
+  return parseRow(preferenceRowSchema, data, action, idOfRow);
+}
+
+/**
+ * Records the "not true" correction on one item of the person's profile. Saying it twice is saying it
+ * once, so a correction that is already stored resolves like a new one. To take it back, remove the
+ * row by its id.
+ */
+export async function setNotUsual(
+  client: SupabaseClient<Database>,
+  target: NotUsualTarget,
+): Promise<void> {
+  const action = "mark this as not usual";
+  let row: PreferenceInsert;
+  if ("foodId" in target) {
+    row = { kind: "not_usual", food_id: target.foodId };
+  } else if ("recipeId" in target) {
+    row = { kind: "not_usual", recipe_id: target.recipeId };
+  } else {
+    const label = labelSchema.safeParse(target.label);
+    if (!label.success) {
+      throw repoError(action, { code: "invalid" });
+    }
+    row = { kind: "not_usual", label: label.data };
+  }
+
+  const { error } = await insertPreference(client, row);
+
+  if (error && error.code !== UNIQUE_VIOLATION_CODE) {
+    throw repoError(action, error);
+  }
+}
+
+/** Removes one row from the palate. A row that is not the user's is left alone. */
+export async function removePalatePreference(
+  client: SupabaseClient<Database>,
+  id: string,
+): Promise<void> {
+  const { error } = await client.from("palate_preferences").delete().eq("id", id);
+
+  if (error) {
+    throw repoError("remove this from your palate", error);
+  }
+}
+
+/**
+ * What the signed in user eats most, from the `palate_food_stats` view: one row per food or recipe in
+ * the last 90 days, the most logged first, then the most recent. The view runs with the caller's
+ * rights, so a user reads their own figures only.
+ */
+export async function listPalateStats(client: SupabaseClient<Database>): Promise<PalateFoodStat[]> {
+  const action = "load what you eat most";
+  const { data, error } = await client
+    .from("palate_food_stats")
+    .select(STATS_COLUMNS)
+    .order("entry_count", { ascending: false })
+    .order("last_local_date", { ascending: false })
+    .order("food_id", { ascending: true, nullsFirst: false })
+    .order("recipe_id", { ascending: true, nullsFirst: false });
+
+  if (error) {
+    throw repoError(action, error);
+  }
+
+  return data.map((row) => parseRow(statsRowSchema, row, action, () => "(view row)"));
+}
+
+/**
+ * How many days in the last 90 have anything logged, from the `palate_logged_days` view, which counts
+ * quick entries too. Core needs it beside the stats to say how often a food comes up. The view has no
+ * row for a person with nothing logged, and that reads as 0.
+ */
+export async function getPalateLoggedDays(client: SupabaseClient<Database>): Promise<number> {
+  const action = "load your logged days";
+  const { data, error } = await client
+    .from("palate_logged_days")
+    .select("logged_days")
+    .maybeSingle();
+
+  if (error) {
+    throw repoError(action, error);
+  }
+
+  return data === null ? 0 : parseRow(loggedDaysRowSchema, data, action, () => "(view row)");
+}

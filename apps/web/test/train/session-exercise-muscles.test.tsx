@@ -246,7 +246,9 @@ describe("the Muscles it works dialog on the session page", () => {
 
       const dialog = await musclesDialog("Side lateral raise");
       expect(await within(dialog).findByText(EXERCISE_MUSCLES.offline)).toBeTruthy();
-      expect(within(dialog).queryByRole("status")).toBeNull();
+      expect(
+        within(dialog).queryByRole("status", { name: EXERCISE_MUSCLES.loadingName }),
+      ).toBeNull();
       expect(within(dialog).queryByRole("list")).toBeNull();
       for (const side of ["front", "back"] as const) {
         const figure = figureOf(dialog, "Side lateral raise", side).innerHTML;
