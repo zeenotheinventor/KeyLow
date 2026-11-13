@@ -15,6 +15,7 @@ import { startBodyMapRendererRead } from "../lib/bodyMapRenderer";
 import { feedFocusManager, feedOnlineManager } from "../lib/connectivity";
 import { startDashboardBodyChartRead } from "../lib/dashboardBodyChart";
 import { createQueryClient } from "../lib/diaryCache";
+import { startFormMediaPreferenceRead } from "../lib/formMediaPreference";
 import { setUpReminderNotifications } from "../lib/notifications";
 import { installFatalRestart } from "../lib/sentry/fatalRestart";
 import { initSentry } from "../lib/sentry/init";
@@ -53,6 +54,10 @@ startBodyFigureRead();
 // first opens, and never sees the 2D map first and then a jump to 3D. A failure to read leaves 2D.
 startBodyMapRendererRead();
 startDashboardBodyChartRead();
+
+// Reads the exercise demos setting too, so the first exercise sheet draws the chosen media and never the
+// default first. A failure to read leaves Video.
+startFormMediaPreferenceRead();
 
 const queryClient = createQueryClient();
 

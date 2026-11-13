@@ -79,6 +79,16 @@ export const MORE_SCREEN = {
         volume: "Sets for each muscle this week, Monday to Sunday.",
       },
     },
+    exerciseDemos: {
+      title: "Exercise demos",
+      options: { video: "Video", photos: "Photos", both: "Both" },
+      captions: {
+        video: "Shows the form video. When an exercise has no video, its photos show instead.",
+        photos:
+          "Shows the start and end photos. When an exercise has no photos, its video shows instead.",
+        both: "Shows the video with the start and end photos under it. When an exercise has only one, that one shows.",
+      },
+    },
     reminders: { title: "Reminders" },
     workoutSuggestions: {
       title: "Workout suggestions",

@@ -1,5 +1,10 @@
 import { buildAssistantSheetThread, threadFromMessages } from "@keylow/core";
-import { describeFormPhoto, describeFormVideoLink, EXERCISE_FORM } from "@keylow/core/copy";
+import {
+  describeFormPhoto,
+  describeFormVideoLink,
+  EXERCISE_FORM,
+  FORM_MEDIA_SWITCH,
+} from "@keylow/core/copy";
 import { youtubeWatchUrl } from "@keylow/core/training";
 import { act, render, screen, userEvent } from "@testing-library/react-native";
 import { openURL } from "expo-linking";
@@ -8,15 +13,24 @@ import { setUpTests } from "react-native-reanimated";
 
 import { AssistantThread } from "../components/AssistantSheet/AssistantThread";
 import { ExerciseFormEntry } from "../components/AssistantSheet/ExerciseFormEntry";
+import { resetFormMediaPreferenceForTests } from "../lib/formMediaPreference/testing";
 import { ThemeProvider } from "../lib/theme";
 import { compileKitStyles } from "./support/kitStyles";
 import { registerAppStyles } from "./support/nativeWindStyles";
 
 import type { AssistantExerciseFormMedia, AssistantStoredMessage } from "@keylow/core";
 
+const mockStorageItems = new Map<string, string>();
+
 jest.mock("@react-native-async-storage/async-storage", () => ({
   __esModule: true,
-  default: { getItem: () => Promise.resolve(null), setItem: () => Promise.resolve() },
+  default: {
+    getItem: (key: string) => Promise.resolve(mockStorageItems.get(key) ?? null),
+    setItem: (key: string, value: string) => {
+      mockStorageItems.set(key, value);
+      return Promise.resolve();
+    },
+  },
 }));
 jest.mock(
   "react-native-safe-area-context",
@@ -44,6 +58,12 @@ const curlPhotos: AssistantExerciseFormMedia = {
   media: { kind: "photos", imagePaths: ["Dumbbell_Curl/0.jpg", "Dumbbell_Curl/1.jpg"] },
 };
 
+// A video card that also carries the two photos, as the server will send it once it knows to.
+const squatVideoAndPhotos: AssistantExerciseFormMedia = {
+  exerciseName: "Barbell Squat",
+  media: { ...squatVideo.media, imagePaths: ["Barbell_Squat/0.jpg", "Barbell_Squat/1.jpg"] },
+};
+
 const inTheme = (children: React.ReactNode) => (
   <ThemeProvider fixedPreference="dark">{children}</ThemeProvider>
 );
@@ -56,6 +76,8 @@ describe("the form media of an exercise in the assistant thread", () => {
   });
 
   beforeEach(() => {
+    mockStorageItems.clear();
+    resetFormMediaPreferenceForTests();
     registerAppStyles(kitStyles);
     jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(false);
     openURLMock.mockResolvedValue(true);
@@ -118,6 +140,56 @@ describe("the form media of an exercise in the assistant thread", () => {
 
       expect(screen.queryAllByRole("button")).toHaveLength(0);
       expect(screen.queryAllByRole("link")).toHaveLength(0);
+    });
+  });
+
+  describe("the exercise demos preference", () => {
+    const videoName = describeFormVideoLink("How to squat with good form", "Strength Basics");
+    const startPhoto = describeFormPhoto("Barbell Squat", "start");
+
+    it("should draw only the video of a card that carries both under Video", async () => {
+      await render(inTheme(<ExerciseFormEntry exercise={squatVideoAndPhotos} />));
+
+      expect(await screen.findByRole("link", { name: videoName })).toBeOnTheScreen();
+      expect(screen.queryByRole("img", { name: startPhoto })).not.toBeOnTheScreen();
+    });
+
+    it("should draw only the photos of a card that carries both under Photos", async () => {
+      mockStorageItems.set("exerciseForm.mediaPreference", "photos");
+      await render(inTheme(<ExerciseFormEntry exercise={squatVideoAndPhotos} />));
+
+      expect(await screen.findByRole("img", { name: startPhoto })).toBeOnTheScreen();
+      expect(screen.queryByRole("link")).not.toBeOnTheScreen();
+    });
+
+    it("should draw the video and the photos of a card that carries both under Both, with no switch", async () => {
+      mockStorageItems.set("exerciseForm.mediaPreference", "both");
+      await render(inTheme(<ExerciseFormEntry exercise={squatVideoAndPhotos} />));
+
+      expect(await screen.findByRole("link", { name: videoName })).toBeOnTheScreen();
+      expect(screen.getByRole("img", { name: startPhoto })).toBeOnTheScreen();
+      expect(screen.queryByLabelText(FORM_MEDIA_SWITCH.label)).not.toBeOnTheScreen();
+    });
+
+    it.each(["video", "photos", "both"])(
+      "should still draw the video of a stored card that carries only a video under %s",
+      async (preference) => {
+        mockStorageItems.set("exerciseForm.mediaPreference", preference);
+        await render(inTheme(<ExerciseFormEntry exercise={squatVideo} />));
+
+        expect(await screen.findByRole("link", { name: videoName })).toBeOnTheScreen();
+        expect(screen.queryByRole("img", { name: startPhoto })).not.toBeOnTheScreen();
+      },
+    );
+
+    it("should draw the photos of a card that carries only photos under Both", async () => {
+      mockStorageItems.set("exerciseForm.mediaPreference", "both");
+      await render(inTheme(<ExerciseFormEntry exercise={curlPhotos} />));
+
+      expect(
+        await screen.findByRole("img", { name: describeFormPhoto("Dumbbell Curl", "start") }),
+      ).toBeOnTheScreen();
+      expect(screen.queryByRole("link")).not.toBeOnTheScreen();
     });
   });
 

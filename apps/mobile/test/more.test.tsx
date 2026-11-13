@@ -27,6 +27,8 @@ import { useBodyMapRenderer } from "../lib/bodyMapRenderer";
 import { resetBodyMapRendererForTests } from "../lib/bodyMapRenderer/testing";
 import { useDashboardBodyChart } from "../lib/dashboardBodyChart";
 import { resetDashboardBodyChartForTests } from "../lib/dashboardBodyChart/testing";
+import { useFormMediaPreference } from "../lib/formMediaPreference";
+import { resetFormMediaPreferenceForTests } from "../lib/formMediaPreference/testing";
 import { suggestionsPreferenceStorageKey } from "../lib/suggestionsPreference";
 import { ThemeProvider, useTheme } from "../lib/theme";
 
@@ -84,6 +86,13 @@ function DashboardBodyChartProbe() {
   return <Text>{`dashboard body chart:${chart}`}</Text>;
 }
 
+// Shows the preference a mounted reader of the exercise demos choice sees, which the segments alone do not prove.
+function FormMediaPreferenceProbe() {
+  const { preference } = useFormMediaPreference();
+
+  return <Text>{`form media preference:${preference}`}</Text>;
+}
+
 type Instance = NonNullable<ReturnType<typeof screen.getByRole>>;
 
 function isInside(node: Instance | null, ancestor: Instance): boolean {
@@ -103,6 +112,7 @@ async function renderMore() {
         <ThemeProbe />
         <BodyMapRendererProbe />
         <DashboardBodyChartProbe />
+        <FormMediaPreferenceProbe />
       </KeyLowProvider>
     </ThemeProvider>,
   );
@@ -120,6 +130,7 @@ describe("the More screen", () => {
     mockSetItem.mockClear();
     resetBodyMapRendererForTests();
     resetDashboardBodyChartForTests();
+    resetFormMediaPreferenceForTests();
     resetBodyFigureForTests();
     deviceScheme.current = "light";
   });
@@ -688,6 +699,68 @@ describe("the More screen", () => {
 
       expect(await screen.findByRole("radio", { name: "Weekly volume" })).toBeChecked();
       expect(screen.getByText(volumeCaption)).toBeOnTheScreen();
+    });
+  });
+
+  describe("Exercise demos", () => {
+    const videoCaption =
+      "Shows the form video. When an exercise has no video, its photos show instead.";
+    const photosCaption =
+      "Shows the start and end photos. When an exercise has no photos, its video shows instead.";
+    const bothCaption =
+      "Shows the video with the start and end photos under it. When an exercise has only one, that one shows.";
+
+    it("should be a radio group in Settings after the Dashboard body map, of Video, Photos and Both", async () => {
+      await renderMore();
+
+      const radios = within(screen.getByLabelText("Settings")).getAllByRole("radio");
+
+      ["Heat", "Weekly volume", "Video", "Photos", "Both"].forEach((name, index) => {
+        expect(radios[index + 5]).toHaveAccessibleName(name);
+      });
+      expect(
+        screen
+          .getAllByLabelText("Exercise demos")
+          .filter((element) => element.props.role === "radiogroup"),
+      ).toHaveLength(1);
+    });
+
+    it("should have Video selected on a fresh install, with the Video caption under it", async () => {
+      await renderMore();
+
+      expect(screen.getByRole("radio", { name: "Video" })).toBeChecked();
+      expect(screen.getByText(videoCaption)).toBeOnTheScreen();
+    });
+
+    it("should select Photos at once, show its caption and tell a mounted reader", async () => {
+      const user = userEvent.setup();
+      await renderMore();
+
+      await user.press(screen.getByRole("radio", { name: "Photos" }));
+
+      expect(screen.getByRole("radio", { name: "Photos" })).toBeChecked();
+      expect(screen.getByText(photosCaption)).toBeOnTheScreen();
+      expect(screen.queryByText(videoCaption)).not.toBeOnTheScreen();
+      expect(screen.getByText("form media preference:photos")).toBeOnTheScreen();
+    });
+
+    it("should show the Both caption and keep the choice for the next launch", async () => {
+      const user = userEvent.setup();
+      await renderMore();
+
+      await user.press(screen.getByRole("radio", { name: "Both" }));
+
+      expect(screen.getByText(bothCaption)).toBeOnTheScreen();
+      expect(mockSetItem).toHaveBeenCalledWith("exerciseForm.mediaPreference", "both");
+    });
+
+    it("should show the saved choice when the screen opens on a later launch", async () => {
+      mockStorageItems.set("exerciseForm.mediaPreference", "photos");
+
+      await renderMore();
+
+      expect(await screen.findByRole("radio", { name: "Photos" })).toBeChecked();
+      expect(screen.getByText(photosCaption)).toBeOnTheScreen();
     });
   });
 

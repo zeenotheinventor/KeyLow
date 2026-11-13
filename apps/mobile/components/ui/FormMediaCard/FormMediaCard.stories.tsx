@@ -44,6 +44,14 @@ const photos = {
   endUrl: neutralPicture,
 } as const;
 
+const both = { ...video, ...photos, kind: "both" } as const;
+
+// The switch is drawn for the story, and pressing it does nothing because no surface keeps the choice here.
+const switchOn = (value: "video" | "photos" | "both") => ({
+  value,
+  onChange: () => undefined,
+});
+
 // A story cannot reach the device's setting, so this answers Reduce Motion as on while it is drawn. It is set
 // while rendering, before the card's own effects read it, and put back when the story goes.
 function ReduceMotionOn({ children }: { children: ReactNode }) {
@@ -60,6 +68,14 @@ function ReduceMotionOn({ children }: { children: ReactNode }) {
   );
   return children;
 }
+
+const reduceMotionDecorators: Story["decorators"] = [
+  (Story) => (
+    <ReduceMotionOn>
+      <Story />
+    </ReduceMotionOn>
+  ),
+];
 
 // A short title takes one line.
 export const VideoShortTitle: Story = { args: video };
@@ -78,13 +94,33 @@ export const PhotosAlternating: Story = { args: photos };
 // With Reduce Motion on, both photos sit side by side and nothing moves.
 export const PhotosReduceMotion: Story = {
   args: photos,
-  decorators: [
-    (Story) => (
-      <ReduceMotionOn>
-        <Story />
-      </ReduceMotionOn>
-    ),
-  ],
+  decorators: reduceMotionDecorators,
+};
+
+// The video card first and the photos card under it, 8 points apart, the photos taking turns.
+export const BothAlternating: Story = { args: both };
+
+// With Reduce Motion on, the photos sit side by side. The video card is as it was.
+export const BothReduceMotion: Story = {
+  args: both,
+  decorators: reduceMotionDecorators,
+};
+
+// The quick switch under both, on Both.
+export const SwitchOnBoth: Story = { args: { ...both, preferenceSwitch: switchOn("both") } };
+
+// The switch under the photos card, on Photos.
+export const SwitchOnPhotos: Story = {
+  args: { ...photos, preferenceSwitch: switchOn("photos") },
+};
+
+// The switch under the video card, on Video.
+export const SwitchOnVideo: Story = { args: { ...video, preferenceSwitch: switchOn("video") } };
+
+// Both with Reduce Motion, and the switch on Both.
+export const SwitchOnBothReduceMotion: Story = {
+  args: { ...both, preferenceSwitch: switchOn("both") },
+  decorators: reduceMotionDecorators,
 };
 
 export const Loading: Story = { args: { kind: "loading" } };

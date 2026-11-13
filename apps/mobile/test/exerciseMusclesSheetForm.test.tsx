@@ -7,6 +7,7 @@ import { setUpTests } from "react-native-reanimated";
 
 import { ExerciseMusclesSheet } from "../components/ExerciseMusclesSheet";
 import { resetBodyFigureForTests } from "../lib/bodyFigure/testing";
+import { resetFormMediaPreferenceForTests } from "../lib/formMediaPreference/testing";
 import { ThemeProvider } from "../lib/theme";
 import { createDiaryQueryClient } from "./support/diaryBackend";
 import {
@@ -22,9 +23,17 @@ import type { ExerciseMusclesSheetProps } from "../components/ExerciseMusclesShe
 import type { ExerciseMuscleEntry } from "@keylow/core/schemas";
 import type { QueryClient } from "@tanstack/react-query";
 
+const mockStorageItems = new Map<string, string>();
+
 jest.mock("@react-native-async-storage/async-storage", () => ({
   __esModule: true,
-  default: { getItem: () => Promise.resolve(null), setItem: () => Promise.resolve() },
+  default: {
+    getItem: (key: string) => Promise.resolve(mockStorageItems.get(key) ?? null),
+    setItem: (key: string, value: string) => {
+      mockStorageItems.set(key, value);
+      return Promise.resolve();
+    },
+  },
 }));
 jest.mock(
   "react-native-safe-area-context",
@@ -110,6 +119,8 @@ describe("the Muscles it works sheet with the form card", () => {
     resetTrainBackend();
     resetFormMediaBackend();
     resetBodyFigureForTests();
+    mockStorageItems.clear();
+    resetFormMediaPreferenceForTests();
     queryClient = createDiaryQueryClient();
     onClose.mockClear();
     jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(false);
@@ -159,6 +170,27 @@ describe("the Muscles it works sheet with the form card", () => {
     expect(
       screen.getByRole("img", { name: describeFormPhoto(squat.name, "end") }),
     ).toBeOnTheScreen();
+  });
+
+  it("should show the video, the photos and the switch above the muscles under Both", async () => {
+    mockStorageItems.set("exerciseForm.mediaPreference", "both");
+    formMediaBackend.rowsByExercise[SQUAT_ID] = {
+      ...VIDEO_ROW,
+      image_paths: PHOTOS_ROW.image_paths,
+    };
+    await render(sheetOf({ exercise: squat, onClose }));
+    await screen.findByRole("link", { name: videoName });
+
+    expect(
+      screen.getByRole("img", { name: describeFormPhoto(squat.name, "start") }),
+    ).toBeOnTheScreen();
+    expect(screen.getByLabelText("Show form as")).toBeOnTheScreen();
+    const drawn = wordsInOrder(screen.toJSON());
+    const positions = [videoName, "Show form as", EXERCISE_MUSCLES.caption].map((words) =>
+      drawn.indexOf(words),
+    );
+    expect(positions.every((position) => position >= 0)).toBe(true);
+    expect(positions).toEqual([...positions].sort((first, second) => first - second));
   });
 
   it("should draw the sheet as it was, with no card, for an exercise with no form media", async () => {
