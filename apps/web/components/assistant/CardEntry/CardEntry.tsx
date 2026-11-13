@@ -36,7 +36,7 @@ const icons = {
 /**
  * One write of the assistant in the thread, with its Undo. `useAssistantCardUndo` gives the card its icon,
  * its words as sent and the state of its Undo, and this draws them and opens the link. The days of a
- * routine are not drawn here yet.
+ * routine open one at a time inside the card.
  */
 export function CardEntry({ entry }: CardEntryProps) {
   const { look, undoState, undo } = useAssistantCardUndo(entry.card);
@@ -46,6 +46,7 @@ export function CardEntry({ entry }: CardEntryProps) {
   return (
     <AssistantActionCard
       icon={icons[look.icon]}
+      days={look.days.length === 0 ? undefined : look.days}
       iconTone={look.iconTone}
       link={
         link === null

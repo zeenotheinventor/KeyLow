@@ -1,7 +1,9 @@
 import { iconStroke } from "@keylow/tokens";
 import { Check } from "lucide-react";
+import { useState } from "react";
 
 import { AssistantLinkRow } from "./AssistantLinkRow";
+import { RoutineDayRow } from "./RoutineDayRow";
 
 import type {
   AssistantActionCardIconTone,
@@ -23,7 +25,7 @@ const iconToneClasses = {
 
 /**
  * What the assistant did, as a card in the thread: an icon tile, a title and its Undo, then the entries it
- * made, a total, a note and a link to what it made. Every word and every amount is the caller's and is drawn
+ * made, the days of a routine it built, a total, a note and a link to what it made. Every word and every amount is the caller's and is drawn
  * exactly as given. The Undo is the diary toast's action in the accent ink, 36 px high. The card stays in
  * the thread after an Undo, with the title muted and no action, so the history reads true.
  */
@@ -33,11 +35,15 @@ export function AssistantActionCard({
   title,
   subtitle,
   rows = [],
+  days = [],
+  initiallyOpenDay,
   total,
   note,
   link,
   undo,
 }: AssistantActionCardProps) {
+  const [openDayIndex, setOpenDayIndex] = useState(initiallyOpenDay);
+
   return (
     // The board draws the card flat, as the notice is, so this is Card's surface without its shadow.
     <div
@@ -69,6 +75,16 @@ export function AssistantActionCard({
       </div>
       {rows.map((row, index) => (
         <Row key={`${index}-${row.name}`} row={row} />
+      ))}
+      {days.map((day, index) => (
+        <RoutineDayRow
+          key={`${index}-${day.name}`}
+          day={day}
+          isOpen={openDayIndex === index}
+          onPress={() => {
+            setOpenDayIndex(openDayIndex === index ? undefined : index);
+          }}
+        />
       ))}
       {total === undefined ? null : (
         <div className="border-t border-border bg-surface-raised px-3 py-[10px] text-caption tabular-nums text-text-secondary">
