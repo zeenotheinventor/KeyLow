@@ -407,6 +407,18 @@ describe("the shopping list screens", () => {
       expect(await screen.findByRole("status", { name: SHOPPING_LIST.added })).toBeOnTheScreen();
     });
 
+    it("should write once when Add is pressed twice before the first write settles", async () => {
+      // The mocked write never settles and never reports pending, so only the screen's own guard can stop a second.
+      routerMock.searchParams = { id: firstRecipe.id, servings: "6" };
+      const user = await show("add");
+      const add = screen.getByRole("button", { name: SHOPPING_LIST.addItem });
+
+      await user.press(add);
+      await user.press(add);
+
+      expect(mockApi.addRecipes).toHaveBeenCalledTimes(1);
+    });
+
     it("should say the recipe is not there for an address that cannot be a recipe", async () => {
       routerMock.searchParams = { id: "not-a-recipe", servings: "2" };
       await show("add");

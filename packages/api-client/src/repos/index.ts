@@ -186,6 +186,7 @@ export {
   addShoppingItem,
   clearTickedItems,
   deleteShoppingItem,
+  getPlannedFoods,
   getShoppingSources,
   listShoppingItems,
   saveShoppingItems,

@@ -6,6 +6,7 @@ import {
   FIRST_PLAN_VARIETY_WORDS,
   MEAL_PLAN_WORDS,
   PLAN_SETTINGS_WORDS,
+  PLAN_SHOPPING_WORDS,
   REPEAT_LIMIT_CHOICES,
   describePlanBandFigures,
   describePlanConfirmCaption,
@@ -28,6 +29,7 @@ describe("the words of the Plan screens", () => {
       MEAL_PLAN_WORDS,
       DIARY_PLAN_ITEM,
       PLAN_SETTINGS_WORDS,
+      PLAN_SHOPPING_WORDS,
       FIRST_PLAN_VARIETY_WORDS,
       REPEAT_LIMIT_CHOICES,
     ]);
@@ -160,6 +162,20 @@ describe("the assistant prefills", () => {
     expect(describeReplanPrefill("2026-11-18")).toBe("Replan Wed 18 Nov: ");
     expect(describePlanPrefill("2026-11-18", "2026-11-22")).toBe(
       "Plan my meals for Wed 18 to Sun 22 Nov",
+    );
+  });
+});
+
+describe("the add screen for a plan", () => {
+  it("should say what is counted, as plan · shopping-added draws it", () => {
+    expect(PLAN_SHOPPING_WORDS.scopeLine).toBe(
+      "The days not yet confirmed. A recipe is bought once for the servings it makes, so leftovers are not bought twice.",
+    );
+  });
+
+  it("should say there is nothing to buy when every day is confirmed or empty", () => {
+    expect(PLAN_SHOPPING_WORDS.nothingToBuy).toBe(
+      "Every day here is confirmed or has nothing planned, so there is nothing to buy.",
     );
   });
 });

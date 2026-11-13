@@ -44,6 +44,7 @@ export { planPrefillDatesOf, repeatLimitSelectionOf } from "./planEntry";
 export type { ConfirmEntryInput } from "./confirmDay";
 export {
   PLAN_STATUS_BADGE,
+  liveDaysOf,
   planDayViewsOf,
   planOpeningDayOf,
   plannedDayRowOf,
@@ -64,6 +65,13 @@ export type {
   PlanRow,
   PlannedDayRow,
 } from "./planView";
+export { planShoppingDraftsOf, planShoppingOf } from "./planShopping";
+export type {
+  PlanShopping,
+  PlanShoppingFood,
+  PlanShoppingRecipe,
+  PlanShoppingScope,
+} from "./planShopping";
 export { rankedIdsOfReply } from "./readRanking";
 export { planSaveInput, plannedDayItems } from "./planSaveInput";
 export type { PlanSaveInputSource, StoredPlanRules } from "./planSaveInput";

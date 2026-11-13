@@ -325,12 +325,8 @@ const isNewer = (candidate: PlanRow, current: PlanRow): boolean =>
     ? candidate.id > current.id
     : Date.parse(candidate.createdAt) > Date.parse(current.createdAt);
 
-/**
- * One view for each date the live plans cover, in date order. Where several plans cover a date (a new plan
- * that replaced part of an older one leaves the older plan's other days), the newest plan's day is the one
- * shown. `plans` are the plans that are not archived.
- */
-export const planDayViewsOf = (plans: readonly PlanRow[]): PlanDayView[] => {
+/** The day each date the live plans cover shows, with the plan it belongs to, in date order. The newest plan's day wins. */
+export const liveDaysOf = (plans: readonly PlanRow[]): { plan: PlanRow; day: PlanDayRow }[] => {
   const owner = new Map<string, { plan: PlanRow; day: PlanDayRow }>();
   for (const plan of plans) {
     for (const day of plan.days) {
@@ -340,10 +336,21 @@ export const planDayViewsOf = (plans: readonly PlanRow[]): PlanDayView[] => {
       }
     }
   }
+  return [...owner.values()].sort((first, second) =>
+    first.day.localDate.localeCompare(second.day.localDate),
+  );
+};
+
+/**
+ * One view for each date the live plans cover, in date order. Where several plans cover a date (a new plan
+ * that replaced part of an older one leaves the older plan's other days), the newest plan's day is the one
+ * shown. `plans` are the plans that are not archived.
+ */
+export const planDayViewsOf = (plans: readonly PlanRow[]): PlanDayView[] => {
   const leftoversOfPlan = new Map(plans.map((plan) => [plan.id, leftoversOf(plan)] as const));
-  return [...owner.values()]
-    .sort((first, second) => first.day.localDate.localeCompare(second.day.localDate))
-    .map(({ plan, day }) => dayView(plan, day, leftoversOfPlan.get(plan.id) ?? new Map()));
+  return liveDaysOf(plans).map(({ plan, day }) =>
+    dayView(plan, day, leftoversOfPlan.get(plan.id) ?? new Map()),
+  );
 };
 
 /** What the Diary's plan row says, and which day it opens. */

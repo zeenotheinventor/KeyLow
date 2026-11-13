@@ -72,6 +72,9 @@ export const keys = {
     items: ["shopping-list", "items"] as const,
     /** The recipes the add dialog reads, with their ingredients, by their ids in the order given. */
     sources: (recipeIds: readonly string[]) => ["shopping-list", "sources", ...recipeIds] as const,
+    /** The recipes and foods the add screen for a plan reads, by their ids. Which are which is part of the key. */
+    planSources: (recipeIds: readonly string[], foodIds: readonly string[]) =>
+      ["shopping-list", "plan-sources", [...recipeIds], [...foodIds]] as const,
   },
   /**
    * The palate reads (ADR 0003, Amendment 22): what the person stated and what the diary says they

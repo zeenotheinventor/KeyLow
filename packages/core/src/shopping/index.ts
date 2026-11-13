@@ -32,6 +32,7 @@ export type {
   PlannedFoodSource,
   PlannedRecipeSource,
   ShoppableDay,
+  ShoppableItem,
   ShoppingDraftsOfPlanInput,
 } from "./shoppingDraftsOfPlan";
 export { shoppingItemSchema, shoppingItemWriteSchema, shoppingSourceSchema } from "./schemas";
