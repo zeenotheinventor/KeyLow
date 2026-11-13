@@ -16,6 +16,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 
 import { toAnthropicTools } from "../_shared/assistant/adapters/anthropic.ts";
+import { GENERATION_CALL_TIMEOUT_MILLISECONDS } from "../_shared/assistant/mcpClient.ts";
 import { undoOutcomeSchema } from "../_shared/assistant/store.ts";
 import { askUserTool } from "../_shared/assistant/tools/askUser.ts";
 import { wrapUntrusted } from "../_shared/assistant/untrusted.ts";
@@ -96,13 +97,19 @@ export const MCP_REQUEST_TIMEOUT_MILLISECONDS = 20_000;
 export const MODEL_REQUEST_TIMEOUT_MILLISECONDS = 60_000;
 const MODEL_MAX_RETRIES = 1;
 
+// A generation tool (`generation: true`, ADR 0006 Amendment 6) makes one Opus call, which waits up to 55 s
+// (`GENERATION_CALL_TIMEOUT_MILLISECONDS`, with no retry) where every other tool waits 20 s. It starts only while
+// this much of the wall clock remains: 55 s of call, and 10 s for what follows it (cards, `finishTurn`, `close`).
+// A turn that starts one at the latest still ends inside 150 s. Under it the tool is not called and nothing is spent.
+export const GENERATION_START_MINIMUM_REMAINING_MILLISECONDS = 65_000;
+
 // The Edge Function's wall clock on the free plan, the shorter of the two (150 s free, 400 s paid, from
 // https://supabase.com/docs/guides/functions/limits, checked 2026-11-03).
 const WALL_CLOCK_MILLISECONDS = 150_000;
 
 // A step that takes no signal (`connect`, `listTools`, `callTool`) cannot be cut short, and a read retries
 // once, so the longest one is two attempts of `MCP_REQUEST_TIMEOUT_MILLISECONDS`. A write never retries,
-// so this is its worst case too.
+// so this is its worst case too. A generation tool can take 55 s, which the 65 s start guard below keeps safe.
 const WORST_UNINTERRUPTIBLE_STEP_MILLISECONDS = 2 * MCP_REQUEST_TIMEOUT_MILLISECONDS;
 
 // What is left for `conclude` (cards, `finishTurn`, `close`, the failed notice) and for the clock being a
@@ -127,6 +134,8 @@ export type TurnLimits = {
   streamIdleMilliseconds: number;
   // The compaction call that follows a turn (KEY-706). It is outside the deadline above, so it has its own.
   compactionTimeoutMilliseconds?: number;
+  // The Edge Function's wall clock, for a test that needs the start guard of a generation tool to bite at once.
+  wallClockMilliseconds?: number;
 };
 
 const DEFAULT_LIMITS: TurnLimits = {
@@ -263,6 +272,8 @@ type Session = {
   client: Anthropic;
   connection: ToolConnection;
   allowedTools: ReadonlySet<string>;
+  // The tools that make a generation call, from the tool list's own flag.
+  generationTools: ReadonlySet<string>;
   tools: AnthropicTool[];
 };
 
@@ -754,6 +765,21 @@ async function runToolUse(
     );
     return null;
   }
+  if (
+    session.generationTools.has(name) &&
+    (run.limits.wallClockMilliseconds ?? WALL_CLOCK_MILLISECONDS) -
+      (performance.now() - run.startedAt) <
+      GENERATION_START_MINIMUM_REMAINING_MILLISECONDS
+  ) {
+    // Too late for a call that needs up to 55 s. Nothing was spent, and the model is told to say so.
+    run.lastErrorCode = "busy_try_again";
+    await storeToolResult(
+      run,
+      toolResultBlock(id, wrapUntrusted(name, { error: "busy_try_again" }), true),
+      null,
+    );
+    return null;
+  }
   // Before the call, because a hint that came back with the result would arrive after the fetch. Only the
   // tool's name and the cleaned words of a search go out: the stream is not stored and the model never reads it.
   if (name === IMPORT_RECIPE_TOOL) {
@@ -991,6 +1017,7 @@ async function takeTurn(run: Run): Promise<Ending> {
     localTime: context.localTime,
     turnHasAction: (turnId) => turns.turnHasAction(turnId),
     requestTimeoutMilliseconds: MCP_REQUEST_TIMEOUT_MILLISECONDS,
+    generationCallTimeoutMilliseconds: GENERATION_CALL_TIMEOUT_MILLISECONDS,
     ...(cachedTools === null ? {} : { knownTools: cachedTools }),
   });
   try {
@@ -1016,6 +1043,9 @@ async function takeTurn(run: Run): Promise<Ending> {
       client,
       connection,
       allowedTools: new Set(allowedTools),
+      generationTools: new Set(
+        listedTools.flatMap((tool) => (tool.generation === true ? [tool.name] : [])),
+      ),
       tools: toAnthropicTools(listedTools),
     };
     // The button's words, on a turn that ended asking for that confirmation, are the person's decision.

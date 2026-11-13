@@ -6,7 +6,12 @@ import { Server } from "@modelcontextprotocol/server";
 
 import type { ExecutionResult } from "../_shared/assistant/executor.ts";
 import type { ToolRegistry } from "../_shared/assistant/tool.ts";
-import { groupMetaKey, strictMetaKey, toJsonSchema } from "../_shared/assistant/tool.ts";
+import {
+  generationMetaKey,
+  groupMetaKey,
+  strictMetaKey,
+  toJsonSchema,
+} from "../_shared/assistant/tool.ts";
 import type { CallToolResult } from "@modelcontextprotocol/server";
 
 export const serverInfo = { name: "kilo-assistant-tools", version: "1.0.0" };
@@ -57,6 +62,7 @@ export function createToolServer(registry: ToolRegistry, callTool: CallTool): Se
       _meta: {
         [strictMetaKey]: tool.strict !== false,
         ...(tool.group === undefined ? {} : { [groupMetaKey]: tool.group }),
+        ...(tool.generation === true ? { [generationMetaKey]: true } : {}),
       },
     })),
   }));

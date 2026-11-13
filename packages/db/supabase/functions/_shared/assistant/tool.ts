@@ -4,6 +4,7 @@
 import { toJSONSchema } from "zod";
 
 import type { Database } from "../core/database.types.ts";
+import type { GenerationServices } from "./generate.ts";
 import type { OffLookup } from "./offLookup.ts";
 import type { ReportError } from "../report.ts";
 import type { RecipeImportServices } from "./recipeParse.ts";
@@ -54,6 +55,9 @@ export type ToolContext = {
   // it. A context without it answers `search_foods` from the catalogue alone and `get_food` by `off_code`
   // with `unavailable`.
   offLookup?: OffLookup;
+  // The Opus generation call of the kitchen tools. Only the `mcp` function sets it. A context without it makes
+  // a generation tool answer `tool_failed`.
+  generation?: GenerationServices;
 };
 
 export type ToolRunOutput = {
@@ -92,6 +96,9 @@ type ToolBase<Input> = {
   // A tool of a group stays in `tools[]` with `defer_loading` and is shown to the model only on a turn where
   // code surfaces its group (ADR 0006, Amendment 5). Absent means the tool is visible on every turn.
   group?: ToolGroup;
+  // True for a tool that makes one Opus generation call inside itself (ADR 0006, Amendment 6). The turn loop
+  // gives it a 55 s call timeout with no retry, and starts it only while 65 s of the wall clock remain.
+  generation?: true;
 };
 
 // Methods and not function properties, so a tool of one input type is a tool of the registry's list.
@@ -306,6 +313,9 @@ export const strictMetaKey = "kilo/strict";
 
 // Where `tools/list` names the group of a tool that has one, in the tool's `_meta`. Ungrouped tools leave it out.
 export const groupMetaKey = "kilo/group";
+
+// Where `tools/list` says a tool makes a generation call, in the tool's `_meta`. Other tools leave it out.
+export const generationMetaKey = "kilo/generation";
 
 export const confirmationIdKey = "confirmation_id";
 

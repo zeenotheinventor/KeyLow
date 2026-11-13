@@ -1,7 +1,7 @@
 import { assertEquals, assertRejects, assertThrows } from "@std/assert";
 
 import { fakeSupabase } from "./testing.ts";
-import { costUsdMicros, recordUsage } from "./usage.ts";
+import { costUsdMicros, hasPrice, recordUsage } from "./usage.ts";
 
 import type { UsageToRecord } from "./usage.ts";
 
@@ -172,3 +172,52 @@ Deno.test(
     assertEquals(row?.["transport"], "none");
   },
 );
+
+// Opus 5.5 is $4 in, $20 out and $0.20 for cache reads per million tokens, and a cache write at 1.25x the
+// input rate, as the Haiku rates above treat it ($5), with no second rate card for a long prompt.
+Deno.test("costUsdMicros prices each token kind from the Opus 5.5 rates", () => {
+  const opus = "claude-opus-5-5";
+  const tokens = 100_000;
+
+  assertEquals(costUsdMicros(opus, { ...none, inputTokens: tokens }), 400_000);
+  assertEquals(costUsdMicros(opus, { ...none, outputTokens: tokens }), 2_000_000);
+  assertEquals(costUsdMicros(opus, { ...none, cacheReadInputTokens: tokens }), 20_000);
+  assertEquals(costUsdMicros(opus, { ...none, cacheCreationInputTokens: tokens }), 500_000);
+});
+
+Deno.test("costUsdMicros prices an Opus 5.5 suggestion of 4,000 in and 1,700 out at $0.05", () => {
+  // 16,000 + 34,000 micro-dollars.
+  assertEquals(
+    costUsdMicros("claude-opus-5-5", { ...none, inputTokens: 4_000, outputTokens: 1_700 }),
+    50_000,
+  );
+});
+
+Deno.test("costUsdMicros charges Opus 5.5 the same rates above 100,000 prompt tokens", () => {
+  assertEquals(costUsdMicros("claude-opus-5-5", { ...none, inputTokens: 150_000 }), 600_000);
+});
+
+Deno.test("hasPrice says which models costUsdMicros knows", () => {
+  assertEquals(hasPrice("claude-opus-5-5"), true);
+  assertEquals(hasPrice("claude-haiku-5-5"), true);
+  assertEquals(hasPrice("claude-unknown-9"), false);
+});
+
+for (const route of ["recipe_generate", "plan_generate"] as const) {
+  Deno.test(
+    `recordUsage writes route ${route} and transport none for a generation call`,
+    async () => {
+      const { client, operations } = fakeSupabase();
+
+      await recordUsage(client, { ...call, model: "claude-opus-5-5", route });
+
+      const values = operations[0]?.values;
+      const row = Array.isArray(values) ? {} : values;
+      assertEquals(row?.["route"], route);
+      assertEquals(row?.["transport"], "none");
+      assertEquals(row?.["model"], "claude-opus-5-5");
+      // 48,000 + 16,000 + 6,000 + 10,000
+      assertEquals(row?.["cost_usd_micros"], 80_000);
+    },
+  );
+}

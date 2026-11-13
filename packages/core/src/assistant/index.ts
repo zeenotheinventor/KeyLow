@@ -22,3 +22,4 @@ export * from "./replyText";
 export * from "./featureRequestContext";
 export * from "./chatMessage";
 export * from "./workingLine";
+export * from "./kitchenGeneration";

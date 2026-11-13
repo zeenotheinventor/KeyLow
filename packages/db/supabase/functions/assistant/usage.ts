@@ -13,9 +13,11 @@ export type TokenCounts = {
 
 // `describe_or_ask` is a call of the turn loop, which reaches its tools over MCP. `compact` is the call that
 // writes a conversation's note, and `recipe_parse` the two calls of a recipe import: the one that reads its lines and the
-// one that chooses each line's food from its search hits. Both routes have
-// no tools and no transport (the table's own check lists all three).
-export type UsageRoute = "describe_or_ask" | "compact" | "recipe_parse";
+// one that chooses each line's food from its search hits. `recipe_generate` and `plan_generate` are the one
+// Opus call inside a kitchen tool (ADR 0006, Amendment 6). Every route but the first has no tools and no
+// transport (the table's own check lists all five).
+export type UsageRoute =
+  "describe_or_ask" | "compact" | "recipe_parse" | "recipe_generate" | "plan_generate";
 
 export type UsageToRecord = TokenCounts & {
   userId: string;
@@ -49,9 +51,23 @@ const haikuOver100kPrompt: Rates = {
 };
 const longPromptTokens = 100_000;
 
+// Claude Opus 5.5: $4 per million input tokens, $20 per million output tokens and $0.20 per million cache
+// reads. A five-minute cache write is 1.25x the input rate ($5), the same rule as Haiku above. It has one
+// rate card whatever the prompt length, so the short and the long card are the same.
+const opusRates: Rates = {
+  input: 4_000_000,
+  output: 20_000_000,
+  cacheRead: 200_000,
+  cacheWrite: 5_000_000,
+};
+
 const pricesByModel: Record<string, { short: Rates; long: Rates }> = {
   "claude-haiku-5-5": { short: haikuUpTo100kPrompt, long: haikuOver100kPrompt },
+  "claude-opus-5-5": { short: opusRates, long: opusRates },
 };
+
+/** Whether `costUsdMicros` has a price for the model. A fallback model that answered a call may have none. */
+export const hasPrice = (model: string): boolean => Object.hasOwn(pricesByModel, model);
 
 // Whole micro-dollars, rounded once on the total. An unknown model throws, so a model change cannot
 // quietly record a spend of zero against the monthly cap.
