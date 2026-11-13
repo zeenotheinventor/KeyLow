@@ -1,9 +1,11 @@
+import { foodRowSchema } from "@keylow/core/schemas";
 import { z } from "zod";
 
 import { idOfRow, parseRow } from "./diaryRows";
 import { repoError } from "./repoError";
 
 import type { Database } from "../database.types";
+import type { PalateFood, PalateFoodStat, PalatePreference } from "@keylow/core";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 // A palate says what a person eats and avoids, and an allergy is special category data (ADR 0003,
@@ -11,7 +13,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 // names the action and the error code only, and the cause holds the code and nothing else. A row that
 // does not parse is reported by its id and the paths of the fields that failed, never by a value.
 
-const PREFERENCE_COLUMNS = "id,kind,food_id,recipe_id,label,created_at";
+const PREFERENCE_COLUMNS = "id,kind,food_id,recipe_id,label";
 
 const STATS_COLUMNS = [
   "food_id",
@@ -32,6 +34,16 @@ const LABEL_MAX_LENGTH = 100;
 /** What Postgres raises when the unique index on a preference collides. */
 const UNIQUE_VIOLATION_CODE = "23505";
 
+/** The most ids one request names, so the address of a read stays far inside what a server accepts. */
+const FOODS_PER_REQUEST = 100;
+
+const palateFoodSchema = foodRowSchema.pick({
+  id: true,
+  name: true,
+  source: true,
+  food_group: true,
+});
+
 const labelSchema = z.string().trim().min(1).max(LABEL_MAX_LENGTH);
 
 const preferenceRowSchema = z
@@ -41,7 +53,6 @@ const preferenceRowSchema = z
     food_id: z.guid().nullable(),
     recipe_id: z.guid().nullable(),
     label: z.string().nullable(),
-    created_at: z.string(),
   })
   .transform((row): PalatePreference => ({
     id: row.id,
@@ -49,7 +60,6 @@ const preferenceRowSchema = z
     foodId: row.food_id,
     recipeId: row.recipe_id,
     label: row.label,
-    createdAt: row.created_at,
   }));
 
 const loggedDaysRowSchema = z
@@ -82,39 +92,14 @@ const statsRowSchema = z
     sixteenOrLaterCount: row.sixteen_or_later_count,
   }));
 
-/** What a person stated about their taste, or a correction ("not true") of what the app noticed. */
-export type PalatePreference = {
-  id: string;
-  kind: "dislike" | "allergy" | "not_usual";
-  foodId: string | null;
-  recipeId: string | null;
-  label: string | null;
-  createdAt: string;
-};
+// The palate types are core's, which reads them, so the repo and core cannot drift.
+export type { PalateFoodStat, PalatePreference };
 
 /** A dislike or an allergy, named by a word that core matches against food names. */
 export type PalateStatement = { kind: "dislike" | "allergy"; label: string };
 
 /** What a "not true" correction is about: one food, one recipe or one label of the profile. */
 export type NotUsualTarget = { foodId: string } | { recipeId: string } | { label: string };
-
-/**
- * What the diary says of one food or one recipe over the last 90 days, as the `palate_food_stats`
- * view counts it: arithmetic only. Exactly one of `foodId` and `recipeId` is set. What counts as
- * usual, rare or never is core's.
- */
-export type PalateFoodStat = {
-  foodId: string | null;
-  recipeId: string | null;
-  entryCount: number;
-  distinctDays: number;
-  firstLocalDate: string;
-  lastLocalDate: string;
-  medianResolvedGrams: number | null;
-  beforeElevenCount: number;
-  elevenToSixteenCount: number;
-  sixteenOrLaterCount: number;
-};
 
 /**
  * The signed in user's stated dislikes and allergies and their corrections, oldest first. Row level
@@ -256,4 +241,34 @@ export async function getPalateLoggedDays(client: SupabaseClient<Database>): Pro
   }
 
   return data === null ? 0 : parseRow(loggedDaysRowSchema, data, action, () => "(view row)");
+}
+
+/**
+ * The columns of the palate's foods that core reads (name, source and food group), for the ids asked
+ * for. A deleted food is returned too, because an old entry still points at it. An id the user cannot
+ * see is left out, and the order of the answer is not the order of the ids.
+ */
+export async function listPalateFoods(
+  client: SupabaseClient<Database>,
+  foodIds: readonly string[],
+): Promise<PalateFood[]> {
+  const action = "load the foods in your palate";
+  const readIds = async (ids: readonly string[]): Promise<PalateFood[]> => {
+    const { data, error } = await client
+      .from("foods")
+      .select("id,name,source,food_group")
+      .in("id", [...ids]);
+
+    if (error) {
+      throw repoError(action, error);
+    }
+
+    return data.map((row) => parseRow(palateFoodSchema, row, action, idOfRow));
+  };
+
+  const requests: Promise<PalateFood[]>[] = [];
+  for (let first = 0; first < foodIds.length; first += FOODS_PER_REQUEST) {
+    requests.push(readIds(foodIds.slice(first, first + FOODS_PER_REQUEST)));
+  }
+  return (await Promise.all(requests)).flat();
 }

@@ -70,6 +70,11 @@ export type {
   CleanCustomExercise,
   CustomExerciseDraft,
   StoredFeatureRequestMessage,
+  PalateFood,
+  PalateFoodStat,
+  PalatePreference,
+  PalateProfile,
+  PalateRecipe,
 } from "./core/index.js";
 export {
   addCalendarDays,
@@ -148,6 +153,8 @@ export {
   displayLoad,
   bestSetPerWeek,
   summariseSession,
+  buildPalateProfile,
+  summaryLines,
   dueCheckinDates,
   EQUIPMENT,
   buildRoutineDraft,

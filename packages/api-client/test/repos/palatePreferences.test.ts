@@ -5,6 +5,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from
 import {
   addPalatePreference,
   getPalateLoggedDays,
+  listPalateFoods,
   listPalatePreferences,
   listPalateStats,
   removePalatePreference,
@@ -114,7 +115,6 @@ describe("listPalatePreferences", () => {
         foodId: null,
         recipeId: null,
         label: "stub word",
-        createdAt: "2026-11-13T10:00:00.123456+00:00",
       },
       {
         id: "77777777-7777-4777-8777-777777777777",
@@ -122,13 +122,10 @@ describe("listPalatePreferences", () => {
         foodId: FOOD_ID,
         recipeId: null,
         label: null,
-        createdAt: "2026-11-13T10:00:00.123456+00:00",
       },
     ]);
     expect(recorded[0]?.url.searchParams.get("order")).toBe("created_at.asc,id.asc");
-    expect(recorded[0]?.url.searchParams.get("select")).toBe(
-      "id,kind,food_id,recipe_id,label,created_at",
-    );
+    expect(recorded[0]?.url.searchParams.get("select")).toBe("id,kind,food_id,recipe_id,label");
   });
 
   it("should fail with the action and the code only when the database quotes the row", async () => {
@@ -170,7 +167,6 @@ describe("addPalatePreference", () => {
       foodId: null,
       recipeId: null,
       label: "stub word",
-      createdAt: "2026-11-13T10:00:00.123456+00:00",
     });
   });
 
@@ -372,5 +368,54 @@ describe("getPalateLoggedDays", () => {
     const error = await errorThrownBy(() => getPalateLoggedDays(createTestClient()));
 
     expectOnlyTheCode(error, "load your logged days", "42501");
+  });
+});
+
+describe("listPalateFoods", () => {
+  const SECOND_FOOD_ID = "88888888-8888-4888-8888-888888888888";
+
+  it("should read the four columns the palate needs for the foods asked for", async () => {
+    answer("get", "foods", (request) =>
+      postgrestRows(request, [
+        { id: FOOD_ID, name: "Oats, rolled", source: "cofid", food_group: "A" },
+      ]),
+    );
+
+    const foods = await listPalateFoods(createTestClient(), [FOOD_ID, SECOND_FOOD_ID]);
+
+    expect(foods).toStrictEqual([
+      { id: FOOD_ID, name: "Oats, rolled", source: "cofid", food_group: "A" },
+    ]);
+    expect(recorded[0]?.url.searchParams.get("select")).toBe("id,name,source,food_group");
+    expect(recorded[0]?.url.searchParams.get("id")).toBe(`in.(${FOOD_ID},${SECOND_FOOD_ID})`);
+  });
+
+  it("should send nothing when no food is asked for", async () => {
+    await expect(listPalateFoods(createTestClient(), [])).resolves.toStrictEqual([]);
+    expect(recorded).toHaveLength(0);
+  });
+
+  it("should ask in requests of at most 100 ids and join the answers", async () => {
+    const ids = Array.from(
+      { length: 101 },
+      (_, index) => `00000000-0000-4000-8000-${String(index).padStart(12, "0")}`,
+    );
+    answer("get", "foods", (request) =>
+      postgrestRows(request, [{ id: FOOD_ID, name: "Oats", source: "cofid", food_group: null }]),
+    );
+
+    const foods = await listPalateFoods(createTestClient(), ids);
+
+    expect(recorded).toHaveLength(2);
+    expect(recorded[0]?.url.searchParams.get("id")?.split(",")).toHaveLength(100);
+    expect(foods).toHaveLength(2);
+  });
+
+  it("should fail with the action and the code only when the database quotes the row", async () => {
+    answer("get", "foods", () => databaseErrorQuotingTheRow("42501"));
+
+    const error = await errorThrownBy(() => listPalateFoods(createTestClient(), [FOOD_ID]));
+
+    expectOnlyTheCode(error, "load the foods in your palate", "42501");
   });
 });
