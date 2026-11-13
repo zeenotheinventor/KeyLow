@@ -29,6 +29,7 @@ type Fake = {
   consumed: number[];
   reports: string[];
   turnsRun: string[];
+  background: Promise<unknown>[];
 };
 
 type FakeOptions = {
@@ -52,6 +53,7 @@ function fake(options: FakeOptions = {}): Fake {
   const consumed: number[] = [];
   const reports: string[] = [];
   const turnsRun: string[] = [];
+  const background: Promise<unknown>[] = [];
   const access: AccessStore = {
     hasConsented: () => Promise.resolve(consented),
     hasEntitlement: () => Promise.resolve(entitled),
@@ -109,10 +111,13 @@ function fake(options: FakeOptions = {}): Fake {
     turns,
     undoWith: () => options.undo ?? (() => Promise.resolve({ status: "undone", actionId })),
     runTurn,
+    runInBackground: (task) => {
+      background.push(task);
+    },
     now: () => new Date("2026-10-25T23:59:00Z"),
     report,
   };
-  return { dependencies, started, conversations, consumed, reports, turnsRun };
+  return { dependencies, started, conversations, consumed, reports, turnsRun, background };
 }
 
 const turnBody = {
@@ -220,6 +225,58 @@ Deno.test(
     }
   },
 );
+
+Deno.test(
+  "every turn request hands its promise to runInBackground, which settles without rejecting",
+  async () => {
+    const cases: { options: FakeOptions; body: typeof turnBody | Record<string, unknown> }[] = [
+      { options: {}, body: turnBody },
+      { options: { consented: false }, body: turnBody },
+      { options: { busy: true }, body: turnBody },
+      { options: { ownsConversation: false }, body: { ...turnBody, conversationId } },
+      { options: { runTurn: () => Promise.reject(new Error("boom")) }, body: turnBody },
+    ];
+    for (const { options, body } of cases) {
+      const made = fake(options);
+
+      const response = await call(made.dependencies, "turn", { body });
+      await response.text();
+
+      assertEquals(made.background.length, 1);
+      await made.background[0];
+    }
+  },
+);
+
+Deno.test("the turn response returns before the background promise settles", async () => {
+  const release = Promise.withResolvers<void>();
+  const finished = Promise.withResolvers<void>();
+  const made = fake({
+    runTurn: async (context, stream) => {
+      writeEvent(stream, {
+        type: "turn",
+        turnId: context.turnId,
+        conversationId: context.conversationId,
+      });
+      await release.promise;
+      writeEvent(stream, { type: "done", outcome: "complete" });
+      finished.resolve();
+    },
+  });
+
+  const response = await call(made.dependencies, "turn", { body: turnBody });
+  const reader = response.body?.getReader();
+  const first = await reader?.read();
+
+  assertEquals(response.headers.get("Content-Type"), "text/event-stream");
+  assertEquals(first?.done, false);
+  assertEquals(made.background.length, 1);
+  // The reader goes away while the turn is still running, and the turn goes on to its end.
+  await reader?.cancel();
+  release.resolve();
+  await finished.promise;
+  await made.background[0];
+});
 
 Deno.test("a refused first-three-gates turn consumes nothing", async () => {
   const noConsent = fake({ consented: false });

@@ -1,4 +1,5 @@
 import { assert, assertEquals, assertNotEquals, assertStringIncludes } from "@std/assert";
+import Anthropic from "@anthropic-ai/sdk";
 
 import { toolRegistry } from "../_shared/assistant/registry.ts";
 import { spyOnConsole } from "../_shared/assistant/testing.ts";
@@ -1702,56 +1703,41 @@ Deno.test(
 
 // ---- Abort ----
 
+// A slow model that has begun its reply. The reader goes away, and the model goes on to its end.
+const slowReply = (text: string): ScriptedResponse => ({
+  blocks: [{ type: "text", text }],
+  stopReason: "end_turn",
+  pauseAfterFirstText: true,
+});
+
 Deno.test(
-  "an abort mid-text stores the partial text as text blocks, ends stopped, writes no done and closes the client",
+  "a reader that goes away mid-text does not stop the turn: the reply is stored and the turn ends complete",
   async () => {
     await withHarness(
-      {
-        responses: [
-          {
-            blocks: [
-              { type: "thinking", thinking: "hmm", signature: "sig" },
-              { type: "text", text: "Let me think about that for you" },
-            ],
-            stopReason: "end_turn",
-            holdAfterFirstText: true,
-          },
-        ],
-      },
+      { responses: [slowReply("Let me think about that for you")] },
       async (harness) => {
         const run = harness.start("hello");
         await run.textReceived;
         await run.cancel();
+        harness.mock.release();
         const result = await run.finished;
 
         assertEquals(typesOf(result.events).includes("done"), false);
-        const [assistant] = rowsOfRole(harness, "assistant");
-        const blocks = blocksOf(assistant?.content);
-        assert(blocks.length > 0);
-        assert(
-          blocks.every((block) => block["type"] === "text" && String(block["text"]).trim() !== ""),
-        );
-        assertStringIncludes("Let me think about that for you", String(blocks[0]?.["text"]).trim());
-        assertEquals(turnStatuses(harness), ["stopped"]);
+        assertEquals(lastAssistantText(harness), "Let me think about that for you");
+        assertEquals(turnStatuses(harness), ["complete"]);
+        assertEquals(harness.mock.streamsCancelled(), 0);
         assertEquals(harness.connections[0]?.closeCount, 1);
         assertEquals(harness.usageRows().length, 1);
+        assertEquals(harness.reports, []);
       },
     );
   },
 );
 
-Deno.test("the request's own signal also stops the turn", async () => {
+Deno.test("the request's own signal does not stop the turn either", async () => {
   const controller = new AbortController();
   await withHarness(
-    {
-      responses: [
-        {
-          blocks: [{ type: "text", text: "Let me think" }],
-          stopReason: "end_turn",
-          holdAfterFirstText: true,
-        },
-      ],
-    },
+    { responses: [slowReply("Let me think about that for you")] },
     async (harness) => {
       const run = harness.start("hello", {
         request: new Request("http://localhost/functions/v1/assistant/turn", {
@@ -1762,54 +1748,120 @@ Deno.test("the request's own signal also stops the turn", async () => {
       });
       await run.textReceived;
       controller.abort();
-      const result = await run.finished;
+      harness.mock.release();
+      await run.finished;
 
-      assertEquals(typesOf(result.events).includes("done"), false);
-      assertEquals(turnStatuses(harness), ["stopped"]);
-      assertEquals(harness.connections[0]?.closeCount, 1);
+      assertEquals(lastAssistantText(harness), "Let me think about that for you");
+      assertEquals(turnStatuses(harness), ["complete"]);
+      assertEquals(harness.mock.streamsCancelled(), 0);
     },
   );
 });
 
-Deno.test("an abort during a tool call stores that result and makes no further call", async () => {
-  let run: ReturnType<Harness["start"]> | undefined;
-  await withHarness(
-    {
-      responses: [
-        callTools([
-          { id: "s1", name: "search_foods", input: { query: "egg" } },
-          { id: "g1", name: "get_day", input: { local_date: "2026-11-03" } },
-        ]),
-        reply("never asked for"),
-      ],
-      answers: {
-        search_foods: async () => {
-          await run?.cancel();
-          return okResult({ name: "search_foods" });
+Deno.test(
+  "a deliberate stop mid-text ends stopped: the partial text stored, no done and no further model call",
+  async () => {
+    let stop: AbortController | undefined;
+    await withHarness(
+      {
+        responses: [
+          {
+            blocks: [{ type: "text", text: "Let me think about that for you" }],
+            stopReason: "end_turn",
+            holdAfterFirstText: true,
+          },
+          reply("never asked for"),
+        ],
+        exposeStop: (controller) => {
+          stop = controller;
         },
       },
-    },
-    async (harness) => {
-      run = harness.start("find an egg");
-      const result = await run.finished;
+      async (harness) => {
+        const run = harness.start("hello");
+        await run.textReceived;
+        stop?.abort();
+        const result = await run.finished;
 
-      assertEquals(
-        harness.connections[0]?.calls.map((call) => call.name),
-        ["search_foods"],
-      );
-      assertEquals(
-        toolResultRows(harness)
-          .flatMap((row) => blocksOf(row.content))
-          .map((b) => b["tool_use_id"]),
-        ["s1"],
-      );
-      assertEquals(harness.mock.bodies.length, 1);
-      assertEquals(typesOf(result.events).includes("done"), false);
-      assertEquals(turnStatuses(harness), ["stopped"]);
-      assertEquals(harness.connections[0]?.closeCount, 1);
-    },
-  );
-});
+        assertEquals(typesOf(result.events).includes("done"), false);
+        assertEquals(turnStatuses(harness), ["stopped"]);
+        assertEquals(harness.mock.bodies.length, 1);
+        assertEquals(harness.reports, []);
+        assertEquals(harness.connections[0]?.closeCount, 1);
+      },
+    );
+  },
+);
+
+Deno.test(
+  "an abort that is neither a stop nor a limit ends failed, reported with a code and no text",
+  async () => {
+    await withHarness(
+      {
+        responses: [],
+        // A client whose call is aborted by something the turn did not do. The cast is limited to this fake.
+        createModelClient: () =>
+          ({
+            messages: {
+              stream: () => ({
+                on: () => undefined,
+                finalMessage: () => Promise.reject(new Anthropic.APIUserAbortError()),
+                currentMessage: undefined,
+              }),
+            },
+          }) as unknown as Anthropic,
+      },
+      async (harness) => {
+        const result = await harness.take("my private breakfast");
+
+        assertEquals(turnStatuses(harness), ["failed"]);
+        assertEquals(typesOf(result.events).at(-1), "done");
+        assertEquals(
+          harness.reports.map((report) => report.caught instanceof Error && report.caught.message),
+          ["unexpected_abort"],
+        );
+        assertEquals(JSON.stringify(harness.reports).includes("breakfast"), false);
+      },
+    );
+  },
+);
+
+Deno.test(
+  "a reader that goes away during a tool call does not stop the loop: every call is made and the turn ends complete",
+  async () => {
+    let run: ReturnType<Harness["start"]> | undefined;
+    await withHarness(
+      {
+        responses: [
+          callTools([
+            { id: "s1", name: "search_foods", input: { query: "egg" } },
+            { id: "g1", name: "get_day", input: { local_date: "2026-11-03" } },
+          ]),
+          reply("Found one."),
+        ],
+        answers: {
+          search_foods: async () => {
+            await run?.cancel();
+            return okResult({ name: "search_foods" });
+          },
+        },
+      },
+      async (harness) => {
+        run = harness.start("find an egg");
+        const result = await run.finished;
+
+        assertEquals(
+          harness.connections[0]?.calls.map((call) => call.name),
+          ["search_foods", "get_day"],
+        );
+        assertEquals(harness.mock.bodies.length, 2);
+        assertEquals(typesOf(result.events).includes("done"), false);
+        assertEquals(lastAssistantText(harness), "Found one.");
+        assertEquals(turnStatuses(harness), ["complete"]);
+        assertEquals(harness.connections[0]?.closeCount, 1);
+      },
+    );
+  },
+);
 
 // ---- The turn's deadline and the model stream's idle watchdog ----
 
@@ -2076,7 +2128,7 @@ Deno.test(
 );
 
 Deno.test(
-  "a reader that goes away after the deadline fired still gives stopped and no done",
+  "a deadline that fires while the reader is gone still ends failed as turn_deadline, with no event",
   async () => {
     let run: ReturnType<Harness["start"]> | undefined;
     await withHarness(
@@ -2100,9 +2152,13 @@ Deno.test(
 
         assertEquals(typesOf(result.events).includes("done"), false);
         assertEquals(typesOf(result.events).includes("notice"), false);
-        assertEquals(turnStatuses(harness), ["stopped"]);
+        assertEquals(turnStatuses(harness), ["failed"]);
         assertEquals(harness.connections[0]?.closeCount, 1);
         assertEquals(harness.mock.bodies.length, 1);
+        assertEquals(
+          harness.reports.map((report) => report.caught instanceof Error && report.caught.message),
+          ["turn_deadline"],
+        );
       },
     );
   },
@@ -3074,7 +3130,7 @@ Deno.test(
 // ---- The answer meta only goes with a complete answer ----
 
 Deno.test(
-  "no answer meta is sent when the turn ends in a clarify, a confirm, a failure or a stop",
+  "no answer meta is sent when the turn ends in a clarify, a confirm, a failure or with the reader gone",
   async () => {
     const read = callTools([{ id: "g1", name: "get_day", input: { local_date: "2026-11-02" } }]);
     const cited = okResult({
@@ -3140,8 +3196,8 @@ Deno.test(
         run = harness.start("How did I do on Monday?");
         const result = await run.finished;
 
-        assertEquals(turnStatuses(harness), ["stopped"]);
-        assertEquals(typesOf(result.events).includes("answer_meta"), false, "stopped");
+        assertEquals(turnStatuses(harness), ["complete"]);
+        assertEquals(typesOf(result.events).includes("answer_meta"), false, "reader gone");
       },
     );
   },
@@ -4024,27 +4080,30 @@ Deno.test("a not_found answer draws nothing and does not use up one of the four"
   );
 });
 
-Deno.test("a stopped turn sends no event for the figure it had", async () => {
-  let run: ReturnType<Harness["start"]> | undefined;
-  await withHarness(
-    {
-      ...musclesOptions([callTools([showMuscles("m1")]), reply("never asked for")]),
-      answers: {
-        show_exercise_muscles: async () => {
-          await run?.cancel();
-          return musclesOf(romanianDeadlift);
+Deno.test(
+  "a turn whose reader went away sends no event for the figure it had, and ends complete",
+  async () => {
+    let run: ReturnType<Harness["start"]> | undefined;
+    await withHarness(
+      {
+        ...musclesOptions([callTools([showMuscles("m1")]), reply("never asked for")]),
+        answers: {
+          show_exercise_muscles: async () => {
+            await run?.cancel();
+            return musclesOf(romanianDeadlift);
+          },
         },
       },
-    },
-    async (harness) => {
-      run = harness.start("What does a Romanian deadlift work?");
-      const result = await run.finished;
+      async (harness) => {
+        run = harness.start("What does a Romanian deadlift work?");
+        const result = await run.finished;
 
-      assertEquals(typesOf(result.events).includes("exercise_muscles"), false);
-      assertEquals(turnStatuses(harness), ["stopped"]);
-    },
-  );
-});
+        assertEquals(typesOf(result.events).includes("exercise_muscles"), false);
+        assertEquals(turnStatuses(harness), ["complete"]);
+      },
+    );
+  },
+);
 
 Deno.test(
   "a figure that does not parse is reported with fixed words, stored as nothing and not sent",
@@ -4280,27 +4339,30 @@ Deno.test("a not_found answer draws nothing and does not use up one of the two",
   );
 });
 
-Deno.test("a stopped turn sends no event for the form card it had", async () => {
-  let run: ReturnType<Harness["start"]> | undefined;
-  await withHarness(
-    {
-      ...formOptions([callTools([showForm("f1")]), reply("never asked for")]),
-      answers: {
-        show_exercise_form: async () => {
-          await run?.cancel();
-          return formOf(squatVideo);
+Deno.test(
+  "a turn whose reader went away sends no event for the form card it had, and ends complete",
+  async () => {
+    let run: ReturnType<Harness["start"]> | undefined;
+    await withHarness(
+      {
+        ...formOptions([callTools([showForm("f1")]), reply("never asked for")]),
+        answers: {
+          show_exercise_form: async () => {
+            await run?.cancel();
+            return formOf(squatVideo);
+          },
         },
       },
-    },
-    async (harness) => {
-      run = harness.start("How do I do a barbell squat?");
-      const result = await run.finished;
+      async (harness) => {
+        run = harness.start("How do I do a barbell squat?");
+        const result = await run.finished;
 
-      assertEquals(typesOf(result.events).includes("exercise_form_media"), false);
-      assertEquals(turnStatuses(harness), ["stopped"]);
-    },
-  );
-});
+        assertEquals(typesOf(result.events).includes("exercise_form_media"), false);
+        assertEquals(turnStatuses(harness), ["complete"]);
+      },
+    );
+  },
+);
 
 Deno.test(
   "a form card that does not parse, a none one included, is reported with fixed words, stored as nothing and not sent",
@@ -4709,7 +4771,7 @@ for (const kind of writeKinds) {
   });
 
   Deno.test(
-    `${kind.label} then the reader goes away: no event, the words stored, complete, nothing reported`,
+    `${kind.label} then the reader goes away: no event, the turn goes on and ends complete on its own words`,
     async () => {
       const spy = spyOnConsole();
       let run: ReturnType<Harness["start"]> | undefined;
@@ -4731,16 +4793,29 @@ for (const kind of writeKinds) {
             assertEquals(typesOf(result.events).includes("done"), false);
             assertEquals(typesOf(result.events).includes("text"), false);
             assertEquals(turnStatuses(harness), ["complete"]);
-            assertEquals(lastAssistantText(harness), savedOne);
+            assertEquals(lastAssistantText(harness), "never asked for");
             assertEquals(harness.reports, []);
-            assertEquals(harness.mock.bodies.length, 1);
-            assertReadBack(harness, savedOne);
+            assertEquals(harness.mock.bodies.length, 2);
+            // The stored thread holds the card, so a returning reader finds it with its Undo.
+            const thread = threadFromMessages(harness.rows(), [
+              {
+                id: actionA,
+                hasTarget: true,
+                undoneAt: null,
+                targetUpdatedAt: null,
+                targets: null,
+              },
+            ]);
+            assertEquals(
+              thread.some((item) => item.kind === "card" && item.card.undo === "available"),
+              true,
+            );
           },
         );
       } finally {
         spy.restore();
       }
-      assertEquals(summaryEnding(spy.lines), "written_then_stopped");
+      assertEquals(summaryEnding(spy.lines), "complete");
     },
   );
 

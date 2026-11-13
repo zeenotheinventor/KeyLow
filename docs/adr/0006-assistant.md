@@ -543,3 +543,32 @@ A generation tool that ends `timed_out`, `generation_timeout` or `generation_ref
 - **The notice** has the codes `timed_out`, which offers Try again, and `refused`, which has no button. The boards are `assistant-card · recipe-draft-failed`.
 - **The refused card** is sent only when the choice of foods to add was really made. When no food was offered, or the choice was refused or failed, the model's own words stand, because the card says none of the person's foods makes a sensible addition. Its calorie clause is left out when the calories are no longer within the fit's tolerance of those held. A recipe notice offers Try again only when the turn wrote nothing, because sending the message again would repeat a write. Its figures are the closest the fit reached, in core's `recipeRefusalOf`. The board is `assistant-card · recipe-compare`, refused.
 - **Not sent:** a generation that failed another way, a recipe that mentions an avoided food, a stored recipe that holds one and a failure to match foods. The model words those, and no board draws them.
+
+## Amendment 7 to this ADR: a turn outlives its connection, part A (2026-11-13)
+
+### Status
+
+Recorded on 2026-11-13 under KEY-1063, part A (KEY-1064). It adds no table, column or migration, and no app change.
+
+### Context
+
+The `turn` route streams the reply over one connection. Until now, the reader going away (the sheet closed, the app sent to the background or the network lost) aborted the turn's signal, so the turn ended `stopped` and a worker that was shut down could kill it half way. A person who asks a question and puts the phone down came back to a reply that was never stored.
+
+### Decision
+
+- **A dropped connection, a closed sheet and a backgrounded app are the same to the server, and none of them stops a turn.** The server cannot tell them apart and does not try. The turn goes on to its normal ending (complete, clarify, confirm, failed or refused), stores the reply and sets the turn's status as if the reader were still there. What it writes to the stream after the reader left is dropped, and no code path throws on the closed stream.
+- **The turn runs under `waitUntil`.** The route hands the turn's promise to `runInBackground` (`EdgeRuntime.waitUntil` in production) and returns the response at once. The promise never rejects. The turn is still bounded by its own limits, the 100 s turn deadline and the model stream's idle watchdog, which end it `failed` with their codes, inside the 150 s wall clock of the free plan.
+- **The turn's signal no longer comes from the stream or the request.** The model call is aborted only by a limit or by a deliberate stop. The stream's own `signal` stays exported and still means "the reader went away", so a later change can use it to decide on a push.
+- **There is no deliberate stop, so none is added.** The app has no stop button. The turn keeps an internal `AbortController` that nothing triggers today, so a later stop route can abort it without reshaping how the loop reads an interruption. The `stopped` status stays in the schema for the rows that older turns left behind, and the loop still ends `stopped`, with no `done` and no cards, if that controller is ever aborted. An abort that is neither that stop nor a limit ends `failed` with the code `unexpected_abort`.
+- **The stored conversation is the source of truth for a returning reader.** An app that reconnects reads the thread, which holds the reply and the status, and does not depend on having seen the stream.
+
+### Consequences
+
+- A turn the person walked away from still costs a model call and its tools, and it counts against the daily turns and the monthly cap like any other. The limits above bound it.
+- A write the turn makes after the reader left is landed, and its card is kept in the stored row's `display` with the action, so a returning reader reads the thread and finds the card with its live Undo, the same as when the reader stayed.
+- Compaction after a complete turn runs as before, under `runInBackground`.
+- Nothing logs message text, as before.
+
+### Implemented by
+
+- KEY-1064: the `runInBackground` dependency of the `turn` route, the turn's own `stop` controller, the stream's comments and this amendment.

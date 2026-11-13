@@ -32,6 +32,9 @@ export type AssistantDependencies = {
   // Undo for the caller: acts under their JWT, so row-level security scopes it.
   undoWith(request: Request, userId: string): (actionId: string) => Promise<UndoResult>;
   runTurn: RunTurn;
+  // Keeps the runtime alive until the turn settles, after the response has gone. A turn outlives its
+  // connection (ADR 0006, Amendment 7). The promise never rejects.
+  runInBackground(task: Promise<unknown>): void;
   now(): Date;
   report: ReportError;
 };
@@ -112,10 +115,12 @@ export function createAssistantHandler(
       return error("invalid_request", "That is not a valid turn.");
     }
     const { stream, body } = createEventStream();
-    void runInStream(stream, async () => {
-      const gate = await streamTurn(request, userId, parsed.data, stream);
-      logRoute("turn", userId, gate, startedAt);
-    });
+    dependencies.runInBackground(
+      runInStream(stream, async () => {
+        const gate = await streamTurn(request, userId, parsed.data, stream);
+        logRoute("turn", userId, gate, startedAt);
+      }),
+    );
     return eventResponse(body);
   }
 
@@ -174,7 +179,8 @@ export function createAssistantHandler(
     }
   }
 
-  // Whatever the turn did, the stream ends, and a throw ends it as a failed turn.
+  // Whatever the turn did, the stream ends, and a throw ends it as a failed turn. It never rejects, because
+  // nothing is left to answer for it once the response has gone.
   async function runInStream(stream: EventStream, work: () => Promise<void>): Promise<void> {
     try {
       await work();
