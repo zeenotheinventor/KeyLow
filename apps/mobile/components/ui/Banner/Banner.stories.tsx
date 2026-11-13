@@ -29,6 +29,16 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
+// The confirmed day of the Plan screen (`plan · day-confirmed`): the quiet notice in the success tones, with a link.
+export const Success: Story = {
+  args: {
+    variant: "success",
+    title: "Confirmed",
+    body: "5 entries are in your diary. Change them there.",
+    action: { label: "Open in diary", onPress: () => undefined },
+  },
+};
+
 // The food detail's missing-values boards: warning-toned, with one action.
 export const Review: Story = {
   args: {

@@ -266,6 +266,7 @@ export { useMealPlans } from "./useMealPlans";
 export { useSaveMealPlan } from "./useSaveMealPlan";
 export { useReplaceMealPlanDay } from "./useReplaceMealPlanDay";
 export { useConfirmMealPlanDay } from "./useConfirmMealPlanDay";
+export { useConfirmPlanDay } from "./useConfirmPlanDay";
 export { useArchiveMealPlan } from "./useArchiveMealPlan";
 export { useMealPlanRepeatLimit } from "./useMealPlanRepeatLimit";
 export { useSetMealPlanRepeatLimit } from "./useSetMealPlanRepeatLimit";

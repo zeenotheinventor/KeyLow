@@ -1,4 +1,5 @@
 import { useAssistantChat } from "@keylow/api-client";
+import { composerTextForPrefill, composerTextOnClose } from "@keylow/core";
 import { ASSISTANT_OFFLINE, ASSISTANT_SHEET, SAVE_FAILED_BANNER } from "@keylow/core/copy";
 import { fetch as streamingFetch } from "expo/fetch";
 import { useRouter } from "expo-router";
@@ -64,6 +65,7 @@ export function AssistantSheet({
   localDate,
   describeAt,
   from,
+  draft,
 }: AssistantSheetProps) {
   const isOnline = useIsOnline();
   const router = useRouter();
@@ -99,7 +101,7 @@ export function AssistantSheet({
       isFollowingEnd.current = true;
     },
   });
-  const { access, thread, composer, isOpening, isEmpty } = chat;
+  const { access, thread, composer, isOpening, isEmpty, setDraft } = chat;
   const scrollRef = useRef<ComponentRef<typeof SheetScrollView>>(null);
   const isUserScrolling = useRef(false);
   const scrollSettledTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -109,6 +111,12 @@ export function AssistantSheet({
       isFollowingEnd.current = true;
     }
   }, [open]);
+  // A prefill puts its words in the field each time the sheet opens, and nothing is sent until Send is pressed.
+  useEffect(() => {
+    if (open && draft !== undefined) {
+      setDraft((current) => composerTextForPrefill(current, draft));
+    }
+  }, [open, draft, setDraft]);
   useEffect(
     () => () => {
       clearTimeout(scrollSettledTimer.current);
@@ -150,6 +158,8 @@ export function AssistantSheet({
     if (chat.isStreaming) {
       chat.stop();
     }
+    // A prefill nobody touched does not wait in the composer for the next opening.
+    setDraft((current) => composerTextOnClose(current, draft));
     onClose();
   }
 
@@ -276,7 +286,7 @@ export function AssistantSheet({
               </View>
             )}
             <Composer
-              isAutoFocused={describeAt !== undefined}
+              isAutoFocused={describeAt !== undefined || draft !== undefined}
               isFieldDisabled={composer.isFieldDisabled}
               isSendDisabled={!chat.canSendDraft}
               placeholder={composer.placeholder}

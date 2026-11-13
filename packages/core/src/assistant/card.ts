@@ -24,6 +24,8 @@ const assistantCardLinkTargetSchema = z.discriminatedUnion("screen", [
   z.strictObject({ screen: z.literal("diary_day"), localDate: z.iso.date() }),
   z.strictObject({ screen: z.literal("routine_editor"), routineId: assistantIdSchema }),
   z.strictObject({ screen: z.literal("session_detail"), sessionId: assistantIdSchema }),
+  /** The Plan screen, on the week that holds `localDate`. The phone has the screen. The web has no page for it, so its card shows no link. */
+  z.strictObject({ screen: z.literal("meal_plan"), localDate: z.iso.date() }),
 ]);
 
 export const assistantCardLinkSchema = z.strictObject({

@@ -9,6 +9,11 @@ export type AssistantOpening = {
   describeAt?: string | undefined;
   /** The screen whose header opens the sheet, when it is not the diary's. */
   from?: AssistantOpenedFrom | undefined;
+  /**
+   * Words to open the composer with, which are never sent: the person adds to them and presses Send. The meal
+   * plan's Regenerate day and Plan my week use it. The keyboard comes up with them.
+   */
+  draft?: string | undefined;
 };
 
 export type AssistantSheetHostProps = {

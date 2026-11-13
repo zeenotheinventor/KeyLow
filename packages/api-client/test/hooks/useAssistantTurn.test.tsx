@@ -710,7 +710,7 @@ describe("useAssistantTurn, a turn that breaks", () => {
     it("should draw a known card whose link screen is unknown, with no link, and finish the turn", async () => {
       const planLink = {
         label: "Open the plan",
-        target: { screen: "meal_plan", planId: CONVERSATION_ID },
+        target: { screen: "shopping_list", planId: CONVERSATION_ID },
       };
       answerTurns(() =>
         openTurnResponse(
@@ -728,7 +728,7 @@ describe("useAssistantTurn, a turn that breaks", () => {
       expect(rendered.result.current.live?.cards).toEqual([
         { ...aCard("Planned your meals"), link: null },
       ]);
-      expect(onKindSkipped.mock.calls).toEqual([[{ subject: "link", kind: "meal_plan" }]]);
+      expect(onKindSkipped.mock.calls).toEqual([[{ subject: "link", kind: "shopping_list" }]]);
     });
 
     it("should tell the caller each skipped kind by name and nothing else", async () => {

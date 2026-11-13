@@ -170,6 +170,7 @@ describe("assistantCardLinkSchema", () => {
     { screen: "recipe_add_ingredient", recipeId, query: "white wine" },
     { screen: "own_food", foodId: recipeId },
     { screen: "diary_day", localDate: "2026-10-24" },
+    { screen: "meal_plan", localDate: "2026-11-16" },
   ])("should parse a link to $screen", (target) => {
     const link = { label: "Open", target };
 
@@ -179,6 +180,15 @@ describe("assistantCardLinkSchema", () => {
   it("should reject a screen the plan does not list", () => {
     expect(
       assistantCardLinkSchema.safeParse({ label: "Open", target: { screen: "settings" } }).success,
+    ).toBe(false);
+  });
+
+  it("should reject a meal plan link whose day is not YYYY-MM-DD", () => {
+    expect(
+      assistantCardLinkSchema.safeParse({
+        label: "Open meal plan",
+        target: { screen: "meal_plan", localDate: "16 November" },
+      }).success,
     ).toBe(false);
   });
 
@@ -205,6 +215,7 @@ describe("assistantCardLinkSchema", () => {
     { screen: "recipe_add_ingredient", recipeId, query: "white wine" },
     { screen: "own_food", foodId: recipeId },
     { screen: "diary_day", localDate: "2026-10-24" },
+    { screen: "meal_plan", localDate: "2026-11-16" },
   ])("should reject an extra key on a link to $screen", (target) => {
     expect(
       assistantCardLinkSchema.safeParse({ label: "Open", target: { ...target, userId: recipeId } })

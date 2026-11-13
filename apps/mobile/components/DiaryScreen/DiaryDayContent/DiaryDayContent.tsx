@@ -4,12 +4,13 @@ import { View } from "react-native";
 
 import { Banner, MacroProgressStrip } from "../../ui";
 import { FoodLog } from "../FoodLog";
+import { PlanTodayRow } from "../PlanTodayRow";
 
 import type { DiaryDayContentProps } from "./types";
 
 /**
  * A loaded day under the week strip: the four progress bars (one button to Targets), the banners for no
- * target, for offline and for a copy that failed, and the hour-by-hour log. The bars add up the entries on screen with core's
+ * target, for offline and for a copy that failed, the planned row of a day in a plan that is not confirmed, and the hour-by-hour log. The bars add up the entries on screen with core's
  * `sumEntries`, so they always agree with the rows.
  */
 export function DiaryDayContent({
@@ -23,6 +24,8 @@ export function DiaryDayContent({
   isCopying,
   hasCopyFailed,
   showHour,
+  plannedRow,
+  onOpenPlannedDay,
   onHourShown,
   onOpenTargets,
   onAddFood,
@@ -49,6 +52,7 @@ export function DiaryDayContent({
           <Banner body={OFFLINE_BANNER.body} title={OFFLINE_BANNER.title} variant="offline" />
         )}
         {hasCopyFailed ? <Banner sentence title={COPY_FAILED_BANNER} variant="error" /> : null}
+        {plannedRow === null ? null : <PlanTodayRow row={plannedRow} onPress={onOpenPlannedDay} />}
       </View>
       <FoodLog
         // A new day is a new log, so it scrolls to its own first food.

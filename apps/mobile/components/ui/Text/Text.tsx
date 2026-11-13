@@ -26,6 +26,7 @@ const variantClassName: Record<TextVariant, string> = {
 const textToneClassName: Record<TextTone, string> = {
   ...toneClassName,
   "warning-ink": "text-warning-ink",
+  "success-ink": "text-success-ink",
   danger: "text-danger",
   "accent-ink": "text-accent-ink",
 };

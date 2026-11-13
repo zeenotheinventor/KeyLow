@@ -178,3 +178,14 @@ export const PLAN_RESULT_NOTES = {
   cleanup_failed:
     "Some older planned days could not be cleared, so they may still show beside this plan.",
 } as const;
+
+/** The card's link to the Plan screen. */
+export const PLAN_CARD_LINK_LABEL = "Open meal plan";
+
+/** One missed target as a phrase: "22 g short on protein", "180 kcal under". The Plan screen's short banner words it the same way. */
+export const describePlanMiss = ({
+  nutrient,
+  target,
+  achieved,
+}: Pick<Miss, "nutrient" | "target" | "achieved">): string =>
+  describeMiss({ nutrient, target, achieved, reason: "" });

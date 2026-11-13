@@ -700,3 +700,25 @@ describe("Banner", () => {
     });
   });
 });
+
+describe("the success variant, as plan · day-confirmed draws it", () => {
+  it("should say the title and body in a status and offer its link", async () => {
+    const onPress = jest.fn();
+    await render(
+      <ThemeProvider fixedPreference="dark">
+        <Banner
+          action={{ label: "Open in diary", onPress }}
+          body="5 entries are in your diary. Change them there."
+          title="Confirmed"
+          variant="success"
+        />
+      </ThemeProvider>,
+    );
+
+    expect(screen.getByRole("status")).toBeOnTheScreen();
+    expect(screen.getByText("Confirmed")).toBeOnTheScreen();
+    expect(screen.getByText("5 entries are in your diary. Change them there.")).toBeOnTheScreen();
+    await userEvent.setup().press(screen.getByRole("button", { name: "Open in diary" }));
+    expect(onPress).toHaveBeenCalledTimes(1);
+  });
+});

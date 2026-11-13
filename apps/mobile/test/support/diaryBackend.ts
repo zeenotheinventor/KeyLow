@@ -35,6 +35,8 @@ export const diaryBackend: {
   dayTotals: Row[];
   /** The `training_goals` rows the current goal read sees. Empty by default, so the user has no goal. */
   trainingGoals: Row[];
+  /** The `meal_plans` rows as the plans read sees them, each with its `meal_plan_days` and their `meal_plan_items`. Empty by default. */
+  mealPlans: Row[];
   /** Fails the reads of this table with a database error. */
   failingTables: Set<string>;
   /** Never answers the reads of this table, as a slow connection does. */
@@ -81,6 +83,7 @@ export const diaryBackend: {
   dayLogs: [],
   dayTotals: [],
   trainingGoals: [],
+  mealPlans: [],
   failingTables: new Set(),
   hungTables: new Set(),
   failingWriteTables: new Set(),
@@ -120,6 +123,7 @@ export function resetDiaryBackend(): void {
   diaryBackend.dayLogs = [];
   diaryBackend.dayTotals = [];
   diaryBackend.trainingGoals = [];
+  diaryBackend.mealPlans = [];
   diaryBackend.failingTables.clear();
   diaryBackend.hungTables.clear();
   diaryBackend.failingWriteTables.clear();
@@ -803,6 +807,9 @@ export async function fakeFetch(
     case "training_goals":
       // By default the user has no goal, so the training reads that wait for it are not held up by an error.
       return Promise.resolve(jsonResponse(diaryBackend.trainingGoals));
+    case "meal_plans":
+      // The user has no meal plan unless a test gives one, so the Diary's planned row stays away.
+      return Promise.resolve(jsonResponse(diaryBackend.mealPlans));
     case "accepted_suggestions":
       // The user has accepted no suggestion, so the projection that waits for them is not held up by an error.
       return Promise.resolve(jsonResponse([]));

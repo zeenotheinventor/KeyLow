@@ -1,4 +1,10 @@
-import { useDiaryDay, useDiaryWeek, useSetDayComplete, useTargets } from "@keylow/api-client";
+import {
+  useDiaryDay,
+  useDiaryWeek,
+  useMealPlans,
+  useSetDayComplete,
+  useTargets,
+} from "@keylow/api-client";
 import { DIARY_LOAD_FAILED, DIARY_MORE_LABEL, WEEK_SWIPE_HINT } from "@keylow/core/copy";
 import {
   clockHourOf,
@@ -9,11 +15,13 @@ import {
   toLocalDate,
 } from "@keylow/core/dates";
 import { nextWeek, previousWeek, weekOf } from "@keylow/core/diary";
+import { planDayViewsOf, plannedDayRowOf } from "@keylow/core/plans";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { useIsOnline } from "../../../lib/connectivity";
 import { foodSearchHref } from "../../../lib/navigation";
+import { planDayPath, planPath } from "../../../lib/planRoutes";
 import { useNow } from "../../../lib/useNow";
 import { setViewedDay } from "../../../lib/viewedDay";
 import { useOpenAssistant } from "../../AssistantSheetHost";
@@ -31,6 +39,8 @@ import type { DiaryDayProps } from "./types";
 import type { WeekStripWeekChange } from "../../ui";
 
 const NOON = 12;
+// The planned row is a convenience, so the plans are read again at most every five minutes while the Diary is opened.
+const PLANS_STALE_TIME_MS = 5 * 60 * 1000;
 const LAST_HOUR = 23;
 
 // An hour of the day written in whole digits, 0 to 23. Anything else is not an hour to show.
@@ -118,6 +128,14 @@ export function DiaryDay({ timeZone, isReadEnabled }: DiaryDayProps) {
   const dayQuery = useDiaryDay(viewedDate, { enabled: isReadEnabled });
   const weekQuery = useDiaryWeek(weekDays[0] ?? viewedDate, { enabled: isReadEnabled });
   const targetsQuery = useTargets({ enabled: isReadEnabled, localDate: viewedDate });
+  // The planned row is a convenience, so a plan that fails to load only leaves the row out.
+  const plansQuery = useMealPlans({ enabled: isReadEnabled, staleTime: PLANS_STALE_TIME_MS });
+  const planRows = plansQuery.data;
+  const plannedRow = useMemo(
+    () =>
+      planRows === undefined ? null : plannedDayRowOf(planDayViewsOf(planRows), viewedDate, today),
+    [planRows, viewedDate, today],
+  );
   const setDayComplete = useSetDayComplete();
   const deleteEntry = useDeleteEntryWithUndo();
   useCheckinToast();
@@ -191,6 +209,7 @@ export function DiaryDay({ timeZone, isReadEnabled }: DiaryDayProps) {
         isYesterdayEmpty={isYesterdayEmpty}
         hasCopyFailed={hasCopyFailed}
         showHour={hourToShow}
+        plannedRow={plannedRow}
         targets={targets}
         timeZone={timeZone}
         onAddFood={(hour) => {
@@ -205,6 +224,9 @@ export function DiaryDay({ timeZone, isReadEnabled }: DiaryDayProps) {
         onDeleteEntry={deleteEntry}
         onHourShown={() => {
           setHourToShow(undefined);
+        }}
+        onOpenPlannedDay={() => {
+          router.push(planDayPath(viewedDate));
         }}
         onOpenTargets={openTargets}
       />
@@ -272,6 +294,10 @@ export function DiaryDay({ timeZone, isReadEnabled }: DiaryDayProps) {
         onCopyYesterday={() => {
           setIsMenuOpen(false);
           copyYesterday();
+        }}
+        onOpenPlan={() => {
+          setIsMenuOpen(false);
+          router.push(planPath(viewedDate));
         }}
       />
     </DiaryFrame>

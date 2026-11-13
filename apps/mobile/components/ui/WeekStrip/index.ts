@@ -1,2 +1,7 @@
 export { WeekStrip } from "./WeekStrip";
-export type { WeekStripDayInput, WeekStripProps, WeekStripWeekChange } from "./types";
+export type {
+  WeekStripDayInput,
+  WeekStripDayMark,
+  WeekStripProps,
+  WeekStripWeekChange,
+} from "./types";

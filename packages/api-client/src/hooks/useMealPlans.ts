@@ -13,12 +13,23 @@ import type { DiaryReadOptions } from "./DiaryReadOptions";
  *
  * `enabled` is the same option the diary reads take: false makes no request at all.
  */
-export function useMealPlans({ enabled = true }: DiaryReadOptions = {}) {
+export function useMealPlans({
+  enabled = true,
+  staleTime,
+}: DiaryReadOptions & {
+  /**
+   * How long, in milliseconds, a read stays fresh. The Diary reads the plans to show its planned row and passes a few
+   * minutes, so opening the Diary again does not read every plan each time. Left out, a read is always stale, as the
+   * Plan screen wants.
+   */
+  staleTime?: number;
+} = {}) {
   const client = useSupabase();
 
   return useQuery({
     queryKey: keys.mealPlans.list,
     queryFn: () => listMealPlans(client),
     enabled,
+    ...(staleTime === undefined ? {} : { staleTime }),
   });
 }

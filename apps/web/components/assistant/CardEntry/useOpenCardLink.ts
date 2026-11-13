@@ -19,9 +19,13 @@ export function useOpenCardLink(): (target: AssistantCardLink["target"]) => void
   const isDocked = useIsDockedPanel();
 
   return (target) => {
+    const href = assistantCardHref(target);
+    if (href === null) {
+      return;
+    }
     if (!isDocked) {
       close();
     }
-    router.push(assistantCardHref(target));
+    router.push(href);
   };
 }

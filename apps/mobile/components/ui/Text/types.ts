@@ -24,9 +24,10 @@ export type TextVariant =
  * (Q14). It is for the title and the action of a review notice. `danger` is the danger colour itself, for
  * the label of the ghost destructive button, which the board draws in it on the plain background.
  * `accent-ink` is the `--accent-ink` token: lime in dark and the primary text colour in light, for the
- * chosen row of the time picker's wheels.
+ * chosen row of the time picker's wheels. `success-ink` is the `--success-ink` token, the title of a
+ * success notice: green in dark and a deep green in light, where the success fill is too faint for text.
  */
-export type TextTone = Tone | "warning-ink" | "danger" | "accent-ink";
+export type TextTone = Tone | "warning-ink" | "success-ink" | "danger" | "accent-ink";
 
 export type TextProps = NativeTextProps & {
   /** Only a look. Heading semantics are the caller's, with `role="heading"`. Defaults to `body`. */

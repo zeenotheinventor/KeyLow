@@ -8,6 +8,7 @@ import {
   describePlanItemDetail,
   describePlanRecipeAmount,
   describePlanUndone,
+  PLAN_CARD_LINK_LABEL,
   describeRepeatLimitNote,
   describeShortDayNote,
 } from "../../copy/assistantPlanCards";
@@ -91,8 +92,10 @@ export function buildPlanCreatedCard(input: PlanCreatedCardInput): AssistantCard
     changeDetail: describePlanChange(plan.days.length),
     totalText: null,
     note: notes.length === 0 ? null : notes.join(" "),
-    // The Plan screen has no link target in the card contract yet, so the card has no link (KEY-1018).
-    link: null,
+    link: {
+      label: PLAN_CARD_LINK_LABEL,
+      target: { screen: "meal_plan", localDate: first.localDate },
+    },
     undo: "available",
     undoneSub: describePlanUndone(first.localDate, last.localDate),
   };

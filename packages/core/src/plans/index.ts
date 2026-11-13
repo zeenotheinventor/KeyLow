@@ -38,6 +38,31 @@ export type {
   StoredPlanItem,
 } from "./planOverlap";
 export { planDaysOf, planHasNoItems, planServingGrams, planWeek } from "./planWeek";
+export { confirmInputsOfDay } from "./confirmDay";
+export { planPrefillDatesOf, repeatLimitSelectionOf } from "./planEntry";
+export type { ConfirmEntryInput } from "./confirmDay";
+export {
+  PLAN_STATUS_BADGE,
+  planDayViewsOf,
+  planOpeningDayOf,
+  plannedDayRowOf,
+  planProgressTargetsOf,
+  planShortBannerOf,
+  planStripMarkOf,
+  planWeekViewOf,
+} from "./planView";
+export type {
+  PlanBandView,
+  PlanDayRow,
+  PlanDayStatus,
+  PlanDayView,
+  PlanFigures,
+  PlanItemRow,
+  PlanItemView,
+  PlanMiss,
+  PlanRow,
+  PlannedDayRow,
+} from "./planView";
 export { rankedIdsOfReply } from "./readRanking";
 export { planSaveInput } from "./planSaveInput";
 export type { PlanSaveInputSource, StoredPlanRules } from "./planSaveInput";
