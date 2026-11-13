@@ -27,6 +27,30 @@ describe("assistantTurnRequestSchema", () => {
     expect(assistantTurnRequestSchema.parse(body)).toEqual(body);
   });
 
+  it.each(["plan", "recipe"])("should parse the entry %s of the Plan or recipe screen", (entry) => {
+    const body = {
+      conversationId: null,
+      text: "Make me a plan",
+      localDate: "2026-10-25",
+      localTime: null,
+      entry,
+    };
+
+    expect(assistantTurnRequestSchema.parse(body)).toEqual(body);
+  });
+
+  it("should reject an entry the app does not send", () => {
+    expect(
+      assistantTurnRequestSchema.safeParse({
+        conversationId,
+        text: "Hi",
+        localDate: "2026-10-25",
+        localTime: null,
+        entry: "diary",
+      }).success,
+    ).toBe(false);
+  });
+
   it("should reject an empty message", () => {
     expect(
       assistantTurnRequestSchema.safeParse({

@@ -22,9 +22,7 @@ export const NO_MESSAGE_ID = "00000000-0000-0000-0000-000000000000";
 
 export type FinalTurnStatus = Exclude<AssistantTurnStatus, "open">;
 
-export type StoredMessage = Omit<AssistantStoredMessage, "turnStatus" | "role"> & {
-  role: AssistantStoredMessage["role"] | "system";
-};
+export type StoredMessage = Omit<AssistantStoredMessage, "turnStatus">;
 
 export type PreviousTurn = {
   status: AssistantTurnStatus;

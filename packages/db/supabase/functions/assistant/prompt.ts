@@ -172,10 +172,8 @@ export class StoredMessageError extends Error {
 }
 
 // A stored message as the replay reads it: `AssistantStoredMessage` without the status of its turn. The role can
-// also be `system`, the stored kitchen addition (ADR 0006, Amendment 5).
-export type StoredHistoryMessage = Omit<AssistantStoredMessage, "turnStatus" | "role"> & {
-  role: AssistantStoredMessage["role"] | "system";
-};
+// be `system`, the stored kitchen addition (ADR 0006, Amendment 5).
+export type StoredHistoryMessage = Omit<AssistantStoredMessage, "turnStatus">;
 
 // A message of the replay: the SDK's, or the kitchen addition that the SDK types on its beta resource only.
 export type ApiMessage = Anthropic.MessageParam | KitchenSystemMessage;

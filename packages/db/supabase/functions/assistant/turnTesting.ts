@@ -394,9 +394,7 @@ export const allowlistToolsOf = (tools: readonly ListedTool[]): AllowlistTool[] 
 // ---- The harness ----
 
 // A stored row with the status of its turn. The role is `system` for the stored kitchen addition.
-export type HarnessRow = Omit<AssistantStoredMessage, "role"> & {
-  role: AssistantStoredMessage["role"] | "system";
-};
+export type HarnessRow = AssistantStoredMessage;
 
 export type TurnResult = {
   events: AssistantStreamEvent[];
@@ -531,8 +529,7 @@ export async function createHarness(options: HarnessOptions): Promise<Harness> {
       });
   };
 
-  const rows = (): AssistantStoredMessage[] =>
-    storedRows().flatMap((row) => (row.role === "system" ? [] : [{ ...row, role: row.role }]));
+  const rows = (): AssistantStoredMessage[] => storedRows().filter((row) => row.role !== "system");
 
   function start(
     text: string,

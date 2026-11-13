@@ -265,6 +265,25 @@ Deno.test("the turn loop gets the id of the user message the turn stored", async
   );
 });
 
+Deno.test("the turn loop gets the entry the app sent, and none when it sent none", async () => {
+  const contexts: TurnContext[] = [];
+  const { dependencies } = fake({
+    runTurn: (context) => {
+      contexts.push(context);
+      return Promise.resolve();
+    },
+  });
+
+  await (await call(dependencies, "turn", { body: { ...turnBody, entry: "plan" } })).text();
+  await (await call(dependencies, "turn", { body: turnBody })).text();
+
+  assertEquals(
+    contexts.map((context) => context.entry),
+    ["plan", undefined],
+  );
+  assertEquals("entry" in (contexts[1] ?? {}), false);
+});
+
 Deno.test("a turn in an existing conversation does not create another", async () => {
   const made = fake();
 
