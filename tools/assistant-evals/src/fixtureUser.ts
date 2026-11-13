@@ -52,7 +52,9 @@ const DEFAULT_NAME_PREFIX = "assistant-eval";
 const WEIGH_IN_TIME = "07:00";
 
 /** The seeded foods the diary uses, read as the user and keyed by name. */
-async function seededFoods(client: SupabaseClient<Database>): Promise<Map<FixtureFood, Food>> {
+export async function seededFoods(
+  client: SupabaseClient<Database>,
+): Promise<Map<FixtureFood, Food>> {
   const { data, error } = await client
     .from("foods")
     .select("id,source_ref")
