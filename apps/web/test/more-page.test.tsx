@@ -243,7 +243,18 @@ describe("More page", () => {
       expect.stringContaining("Body map"),
       expect.stringContaining("Dashboard body map"),
       "About",
+      "Request a featureTell us what Ki-Lo should do next",
     ]);
+  });
+
+  it("should end Settings with Request a feature, after About, a link to its page", async () => {
+    await renderPage();
+
+    const settings = screen.getByRole("region", { name: "Settings" });
+    const links = within(settings).getAllByRole("link");
+    const last = links[links.length - 1];
+    expect(last?.textContent).toBe("Request a featureTell us what Ki-Lo should do next");
+    expect(last?.getAttribute("href")).toBe("/more/feature-request");
   });
 
   describe("the Assistant row", () => {
