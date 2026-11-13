@@ -139,6 +139,7 @@ const liveTurn = (overrides: Partial<AssistantLiveTurn> = {}): AssistantLiveTurn
   link: null,
   exerciseMuscles: [],
   exerciseFormMedia: [],
+  recipeDrafts: [],
   askAgain: false,
   status: null,
   notice: null,

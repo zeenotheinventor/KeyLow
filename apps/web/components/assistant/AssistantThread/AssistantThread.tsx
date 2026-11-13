@@ -55,6 +55,9 @@ function renderEntry(entry: AssistantSheetEntry) {
       return <ExerciseMusclesEntry key={entry.key} entry={entry} />;
     case "exerciseFormMedia":
       return <ExerciseFormEntry key={entry.key} entry={entry} />;
+    // The suggested recipe card is mobile only for now (the web twin is not designed), so the web draws nothing for it.
+    case "recipeDraft":
+      return null;
     // Ask again is the quick reply at the end of the thread, drawn once below.
     case "askAgain":
       return null;

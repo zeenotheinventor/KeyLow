@@ -179,6 +179,7 @@ describe("useAssistantTurn, what each board shows", () => {
       link: null,
       exerciseMuscles: [],
       exerciseFormMedia: [],
+      recipeDrafts: [],
       askAgain: false,
       status: null,
       notice: null,

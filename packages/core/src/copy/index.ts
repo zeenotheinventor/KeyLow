@@ -69,6 +69,7 @@ export * from "./foodReminders";
 export * from "./assistantSheet";
 export * from "./assistantDayCards";
 export * from "./assistantRecipeCards";
+export * from "./assistantRecipeDraftCard";
 export * from "./assistantFoodCards";
 export * from "./assistantTargetCards";
 export * from "./assistantTrainingCards";

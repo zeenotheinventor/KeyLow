@@ -119,6 +119,8 @@ const draftLine = (
   name: line.name,
   foodId: matched?.food.id ?? null,
   foodName: matched?.food.name ?? null,
+  // Left off an unmatched line, which has no food to name a source for.
+  ...(matched === null ? {} : { foodSource: matched.food.source }),
   grams: matched?.grams ?? line.grams,
   beforeGrams: null,
   kcal: matched?.kcal ?? null,
