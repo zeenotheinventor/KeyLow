@@ -13,8 +13,16 @@ import {
   resolveAssistantSheetAccess,
   resolveAssistantTimeZone,
 } from "@keylow/core";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
+import {
+  DETACHED_TURN_POLL_MS,
+  OPEN_TURN_DEADLINE_MS,
+  detachedTurnState,
+  openTurnDeadlineMs,
+  runningOpenTurn,
+  storedReplyText,
+} from "../detachedTurn";
 import { useAssistantConversation } from "./useAssistantConversation";
 import { useAssistantStatus } from "./useAssistantStatus";
 import { useAssistantTurn } from "./useAssistantTurn";
@@ -24,6 +32,9 @@ import { useSetAssistantConsent } from "./useSetAssistantConsent";
 
 import type { SkippedKind, StreamingFetch } from "../runAssistantTurn";
 import type { AssistantOpenedFrom, AssistantSheetSent } from "@keylow/core";
+
+// How long after a deadline the timer that renders again waits, so the clock it reads is past the deadline.
+const DEADLINE_TIMER_MARGIN_MS = 50;
 
 export type UseAssistantChatInput = {
   /** Whether the chat is on screen. The conversation is read while it is, and the status each time it opens. */
@@ -49,6 +60,14 @@ export type UseAssistantChatInput = {
   onKindSkipped?: ((skipped: SkippedKind) => void) | undefined;
   /** Called when a new conversation has started, so the screen can follow the end of the thread. */
   onNewConversationStarted?: (() => void) | undefined;
+  /**
+   * Off by default, so the web is unchanged. On, a turn whose stream breaks (the app went to the background,
+   * the connection dropped, the sheet closed) is not failed: it shows as still working while the stored
+   * conversation is read every 2 s, until the server has given the turn a final status, and then the stored
+   * reply draws. Send stays off while the newest stored turn is open. A turn still open 150 s after its row
+   * was created, or one that never reached the server, shows the failed turn notice.
+   */
+  resumeDetachedTurns?: boolean | undefined;
 };
 
 /**
@@ -71,17 +90,51 @@ export function useAssistantChat({
   onMessageSent,
   onNewConversationStarted,
   onKindSkipped,
+  resumeDetachedTurns = false,
 }: UseAssistantChatInput) {
   const conversation = useAssistantConversation({ enabled: open });
   const status = useAssistantStatus();
   const setConsent = useSetAssistantConsent();
   const profileTimeZone = useProfileTimeZone();
   const newConversation = useNewAssistantConversation();
-  const { send, stop, live, isStreaming } = useAssistantTurn({ fetch, onKindSkipped });
+  const { send, stop, live, isStreaming, settleDetached, refreshAfterStoredTurn } =
+    useAssistantTurn({
+      fetch,
+      onKindSkipped,
+      resumeDetachedTurns,
+    });
   const [draft, setDraft] = useState("");
   const [sent, setSent] = useState<AssistantSheetSent | null>(null);
 
   const items = conversation.data?.items;
+  const { refetch: refetchConversation } = conversation;
+  // The time the deadlines are judged against: set when the chat mounts and by the timer that renders again at
+  // the moment a deadline passes, so a render never reads the clock.
+  const [nowMs, setNowMs] = useState(Date.now);
+  // The newest stored turn while the server is writing it. A turn that is open past its deadline is lost,
+  // which is no reason to hold Send back or read on for ever.
+  const storedOpenTurn = conversation.data?.openTurn ?? null;
+  const openTurn = resumeDetachedTurns ? runningOpenTurn(storedOpenTurn, nowMs) : null;
+  const detachedAtMs = live?.detached?.atMs;
+  const isDetached = detachedAtMs !== undefined;
+  // The turn is drawn as streaming while it is detached, so its working line shows under your message.
+  const isTurnShown = isStreaming || isDetached;
+  // When the conversation was last read by the reads below, which is what shows that a turn that left no
+  // `turn` event never reached the server, once a read well after the detach still holds none of it.
+  const [lastReadAtMs, setLastReadAtMs] = useState<number | null>(null);
+  const readConversation = useCallback(
+    (options?: { cancelRefetch: boolean }) =>
+      refetchConversation(options).then((result) => {
+        if (result.isSuccess) {
+          // Each read also moves the clock the deadlines are judged against, as a second way to notice one passing.
+          const readAtMs = Date.now();
+          setLastReadAtMs(readAtMs);
+          setNowMs(readAtMs);
+        }
+        return result;
+      }),
+    [refetchConversation],
+  );
   const timeZone = resolveAssistantTimeZone(profileTimeZone.data, deviceTimeZone);
   // A status that cannot be asked for offline is no reason to hold the chat back, and the turn route stays
   // the authority for what it says.
@@ -95,11 +148,26 @@ export function useAssistantChat({
     }),
     streamNotice: sent === null ? null : (live?.notice ?? null),
   });
+  const detachedState =
+    !isStreaming && live !== null && detachedAtMs !== undefined
+      ? sent === null
+        ? "stored"
+        : detachedTurnState({
+            live,
+            detachedAtMs,
+            afterItemId: sent.afterItemId,
+            items: items ?? [],
+            openTurn: storedOpenTurn,
+            lastReadAtMs,
+            nowMs,
+          })
+      : null;
   const thread = buildAssistantSheetThread({
     items: items ?? [],
     sent,
     live,
-    isStreaming,
+    isStreaming: isTurnShown,
+    isStoredTurnOpen: openTurn !== null,
     accessNotice: access.kind === "limited" ? access.notice : null,
   });
   const composer = describeAssistantComposer({
@@ -157,17 +225,23 @@ export function useAssistantChat({
   // empty again (a new conversation, or every conversation deleted) would draw the old message back. A read
   // that holds only your message, or your message and a card while words are to come, does not count, or the
   // reply would vanish until the next read.
-  if (sent !== null && !isStreaming && isSentTurnStored(items ?? [], sent.afterItemId, live)) {
+  // A detached turn is let go by the effect below, which also announces its reply.
+  if (
+    sent !== null &&
+    !isStreaming &&
+    !isDetached &&
+    isSentTurnStored(items ?? [], sent.afterItemId, live)
+  ) {
     setSent(null);
   }
 
   const sendState = {
-    isStreaming,
+    isStreaming: isTurnShown,
     isOnline,
     isThreadKnown,
     isThreadFetching: conversation.isFetching,
     // The turn's step clears with its next event, so it is over as soon as anything else arrives.
-    isWorking: (live?.status ?? null) !== null,
+    isWorking: (live?.status ?? null) !== null || openTurn !== null,
     access,
   };
   const canSendWords = (words: string) => canSendAssistantMessage({ text: words, ...sendState });
@@ -184,6 +258,105 @@ export function useAssistantChat({
     }
     wasStreaming.current = isStreaming;
   }, [isStreaming, live, onAnswerFinished]);
+
+  // A detached turn is read once as it detaches, and again each time the chat opens, so a turn that finished
+  // while it was closed is found at once.
+  useEffect(() => {
+    if (open && isDetached && !isStreaming) {
+      void readConversation();
+    }
+  }, [open, isDetached, isStreaming, live, readConversation]);
+
+  // While the chat is open and a turn is open (or detached and not decided), the stored conversation is read
+  // every 2 s. Nothing is read with the chat closed, or when no turn is open.
+  const isAwaitingStoredTurn =
+    open && !isStreaming && (openTurn !== null || detachedState === "waiting");
+  useEffect(() => {
+    if (!isAwaitingStoredTurn) {
+      return undefined;
+    }
+    const timer = setInterval(() => {
+      void readConversation({ cancelRefetch: false });
+    }, DETACHED_TURN_POLL_MS);
+    return () => {
+      clearInterval(timer);
+    };
+  }, [isAwaitingStoredTurn, readConversation]);
+
+  // Renders again when the earliest deadline passes, which is when the turn is taken as lost.
+  const deadlines = [
+    openTurn === null ? null : openTurnDeadlineMs(openTurn),
+    detachedState === "waiting" && detachedAtMs !== undefined
+      ? detachedAtMs + OPEN_TURN_DEADLINE_MS
+      : null,
+  ].filter((deadline) => deadline !== null);
+  const nextDeadlineMs = deadlines.length === 0 ? null : Math.min(...deadlines);
+  useEffect(() => {
+    if (nextDeadlineMs === null) {
+      return undefined;
+    }
+    const timer = setTimeout(
+      () => {
+        setNowMs(Date.now());
+      },
+      // A little after the deadline, so the clock read in the callback is past it and the turn is not left working.
+      Math.max(0, nextDeadlineMs - Date.now()) + DEADLINE_TIMER_MARGIN_MS,
+    );
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [nextDeadlineMs]);
+
+  // The stored conversation decides a detached turn: a stored ending lets the live turn go, so the stored one
+  // draws and the message sent from here is let go with it, and a resumed reply is announced once, only while
+  // the chat is open. A turn that is lost shows as failed.
+  // A turn that was open when the chat found it, with no live turn of this chat (the app was restarted while
+  // it ran), is watched until it ends: its writes are read again and its reply is announced, as for a detached one.
+  const isWatchingRestartedTurn = useRef(false);
+  useEffect(() => {
+    if (openTurn !== null && sent === null && live === null) {
+      isWatchingRestartedTurn.current = true;
+    } else if (isWatchingRestartedTurn.current && openTurn === null) {
+      isWatchingRestartedTurn.current = false;
+      refreshAfterStoredTurn();
+      const lastUser = items?.filter((item) => item.kind === "user").at(-1);
+      const answer = finishedAnswerWords({
+        text: lastUser === undefined ? "" : storedReplyText(items ?? [], lastUser.id),
+        stopped: false,
+        outcome: "complete",
+      });
+      if (open && answer !== "") {
+        onAnswerFinished?.(answer);
+      }
+    }
+  }, [openTurn, sent, live, items, open, onAnswerFinished, refreshAfterStoredTurn]);
+
+  const resolution = useRef({ open, onAnswerFinished, reply: "" });
+  useEffect(() => {
+    resolution.current = {
+      open,
+      onAnswerFinished,
+      reply: sent === null ? "" : storedReplyText(items ?? [], sent.afterItemId),
+    };
+  });
+  useEffect(() => {
+    if (detachedState === "stored") {
+      const { open: isOpenNow, onAnswerFinished: announce, reply } = resolution.current;
+      const answer = finishedAnswerWords({ text: reply, stopped: false, outcome: "complete" });
+      if (isOpenNow && answer !== "") {
+        announce?.(answer);
+      }
+      settleDetached("stored");
+    } else if (detachedState === "failed") {
+      settleDetached("failed");
+    }
+  }, [detachedState, settleDetached]);
+
+  // For the app coming back to the foreground: the turn may have finished, or the limit lifted, while it was away.
+  function refresh() {
+    void refetchConversation({ cancelRefetch: false });
+    void refetchStatus({ cancelRefetch: false });
+  }
 
   function sendMessage(words: string) {
     const text = words.trim();
@@ -247,7 +420,7 @@ export function useAssistantChat({
   const isNewDisabled = isNewConversationDisabled({
     isEmpty,
     isOpening,
-    isStreaming,
+    isStreaming: isTurnShown,
     isOnline,
     isStartingNew: newConversation.isPending,
     isConsentNeeded: access.kind === "consent",
@@ -268,6 +441,7 @@ export function useAssistantChat({
     turnOnAssistant,
     isTurningOn: setConsent.isPending,
     stop,
+    refresh,
     isStreaming,
     isOpening,
     isEmpty,

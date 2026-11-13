@@ -149,6 +149,7 @@ describe("the reads of the assistant", () => {
       messages: [],
       actions: [],
       olderCursor: null,
+      openTurn: null,
     });
   });
 });
@@ -253,6 +254,38 @@ describe("getAssistantConversationPage", () => {
     });
   });
 
+  it("should give the newest turn as the open turn while the server is still writing it", async () => {
+    const { turns, messages } = longConversation(3);
+    const newest = turns[2];
+    installAssistantFake(
+      server,
+      createAssistantFakeState({
+        messages,
+        turns: turns.map((turn) => (turn === newest ? { ...turn, status: "open" } : turn)),
+      }),
+    );
+
+    const page = await getAssistantConversationPage(createTestClient(), null);
+
+    expect(page.openTurn).toMatchObject({ turnId: turnId(2) });
+    expect(typeof page.openTurn?.firstSeenAtMs).toBe("number");
+  });
+
+  it("should give no open turn when the newest turn has ended or an older turn is open", async () => {
+    const { turns, messages } = longConversation(3);
+    installAssistantFake(
+      server,
+      createAssistantFakeState({
+        messages,
+        turns: turns.map((turn, index) => (index === 0 ? { ...turn, status: "open" } : turn)),
+      }),
+    );
+
+    const page = await getAssistantConversationPage(createTestClient(), null);
+
+    expect(page.openTurn).toBeNull();
+  });
+
   it("should give no cursor for exactly 20 turns", async () => {
     installAssistantFake(server, createAssistantFakeState(longConversation(20)));
 
@@ -318,6 +351,7 @@ describe("getAssistantConversationPage", () => {
       messages: [],
       actions: [],
       olderCursor: null,
+      openTurn: null,
     });
     expect(state.actionReads).toEqual([]);
   });

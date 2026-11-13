@@ -8,7 +8,7 @@ import {
   userEvent,
   waitFor,
 } from "@testing-library/react-native";
-import { AccessibilityInfo, BackHandler, Platform } from "react-native";
+import { AccessibilityInfo, AppState, BackHandler, Platform } from "react-native";
 import { setUpTests } from "react-native-reanimated";
 
 import { AssistantSheet } from "../components/AssistantSheet";
@@ -19,6 +19,7 @@ import { installVirtualClock } from "./support/virtualClock";
 
 import type { AssistantLiveTurn } from "@keylow/api-client";
 import type { AssistantThreadItem } from "@keylow/core";
+import type { AppStateStatus } from "react-native";
 
 jest.mock("@react-native-async-storage/async-storage", () => ({
   __esModule: true,
@@ -39,14 +40,27 @@ jest.mock("expo/fetch", () => ({ fetch: jest.fn() }));
 // The three hooks the sheet reads are the app's own and are tested in the api client. They are given invented
 // data here, so a test says what the person sees for each thing the hooks can answer.
 type FakeConversation = {
-  data: { conversationId: string | null; items: AssistantThreadItem[] } | undefined;
+  data:
+    | {
+        conversationId: string | null;
+        items: AssistantThreadItem[];
+        openTurn?: { turnId: string; firstSeenAtMs: number } | null;
+      }
+    | undefined;
   isSuccess: boolean;
   isError: boolean;
   isFetching: boolean;
+  refetch?: () => Promise<{ isSuccess: boolean }>;
 };
 const mockAssistant: {
   conversation: FakeConversation;
-  turn: { send: jest.Mock; stop: jest.Mock; live: AssistantLiveTurn | null; isStreaming: boolean };
+  turn: {
+    send: jest.Mock;
+    stop: jest.Mock;
+    settleDetached?: jest.Mock;
+    live: AssistantLiveTurn | null;
+    isStreaming: boolean;
+  };
   newConversation: { mutateAsync: jest.Mock; isPending: boolean };
 } = {
   conversation: { data: undefined, isSuccess: false, isError: false, isFetching: false },
@@ -146,10 +160,10 @@ const earlierThread = [
 let onClose: jest.Mock;
 
 // A new element each time, because React skips an element it has already rendered.
-const sheetTree = () => (
+const sheetTree = (isOpen = true) => (
   <ThemeProvider fixedPreference="dark">
     <ToastProvider>
-      <AssistantSheet localDate={OPENED_ON} open onClose={onClose} />
+      <AssistantSheet localDate={OPENED_ON} open={isOpen} onClose={onClose} />
     </ToastProvider>
   </ThemeProvider>
 );
@@ -611,7 +625,7 @@ describe("the assistant sheet", () => {
     });
   });
 
-  describe("stopped on close, assistant · streaming (right)", () => {
+  describe("the words kept when a turn is stopped, assistant · streaming (right)", () => {
     const question = "What did I eat yesterday?";
     const arrived =
       "Yesterday, Saturday 24 October, you logged 8 entries, 1,940 kcal in all. At 08:00, porridge with";
@@ -630,7 +644,7 @@ describe("the assistant sheet", () => {
       return rendered;
     }
 
-    it("should stop the answer and close the sheet when Close is pressed mid-stream", async () => {
+    it("should let go of the answer and close the sheet when Close is pressed mid-stream", async () => {
       await renderStreaming();
 
       await userSetup().press(screen.getByRole("button", { name: "Close" }));
@@ -639,7 +653,7 @@ describe("the assistant sheet", () => {
       expect(onClose).toHaveBeenCalledTimes(1);
     });
 
-    it("should not stop anything when Close is pressed with no answer arriving", async () => {
+    it("should not let go of anything when Close is pressed with no answer arriving", async () => {
       loadedConversation(earlierThread);
       await renderSheet();
 
@@ -1186,7 +1200,7 @@ describe("the assistant sheet", () => {
     });
   });
 
-  describe("every way of closing stops a streaming answer", () => {
+  describe("every way of closing lets go of a streaming answer", () => {
     async function renderStreaming() {
       loadedConversation([]);
       const rendered = await renderSheet();
@@ -1199,7 +1213,7 @@ describe("the assistant sheet", () => {
       await rendered.rerender(sheetTree());
     }
 
-    it("should stop it on the Android back button", async () => {
+    it("should let it go on the Android back button", async () => {
       const addListener = jest.spyOn(BackHandler, "addEventListener");
       await renderStreaming();
 
@@ -1210,7 +1224,7 @@ describe("the assistant sheet", () => {
       expect(onClose).toHaveBeenCalledTimes(1);
     });
 
-    it("should stop it on a press on the dimmed diary", async () => {
+    it("should let it go on a press on the dimmed diary", async () => {
       await renderStreaming();
       const dim = screen
         .getAllByRole("button", { includeHiddenElements: true })
@@ -1225,7 +1239,7 @@ describe("the assistant sheet", () => {
       expect(onClose).toHaveBeenCalledTimes(1);
     });
 
-    it("should stop it on the screen reader's escape gesture", async () => {
+    it("should let it go on the screen reader's escape gesture", async () => {
       await renderStreaming();
 
       const dialog = screen
@@ -1302,6 +1316,157 @@ describe("the assistant sheet", () => {
       await userSetup().press(screen.getByRole("button", { name: "Close" }));
 
       expect(onClose).toHaveBeenCalledTimes(1);
+    });
+  });
+  describe("a turn the connection lost, resumed from the stored conversation", () => {
+    const question = "What's left for today?";
+    const storedReply = "You have 1,400 kcal and 90 g of protein left today.";
+
+    // The sheet after the stream broke: the live turn is detached, and the server still has the turn open.
+    async function renderDetached() {
+      loadedConversation(earlierThread);
+      const rendered = await renderSheet();
+      await sendFromSheet(rendered, question);
+      mockAssistant.conversation = {
+        ...mockAssistant.conversation,
+        data: {
+          conversationId: CONVERSATION_ID,
+          items: [...earlierThread, userItem("u2", question)],
+          openTurn: { turnId: "t2", firstSeenAtMs: Date.now() },
+        },
+        refetch: () => Promise.resolve({ isSuccess: true }),
+      };
+      mockAssistant.turn = {
+        ...mockAssistant.turn,
+        settleDetached: jest.fn(() => {
+          mockAssistant.turn.live = null;
+        }),
+        live: liveTurn({ turnId: "t2", detached: { atMs: Date.now() } }),
+        isStreaming: false,
+      };
+      await rendered.rerender(sheetTree());
+      return rendered;
+    }
+
+    it("should show the working line, with no error and no Try again, while the server is still writing", async () => {
+      await renderDetached();
+
+      expect(screen.getByText("Thinking")).toBeOnTheScreen();
+      expect(screen.queryByRole("button", { name: "Try again" })).not.toBeOnTheScreen();
+      expect(sendButton()).toBeDisabled();
+    });
+
+    it("should draw the stored reply, with no Try again, when the sheet is opened again after the turn finished", async () => {
+      const rendered = await renderDetached();
+      await rendered.rerender(sheetTree(false));
+      mockAssistant.conversation = {
+        ...mockAssistant.conversation,
+        data: {
+          conversationId: CONVERSATION_ID,
+          items: [...earlierThread, userItem("u2", question), replyItem("r2", storedReply)],
+          openTurn: null,
+        },
+      };
+
+      await rendered.rerender(sheetTree());
+      // The turn lets go of the detached live turn, and the sheet draws again.
+      await rendered.rerender(sheetTree());
+
+      expect(screen.getByText(storedReply)).toBeOnTheScreen();
+      expect(screen.queryByText("Thinking")).not.toBeOnTheScreen();
+      expect(screen.queryByRole("button", { name: "Try again" })).not.toBeOnTheScreen();
+      expect(mockAssistant.turn.settleDetached).toHaveBeenCalledWith("stored");
+    });
+    describe("the app returning to the foreground", () => {
+      const listeners: ((state: AppStateStatus) => void)[] = [];
+
+      beforeEach(() => {
+        listeners.length = 0;
+        jest.spyOn(AppState, "addEventListener").mockImplementation((_type, listener) => {
+          listeners.push(listener);
+          return { remove: jest.fn() };
+        });
+      });
+
+      const returnToForeground = () =>
+        act(() => {
+          listeners.forEach((listener) => {
+            listener("active");
+          });
+        });
+
+      it("should read the conversation again when it comes back with the sheet open", async () => {
+        const refetch = jest.fn(() => Promise.resolve({ isSuccess: true }));
+        loadedConversation(earlierThread);
+        mockAssistant.conversation = { ...mockAssistant.conversation, refetch };
+        await renderSheet();
+
+        await returnToForeground();
+
+        expect(refetch).toHaveBeenCalledTimes(1);
+      });
+
+      it("should let go of a streaming turn when the app goes to the background", async () => {
+        loadedConversation([]);
+        const rendered = await renderSheet();
+        await sendFromSheet(rendered, "What did I eat yesterday?");
+        mockAssistant.turn = {
+          ...mockAssistant.turn,
+          live: liveTurn({ text: "Yesterday, porridge with" }),
+          isStreaming: true,
+        };
+        await rendered.rerender(sheetTree());
+
+        await act(() => {
+          listeners.forEach((listener) => {
+            listener("background");
+          });
+        });
+
+        expect(mockAssistant.turn.stop).toHaveBeenCalledTimes(1);
+      });
+
+      it("should not stop anything when it goes to the background with no turn streaming", async () => {
+        loadedConversation(earlierThread);
+        await renderSheet();
+
+        await act(() => {
+          listeners.forEach((listener) => {
+            listener("background");
+          });
+        });
+
+        expect(mockAssistant.turn.stop).not.toHaveBeenCalled();
+      });
+
+      it("should show the working line for a turn left open after a restart, with Send off", async () => {
+        loadedConversation(earlierThread);
+        mockAssistant.conversation = {
+          ...mockAssistant.conversation,
+          data: {
+            conversationId: CONVERSATION_ID,
+            items: [...earlierThread, userItem("u2", "What's left for today?")],
+            openTurn: { turnId: "t2", firstSeenAtMs: Date.now() },
+          },
+        };
+
+        await renderSheet();
+
+        expect(screen.getByText("Thinking")).toBeOnTheScreen();
+        expect(screen.queryByRole("button", { name: "Try again" })).not.toBeOnTheScreen();
+        expect(sendButton()).toBeDisabled();
+      });
+
+      it("should read nothing when it comes back with the sheet closed", async () => {
+        const refetch = jest.fn(() => Promise.resolve({ isSuccess: true }));
+        loadedConversation(earlierThread);
+        mockAssistant.conversation = { ...mockAssistant.conversation, refetch };
+        await render(sheetTree(false));
+
+        await returnToForeground();
+
+        expect(refetch).not.toHaveBeenCalled();
+      });
     });
   });
 });

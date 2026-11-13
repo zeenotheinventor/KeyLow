@@ -1,13 +1,13 @@
 import { joinAssistantThreadPages, threadFromMessages } from "@keylow/core";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useSupabase } from "../KeyLowProvider";
 import { keys } from "../queryKeys";
 import { getAssistantConversationPage } from "../repos/assistantConversations";
 
 import type { DiaryReadOptions } from "./DiaryReadOptions";
-import type { AssistantConversationPage } from "../repos/assistantConversations";
+import type { AssistantConversationPage, AssistantOpenTurn } from "../repos/assistantConversations";
 import type { AssistantThreadCursor, AssistantThreadItem } from "@keylow/core";
 import type { InfiniteData, UseInfiniteQueryResult } from "@tanstack/react-query";
 
@@ -15,6 +15,8 @@ export type AssistantConversation = {
   /** Null while the person has no conversation. */
   conversationId: string | null;
   items: AssistantThreadItem[];
+  /** The newest turn while the server is still writing it, else null. */
+  openTurn: AssistantOpenTurn | null;
 };
 
 /** What the cache holds under `keys.assistant.conversation`: the newest page first, each older one after it. */
@@ -25,7 +27,7 @@ export type AssistantConversationPages = InfiniteData<
 
 /** The cache's value for a person with no conversation, which Delete all conversations writes. */
 export const emptyAssistantConversationPages: AssistantConversationPages = {
-  pages: [{ conversationId: null, messages: [], actions: [], olderCursor: null }],
+  pages: [{ conversationId: null, messages: [], actions: [], olderCursor: null, openTurn: null }],
   pageParams: [null],
 };
 
@@ -40,6 +42,7 @@ function threadOfPages({ pages }: AssistantConversationPages): AssistantConversa
     // The newest page's id: an older page of another conversation is never read.
     conversationId: pages[0]?.conversationId ?? null,
     items: threadFromMessages(messages, actions),
+    openTurn: pages[0]?.openTurn ?? null,
   };
 }
 
@@ -75,6 +78,7 @@ export function useAssistantConversation({
 }: DiaryReadOptions = {}): ConversationRead {
   const client = useSupabase();
   const queryClient = useQueryClient();
+  const firstSeenOpenTurns = useRef(new Map<string, number>());
 
   // The error of the last older page that failed. The query keeps it as its error until a read succeeds,
   // so a read of the thread that starts after it must not make the thread look failed.
@@ -82,7 +86,18 @@ export function useAssistantConversation({
   const query = useInfiniteQuery({
     queryKey: keys.assistant.conversation,
     initialPageParam: NEWEST_PAGE,
-    queryFn: ({ pageParam }) => getAssistantConversationPage(client, pageParam),
+    queryFn: async ({ pageParam }) => {
+      const page = await getAssistantConversationPage(client, pageParam);
+      const { openTurn } = page;
+      if (openTurn === null) {
+        return page;
+      }
+      // The first read that found the turn open is the one its 150 s are counted from.
+      const firstSeenAtMs =
+        firstSeenOpenTurns.current.get(openTurn.turnId) ?? openTurn.firstSeenAtMs;
+      firstSeenOpenTurns.current.set(openTurn.turnId, firstSeenAtMs);
+      return { ...page, openTurn: { ...openTurn, firstSeenAtMs } };
+    },
     getNextPageParam: (page) => page.olderCursor ?? undefined,
     select: threadOfPages,
     enabled,

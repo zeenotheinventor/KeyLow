@@ -8,6 +8,7 @@ import { keys } from "../../src/queryKeys";
 import {
   CONVERSATION_ID,
   FIRST_ACTION_ID,
+  SECOND_TURN_ID,
   actionRow,
   loggedCard,
   createAssistantFakeState,
@@ -193,7 +194,44 @@ describe("useAssistantConversation", () => {
     await waitFor(() => {
       expect(result.current.isSuccess).toBe(true);
     });
-    expect(result.current.data).toEqual({ conversationId: null, items: [] });
+    expect(result.current.data).toEqual({ conversationId: null, items: [], openTurn: null });
+  });
+
+  it("should give the newest turn as the open turn while it is still open, and none once it has ended", async () => {
+    const state = createAssistantFakeState();
+    state.turns = state.turns.map((turn) =>
+      turn.id === SECOND_TURN_ID ? { ...turn, status: "open" } : turn,
+    );
+    installAssistantFake(server, state);
+    const { wrapper } = createWrapper();
+    const { result } = renderHook(() => useAssistantConversation(), { wrapper });
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+    const firstSeen = result.current.data?.openTurn?.firstSeenAtMs;
+    expect(result.current.data?.openTurn).toMatchObject({ turnId: SECOND_TURN_ID });
+    expect(typeof firstSeen).toBe("number");
+
+    // A later read of the same open turn keeps the time it was first read.
+    await new Promise((resolve) => {
+      setTimeout(resolve, 20);
+    });
+    await act(async () => {
+      await result.current.refetch();
+    });
+    await waitFor(() => {
+      expect(state.turnReads.length).toBeGreaterThan(1);
+    });
+    expect(result.current.data?.openTurn?.firstSeenAtMs).toBe(firstSeen);
+
+    state.turns = state.turns.map((turn) => ({ ...turn, status: "complete" }));
+    await act(async () => {
+      await result.current.refetch();
+    });
+
+    await waitFor(() => {
+      expect(result.current.data?.openTurn).toBeNull();
+    });
   });
 
   it("should cache under the assistant conversation key", async () => {

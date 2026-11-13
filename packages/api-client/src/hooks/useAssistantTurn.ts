@@ -43,6 +43,13 @@ type SendOptions = {
  *
  * - `send` posts the message, and does nothing while a turn is streaming.
  * - `stop` aborts the request and keeps the text that arrived, marked `stopped`. Unmounting aborts too.
+ *   With `resumeDetachedTurns` on, `stop` (the sheet closing) only ends the local read: the server goes on with
+ *   the turn, so `live` is left `detached`, with the ids and the text so far, and so it is when the stream breaks
+ *   after the request went out. A connection that fails before any answer is still the failed turn notice.
+ *   `settleDetached` ends a detached turn once the stored conversation has decided it: `stored` lets the live
+ *   turn go so the stored one draws, `failed` shows the failed turn notice, and both read the changes, the
+ *   status and the diary again. `refreshAfterStoredTurn` does that read for a turn that ended with no live turn
+ *   on screen.
  * - `live` is the turn being written, or null before the first send. A network failure, a refused request
  *   or an event the app cannot read gives the `turn_failed` notice and never throws.
  * - An event type or card kind this app does not know is skipped and the turn goes on, with its name given to
@@ -57,9 +64,11 @@ type SendOptions = {
 export function useAssistantTurn({
   fetch,
   onKindSkipped,
+  resumeDetachedTurns = false,
 }: {
   fetch: StreamingFetch;
   onKindSkipped?: ((skipped: SkippedKind) => void) | undefined;
+  resumeDetachedTurns?: boolean | undefined;
 }) {
   const client = useSupabase();
   const functionsUrl = useFunctionsUrl();
@@ -109,6 +118,7 @@ export function useAssistantTurn({
             request: { conversationId, text, localDate, localTime: localTime ?? null },
             signal: controller.signal,
             onKindSkipped,
+            resumeDetachedTurns,
           },
           show,
         );
@@ -129,12 +139,33 @@ export function useAssistantTurn({
         }
       }
     },
-    [client, fetch, functionsUrl, onKindSkipped, queryClient],
+    [client, fetch, functionsUrl, onKindSkipped, queryClient, resumeDetachedTurns],
   );
 
   const stop = useCallback(() => {
     controllerRef.current?.abort();
   }, []);
 
-  return { send, stop, live, isStreaming };
+  // The writes of a turn that ended after the stream did are read now, because the read that `send` made
+  // came before the server wrote them.
+  const refreshAfterStoredTurn = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: keys.assistant.changes });
+    void queryClient.invalidateQueries({ queryKey: keys.assistant.status });
+    void invalidateAssistantWrites(queryClient);
+  }, [queryClient]);
+
+  const settleDetached = useCallback(
+    (outcome: "stored" | "failed") => {
+      setLive((current) => {
+        if (current?.detached === undefined) {
+          return current;
+        }
+        return outcome === "stored" ? null : failedTurn({ ...current, detached: undefined });
+      });
+      refreshAfterStoredTurn();
+    },
+    [refreshAfterStoredTurn],
+  );
+
+  return { send, stop, live, isStreaming, settleDetached, refreshAfterStoredTurn };
 }
