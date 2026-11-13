@@ -5,6 +5,7 @@ import { createCaseEnvironment } from "./caseEnvironment.ts";
 import { createEvalDatabase } from "./database.ts";
 import { createFixtureUser } from "./fixtureUser.ts";
 import { createHttpDriver } from "./httpDriver.ts";
+import { createKitchenWorld, kitchenWorldHolder } from "./kitchenWorld.ts";
 import { stopPageServer } from "./pageServerHolder.ts";
 import { attachRedTeamWorld } from "./redTeamSession.ts";
 import { createTrainingEditsWorld, trainingEditsWorldHolder } from "./trainingEditsWorld.ts";
@@ -142,12 +143,13 @@ async function timeZoneOf(user: FixtureUser): Promise<string | null> {
 }
 
 /**
- * Closes what a session holds, each step whatever the others do: the training world, the red-team world (user B), the
- * page server and the eval user. The first failure is thrown once all three have been tried.
+ * Closes what a session holds, each step whatever the others do: the kitchen and training worlds, the red-team world
+ * (user B), the page server and the eval user. The first failure is thrown once every step has been tried.
  */
 const closeEverything = (user: FixtureUser) => async (): Promise<void> => {
   const failures: unknown[] = [];
   for (const step of [
+    () => kitchenWorldHolder.detach(),
     () => trainingWorldHolder.detach(),
     () => trainingEditsWorldHolder.detach(),
     () => redTeamWorldHolder.detach(),
@@ -211,6 +213,8 @@ export async function openLocalHttpSession(): Promise<EvalSession> {
     const serviceClient = createClient<Database>(stack.apiUrl, stack.serviceRoleKey, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
+    // The kitchen sets ask for their world when they need it (KEY-1028), so nothing is written for the others.
+    kitchenWorldHolder.attach(createKitchenWorld(user, serviceClient));
     // User B and the rows of the red-team set (KEY-702). It cannot fail the session.
     await attachRedTeamWorld({ stack, userA: user, serviceClient });
     return {
