@@ -131,6 +131,27 @@ Deno.test("listTools says which tools are strict, and a tool that opted out is n
 });
 
 Deno.test(
+  "listTools says which tools belong to the kitchen group and leaves the rest ungrouped",
+  async () => {
+    const registry = createRegistry([
+      fakeReadTool(readToolName).definition,
+      { ...fakeReadTool("kitchen_one").definition, group: "kitchen" },
+    ]);
+    await withServer({ registry }, async (server) => {
+      const connection = await connectToolServer(connectionOptions(server));
+
+      const tools = await connection.listTools();
+
+      assertEquals(
+        tools.map((tool) => tool.group ?? null),
+        [null, "kitchen"],
+      );
+      await connection.close();
+    });
+  },
+);
+
+Deno.test(
   "every request carries the turn's local date and time, and no time header when there is none",
   async () => {
     await withServer({}, async (server) => {

@@ -107,6 +107,28 @@ describe("readOwnRows", () => {
     expect(url?.searchParams.get("order")).toBe("id.asc");
   });
 
+  it("should export a stored system message of the assistant as it is, like every other row of the person's conversation", async () => {
+    const additionRow = {
+      id: "00000000-0000-4000-8000-0000000000f1",
+      role: "system",
+      content: [{ type: "text", text: "The kitchen rules." }],
+    };
+    answerTables({
+      assistant_messages: (url) =>
+        Number(url.searchParams.get("offset") ?? 0) === 0 ? [additionRow] : [],
+    });
+
+    const rows = await readOwnRows(
+      await signedInClient(),
+      SIGNED_IN_USER_ID,
+      "assistant_messages",
+      "user_id",
+      ["id"],
+    );
+
+    expect(rows).toEqual([additionRow]);
+  });
+
   it("should only accept columns that belong to the table", () => {
     const readWithWrongOwnerColumn = async () =>
       readOwnRows(

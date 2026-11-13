@@ -28,7 +28,7 @@ import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
 const messageRowSchema = z.object({
   id: z.string(),
   turn_id: z.string(),
-  role: z.enum(["user", "assistant"]),
+  role: z.enum(["user", "assistant", "system"]),
   content: z.unknown(),
   display: z.unknown(),
 });
@@ -416,14 +416,21 @@ export async function getAssistantConversationPage(
   return {
     conversationId,
     messages: page.turns.flatMap((turn) =>
-      turn.assistant_messages.map((message) => ({
-        id: message.id,
-        turnId: message.turn_id,
-        role: message.role,
-        content: message.content,
-        display: message.display,
-        turnStatus: turn.status,
-      })),
+      // The kitchen addition (a system row) is for the model, so the app never reads it.
+      turn.assistant_messages.flatMap((message) =>
+        message.role === "system"
+          ? []
+          : [
+              {
+                id: message.id,
+                turnId: message.turn_id,
+                role: message.role,
+                content: message.content,
+                display: message.display,
+                turnStatus: turn.status,
+              },
+            ],
+      ),
     ),
     actions: actions.actions,
     olderCursor: page.olderCursor,

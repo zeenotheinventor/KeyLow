@@ -1,5 +1,6 @@
 // The seam between the routes and the turn loop (`turn.ts`). The routes build a `TurnContext` once the
 // gates have passed and the turn's rows exist, and the loop streams the rest of the turn.
+import type { KitchenEntry } from "./kitchen.ts";
 import type { EventStream } from "./sse.ts";
 
 export type TurnContext = {
@@ -12,6 +13,8 @@ export type TurnContext = {
   text: string;
   localDate: string;
   localTime: string | null;
+  // Where the app opened the sheet from, when it did. Any value makes a kitchen turn (ADR 0006, Amendment 5).
+  entry?: KitchenEntry;
   // Carries the caller's JWT, for a client that acts as them, and the signal of the app's request.
   request: Request;
 };

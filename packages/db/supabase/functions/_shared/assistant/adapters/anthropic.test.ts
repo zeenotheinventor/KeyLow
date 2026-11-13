@@ -52,6 +52,45 @@ Deno.test(
 );
 
 Deno.test(
+  "a tool of the kitchen group is sent with defer_loading as its last key, and no other tool has the field",
+  () => {
+    const open = { type: "object", properties: {}, additionalProperties: false } as const;
+    const [plain, kitchen, kitchenOptedOut] = toAnthropicTools([
+      toolWith(open),
+      { ...toolWith(open), name: "kitchen_one", group: "kitchen" },
+      { ...toolWith(open), name: "kitchen_two", group: "kitchen", strict: false },
+    ]);
+
+    assertEquals(Object.keys(plain ?? {}).includes("defer_loading"), false);
+    assertEquals(Object.keys(kitchen ?? {}), [
+      "name",
+      "description",
+      "input_schema",
+      "strict",
+      "eager_input_streaming",
+      "defer_loading",
+    ]);
+    assertEquals(kitchen?.defer_loading, true);
+    assertEquals(kitchenOptedOut?.defer_loading, true);
+  },
+);
+
+Deno.test(
+  "listing a kitchen tool after the others leaves the bytes of every other tool as they were",
+  () => {
+    const kitchenTool: ListedTool = {
+      ...toolWith({ type: "object", additionalProperties: false, properties: {} }),
+      name: "kitchen_one",
+      group: "kitchen",
+    };
+
+    const withKitchen = toAnthropicTools([...tools, kitchenTool]);
+
+    assertEquals(withKitchen.slice(0, tools.length), toAnthropicTools(tools));
+  },
+);
+
+Deno.test(
   "every tool that did not opt out is strict, in the order of the list, with the Messages API field names",
   () => {
     const converted = toAnthropicTools(tools);

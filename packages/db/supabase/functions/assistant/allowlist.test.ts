@@ -451,3 +451,82 @@ Deno.test(
     );
   },
 );
+
+// ADR 0006, Amendment 5. A tool of the kitchen group is in no set until the turn surfaces the group, and then it
+// is placed by the same rules as any other tool.
+const kitchenRead: AllowlistTool = { name: "kitchen_read", readOnlyHint: true, group: "kitchen" };
+const kitchenWrite: AllowlistTool = {
+  name: "kitchen_write",
+  readOnlyHint: false,
+  group: "kitchen",
+};
+const withKitchen = [...tools, kitchenRead, kitchenWrite];
+
+const allowedWithKitchen = (text: string, kitchenSurfaced: boolean | undefined) =>
+  allowedToolsFor({
+    text,
+    pendingConfirmationTool: null,
+    tools: withKitchen,
+    ...(kitchenSurfaced === undefined ? {} : { kitchenSurfaced }),
+  });
+
+Deno.test("a kitchen tool is in no set while the group is not surfaced", () => {
+  for (const text of [
+    "Make me a meal plan for the week",
+    "What do I usually eat?",
+    "Log my lunch",
+    "Can you save https://example.com/pancakes for me",
+  ]) {
+    for (const surfaced of [false, undefined]) {
+      const names = allowedWithKitchen(text, surfaced);
+      assertEquals(names.includes("kitchen_read"), false, text);
+      assertEquals(names.includes("kitchen_write"), false, text);
+    }
+  }
+});
+
+Deno.test("a surfaced kitchen write is in the general set and not the read set", () => {
+  assertEquals(allowedWithKitchen("Make me a meal plan for the week", true).slice(-2), [
+    "kitchen_read",
+    "kitchen_write",
+  ]);
+  assertEquals(allowedWithKitchen("What do I usually eat?", true), [
+    "search_foods",
+    "get_food",
+    "get_day",
+    "ask_user",
+    "kitchen_read",
+  ]);
+});
+
+Deno.test("a surfaced kitchen tool is still left out of the recipe import set", () => {
+  const names = allowedWithKitchen("Can you save https://example.com/pancakes for me", true);
+
+  assertEquals(names.includes("kitchen_read"), false);
+  assertEquals(names.includes("kitchen_write"), false);
+});
+
+Deno.test(
+  "the pending confirmation of a kitchen tool is not allowed while the group is not surfaced",
+  () => {
+    const names = allowedToolsFor({
+      text: "Yes, save it",
+      pendingConfirmationTool: "kitchen_write",
+      tools: withKitchen,
+      kitchenSurfaced: false,
+    });
+
+    assertEquals(names.includes("kitchen_write"), false);
+  },
+);
+
+Deno.test("the pending confirmation of a surfaced kitchen tool is allowed", () => {
+  const names = allowedToolsFor({
+    text: "Yes, save it",
+    pendingConfirmationTool: "kitchen_write",
+    tools: withKitchen,
+    kitchenSurfaced: true,
+  });
+
+  assert(names.includes("kitchen_write"));
+});

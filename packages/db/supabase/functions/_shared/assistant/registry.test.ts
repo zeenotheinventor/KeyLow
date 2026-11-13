@@ -1,7 +1,7 @@
 import { assert, assertEquals, assertThrows } from "@std/assert";
 import { z } from "zod";
 
-import { createRegistry, toolRegistry } from "./registry.ts";
+import { createRegistry, createToolRegistry, toolRegistry } from "./registry.ts";
 import { toJsonSchema } from "./tool.ts";
 
 import type { ReadToolDefinition, ToolDefinition, WriteToolDefinition } from "./tool.ts";
@@ -501,3 +501,28 @@ Deno.test(
     assertEquals(tool?.annotations, { readOnlyHint: false, destructiveHint: true });
   },
 );
+
+// ADR 0006, Amendment 5. One test-only tool proves the hidden group on a live stack. It is listed only when the
+// function secret ASSISTANT_KITCHEN_PROBE is 1, and the kitchen tools that replace it come in M9.
+Deno.test("the kitchen probe is not in the registry unless it is asked for", () => {
+  assertEquals(
+    createToolRegistry({ kitchenProbe: false })
+      .list.map((tool) => tool.name)
+      .includes("kitchen_probe"),
+    false,
+  );
+  assertEquals(
+    toolRegistry.list.map((tool) => tool.group),
+    toolRegistry.list.map(() => undefined),
+  );
+});
+
+Deno.test("the kitchen probe is the last tool, a read of the kitchen group", () => {
+  const registry = createToolRegistry({ kitchenProbe: true });
+  const probe = registry.list.at(-1);
+
+  assertEquals(probe?.name, "kitchen_probe");
+  assertEquals(probe?.group, "kitchen");
+  assertEquals(probe?.kind, "read");
+  assertEquals(registry.list.length, createToolRegistry({ kitchenProbe: false }).list.length + 1);
+});

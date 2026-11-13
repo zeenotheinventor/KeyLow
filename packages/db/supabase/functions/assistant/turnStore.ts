@@ -9,7 +9,8 @@ import type { Database, Json } from "../_shared/core/database.types.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export type NewMessage = {
-  role: "user" | "assistant";
+  // `system` is the stored kitchen addition (ADR 0006, Amendment 5), the only row of that role.
+  role: "user" | "assistant" | "system";
   // The Messages API content blocks, exactly as the model saw or wrote them.
   content: Json;
   // What the app draws under a tool result, keyed by `tool_use_id`, or null (Amendment 14 addendum).
@@ -114,7 +115,7 @@ const turnStatuses = [
   "failed",
   "refused",
 ] as const satisfies readonly AssistantTurnStatus[];
-const roles = ["user", "assistant"] as const;
+const roles = ["user", "assistant", "system"] as const;
 
 const pendingToolSchema = z.object({
   id: z.string().optional(),

@@ -624,3 +624,26 @@ describe("threadFromMessages, a display entry that holds an undo", () => {
     expect(kinds(thread)).toEqual(["user"]);
   });
 });
+
+describe("threadFromMessages and the stored kitchen addition", () => {
+  it("should draw nothing for a system row, so the kitchen rules are never a reply", () => {
+    const system = message({
+      id: "m-system",
+      turnId: firstTurnId,
+      role: "system",
+      content: [
+        { type: "tool_addition", tool: { type: "tool_reference", name: "kitchen_one" } },
+        { type: "text", text: "The kitchen rules." },
+      ],
+    });
+    const [first, ...rest] = boardConversation;
+    if (first === undefined) {
+      throw new Error("the board conversation is empty");
+    }
+
+    const thread = threadFromMessages([first, system, ...rest], availableActions);
+
+    expect(thread).toEqual(threadFromMessages(boardConversation, availableActions));
+    expect(JSON.stringify(thread)).not.toContain("The kitchen rules.");
+  });
+});

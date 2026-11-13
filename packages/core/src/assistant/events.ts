@@ -314,13 +314,16 @@ export const ASSISTANT_MAX_TEXT_LENGTH = 2000;
  * The body of `POST /functions/v1/assistant/turn`. `conversationId` is null for the first message of a
  * new conversation. `localDate` is the day the sheet was opened on, in the person's time zone, so
  * Describe opened from Log food on another day logs to that day. `localTime` is the Describe hint's hour,
- * `HH:MM`, or null.
+ * `HH:MM`, or null. `entry` is where the sheet was opened from when it was not the chat: the Plan screen or a
+ * recipe. It makes the turn a kitchen turn (ADR 0006, Amendment 5). It is left out for every other sheet, so an
+ * app that does not send it is still valid.
  */
 export const assistantTurnRequestSchema = z.strictObject({
   conversationId: assistantIdSchema.nullable(),
   text: z.string().trim().min(1).max(ASSISTANT_MAX_TEXT_LENGTH),
   localDate: z.iso.date(),
   localTime: z.iso.time({ precision: -1 }).nullable(),
+  entry: z.enum(["plan", "recipe"]).optional(),
 });
 
 export type AssistantTurnRequest = z.infer<typeof assistantTurnRequestSchema>;

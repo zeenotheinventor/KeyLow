@@ -208,6 +208,38 @@ describe("getAssistantConversationPage", () => {
     );
   });
 
+  it("should leave out the stored kitchen addition, a system row, and still read the turn", async () => {
+    const { turns, messages, actions } = longConversation(2);
+    const addition = {
+      id: uuid("00000004", 900),
+      turn_id: turnId(1),
+      role: "system",
+      content: [{ type: "text", text: "The kitchen rules." }],
+      display: null,
+      conversation_id: CONVERSATION_ID,
+      seq: 4,
+    };
+    const withAddition = [
+      ...messages.slice(0, 3),
+      addition,
+      ...messages.slice(3).map((row) => ({ ...row, seq: row.seq + 1 })),
+    ];
+    installAssistantFake(
+      server,
+      createAssistantFakeState({ turns, messages: withAddition, actions }),
+    );
+
+    const page = await getAssistantConversationPage(createTestClient(), null);
+
+    expect(page.messages.map((message) => message.role)).toEqual([
+      "user",
+      "assistant",
+      "user",
+      "assistant",
+    ]);
+    expect(JSON.stringify(page.messages)).not.toContain("The kitchen rules.");
+  });
+
   it("should give a cursor naming the oldest turn of the page when an older turn exists", async () => {
     installAssistantFake(server, createAssistantFakeState(longConversation(TURN_COUNT)));
 
