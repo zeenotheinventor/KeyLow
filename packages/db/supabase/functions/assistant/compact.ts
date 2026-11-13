@@ -17,6 +17,7 @@
 // - The call runs after the response, outside the turn's deadline, so it has its own timeout and no retry.
 // - Nothing here logs or reports the note, the transcript or a message.
 import { readLimit } from "../_shared/rateLimit.ts";
+import { logLine } from "../_shared/log.ts";
 import { buildCompactionRequest, renderTranscript } from "./compactPrompt.ts";
 import { MODEL, openToolUses, toApiMessages } from "./prompt.ts";
 import { NO_MESSAGE_ID } from "./turnStore.ts";
@@ -95,9 +96,14 @@ class CompactionFailure extends Error {
 }
 
 function log(input: CompactionInput, result: Result, noteTokens: number, startedAt: number): void {
-  console.log(
-    `assistant compaction conversation=${input.conversationId} turn=${input.turnId} promptTokens=${input.promptTokens} noteTokens=${noteTokens} result=${result} ${Math.round(performance.now() - startedAt)}ms`,
-  );
+  logLine("info", "assistant compaction", {
+    conversation: input.conversationId,
+    turn: input.turnId,
+    promptTokens: input.promptTokens,
+    noteTokens,
+    result,
+    milliseconds: Math.round(performance.now() - startedAt),
+  });
 }
 
 // The rows the note has to cover: from the turn after the previous note to the end of this turn. The cut is

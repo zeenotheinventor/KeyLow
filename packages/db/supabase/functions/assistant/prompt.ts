@@ -19,6 +19,7 @@
 import { z } from "zod";
 
 import { describeShortDate, isValidTimeZone, localToday } from "../_shared/core.ts";
+import { logLine } from "../_shared/log.ts";
 
 import type { AnthropicTool } from "../_shared/assistant/adapters/anthropic.ts";
 import type { JsonSchemaObject } from "../_shared/assistant/tool.ts";
@@ -359,7 +360,7 @@ export function toApiMessagesWithNote(
   const replayed = history.slice(lastCompactedIndex + 1);
   if (lastCompactedIndex === -1 || replayed[0]?.role !== "user") {
     // A fixed code and nothing else, so a prompt that stopped shrinking shows up in the logs.
-    console.log("assistant replay code=note_fallback");
+    logLine("info", "assistant replay", { code: "note_fallback" });
     return toApiMessages(history, currentTurnId);
   }
   // The thinking rules apply to the turns after the cut: only the current turn's is sent, and the previous

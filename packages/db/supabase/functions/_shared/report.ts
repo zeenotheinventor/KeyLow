@@ -6,6 +6,7 @@ import type * as SentryDeno from "@sentry/deno";
 import type { ErrorEvent } from "@sentry/deno";
 
 import type { EdgeErrorCode } from "./core.ts";
+import { logLine } from "./log.ts";
 import { runInBackground } from "./runtime.ts";
 
 type SentryOptions = Parameters<typeof SentryDeno.init>[0];
@@ -111,7 +112,7 @@ export function createReporter(dependencies: ReporterDependencies): ReportError 
       sdk.captureException(safeError, { tags: { function: functionName, code } });
       await sdk.flush(flushTimeoutMilliseconds);
     } catch {
-      console.error(`${functionName} could not report ${code} to Sentry`);
+      logLine("error", "report to Sentry failed", { function: functionName, code });
     }
   }
 
@@ -119,14 +120,14 @@ export function createReporter(dependencies: ReporterDependencies): ReportError 
   return (functionName, code, caught) => {
     try {
       const safeError = toSafeError(caught);
-      console.error(`${functionName} ${code}`, safeError.stack);
+      logLine("error", "report", { function: functionName, code, errorType: safeError.name });
       const dsn = dependencies.readDsn();
       if (!dsn) {
         return;
       }
       dependencies.runInBackground(send(dsn, functionName, code, safeError));
     } catch {
-      console.error(`${functionName} could not report ${code}`);
+      logLine("error", "report failed", { function: functionName, code });
     }
   };
 }

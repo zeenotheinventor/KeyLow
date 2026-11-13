@@ -12,7 +12,7 @@ Open the project, then **Issues**, then the issue.
 - **The stack** shows the file and line. Source maps are uploaded for builds that had `SENTRY_AUTH_TOKEN`, so frames are readable. If you see minified frames, that build had no token (see section 6).
 - **The account id** is on the event's user. It is the Supabase user UUID. To see who it is, look the id up under Authentication in the Supabase dashboard. Nothing else that names the person is in Sentry (no email, no name, no IP address).
 - **The route** is on the request (web only). Mobile events show no route, only the request breadcrumbs (`xhr`, `fetch`, `http`), with query strings removed.
-- **Edge events** carry the tags `function` and `code`, and the exception value is the fixed text `<function> <code>`. They have no breadcrumbs and no contexts (no device or browser details). For more detail, read that function's logs in the Supabase dashboard (the console line has the same stack).
+- **Edge events** carry the tags `function` and `code`, and the exception value is the fixed text `<function> <code>`. They have no breadcrumbs and no contexts (no device or browser details). For more detail, read that function's logs in the Supabase dashboard. The console line carries only the function, the code and the error type, with no stack, so the stack is in Sentry only.
 
 ## 2. Which release did it come from
 

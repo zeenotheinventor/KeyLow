@@ -12,13 +12,10 @@ import {
   readPriorBelief,
   readRequestBody,
   readRunCheckinRequest,
-  recomputeLogLine,
   recordCheckinFailure,
-  refusedLogLine,
   requireCompleteRead,
   requireUniqueDates,
   runCheckinLoop,
-  runLogLine,
   toCheckinInput,
   toCheckinProgram,
   toRecordCheckinArguments,
@@ -638,20 +635,6 @@ Deno.test(
   },
 );
 
-Deno.test("the log line of a run holds the user id, the count and the duration only", () => {
-  assertEquals(
-    runLogLine({ userId: "0c5f8d4e", ran: 3, durationMilliseconds: 412 }),
-    "run-checkin due user=0c5f8d4e ran=3 duration_ms=412",
-  );
-});
-
-Deno.test("the log line of a refusal holds the user id and the code only", () => {
-  assertEquals(
-    refusedLogLine("0c5f8d4e", "missing_stats"),
-    "run-checkin refused user=0c5f8d4e code=missing_stats",
-  );
-});
-
 Deno.test("requireCompleteRead returns the rows of a read under the row limit", () => {
   const rows = Array.from({ length: 999 }, (_, index) => ({ index }));
 
@@ -1089,13 +1072,6 @@ Deno.test("callRecordTargets throws the code of a refused write and none of the 
   );
 
   assertEquals(failure.message, "record_targets was refused with code 23514");
-});
-
-Deno.test("the log line of a recompute holds the user id, the branch and the duration only", () => {
-  assertEquals(
-    recomputeLogLine({ userId: "0c5f8d4e", branch: "rewrite", durationMilliseconds: 87 }),
-    "run-checkin recompute user=0c5f8d4e branch=rewrite duration_ms=87",
-  );
 });
 
 Deno.test(
