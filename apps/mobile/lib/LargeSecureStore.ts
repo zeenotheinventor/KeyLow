@@ -5,12 +5,26 @@ import * as SecureStore from "expo-secure-store";
 
 const encryptionKeyByteCount = 32;
 
+type LargeSecureStoreOptions = {
+  /**
+   * When the keychain gives the key out, and whether a backup carries it. Left out, the key is written
+   * with the keychain's own default, which is how the session is stored.
+   */
+  keychainAccessible?: SecureStore.KeychainAccessibilityConstant;
+};
+
 /**
  * Storage for supabase-js sessions. SecureStore refuses values over 2048 bytes and a session is
  * larger, so the session is AES-256-CTR encrypted into AsyncStorage and only the encryption key,
  * a fresh one on every write, lives in SecureStore under the same storage key.
  */
 export class LargeSecureStore {
+  private readonly keyStoreOptions: SecureStore.SecureStoreOptions | undefined;
+
+  constructor({ keychainAccessible }: LargeSecureStoreOptions = {}) {
+    this.keyStoreOptions = keychainAccessible === undefined ? undefined : { keychainAccessible };
+  }
+
   async getItem(key: string): Promise<string | null> {
     const ciphertextHex = await AsyncStorage.getItem(key);
     if (ciphertextHex === null) {
@@ -31,7 +45,7 @@ export class LargeSecureStore {
     const cipher = new ModeOfOperation.ctr(encryptionKey, new Counter(1));
     const ciphertext = cipher.encrypt(utils.utf8.toBytes(value));
 
-    await SecureStore.setItemAsync(key, utils.hex.fromBytes(encryptionKey));
+    await SecureStore.setItemAsync(key, utils.hex.fromBytes(encryptionKey), this.keyStoreOptions);
     await AsyncStorage.setItem(key, utils.hex.fromBytes(ciphertext));
   }
 

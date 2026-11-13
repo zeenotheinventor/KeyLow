@@ -5,6 +5,8 @@
 // at any depth before wrapping. Each tool projects the fields it returns, so this is the backstop and
 // not the first defence.
 
+import { logLine } from "../log.ts";
+
 export type JsonValue =
   string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
 
@@ -88,18 +90,18 @@ export function wrapUntrusted(source: string, payload: JsonValue, userId?: strin
   const minimised = minimise(payload);
   if (minimised.removedAny) {
     // The tool name and a code, never the key's value.
-    console.warn(`assistant ${name} denied_key_removed`);
+    logLine("warn", "assistant", { tool: name, code: "denied_key_removed" });
   }
   let json = JSON.stringify(minimised.value);
   if (userId !== undefined && userId !== "") {
     if (!uuidPattern.test(userId)) {
       // A short id would match inside numbers and break the JSON, so it is not scrubbed at all.
-      console.warn(`assistant ${name} user_id_not_uuid`);
+      logLine("warn", "assistant", { tool: name, code: "user_id_not_uuid" });
     } else {
       const scrubbed = scrubValue(json, userId);
       json = scrubbed.json;
       if (scrubbed.removedAny) {
-        console.warn(`assistant ${name} user_id_value_removed`);
+        logLine("warn", "assistant", { tool: name, code: "user_id_value_removed" });
       }
     }
   }

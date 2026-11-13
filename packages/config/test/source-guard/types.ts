@@ -8,7 +8,8 @@ export type RuleName =
   | "tailwind-palette-class"
   | "error-message-in-jsx"
   | "local-core-helper"
-  | "light-mode-coloured-text";
+  | "light-mode-coloured-text"
+  | "raw-console-in-function";
 
 export type Violation = {
   rule: RuleName;

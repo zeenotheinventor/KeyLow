@@ -10,9 +10,6 @@ import { PersistedDiaryCache } from "../components/PersistedDiaryCache";
 import { SignOutButton } from "../components/SignOutButton";
 import { ToastProvider } from "../components/ui";
 import { parseStoredCache } from "../lib/diaryCache";
-import { DIARY_CACHE_STORAGE_KEY } from "../lib/diaryCache/constants";
-import { createStoredUserIdReader } from "../lib/storedSession";
-import { ThemeProvider } from "../lib/theme";
 import {
   createDiaryQueryClient,
   diaryBackend,
@@ -22,6 +19,11 @@ import {
   signInDiaryClient,
 } from "./support/diaryBackend";
 import { resetRouterMock, routerMock } from "./support/expoRouterMock";
+import { DIARY_CACHE_STORAGE_KEY } from "../lib/diaryCache/constants";
+import { createDiaryCacheStorage } from "../lib/diaryCache/createDiaryCacheStorage";
+import { createStoredUserIdReader } from "../lib/storedSession";
+import { ThemeProvider } from "../lib/theme";
+import { secureStoreItems } from "./support/diaryCacheStoresFake";
 import { compileKitStyles } from "./support/kitStyles";
 import { registerAppStyles } from "./support/nativeWindStyles";
 import { STORED_SESSION_KEY, createStoredSessionClient } from "./support/storedSessionClient";
@@ -34,6 +36,19 @@ jest.mock("@react-native-async-storage/async-storage", () => ({
     "@react-native-async-storage/async-storage/jest/async-storage-mock",
   ),
 }));
+jest.mock(
+  "expo-secure-store",
+  () =>
+    jest.requireActual<{ secureStoreFake: unknown }>("./support/diaryCacheStoresFake")
+      .secureStoreFake,
+);
+jest.mock(
+  "expo-crypto",
+  () => jest.requireActual<{ cryptoFake: unknown }>("./support/diaryCacheStoresFake").cryptoFake,
+);
+
+// What the app stores is ciphertext, so a test reads and writes the cache through the same storage the app uses.
+const storedCache = createDiaryCacheStorage();
 jest.mock(
   "expo-router",
   () => jest.requireActual<{ mockExpoRouter: unknown }>("./support/expoRouterMock").mockExpoRouter,
@@ -82,6 +97,7 @@ describe("opening the diary with no connection, from a cold start", () => {
     resetDiaryBackend();
     diaryBackend.entries = sampleDay();
     await AsyncStorage.clear();
+    secureStoreItems.clear();
     await signInDiaryClient();
   });
 
@@ -130,7 +146,7 @@ describe("opening the diary with no connection, from a cold start", () => {
     );
     await screen.findByRole("button", { name: /^Porridge oats/ });
     await waitFor(async () => {
-      const text = await AsyncStorage.getItem(DIARY_CACHE_STORAGE_KEY);
+      const text = await storedCache.getItem(DIARY_CACHE_STORAGE_KEY);
       const hashes =
         text === null ? [] : parseStoredCache(text).clientState.queries.map((q) => q.queryHash);
       for (const queryKey of [keys.diary.day(TODAY), keys.profiles.termsAcceptance]) {
@@ -197,8 +213,8 @@ describe("opening the diary with no connection, from a cold start", () => {
 
   it("should not show the stored cache to a person whose session is another account's", async () => {
     await useTheDiaryOnlineThenCloseTheApp();
-    const stored = await AsyncStorage.getItem(DIARY_CACHE_STORAGE_KEY);
-    await AsyncStorage.setItem(DIARY_CACHE_STORAGE_KEY, (stored ?? "").replaceAll("1111", "9999"));
+    const stored = await storedCache.getItem(DIARY_CACHE_STORAGE_KEY);
+    await storedCache.setItem(DIARY_CACHE_STORAGE_KEY, (stored ?? "").replaceAll("1111", "9999"));
 
     await startOffline({ hasStoredSession: true });
 

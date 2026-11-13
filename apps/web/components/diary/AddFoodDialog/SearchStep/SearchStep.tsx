@@ -1,6 +1,7 @@
 import { MIN_SEARCH_LENGTH, useFoodSearch } from "@keylow/api-client";
 import {
   ADD_FOOD_DIALOG,
+  ASSISTANT_DESCRIBE,
   DIARY_ACTIONS,
   OFFLINE_BANNER,
   PLATE,
@@ -22,7 +23,7 @@ import {
   liveRowShowsServing,
   servingOfSearchHit,
 } from "@keylow/core/search";
-import { SearchX, WifiOff, Zap } from "lucide-react";
+import { MessageSquareText, SearchX, WifiOff, Zap } from "lucide-react";
 import { useState } from "react";
 
 import { FavouriteFoods } from "./FavouriteFoods";
@@ -121,7 +122,7 @@ function SearchStepView(props: SearchStepProps & RecipeResults) {
 
   const renderResults = () => {
     if (!isSearchable) {
-      // Before anything is typed the search offers Quick add, the Favourites strip and Recent, as the web idle
+      // Before anything is typed the search offers Quick add with Describe under it, the Favourites strip and Recent, as the web idle
       // board (`plate-dialog-idle`) draws them. An ingredient search offers Recent alone, with no plus, as the
       // phone's does: a row opens the amount step. The hint to type something is Recent's to give, when it has
       // no rows.
@@ -137,6 +138,16 @@ function SearchStepView(props: SearchStepProps & RecipeResults) {
                   disabled={isLogging}
                   onClick={props.onQuickAdd}
                 />
+                {props.onDescribe !== undefined && (
+                  // The assistant needs the network, so the row is off offline, as the Log button is.
+                  <ListRow
+                    icon={MessageSquareText}
+                    title={ASSISTANT_DESCRIBE.rowTitle}
+                    subtitle={ASSISTANT_DESCRIBE.rowCaption}
+                    disabled={isLogging || !isOnline}
+                    onClick={props.onDescribe}
+                  />
+                )}
               </ul>
             </Card>
           )}

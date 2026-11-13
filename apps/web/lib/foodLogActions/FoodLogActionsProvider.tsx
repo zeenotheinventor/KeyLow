@@ -3,7 +3,12 @@
 import { usePathname } from "next/navigation";
 import { createContext, useContext, useMemo, useRef, useState } from "react";
 
-import type { AddFoodRequest, FoodLogActions, FoodLogActionsProviderProps } from "./types";
+import type {
+  AddFoodRequest,
+  AssistantDescribeOpener,
+  FoodLogActions,
+  FoodLogActionsProviderProps,
+} from "./types";
 
 import { AddFoodDialog } from "@/components/diary/AddFoodDialog";
 import { EditEntryDialog } from "@/components/diary/EditEntryDialog";
@@ -36,6 +41,7 @@ export function FoodLogActionsProvider({ children }: FoodLogActionsProviderProps
   // The add dialog has food on its plate, which a page change must not drop.
   const [isPlateHeld, setIsPlateHeld] = useState(false);
   const requestCount = useRef(0);
+  const assistantDescribeOpener = useRef<AssistantDescribeOpener | undefined>(undefined);
 
   // A dialog belongs to the page it was opened on, so going to another page closes it. The one exception
   // is a request that was made for the page now showing, which opens there instead. A request is for
@@ -67,6 +73,9 @@ export function FoodLogActionsProvider({ children }: FoodLogActionsProviderProps
           id,
           opener: current?.opener ?? document.activeElement,
         }));
+      },
+      setAssistantDescribeOpener: (opener: AssistantDescribeOpener | undefined) => {
+        assistantDescribeOpener.current = opener;
       },
       openAddFoodOnNextPage: (request: AddFoodRequest, targetPathname: string) => {
         requestCount.current += 1;
@@ -113,6 +122,15 @@ export function FoodLogActionsProvider({ children }: FoodLogActionsProviderProps
           opener={dialog.opener}
           onClose={closeDialog}
           onHoldsPlateChange={setIsPlateHeld}
+          onDescribe={(opening) => {
+            const openAssistant = assistantDescribeOpener.current;
+            // With no assistant to open, the dialog and its plate stay as they were.
+            if (openAssistant === undefined) {
+              return;
+            }
+            openAssistant(opening);
+            closeDialog();
+          }}
         />
       )}
       {dialog?.kind === "edit" && (

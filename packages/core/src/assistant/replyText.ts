@@ -656,12 +656,16 @@ function rowWords(headings: readonly ReplySpan[][], cells: readonly ReplySpan[][
   return parts.length === 0 ? "" : `${parts.join(", ")}.`;
 }
 
-function tableWords(table: ReplyTable): string {
+/** The first sentence of a table's reading, such as "Table, 7 rows.", which also names the web's scroll region. */
+export function tableOpening(table: ReplyTable): string {
   const count = table.rows.length;
-  const opening = `${ASSISTANT_SHEET.tableLabel}, ${count} ${
+  return `${ASSISTANT_SHEET.tableLabel}, ${count} ${
     count === 1 ? ASSISTANT_SHEET.tableRowOne : ASSISTANT_SHEET.tableRowMany
   }.`;
-  return [opening, ...table.rows.map((cells) => rowWords(table.headings, cells))]
+}
+
+function tableWords(table: ReplyTable): string {
+  return [tableOpening(table), ...table.rows.map((cells) => rowWords(table.headings, cells))]
     .filter((sentence) => sentence !== "")
     .join(" ");
 }

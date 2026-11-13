@@ -46,8 +46,9 @@ const mockAssistant: {
   turn: { send: jest.fn(), stop: jest.fn(), live: null, isStreaming: false },
 };
 
-jest.mock("@keylow/api-client", () => ({
-  ...jest.requireActual<object>("@keylow/api-client"),
+// The hooks the chat reads are mocked at their own modules, because `useAssistantChat` calls them inside
+// `@keylow/api-client`, where a mock of the package index does not reach. The index re-exports the same mocks.
+jest.mock("../../../packages/api-client/src/hooks/useAssistantStatus", () => ({
   useAssistantStatus: () => ({
     data: { notice: null },
     isSuccess: true,
@@ -55,10 +56,20 @@ jest.mock("@keylow/api-client", () => ({
     failureCount: 0,
     refetch: jest.fn().mockResolvedValue({ isSuccess: true }),
   }),
+}));
+jest.mock("../../../packages/api-client/src/hooks/useSetAssistantConsent", () => ({
   useSetAssistantConsent: () => ({ mutate: jest.fn(), isPending: false }),
+}));
+jest.mock("../../../packages/api-client/src/hooks/useAssistantConversation", () => ({
   useAssistantConversation: () => mockAssistant.conversation,
+}));
+jest.mock("../../../packages/api-client/src/hooks/useAssistantTurn", () => ({
   useAssistantTurn: () => mockAssistant.turn,
+}));
+jest.mock("../../../packages/api-client/src/hooks/useNewAssistantConversation", () => ({
   useNewAssistantConversation: () => ({ mutateAsync: jest.fn(), isPending: false }),
+}));
+jest.mock("../../../packages/api-client/src/hooks/useProfileTimeZone", () => ({
   useProfileTimeZone: () => ({ data: "Europe/London" }),
 }));
 

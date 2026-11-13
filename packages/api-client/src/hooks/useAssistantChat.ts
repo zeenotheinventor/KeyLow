@@ -25,31 +25,7 @@ import { useSetAssistantConsent } from "./useSetAssistantConsent";
 import type { SkippedKind, StreamingFetch } from "../runAssistantTurn";
 import type { AssistantOpenedFrom, AssistantSheetSent } from "@keylow/core";
 
-/** The reads and writes the controller makes. They default to this package's own hooks. */
-export type AssistantChatReaders = {
-  useAssistantConversation: typeof useAssistantConversation;
-  useAssistantStatus: typeof useAssistantStatus;
-  useAssistantTurn: typeof useAssistantTurn;
-  useNewAssistantConversation: typeof useNewAssistantConversation;
-  useProfileTimeZone: typeof useProfileTimeZone;
-  useSetAssistantConsent: typeof useSetAssistantConsent;
-};
-
-const packageReaders: AssistantChatReaders = {
-  useAssistantConversation,
-  useAssistantStatus,
-  useAssistantTurn,
-  useNewAssistantConversation,
-  useProfileTimeZone,
-  useSetAssistantConsent,
-};
-
 export type UseAssistantChatInput = {
-  /**
-   * The hooks the controller reads through. A screen whose tests stand in for some of them at the package's
-   * index passes the index's, because a hook inside the package cannot see a mock of the index.
-   */
-  readers?: AssistantChatReaders | undefined;
   /** Whether the chat is on screen. The conversation is read while it is, and the status each time it opens. */
   open: boolean;
   /** The day the chat was opened on, in the person's time zone, `YYYY-MM-DD`. */
@@ -83,7 +59,6 @@ export type UseAssistantChatInput = {
  * with the screen is drawing, scrolling, the router and the platform: they come in as inputs.
  */
 export function useAssistantChat({
-  readers,
   open,
   localDate,
   describeAt,
@@ -97,13 +72,12 @@ export function useAssistantChat({
   onNewConversationStarted,
   onKindSkipped,
 }: UseAssistantChatInput) {
-  const reads = readers ?? packageReaders;
-  const conversation = reads.useAssistantConversation({ enabled: open });
-  const status = reads.useAssistantStatus();
-  const setConsent = reads.useSetAssistantConsent();
-  const profileTimeZone = reads.useProfileTimeZone();
-  const newConversation = reads.useNewAssistantConversation();
-  const { send, stop, live, isStreaming } = reads.useAssistantTurn({ fetch, onKindSkipped });
+  const conversation = useAssistantConversation({ enabled: open });
+  const status = useAssistantStatus();
+  const setConsent = useSetAssistantConsent();
+  const profileTimeZone = useProfileTimeZone();
+  const newConversation = useNewAssistantConversation();
+  const { send, stop, live, isStreaming } = useAssistantTurn({ fetch, onKindSkipped });
   const [draft, setDraft] = useState("");
   const [sent, setSent] = useState<AssistantSheetSent | null>(null);
 

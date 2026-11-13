@@ -47,6 +47,7 @@ import {
 } from "../_shared/core.ts";
 import { planCachedLookup } from "../_shared/cachedLookupPlan.ts";
 import { error, handle, json } from "../_shared/http.ts";
+import { logLine } from "../_shared/log.ts";
 import { offRequest } from "../_shared/off.ts";
 import { reportError } from "../_shared/report.ts";
 import { consume, readLimit } from "../_shared/rateLimit.ts";
@@ -203,14 +204,15 @@ async function refreshBeforeAnswering(
 ): Promise<StoredProduct | OffProductResponse> {
   try {
     if ((await chargeLookup(userId)) !== null) {
-      console.warn(`off-product kept the old portions of ${code}, a limit is reached`);
+      logLine("warn", "off-product refresh", { code: "kept_old_portions_limit_reached" });
       return cached;
     }
     const refreshed = await fetchAndStoreProduct(service, code);
     if (!refreshed.ok) {
-      console.warn(
-        `off-product kept the old portions of ${code}, the refresh answered ${refreshed.failure.status}`,
-      );
+      logLine("warn", "off-product refresh", {
+        code: "kept_old_portions_refresh_failed",
+        status: refreshed.failure.status,
+      });
       return cached;
     }
     return refreshed;
@@ -226,14 +228,15 @@ async function refreshProduct(service: Service, code: string): Promise<void> {
   try {
     const globalLimit = readLimit("OFF_PRODUCT_GLOBAL_PER_MIN", 80);
     if ((await consume(globalBucket, globalLimit, rateLimitWindowSeconds)) !== null) {
-      console.warn(`off-product skipped the refresh of ${code}, the global limit is reached`);
+      logLine("warn", "off-product refresh", { code: "skipped_global_limit_reached" });
       return;
     }
     const refreshed = await fetchAndStoreProduct(service, code);
     if (!refreshed.ok) {
-      console.warn(
-        `off-product could not refresh ${code}, the answer was ${refreshed.failure.status}`,
-      );
+      logLine("warn", "off-product refresh", {
+        code: "refresh_failed",
+        status: refreshed.failure.status,
+      });
     }
   } catch (caught) {
     reportError("off-product", "internal_error", caught);

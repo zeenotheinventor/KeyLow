@@ -385,31 +385,8 @@ export function readRunCheckinRequest(body: unknown): RunCheckinRequestRead {
   return { ok: false, code: namesAMode ? "bad_mode" : "invalid_request" };
 }
 
-/** The line a finished run logs: the user id, the number of check-ins run and the duration. */
-export function runLogLine({
-  userId,
-  ran,
-  durationMilliseconds,
-}: Readonly<{ userId: string; ran: number; durationMilliseconds: number }>): string {
-  return `run-checkin due user=${userId} ran=${ran} duration_ms=${durationMilliseconds}`;
-}
-
 /** The code of a call that is refused for its user's rows: no program, or a profile with a stat missing. */
 export type RunCheckinRefusalCode = Extract<EdgeErrorCode, "no_program" | "missing_stats">;
-
-/** The line a refused run logs: the user id and the code. */
-export function refusedLogLine(userId: string, code: RunCheckinRefusalCode): string {
-  return `run-checkin refused user=${userId} code=${code}`;
-}
-
-/** The line a finished recompute logs: the user id, which branch ran and the duration. */
-export function recomputeLogLine({
-  userId,
-  branch,
-  durationMilliseconds,
-}: Readonly<{ userId: string; branch: RecomputeBranch; durationMilliseconds: number }>): string {
-  return `run-checkin recompute user=${userId} branch=${branch} duration_ms=${durationMilliseconds}`;
-}
 
 /**
  * The snapshot a due check-in starts from: the newest one dated before `before`, or the newest of all

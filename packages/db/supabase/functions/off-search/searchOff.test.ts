@@ -104,7 +104,7 @@ Deno.test("searchOff makes two calls and reports once when both fail", async () 
   assertEquals(outcome.ok ? undefined : outcome.failure.status, 502);
   assertEquals(requests.length, 2);
   assertEquals(reports.length, 1);
-  assertEquals(reports[0].startsWith("off-search upstream_error"), true);
+  assertEquals(reports[0].startsWith("report function=off-search code=upstream_error"), true);
 });
 
 Deno.test("searchOff never retries a 429, which answers rate_limited with one call", async () => {

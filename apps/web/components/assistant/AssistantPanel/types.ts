@@ -9,6 +9,8 @@ export type AssistantPanelProps = {
   localDate: string;
   /** The pages whose top bar opened the panel, when they were not the diary's. The Train pages ask about training. */
   from?: AssistantOpenedFrom | undefined;
+  /** The time Describe logs at, `HH:MM`, when the panel was opened from the add food dialog. It brings the Describe intro and the hint over the field. */
+  describeAt?: string | undefined;
   /** The top bar's Assistant button, which focus is not taken from when the panel opens. */
   buttonRef: RefObject<HTMLButtonElement | null>;
   /** Docked, how far from the top of the window the panel starts: the bottom of the top bar while it shows, and 0 once the page has scrolled past it. */

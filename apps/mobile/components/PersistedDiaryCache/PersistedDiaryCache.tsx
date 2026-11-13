@@ -1,5 +1,4 @@
 import { useSupabase } from "@keylow/api-client";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useQueryClient } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { useEffect, useRef, useState } from "react";
@@ -10,6 +9,7 @@ import {
   createDiaryCachePersister,
   createShouldDehydrateQuery,
 } from "../../lib/diaryCache";
+import { createDiaryCacheStorage } from "../../lib/diaryCache/createDiaryCacheStorage";
 
 import type { PersistedDiaryCacheProps } from "./types";
 
@@ -21,15 +21,18 @@ import type { PersistedDiaryCacheProps } from "./types";
  * web does not use this. It sits inside `KeyLowProvider`, whose query client it persists, and outside
  * the sign-in gate, so the gate's own read finds the stored acceptance.
  *
- * On a sign out, which is also how an account deletion ends, the stored cache is removed and the one in
- * memory is reset, so the next person to sign in never sees it. Supabase reporting no session at a
+ * The stored cache is encrypted (see `createDiaryCacheStorage`), so a backup of the phone holds none of
+ * it in the clear. On a sign out, which is also how an account deletion ends, the stored cache and
+ * its key are removed and the one in memory is reset, so the next person to sign in never sees it. Supabase reporting no session at a
  * start does not clear it: offline, with an access token that has expired, it reports no session
  * although the person is still signed in, and that is when the cache is wanted.
  */
 export function PersistedDiaryCache({ children, readStoredUserId }: PersistedDiaryCacheProps) {
   const client = useSupabase();
   const queryClient = useQueryClient();
-  const [persister] = useState(() => createDiaryCachePersister(AsyncStorage, readStoredUserId));
+  const [persister] = useState(() =>
+    createDiaryCachePersister(createDiaryCacheStorage(), readStoredUserId),
+  );
   const hasSeenSignOut = useRef(false);
 
   useEffect(() => {

@@ -2,6 +2,17 @@ import { Apple, ChefHat, Check, Copy, MessageSquareText, RotateCcw, Target } fro
 
 import { AssistantActionCard } from "./AssistantActionCard";
 import { AssistantLinkRow } from "./AssistantLinkRow";
+import {
+  argsOfDraft,
+  goalsUpdated,
+  routineActive,
+  routineArchived,
+  routineUpdated,
+  setUpdated,
+  sevenDayRoutine,
+  threeDayRoutine,
+  workoutDeleted,
+} from "./trainingCardArgs";
 
 import type { AssistantActionCardRow } from "./types";
 import type { Meta, StoryObj } from "@storybook/nextjs";
@@ -203,3 +214,55 @@ export const StandaloneLink: Story = {
     <AssistantLinkRow isStandalone label="Open in routine editor" onPress={() => undefined} />
   ),
 };
+
+// The training stories are made by core's own card builders and `describeAssistantCard` (see
+// `trainingCardArgs.ts`), as the `web-assistant-card` boards were, so their words are core's.
+
+// `web-assistant-card · routine-created`, "3 days, as it arrives": every day closed, the card's own state.
+export const RoutineThreeDays: Story = { args: argsOfDraft(threeDayRoutine) };
+
+// `web-assistant-card · routine-created`, "3 days, a day opened": Monday open, its exercises listed in place.
+export const RoutineThreeDaysOpen: Story = {
+  args: argsOfDraft(threeDayRoutine, { initiallyOpenDay: 0 }),
+};
+
+// `web-assistant-card · routine-created`, "7 days, as it arrives": the card's longest, all closed.
+export const RoutineSevenDays: Story = { args: argsOfDraft(sevenDayRoutine) };
+
+// `web-assistant-card · routine-created`, "7 days, a day opened, scrolled": Thursday open.
+export const RoutineSevenDaysOpen: Story = {
+  args: argsOfDraft(sevenDayRoutine, { initiallyOpenDay: 3 }),
+};
+
+// `web-assistant-card · routine-created`, "Can't undo, now active": the routine was made active since.
+export const RoutineThreeDaysCantUndo: Story = {
+  args: argsOfDraft(threeDayRoutine, { outcome: { state: "unavailable", reason: "active" } }),
+};
+
+// `web-assistant-card · undo-unavailable-training`, "Built routine, during a workout".
+export const RoutineThreeDaysCantUndoYet: Story = {
+  args: argsOfDraft(threeDayRoutine, { workoutInProgress: true }),
+};
+
+// `web-assistant-card · routine-updated`, "With Undo".
+export const RoutineUpdated: Story = { args: argsOfDraft(routineUpdated) };
+
+// `web-assistant-card · routine-states`, "Active, with Undo".
+export const RoutineActive: Story = { args: argsOfDraft(routineActive) };
+
+// `web-assistant-card · routine-states`, "Archived, with Undo".
+export const RoutineArchived: Story = { args: argsOfDraft(routineArchived) };
+
+// `web-assistant-card · goals-updated`, "With Undo".
+export const GoalsUpdated: Story = { args: argsOfDraft(goalsUpdated) };
+
+// `web-assistant-card · set-updated`, "One set, kg".
+export const SetUpdated: Story = { args: argsOfDraft(setUpdated) };
+
+// `web-assistant-card · undo-unavailable-training`, "During a workout".
+export const SetUpdatedCantUndoYet: Story = {
+  args: argsOfDraft(setUpdated, { workoutInProgress: true }),
+};
+
+// `web-assistant-card · workout-deleted`, "With Undo": no link, because the workout is gone from the history.
+export const WorkoutDeleted: Story = { args: argsOfDraft(workoutDeleted) };

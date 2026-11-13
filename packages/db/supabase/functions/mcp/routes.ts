@@ -10,6 +10,7 @@ import { z } from "zod";
 import { executeTool } from "../_shared/assistant/executor.ts";
 import { wrapUntrusted } from "../_shared/assistant/untrusted.ts";
 import { error } from "../_shared/http.ts";
+import { logLine } from "../_shared/log.ts";
 import { createToolServer } from "./server.ts";
 
 import type { ExecutionResult } from "../_shared/assistant/executor.ts";
@@ -70,9 +71,11 @@ function allowedToolsOf(request: Request): ReadonlySet<string> {
 }
 
 function logGate(userId: string, gate: string, startedAt: number): void {
-  console.log(
-    `mcp gate user=${userId} gate=${gate} ${Math.round(performance.now() - startedAt)}ms`,
-  );
+  logLine("info", "mcp gate", {
+    user: userId,
+    gate,
+    milliseconds: Math.round(performance.now() - startedAt),
+  });
 }
 
 export function createMcpEndpoint(
@@ -97,7 +100,7 @@ export function createMcpEndpoint(
       const result = await runTool(name, knownName, rawInput);
       const code = result.status === "error" ? result.code : result.status;
       const milliseconds = Math.round(performance.now() - startedAt);
-      console.log(`mcp call user=${user.id} tool=${knownName} code=${code} ${milliseconds}ms`);
+      logLine("info", "mcp call", { user: user.id, tool: knownName, code, milliseconds });
       return result;
     }
 

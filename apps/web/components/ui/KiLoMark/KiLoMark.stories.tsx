@@ -28,3 +28,6 @@ export const WithTitle: Story = { args: { title: "Ki-Lo" } };
 
 // The mark followed by the word, at the 40px size of the web sign-up and accept-terms cards.
 export const WithWordmark: Story = { args: { wordmark: true, className: "size-10" } };
+
+// The working line's size: the "Loading the bar" loop, which shows the complete logo under reduced motion.
+export const Loading: Story = { args: { isAnimated: true, className: "size-5" } };

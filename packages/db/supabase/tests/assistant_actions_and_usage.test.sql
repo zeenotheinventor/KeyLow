@@ -647,7 +647,7 @@ select throws_ok(
   $$select pg_temp.add_usage('66500000-0000-4000-8000-0000000000dd', '66500000-0000-4000-8000-000000000d11', 'coaching', 'none')$$,
   '23514',
   'new row for relation "assistant_usage" violates check constraint "assistant_usage_route_check"',
-  'a route outside the three is refused'
+  'a route outside the five is refused'
 );
 select throws_ok(
   $$select pg_temp.add_usage('66500000-0000-4000-8000-0000000000dd', '66500000-0000-4000-8000-000000000d11', 'describe_or_ask', 'sse')$$,

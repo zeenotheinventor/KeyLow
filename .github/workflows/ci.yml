@@ -15,7 +15,8 @@ name: CI
 #           │               │           1/6 to 6/6, dealt out by file size (shardSequencer.js)
 #           ├─ web ─────────┤   three legs: static (lint, type-check, `next build`) and Vitest
 #           │               │   shards 1/2 and 2/2
-#           └─ web-storybook┘   the web Storybook build
+#           ├─ web-storybook┤   the web Storybook build
+#           └─ web-e2e ─────┘   the web Playwright specs, against a local Supabase stack
 #
 # A job with legs is one matrix, and `checks` waits for every leg of it, so a failed leg fails `checks`
 # and a skipped job counts as passed.
@@ -566,11 +567,129 @@ jobs:
       - name: Build the web Storybook
         run: pnpm turbo run build-storybook --filter=@keylow/web --only
 
+  # The two Playwright specs of the web app (apps/web/e2e) against a real local Supabase stack: the
+  # sign-up and sign-in walk, and the recipe library walk. Nothing else drives the web app in a
+  # browser, so a broken route or a renamed link goes unseen without it. It runs for the same changes
+  # as `web`, which already covers everything the app imports (core, api-client, db with its
+  # migrations and seeds, tokens), and on every full run. A pull request that touches only the mobile
+  # app skips it.
+  # The stack starts the same way as in `db`, in the background while the install runs. No function is
+  # served, because neither spec calls one. The specs sign up with a new address each run and never
+  # reset the stack, so nothing needs cleaning up. config.toml already has sign-up open and email
+  # confirmation off, and the seeds hold the foods the recipe walk searches.
+  # Playwright starts the dev server itself (playwright.config.ts) and reads the stack's URL and
+  # anon key from the environment, as `.env.example` describes. Only Chromium is installed. Its
+  # download is cached under the Playwright version, and the system libraries are installed on every
+  # run because they live outside the cache. Pull requests only restore the cache and a push to main
+  # saves it, as for the other caches (see the header).
+  web-e2e:
+    needs: scope
+    if: needs.scope.outputs.web == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # packages: read lets the job's token log in to GitHub's registry below.
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v7
+      - uses: supabase/setup-cli@v3
+        with:
+          version: 2.106.0
+      - name: Log in to GitHub's registry
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: echo "$GITHUB_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+      # The same start as the `db` job (see the comments there for the pull from GitHub's registry and
+      # the switched off services). Only postgres-meta v0.96.6 is pulled by hand, which is the image
+      # `supabase start` runs for the meta service. The images this job never runs (edge-runtime,
+      # pg_prove, the postgres-meta that type generation uses) are left out.
+      - name: Start the local Supabase stack in the background
+        id: start
+        working-directory: packages/db
+        env:
+          SUPABASE_REALTIME_ENABLED: "false"
+          SUPABASE_STORAGE_ENABLED: "false"
+        run: |
+          nohup bash -c '
+            (
+              set -e
+              echo "$(date +%T) pulling the image"
+              for try in 1 2 3 4 5; do docker pull ghcr.io/supabase/postgres-meta:v0.96.6 && break; sleep $((try * 5)); done
+              docker tag ghcr.io/supabase/postgres-meta:v0.96.6 public.ecr.aws/supabase/postgres-meta:v0.96.6
+              echo "$(date +%T) starting the stack"
+              supabase start -x edge-runtime,imgproxy,logflare,mailpit,realtime,storage-api,studio,vector
+              echo "$(date +%T) the stack has started"
+            )
+            echo $? > "$RUNNER_TEMP/supabase-start.status.tmp"
+            mv "$RUNNER_TEMP/supabase-start.status.tmp" "$RUNNER_TEMP/supabase-start.status"
+          ' > "$RUNNER_TEMP/supabase-start.log" 2>&1 &
+      - uses: ./.github/actions/setup
+      - name: Find the Playwright version
+        id: playwright
+        run: echo "version=$(pnpm --filter @keylow/web exec playwright --version | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')" >> "$GITHUB_OUTPUT"
+      - name: Restore the Chromium download
+        id: browser-cache
+        uses: actions/cache/restore@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-chromium-${{ steps.playwright.outputs.version }}
+      - name: Install Chromium and its system libraries
+        if: steps.browser-cache.outputs.cache-hit != 'true'
+        run: pnpm --filter @keylow/web exec playwright install --with-deps chromium
+      - name: Install the system libraries of Chromium
+        if: steps.browser-cache.outputs.cache-hit == 'true'
+        run: pnpm --filter @keylow/web exec playwright install-deps chromium
+      - name: Save the Chromium download
+        if: github.event_name == 'push' && steps.browser-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-chromium-${{ steps.playwright.outputs.version }}
+      # Bounded at ten minutes. Prints the start log either way, so a failed pull or start is explained.
+      - name: Wait for the Supabase stack
+        id: stack
+        if: ${{ !cancelled() && steps.start.outcome == 'success' }}
+        run: |
+          for attempt in $(seq 1 300); do
+            if [ -f "$RUNNER_TEMP/supabase-start.status" ]; then
+              break
+            fi
+            sleep 2
+          done
+          cat "$RUNNER_TEMP/supabase-start.log"
+          status=$(cat "$RUNNER_TEMP/supabase-start.status" 2>/dev/null || echo "no status after ten minutes")
+          if [ "$status" != "0" ]; then
+            echo "The Supabase stack did not start: $status."
+            exit 1
+          fi
+      # The CLI is the one place that knows the key of the local stack.
+      - name: Point the web app at the stack
+        id: env
+        if: ${{ !cancelled() && steps.stack.outcome == 'success' }}
+        working-directory: packages/db
+        run: |
+          key=$(supabase status --output env | sed -n 's/^ANON_KEY="\(.*\)"$/\1/p')
+          if [ -z "$key" ]; then
+            echo "The stack reported no anon key."
+            exit 1
+          fi
+          echo "NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321" >> "$GITHUB_ENV"
+          echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$key" >> "$GITHUB_ENV"
+      - name: Run the web Playwright specs
+        if: ${{ !cancelled() && steps.env.outcome == 'success' }}
+        run: pnpm --filter @keylow/web test:e2e
+      - name: Print the state of the stack
+        if: ${{ failure() && steps.stack.outcome == 'success' }}
+        run: |
+          free -m || true
+          docker ps -a --format '{{.Names}} {{.Status}}' || true
+
   # The required check. It always runs, so a pull request whose other jobs were skipped still gets a
   # result. A skipped job passes. A failed or cancelled job, or a result this script does not know,
   # fails it. When a job is missing from `needs` it is not checked, so add each new job to the list.
   checks:
-    needs: [scope, core, lockfile, functions, db, mobile, web, web-storybook]
+    needs: [scope, core, lockfile, functions, db, mobile, web, web-storybook, web-e2e]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5

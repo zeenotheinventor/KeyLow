@@ -1,5 +1,5 @@
 import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ChatMessage } from "@/components/ui/ChatMessage";
 
@@ -54,16 +54,124 @@ describe("ChatMessage", () => {
       expect(screen.getByText("Rest")).toBeTruthy();
     });
 
-    it("should draw a table's rows as plain lines until it has a table of its own", () => {
-      render(
-        <ChatMessage
-          {...assistantProps}
-          paragraphs={["| Food | kcal |\n| --- | --- |\n| Toast | 88 |\n| Egg | 72 |"]}
-        />,
-      );
+    describe("a table", () => {
+      const tableMarkdown = "| Food | kcal |\n| --- | --- |\n| Toast | 88 |\n| Egg | 72 |";
 
-      expect(screen.getByText("Toast · 88")).toBeTruthy();
-      expect(screen.getByText("Egg · 72")).toBeTruthy();
+      afterEach(() => {
+        vi.restoreAllMocks();
+      });
+
+      it("should draw its headings and cells", () => {
+        render(<ChatMessage {...assistantProps} paragraphs={[tableMarkdown]} />);
+
+        expect(screen.getByText("Food")).toBeTruthy();
+        expect(screen.getByText("kcal")).toBeTruthy();
+        expect(screen.getByText("Toast")).toBeTruthy();
+        expect(screen.getByText("72")).toBeTruthy();
+      });
+
+      it("should be read once in the message's name, a sentence a row", () => {
+        render(<ChatMessage {...assistantProps} paragraphs={["Your day.", tableMarkdown]} />);
+
+        expect(
+          screen.getByRole("group", {
+            name: "Assistant: Your day. Table, 2 rows. Toast, kcal 88. Egg, kcal 72.",
+          }),
+        ).toBeTruthy();
+      });
+
+      it("should hide the words around it from a screen reader, which reads them in the name", () => {
+        render(<ChatMessage {...assistantProps} paragraphs={["Your day.", tableMarkdown]} />);
+
+        expect(screen.getByText("Your day.").closest("[aria-hidden='true']")).not.toBeNull();
+      });
+
+      it("should hide the lines under a table from a screen reader, which reads them in the name", () => {
+        render(
+          <ChatMessage
+            {...assistantProps}
+            paragraphs={[tableMarkdown]}
+            citation="Based on 38 entries"
+            estimate={{ badgeLabel: "Estimate", label: "Trend weight is an estimate" }}
+            stoppedLabel="Stopped when you closed the assistant"
+          />,
+        );
+
+        for (const line of [
+          "Based on 38 entries",
+          "Trend weight is an estimate",
+          "Stopped when you closed the assistant",
+        ]) {
+          expect(screen.getByText(line).closest("[aria-hidden='true']")).not.toBeNull();
+        }
+      });
+
+      it("should leave the lines of a message with no table to a screen reader", () => {
+        render(
+          <ChatMessage
+            {...assistantProps}
+            paragraphs={["Hello."]}
+            citation="Based on 38 entries"
+          />,
+        );
+
+        expect(screen.getByText("Based on 38 entries").closest("[aria-hidden='true']")).toBeNull();
+      });
+
+      it("should name its scroll region by its rows when wider than the reply", () => {
+        vi.spyOn(HTMLElement.prototype, "scrollWidth", "get").mockReturnValue(900);
+        vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(300);
+        render(<ChatMessage {...assistantProps} paragraphs={[tableMarkdown]} />);
+
+        expect(screen.getByRole("region", { name: "Table, 2 rows." })).toBeTruthy();
+      });
+
+      it("should name one row as a row", () => {
+        vi.spyOn(HTMLElement.prototype, "scrollWidth", "get").mockReturnValue(900);
+        vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(300);
+        render(
+          <ChatMessage
+            {...assistantProps}
+            paragraphs={["| Food | kcal |\n| --- | --- |\n| Toast | 88 |"]}
+          />,
+        );
+
+        expect(screen.getByRole("region", { name: "Table, 1 row." })).toBeTruthy();
+      });
+
+      it("should hold the next row back and put the caret in an empty row while it arrives", () => {
+        vi.spyOn(HTMLElement.prototype, "scrollWidth", "get").mockReturnValue(900);
+        vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(300);
+        render(
+          <ChatMessage
+            {...assistantProps}
+            isStreaming
+            paragraphs={["| Food | kcal |\n| --- | --- |\n| Toast | 88 |\n| Egg | 7"]}
+          />,
+        );
+
+        expect(screen.getByRole("region", { name: "Table, 1 row." })).toBeTruthy();
+        expect(screen.queryByText("Egg")).toBeNull();
+        const grid = screen.getByText("Food").closest("[aria-hidden='true']");
+        // Two columns: the headings, one row, then the empty row that holds the caret.
+        expect(grid?.children).toHaveLength(6);
+        expect(grid?.children[4]?.querySelector("[aria-hidden='true']")).not.toBeNull();
+      });
+
+      it("should put the caret after the words that follow the table", () => {
+        render(
+          <ChatMessage
+            {...assistantProps}
+            isStreaming
+            paragraphs={[`${tableMarkdown}\n\nThat is`]}
+          />,
+        );
+
+        expect(screen.getByText("That is").querySelector("[aria-hidden='true']")).not.toBeNull();
+        const grid = screen.getByText("Food").closest("[aria-hidden='true']");
+        expect(grid?.children).toHaveLength(6);
+        expect(grid?.querySelector("[aria-hidden='true']")).toBeNull();
+      });
     });
 
     it("should draw the stopped line under a reply that was cut short", () => {

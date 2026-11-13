@@ -28,7 +28,9 @@ import {
   signInDiaryClient,
   SIGNED_IN_USER_ID,
 } from "./support/diaryBackend";
+import { secureStoreItems } from "./support/diaryCacheStoresFake";
 import { DIARY_CACHE_MAX_AGE_MS, DIARY_CACHE_STORAGE_KEY } from "../lib/diaryCache/constants";
+import { createDiaryCacheStorage } from "../lib/diaryCache/createDiaryCacheStorage";
 
 import type {
   AcceptedSuggestionRow,
@@ -45,6 +47,19 @@ jest.mock("@react-native-async-storage/async-storage", () => ({
     "@react-native-async-storage/async-storage/jest/async-storage-mock",
   ),
 }));
+jest.mock(
+  "expo-secure-store",
+  () =>
+    jest.requireActual<{ secureStoreFake: unknown }>("./support/diaryCacheStoresFake")
+      .secureStoreFake,
+);
+jest.mock(
+  "expo-crypto",
+  () => jest.requireActual<{ cryptoFake: unknown }>("./support/diaryCacheStoresFake").cryptoFake,
+);
+
+// What the app stores is ciphertext, so a test reads and writes the cache through the same storage the app uses.
+const storedCache = createDiaryCacheStorage();
 
 // Both moments are on 17 October in London (BST), so they share the key of the start day.
 const MORNING = "2026-10-17T07:00:00Z";
@@ -223,7 +238,7 @@ async function renderCache(
 }
 
 async function storedQueryHashes(): Promise<string[]> {
-  const text = await AsyncStorage.getItem(DIARY_CACHE_STORAGE_KEY);
+  const text = await storedCache.getItem(DIARY_CACHE_STORAGE_KEY);
 
   return text === null ? [] : parseStoredCache(text).clientState.queries.map((q) => q.queryHash);
 }
@@ -260,6 +275,7 @@ describe("the training reads in the persisted cache", () => {
     jest.useFakeTimers();
     resetDiaryBackend();
     await AsyncStorage.clear();
+    secureStoreItems.clear();
     await signInDiaryClient();
     await act(() => {
       onlineManager.setOnline(false);
@@ -297,7 +313,7 @@ describe("the training reads in the persisted cache", () => {
     it("should keep the accepted suggestions as rows, with nothing worked out from them", async () => {
       await storeTheTrainingReadsAndCloseTheApp(<View />);
 
-      const stored = parseStoredCache((await AsyncStorage.getItem(DIARY_CACHE_STORAGE_KEY)) ?? "");
+      const stored = parseStoredCache((await storedCache.getItem(DIARY_CACHE_STORAGE_KEY)) ?? "");
       const acceptedQuery = stored.clientState.queries.find(
         ({ queryHash }) => queryHash === hashKey(keys.training.acceptedSuggestions(WEEK_START)),
       );
@@ -311,7 +327,7 @@ describe("the training reads in the persisted cache", () => {
     it("should keep the goal row as it is, and not the goal history", async () => {
       await storeTheTrainingReadsAndCloseTheApp(<View />);
 
-      const stored = parseStoredCache((await AsyncStorage.getItem(DIARY_CACHE_STORAGE_KEY)) ?? "");
+      const stored = parseStoredCache((await storedCache.getItem(DIARY_CACHE_STORAGE_KEY)) ?? "");
       const goalQuery = stored.clientState.queries.find(
         ({ queryHash }) => queryHash === hashKey(keys.training.goals),
       );
@@ -349,7 +365,8 @@ describe("the training reads in the persisted cache", () => {
     it("should store no status worked out from the goal's priorities", async () => {
       await storeTheTrainingReadsAndCloseTheApp(<StatusOfTheAbs now={MORNING} />);
 
-      const text = (await AsyncStorage.getItem(DIARY_CACHE_STORAGE_KEY)) ?? "";
+      const text = (await storedCache.getItem(DIARY_CACHE_STORAGE_KEY)) ?? "";
+      expect(text).not.toBe("");
       expect(text).not.toContain("not_trained");
       expect(text).not.toContain("volumeStatus");
     });
@@ -429,9 +446,9 @@ describe("the training reads in the persisted cache", () => {
   describe("how old the training reads may be", () => {
     it("should drop a week of sessions stored more than a week ago, and keep the others", async () => {
       await storeTheTrainingReadsAndCloseTheApp(<View />);
-      const text = await AsyncStorage.getItem(DIARY_CACHE_STORAGE_KEY);
+      const text = await storedCache.getItem(DIARY_CACHE_STORAGE_KEY);
       const stored = parseStoredCache(text ?? "");
-      await AsyncStorage.setItem(
+      await storedCache.setItem(
         DIARY_CACHE_STORAGE_KEY,
         JSON.stringify({
           ...stored,
@@ -461,8 +478,8 @@ describe("the training reads in the persisted cache", () => {
   describe("a cache saved before the goal was kept", () => {
     it("should show heat and the body map as with no goal, with no connection", async () => {
       await storeTheTrainingReadsAndCloseTheApp(<View />);
-      const stored = parseStoredCache((await AsyncStorage.getItem(DIARY_CACHE_STORAGE_KEY)) ?? "");
-      await AsyncStorage.setItem(
+      const stored = parseStoredCache((await storedCache.getItem(DIARY_CACHE_STORAGE_KEY)) ?? "");
+      await storedCache.setItem(
         DIARY_CACHE_STORAGE_KEY,
         JSON.stringify({
           ...stored,
