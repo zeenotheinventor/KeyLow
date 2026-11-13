@@ -42,12 +42,12 @@ export const AssistantRecipeDraftEntry = memo(function AssistantRecipeDraftEntry
   const draftKey = useMemo(() => recipeDraftKeyOf(draft), [draft]);
   // Whether the card is still on screen, so a save that finishes after it has gone opens nothing.
   const isMounted = useRef(true);
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    isMounted.current = true;
+    return () => {
       isMounted.current = false;
-    },
-    [],
-  );
+    };
+  }, []);
   const savedRecipeId = useSyncExternalStore(subscribeRecipePrefill, () =>
     savedRecipeIdOfDraft(draftKey),
   );
