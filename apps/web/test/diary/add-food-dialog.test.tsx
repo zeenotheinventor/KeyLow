@@ -13,6 +13,13 @@ import type { Food, FoodPortion } from "@keylow/core/schemas";
 import { AddFoodDialog } from "@/components/diary/AddFoodDialog";
 import { ToastProvider } from "@/components/ui/Toast";
 
+// The Diary is the page, so a logged plate has nowhere to go.
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn() }),
+  usePathname: () => "/diary",
+  useSearchParams: () => new URLSearchParams(),
+}));
+
 const CHICKEN_ID = "11111111-1111-4111-8111-111111111111";
 const RICE_ID = "11111111-1111-4111-8111-222222222222";
 const SOUP_ID = "11111111-1111-4111-8111-333333333333";

@@ -15,6 +15,13 @@ import type { FoodWithPortionsState, RecipeSummary } from "@keylow/api-client";
 
 import { AddFoodDialog } from "@/components/diary/AddFoodDialog";
 
+// The Diary is the page, so a logged plate has nowhere to go.
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn() }),
+  usePathname: () => "/diary",
+  useSearchParams: () => new URLSearchParams(),
+}));
+
 const food = makeFood({ name: "Porridge oats" });
 const golden = buildChickenAndRiceRecipe({ servings: 4, yieldGrams: 1100 });
 const recipe: RecipeSummary = summaryOfStoredRecipe({

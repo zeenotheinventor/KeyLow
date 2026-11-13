@@ -66,6 +66,7 @@ vi.mock("@keylow/api-client", async (importOriginal) => ({
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
   usePathname: () => "/diary",
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 function renderDialog() {

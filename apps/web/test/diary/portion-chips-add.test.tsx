@@ -26,6 +26,13 @@ import type { Food, FoodPortion } from "@keylow/core/schemas";
 import { AddFoodDialog } from "@/components/diary/AddFoodDialog";
 import { ToastProvider } from "@/components/ui/Toast";
 
+// The Diary is the page, so a logged plate has nowhere to go.
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn() }),
+  usePathname: () => "/diary",
+  useSearchParams: () => new URLSearchParams(),
+}));
+
 type Api = {
   foods: Map<string, Food>;
   portions: Map<string, FoodPortion[]>;
