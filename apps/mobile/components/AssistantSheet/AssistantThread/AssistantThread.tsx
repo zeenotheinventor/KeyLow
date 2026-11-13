@@ -2,6 +2,7 @@ import { ASSISTANT_SHEET, ASSISTANT_STOPPED, describeAssistantNotice } from "@ke
 
 import { AssistantLinkRow, AssistantNotice, ChatMessage, ChipGroup } from "../../ui";
 import { AssistantCardEntry } from "../AssistantCardEntry";
+import { AssistantRecipeCompareEntry } from "../AssistantRecipeCompareEntry";
 import { AssistantRecipeDraftEntry } from "../AssistantRecipeDraftEntry";
 import { ConfirmButtons } from "../ConfirmButtons";
 import { ExerciseFormEntry } from "../ExerciseFormEntry";
@@ -69,6 +70,15 @@ export function AssistantThread({
             draft={entry.draft}
             key={entry.key}
             onAdjust={onAdjustRecipe}
+            onOpenEditor={onOpenRecipeEditor}
+            onOpenSavedRecipe={onOpenSavedRecipe}
+          />
+        );
+      case "recipeCompare":
+        return (
+          <AssistantRecipeCompareEntry
+            draft={entry.draft}
+            key={entry.key}
             onOpenEditor={onOpenRecipeEditor}
             onOpenSavedRecipe={onOpenSavedRecipe}
           />

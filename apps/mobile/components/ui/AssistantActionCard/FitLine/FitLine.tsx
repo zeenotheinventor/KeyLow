@@ -1,7 +1,7 @@
 import { View } from "react-native";
 
-import { Icon } from "../../../Icon";
-import { Text } from "../../../Text";
+import { Icon } from "../../Icon";
+import { Text } from "../../Text";
 
 import type { FitLineProps } from "./types";
 

@@ -13,6 +13,7 @@ import {
   describeLogsAt,
 } from "../copy/assistantSheet";
 
+import type { AdjustmentDraft } from "./adjustmentDraft";
 import type { AssistantCard, AssistantCardLink } from "./card";
 import type { AssistantOpenedFrom } from "./describeInLog";
 import type { AssistantStatus } from "./events";
@@ -110,10 +111,16 @@ export type AssistantSheetEntry =
       exercise: AssistantExerciseFormMedia;
     }
   | {
-      /** A recipe the assistant suggested, the card with its figures, ingredients and Save to recipes (`assistant-card · recipe-draft`). An adjustment has no entry here, its compare card is a screen of its own. */
+      /** A recipe the assistant suggested, the card with its figures, ingredients and Save to recipes (`assistant-card · recipe-draft`). */
       kind: "recipeDraft";
       key: string;
       draft: SuggestionDraft;
+    }
+  | {
+      /** A saved recipe the assistant changed, the compare card with its before and after and Save as new recipe (`assistant-card · recipe-compare`). */
+      kind: "recipeCompare";
+      key: string;
+      draft: AdjustmentDraft;
     }
   | {
       /** A link on its own, a line that opens what the answer is about (`assistant-card · routine-updated`, Removing a day). */
@@ -358,9 +365,7 @@ function storedEntries(items: readonly AssistantThreadItem[], isAllAnswered = fa
         entries.push({ kind: "exerciseFormMedia", key: item.id, exercise: item.exercise });
         break;
       case "recipe_draft":
-        if (item.draft.variant === "suggestion") {
-          entries.push({ kind: "recipeDraft", key: item.id, draft: item.draft });
-        }
+        entries.push(recipeEntryOf(item.id, item.draft));
         break;
       case "link":
         entries.push({ kind: "link", key: item.id, link: item.link });
@@ -458,9 +463,7 @@ function sentEntries(
     });
   }
   for (const [position, draft] of (live.recipeDrafts ?? []).entries()) {
-    if (draft.variant === "suggestion") {
-      entries.push({ kind: "recipeDraft", key: `sent:recipeDraft:${position}`, draft });
-    }
+    entries.push(recipeEntryOf(`sent:recipeDraft:${position}`, draft));
   }
   if (live.link !== undefined && live.link !== null) {
     entries.push({ kind: "link", key: "sent:link", link: live.link });
@@ -486,6 +489,13 @@ const liftsAt = (notice: DescribableAssistantNotice): string | null =>
 const isSameNotice = (first: DescribableAssistantNotice, second: DescribableAssistantNotice) =>
   first.code === second.code && liftsAt(first) === liftsAt(second);
 
+// A suggestion is the draft card and an adjustment is the compare card.
+function recipeEntryOf(key: string, draft: AssistantRecipeDraft): AssistantSheetEntry {
+  return draft.variant === "adjustment"
+    ? { kind: "recipeCompare", key, draft }
+    : { kind: "recipeDraft", key, draft };
+}
+
 // The cards of the muscles and the form media come after the reply, so a reply that was cut short is the entry before them.
 function lastEntryBeforeCards(
   entries: readonly AssistantSheetEntry[],
@@ -495,7 +505,8 @@ function lastEntryBeforeCards(
     if (
       entry?.kind !== "exerciseMuscles" &&
       entry?.kind !== "exerciseFormMedia" &&
-      entry?.kind !== "recipeDraft"
+      entry?.kind !== "recipeDraft" &&
+      entry?.kind !== "recipeCompare"
     ) {
       return entry;
     }
@@ -619,7 +630,8 @@ export function buildAssistantSheetThread({
         (entry) =>
           entry.kind === "exerciseMuscles" ||
           entry.kind === "exerciseFormMedia" ||
-          entry.kind === "recipeDraft",
+          entry.kind === "recipeDraft" ||
+          entry.kind === "recipeCompare",
       ),
   };
 }

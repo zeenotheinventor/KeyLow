@@ -139,6 +139,11 @@ function Row({ row }: { row: AssistantActionCardRow }) {
       {row.match === "matched" ? (
         <Icon label={row.matchLabel} name="Check" size="sm" tone="success" />
       ) : null}
+      {row.changeLabel === undefined ? null : (
+        <View className="shrink-0">
+          <Badge tone="accent">{row.changeLabel}</Badge>
+        </View>
+      )}
       {isUnresolved ? (
         // The badge is `self-start`, so the wrapper lets the row centre it, as a list row does.
         <View className="shrink-0">

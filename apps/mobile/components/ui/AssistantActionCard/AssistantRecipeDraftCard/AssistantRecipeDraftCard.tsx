@@ -5,7 +5,7 @@ import { Button } from "../../Button";
 import { Icon } from "../../Icon";
 import { Text } from "../../Text";
 import { AssistantActionCard } from "../AssistantActionCard";
-import { FitLine } from "./FitLine";
+import { FitLine } from "../FitLine";
 import { TargetFigures } from "./TargetFigures";
 
 import type { AssistantRecipeDraftCardProps } from "./types";

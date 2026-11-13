@@ -16,6 +16,8 @@ type AssistantActionCardRowWords = {
   value?: string | undefined;
   /** The words of the Estimate badge, drawn beside the detail. Only a line whose amount was estimated sets it. */
   estimateLabel?: string | undefined;
+  /** The words of an accent badge at the right of the row, such as "Changed" on a line a recipe adjustment changed. */
+  changeLabel?: string | undefined;
 };
 
 /**
