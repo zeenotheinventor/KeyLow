@@ -1044,4 +1044,279 @@ describe("the assistant panel", () => {
       expect(screen.getByText("Based on 24 weigh-ins, 21 Sep to 18 Oct")).toBeTruthy();
     });
   });
+
+  describe("older turns", () => {
+    // 45 stored turns, so the panel opens on the newest 20 and two older pages follow. "Question 44" is the newest.
+    const storeFortyFiveTurns = () => {
+      panelBackend.storedTurns = Array.from({ length: 45 }, (_unused, index) => ({
+        userText: `Question ${index}`,
+        assistantText: `Answer ${index}`,
+      }));
+    };
+
+    // jsdom has no layout, so a message is 100 tall above a 1000 base in a 400 window, and every write to the
+    // thread's scroll position is kept. It is set on the element's prototype, so it is in place before the
+    // thread first draws, and only the thread (the log) is changed.
+    const MESSAGE_HEIGHT = 100;
+    const PLACEHOLDER_BONES_HEIGHT = 220;
+    // A browser fires the scroll event on a later frame, not in the write.
+    const SCROLL_EVENT_DELAY_MS = 20;
+    let restoreThreadSize = () => {};
+    afterEach(() => {
+      restoreThreadSize();
+    });
+
+    const sizeGrowingThreads = ({ base = 1000, messageHeight = MESSAGE_HEIGHT } = {}) => {
+      let top = 0;
+      const writes: number[] = [];
+      // Scroll events the writes have caused that were not yet fired.
+      let pendingScrollEvents = 0;
+      const isThread = (element: Element) => element.getAttribute("role") === "log";
+      // The placeholder's bones show a moment after it does, and are 220 tall.
+      const heightOf = (thread: Element) =>
+        base +
+        messageHeight * thread.querySelectorAll('[role="group"]').length +
+        (thread.querySelector('[role="status"]')?.childElementCount ? PLACEHOLDER_BONES_HEIGHT : 0);
+      const originals = {
+        scrollHeight: Object.getOwnPropertyDescriptor(Element.prototype, "scrollHeight"),
+        clientHeight: Object.getOwnPropertyDescriptor(Element.prototype, "clientHeight"),
+        scrollTop: Object.getOwnPropertyDescriptor(Element.prototype, "scrollTop"),
+      };
+      Object.defineProperties(Element.prototype, {
+        scrollHeight: {
+          configurable: true,
+          get(this: Element) {
+            return isThread(this) ? heightOf(this) : 0;
+          },
+        },
+        clientHeight: {
+          configurable: true,
+          get(this: Element) {
+            return isThread(this) ? 400 : 0;
+          },
+        },
+        scrollTop: {
+          configurable: true,
+          get(this: Element) {
+            return isThread(this) ? top : 0;
+          },
+          set(this: Element, next: number) {
+            if (isThread(this)) {
+              const isMoved = next !== top;
+              top = next;
+              writes.push(next);
+              // A browser says so, after the write, when the write moved the thread.
+              if (isMoved) {
+                pendingScrollEvents += 1;
+                setTimeout(() => {
+                  pendingScrollEvents -= 1;
+                  this.dispatchEvent(new Event("scroll"));
+                }, SCROLL_EVENT_DELAY_MS);
+              }
+            }
+          },
+        },
+      });
+      restoreThreadSize = () => {
+        Object.entries(originals).forEach(([name, descriptor]) => {
+          if (descriptor !== undefined) {
+            Object.defineProperty(Element.prototype, name, descriptor);
+          }
+        });
+      };
+      // The person's own scroll moves the thread and says so, and is not one of the panel's writes.
+      const scrollUpTo = (next: number) => {
+        top = next;
+        act(() => {
+          screen.getByRole("log").dispatchEvent(new Event("scroll"));
+        });
+      };
+      // A scroll event reads where the thread is when it fires, so one still to come would read the person's
+      // scroll as its own position. A test waits for them before it scrolls.
+      const settleScrollEvents = () =>
+        waitFor(() => {
+          expect(pendingScrollEvents).toBe(0);
+        });
+      return {
+        writes,
+        scrollUpTo,
+        settleScrollEvents,
+        heightNow: () => heightOf(screen.getByRole("log")),
+        topNow: () => top,
+      };
+    };
+
+    async function openOnFortyFiveTurns(size?: { base: number; messageHeight: number }) {
+      storeFortyFiveTurns();
+      const sized = sizeGrowingThreads(size);
+      const user = userEvent.setup();
+      await renderApp();
+      await user.click(assistantButton());
+      await screen.findByText("Question 44");
+      await sized.settleScrollEvents();
+      return sized;
+    }
+
+    it("should open at the newest message, 20 turns of 45", async () => {
+      const { writes, heightNow } = await openOnFortyFiveTurns();
+
+      expect(writes.at(-1)).toBe(heightNow());
+      expect(screen.getByText("Question 25")).toBeTruthy();
+      expect(screen.queryByText("Question 24")).toBeNull();
+      expect(panelBackend.olderPageRequests).toBe(0);
+    });
+
+    it("should load the next 20 when the person scrolls to within 300 px of the top", async () => {
+      const { scrollUpTo } = await openOnFortyFiveTurns();
+
+      scrollUpTo(300);
+
+      await screen.findByText("Question 5");
+      expect(screen.getByText("Question 24")).toBeTruthy();
+      expect(screen.queryByText("Question 4")).toBeNull();
+      expect(panelBackend.olderPageRequests).toBe(1);
+    });
+
+    it("should not load older turns while the person is further than 300 px from the top", async () => {
+      const { scrollUpTo } = await openOnFortyFiveTurns();
+
+      scrollUpTo(301);
+      // A read would have started by now, and a negative needs the time to pass.
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      });
+
+      expect(panelBackend.olderPageRequests).toBe(0);
+    });
+
+    it("should not load older turns from the panel's own scroll to the end", async () => {
+      const { writes } = await openOnFortyFiveTurns();
+
+      expect(writes.length).toBeGreaterThan(0);
+      expect(panelBackend.olderPageRequests).toBe(0);
+    });
+
+    it("should show the loading placeholder above the turns while older ones load, and then take it away", async () => {
+      let release = () => {};
+      panelBackend.olderPageGate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const { scrollUpTo } = await openOnFortyFiveTurns();
+
+      scrollUpTo(100);
+
+      const placeholder = await screen.findByRole("status", { name: ASSISTANT_SHEET.openingLabel });
+      expect(
+        within(screen.getByRole("log")).getByRole("status", { name: ASSISTANT_SHEET.openingLabel }),
+      ).toBe(placeholder);
+      release();
+      await screen.findByText("Question 5");
+      expect(screen.queryByRole("status", { name: ASSISTANT_SHEET.openingLabel })).toBeNull();
+    });
+
+    it("should not load twice while a page is loading", async () => {
+      let release = () => {};
+      panelBackend.olderPageGate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const { scrollUpTo } = await openOnFortyFiveTurns();
+
+      scrollUpTo(100);
+      await screen.findByRole("status", { name: ASSISTANT_SHEET.openingLabel });
+      scrollUpTo(50);
+      scrollUpTo(10);
+      release();
+      await screen.findByText("Question 5");
+
+      expect(panelBackend.olderPageRequests).toBe(1);
+    });
+
+    it("should keep the view where it was when the older turns arrive above it", async () => {
+      let release = () => {};
+      panelBackend.olderPageGate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const { scrollUpTo, topNow, heightNow } = await openOnFortyFiveTurns();
+      scrollUpTo(100);
+      await screen.findByRole("status", { name: ASSISTANT_SHEET.openingLabel });
+      const distanceFromBottomWhileLoading = heightNow() - 400 - topNow();
+
+      release();
+      await screen.findByText("Question 5");
+
+      expect(heightNow() - 400 - topNow()).toBe(distanceFromBottomWhileLoading);
+    });
+
+    it("should keep the distance from the bottom across the placeholder appearing", async () => {
+      panelBackend.olderPageGate = new Promise<void>(() => {});
+      const { scrollUpTo, topNow, heightNow } = await openOnFortyFiveTurns();
+      const distanceBefore = heightNow() - 400 - 100;
+
+      scrollUpTo(100);
+      await screen.findByRole("status", { name: ASSISTANT_SHEET.openingLabel });
+
+      expect(heightNow() - 400 - topNow()).toBe(distanceBefore);
+    });
+
+    it("should keep the view in place when the placeholder's bones show, after it did", async () => {
+      const resizeCallbacks: Array<() => void> = [];
+      vi.stubGlobal(
+        "ResizeObserver",
+        class {
+          constructor(callback: () => void) {
+            resizeCallbacks.push(callback);
+          }
+          observe() {}
+          unobserve() {}
+          disconnect() {}
+        },
+      );
+      panelBackend.olderPageGate = new Promise<void>(() => {});
+      const { scrollUpTo, topNow, heightNow } = await openOnFortyFiveTurns();
+      scrollUpTo(100);
+      const placeholder = await screen.findByRole("status", { name: ASSISTANT_SHEET.openingLabel });
+      const distanceBeforeBones = heightNow() - 400 - topNow();
+
+      await waitFor(() => {
+        expect(placeholder.childElementCount).toBeGreaterThan(0);
+      });
+      act(() => {
+        resizeCallbacks.forEach((callback) => {
+          callback();
+        });
+      });
+
+      expect(heightNow() - 400 - topNow()).toBe(distanceBeforeBones);
+    });
+
+    it("should not read the panel's own scroll to the end as the person's, though it is at the top", async () => {
+      // A thread of 200 in a 400 window, so the end the panel scrolls to is within 300 px of the top.
+      await openOnFortyFiveTurns({ base: 200, messageHeight: 0 });
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      });
+
+      expect(panelBackend.olderPageRequests).toBe(0);
+    });
+
+    it("should stop following the end when the person scrolls near the top, though the end is within reach", async () => {
+      let release = () => {};
+      panelBackend.olderPageGate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      // A thread of 400 in a 400 window, so the top is also the end, and 1 per message grows it when turns load.
+      const { scrollUpTo, topNow, heightNow } = await openOnFortyFiveTurns({
+        base: 360,
+        messageHeight: 1,
+      });
+      scrollUpTo(0);
+      await screen.findByRole("status", { name: ASSISTANT_SHEET.openingLabel });
+
+      release();
+      await screen.findByText("Question 5");
+
+      // Still where the person was, with the thread's end where it was, not carried to the new end.
+      expect(heightNow() - 400 - topNow()).toBe(0);
+    });
+  });
 });

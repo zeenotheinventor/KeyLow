@@ -33,12 +33,25 @@ const deviceTimeZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
 // How far from the end of the thread, in px, the person can scroll and still be reading the end of it.
 const NEAR_THE_END_DISTANCE = 40;
 
+// How far from the top of the thread, in px, a scroll of the person's own starts loading older turns.
+const NEAR_THE_TOP_DISTANCE = 300;
+
 // The thread grows up from the composer once there is a conversation, and starts at the top when it is the
 // empty state's words or the consent card.
 const threadClassNames = {
   conversation: "mt-auto",
   empty: "",
 } as const;
+
+type ThreadLayout = { scrollHeight: number; firstKey: string | undefined; isLoading: boolean };
+
+// Moves the thread to `top`, and says where it ended up when that moved it, or null when it was already there
+// (no scroll event follows then).
+function writeScrollTop(element: HTMLDivElement, top: number): number | null {
+  const previousTop = element.scrollTop;
+  element.scrollTop = top;
+  return element.scrollTop === previousTop ? null : element.scrollTop;
+}
 
 /**
  * The assistant's chat panel (`web-assistant · empty`, `streaming`, `conversation`, `consent-needed`). From
@@ -63,7 +76,14 @@ export function AssistantPanel({
   // Whether a growing thread is followed to its end. It is on until the person's own scroll takes them away
   // from the end, and on again when they come back, send a message, start a new conversation or open the panel.
   const isFollowingEnd = useRef(true);
+  // The scroll position the panel itself last wrote, so the scroll event that write causes is not read as
+  // the person's own scroll. Only the person's scroll changes what is followed or loads older turns.
+  const lastWrittenTop = useRef<number | null>(null);
+  // How the thread was laid out after the last render, to keep the view in place when turns or the loading
+  // placeholder arrive above it.
+  const lastLayout = useRef<ThreadLayout | undefined>(undefined);
   const threadRef = useRef<HTMLDivElement>(null);
+  const threadContentRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const fieldRef = useRef<HTMLTextAreaElement>(null);
 
@@ -123,19 +143,78 @@ export function AssistantPanel({
     }
   }, [isOpen, isFieldShown, buttonRef]);
 
-  // The thread follows its end as it grows, unless the person scrolled up.
+  const firstKey = thread.entries[0]?.key;
+  const isLoadingOlder = chat.isLoadingOlder;
+
+  // The thread follows its end as it grows, unless the person scrolled up. Scrolled up, what arrives above
+  // the view (the loading placeholder, then the older turns) moves everything down, and the browser's own
+  // scroll anchoring is off for the thread, so the view is moved by the same height to stay on what was read.
   useLayoutEffect(() => {
-    const thread = threadRef.current;
-    if (thread !== null && isFollowingEnd.current) {
-      thread.scrollTop = thread.scrollHeight;
+    const element = threadRef.current;
+    if (element === null) {
+      return;
     }
+    const before = lastLayout.current;
+    const isAddedAbove =
+      before !== undefined && (before.firstKey !== firstKey || before.isLoading !== isLoadingOlder);
+    if (isFollowingEnd.current) {
+      lastWrittenTop.current =
+        writeScrollTop(element, element.scrollHeight) ?? lastWrittenTop.current;
+    } else if (isAddedAbove) {
+      lastWrittenTop.current =
+        writeScrollTop(element, element.scrollTop + element.scrollHeight - before.scrollHeight) ??
+        lastWrittenTop.current;
+    }
+    lastLayout.current = {
+      scrollHeight: element.scrollHeight,
+      firstKey,
+      isLoading: isLoadingOlder,
+    };
   });
 
+  // The loading placeholder's bones show a moment after it does, which grows the thread above the view
+  // without a render, so the view is moved for that growth too.
+  useEffect(() => {
+    const element = threadRef.current;
+    const content = threadContentRef.current;
+    if (element === null || content === null || typeof ResizeObserver === "undefined") {
+      return;
+    }
+    const observer = new ResizeObserver(() => {
+      const before = lastLayout.current;
+      if (before === undefined || !before.isLoading || isFollowingEnd.current) {
+        return;
+      }
+      lastWrittenTop.current =
+        writeScrollTop(element, element.scrollTop + element.scrollHeight - before.scrollHeight) ??
+        lastWrittenTop.current;
+      lastLayout.current = { ...before, scrollHeight: element.scrollHeight };
+    });
+    observer.observe(content);
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
   function readScroll() {
-    const thread = threadRef.current;
-    if (thread !== null) {
-      isFollowingEnd.current =
-        thread.scrollHeight - thread.clientHeight - thread.scrollTop <= NEAR_THE_END_DISTANCE;
+    const element = threadRef.current;
+    if (element === null) {
+      return;
+    }
+    if (lastWrittenTop.current === element.scrollTop) {
+      lastWrittenTop.current = null;
+      return;
+    }
+    lastWrittenTop.current = null;
+    isFollowingEnd.current =
+      element.scrollHeight - element.clientHeight - element.scrollTop <= NEAR_THE_END_DISTANCE;
+    // Reading up towards older turns is never followed back to the end, even in a thread short enough for
+    // the top and the end to be within reach of each other, and the turns that load must not pull the view.
+    if (chat.hasOlder && element.scrollTop <= NEAR_THE_TOP_DISTANCE) {
+      isFollowingEnd.current = false;
+      if (!chat.isLoadingOlder) {
+        chat.loadOlder();
+      }
     }
   }
 
@@ -178,7 +257,12 @@ export function AssistantPanel({
         />
       );
     }
-    return <AssistantThread thread={thread} />;
+    return (
+      <>
+        {chat.isLoadingOlder ? <AssistantOpening key="older-turns-placeholder" /> : null}
+        <AssistantThread thread={thread} />
+      </>
+    );
   }
 
   return (
@@ -216,10 +300,11 @@ export function AssistantPanel({
         ref={threadRef}
         role="log"
         aria-live="off"
-        className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-3 pt-4"
+        className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-3 pt-4 [overflow-anchor:none]"
         onScroll={readScroll}
       >
         <div
+          ref={threadContentRef}
           className={cn(
             "flex flex-col gap-3",
             threadClassNames[!isOpening && (isEmpty || isConsentNeeded) ? "empty" : "conversation"],

@@ -39,6 +39,10 @@ export const panelBackend = {
   statusRequests: 0,
   /** Holds the status route until it settles, so a test sees the panel while it is read. */
   statusGate: null as Promise<void> | null,
+  /** How many reads of an older page of turns were made. */
+  olderPageRequests: 0,
+  /** Holds the older page's read until it settles, so a test sees the thread while it loads. */
+  olderPageGate: null as Promise<void> | null,
 };
 
 export function resetPanelBackend() {
@@ -51,6 +55,8 @@ export function resetPanelBackend() {
   panelBackend.newConversationRequests = 0;
   panelBackend.statusRequests = 0;
   panelBackend.statusGate = null;
+  panelBackend.olderPageRequests = 0;
+  panelBackend.olderPageGate = null;
 }
 
 // A body that stops with an AbortError when the request's signal aborts, as the browser's `fetch` does.
@@ -96,9 +102,18 @@ function answerRows(request: Request, rows: unknown[]): Response {
     : json(row);
 }
 
+// The first turn keeps the api-client fake's id, the others are numbered after it.
+const turnIdOf = (index: number) =>
+  index === 0
+    ? FIRST_TURN_ID
+    : `00000000-0000-4000-8000-0000000001${String(index).padStart(2, "0")}`;
+
+// One minute apart, so the turns sort by time as stored ones do.
+const turnCreatedAtOf = (index: number) => new Date(Date.UTC(2026, 9, 27, 8, index)).toISOString();
+
 const storedTurnRows = () =>
   panelBackend.storedTurns.map(({ userText, assistantText }, index) => {
-    const id = index === 0 ? FIRST_TURN_ID : `00000000-0000-4000-8000-0000000000a${index + 1}`;
+    const id = turnIdOf(index);
     const messages: StoredMessage[] = [
       {
         id: `user-${index}`,
@@ -121,7 +136,7 @@ const storedTurnRows = () =>
     return {
       id,
       status: "complete",
-      created_at: `2026-10-27T0${index + 8}:00:00Z`,
+      created_at: turnCreatedAtOf(index),
       assistant_messages: messages.map((message, position) => ({
         ...message,
         conversation_id: STORED_CONVERSATION_ID,
@@ -129,6 +144,16 @@ const storedTurnRows = () =>
       })),
     };
   });
+
+/** The turns a read of a page returns: newest first, those before the cursor's time, at most `limit`. */
+function pageOfStoredTurnRows(searchParams: URLSearchParams) {
+  const cursorTime = searchParams.get("or")?.match(/created_at\.lt\."([^"]+)"/)?.[1];
+  const limit = Number(searchParams.get("limit") ?? storedTurnRows().length);
+  return storedTurnRows()
+    .filter((row) => cursorTime === undefined || row.created_at < cursorTime)
+    .reverse()
+    .slice(0, limit);
+}
 
 async function fakeFetch(input: string | URL | globalThis.Request, init?: RequestInit) {
   const request = new globalThis.Request(input, init);
@@ -187,8 +212,11 @@ async function fakeFetch(input: string | URL | globalThis.Request, init?: Reques
     );
   }
   if (pathname.endsWith("/assistant_turns")) {
-    const isOlderPage = searchParams.has("or");
-    return answerRows(request, isOlderPage ? [] : storedTurnRows());
+    if (searchParams.has("or")) {
+      panelBackend.olderPageRequests += 1;
+      await panelBackend.olderPageGate;
+    }
+    return answerRows(request, pageOfStoredTurnRows(searchParams));
   }
   if (pathname.endsWith("/assistant_actions") || pathname.endsWith("/assistant_messages")) {
     return answerRows(request, []);
