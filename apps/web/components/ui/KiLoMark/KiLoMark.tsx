@@ -7,7 +7,10 @@ const brandName = "Ki-Lo";
 // The design system's mark, a calorie ring broken by a diagonal dumbbell. Its two colours are the
 // accent and the primary text colour in both themes, so one drawing follows the theme and the
 // separate on-light file is not needed.
-function Mark({ title, className }: KiLoMarkGlyphProps) {
+function Mark({ title, className, isAnimated = false }: KiLoMarkGlyphProps) {
+  if (isAnimated) {
+    return <LoadingBar className={className} />;
+  }
   return (
     <svg
       viewBox="0 0 256 256"
@@ -29,6 +32,58 @@ function Mark({ title, className }: KiLoMarkGlyphProps) {
         <line x1={72} y1={184} x2={184} y2={72} />
         <line x1={60} y1={150} x2={106} y2={196} />
         <line x1={150} y1={60} x2={196} y2={106} />
+      </g>
+    </svg>
+  );
+}
+
+// The same drawing as the loading mark, "Loading the bar", with each part on its own animation in
+// `tailwind/animations/loading-mark.json`. The two arcs are the still mark's one dash pattern drawn as two
+// circles, the second turned to where the pattern repeats (327 units round the circle, 187.35 degrees on from
+// the first), so each can draw and erase on its own. Every part's drawing as written is the complete logo,
+// which is the loop's first frame and what reduced motion shows.
+function LoadingBar({ className }: { className: string | undefined }) {
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 256 256"
+      fill="none"
+      strokeWidth={22}
+      strokeLinecap="round"
+      className={cn("size-7 shrink-0", className)}
+    >
+      <circle
+        cx={128}
+        cy={128}
+        r={100}
+        strokeDasharray="205 1000"
+        transform="rotate(-9 128 128)"
+        className="animate-loading-arc-one stroke-accent motion-reduce:animate-none"
+      />
+      <circle
+        cx={128}
+        cy={128}
+        r={100}
+        strokeDasharray="205 1000"
+        transform="rotate(178.35 128 128)"
+        className="animate-loading-arc-two stroke-accent motion-reduce:animate-none"
+      />
+      <g className="animate-loading-knock stroke-text-primary motion-reduce:animate-none">
+        <line x1={72} y1={184} x2={184} y2={72} />
+        <line
+          x1={60}
+          y1={150}
+          x2={106}
+          y2={196}
+          className="animate-loading-plate-two motion-reduce:animate-none"
+        />
+        <line
+          x1={150}
+          y1={60}
+          x2={196}
+          y2={106}
+          className="animate-loading-plate-one motion-reduce:animate-none"
+        />
       </g>
     </svg>
   );

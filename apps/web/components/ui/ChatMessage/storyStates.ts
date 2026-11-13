@@ -9,4 +9,6 @@ export const storyStates = [
   "Formatted",
   "FormattedStreaming",
   "Table",
+  "TableFits",
+  "TableStreaming",
 ];
