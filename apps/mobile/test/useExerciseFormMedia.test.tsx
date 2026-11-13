@@ -75,10 +75,12 @@ describe("useExerciseFormMedia", () => {
       expect(result.current).toEqual({
         status: "ready",
         media: {
-          kind: "video",
-          videoId: "abcdefghijk",
-          title: "Barbell back squat, step by step",
-          channel: "Strength Basics",
+          video: {
+            videoId: "abcdefghijk",
+            title: "Barbell back squat, step by step",
+            channel: "Strength Basics",
+          },
+          photos: null,
         },
       });
     });

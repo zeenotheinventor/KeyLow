@@ -463,11 +463,16 @@ export type { GoalDraft, GoalDraftAction, GoalDraftAnswers } from "./goalDraft";
 export { priorityFigureValues } from "./priorityFigureValues";
 export { sessionHeatReadingTime } from "./sessionProgress";
 export {
+  DEFAULT_FORM_MEDIA_PREFERENCE,
+  FORM_MEDIA_PREFERENCES,
   FREE_EXERCISE_DB_COMMIT,
   exerciseFormMediaDisplayOf,
   exerciseFormMediaOf,
+  exerciseFormMediaSetOf,
   freeExerciseDbImagePathSchema,
   freeExerciseDbImageUrl,
+  formMediaPreferenceOf,
+  formMediaToShow,
   shownExerciseFormMediaSchema,
   youtubeThumbnailUrl,
   youtubeVideoIdSchema,
@@ -477,4 +482,10 @@ export type {
   ExerciseFormMedia,
   ExerciseFormMediaDisplay,
   ExerciseFormMediaRow,
+  ExerciseFormMediaSet,
+  ExerciseFormMediaToShow,
+  ExerciseFormMediaToShowDisplay,
+  ExerciseFormPhotos,
+  ExerciseFormVideo,
+  FormMediaPreference,
 } from "./formMedia";

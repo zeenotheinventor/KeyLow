@@ -51,7 +51,7 @@ describe("getExerciseFormMedia", () => {
     expect(body).toEqual({ p_exercise_id: EXERCISE_ID });
   });
 
-  it("should give the video of a row that has one", async () => {
+  it("should give both the video and the photos of a row that has both", async () => {
     answerWith([
       {
         video_id: "aB3_-xYz012",
@@ -62,37 +62,37 @@ describe("getExerciseFormMedia", () => {
     ]);
 
     await expect(getExerciseFormMedia(createTestClient(), EXERCISE_ID)).resolves.toEqual({
-      kind: "video",
-      videoId: "aB3_-xYz012",
-      title: "Barbell squat form",
-      channel: "Form Channel",
+      video: { videoId: "aB3_-xYz012", title: "Barbell squat form", channel: "Form Channel" },
+      photos: { imagePaths: ["Barbell_Squat/0.jpg", "Barbell_Squat/1.jpg"] },
     });
   });
 
-  it("should give the photos of a row with no video", async () => {
+  it("should give the photos alone for a row with no video", async () => {
     answerWith([
       { video_id: null, video_title: null, video_channel: null, image_paths: photoPaths },
     ]);
 
     await expect(getExerciseFormMedia(createTestClient(), EXERCISE_ID)).resolves.toEqual({
-      kind: "photos",
-      imagePaths: ["Barbell_Squat/0.jpg", "Barbell_Squat/1.jpg"],
+      video: null,
+      photos: { imagePaths: ["Barbell_Squat/0.jpg", "Barbell_Squat/1.jpg"] },
     });
   });
 
-  it("should give none for a custom exercise's empty paths", async () => {
+  it("should give neither for a custom exercise's empty paths", async () => {
     answerWith([{ video_id: null, video_title: null, video_channel: null, image_paths: [] }]);
 
     await expect(getExerciseFormMedia(createTestClient(), EXERCISE_ID)).resolves.toEqual({
-      kind: "none",
+      video: null,
+      photos: null,
     });
   });
 
-  it("should give none when no row comes back, as for an exercise that is not visible", async () => {
+  it("should give neither when no row comes back, as for an exercise that is not visible", async () => {
     answerWith([]);
 
     await expect(getExerciseFormMedia(createTestClient(), EXERCISE_ID)).resolves.toEqual({
-      kind: "none",
+      video: null,
+      photos: null,
     });
   });
 

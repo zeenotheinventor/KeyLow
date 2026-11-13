@@ -4,6 +4,10 @@ import {
   FREE_EXERCISE_DB_COMMIT,
   exerciseFormMediaDisplayOf,
   exerciseFormMediaOf,
+  exerciseFormMediaSetOf,
+  formMediaPreferenceOf,
+  formMediaToShow,
+  DEFAULT_FORM_MEDIA_PREFERENCE,
   freeExerciseDbImagePathSchema,
   freeExerciseDbImageUrl,
   shownExerciseFormMediaSchema,
@@ -11,6 +15,8 @@ import {
   youtubeVideoIdSchema,
   youtubeWatchUrl,
 } from "../../src/training";
+
+import type { ExerciseFormMediaSet, FormMediaPreference } from "../../src/training";
 
 const VIDEO_ID = "aB3_-xYz012";
 
@@ -175,6 +181,113 @@ describe("exerciseFormMediaOf", () => {
   });
 });
 
+describe("exerciseFormMediaSetOf", () => {
+  it("should keep both the video and the photos when the row has both", () => {
+    expect(exerciseFormMediaSetOf(videoRow)).toEqual({
+      video: { videoId: VIDEO_ID, title: "Barbell squat form", channel: "Form Channel" },
+      photos: { imagePaths: ["Barbell_Squat/0.jpg", "Barbell_Squat/1.jpg"] },
+    });
+  });
+
+  it("should keep the video alone when the row has no photos", () => {
+    expect(exerciseFormMediaSetOf({ ...videoRow, image_paths: null })).toEqual({
+      video: { videoId: VIDEO_ID, title: "Barbell squat form", channel: "Form Channel" },
+      photos: null,
+    });
+  });
+
+  it("should keep the photos alone when the row has no video", () => {
+    expect(
+      exerciseFormMediaSetOf({
+        ...videoRow,
+        video_id: null,
+        video_title: null,
+        video_channel: null,
+      }),
+    ).toEqual({
+      video: null,
+      photos: { imagePaths: ["Barbell_Squat/0.jpg", "Barbell_Squat/1.jpg"] },
+    });
+  });
+
+  it("should keep the photos when the video id is invalid", () => {
+    expect(exerciseFormMediaSetOf({ ...videoRow, video_id: "bad" })).toEqual({
+      video: null,
+      photos: { imagePaths: ["Barbell_Squat/0.jpg", "Barbell_Squat/1.jpg"] },
+    });
+  });
+
+  it("should drop the video when its title or channel is blank", () => {
+    expect(exerciseFormMediaSetOf({ ...videoRow, video_title: " " }).video).toBeNull();
+    expect(exerciseFormMediaSetOf({ ...videoRow, video_channel: null }).video).toBeNull();
+  });
+
+  it("should drop the photos when only one path is valid", () => {
+    expect(
+      exerciseFormMediaSetOf({ ...videoRow, image_paths: ["Barbell_Squat/0.jpg", "bad"] }).photos,
+    ).toBeNull();
+  });
+
+  it("should use the first and the last valid path as the start and the end", () => {
+    expect(
+      exerciseFormMediaSetOf({
+        ...videoRow,
+        image_paths: ["A/0.jpg", "bad", "A/1.jpg", "A/2.jpg"],
+      }).photos,
+    ).toEqual({ imagePaths: ["A/0.jpg", "A/2.jpg"] });
+  });
+
+  it("should hold nothing for no row", () => {
+    expect(exerciseFormMediaSetOf(null)).toEqual({ video: null, photos: null });
+  });
+});
+
+describe("formMediaPreferenceOf", () => {
+  it.each(["video", "photos", "both"] as const)("should read %s", (preference) => {
+    expect(formMediaPreferenceOf(preference)).toBe(preference);
+  });
+
+  it.each([null, "", "Video", "images", "all"])("should read %j as nothing", (stored) => {
+    expect(formMediaPreferenceOf(stored)).toBeNull();
+  });
+});
+
+describe("DEFAULT_FORM_MEDIA_PREFERENCE", () => {
+  it("should be the video", () => {
+    expect(DEFAULT_FORM_MEDIA_PREFERENCE).toBe("video");
+  });
+});
+
+describe("formMediaToShow", () => {
+  const video = { videoId: VIDEO_ID, title: "Squat", channel: "Channel" };
+  const photos = { imagePaths: ["A_B/0.jpg", "A_B/1.jpg"] } as const;
+  const videoOnly: ExerciseFormMediaSet = { video, photos: null };
+  const photosOnly: ExerciseFormMediaSet = { video: null, photos };
+  const bothKinds: ExerciseFormMediaSet = { video, photos };
+  const neither: ExerciseFormMediaSet = { video: null, photos: null };
+  const asVideo = { kind: "video", ...video } as const;
+  const asPhotos = { kind: "photos", ...photos } as const;
+  const asBoth = { kind: "both", video, imagePaths: photos.imagePaths } as const;
+  const none = { kind: "none" } as const;
+
+  it.each<[FormMediaPreference, string, ExerciseFormMediaSet, unknown]>([
+    ["video", "video only", videoOnly, asVideo],
+    ["video", "photos only", photosOnly, asPhotos],
+    ["video", "both", bothKinds, asVideo],
+    ["video", "neither", neither, none],
+    ["photos", "video only", videoOnly, asVideo],
+    ["photos", "photos only", photosOnly, asPhotos],
+    ["photos", "both", bothKinds, asPhotos],
+    ["photos", "neither", neither, none],
+    ["both", "video only", videoOnly, asVideo],
+    ["both", "photos only", photosOnly, asPhotos],
+    ["both", "both", bothKinds, asBoth],
+    ["both", "neither", neither, none],
+  ])("should show for %s with %s", (preference, _setName, set, expected) => {
+    expect(formMediaToShow(set, preference)).toEqual(expected);
+  });
+});
+
 describe("the URL builders", () => {
   it("should build the YouTube watch URL", () => {
     expect(youtubeWatchUrl(VIDEO_ID)).toBe("https://www.youtube.com/watch?v=aB3_-xYz012");
@@ -188,6 +301,26 @@ describe("the URL builders", () => {
     expect(freeExerciseDbImageUrl("Barbell_Squat/0.jpg")).toBe(
       "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/Barbell_Squat/0.jpg",
     );
+  });
+});
+
+describe("exerciseFormMediaDisplayOf for both", () => {
+  it("should draw the video and the two photos with every URL from the builders", () => {
+    expect(
+      exerciseFormMediaDisplayOf({
+        kind: "both",
+        video: { videoId: VIDEO_ID, title: "Squat", channel: "Channel" },
+        imagePaths: ["A_B/0.jpg", "A_B/1.jpg"],
+      }),
+    ).toEqual({
+      kind: "both",
+      title: "Squat",
+      channel: "Channel",
+      thumbnailUrl: youtubeThumbnailUrl(VIDEO_ID),
+      watchUrl: youtubeWatchUrl(VIDEO_ID),
+      startUrl: freeExerciseDbImageUrl("A_B/0.jpg"),
+      endUrl: freeExerciseDbImageUrl("A_B/1.jpg"),
+    });
   });
 });
 

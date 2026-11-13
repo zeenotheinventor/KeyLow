@@ -1,5 +1,5 @@
 import { useExerciseFormMedia } from "@keylow/api-client";
-import { exerciseFormMediaDisplayOf } from "@keylow/core/training";
+import { exerciseFormMediaDisplayOf, formMediaToShow } from "@keylow/core/training";
 
 import type { FormSectionProps } from "./types";
 
@@ -27,7 +27,7 @@ export function FormSection({ exerciseId, exerciseName }: FormSectionProps) {
     case "failed":
       return <FormMediaCard kind="unavailable" />;
     case "ready": {
-      const display = exerciseFormMediaDisplayOf(state.media);
+      const display = exerciseFormMediaDisplayOf(formMediaToShow(state.media, "video"));
       switch (display.kind) {
         case "video":
           return <FormMediaCard {...display} />;
