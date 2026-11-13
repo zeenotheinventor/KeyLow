@@ -7,6 +7,7 @@ import { setUpTests } from "react-native-reanimated";
 import { thursdayOffer } from "../components/SuggestionCard/storyStates";
 import { TrainScreen } from "../components/TrainScreen";
 import { suggestionDismissedStorageKey } from "../lib/suggestionDismissed";
+import { suggestionsPreferenceStorageKey } from "../lib/suggestionsPreference";
 import { ThemeProvider } from "../lib/theme";
 import { createDiaryQueryClient } from "./support/diaryBackend";
 import { resetTrainBackend, trainBackend, trainClient } from "./support/trainBackend";
@@ -145,6 +146,22 @@ describe("the suggestion card on the Train home", () => {
     expect(screen.queryByLabelText("Suggestion for Thursday")).not.toBeOnTheScreen();
     // Nothing is read either, since an offer with no toast to tell anyone could not be added to.
     expect(mockCardInputs.at(-1)?.enabled).toBe(false);
+  });
+
+  it("should draw no card and read nothing when the person turned workout suggestions off", async () => {
+    mockStored.set(suggestionsPreferenceStorageKey, "false");
+    await renderTrain();
+    await screen.findByRole("heading", { name: TRAIN_TODAY_CARD.restTitle });
+
+    expect(screen.queryByLabelText("Suggestion for Thursday")).not.toBeOnTheScreen();
+    expect(mockCardInputs.at(-1)?.enabled).toBe(false);
+  });
+
+  it("should leave the reads off until the device says whether suggestions are wanted", async () => {
+    mockStored.set(suggestionsPreferenceStorageKey, "false");
+    await renderTrain();
+
+    expect(mockCardInputs[0]?.enabled).toBe(false);
   });
 
   it("should ask the shared hook for the home it is on and give it the notices", async () => {
