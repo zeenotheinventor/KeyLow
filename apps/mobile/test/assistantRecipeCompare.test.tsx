@@ -1,5 +1,5 @@
 import { KeyLowProvider } from "@keylow/api-client";
-import { recipeDraftKeyOf } from "@keylow/core";
+import { buildRecipeIngredient, recipeDraftKeyOf } from "@keylow/core";
 import { buildFood } from "@keylow/core/testing";
 import { QueryClient, onlineManager } from "@tanstack/react-query";
 import { act, cleanup, render, screen, userEvent } from "@testing-library/react-native";
@@ -353,6 +353,38 @@ describe("the compare card", () => {
       ).not.toBeOnTheScreen();
       expect(screen.getByText("Counted by portion, unchanged")).toBeOnTheScreen();
       expect(onOpenEditor).not.toHaveBeenCalled();
+    });
+
+    it("should open the editor for a line counted by portion that carries its frozen ingredient, without loading its food", async () => {
+      const bucket = buildFood({
+        id: BROCCOLI_ID,
+        name: "Bucket",
+        basis: "per_portion",
+        kcal: 500,
+      });
+      const frozen = buildRecipeIngredient(bucket, {
+        quantity: 2,
+        unit: "portion",
+        portion: { id: OIL_ID, label: "1 bucket", grams: null, ml: null },
+      });
+      const byPortion: AdjustmentDraft = {
+        ...compareDraft,
+        ingredients: compareDraft.ingredients.map((line) =>
+          line.change === "same" ? { ...line, grams: 0, beforeGrams: 0, frozen } : line,
+        ),
+      };
+      mockLoadFoods.mockResolvedValue(foodsOf(byPortion));
+      await render(entryTree(byPortion));
+
+      await userSetup().press(saveButton());
+
+      expect(onOpenEditor).toHaveBeenCalledWith("/recipes/new?prefill=prefill-1");
+      expect(
+        peekRecipePrefill("prefill-1")?.draft.ingredients.find(
+          ({ food_id }) => food_id === BROCCOLI_ID,
+        ),
+      ).toEqual(frozen);
+      expect(mockLoadFoods).toHaveBeenCalledWith(expect.not.arrayContaining([BROCCOLI_ID]));
     });
 
     it("should say it was not saved when a food of the adjustment is gone", async () => {

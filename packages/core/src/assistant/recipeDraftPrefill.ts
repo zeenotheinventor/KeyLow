@@ -1,3 +1,4 @@
+import { rescaledIngredient } from "./adjustmentDraft";
 import { describeAdjustedRecipeName } from "../copy/assistantRecipeCompareCard";
 import { buildRecipeIngredient } from "../recipes/buildRecipeIngredient";
 
@@ -11,8 +12,9 @@ export type PrefillFood = { food: Food; portions: readonly FoodPortion[] };
 
 /**
  * Why a draft cannot open the editor: `food_missing` when a matched food is not among the foods that were loaded
- * (the connection, or a food that is gone), and `not_rebuildable` when an adjustment's line cannot be made again
- * in grams, which is a line with no food or one counted by portion and so with no weight.
+ * (the connection, or a food that is gone), and `not_rebuildable` when an adjustment's line cannot be made again,
+ * which is a line with no food, or one counted by portion and so with no weight, in a draft stored before its lines
+ * carried their frozen ingredient. A draft made since then never has either.
  */
 export type RecipePrefillRefusal = "food_missing" | "not_rebuildable";
 
@@ -27,6 +29,12 @@ export type RecipePrefillOutcome =
  * recipe named for it ("Eval chicken and rice, adjusted") with the original's own steps, and a line the fit
  * removed is left out. It refuses, with the reason, when a matched food is not among `foods`, so a recipe is never
  * opened short of what the card showed, and when an adjustment's line has no grams or no food.
+ *
+ * An adjustment's line that carries its frozen ingredient (`frozen`) is rebuilt from that with the draft's grams,
+ * so the saved figures are the card's After even when the food was edited since, an amount left as it was keeps
+ * its own unit, and a line counted by portion stays a portion. Such a line needs no live food. A draft stored
+ * before `frozen` existed has none, so each of its lines falls back to the live food in grams, and a line counted
+ * by portion is refused as `not_rebuildable`.
  */
 export function recipeDraftPrefillOf(
   draft: AssistantRecipeDraft,
@@ -36,6 +44,12 @@ export function recipeDraftPrefillOf(
   const ingredients: RecipeIngredient[] = [];
   for (const line of draft.ingredients) {
     if (isAdjustment && line.change === "removed") {
+      continue;
+    }
+    // An adjustment's line that carries its frozen ingredient is rebuilt from that, in the grams the draft states,
+    // so its figures are the card's After and a line counted by portion stays a portion.
+    if (isAdjustment && line.frozen != null) {
+      ingredients.push(rescaledIngredient(line.frozen, line.grams));
       continue;
     }
     if (line.foodId === null) {
@@ -71,9 +85,14 @@ export function recipeDraftPrefillOf(
   };
 }
 
-/** The ids of the foods the matched lines of a draft named, in line order, which the editor needs to open on it. */
+/**
+ * The ids of the foods the matched lines of a draft named, in line order, which the editor needs to open on it.
+ * An adjustment's line that carries its frozen ingredient needs no live food, so it is not asked for.
+ */
 export const matchedFoodIdsOf = (draft: AssistantRecipeDraft): string[] =>
-  draft.ingredients.flatMap(({ foodId }) => (foodId === null ? [] : [foodId]));
+  draft.ingredients.flatMap(({ foodId, frozen }) =>
+    foodId === null || (draft.variant === "adjustment" && frozen != null) ? [] : [foodId],
+  );
 
 /**
  * The name of the first line that matched no food, which the editor opens its add-ingredient search on, so the
