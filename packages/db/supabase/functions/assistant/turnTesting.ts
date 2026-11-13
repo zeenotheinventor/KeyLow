@@ -37,6 +37,9 @@ export type ScriptedResponse = {
   usage?: { input?: number; output?: number; cacheRead?: number; cacheCreation?: number };
   // Streams up to the first text delta, then keeps the stream open until the reader goes away.
   holdAfterFirstText?: boolean;
+  // Streams up to the first text delta, then waits for `release()` and sends the rest, as a slow model does.
+  // The reader going away does not end it. The wait also ends when the mock shuts down.
+  pauseAfterFirstText?: boolean;
   // Sends the headers and then no event at all, until the reader goes away.
   holdAfterHeaders?: boolean;
   // Never answers, not even with headers, until the reader goes away.
@@ -55,6 +58,10 @@ export type ModelMock = {
   betaHeaders: (string | null)[];
   json: () => Record<string, unknown>[];
   firstTextSent: Promise<void>;
+  // Lets a `pauseAfterFirstText` reply go on to its end.
+  release(): void;
+  // How many model streams the client gave up on. A call nobody aborted leaves it at zero.
+  streamsCancelled(): number;
   shutdown(): Promise<void>;
 };
 
@@ -175,6 +182,8 @@ export async function startModelMock(responses: ScriptedResponse[]): Promise<Mod
   const listening = Promise.withResolvers<number>();
   const firstText = Promise.withResolvers<void>();
   const stopped = Promise.withResolvers<void>();
+  const released = Promise.withResolvers<void>();
+  const streamsCancelled = { count: 0 };
   let next = 0;
 
   const failure = (status: number) =>
@@ -205,7 +214,7 @@ export async function startModelMock(responses: ScriptedResponse[]): Promise<Mod
     if (JSON.parse(body).stream !== true) {
       return Response.json(messageOf(scripted, index));
     }
-    const { head } = eventsOf(scripted, index);
+    const { head, tail } = eventsOf(scripted, index);
     const cancelled = Promise.withResolvers<void>();
     return new Response(
       new ReadableStream<Uint8Array>({
@@ -217,6 +226,15 @@ export async function startModelMock(responses: ScriptedResponse[]): Promise<Mod
           for (const event of head) {
             controller.enqueue(encoder.encode(event));
           }
+          if (scripted.pauseAfterFirstText === true) {
+            firstText.resolve();
+            await Promise.race([released.promise, stopped.promise]);
+            for (const event of tail) {
+              controller.enqueue(encoder.encode(event));
+            }
+            controller.close();
+            return;
+          }
           if (scripted.holdAfterFirstText === true) {
             // The rest of the reply is never sent, as when the connection stalls.
             firstText.resolve();
@@ -226,6 +244,7 @@ export async function startModelMock(responses: ScriptedResponse[]): Promise<Mod
           controller.close();
         },
         cancel() {
+          streamsCancelled.count += 1;
           cancelled.resolve();
         },
       }),
@@ -243,6 +262,8 @@ export async function startModelMock(responses: ScriptedResponse[]): Promise<Mod
     betaHeaders,
     json: () => bodies.map((body) => JSON.parse(body)),
     firstTextSent: firstText.promise,
+    release: () => released.resolve(),
+    streamsCancelled: () => streamsCancelled.count,
     async shutdown() {
       stopped.resolve();
       await server.shutdown();
@@ -450,6 +471,10 @@ export type HarnessOptions = {
   failUsage?: boolean;
   // Short limits, in milliseconds, so a test never waits for real minutes.
   limits?: TurnLimits;
+  // Replaces the model client, for a failure the mock server cannot make.
+  createModelClient?: TurnDependencies["createModelClient"];
+  // Receives the turn's stop controller, which nothing else triggers yet.
+  exposeStop?: TurnDependencies["exposeStop"];
   // The turn store's clock, for a test that needs `updated_at` to move by a known step.
   storeNow?: () => Date;
   // `ASSISTANT_KITCHEN`. Off unless set.
@@ -505,7 +530,9 @@ export async function createHarness(options: HarnessOptions): Promise<Harness> {
     runInBackground: (task) => {
       background.push(task);
     },
-    createModelClient: () => createModelClient((name) => environment[name]),
+    createModelClient:
+      options.createModelClient ?? (() => createModelClient((name) => environment[name])),
+    ...(options.exposeStop === undefined ? {} : { exposeStop: options.exposeStop }),
     availableTools: allowlistToolsOf(tools),
     kitchenEnabled: () => options.kitchen === true,
     functionsBaseUrl: () => "http://127.0.0.1:54321",

@@ -94,6 +94,10 @@ describe("the tab shell copy", () => {
           },
         },
         reminders: { title: "Reminders" },
+        workoutSuggestions: {
+          title: "Workout suggestions",
+          subtitle: "Suggest a workout on Train for your planned days",
+        },
         about: { title: "About" },
         featureRequest: {
           title: "Request a feature",

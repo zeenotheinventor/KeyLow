@@ -79,6 +79,7 @@ Deno.serve(
         report: reportError,
         now: () => new Date(),
       }),
+      runInBackground,
       now: () => new Date(),
       report: reportError,
     });

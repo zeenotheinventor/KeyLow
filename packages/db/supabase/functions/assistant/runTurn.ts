@@ -15,7 +15,7 @@ export type TurnContext = {
   localTime: string | null;
   // Where the app opened the sheet from, when it did. Any value makes a kitchen turn (ADR 0006, Amendment 5).
   entry?: KitchenEntry;
-  // Carries the caller's JWT, for a client that acts as them, and the signal of the app's request.
+  // Carries the caller's JWT, for a client that acts as them.
   request: Request;
 };
 

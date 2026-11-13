@@ -61,6 +61,9 @@ export const ACCOUNT_EXPORT_COVERAGE: Record<
   exercise_form_videos: {
     notExported: "Shared reference data, the same for everyone. No row belongs to the account.",
   },
+  push_tokens: {
+    notExported: "A device credential for sending notifications, not the person's own data.",
+  },
   rate_limits: { notExported: "Closed to every API role. Counters, not account data." },
   off_search_results: {
     notExported:

@@ -233,6 +233,8 @@ export type TurnDependencies = {
   functionsBaseUrl(): string | undefined;
   report: ReportError;
   now(): Date;
+  // Hands the turn's stop controller out as the turn starts. Only a test uses it, until a stop route exists.
+  exposeStop?(stop: AbortController): void;
 };
 
 // How a turn ended. `code` is for the log line only.
@@ -249,11 +251,13 @@ type Run = {
   // `performance.now()` when the turn began.
   startedAt: number;
   stream: EventStream;
-  // Aborts when the app closes the sheet or its request ends.
-  signal: AbortSignal;
+  // The turn's deliberate stop. Nothing triggers it today: a closed sheet, a backgrounded app and a lost
+  // connection do not stop a turn (ADR 0006, Amendment 7), so a later stop route can abort it without
+  // reshaping `interruption()`.
+  stop: AbortController;
   limits: TurnLimits;
-  // Aborts when the deadline passes or the model stream goes quiet. Apart from `signal`, so the two stay
-  // apart: the reader going away is a stop, a limit is a failure.
+  // Aborts when the deadline passes or the model stream goes quiet. Apart from `stop`, so the two stay
+  // apart: a deliberate stop is a `stopped` ending, a limit is a failure.
   limitSignal: AbortController;
   limitCode: LimitCode | null;
   dependencies: TurnDependencies;
@@ -306,11 +310,11 @@ function hitLimit(run: Run, code: LimitCode): void {
   run.limitSignal.abort();
 }
 
-// Why the step in flight, or the next one, must not go on: the reader went away (a stop, which wins over a
-// limit that fired as well) or a limit passed (a failure, reported with a code and no content). Null when
-// the turn may go on.
+// Why the step in flight, or the next one, must not go on: a deliberate stop (which wins over a limit that
+// fired as well, and which nothing triggers yet) or a limit passed (a failure, reported with a code and no
+// content). Null when the turn may go on.
 function interruption(run: Run): Ending | null {
-  if (run.signal.aborted) {
+  if (run.stop.signal.aborted) {
     return ending("stopped");
   }
   if (run.limitCode === null) {
@@ -436,8 +440,8 @@ const isToolInputParseError = (caught: unknown): boolean =>
 type ModelOutcome =
   { kind: "message"; message: Anthropic.Message } | { kind: "interrupted" } | { kind: "retry" };
 
-// One streamed model call. The text goes to the app as it arrives. The call is cut short by the reader
-// going away, by the turn's deadline, and by the stream going quiet for `streamIdleMilliseconds`.
+// One streamed model call. The text goes to the app as it arrives. The call is cut short by a deliberate stop,
+// by the turn's deadline, and by the stream going quiet for `streamIdleMilliseconds`.
 async function callModel(
   run: Run,
   session: Session,
@@ -446,7 +450,7 @@ async function callModel(
   const startedAt = performance.now();
   run.counts.modelCalls += 1;
   const modelStream = session.client.messages.stream(request, {
-    signal: AbortSignal.any([run.signal, run.limitSignal.signal]),
+    signal: AbortSignal.any([run.stop.signal, run.limitSignal.signal]),
     // A deferred tool and a `tool_addition` need the beta, so it goes with every request that has a deferred
     // tool, kitchen turn or not, and with every request that replays an addition, so a conversation that has one
     // still works after a deploy that lists no kitchen tool. A header is not part of the cache's prefix.
@@ -486,7 +490,7 @@ async function callModel(
       run.dependencies.report("assistant", "internal_error", recordFailure),
     );
     if (
-      run.signal.aborted ||
+      run.stop.signal.aborted ||
       run.limitCode !== null ||
       caught instanceof Anthropic.APIUserAbortError
     ) {
@@ -919,7 +923,13 @@ async function runModelCalls(run: Run, session: Session): Promise<Ending> {
     });
     const outcome = await callModel(run, session, request);
     if (outcome.kind === "interrupted") {
-      return interruption(run) ?? ending("stopped");
+      const interrupted = interruption(run);
+      if (interrupted !== null) {
+        return interrupted;
+      }
+      // An abort that is neither a stop nor a limit is not one the turn caused. It is a failure with a code.
+      run.dependencies.report("assistant", "internal_error", new Error("unexpected_abort"));
+      return failedEnding("unexpected_abort");
     }
     if (outcome.kind === "retry") {
       continue;
@@ -1305,7 +1315,7 @@ async function conclude(run: Run, reached: Ending): Promise<Ending> {
       endAsFailed(stream);
       break;
     case "stopped":
-      // Nobody is reading, so there is no `done`.
+      // A deliberate stop ends with no `done` and no cards. Nothing triggers one yet (ADR 0006, Amendment 7).
       break;
   }
   if (compaction !== null) {
@@ -1324,7 +1334,7 @@ export function createRunTurn(
       context,
       startedAt,
       stream,
-      signal: AbortSignal.any([stream.signal, context.request.signal]),
+      stop: new AbortController(),
       limits,
       limitSignal: new AbortController(),
       limitCode: null,
@@ -1345,6 +1355,7 @@ export function createRunTurn(
       citations: [],
       estimates: [],
     };
+    dependencies.exposeStop?.(run.stop);
     emit(run, {
       type: "turn",
       turnId: context.turnId,

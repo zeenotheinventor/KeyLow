@@ -27,6 +27,7 @@ import { GroupedList, ListRow } from "../../../components/ui";
 import { goalPath } from "../../../lib/goalRoutes";
 import { recipesPath } from "../../../lib/recipeRoutes";
 import { signOut } from "../../../lib/signOut";
+import { useSuggestionsEnabled } from "../../../lib/suggestionsPreference";
 import { useOpenOnce } from "../../../lib/useOpenOnce";
 import { useReadsEnabled } from "../../../lib/useReadsEnabled";
 
@@ -55,6 +56,7 @@ export default function MoreRoute() {
   const trainingGoals = useTrainingGoals({ enabled: isReadEnabled });
   const timeZone = useProfileTimeZone({ enabled: isReadEnabled });
   const openOnce = useOpenOnce();
+  const suggestions = useSuggestionsEnabled();
   const assistantRow = describeAssistantMoreRow(assistantConsent.data?.isOn);
   const kcalTarget = targets.data?.kcal ?? null;
   const program = programSummary.data?.program;
@@ -170,6 +172,17 @@ export default function MoreRoute() {
             title={MORE_SCREEN.settings.reminders.title}
             onPress={() => {
               router.push("/reminders");
+            }}
+          />
+          <ListRow
+            icon="CalendarDays"
+            subtitle={MORE_SCREEN.settings.workoutSuggestions.subtitle}
+            title={MORE_SCREEN.settings.workoutSuggestions.title}
+            toggle={{
+              isOn: suggestions.isEnabled ?? true,
+              label: MORE_SCREEN.settings.workoutSuggestions.title,
+              onValueChange: suggestions.setEnabled,
+              disabled: suggestions.isEnabled === undefined,
             }}
           />
           <ListRow

@@ -1,17 +1,8 @@
 import { KeyLowProvider } from "@keylow/api-client";
 import { ASSISTANT_CONSENT_VERSION } from "@keylow/core";
-import { act, render, screen, userEvent, within } from "@testing-library/react-native";
+import { act, render, screen, userEvent, waitFor, within } from "@testing-library/react-native";
 import { Text } from "react-native";
 
-import MoreRoute from "../app/(tabs)/more";
-import { resetBodyFigureForTests } from "../lib/bodyFigure/testing";
-import { useBodyMapRenderer } from "../lib/bodyMapRenderer";
-import { resetBodyMapRendererForTests } from "../lib/bodyMapRenderer/testing";
-import { useDashboardBodyChart } from "../lib/dashboardBodyChart";
-import { resetDashboardBodyChartForTests } from "../lib/dashboardBodyChart/testing";
-import { useFormMediaPreference } from "../lib/formMediaPreference";
-import { resetFormMediaPreferenceForTests } from "../lib/formMediaPreference/testing";
-import { ThemeProvider, useTheme } from "../lib/theme";
 import { deviceScheme } from "./support/deviceScheme";
 import {
   createDiaryQueryClient,
@@ -30,6 +21,16 @@ import {
 import { mockSupabaseClient, resetSupabaseMock } from "./support/supabaseMock";
 import { storedGoalRow } from "./support/trainingGoalsRead";
 import { installVirtualClock } from "./support/virtualClock";
+import MoreRoute from "../app/(tabs)/more";
+import { resetBodyFigureForTests } from "../lib/bodyFigure/testing";
+import { useBodyMapRenderer } from "../lib/bodyMapRenderer";
+import { resetBodyMapRendererForTests } from "../lib/bodyMapRenderer/testing";
+import { useDashboardBodyChart } from "../lib/dashboardBodyChart";
+import { resetDashboardBodyChartForTests } from "../lib/dashboardBodyChart/testing";
+import { useFormMediaPreference } from "../lib/formMediaPreference";
+import { resetFormMediaPreferenceForTests } from "../lib/formMediaPreference/testing";
+import { suggestionsPreferenceStorageKey } from "../lib/suggestionsPreference";
+import { ThemeProvider, useTheme } from "../lib/theme";
 
 const mockStorageItems = new Map<string, string>();
 const mockSetItem = jest.fn((key: string, value: string) => {
@@ -839,6 +840,41 @@ describe("the More screen", () => {
       await user.press(screen.getByRole("button", { name: "Reminders" }));
 
       expect(routerMock.push).toHaveBeenCalledWith("/reminders");
+    });
+  });
+
+  describe("Workout suggestions", () => {
+    it("should be a switch in Settings, on by default, after Reminders", async () => {
+      await renderMore();
+
+      const settings = within(screen.getByLabelText("Settings"));
+      const toggle = await settings.findByRole("switch", { name: "Workout suggestions" });
+
+      expect(toggle).toBeOnTheScreen();
+      expect(toggle).toBeChecked();
+      // The tree is in screen order, so the switch's name comes after Reminders' and before About's.
+      const tree = JSON.stringify(screen.toJSON());
+      expect(tree.indexOf("Workout suggestions")).toBeGreaterThan(tree.indexOf('"Reminders"'));
+      expect(tree.indexOf("Workout suggestions")).toBeLessThan(tree.indexOf('"About"'));
+    });
+
+    it("should turn off and be stored when pressed", async () => {
+      const user = userEvent.setup();
+      await renderMore();
+
+      await user.press(await screen.findByRole("switch", { name: "Workout suggestions" }));
+
+      expect(screen.getByRole("switch", { name: "Workout suggestions" })).not.toBeChecked();
+      expect(mockStorageItems.get(suggestionsPreferenceStorageKey)).toBe("false");
+    });
+
+    it("should show off when the device stored off", async () => {
+      mockStorageItems.set(suggestionsPreferenceStorageKey, "false");
+      await renderMore();
+
+      await waitFor(() => {
+        expect(screen.getByRole("switch", { name: "Workout suggestions" })).not.toBeChecked();
+      });
     });
   });
 
