@@ -13,7 +13,7 @@ import {
   DELETE_FAILED_BANNER,
   LEGAL_PATHS,
   SAVE_FAILED_BANNER,
-  describeAssistantConsentCaption,
+  describeWebAssistantConsentCaption,
 } from "@keylow/core/copy";
 import { ChevronLeft, CircleAlert } from "lucide-react";
 import Link from "next/link";
@@ -125,7 +125,7 @@ export function AssistantSettingsPage() {
         </Card>
         {isRead && (
           <p className="px-1 text-caption text-text-muted">
-            {describeAssistantConsentCaption(isOn)}
+            {describeWebAssistantConsentCaption(isOn)}
           </p>
         )}
       </div>

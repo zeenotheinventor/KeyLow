@@ -39,6 +39,13 @@ export function describeAssistantConsentCaption(isOn: boolean): string {
     : "Off until you turn it on.";
 }
 
+/** The same caption on the web, where the ways in are the top bar's Assistant button and Describe in Add food. */
+export function describeWebAssistantConsentCaption(isOn: boolean): string {
+  return isOn
+    ? "On. Open it from the Assistant button at the top of any page, or Describe in Add food."
+    : "Off until you turn it on.";
+}
+
 /** The Assistant settings screen. "What the assistant changed" belongs to the screen that opens from it. */
 export const ASSISTANT_SETTINGS = {
   title: "Assistant",
