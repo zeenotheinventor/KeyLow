@@ -157,6 +157,7 @@ export {
   bestSetPerWeek,
   summariseSession,
   buildPalateProfile,
+  palateRecipeOf,
   summaryLines,
   avoidsFood,
   assistantRecipeDraftSchema,

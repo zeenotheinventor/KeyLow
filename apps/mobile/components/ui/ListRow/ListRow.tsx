@@ -41,6 +41,8 @@ export function ListRow({
   loading = false,
   disabled = false,
   variant,
+  role,
+  density,
   ref,
   toggle,
   trailing,
@@ -48,6 +50,7 @@ export function ListRow({
 }: ListRowProps) {
   const isFooter = variant === "footer";
   const isCompact = size === "compact";
+  const isSnug = density === "snug";
   const { isFirst } = useGroupedRowPosition();
   const trailingValue = value === undefined ? undefined : [value, unit].filter(Boolean).join(" ");
   const label = [title, subtitle, badge?.label, trailingValue].filter(Boolean).join(", ");
@@ -59,6 +62,7 @@ export function ListRow({
       ? "min-h-[52px] px-3"
       : "min-h-[56px] px-3";
   const rowClassName = `${sizeClassName} flex-row items-center gap-3 py-2 ${separatorClassName} ${dimClassName}`;
+  const titleToneName = titleTone === "accent" ? "accent-ink" : (titleTone ?? "primary");
   const valueToneName = valueTone === "muted" ? "muted" : "primary";
 
   const contents = (
@@ -80,8 +84,8 @@ export function ListRow({
       )}
       <View className={isCompact ? "flex-1" : "flex-1 gap-[2px]"}>
         <Text
-          numberOfLines={1}
-          tone={titleTone ?? "primary"}
+          numberOfLines={isSnug ? undefined : 1}
+          tone={titleToneName}
           variant={isCompact ? "label-small" : "body-strong"}
         >
           {title}
@@ -156,7 +160,7 @@ export function ListRow({
       .join(", ");
     return (
       <View
-        className={`min-h-[60px] -mr-1 flex-row items-center gap-3 px-3 py-2 ${separatorClassName} ${dimClassName}`}
+        className={`${isSnug ? "min-h-[56px]" : "min-h-[60px]"} -mr-1 flex-row items-center gap-3 px-3 py-2 ${separatorClassName} ${dimClassName}`}
       >
         <View
           accessible
@@ -183,7 +187,7 @@ export function ListRow({
             busy={trailing.busy}
             className="h-control-sm shrink-0 justify-center rounded-small px-3"
             hitSlop={trailingActionHitSlop}
-            label={`${trailing.label}, ${title}`}
+            label={trailing.accessibleName ?? `${trailing.label}, ${title}`}
             onPress={trailing.onPress}
           >
             <Text tone="accent-ink" variant="label-small">
@@ -230,6 +234,7 @@ export function ListRow({
       label={label}
       pressScale={rowPressScale}
       ref={ref}
+      role={role}
       onPress={onPress}
     >
       {contents}

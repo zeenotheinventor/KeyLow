@@ -230,3 +230,43 @@ export const TrailingTick: StoryObj<Meta<ListRowWithTrailingProps>> = {
     trailing: { kind: "tick", label: "Ready" },
   },
 };
+
+// The palate's usual food: a long name that wraps, its days and typical amount, and a Not true button named
+// for the item. A snug row is 56 points high where the changes list's row is 60.
+export const PalateItem: StoryObj<Meta<ListRowWithTrailingProps>> = {
+  args: {
+    title: "Apples, eating, raw, flesh and skin",
+    subtitle: "28 days · usually 100 g",
+    density: "snug",
+    trailing: {
+      kind: "action",
+      label: "Not true",
+      accessibleName: "Not true: Apples, eating, raw, flesh and skin",
+      onPress: () => undefined,
+    },
+  },
+};
+
+// The palate's "Show all 10": the title in the accent ink and a chevron down.
+export const AccentTitle: StoryObj<Meta<ListRowToPressProps>> = {
+  args: {
+    icon: undefined,
+    title: "Show all 10",
+    titleTone: "accent",
+    chevron: false,
+    trailingIcon: "ChevronDown",
+    onPress: () => undefined,
+  },
+};
+
+// The palate's link to Foods to avoid: a row that goes to another screen, so it is a link.
+export const LinkRow: StoryObj<Meta<ListRowToPressProps>> = {
+  args: {
+    icon: undefined,
+    title: "Foods to avoid",
+    titleTone: "accent",
+    subtitle: "None yet",
+    role: "link",
+    onPress: () => undefined,
+  },
+};

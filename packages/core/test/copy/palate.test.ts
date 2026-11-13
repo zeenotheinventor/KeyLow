@@ -11,6 +11,8 @@ import {
   describeRareGroupDetail,
   describeRareSummary,
   describeRecipeDetail,
+  describeShowAll,
+  describeUndo,
   describeUsualMostDays,
   describeUsualMostWeeks,
 } from "../../src/copy";
@@ -41,6 +43,8 @@ describe("PALATE_WORDS", () => {
       noneYet: "None yet",
       noneYetCaption: "The assistant already leaves these out, even before it knows your habits.",
       emptyTitle: "Not enough to go on yet",
+      loadFailedTitle: "Couldn't load what you usually eat",
+      loadFailedBody: "Check your connection and try again.",
     });
   });
 
@@ -117,6 +121,11 @@ describe("the rows and details", () => {
     expect(describeNotTrue("Eggs, chicken, whole, boiled")).toBe(
       "Not true: Eggs, chicken, whole, boiled",
     );
+  });
+
+  it("should name the item an Undo button is on, and how many a Show all opens", () => {
+    expect(describeUndo("Eggs, chicken, whole, boiled")).toBe("Undo, Eggs, chicken, whole, boiled");
+    expect(describeShowAll(10)).toBe("Show all 10");
   });
 
   it("should count the days logged when there are too few to go on", () => {
