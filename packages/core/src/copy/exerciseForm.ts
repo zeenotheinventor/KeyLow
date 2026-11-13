@@ -34,6 +34,6 @@ export const ROUTINE_EXERCISE_FORM = {
   menuAction: "Form and muscles",
 } as const;
 
-/** The name of the exercise's name button in a routine row: it opens the sheet. */
+/** The name of the Form and muscles button of an exercise in a routine row: it opens the sheet. */
 export const describeFormAndMusclesButton = (exerciseName: string): string =>
   `${ROUTINE_EXERCISE_FORM.menuAction}, ${exerciseName}`;

@@ -29,6 +29,7 @@ import { useEffect, useId, useReducer, useRef, useState } from "react";
 
 import { AddExerciseDialog } from "../AddExerciseDialog";
 import { CustomExerciseDialog } from "../CustomExerciseDialog";
+import { ExerciseMusclesDialog } from "../ExerciseMusclesDialog";
 import { RoutineDayCard } from "../RoutineDayCard";
 import { useRoutineNotices } from "../useRoutineNotices";
 
@@ -85,6 +86,12 @@ export function RoutineEditor({
   const [addingToDayKey, setAddingToDayKey] = useState<number | null>(null);
   // The words the New exercise form starts with, while it is open over the search.
   const [creatingName, setCreatingName] = useState<string | null>(null);
+  // The exercise whose form and muscles dialog is open, and the button that opened it.
+  const [exerciseOnShow, setExerciseOnShow] = useState<{
+    exerciseId: string;
+    name: string;
+    opener: HTMLButtonElement;
+  } | null>(null);
   const [isDiscardOpen, setIsDiscardOpen] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
   // Marks show from the first press of Save with problems, and follow the draft after.
@@ -326,6 +333,13 @@ export function RoutineEditor({
                 onChangeField={(key, field, text) => {
                   dispatch({ type: "editExercise", dayKey: day.key, key, field, text });
                 }}
+                onOpenExercise={(exercise, opener) => {
+                  setExerciseOnShow({
+                    exerciseId: exercise.exercise_id,
+                    name: exercise.name,
+                    opener,
+                  });
+                }}
                 onMoveExercise={(exercise, position, by) => {
                   dispatch({ type: "moveExercise", dayKey: day.key, key: exercise.key, by });
                   announceMove(
@@ -387,6 +401,17 @@ export function RoutineEditor({
             }
             setCreatingName(null);
             setAddingToDayKey(null);
+          }}
+        />
+      )}
+      {exerciseOnShow === null ? null : (
+        <ExerciseMusclesDialog
+          exerciseId={exerciseOnShow.exerciseId}
+          exerciseName={exerciseOnShow.name}
+          muscles={null}
+          returnFocusTo={exerciseOnShow.opener}
+          onClose={() => {
+            setExerciseOnShow(null);
           }}
         />
       )}
