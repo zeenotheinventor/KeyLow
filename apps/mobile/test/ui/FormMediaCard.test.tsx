@@ -1,4 +1,9 @@
-import { EXERCISE_FORM, describeFormPhoto, describeFormVideoLink } from "@keylow/core/copy";
+import {
+  EXERCISE_FORM,
+  FORM_MEDIA_SWITCH,
+  describeFormPhoto,
+  describeFormVideoLink,
+} from "@keylow/core/copy";
 import { act, fireEvent, render, screen, userEvent } from "@testing-library/react-native";
 import { openURL } from "expo-linking";
 import { AccessibilityInfo } from "react-native";
@@ -188,6 +193,90 @@ describe("FormMediaCard", () => {
       await fireEvent(screen.getByRole("img", { name: startName }), "error");
 
       expect(screen.getByRole("img", { name: EXERCISE_FORM.imageFailedName })).toBeOnTheScreen();
+    });
+  });
+
+  describe("both", () => {
+    const both = {
+      kind: "both",
+      title: video.title,
+      channel: video.channel,
+      thumbnailUrl: video.thumbnailUrl,
+      watchUrl: video.watchUrl,
+      exerciseName: photos.exerciseName,
+      startUrl: photos.startUrl,
+      endUrl: photos.endUrl,
+    } as const;
+
+    it("should show the video link and the start photo together", async () => {
+      await renderCard(both);
+
+      expect(
+        screen.getByRole("link", { name: describeFormVideoLink(video.title, video.channel) }),
+      ).toBeOnTheScreen();
+      expect(screen.getByRole("img", { name: startName })).toBeOnTheScreen();
+    });
+
+    it("should open the video when the link is pressed", async () => {
+      await renderCard(both);
+
+      const user = userEvent.setup();
+      await user.press(
+        screen.getByRole("link", { name: describeFormVideoLink(video.title, video.channel) }),
+      );
+
+      expect(openURLMock).toHaveBeenCalledWith(video.watchUrl);
+    });
+
+    it("should show both photos side by side with Reduce Motion on", async () => {
+      jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(true);
+      await renderCard(both);
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      expect(screen.getByRole("img", { name: startName })).toBeVisible();
+      expect(screen.getByRole("img", { name: endName })).toBeVisible();
+      expect(screen.getByRole("link")).toBeOnTheScreen();
+    });
+  });
+
+  describe("the switch", () => {
+    const withSwitch = (onChange: jest.Mock, value: "video" | "photos" | "both" = "both") =>
+      ({
+        ...video,
+        preferenceSwitch: { value, onChange },
+      }) as const;
+
+    it("should be a radio group of Video, Photos and Both with the chosen one checked", async () => {
+      await renderCard(withSwitch(jest.fn(), "photos"));
+
+      expect(screen.getByLabelText(FORM_MEDIA_SWITCH.label)).toBeOnTheScreen();
+      expect(screen.getAllByRole("radio")).toHaveLength(3);
+      expect(screen.getByRole("radio", { name: "Photos" })).toBeChecked();
+      expect(screen.getByRole("radio", { name: "Video" })).not.toBeChecked();
+    });
+
+    it("should call back with the option pressed", async () => {
+      const onChange = jest.fn();
+      await renderCard(withSwitch(onChange));
+
+      const user = userEvent.setup();
+      await user.press(screen.getByRole("radio", { name: "Video" }));
+
+      expect(onChange).toHaveBeenCalledWith("video");
+    });
+
+    it("should be drawn under the photos card as well", async () => {
+      await renderCard({ ...photos, preferenceSwitch: { value: "both", onChange: jest.fn() } });
+
+      expect(screen.getByLabelText(FORM_MEDIA_SWITCH.label)).toBeOnTheScreen();
+    });
+
+    it("should not be drawn when the card has no switch", async () => {
+      await renderCard(video);
+
+      expect(screen.queryByLabelText(FORM_MEDIA_SWITCH.label)).not.toBeOnTheScreen();
     });
   });
 

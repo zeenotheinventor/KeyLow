@@ -17,6 +17,13 @@ export const EXERCISE_FORM = {
   imageFailedName: "Image not available",
 } as const;
 
+/** The quick switch under the media of the exercise sheet, which changes what every exercise demo shows. */
+export const FORM_MEDIA_SWITCH = {
+  /** The name of the radio group. */
+  label: "Show form as",
+  options: { video: "Video", photos: "Photos", both: "Both" },
+} as const;
+
 /** Which of the two photos of an exercise. */
 export type FormPhotoPosition = "start" | "end";
 

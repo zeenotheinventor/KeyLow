@@ -1,6 +1,8 @@
+import { useEffect } from "react";
 import { View } from "react-native";
 
 import { ExerciseFormEntry } from "./ExerciseFormEntry";
+import { useFormMediaPreference } from "../../../lib/formMediaPreference";
 import { ThemeScope } from "../../../lib/theme";
 
 import type { Meta, StoryObj } from "@storybook/react-native";
@@ -50,4 +52,38 @@ export const Photos: Story = {
       media: { kind: "photos", imagePaths: ["Barbell_Squat/0.jpg", "Barbell_Squat/1.jpg"] },
     },
   },
+};
+
+// The card draws what the preference is, so the story sets it to Both as it is drawn.
+function WithBothPreference({ children }: { children: React.ReactNode }) {
+  const { setPreference } = useFormMediaPreference();
+
+  useEffect(() => {
+    setPreference("both");
+  }, [setPreference]);
+
+  return children;
+}
+
+// The board `assistant-card-both`: a card that carries the video and the photos, with the preference on Both.
+export const Both: Story = {
+  args: {
+    exercise: {
+      exerciseName: "Barbell Squat",
+      media: {
+        kind: "video",
+        videoId: "abcdefghijk",
+        title: "How to do a barbell back squat with perfect form, step by step",
+        channel: "Strength Basics",
+        imagePaths: ["Barbell_Squat/0.jpg", "Barbell_Squat/1.jpg"],
+      },
+    },
+  },
+  decorators: [
+    (Story) => (
+      <WithBothPreference>
+        <Story />
+      </WithBothPreference>
+    ),
+  ],
 };

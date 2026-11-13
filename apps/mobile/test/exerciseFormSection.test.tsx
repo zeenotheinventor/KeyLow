@@ -1,12 +1,26 @@
 import { KeyLowProvider } from "@keylow/api-client";
-import { EXERCISE_FORM, describeFormPhoto, describeFormVideoLink } from "@keylow/core/copy";
+import {
+  EXERCISE_FORM,
+  FORM_MEDIA_SWITCH,
+  describeFormPhoto,
+  describeFormVideoLink,
+} from "@keylow/core/copy";
 import { onlineManager } from "@tanstack/react-query";
-import { act, cleanup, render, screen, userEvent, waitFor } from "@testing-library/react-native";
+import {
+  act,
+  cleanup,
+  render,
+  screen,
+  userEvent,
+  waitFor,
+  within,
+} from "@testing-library/react-native";
 import { openURL } from "expo-linking";
 import { AccessibilityInfo } from "react-native";
 import { setUpTests } from "react-native-reanimated";
 
 import { ExerciseFormSection } from "../components/ExerciseFormSection";
+import { resetFormMediaPreferenceForTests } from "../lib/formMediaPreference/testing";
 import { ThemeProvider } from "../lib/theme";
 import { createDiaryQueryClient, diaryBackend, resetDiaryBackend } from "./support/diaryBackend";
 import {
@@ -19,9 +33,17 @@ import { registerAppStyles } from "./support/nativeWindStyles";
 
 import type { QueryClient } from "@tanstack/react-query";
 
+const mockStorageItems = new Map<string, string>();
+
 jest.mock("@react-native-async-storage/async-storage", () => ({
   __esModule: true,
-  default: { getItem: () => Promise.resolve(null), setItem: () => Promise.resolve() },
+  default: {
+    getItem: (key: string) => Promise.resolve(mockStorageItems.get(key) ?? null),
+    setItem: (key: string, value: string) => {
+      mockStorageItems.set(key, value);
+      return Promise.resolve();
+    },
+  },
 }));
 jest.mock("expo-linking", () => ({ openURL: jest.fn() }));
 setUpTests();
@@ -36,6 +58,7 @@ const VIDEO_ROW = {
   video_channel: VIDEO_CHANNEL,
   image_paths: ["Barbell_Squat/0.jpg", "Barbell_Squat/1.jpg"],
 };
+const VIDEO_ONLY_ROW = { ...VIDEO_ROW, image_paths: null };
 const PHOTOS_ROW = {
   video_id: null,
   video_title: null,
@@ -70,6 +93,8 @@ describe("ExerciseFormSection", () => {
 
   beforeEach(() => {
     registerAppStyles(kitStyles);
+    mockStorageItems.clear();
+    resetFormMediaPreferenceForTests();
     resetFormMediaBackend();
     resetDiaryBackend();
     jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(false);
@@ -119,6 +144,98 @@ describe("ExerciseFormSection", () => {
       expect(screen.queryByRole("status")).not.toBeOnTheScreen();
       expect(screen.queryByRole("link")).not.toBeOnTheScreen();
       expect(screen.queryAllByRole("img")).toHaveLength(0);
+    });
+  });
+
+  describe("the exercise demos preference", () => {
+    const videoName = describeFormVideoLink(VIDEO_TITLE, VIDEO_CHANNEL);
+    const startPhoto = describeFormPhoto(SQUAT_NAME, "start");
+    const switchGroup = () => screen.getByLabelText(FORM_MEDIA_SWITCH.label);
+
+    describe("for an exercise with both a video and photos", () => {
+      beforeEach(() => {
+        formMediaBackend.rowsByExercise[SQUAT_ID] = VIDEO_ROW;
+      });
+
+      it("should show only the video under Video, with the switch on Video", async () => {
+        await renderSection(true);
+
+        expect(await screen.findByRole("link", { name: videoName })).toBeOnTheScreen();
+        expect(screen.queryByRole("img", { name: startPhoto })).not.toBeOnTheScreen();
+        expect(within(switchGroup()).getByRole("radio", { name: "Video" })).toBeChecked();
+      });
+
+      it("should show only the photos under Photos, with the switch on Photos", async () => {
+        mockStorageItems.set("exerciseForm.mediaPreference", "photos");
+        await renderSection(true);
+
+        expect(await screen.findByRole("img", { name: startPhoto })).toBeOnTheScreen();
+        expect(screen.queryByRole("link", { name: videoName })).not.toBeOnTheScreen();
+        expect(within(switchGroup()).getByRole("radio", { name: "Photos" })).toBeChecked();
+      });
+
+      it("should show the video and the photos under Both, with the switch on Both", async () => {
+        mockStorageItems.set("exerciseForm.mediaPreference", "both");
+        await renderSection(true);
+
+        expect(await screen.findByRole("link", { name: videoName })).toBeOnTheScreen();
+        expect(screen.getByRole("img", { name: startPhoto })).toBeOnTheScreen();
+        expect(within(switchGroup()).getByRole("radio", { name: "Both" })).toBeChecked();
+      });
+
+      it("should change what the sheet shows at once, and keep the choice, when the switch is pressed", async () => {
+        await renderSection(true);
+        await screen.findByRole("link", { name: videoName });
+
+        await userEvent.press(within(switchGroup()).getByRole("radio", { name: "Both" }));
+
+        expect(screen.getByRole("img", { name: startPhoto })).toBeOnTheScreen();
+        expect(screen.getByRole("link", { name: videoName })).toBeOnTheScreen();
+        expect(mockStorageItems.get("exerciseForm.mediaPreference")).toBe("both");
+      });
+    });
+
+    describe("for an exercise with a video only", () => {
+      it.each(["video", "photos", "both"])(
+        "should show the video, with no switch, under %s",
+        async (preference) => {
+          mockStorageItems.set("exerciseForm.mediaPreference", preference);
+          formMediaBackend.rowsByExercise[SQUAT_ID] = VIDEO_ONLY_ROW;
+          await renderSection(true);
+
+          expect(await screen.findByRole("link", { name: videoName })).toBeOnTheScreen();
+          expect(screen.queryByRole("img", { name: startPhoto })).not.toBeOnTheScreen();
+          expect(screen.queryByLabelText(FORM_MEDIA_SWITCH.label)).not.toBeOnTheScreen();
+        },
+      );
+    });
+
+    describe("for an exercise with photos only", () => {
+      it.each(["video", "photos", "both"])(
+        "should show the photos, with no switch, under %s",
+        async (preference) => {
+          mockStorageItems.set("exerciseForm.mediaPreference", preference);
+          formMediaBackend.rowsByExercise[SQUAT_ID] = PHOTOS_ROW;
+          await renderSection(true);
+
+          expect(await screen.findByRole("img", { name: startPhoto })).toBeOnTheScreen();
+          expect(screen.queryByRole("link")).not.toBeOnTheScreen();
+          expect(screen.queryByLabelText(FORM_MEDIA_SWITCH.label)).not.toBeOnTheScreen();
+        },
+      );
+    });
+
+    it("should show nothing, and no switch, for an exercise with neither, under Both", async () => {
+      mockStorageItems.set("exerciseForm.mediaPreference", "both");
+      await renderSection(true);
+
+      await waitFor(() => {
+        expect(formMediaBackend.reads).toBe(1);
+        expect(screen.queryByRole("status")).not.toBeOnTheScreen();
+        expect(screen.queryByLabelText(FORM_MEDIA_SWITCH.label)).not.toBeOnTheScreen();
+        expect(screen.queryByRole("link")).not.toBeOnTheScreen();
+        expect(screen.queryAllByRole("img")).toHaveLength(0);
+      });
     });
   });
 
