@@ -7,6 +7,7 @@ export * from "./export";
 export * from "./foods";
 export * from "./format";
 export * from "./nutrition";
+export * from "./palate";
 export * from "./plate";
 // Only what the assistant's recipe tools need. The rest of recipes is read through `@keylow/core/recipes`.
 export { buildRecipeIngredient, validateRecipeDraft } from "./recipes";
