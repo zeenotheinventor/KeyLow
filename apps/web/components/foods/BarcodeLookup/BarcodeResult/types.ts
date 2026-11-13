@@ -6,4 +6,6 @@ export type BarcodeResultProps = UseFoodByBarcodeReturn & {
   day?: string | undefined;
   /** The page must not be left, so the link to create the food opens in a new tab and says why. */
   createsInNewTab?: boolean | undefined;
+  /** What the new tab leaves as it is, which the not-found sentence says. Defaults to the recipe. */
+  keeps?: "recipe" | "plate" | undefined;
 };

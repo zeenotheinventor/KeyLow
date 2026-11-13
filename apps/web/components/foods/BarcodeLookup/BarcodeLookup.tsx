@@ -23,7 +23,7 @@ import { useFoodLogActions } from "@/lib/foodLogActions";
  * up. A food that is found opens the Add food dialog on its portion step, over the panel, as a
  * search result does, or, given `onFound`, is handed to the page that owns the panel.
  */
-export function BarcodeLookup({ onClose, onFound, day }: BarcodeLookupProps) {
+export function BarcodeLookup({ onClose, onFound, day, keeps }: BarcodeLookupProps) {
   const { openAddFood } = useFoodLogActions();
   const idPrefix = useId();
   const inputId = `${idPrefix}-digits`;
@@ -127,7 +127,12 @@ export function BarcodeLookup({ onClose, onFound, day }: BarcodeLookupProps) {
           </span>
         )}
         {request !== null && (
-          <BarcodeResult {...lookup} day={day} createsInNewTab={onFound !== undefined} />
+          <BarcodeResult
+            {...lookup}
+            day={day}
+            createsInNewTab={onFound !== undefined}
+            keeps={keeps}
+          />
         )}
       </section>
     </Card>

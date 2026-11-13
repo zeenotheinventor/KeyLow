@@ -33,7 +33,13 @@ function ActionButton({ action }: { action: EmptyStateAction }) {
   if (action.href !== undefined) {
     return (
       <Button asChild variant={variant} className="mt-3">
-        <Link href={action.href}>{content}</Link>
+        {action.opensInNewTab === true ? (
+          <Link href={action.href} target="_blank" rel="noreferrer">
+            {content} <span className="sr-only">(opens in a new tab)</span>
+          </Link>
+        ) : (
+          <Link href={action.href}>{content}</Link>
+        )}
       </Button>
     );
   }

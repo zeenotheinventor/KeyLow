@@ -12,6 +12,10 @@ type CommonSearchStepProps = {
   onOpenFood: (foodId: string) => void;
   /** A press on a Recent row: go to the amount step at the amount it was last logged with. */
   onOpenRecent: (food: RecentFood) => void;
+  /** The search field's barcode button, which the owner of the typed lookup panel supplies. */
+  barcodeButton?: BarcodeButton | undefined;
+  /** What sits between the field and the results: the typed barcode lookup panel, or the note that it is off. */
+  barcodePanel?: ReactNode;
 };
 
 /** The diary's search: foods found go on the plate, and each row has a plus that puts its serving there. */
@@ -45,10 +49,6 @@ export type LogSearchStepProps = CommonSearchStepProps & {
  */
 type IngredientSearchStepProps = CommonSearchStepProps & {
   mode: "ingredient";
-  /** The search field's barcode button, which the owner of the typed lookup panel supplies. */
-  barcodeButton?: BarcodeButton | undefined;
-  /** What sits between the field and the results: the typed barcode lookup panel, or the note that it is off. */
-  barcodePanel?: ReactNode;
 };
 
 export type SearchStepProps = LogSearchStepProps | IngredientSearchStepProps;

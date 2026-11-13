@@ -78,7 +78,8 @@ function limitsFor(
  * that match come first, in their own group, each with a plus that puts one serving on the plate, and a press on the row
  * goes to the amount step for the recipe. In `ingredient` mode, a recipe's, there is no Time field, no plus,
  * no Quick add row and no recipes (a recipe is not an ingredient of itself), and Recent has no plus: a press
- * on a row is the only way on.
+ * on a row is the only way on. The barcode button and the typed lookup panel are in both modes. In the log
+ * search an empty result offers Create a food, which opens the new food page in a new tab.
  */
 export function SearchStep(props: SearchStepProps) {
   return props.mode === "ingredient" ? (
@@ -179,6 +180,13 @@ function SearchStepView(props: SearchStepProps & RecipeResults) {
               size="section"
               title={SEARCH_EMPTY.title}
               body={SEARCH_EMPTY.body}
+              // The new food is made in another tab, so this tab's dialog and plate stay. A recipe's ingredient
+              // search has no such button, as the phone's has none.
+              action={
+                props.mode === "ingredient"
+                  ? undefined
+                  : { label: SEARCH_EMPTY.action, href: "/foods/new", opensInNewTab: true }
+              }
             />
           )}
         </>
@@ -291,9 +299,7 @@ function SearchStepView(props: SearchStepProps & RecipeResults) {
           onChange={(event) => {
             onQueryChange(event.target.value);
           }}
-          {...(props.mode === "ingredient" && props.barcodeButton !== undefined
-            ? { barcodeButton: props.barcodeButton }
-            : {})}
+          {...(props.barcodeButton === undefined ? {} : { barcodeButton: props.barcodeButton })}
         />
         {props.mode !== "ingredient" && props.hidesTime !== true && (
           <TimeField
@@ -305,7 +311,7 @@ function SearchStepView(props: SearchStepProps & RecipeResults) {
           />
         )}
       </div>
-      {props.mode === "ingredient" && props.barcodePanel}
+      {props.barcodePanel}
       {props.mode !== "ingredient" && !isOnline && (
         // The plus still works offline because it writes nothing, so the banner says why Log foods is off.
         <Banner title={OFFLINE_BANNER.title} icon={WifiOff}>

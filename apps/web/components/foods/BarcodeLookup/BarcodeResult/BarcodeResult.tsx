@@ -4,6 +4,7 @@ import {
   BARCODE_NOT_FOUND,
   INGREDIENT_BARCODE,
   LOOKUP_RATE_LIMITED,
+  PLATE_BARCODE,
   describeRateLimit,
 } from "@keylow/core/copy";
 import Link from "next/link";
@@ -20,6 +21,7 @@ export function BarcodeResult({
   error,
   day,
   createsInNewTab = false,
+  keeps = "recipe",
 }: BarcodeResultProps) {
   if (result?.status === "found") {
     return <InlineStatus size="small">{BARCODE_LOOKUP_PROGRESS.openingFood}</InlineStatus>;
@@ -46,7 +48,9 @@ export function BarcodeResult({
       <div className="flex flex-col gap-2 border-t border-border pt-1">
         <span className="pt-2 text-body-strong">{BARCODE_NOT_FOUND.title}</span>
         <span className="text-[14px] leading-5 text-text-secondary">
-          {createsInNewTab ? INGREDIENT_BARCODE.notFoundBody : BARCODE_NOT_FOUND.typedBody}
+          {createsInNewTab
+            ? (keeps === "plate" ? PLATE_BARCODE : INGREDIENT_BARCODE).notFoundBody
+            : BARCODE_NOT_FOUND.typedBody}
         </span>
         <Link
           href={`/foods/new?barcode=${result.code}${createsInNewTab ? "&for=recipe" : day === undefined ? "" : `&day=${day}`}`}

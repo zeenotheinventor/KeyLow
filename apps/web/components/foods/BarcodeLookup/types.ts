@@ -13,6 +13,8 @@ export type BarcodeLookupProps = {
    * has offers to create the food in a new tab.
    */
   onFound?: ((food: Food) => void) | undefined;
+  /** What a code nobody has leaves as it is in the new tab it opens: the recipe (the default) or the plate. */
+  keeps?: "recipe" | "plate" | undefined;
   /** Called when the user closes the panel. */
   onClose: () => void;
   /** The day a found food is added to, `YYYY-MM-DD`. Left out, it is today. */

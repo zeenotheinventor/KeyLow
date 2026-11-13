@@ -9,9 +9,7 @@ import { makeFood, makePortion } from "../foods/support";
 import type { UseFoodByBarcodeOptions, UseFoodByBarcodeReturn } from "@keylow/api-client";
 import type { RecipeIngredient } from "@keylow/core/recipes";
 
-import { AddFoodDialog } from "@/components/diary/AddFoodDialog";
 import { AddIngredientDialog } from "@/components/recipes/AddIngredientDialog";
-import { ToastProvider } from "@/components/ui/Toast";
 import { FoodLogActionsProvider } from "@/lib/foodLogActions";
 
 const OAT_CAKES_ID = "11111111-1111-4111-8111-111111111111";
@@ -111,18 +109,6 @@ describe("a barcode typed in the Add ingredient dialog", () => {
 
       expect(barcodeButton().getAttribute("aria-expanded")).toBe("false");
       expect(screen.queryByRole("region", { name: "Barcode lookup" })).toBeNull();
-    });
-
-    it("should be left out of the diary's Add food search", () => {
-      render(
-        <ToastProvider>
-          <FoodLogActionsProvider>
-            <AddFoodDialog request={{ date: "2026-10-15" }} opener={null} onClose={vi.fn()} />
-          </FoodLogActionsProvider>
-        </ToastProvider>,
-      );
-
-      expect(screen.queryByRole("button", { name: "Look up a barcode" })).toBeNull();
     });
 
     it("should open the panel under the field with the cursor in the digits", () => {

@@ -67,6 +67,12 @@ export const INGREDIENT_BARCODE = {
   notFoundAction: "Create food with this barcode (opens in a new tab)",
 };
 
+/** The same lookup inside the Add food dialog, where the plate is held and must not be lost. */
+export const PLATE_BARCODE = {
+  notFoundBody:
+    "Create the food with this barcode in a new tab, then search for it here. Your plate stays as it is.",
+};
+
 export const BARCODE_LOOKUP_PROGRESS = {
   lookingUp: "Looking up the barcode",
   openingFood: "Opening the food",
