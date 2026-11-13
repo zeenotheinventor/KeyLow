@@ -13,6 +13,7 @@ export const EVAL_SET_NAMES = [
   "trainingKnowledge",
   "mealEstimate",
   "featureRequest",
+  "kitchenProbe",
 ] as const;
 
 export type EvalSetName = (typeof EVAL_SET_NAMES)[number];
@@ -40,6 +41,8 @@ export const THRESHOLD_PERCENT: Readonly<Record<EvalSetName, number>> = {
   mealEstimate: 80,
   /** The assistant offers a feature request when Ki-Lo has no such feature, and sends it only on the button (KEY-977). */
   featureRequest: 90,
+  /** The hidden kitchen group on the live API (KEY-1022): one conversation, so it passes or it does not. */
+  kitchenProbe: 100,
 };
 
 /**
@@ -52,4 +55,5 @@ export const OPT_IN_SET_NAMES: readonly EvalSetName[] = [
   "trainingKnowledge",
   "mealEstimate",
   "featureRequest",
+  "kitchenProbe",
 ];

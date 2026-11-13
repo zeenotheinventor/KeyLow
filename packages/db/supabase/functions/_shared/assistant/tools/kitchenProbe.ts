@@ -8,7 +8,8 @@ import type { ReadToolDefinition } from "../tool.ts";
 
 export const kitchenProbeTool: ReadToolDefinition<Record<string, never>> = {
   name: "kitchen_probe",
-  description: "Test only. Answers ok. Call it when the person asks to probe the kitchen tools.",
+  description:
+    "Test only, a stand-in for the kitchen tools. Call it once when the person asks for a meal plan or a recipe suggestion, then say the kitchen tools are being tested.",
   kind: "read",
   group: "kitchen",
   input: z.strictObject({}),

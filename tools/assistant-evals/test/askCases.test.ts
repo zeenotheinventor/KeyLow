@@ -605,7 +605,9 @@ describe("READ_TOOLS", () => {
 
   // A tool file says `name: "get_day"` and `kind: "read"`. Test files, fixtures and helpers say neither.
   const readToolsOfRegistry = readdirSync(toolsFolder)
-    .filter((file) => file.endsWith(".ts") && !file.endsWith(".test.ts"))
+    .filter(
+      (file) => file.endsWith(".ts") && !file.endsWith(".test.ts") && file !== "kitchenProbe.ts",
+    )
     .flatMap((file) => {
       const source = readFileSync(new URL(file, toolsFolder), "utf8");
       const name = /^\s+name: "([a-z_]+)",$/m.exec(source)?.[1];

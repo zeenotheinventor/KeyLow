@@ -20,6 +20,11 @@ on:
         type: string
         required: false
         default: ""
+      kitchen:
+        description: Turns the hidden kitchen tool group on in the served functions (ASSISTANT_KITCHEN=1 and the test-only ASSISTANT_KITCHEN_PROBE=1), for the kitchenProbe set (ADR 0006, Amendment 5). Off changes nothing.
+        type: boolean
+        required: false
+        default: false
 
 # A second dispatch on the same ref replaces the first, so one ref never spends tokens twice at once.
 concurrency:
@@ -86,11 +91,15 @@ jobs:
         working-directory: packages/db
         env:
           ANTHROPIC_EVAL_API_KEY: ${{ secrets.ANTHROPIC_EVAL_API_KEY }}
+          KITCHEN: ${{ inputs.kitchen }}
         run: |
           gateway=$(docker network inspect supabase_network_keylow --format '{{(index .IPAM.Config 0).Gateway}}')
           sed -e '/^ANTHROPIC_BASE_URL=/d' -e '/^ANTHROPIC_API_KEY=/d' -e "s/host.docker.internal/$gateway/" \
             supabase/functions/.env.test > "$RUNNER_TEMP/functions.env"
           printf 'ANTHROPIC_API_KEY=%s\n' "$ANTHROPIC_EVAL_API_KEY" >> "$RUNNER_TEMP/functions.env"
+          if [ "$KITCHEN" = "true" ]; then
+            printf 'ASSISTANT_KITCHEN=1\nASSISTANT_KITCHEN_PROBE=1\n' >> "$RUNNER_TEMP/functions.env"
+          fi
           nohup supabase functions serve --env-file "$RUNNER_TEMP/functions.env" --no-verify-jwt \
             > "$RUNNER_TEMP/functions-serve.log" 2>&1 &
           for _ in $(seq 1 45); do

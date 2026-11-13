@@ -1235,7 +1235,9 @@ describe("the names the set relies on", () => {
 
   it("should be a write tool in the registry for the import and for log_entry", () => {
     const writeTools = readdirSync(toolsFolder)
-      .filter((file) => file.endsWith(".ts") && !file.endsWith(".test.ts"))
+      .filter(
+        (file) => file.endsWith(".ts") && !file.endsWith(".test.ts") && file !== "kitchenProbe.ts",
+      )
       .flatMap((file) => {
         const source = readFileSync(new URL(file, toolsFolder), "utf8");
         const name = /^\s+name: "([a-z_]+)",$/m.exec(source)?.[1];
@@ -2070,7 +2072,9 @@ describe("the read tools Part 1 allows", () => {
       import.meta.url,
     );
     const kinds = readdirSync(toolsFolder)
-      .filter((file) => file.endsWith(".ts") && !file.endsWith(".test.ts"))
+      .filter(
+        (file) => file.endsWith(".ts") && !file.endsWith(".test.ts") && file !== "kitchenProbe.ts",
+      )
       .flatMap((file) => {
         const source = readFileSync(new URL(file, toolsFolder), "utf8");
         const name = /^\s+name: "([a-z_]+)",$/m.exec(source)?.[1];
