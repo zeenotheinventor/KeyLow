@@ -23,6 +23,7 @@ import {
   buildAdjustmentDraft,
   computeRecipe,
   readSubstitution,
+  recipeRefusalOf,
   substitutionSchema,
 } from "../../core.ts";
 import { getRecipe } from "../../repos.ts";
@@ -31,11 +32,11 @@ import { adjustRequestOf } from "../kitchenPrompts.ts";
 import { BudgetExceeded, deadlineOf } from "./deadline.ts";
 import { readFoodAndPortions } from "./foodMatching.ts";
 import { readPalate } from "./readPalate.ts";
-import { dataNotice } from "./shared.ts";
+import { dataNotice, recipeToolRefusal as refuse } from "./shared.ts";
 
 import type { AdjustmentOutcome, FitMiss } from "../../core.ts";
 import type { FoodAndPortions } from "./foodMatching.ts";
-import type { ReadToolDefinition } from "../tool.ts";
+import type { ReadToolDefinition, ToolRunOutput } from "../tool.ts";
 
 const adjustRecipeInput = z
   .strictObject({
@@ -67,10 +68,6 @@ export const defaultAdjustLimits: AdjustLimits = {
   generationMilliseconds: GENERATION_TIMEOUT_MILLISECONDS,
 };
 
-const refuse = (error: string, extra: Record<string, unknown> = {}) => ({
-  data: { error, ...extra },
-});
-
 const missesOf = (misses: readonly FitMiss[]) =>
   misses.map(({ nutrient, target, achieved, reason, limitedBy }) => ({
     nutrient,
@@ -88,7 +85,7 @@ export function createAdjustRecipeTool(
     description:
       "Changes a saved recipe by one nutrient in a serving, such as 30 g more protein, and shows a card to " +
       "save as a new recipe. Ki-Lo works out every figure. If could_not_reach_target, give the closest " +
-      "figure from misses. If recipe_has_avoided_ingredient, they can remove that food and ask again. Nothing is saved. " +
+      "figure from misses, and the app shows a card with the figures, so keep your words short. If recipe_has_avoided_ingredient, they can remove that food and ask again. Nothing is saved. " +
       dataNotice,
     kind: "read",
     group: "kitchen",
@@ -96,7 +93,7 @@ export function createAdjustRecipeTool(
     input: adjustRecipeInput,
     annotations: { readOnlyHint: true },
     strict: false,
-    async run(ctx, input) {
+    async run(ctx, input): Promise<ToolRunOutput> {
       const { millisecondsLeft, within } = deadlineOf(limits.totalMilliseconds);
 
       try {
@@ -144,6 +141,8 @@ export function createAdjustRecipeTool(
         let outcome: AdjustmentOutcome = scaled;
         let tried: string[] = [];
         let chooserUnavailable = false;
+        // Whether the choice of foods to add was really made, so the card never speaks for foods that were not judged.
+        let chooserRan = false;
         if (scaled.status === "unreachable") {
           // Scaling cannot reach it, so one Opus call may add foods of the person's own.
           const cache = new Map<string, Promise<FoodAndPortions | null>>();
@@ -199,6 +198,7 @@ export function createAdjustRecipeTool(
             }
             // A refused or failed choice leaves what scaling reached, which the model can still report.
             chooserUnavailable = !generated.ok;
+            chooserRan = generated.ok;
             const additions = (generated.ok ? generated.value.positions : []).flatMap(
               (position) => {
                 const candidate = candidates[position];
@@ -223,11 +223,26 @@ export function createAdjustRecipeTool(
           return refuse("recipe_has_avoided_ingredient", { foods: outcome.foods });
         }
         if (outcome.status === "unreachable") {
-          return refuse("could_not_reach_target", {
+          const refused = refuse("could_not_reach_target", {
             misses: missesOf(outcome.misses),
             tried_foods: tried,
             ...(chooserUnavailable ? { chooser: "unavailable" } : {}),
           });
+          // The card says none of the person's foods makes a sensible addition, which is only true when the
+          // choice was really made. No foods offered, or a choice that was refused or failed, is left to the
+          // model's words.
+          const refusal =
+            !chooserRan || chooserUnavailable
+              ? null
+              : recipeRefusalOf({
+                  recipeName: recipe.name,
+                  nutrient: input.nutrient,
+                  target,
+                  reached: outcome.reached,
+                });
+          return refusal === null
+            ? refused
+            : { ...refused, structured: { recipeRefusal: refusal } };
         }
         // The model is never told a recipe was adjusted without a card the app can draw. The turn loop checks the
         // same schema again.

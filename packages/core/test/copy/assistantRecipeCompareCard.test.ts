@@ -8,6 +8,7 @@ import {
   describeRecipeCompareFitWithin,
   describeRecipeCompareStays,
   describeRecipeCompareSubtitle,
+  describeRecipeRefusal,
 } from "../../src/copy";
 import { MAX_RECIPE_NAME_LENGTH } from "../../src/recipes/bounds";
 
@@ -139,6 +140,47 @@ describe("describeRecipeCompareStays", () => {
   it("should say the original stays as it is", () => {
     expect(describeRecipeCompareStays("Eval chicken and rice")).toBe(
       "Eval chicken and rice stays as it is.",
+    );
+  });
+});
+
+describe("describeRecipeRefusal", () => {
+  const refusal = {
+    recipeName: "Eval porridge bowl",
+    nutrient: "protein_g",
+    target: 53,
+    reached: 17.2,
+    reachedKcal: 389.4,
+  } as const;
+
+  it("should word the board's refused card from its figures", () => {
+    expect(describeRecipeRefusal(refusal)).toEqual({
+      title: "Can't adjust Eval porridge bowl",
+      subtitle: "No new recipe made",
+      body: "Its ingredients reach 17 g protein a serving near its 389 kcal, not the 53 g you asked for. None of your foods makes a sensible addition.",
+    });
+  });
+
+  it("should word a calorie request without a second calorie figure", () => {
+    expect(
+      describeRecipeRefusal({ ...refusal, nutrient: "kcal", target: 250, reachedKcal: null }).body,
+    ).toBe(
+      "Its ingredients reach 17 kcal a serving, not the 250 kcal you asked for. None of your foods makes a sensible addition.",
+    );
+  });
+
+  it("should word a carbs or fat request with its noun", () => {
+    expect(describeRecipeRefusal({ ...refusal, nutrient: "carbs_g" }).body).toContain(
+      "reach 17 g carbs a serving",
+    );
+    expect(describeRecipeRefusal({ ...refusal, nutrient: "fat_g" }).body).toContain(
+      "reach 17 g fat a serving",
+    );
+  });
+
+  it("should leave out 'near its' when the calories are not known", () => {
+    expect(describeRecipeRefusal({ ...refusal, reachedKcal: null }).body).toBe(
+      "Its ingredients reach 17 g protein a serving, not the 53 g you asked for. None of your foods makes a sensible addition.",
     );
   });
 });

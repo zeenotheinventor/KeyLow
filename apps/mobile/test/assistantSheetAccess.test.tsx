@@ -707,6 +707,8 @@ const liveWithNotice = (notice: AssistantNotice): AssistantLiveTurn => ({
   exerciseMuscles: [],
   exerciseFormMedia: [],
   recipeDrafts: [],
+  recipeRefusals: [],
+  recipeNotices: [],
   askAgain: false,
   status: null,
   notice,

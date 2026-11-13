@@ -535,3 +535,11 @@ Haiku 5.5 routes a kitchen turn. It passes the person's words and any figures to
 ### Implemented by
 
 - KEY-1026, `generate.ts`, the Opus 5.5 prices, the readers in core, the generation flag and its two timeouts, the start guard in the turn loop and this amendment.
+
+### Addendum of 2026-11-13 (KEY-1048): a recipe that did not come
+
+A generation tool that ends `timed_out`, `generation_timeout` or `generation_refused` also sends the app a notice, and `adjust_recipe` sends the figures of a refused adjustment. Both travel in the tool result's `structured` field, which the model never reads. The turn loop checks each against its core schema, keeps it in the row's `display` under `recipeNotice` or `recipeRefusal`, and streams it after the reply as a `recipe_notice` or `recipe_refusal` event, in call order, beside `recipe_draft`. They are events of their own and not `notice` events, because the notices are the gates of the whole assistant and a recipe that did not come leaves it working. An app that is behind skips an event type it does not know (the KEY-1018 rule above) and drops a `display` key it cannot read, so no phone fails a turn over them. The schemas are not strict, so a field a later version adds is stripped.
+
+- **The notice** has the codes `timed_out`, which offers Try again, and `refused`, which has no button. The boards are `assistant-card · recipe-draft-failed`.
+- **The refused card** is sent only when the choice of foods to add was really made. When no food was offered, or the choice was refused or failed, the model's own words stand, because the card says none of the person's foods makes a sensible addition. Its calorie clause is left out when the calories are no longer within the fit's tolerance of those held. A recipe notice offers Try again only when the turn wrote nothing, because sending the message again would repeat a write. Its figures are the closest the fit reached, in core's `recipeRefusalOf`. The board is `assistant-card · recipe-compare`, refused.
+- **Not sent:** a generation that failed another way, a recipe that mentions an avoided food, a stored recipe that holds one and a failure to match foods. The model words those, and no board draws them.

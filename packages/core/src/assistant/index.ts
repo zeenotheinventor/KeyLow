@@ -7,6 +7,8 @@ export * from "./recipeDraft";
 export * from "./recipeDraftCard";
 export * from "./recipeDraftOf";
 export * from "./recipeDraftPrefill";
+export * from "./recipeNotice";
+export * from "./recipeRefusal";
 export * from "./notice";
 export * from "./consentVersion";
 export * from "./citations";

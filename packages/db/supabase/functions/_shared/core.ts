@@ -86,6 +86,8 @@ export type {
   PalateProfile,
   PalateRecipe,
   AssistantRecipeDraft,
+  AssistantRecipeNotice,
+  AssistantRecipeRefusal,
   SuggestionLine,
 } from "./core/index.js";
 export {
@@ -203,6 +205,10 @@ export {
   adjustmentTarget,
   buildAdjustmentDraft,
   assistantRecipeDraftSchema,
+  assistantRecipeNoticeSchema,
+  assistantRecipeRefusalSchema,
+  recipeNoticeOfToolError,
+  recipeRefusalOf,
   buildSuggestionDraft,
   recipeDraftSummaryOf,
   dueCheckinDates,

@@ -5,6 +5,8 @@ import { assistantExerciseFormMediaSchema } from "./exerciseFormCard";
 import { assistantExerciseMusclesSchema } from "./exerciseMusclesCard";
 import { assistantNoticeSchema } from "./notice";
 import { assistantRecipeDraftSchema } from "./recipeDraft";
+import { assistantRecipeNoticeSchema } from "./recipeNotice";
+import { assistantRecipeRefusalSchema } from "./recipeRefusal";
 import { undoStateOfActions } from "./undoState";
 import { ASSISTANT_CARD_KINDS_WITHOUT_UNDO, mergeAssistantCards } from "./writeToolWords";
 
@@ -13,6 +15,8 @@ import type { AssistantExerciseFormMedia } from "./exerciseFormCard";
 import type { AssistantExerciseMuscles } from "./exerciseMusclesCard";
 import type { AssistantNotice } from "./notice";
 import type { AssistantRecipeDraft } from "./recipeDraft";
+import type { AssistantRecipeNotice } from "./recipeNotice";
+import type { AssistantRecipeRefusal } from "./recipeRefusal";
 import type { AssistantActionState } from "./undoState";
 
 /*
@@ -85,6 +89,10 @@ export type AssistantThreadItem =
   | { kind: "exercise_form_media"; id: string; exercise: AssistantExerciseFormMedia }
   /** A recipe the assistant drafted, drawn as the suggested recipe card under the reply (`assistant-card · recipe-draft`). One item for each draft, in call order, never merged. */
   | { kind: "recipe_draft"; id: string; draft: AssistantRecipeDraft }
+  /** Why a recipe did not come, drawn as a notice under the reply (`assistant-card · recipe-draft-failed`). `canRetry` is false when the turn also wrote something, because sending the message again would repeat the write. One item for each tool result that holds one, never merged. */
+  | { kind: "recipe_notice"; id: string; notice: AssistantRecipeNotice; canRetry: boolean }
+  /** A saved recipe that could not be changed as asked, drawn as the refused compare card under the reply (`assistant-card · recipe-compare`, refused). One item for each tool result that holds one, never merged. */
+  | { kind: "recipe_refusal"; id: string; refusal: AssistantRecipeRefusal }
   /** The Ask again quick reply at the end of a turn (`assistant · workout-in-progress`). `answered` once a later turn exists, and then the chip is gone. */
   | { kind: "ask_again"; id: string; answered: boolean };
 
@@ -138,6 +146,9 @@ const displayEntrySchema = z.object({
   // A draft this app cannot read (a later version's, or a damaged one) is dropped on its own, so the rest of
   // the entry is still drawn.
   recipeDraft: assistantRecipeDraftSchema.optional().catch(undefined),
+  // Dropped on their own when this app cannot read them, for the same reason.
+  recipeNotice: assistantRecipeNoticeSchema.optional().catch(undefined),
+  recipeRefusal: assistantRecipeRefusalSchema.optional().catch(undefined),
   askAgain: z.boolean().optional(),
   citation: z.string().min(1).nullish(),
   estimate: z.string().min(1).nullish(),
@@ -205,10 +216,12 @@ function itemsOfTurn(
 ): AssistantThreadItem[] {
   const items: DraftItem[] = [];
   // The muscles and the form media of an exercise, a recipe draft, a link and Ask again are drawn at the end of the turn, under its words, as
-  // the boards show them: the reply, the muscles, the form media, the recipe draft, the link, a notice, then Ask again.
+  // the boards show them: the reply, the muscles, the form media, the recipe draft, a refused adjustment, a recipe notice, the link, a notice, then Ask again.
   const exerciseMuscles: AssistantThreadItem[] = [];
   const exerciseFormMedia: AssistantThreadItem[] = [];
   const recipeDrafts: AssistantThreadItem[] = [];
+  const recipeRefusals: AssistantThreadItem[] = [];
+  const recipeNotices: AssistantThreadItem[] = [];
   const links: AssistantThreadItem[] = [];
   const askAgains: AssistantThreadItem[] = [];
   const citations: (string | null | undefined)[] = [];
@@ -290,6 +303,21 @@ function itemsOfTurn(
             draft: outcome.recipeDraft,
           });
         }
+        if (outcome.recipeRefusal !== undefined) {
+          recipeRefusals.push({
+            kind: "recipe_refusal",
+            id: `${id}:recipeRefusal`,
+            refusal: outcome.recipeRefusal,
+          });
+        }
+        if (outcome.recipeNotice !== undefined) {
+          recipeNotices.push({
+            kind: "recipe_notice",
+            id: `${id}:recipeNotice`,
+            notice: outcome.recipeNotice,
+            canRetry: true,
+          });
+        }
         if (outcome.link !== undefined) {
           links.push({ kind: "link", id: `${id}:link`, link: outcome.link });
         }
@@ -305,7 +333,15 @@ function itemsOfTurn(
     turn,
     context,
     { citation: distinct(citations), estimate: distinct(estimates) },
-    { exerciseMuscles, exerciseFormMedia, recipeDrafts, links, askAgains },
+    {
+      exerciseMuscles,
+      exerciseFormMedia,
+      recipeDrafts,
+      recipeRefusals,
+      recipeNotices,
+      links,
+      askAgains,
+    },
   );
 }
 
@@ -318,6 +354,8 @@ function finishTurn(
     exerciseMuscles: AssistantThreadItem[];
     exerciseFormMedia: AssistantThreadItem[];
     recipeDrafts: AssistantThreadItem[];
+    recipeRefusals: AssistantThreadItem[];
+    recipeNotices: AssistantThreadItem[];
     links: AssistantThreadItem[];
     askAgains: AssistantThreadItem[];
   },
@@ -337,6 +375,7 @@ function finishTurn(
     return { kind: "card", id: item.id, card: { ...merged, undo } };
   });
 
+  const wroteSomething = drafts.some((item) => item.kind === "draft_card");
   const lastReplyIndex = items.map((item) => item.kind).lastIndexOf("reply");
   const lastReply = items[lastReplyIndex];
   if (lastReply?.kind === "reply") {
@@ -350,9 +389,13 @@ function finishTurn(
     ...trailing.exerciseMuscles,
     ...trailing.exerciseFormMedia,
     ...trailing.recipeDrafts,
+    ...trailing.recipeRefusals,
+    // The same rule as the failed-turn notice below: sending the message again after a write landed would repeat it.
+    ...trailing.recipeNotices.map((item) =>
+      item.kind === "recipe_notice" ? { ...item, canRetry: !wroteSomething } : item,
+    ),
     ...trailing.links,
   );
-  const wroteSomething = drafts.some((item) => item.kind === "draft_card");
   // The notice says nothing was changed and offers Try again, so a turn that holds a card never draws it. The
   // server ends such a turn complete with words of its own (KEY-926). This covers the rows it cannot write: a
   // worker killed mid-turn, whose open turn is marked failed later, and a `finishTurn` that threw.

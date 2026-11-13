@@ -24,4 +24,22 @@ export const samples: Record<string, () => string[]> = {
     copy.describeRecipeCompareAmounts({ change: "removed", before: 30, grams: 0 }, false),
   ],
   describeRecipeCompareStays: () => [copy.describeRecipeCompareStays("Eval chicken and rice")],
+  describeRecipeRefusal: () => [
+    ...Object.values(
+      copy.describeRecipeRefusal({
+        recipeName: "Eval porridge bowl",
+        nutrient: "protein_g",
+        target: 53,
+        reached: 17,
+        reachedKcal: 389,
+      }),
+    ),
+    copy.describeRecipeRefusal({
+      recipeName: "Eval porridge bowl",
+      nutrient: "kcal",
+      target: 250,
+      reached: 389,
+      reachedKcal: null,
+    }).body,
+  ],
 };

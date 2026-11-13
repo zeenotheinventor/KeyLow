@@ -10,6 +10,7 @@ import {
   describeRecipeDraftMiss,
   describeRecipeDraftSteps,
   describeRecipeDraftSubtitle,
+  describeRecipeNotice,
 } from "../../src/copy";
 
 describe("RECIPE_DRAFT_WORDS", () => {
@@ -175,5 +176,23 @@ describe("composerTextForAdjust", () => {
 
   it("should keep what the person already typed", () => {
     expect(composerTextForAdjust("More rice please")).toBe("More rice please");
+  });
+});
+
+describe("describeRecipeNotice", () => {
+  it("should word the timed out notice as the board does, with Try again", () => {
+    expect(describeRecipeNotice({ code: "timed_out" })).toEqual({
+      title: "That recipe did not come through",
+      body: "It took too long to write, and nothing was saved. Try again, or ask for something simpler.",
+      button: "Try again",
+    });
+  });
+
+  it("should word the refused notice as the board does, with no button", () => {
+    expect(describeRecipeNotice({ code: "refused" })).toEqual({
+      title: "That recipe can't be written",
+      body: "The request was turned down, so nothing was made or saved. Try asking for it in other words.",
+      button: null,
+    });
   });
 });

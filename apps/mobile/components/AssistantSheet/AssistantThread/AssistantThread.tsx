@@ -1,9 +1,15 @@
-import { ASSISTANT_SHEET, ASSISTANT_STOPPED, describeAssistantNotice } from "@keylow/core/copy";
+import {
+  ASSISTANT_SHEET,
+  ASSISTANT_STOPPED,
+  describeAssistantNotice,
+  describeRecipeNotice,
+} from "@keylow/core/copy";
 
 import { AssistantLinkRow, AssistantNotice, ChatMessage, ChipGroup } from "../../ui";
 import { AssistantCardEntry } from "../AssistantCardEntry";
 import { AssistantRecipeCompareEntry } from "../AssistantRecipeCompareEntry";
 import { AssistantRecipeDraftEntry } from "../AssistantRecipeDraftEntry";
+import { AssistantRecipeRefusalEntry } from "../AssistantRecipeRefusalEntry";
 import { ConfirmButtons } from "../ConfirmButtons";
 import { ExerciseFormEntry } from "../ExerciseFormEntry";
 import { ExerciseMusclesEntry } from "../ExerciseMusclesEntry";
@@ -25,13 +31,23 @@ const noticeLooks: Record<
   turn_failed: { icon: "CircleAlert", tone: "danger" },
 };
 
+// The notices for a recipe that did not come share the failed turn's glyph. A timeout is the danger one, because it
+// offers Try again, and a refusal is the neutral one.
+const recipeNoticeLooks: Record<
+  Extract<AssistantSheetEntry, { kind: "recipeNotice" }>["notice"]["code"],
+  { icon: IconName; tone: AssistantNoticeTone }
+> = {
+  timed_out: { icon: "CircleAlert", tone: "danger" },
+  refused: { icon: "CircleAlert", tone: "neutral" },
+};
+
 const askAgainOptions = [{ value: "ask-again", label: ASSISTANT_STOPPED.askAgain }];
 
 /**
  * The messages and action cards of the conversation, oldest first, with the quick reply under an answer
  * that was cut short or that asked for it, the quick replies under a clarifying question, the two buttons under a
  * confirmation, the citation and Estimate lines under an answer from the person's data, a link on its own
- * under an answer that made no card, the muscles an exercise works as a figure, its form video or photos as a card and a suggested recipe as a card under the reply, and the working line while the assistant works with no words to show.
+ * under an answer that made no card, the muscles an exercise works as a figure, its form video or photos as a card and a suggested recipe as a card under the reply, the notice for a recipe that did not come and the card for an adjustment that was refused, and the working line while the assistant works with no words to show.
  * Every word comes from the thread the screen was given or from core's copy, so nothing here words a
  * message, and nothing in it decides what to show.
  */
@@ -83,6 +99,26 @@ export function AssistantThread({
             onOpenSavedRecipe={onOpenSavedRecipe}
           />
         );
+      case "recipeRefusal":
+        return <AssistantRecipeRefusalEntry key={entry.key} refusal={entry.refusal} />;
+      case "recipeNotice": {
+        const words = describeRecipeNotice(entry.notice);
+        const look = recipeNoticeLooks[entry.notice.code];
+        return (
+          <AssistantNotice
+            buttons={
+              entry.isLatest && entry.canRetry && words.button !== null
+                ? [{ label: words.button, kind: "secondary", onPress: onTryAgain }]
+                : []
+            }
+            icon={look.icon}
+            key={entry.key}
+            paragraphs={[words.body]}
+            title={words.title}
+            tone={look.tone}
+          />
+        );
+      }
       case "link":
         return (
           <AssistantLinkRow

@@ -37,6 +37,7 @@ import type {
   AssistantExerciseFormMedia,
   AssistantExerciseMuscles,
   AssistantRecipeDraft,
+  AssistantRecipeRefusal,
   AssistantStreamEvent,
 } from "../_shared/core.ts";
 import type { Harness, HarnessOptions, ScriptedResponse, ToolAnswer } from "./turnTesting.ts";
@@ -5258,6 +5259,119 @@ Deno.test(
         assertEquals(typesOf(result.events).includes("answer_meta"), false);
       },
     );
+  },
+);
+
+const noticeOf = (structured: Record<string, unknown>) =>
+  okResult({ name: "suggest_recipe", payload: { error: "timed_out" }, structured });
+
+Deno.test(
+  "a recipe notice sends its event after the reply and before done, and stores it under the call's id",
+  async () => {
+    await withHarness(
+      {
+        responses: [
+          callTools([suggestRecipeCall("r1")], "Writing it."),
+          reply("That took too long."),
+        ],
+        tools: suggestRecipeTools,
+        answers: { suggest_recipe: noticeOf({ recipeNotice: { code: "timed_out" } }) },
+      },
+      async (harness) => {
+        const result = await harness.take("Suggest a dinner around 600 kcal with 45 g protein");
+
+        const types = typesOf(withoutStatus(result.events));
+        assertEquals(types.filter((type) => type !== "text").slice(-2), ["recipe_notice", "done"]);
+        assertEquals(types.lastIndexOf("text") < types.indexOf("recipe_notice"), true);
+        assertEquals(eventsOfType(result.events, "recipe_notice"), [
+          { type: "recipe_notice", notice: { code: "timed_out" } },
+        ]);
+        assertEquals(toolResultRows(harness)[0]?.display, {
+          r1: { recipeNotice: { code: "timed_out" } },
+        });
+        assertEquals(result.events.at(-1), { type: "done", outcome: "complete" });
+      },
+    );
+  },
+);
+
+const refusalOfRecipe: AssistantRecipeRefusal = {
+  recipeName: "Eval porridge bowl",
+  nutrient: "protein_g",
+  target: 53,
+  reached: 17.2,
+  reachedKcal: 389.4,
+};
+
+Deno.test(
+  "a refused adjustment sends its event after the reply and before done, and stores it under the call's id",
+  async () => {
+    await withHarness(
+      {
+        responses: [
+          callTools([suggestRecipeCall("r1")], "Looking."),
+          reply("That one can't be done with what is in it."),
+        ],
+        tools: suggestRecipeTools,
+        answers: { suggest_recipe: noticeOf({ recipeRefusal: refusalOfRecipe }) },
+      },
+      async (harness) => {
+        const result = await harness.take("Make the porridge 40 g higher in protein");
+
+        const types = typesOf(withoutStatus(result.events));
+        assertEquals(types.filter((type) => type !== "text").slice(-2), ["recipe_refusal", "done"]);
+        assertEquals(eventsOfType(result.events, "recipe_refusal"), [
+          { type: "recipe_refusal", refusal: refusalOfRecipe },
+        ]);
+        assertEquals(toolResultRows(harness)[0]?.display, {
+          r1: { recipeRefusal: refusalOfRecipe },
+        });
+      },
+    );
+  },
+);
+
+Deno.test(
+  "a recipe notice or refusal that does not parse is reported with fixed words and is neither sent nor stored",
+  async () => {
+    const spy = spyOnConsole();
+    try {
+      await withHarness(
+        {
+          responses: [callTools([suggestRecipeCall("r1")]), reply("Here you go.")],
+          tools: suggestRecipeTools,
+          answers: {
+            suggest_recipe: noticeOf({
+              recipeNotice: { code: "Sentinel Stew" },
+              recipeRefusal: {
+                ...refusalOfRecipe,
+                recipeName: "Sentinel Stew",
+                nutrient: "fibre_g",
+              },
+            }),
+          },
+        },
+        async (harness) => {
+          const result = await harness.take("Suggest a dinner");
+
+          assertEquals(typesOf(result.events).includes("recipe_notice"), false);
+          assertEquals(typesOf(result.events).includes("recipe_refusal"), false);
+          assertEquals(result.events.at(-1), { type: "done", outcome: "complete" });
+          assertEquals(toolResultRows(harness)[0]?.display, null);
+          assertEquals(harness.reports.length, 2);
+          assertEquals(
+            harness.reports.some((report) => String(report.caught).includes("Sentinel")),
+            false,
+          );
+          assertEquals(
+            spy.lines.some((line) => line.includes("Sentinel")),
+            false,
+          );
+        },
+      );
+    } finally {
+      spy.restore();
+    }
   },
 );
 
