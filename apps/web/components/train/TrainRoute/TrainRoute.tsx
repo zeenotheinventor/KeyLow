@@ -1,6 +1,6 @@
 "use client";
 
-import { useStartSessionAction, useTrainingGoals } from "@keylow/api-client";
+import { useStartSessionAction } from "@keylow/api-client";
 import { TRAIN_START_FAILED } from "@keylow/core/copy";
 import { CircleAlert } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -9,7 +9,7 @@ import { useSuggestionNotices } from "../SuggestionCard";
 import { TrainScreen } from "../TrainScreen";
 
 import { useToast } from "@/components/ui/Toast";
-import { goalFromTrainPath, goalQuestionPath } from "@/lib/goalRoutes";
+import { goalFromTrainPath } from "@/lib/goalRoutes";
 import { trainRoutineNewPath, trainSessionDetailPath, trainSessionPath } from "@/lib/trainRoutes";
 
 /**
@@ -18,8 +18,9 @@ import { trainRoutineNewPath, trainSessionDetailPath, trainSessionPath } from "@
  * opens that one. Create routine opens the new routine's editor. A start that fails shows a danger toast
  * that states the rule, opens nothing and can be pressed again. View session on the Done card opens the
  * session's detail. Set your goal, on the suggestion card and the first visit's card, opens the Goal page,
- * told it came from Train, when a goal was read to exist, and the first question when there is none or it is not
- * known yet (offline, loading or failed), so the button always leads somewhere. The suggestion card's toasts are
+ * told it came from Train. The Goal page shows the answers when a goal is stored and opens the first question
+ * when there is none or it is not known yet (offline, loading or failed), carrying Train on, so the button
+ * always leads somewhere and the flow returns here. The suggestion card's toasts are
  * the page's.
  */
 export function TrainRoute() {
@@ -35,8 +36,6 @@ export function TrainRoute() {
     },
   });
 
-  const goals = useTrainingGoals();
-  const hasGoal = goals.data !== undefined && goals.data !== null;
   const suggestionToasts = useSuggestionNotices(start);
 
   return (
@@ -49,7 +48,7 @@ export function TrainRoute() {
       onLogSession={start}
       onResume={openSession}
       onSetGoal={() => {
-        router.push(hasGoal ? goalFromTrainPath() : goalQuestionPath(1));
+        router.push(goalFromTrainPath());
       }}
       onViewSession={(sessionId) => {
         router.push(trainSessionDetailPath(sessionId, "train"));

@@ -21,13 +21,16 @@ import { useGoalSetOn } from "@/lib/useGoalSetOn";
 
 /**
  * "Goal", the page the Goal row of More opens once a goal is stored, as `goals · edit` draws it: the six
- * answers as rows that each open their question, the note that changing one starts a new goal from today, See
- * your priorities, and the day the goal was set. A row reopens the questionnaire at its question with every
- * answer filled, and finishing walks on to the summary, where Save goal stores a new goal and the person comes
- * back here. See your priorities opens that summary for the answers as stored, with nothing to save. Every
- * time this page is in front the draft starts over from the stored goal, so an answer changed and not saved
- * is dropped, and a goal just saved is what the next change is counted against. The day is not drawn until
- * the profile's time zone is read, so it does not show and then change. Back returns to Train when Train opened the page and to More otherwise, by replacing the address so that Back in the browser does not return here.
+ * answers as rows that each open their question, the note that changing one starts a new goal from today,
+ * See your priorities, and the day the goal was set. A row reopens the questionnaire at its question with
+ * every answer filled, and finishing walks on to the summary, where Save goal stores a new goal and the
+ * person comes back here. See your priorities opens that summary for the answers as stored, with nothing to
+ * save. Every time this page is in front the draft starts over from the stored goal, so an answer changed
+ * and not saved is dropped, and a goal just saved is what the next change is counted against. The rows and
+ * See your priorities carry Train as the origin when Train opened the page, so the flow leaves for Train and
+ * not for More. The day is not drawn until the profile's time zone is read, so it does not show and then
+ * change. Back returns to Train when Train opened the page and to More otherwise, by replacing the address
+ * so that Back in the browser does not return here.
  */
 export function GoalScreen({ goal, isFromTrain }: GoalScreenProps) {
   const router = useRouter();
@@ -74,14 +77,16 @@ export function GoalScreen({ goal, isFromTrain }: GoalScreenProps) {
               label={row.label}
               name={row.name}
               value={row.value}
-              href={goalQuestionPath(index + 1, { fromGoalPage: true })}
+              href={goalQuestionPath(index + 1, { fromGoalPage: true, fromTrain: isFromTrain })}
             />
           ))}
         </ul>
       </Card>
       <p className="px-1 text-caption text-text-muted">{GOAL_SCREEN.changeNote}</p>
       <Button asChild variant="secondary" className="w-full">
-        <Link href={goalSummaryPath()}>{GOAL_SCREEN.prioritiesAction}</Link>
+        <Link href={goalSummaryPath({ fromTrain: isFromTrain })}>
+          {GOAL_SCREEN.prioritiesAction}
+        </Link>
       </Button>
       {setOn === undefined ? null : (
         <span className="px-1 text-caption text-text-muted">{setOn}</span>

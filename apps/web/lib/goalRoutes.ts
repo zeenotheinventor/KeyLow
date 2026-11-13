@@ -2,6 +2,8 @@ import { GOAL_QUESTION_STEPS } from "@keylow/core/copy";
 
 import type { GoalQuestionStep } from "@keylow/core/copy";
 
+import { trainPath } from "@/lib/trainRoutes";
+
 /**
  * The Goal page. With a goal stored it shows the answers, and with none it sends the person to the first
  * question, so the address serves both.
@@ -15,21 +17,47 @@ export const goalRowPath = (): string => goalPath();
 export const goalExitPath = (): string => "/more";
 
 /**
- * Where the flow leaves to when it is closed or its goal is saved. With a goal that was stored when the flow
- * opened it is the Goal page, where the new answers show and where a row would have opened the question. The
- * web has no stack to read as the phone does, so this is the rule: setting the first goal leaves for More.
+ * Where the flow leaves to when it is closed or its goal is saved. The web has no stack to read as the phone
+ * does, so the address carries where the flow was opened from, and this is the rule. Opened from Train, the
+ * flow leaves for Train when the first goal is being set, and for the Goal page as Train opens it when a goal
+ * was stored, so the new answers show and Back on that page still returns to Train. Opened from More, it
+ * leaves for the Goal page with a stored goal and for More when it is the first goal.
  */
-export const goalLeavePath = (hasStoredGoal: boolean): string =>
-  hasStoredGoal ? goalPath() : goalExitPath();
+export const goalLeavePath = (hasStoredGoal: boolean, { fromTrain = false } = {}): string => {
+  if (hasStoredGoal) {
+    return fromTrain ? goalFromTrainPath() : goalPath();
+  }
+  return fromTrain ? trainPath() : goalExitPath();
+};
 
 /**
  * The Goal page as Train opens it. The Goal page reads the `from` parameter to know where its Back button
- * returns to: Train when it says so, and More otherwise. A save or a cancel replaces the address with the plain
- * Goal page, so a person who came from Train leaves for More from there.
+ * returns to: Train when it says so, and More otherwise. With no goal stored it sends the person to the first
+ * question, and the questions and the summary then carry Train in their own `origin` parameter, so a save or
+ * a cancel can return to Train.
  */
 export const goalFromTrainPath = (): string => `${goalPath()}?from=train`;
 
-/** Whether a Goal page address, by its `from` parameter, was opened from Train. */
+// The query a question or the summary carries: `from=goal` when the Goal page is under it, and `origin=train`
+// when Train opened the flow. They are two parameters because both can be true of one address.
+function originQuery({
+  fromGoalPage,
+  fromTrain,
+}: {
+  fromGoalPage: boolean;
+  fromTrain: boolean;
+}): string {
+  const query = new URLSearchParams();
+  if (fromGoalPage) {
+    query.set("from", "goal");
+  }
+  if (fromTrain) {
+    query.set("origin", "train");
+  }
+  return query.size === 0 ? "" : `?${query.toString()}`;
+}
+
+/** Whether an address, by its `from` or `origin` parameter, says Train opened the flow. */
 export const isOpenedFromTrain = (from: string | undefined): boolean => from === "train";
 
 /**
@@ -38,14 +66,17 @@ export const isOpenedFromTrain = (from: string | undefined): boolean => from ===
  * what Back returns to. That is a fact of the address and the history entry that holds it, so it cannot go
  * stale as a flag kept for the whole flow would.
  */
-export const goalQuestionPath = (step: number, { fromGoalPage = false } = {}): string =>
-  `${goalPath()}/${step}${fromGoalPage ? "?from=goal" : ""}`;
+export const goalQuestionPath = (
+  step: number,
+  { fromGoalPage = false, fromTrain = false } = {},
+): string => `${goalPath()}/${step}${originQuery({ fromGoalPage, fromTrain })}`;
 
 /** Whether a question address, by its `from` parameter, was opened from the Goal page. */
 export const isOpenedFromGoalPage = (from: string | undefined): boolean => from === "goal";
 
 /** The summary the last question leads to. Its folder sits beside the questions', so it is never taken for one. */
-export const goalSummaryPath = (): string => `${goalPath()}/summary`;
+export const goalSummaryPath = ({ fromTrain = false } = {}): string =>
+  `${goalPath()}/summary${originQuery({ fromGoalPage: false, fromTrain })}`;
 
 /** The question an address names: its number from 1 to 6 as written, or `undefined` for anything else. */
 export function readGoalStep(segment: string): GoalQuestionStep | undefined {

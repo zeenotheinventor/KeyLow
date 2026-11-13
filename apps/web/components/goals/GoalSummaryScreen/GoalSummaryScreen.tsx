@@ -51,19 +51,21 @@ const ROW_PLACES = [0, 1, 2, 3] as const;
 /**
  * "Your priorities", the last screen of the goal questionnaire, in the card the questions use: the answers
  * restated, a row for each group of muscles, the front and back of the body filled on the volume scale, and
- * Save goal. The rows count the muscles of the active routine as kept up, as the plan does. While the routine
- * is being read the rows and the figures are not drawn, so no muscle shows as left out and then flips to
- * kept up when the routine arrives. A routine that cannot be read counts as none, and so does one that
- * cannot be asked for because the browser is offline, since a read that is paused would never end. The
+ * Save goal. The rows count the muscles of the active routine as kept up, as the plan does. While the
+ * routine is being read the rows and the figures are not drawn, so no muscle shows as left out and then
+ * flips to kept up when the routine arrives. A routine that cannot be read counts as none, and so does one
+ * that cannot be asked for because the browser is offline, since a read that is paused would never end. The
  * answers line, the legend and Save goal do not wait for it. The figures are always the flat drawings, in
  * the male or female figure the setting has. Save goal is drawn only once an answer has changed, so a goal
- * that is opened and left as it is stores no new row. It sends the answers once, however often it is pressed,
- * and then leaves for the Goal page when a goal was stored when the flow opened, so the new answer shows, and
- * for More when it is the first goal. With no connection it is off and says why, since a save that waited would fire
- * later without the person looking. A save that fails keeps the answers and shows the error toast, so it
- * can be tried again. Nothing the answers say reaches a log or a report from here.
+ * that is opened and left as it is stores no new row. It sends the answers once, however often it is
+ * pressed, and then leaves for the Goal page when a goal was stored when the flow opened, so the new answer
+ * shows, and for More when it is the first goal. When Train opened the flow it leaves for Train when it is
+ * the first goal, and for the Goal page as Train opens it otherwise, so Back there returns to Train. With no
+ * connection it is off and says why, since a save that waited would fire later without the person looking. A
+ * save that fails keeps the answers and shows the error toast, so it can be tried again. Nothing the answers
+ * say reaches a log or a report from here.
  */
-export function GoalSummaryScreen({ answers }: GoalSummaryScreenProps) {
+export function GoalSummaryScreen({ answers, isFromTrain }: GoalSummaryScreenProps) {
   const router = useRouter();
   const toast = useToast();
   const isOnline = useIsOnline();
@@ -107,7 +109,7 @@ export function GoalSummaryScreen({ answers }: GoalSummaryScreenProps) {
       toast.show({ message: GOAL_ERRORS.save, tone: "danger" });
       return;
     }
-    router.replace(goalLeavePath(hasStoredGoal));
+    router.replace(goalLeavePath(hasStoredGoal, { fromTrain: isFromTrain }));
   }
 
   return (

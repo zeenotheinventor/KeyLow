@@ -2,11 +2,13 @@ import { describe, expect, it } from "vitest";
 
 import {
   goalExitPath,
+  goalFromTrainPath,
   goalLeavePath,
   goalPath,
   goalQuestionPath,
   goalRowPath,
   goalSummaryPath,
+  isOpenedFromTrain,
   readGoalStep,
 } from "@/lib/goalRoutes";
 
@@ -44,6 +46,36 @@ describe("where a saved or closed flow leaves to", () => {
 
   it("should leave for More when the first goal is being set", () => {
     expect(goalLeavePath(false)).toBe("/more");
+  });
+});
+
+describe("where a flow Train opened leaves to", () => {
+  it("should leave for Train when the first goal is being set", () => {
+    expect(goalLeavePath(false, { fromTrain: true })).toBe("/train");
+  });
+
+  it("should leave for the Goal page as Train opens it when a goal was stored, so its Back returns to Train", () => {
+    expect(goalLeavePath(true, { fromTrain: true })).toBe(goalFromTrainPath());
+    expect(goalFromTrainPath()).toBe("/goal?from=train");
+  });
+});
+
+describe("the addresses that carry Train as the origin", () => {
+  it("should carry the origin on a question, beside the Goal page flag", () => {
+    expect(goalQuestionPath(2, { fromTrain: true })).toBe("/goal/2?origin=train");
+    expect(goalQuestionPath(2, { fromGoalPage: true, fromTrain: true })).toBe(
+      "/goal/2?from=goal&origin=train",
+    );
+  });
+
+  it("should carry the origin on the summary", () => {
+    expect(goalSummaryPath({ fromTrain: true })).toBe("/goal/summary?origin=train");
+  });
+
+  it("should say Train opened the flow only when the origin parameter says so", () => {
+    expect(isOpenedFromTrain("train")).toBe(true);
+    expect(isOpenedFromTrain(undefined)).toBe(false);
+    expect(isOpenedFromTrain("more")).toBe(false);
   });
 });
 
