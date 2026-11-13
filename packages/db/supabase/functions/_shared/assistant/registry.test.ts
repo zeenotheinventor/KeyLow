@@ -528,6 +528,7 @@ Deno.test("the kitchen tools follow the visible tools in a fixed order", () => {
       ["suggest_recipe", "kitchen", false],
       ["plan_meals", "kitchen", false],
       ["adjust_recipe", "kitchen", false],
+      ["replan_day", "kitchen", false],
     ],
   );
   assertEquals(

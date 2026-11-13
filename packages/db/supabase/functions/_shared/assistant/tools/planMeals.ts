@@ -10,9 +10,7 @@ import { z } from "zod";
 import {
   PLAN_NOT_SAVED_WORDS,
   PLAN_RESULT_NOTES,
-  buildPalateProfile,
   buildPlanCreatedCard,
-  buildPlanPool,
   daysToClear,
   daysToRestore,
   isPlanUndoable,
@@ -27,20 +25,12 @@ import {
   rankedIdsOfReply,
   resolveRepeatLimit,
   restorableItemsOfDay,
-  roundCalories,
-  roundGrams,
 } from "../../core.ts";
 import {
   archiveMealPlan,
-  getFood,
   getMealPlanRepeatLimit,
   getMyTargets,
-  getPalateLoggedDays,
   listMealPlans,
-  listPalateFoods,
-  listPalatePreferences,
-  listPalateStats,
-  listRecipes,
   replaceMealPlanDay,
   restoreMealPlan,
   saveMealPlan,
@@ -48,9 +38,10 @@ import {
 import { PLAN_SYSTEM_PROMPT, planPromptContent } from "../planPrompt.ts";
 import { targetsOfDay } from "./diaryView.ts";
 import { invalidInput } from "./entryWrite.ts";
+import { caloriesAndProtein, livePlansOf, planPoolOf, readKitchen } from "./planKitchen.ts";
 import { localDateSchema } from "./shared.ts";
 
-import type { Food, LivePlan, PalateRecipe, Plan } from "../../core.ts";
+import type { Food, LivePlan } from "../../core.ts";
 import type { MealPlanItemInput } from "../../repos.ts";
 import type { ToolContext, WriteRunOutput, WriteToolDefinition } from "../tool.ts";
 
@@ -90,67 +81,6 @@ const refusal = (reason: keyof typeof PLAN_NOT_SAVED_WORDS): WriteRunOutput => (
   data: { planned: false, reason, message: PLAN_NOT_SAVED_WORDS[reason] },
   target: null,
 });
-
-// What the person's diary and recipes offer to plan from, read under their JWT.
-async function readKitchen(ctx: ToolContext) {
-  const [stats, loggedDays, preferences, recipes] = await Promise.all([
-    listPalateStats(ctx.caller),
-    getPalateLoggedDays(ctx.caller),
-    listPalatePreferences(ctx.caller),
-    listRecipes(ctx.caller),
-  ]);
-  const foodIds = [...new Set(stats.flatMap(({ foodId }) => (foodId === null ? [] : [foodId])))];
-  const palateFoods = await listPalateFoods(ctx.caller, foodIds);
-  const palateRecipes = recipes.map((recipe): PalateRecipe => ({
-    id: recipe.id,
-    name: recipe.name,
-    servingGrams:
-      recipe.yield_grams === null || recipe.servings <= 0
-        ? null
-        : recipe.yield_grams / recipe.servings,
-  }));
-  const profile = buildPalateProfile(stats, preferences, {
-    today: ctx.turn.localDate,
-    loggedDays,
-    foods: palateFoods,
-    recipes: palateRecipes,
-  });
-  const usualFoods = await Promise.all(
-    profile.usualFoods.map(async ({ foodId, typicalGrams }) => ({
-      foodId,
-      typicalGrams,
-      food: await getFood(ctx.caller, foodId),
-    })),
-  );
-  const foods = usualFoods.flatMap(({ food }) => (food === null ? [] : [food]));
-  return { stats, preferences, recipes, profile, usualFoods, foods };
-}
-
-const caloriesAndProtein = (day: Plan["days"][number]) => ({
-  local_date: day.localDate,
-  status: day.status,
-  kcal: day.totals.kcal === null ? null : roundCalories(day.totals.kcal),
-  protein_g: day.totals.protein_g === null ? null : roundGrams(day.totals.protein_g),
-  target_kcal: day.target.kcal ?? null,
-  target_protein_g: day.target.protein_g ?? null,
-  short_of: day.shortfalls.map(({ nutrient, reason }) => ({
-    nutrient,
-    // A work limit means the planner stopped before it knew the day was out of reach.
-    not_fully_worked_out: reason === "work_limit",
-  })),
-});
-
-// The live plans as core picks days from them, and as the cleanup reads what to put back.
-const livePlansOf = (plans: Awaited<ReturnType<typeof listMealPlans>>): LivePlan[] =>
-  plans.map(({ id, days }) => ({
-    id,
-    days: days.map((day) => ({
-      id: day.id,
-      localDate: day.localDate,
-      isConfirmed: day.confirmedAt !== null,
-      itemCount: day.items.length,
-    })),
-  }));
 
 // What Undo needs to put the older plans back: the cleared days with their items, and the plans archived.
 type ClearedDay = { dayId: string; localDate: string; items: MealPlanItemInput[] };
@@ -255,14 +185,7 @@ export const planMealsTool: WriteToolDefinition<PlanMealsInput> = {
       return refusal("no_calorie_target");
     }
 
-    const pool = buildPlanPool({
-      recipes: kitchen.recipes,
-      usualRecipeIds: kitchen.profile.usualRecipes.map(({ recipeId }) => recipeId),
-      usualFoods: kitchen.usualFoods,
-      foods: kitchen.foods,
-      stats: kitchen.stats,
-      preferences: kitchen.preferences,
-    });
+    const pool = planPoolOf(kitchen);
     if (pool.offers.length === 0) {
       return refusal("nothing_to_plan_from");
     }

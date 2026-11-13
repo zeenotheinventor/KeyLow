@@ -234,7 +234,8 @@ export function saveMealPlanRpc(saved: SavedPlan[]): RpcHandler {
   };
 }
 
-// `replace_meal_plan_day`: the day's items become exactly the ones given. A confirmed day is refused with 22023.
+// `replace_meal_plan_day`: the day's items become exactly the ones given, all or nothing. A confirmed day is refused
+// with 22023, so is a leftover whose cook is not in the plan, and a repeated position is a unique violation.
 // `fails` makes the call fail, as a day the database could not write.
 export function replaceMealPlanDayRpc(options: { fails?: () => boolean } = {}): RpcHandler {
   return (args, tables) => {
@@ -254,8 +255,46 @@ export function replaceMealPlanDayRpc(options: { fails?: () => boolean } = {}): 
         };
       }
       const given = args["p_items"] as Row[];
+      const oldItems = day["meal_plan_items"] as Row[];
+      const oldLinks = planDays.flatMap((other) =>
+        (other["meal_plan_items"] as Row[]).map((item) => [item, item["leftover_of"]] as const),
+      );
+      // The foreign key: deleting the day's items clears the link of every leftover that named one of them.
+      const deleted = new Set(oldItems.map((item) => item["id"]));
+      for (const [item, link] of oldLinks) {
+        if (deleted.has(link)) {
+          item["leftover_of"] = null;
+        }
+      }
       const rows = given.map((item, at) => itemRowOf(item, at, ids));
-      day["meal_plan_items"] = withCooks(rows, planDays, String(day["local_date"]));
+      // The new rows are in the plan before a leftover looks for its cook, as the function inserts them.
+      day["meal_plan_items"] = rows;
+      const linked = withCooks(rows, planDays, String(day["local_date"]));
+      const refused = (() => {
+        // `unique (day_id, position)`.
+        if (new Set(rows.map((row) => row["position"])).size < rows.length) {
+          return { code: "23505", message: "duplicate position" };
+        }
+        // A leftover whose cook is not in the plan is not written, and the count refuses the call.
+        if (
+          linked.some((row) => row["leftover_of_position"] !== null && row["leftover_of"] === null)
+        ) {
+          return {
+            code: "22023",
+            message: "a leftover must name an item that is already in the plan",
+          };
+        }
+        return null;
+      })();
+      if (refused !== null) {
+        // All or nothing: the day and every link are as they were.
+        day["meal_plan_items"] = oldItems;
+        for (const [item, link] of oldLinks) {
+          item["leftover_of"] = link;
+        }
+        return { data: null, error: refused };
+      }
+      day["meal_plan_items"] = linked;
       return { data: null, error: null };
     }
     return { data: null, error: { code: "22023", message: "the day was not found" } };
@@ -315,7 +354,7 @@ export function scriptedGeneration(replies: unknown[]) {
 }
 
 export function planContext(
-  tool: Parameters<typeof createFakeContext>[0][number],
+  tool: Parameters<typeof createFakeContext>[0][number] | Parameters<typeof createFakeContext>[0],
   options: {
     generation?: GenerationServices;
     profile?: Record<string, unknown>;
@@ -338,7 +377,9 @@ export function planContext(
       },
     },
   );
-  const made = createFakeContext([tool], { localDate: options.localDate ?? "2026-11-16" });
+  const made = createFakeContext(Array.isArray(tool) ? tool : [tool], {
+    localDate: options.localDate ?? "2026-11-16",
+  });
   const ctx: ToolContext = {
     ...made.ctx,
     caller: stub.caller,

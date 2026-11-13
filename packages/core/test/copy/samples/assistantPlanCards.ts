@@ -61,4 +61,22 @@ export const samples: Record<string, () => string[]> = {
       { nutrient: "protein_g", target: 90, achieved: null, reason: "no_data" },
     ]),
   ],
+  describePlanDayReplannedTitle: () => [copy.describePlanDayReplannedTitle("2026-11-19")],
+  describePlanDayUndone: () => [copy.describePlanDayUndone("2026-11-19")],
+  describePlanDayFigures: () =>
+    [
+      copy.describePlanDayFigures(1292, 1300, 68, 90),
+      copy.describePlanDayFigures(1292, null, 68, null),
+      copy.describePlanDayFigures(null, null, null, null),
+    ].flatMap((sentence) => (sentence === null ? [] : [sentence])),
+  describePlanBandName: () => [copy.describePlanBandName("morning", "07:30")],
+  describePlanBandKcal: () => [copy.describePlanBandKcal(564)],
+  describeReplannedDayNote: () => [
+    copy.describeReplannedDayNote([miss]),
+    copy.describeReplannedDayNote([{ ...miss, reason: "work_limit" }]),
+  ],
+  describeKeptCooksNote: () => [
+    copy.describeKeptCooksNote(["Chicken and rice"]),
+    copy.describeKeptCooksNote(["Chicken and rice", "Stew"]),
+  ],
 };

@@ -531,14 +531,15 @@ Deno.test("the pending confirmation of a surfaced kitchen tool is allowed", () =
   assert(names.includes("kitchen_write"));
 });
 
-// ADR 0006, Amendment 5, the plan exception. A read-shaped message reaches `plan_meals` only when it matches the
+// ADR 0006, Amendment 5, the plan exception. A read-shaped message reaches `plan_meals` and `replan_day` only when it matches the
 // meal plan words of `kitchen.ts`, and only while the kitchen group is surfaced.
 const planMealsTool: AllowlistTool = { name: "plan_meals", readOnlyHint: false, group: "kitchen" };
+const replanDayTool: AllowlistTool = { name: "replan_day", readOnlyHint: false, group: "kitchen" };
 const allowedForPlan = (text: string, kitchenSurfaced: boolean) =>
   allowedToolsFor({
     text,
     pendingConfirmationTool: null,
-    tools: [...tools, kitchenRead, planMealsTool],
+    tools: [...tools, kitchenRead, planMealsTool, replanDayTool],
     kitchenSurfaced,
   });
 
@@ -577,3 +578,23 @@ Deno.test(
     );
   },
 );
+
+Deno.test("replan_day is allowed on a read-shaped message that matches the meal plan words", () => {
+  for (const text of ["Should I replan Thursday?", "What should I eat this week?"]) {
+    assertEquals(allowedForPlan(text, true).includes("replan_day"), true, text);
+  }
+});
+
+Deno.test(
+  "replan_day is not allowed on other read-shaped text, or when the kitchen is not surfaced",
+  () => {
+    for (const text of ["Why was Tuesday so high?", "What do I usually eat?"]) {
+      assertEquals(allowedForPlan(text, true).includes("replan_day"), false, text);
+    }
+    assertEquals(allowedForPlan("Should I replan Thursday?", false).includes("replan_day"), false);
+  },
+);
+
+Deno.test("replan_day is allowed on a replan that is not read-shaped, as every write is", () => {
+  assertEquals(allowedForPlan("Replan Thu 19 Nov: no fish", true).includes("replan_day"), true);
+});

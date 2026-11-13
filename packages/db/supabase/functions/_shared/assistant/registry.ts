@@ -25,6 +25,7 @@ import { getWorkoutsTool } from "./tools/getWorkouts.ts";
 import { importRecipeFromUrlTool } from "./tools/importRecipeFromUrl.ts";
 import { logEntryTool } from "./tools/logEntry.ts";
 import { planMealsTool } from "./tools/planMeals.ts";
+import { replanDayTool } from "./tools/replanDay.ts";
 import { searchExercisesTool } from "./tools/searchExercises.ts";
 import { searchFoodsTool } from "./tools/searchFoods.ts";
 import { setDayCompleteTool } from "./tools/setDayComplete.ts";
@@ -119,6 +120,7 @@ const toolDefinitions: readonly ToolDefinition[] = [
   suggestRecipeTool,
   planMealsTool,
   adjustRecipeTool,
+  replanDayTool,
 ];
 
 // The registry of a deployment. The kitchen probe is last and present only when asked for, so the order of every

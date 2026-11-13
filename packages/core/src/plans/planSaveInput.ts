@@ -25,25 +25,22 @@ export type PlanSaveInputSource = {
 /** `HH:MM` as the database stores a time. */
 const withSeconds = (time: string): string => `${time}:00`;
 
-/**
- * What `saveMealPlan` takes for a plan the planner built. Each item's `nutrients` are the planner's figures, and
- * its `snapshot` is the one a diary entry of the same amount would freeze, built by `buildLogEntry` or
- * `buildRecipeLogEntry`, so confirming a day later starts from the same names and figures. A leftover names the
- * item that cooked it by its day and position. Throws a `RangeError` for an item whose food or recipe is not
- * given, or a leftover whose cook is not in the plan.
- */
-export const planSaveInput = ({ plan, rules, foods, recipes }: PlanSaveInputSource) => {
-  const first = plan.days[0];
-  if (first === undefined) {
-    throw new RangeError("A plan needs at least one day");
-  }
+const positionsOf = (plan: Plan): Map<string, { localDate: string; position: number }> => {
   const positionOfKey = new Map<string, { localDate: string; position: number }>();
   for (const day of plan.days) {
     day.items.forEach(({ key }, position) => {
       positionOfKey.set(key, { localDate: day.localDate, position });
     });
   }
+  return positionOfKey;
+};
 
+const itemBuilderOf = (
+  plan: Plan,
+  foods: ReadonlyMap<string, Food>,
+  recipes: ReadonlyMap<string, LoggableRecipe>,
+) => {
+  const positionOfKey = positionsOf(plan);
   const itemOf = (localDate: string, item: PlanItem, position: number) => {
     const loggedAt = `${localDate}T${item.time}:00.000Z`;
     const base = {
@@ -99,6 +96,48 @@ export const planSaveInput = ({ plan, rules, foods, recipes }: PlanSaveInputSour
       snapshot,
     };
   };
+  return itemOf;
+};
+
+/**
+ * The items of one day of `plan` as `replaceMealPlanDay` takes them: each one's position is its place in the
+ * day, and its snapshot is the one a diary entry of the same amount would freeze. An item whose key is in
+ * `exceptKeys` is left out and its food or recipe is not needed. Throws a `RangeError` for a day that is not
+ * in the plan, as `planSaveInput` does for an item it cannot build.
+ */
+export const plannedDayItems = ({
+  plan,
+  localDate,
+  foods,
+  recipes,
+  exceptKeys = new Set<string>(),
+}: Omit<PlanSaveInputSource, "rules"> & {
+  localDate: string;
+  exceptKeys?: ReadonlySet<string>;
+}) => {
+  const day = plan.days.find((candidate) => candidate.localDate === localDate);
+  if (day === undefined) {
+    throw new RangeError("That day is not in the plan");
+  }
+  const itemOf = itemBuilderOf(plan, foods, recipes);
+  return day.items.flatMap((item, position) =>
+    exceptKeys.has(item.key) ? [] : [itemOf(localDate, item, position)],
+  );
+};
+
+/**
+ * What `saveMealPlan` takes for a plan the planner built. Each item's `nutrients` are the planner's figures, and
+ * its `snapshot` is the one a diary entry of the same amount would freeze, built by `buildLogEntry` or
+ * `buildRecipeLogEntry`, so confirming a day later starts from the same names and figures. A leftover names the
+ * item that cooked it by its day and position. Throws a `RangeError` for an item whose food or recipe is not
+ * given, or a leftover whose cook is not in the plan.
+ */
+export const planSaveInput = ({ plan, rules, foods, recipes }: PlanSaveInputSource) => {
+  const first = plan.days[0];
+  if (first === undefined) {
+    throw new RangeError("A plan needs at least one day");
+  }
+  const itemOf = itemBuilderOf(plan, foods, recipes);
 
   return {
     startDate: first.localDate,
