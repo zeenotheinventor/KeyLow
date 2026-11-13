@@ -503,14 +503,12 @@ select lives_ok(
   $$select pg_temp.add_message('66400000-0000-4000-8000-0000000000dd', '66400000-0000-4000-8000-000000000d01', '66400000-0000-4000-8000-000000000d11', '66400000-0000-4000-8000-000000000d22', 2, 'assistant')$$,
   'an assistant message with seq 2 is accepted'
 );
-select throws_ok(
+select lives_ok(
   $$select pg_temp.add_message('66400000-0000-4000-8000-0000000000dd', '66400000-0000-4000-8000-000000000d01', '66400000-0000-4000-8000-000000000d11', gen_random_uuid(), 3, 'system')$$,
-  '23514',
-  'new row for relation "assistant_messages" violates check constraint "assistant_messages_role_check"',
-  'the role system is refused'
+  'the role system is accepted (ADR 0003, Amendment 22)'
 );
 select throws_ok(
-  $$select pg_temp.add_message('66400000-0000-4000-8000-0000000000dd', '66400000-0000-4000-8000-000000000d01', '66400000-0000-4000-8000-000000000d11', gen_random_uuid(), 3, 'tool')$$,
+  $$select pg_temp.add_message('66400000-0000-4000-8000-0000000000dd', '66400000-0000-4000-8000-000000000d01', '66400000-0000-4000-8000-000000000d11', gen_random_uuid(), 4, 'tool')$$,
   '23514',
   'new row for relation "assistant_messages" violates check constraint "assistant_messages_role_check"',
   'the role tool is refused'
@@ -874,7 +872,7 @@ select is(
 );
 select is(
   (select count(*)::int from public.assistant_messages where conversation_id = '66400000-0000-4000-8000-000000000d01'),
-  2,
+  3,
   'user D''s messages are untouched by the delete of user A''s conversation'
 );
 
@@ -918,7 +916,7 @@ select lives_ok(
 );
 select is(
   (select count(*)::int from public.assistant_messages where conversation_id = '66400000-0000-4000-8000-000000000d01'),
-  2,
+  3,
   'the service role reads the messages of a conversation'
 );
 select throws_ok(

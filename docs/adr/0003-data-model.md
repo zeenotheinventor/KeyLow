@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted, 2026-09-22. Amendment 1 appended 2026-10-07. Amendment 2 appended 2026-10-15. Amendment 3 appended 2026-10-15. Amendment 4 appended 2026-10-15. Amendment 5 appended 2026-10-15. Amendment 6 appended 2026-10-15. Amendment 7 appended 2026-10-15. Amendment 8 appended 2026-10-16. Amendment 9 appended 2026-10-18. Amendment 10 appended 2026-10-23. Amendment 11 appended 2026-10-23. Amendment 12 appended 2026-10-23. Amendment 13 appended 2026-10-23. Amendment 14 appended 2026-10-26, with addenda of 2026-11-03 and 2026-11-07. Amendment 15 appended 2026-10-29. Amendment 16 appended 2026-11-10. Amendment 17 appended 2026-11-10. Amendment 18 appended 2026-11-10. Amendment 19 appended 2026-11-11. Amendment 20 appended 2026-11-11.
+Accepted, 2026-09-22. Amendment 1 appended 2026-10-07. Amendment 2 appended 2026-10-15. Amendment 3 appended 2026-10-15. Amendment 4 appended 2026-10-15. Amendment 5 appended 2026-10-15. Amendment 6 appended 2026-10-15. Amendment 7 appended 2026-10-15. Amendment 8 appended 2026-10-16. Amendment 9 appended 2026-10-18. Amendment 10 appended 2026-10-23. Amendment 11 appended 2026-10-23. Amendment 12 appended 2026-10-23. Amendment 13 appended 2026-10-23. Amendment 14 appended 2026-10-26, with addenda of 2026-11-03 and 2026-11-07. Amendment 15 appended 2026-10-29. Amendment 16 appended 2026-11-10. Amendment 17 appended 2026-11-10. Amendment 18 appended 2026-11-10. Amendment 19 appended 2026-11-11. Amendment 20 appended 2026-11-11. Amendment 21 appended 2026-11-11. Amendment 22 appended 2026-11-13.
 
 ## Context
 
@@ -2555,3 +2555,160 @@ At most 20 rows per person in any rolling 24 hours, enforced by a `before insert
 ### Consequences of Amendment 21
 
 `packages/db/src/types.gen.ts` gains the table. The export gains a table and keeps `export_version` at 1, as every earlier added table did. The assistant tool (KEY-977) and the More screen (KEY-978) write through `createFeatureRequest`. Any further deviation from the frozen Decision, from Amendments 1 to 20 or from this amendment needs an Amendment 22 before the migration or code that implements it lands.
+
+## Amendment 22 (Palate preferences, meal plans and the repeat limit, 2026-11-13)
+
+### Status
+
+Recorded on 2026-11-13 under KEY-1016, part of KEY-216 (the M9 brief: palate, recipe generation and meal plans). It is the data side of the kitchen jobs that ADR 0006 holds the decisions for, and it follows Zee's rulings of 2026-11-12 and 2026-11-13 on KEY-216, in particular the ones on the model for generation (ruling 1), the shared plan quota (ruling 3), the confirmed adjusted recipe (ruling 9), the variety choice (ruling 10) and the coarse food groups (ruling 11). The frozen Decision names none of these tables, so by the rule at the top of this ADR they need an amendment before their migrations. This amendment adds four tables (`palate_preferences`, `meal_plans`, `meal_plan_days`, `meal_plan_items`), one view (`palate_food_stats`), three functions (`save_meal_plan`, `replace_meal_plan_day`, `confirm_meal_plan_day`) and one column on `profiles` (`meal_plan_repeat_limit`). It also widens two checks that Amendment 14 set, and it records one reading of `foods.food_group` that Amendment 2 ruled out for v1.
+
+The tables are created by their own tickets (KEY-1023 for the palate, KEY-1027 for the plans). Only the two check widenings ship with this amendment, in the migration `20261113010000_assistant_check_widening.sql`. The details below are interpretations made for implementation. Zee confirms them by approving the pull request that carries this amendment. The frozen Decision and Amendments 1 to 21 are unchanged except where "What this supersedes" says so. Amendment 1's `id` and `created_at` columns apply to every table below.
+
+### `palate_preferences`
+
+What a person states about their own taste, and the corrections they make to what the app says it has noticed.
+
+- `id uuid` primary key, default `gen_random_uuid()`.
+- `owner_id uuid not null default auth.uid()`, references `auth.users (id) on delete cascade`.
+- `kind text not null`, check `kind in ('dislike', 'allergy', 'not_usual')`. A `not_usual` row is the "not true" correction on an item of the person's profile.
+- `food_id uuid`, nullable, references `foods (id) on delete cascade`.
+- `recipe_id uuid`, nullable, references `recipes (id) on delete cascade`. Both cascade because a preference about a row that no longer exists means nothing, and a set null would leave a `not_usual` row with none of its three references, which the check below refuses. This is an orchestrator decision of 2026-11-13, recommended while Zee was away and reversible.
+- `label text`, nullable, check that it is not blank and at most 100 characters. For a `dislike` or an `allergy` it is a word such as "mushrooms" or "peanuts", which core matches against food names, because neither CoFID nor the seed carries allergen data.
+- `created_at timestamptz not null default now()`.
+- Check on the three references: a `not_usual` row has exactly one of `food_id`, `recipe_id` and `label`, and a `dislike` or an `allergy` row has a `label`.
+- Unique on `(owner_id, kind, coalesce(food_id, recipe_id), lower(label))`, through an expression index, so the same correction cannot be stored twice. The index is declared `NULLS NOT DISTINCT` (Postgres 15 and later, and this project runs 17), so a null in `label` or in the coalesced reference counts as a value and two identical `not_usual` rows do collide. Without it a null would make every such row distinct and the index would stop nothing.
+- An index on `(owner_id, kind)`, which serves the person's list and the cascade from `auth.users`, and plain indexes on `food_id` and `recipe_id`, which serve the foreign key checks when a food or a recipe row is removed (the reason Amendment 2 gives for the same index on log entries).
+
+Row level security: `authenticated` can select, insert and delete its own rows and cannot update, so a change is a delete and an add. The insert policy also requires that a `food_id` is a food the caller can see and a `recipe_id` is a recipe the caller owns, through an `exists` subquery that runs under the `foods` and `recipes` policies. The reason is the one `recipe_ingredients` gives: a foreign key is checked without row level security, so without it a person could point a row at another person's private food and learn whether an id exists.
+
+### `palate_food_stats`
+
+A view with `security_invoker = true`, so the policies of `food_log_entries` apply to whoever reads it. It has one row per owner and per food or recipe, over the last 90 days of `food_log_entries` that are not soft deleted, counted back from the owner's local today in `profiles.timezone`. The zone for the bands and for the window is an orchestrator decision of 2026-11-13, recommended while Zee was away and reversible:
+
+- `owner_id` (the entry's `user_id`), `food_id` and `recipe_id` (one of them is null).
+- `entry_count`, `distinct_days`, `first_local_date` and `last_local_date`.
+- `median_resolved_grams`.
+- `before_eleven_count`, `eleven_to_sixteen_count` and `sixteen_or_later_count`: the entries logged before 11:00, from 11:00 to 15:59 and from 16:00 on, by the hour of `logged_at` in the owner's `profiles.timezone`. `food_log_entries` has no zone column, so the view joins `profiles` on the owner inside the invoker view and applies the zone at read time, which means a person who changes timezone sees their past entries re-banded.
+
+The view does arithmetic only. Every branch (what counts as usual, rare or never, and the words that sum it up) is in `@keylow/core`, as the rule at the top of `AGENTS.md` requires. It has no stored rows and no grant of its own beyond `select` for `authenticated`.
+
+### `meal_plans`
+
+One row per plan, belonging to the person it was made for.
+
+- `id uuid` primary key, default `gen_random_uuid()`.
+- `owner_id uuid not null default auth.uid()`, references `auth.users (id) on delete cascade`.
+- `start_date date not null`, the first day of the plan.
+- `day_count smallint not null`, check `day_count between 1 and 7`.
+- `rules jsonb not null`: the rules the plan was made under, which are `maxRepeats` (1 to 7, or null for no limit), `leftovers`, `slots` and the stored ranking of the generation call. The shape belongs to core and the database checks only that it is a JSON object. `maxRepeats` stores the limit that applied to this plan and never the profile's raw value: a profile value of 0 is stored as null (no limit), and an unset profile (null) is resolved to the default of 2 before storing, so a stored plan never depends on a later change to the default or to the profile (orchestrator decision of 2026-11-13, reversible).
+- `source text not null`, check `source in ('assistant', 'app')`.
+- `archived_at timestamptz`, nullable. A plan is archived and never deleted by a client, as a recipe is (Amendment 8).
+- `created_at timestamptz not null default now()`.
+- An index on `(owner_id, start_date)`, which serves the person's list of plans and the cascade from `auth.users`.
+
+### `profiles.meal_plan_repeat_limit`
+
+`smallint`, nullable, check `meal_plan_repeat_limit is null or meal_plan_repeat_limit between 0 and 7`, null for every existing and new profile. The reading, from Zee's ruling 10 of 2026-11-13:
+
+| Value  | Meaning                                                                                                     |
+| ------ | ----------------------------------------------------------------------------------------------------------- |
+| null   | The person has not chosen. A limit of 2 appearances of a recipe a week applies, and the first plan says so. |
+| 0      | No limit. The person does not mind eating the same thing again.                                             |
+| 1 to 7 | The most appearances of one recipe in a week. A leftover counts toward a numeric limit.                     |
+
+The default of 2 is a rule of core and is not stored, so changing it never needs a migration. The person writes the column and nothing else does, from the Plan screen or from the choice the first plan offers. The assistant never writes it. Following Amendment 3 and Amendment 14, the `profiles` column lists are explicit, so the migration that adds the column also adds it to the `update` grant for `authenticated` and not to `insert`, and the existing `profiles_update_own` policy applies unchanged.
+
+### `meal_plan_days`
+
+One row per day of a plan.
+
+- `id uuid` primary key, default `gen_random_uuid()`.
+- `plan_id uuid not null references meal_plans (id) on delete cascade`.
+- `owner_id uuid not null default auth.uid()`, references `auth.users (id) on delete cascade`.
+- `local_date date not null`.
+- `target jsonb not null`: the day's kcal and macros as the planner used them, frozen at plan time. A change to the person's targets later never changes a stored day.
+- `confirmed_at timestamptz`, nullable.
+- `confirmed_entry_ids uuid[]`, nullable: the ids of the diary entries that confirming the day wrote. It is null until the day is confirmed.
+- `created_at timestamptz not null default now()`.
+- Check that `(confirmed_at is null) = (confirmed_entry_ids is null)`.
+- Unique on `(plan_id, local_date)`, which also serves the foreign key to the plan. An index on `owner_id` serves the cascade from `auth.users`.
+
+### `meal_plan_items`
+
+One row per planned food or recipe of a day.
+
+- `id uuid` primary key, default `gen_random_uuid()`.
+- `day_id uuid not null references meal_plan_days (id) on delete cascade`.
+- `owner_id uuid not null default auth.uid()`, references `auth.users (id) on delete cascade`.
+- `position integer not null`, check `position >= 0`, the order within the day.
+- `slot_time time`, nullable: when in the day the item is meant to be eaten. The diary has no meal slots (Amendment 5), so this is a time and not a name.
+- `item_type text not null`, check `item_type in ('food', 'recipe')`.
+- `food_id uuid`, nullable, references `foods (id) on delete set null`, and `recipe_id uuid`, nullable, references `recipes (id) on delete set null`. The check is that a food item has no `recipe_id` and a recipe item has no `food_id`. It cannot also require that the matching reference is present, because `on delete set null` clears it when the row is removed, and the item stays meaningful through its `snapshot` and `nutrients`.
+- `servings numeric` and `grams numeric`, both nullable, and `portion_id uuid`, nullable, references `food_portions (id) on delete set null`. A recipe item has `servings` above 0. A food item has `grams` above 0 and may name the portion it was counted in.
+- `nutrients jsonb not null`: the item's nutrients, computed by core at plan time and frozen, in the shape of `food_log_entries.nutrients`.
+- `leftover_of uuid`, nullable, references `meal_plan_items (id) on delete set null`: the item that cooked the meal, when this item is a leftover of it.
+- `snapshot jsonb not null`: the same snapshot a diary entry takes, built by core's `buildLogEntry` or `buildRecipeLogEntry`, so the item keeps the name and the figures it was planned with.
+- `created_at timestamptz not null default now()`.
+- An index on `(day_id, position)`, which serves a day's items and the foreign key to the day. Plain indexes on `owner_id`, `food_id`, `recipe_id`, `portion_id` and `leftover_of` serve the cascade and the foreign key checks.
+
+### The functions
+
+All three are `security invoker` with an empty `search_path`, so every policy below applies to their writes. `execute` is held by `authenticated` alone. Their refusals are `22023` with a message that states the rule and quotes no value, in the style of `save_recipe` and `save_shopping_items`. Each returns the values named here and no row. A key a function does not know is ignored, so a caller cannot set `owner_id`, `id` or `created_at`. None has a branch of its own beyond its input checks. What a plan contains is core's.
+
+- `save_meal_plan(p_plan jsonb, p_days jsonb, p_items jsonb) returns uuid`: writes a plan, its days and its items in one call, all or nothing, and returns the new plan's id. Items name their day by its `local_date`, because the days have no ids until the call writes them. A `day_count` that does not match the number of days is refused.
+- `replace_meal_plan_day(p_day_id uuid, p_items jsonb)`: replaces the items of one day, all or nothing, and returns nothing. It refuses a day that is confirmed, because a confirmed day is a record of what was written to the diary.
+- `confirm_meal_plan_day(p_day_id uuid, p_entries jsonb) returns uuid[]`: inserts the `food_log_entries` rows that core built, stamps `confirmed_at` and `confirmed_entry_ids` on the day, and returns the new entry ids, in one transaction. It locks the day row first and refuses a day that is already confirmed, so two taps cannot write a day twice. The rows go through the same policies and the same column grants as any diary write, so the diary rules apply unchanged.
+
+### Privileges and row level security
+
+In the style of Amendments 9, 12, 13 and 15: `revoke all` from `anon`, `authenticated` and `service_role` on every new table, then explicit grants. RLS is enabled on all four tables.
+
+- `palate_preferences`: as in its own section.
+- `meal_plans`: `authenticated` has `select`, `insert` on `owner_id`, `start_date`, `day_count`, `rules` and `source`, and `update` on `rules` and `archived_at`. There is no `delete` grant, so a plan is archived and a client cannot lose one. Policies `meal_plans_select_own`, `_insert_own` and `_update_own` on `owner_id = (select auth.uid())`.
+- `meal_plan_days`: `authenticated` has `select`, `insert` on `plan_id`, `owner_id`, `local_date` and `target`, and `update` on `target`, `confirmed_at` and `confirmed_entry_ids`. The insert policy also requires that the plan belongs to the caller, through an `exists` subquery. The reason is the one above: a foreign key is checked without row level security.
+- `meal_plan_items`: `authenticated` has `select`, `delete` and `insert` on every column except `id` and `created_at`, and no `update`, because replacing a day is a delete and an add. The insert policy requires that the day belongs to the caller, that a `food_id` is a food the caller can see, that a `recipe_id` is a recipe the caller owns, and that `leftover_of` is an item of the same owner.
+- **Direct writes.** The plan tables are the person's own record. A client that writes to them directly, including to a confirmed day or to `confirmed_at` and `confirmed_entry_ids`, changes only that person's own rows and no one else's, so this is accepted and not guarded by a trigger. The three functions are the supported path and the only one that keeps a day, its items and the diary consistent (orchestrator decision of 2026-11-13, reversible).
+- Every policy uses `(select auth.uid())`. `anon` and `service_role` get nothing, because nothing server side reads a plan or the palate: the assistant tools run under the person's own JWT.
+- Terms acceptance is not in the policies, as in Amendments 9, 12 and 13.
+
+### Health data
+
+Everything in this amendment is health and habit data. A palate says what a person eats and avoids, a plan says what they intend to eat, and an `allergy` row is special category data. All four tables, and the view over the diary, are owner-only under RLS. None of it is ever written to a log, an error message, a Sentry event or an analytics event, and none of it is in a committed fixture, so an evaluation fixture is synthetic and uses made up food words. A repository error names the action and a code only, never the database message or a row. The generation prompt carries palate items, food names and figures and never the user id, the email or a profile field (ADR 0006, data minimisation, unchanged). `meal_plan_repeat_limit` is a preference and carries no health value, but it sits in `profiles` and is treated with it.
+
+### Export and account deletion
+
+- **Export.** The whole-account export (KEY-707 and KEY-708) includes every column of every row the user owns in `palate_preferences`, `meal_plans`, `meal_plan_days` and `meal_plan_items`, with `profiles.meal_plan_repeat_limit` inside its table, rows as stored. `authenticated` has `select` on all four, so none needs a `service_role` grant. The view `palate_food_stats` has no rows of its own, because it is derived from the diary, so it is not exported. The export's completeness guard test fails until the four tables are added to it, and the ticket that creates each table adds it.
+- **Account deletion** works through the `on delete cascade` foreign key from `auth.users` (`owner_id` on every new table) and needs no code.
+- A recipe is archived and never hard deleted, so `recipe_id` references hold. A plan that names an archived recipe keeps it. A `food_id` that is set null leaves the item with its `snapshot` and its frozen `nutrients`.
+
+### The two check widenings
+
+Both widen a check that Amendment 14 set, in `20261113010000_assistant_check_widening.sql`. The migration changes no column, grant, policy or row, and it keeps each check's name.
+
+- `assistant_messages.role` gains `system`: `role in ('user', 'assistant', 'system')`. The hidden kitchen tool group of ADR 0006 stores a `tool_addition` message with that role, so the next turn replays the same addition. A client still cannot write a message, because the table has no insert grant for it.
+- `assistant_usage.route` gains `recipe_generate` and `plan_generate`: `route in ('describe_or_ask', 'compact', 'recipe_parse', 'recipe_generate', 'plan_generate')`. `recipe_generate` is the tool-less generation call for a recipe suggestion or an adjustment, and `plan_generate` is the one for a plan or a replan. Both have the `none` transport, which the transport check already allows, so the spend of the model for generation shows per job in `assistant_usage_daily` (ruling 1). `entitlements` is unchanged, because the plan quota is shared with chat turns (ruling 3).
+
+### The `food_group` reading
+
+Amendment 2 says nothing in v1 reads `foods.food_group`, and Amendment 15 already reads it as a hint for store cupboard items. For the palate, core may read it through exactly one mapping, `palateGroupOf(source, food_group, name)`, which returns one of a short list of coarse groups: meat, fish, eggs, dairy, grains and bread, potatoes, vegetables, fruit, legumes and nuts, fats and oils, sweets and snacks, drinks and other. The mapping is a core function with its own tests, because the column holds raw source vocabulary (CoFID codes such as `AD`, Open Food Facts categories through `pickFoodGroup`). It is never stored, so no column, grant or constraint changes, and a user food with a null `food_group` falls to its name. Cuisines are not in v1 (ruling 11), because CoFID has no cuisine field.
+
+### Snapshot rules
+
+- A recipe that the assistant suggests or adjusts is never written by a tool. The person saves it from the card as a new recipe through `save_recipe` with a null id (ruling 9). The original row is untouched, and every logged entry keeps its frozen snapshot (Amendment 8).
+- A plan item freezes its `nutrients` and its `snapshot` at plan time. Confirming a day builds fresh diary snapshots from the foods and recipes as they are at that moment, so a food edited between the plan and the confirmation is logged as it now is, and the confirm view shows the new figure. Editing a food never changes an entry already logged (Amendment 2).
+
+### What this supersedes
+
+- Amendment 14's list of `assistant_messages.role` values and its `route` check, as set out in "The two check widenings".
+- Amendment 2's line that nothing in v1 reads `foods.food_group`, for the one mapping in "The `food_group` reading" and for nothing else.
+
+### Implemented by
+
+- The migration `20261113010000_assistant_check_widening.sql` and the pgTAP in `assistant_check_widening.test.sql`, which proves that `system`, `recipe_generate` and `plan_generate` are accepted and that a value outside the lists is refused. The two Amendment 14 pgTAP files that asserted the old lists changed with it.
+- KEY-1023: `palate_preferences`, `palate_food_stats` and the core palate pieces, with the export entries.
+- KEY-1027: `meal_plans`, `meal_plan_days`, `meal_plan_items`, `profiles.meal_plan_repeat_limit`, the three functions and the export entries.
+- ADR 0006's amendments for the kitchen tools (KEY-1022 and KEY-1026) hold the decisions and their reasons.
+
+### Consequences of Amendment 22
+
+`packages/db/src/types.gen.ts` does not change for the two check widenings, because a check on a `text` column does not appear in the generated types. It gains the tables, the view, the functions and the profile column when KEY-1023 and KEY-1027 land. This migration inserts no row, so it copes with any database. Any further deviation from the frozen Decision, from Amendments 1 to 21 or from this amendment needs an Amendment 23 before the migration or code that implements it lands.
