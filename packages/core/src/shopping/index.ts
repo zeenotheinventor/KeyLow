@@ -27,5 +27,12 @@ export {
   planTypedItem,
 } from "./planListMerge";
 export type { ShoppingListMerge } from "./planListMerge";
+export { shoppingDraftsOfPlan } from "./shoppingDraftsOfPlan";
+export type {
+  PlannedFoodSource,
+  PlannedRecipeSource,
+  ShoppableDay,
+  ShoppingDraftsOfPlanInput,
+} from "./shoppingDraftsOfPlan";
 export { shoppingItemSchema, shoppingItemWriteSchema, shoppingSourceSchema } from "./schemas";
 export type { ShoppingItem, ShoppingItemWrite, ShoppingSource } from "./schemas";

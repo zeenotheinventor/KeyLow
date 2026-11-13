@@ -25,7 +25,7 @@ export type FitIngredient = {
   grams: number;
   /** A locked ingredient never changes. */
   locked: boolean;
-  /** Replaces the lower edge of the default band (half the proposed grams, at least 5 g). */
+  /** Replaces the lower edge of the default band (half the proposed grams, at least 5 g). 0 lets the ingredient drop to 0 g. That is for the planner, which uses it to leave a food out of a day. A recipe caller must not forward a person's 0. */
   minGrams?: number;
   /** Replaces the upper edge of the default band (double the proposed grams, at most 1,000 g). */
   maxGrams?: number;

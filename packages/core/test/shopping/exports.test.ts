@@ -17,6 +17,7 @@ describe("the shopping module", () => {
       "nextShoppingPosition",
       "planListMerge",
       "planTypedItem",
+      "shoppingDraftsOfPlan",
       "shoppingItemSchema",
       "shoppingItemWriteSchema",
       "shoppingSourceSchema",
