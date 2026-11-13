@@ -68,10 +68,12 @@ async function renderTurn({
   signedIn = true,
   fetchOverride,
   onKindSkipped,
+  resumeDetachedTurns,
 }: {
   signedIn?: boolean;
   fetchOverride?: StreamingFetch;
   onKindSkipped?: (skipped: SkippedKind) => void;
+  resumeDetachedTurns?: boolean;
 } = {}) {
   const client = createTestClient();
   if (signedIn) {
@@ -80,9 +82,10 @@ async function renderTurn({
   const { queryClient, wrapper } = createWrapper(client, { functionsUrl: FUNCTIONS_URL });
   // The spy passes the request on, so a test can read the signal the hook gave it.
   const injectedFetch = vi.fn<StreamingFetch>((url, init) => (fetchOverride ?? fetch)(url, init));
-  const rendered = renderHook(() => useAssistantTurn({ fetch: injectedFetch, onKindSkipped }), {
-    wrapper,
-  });
+  const rendered = renderHook(
+    () => useAssistantTurn({ fetch: injectedFetch, onKindSkipped, resumeDetachedTurns }),
+    { wrapper },
+  );
   return { ...rendered, client, queryClient, injectedFetch };
 }
 
@@ -982,5 +985,126 @@ describe("useAssistantTurn, what the end of a turn refreshes", () => {
     expect(isInvalidated(keys.assistant.changes)).toBe(false);
     expect(isInvalidated(keys.assistant.status)).toBe(false);
     expect(isInvalidated(keys.diary.all)).toBe(false);
+  });
+});
+
+describe("useAssistantTurn, resuming a detached turn", () => {
+  const wordsSoFar =
+    eventText({ type: "turn", turnId: TURN_ID, conversationId: CONVERSATION_ID }) +
+    eventText({ type: "text", delta: "Yesterday you ate" });
+
+  async function sendAndStopAfterWords(resumeDetachedTurns: boolean) {
+    answerTurns(() => openTurnResponse(wordsSoFar));
+    const rendered = await renderTurn({ resumeDetachedTurns });
+    act(() => {
+      void rendered.result.current.send("What did I eat?", sheetDay);
+    });
+    await waitFor(() => {
+      expect(rendered.result.current.live?.text).toBe("Yesterday you ate");
+    });
+    act(() => {
+      rendered.result.current.stop();
+    });
+    await waitFor(() => {
+      expect(rendered.result.current.isStreaming).toBe(false);
+    });
+    return rendered;
+  }
+
+  it("should leave the turn detached, not stopped, when stop is called with resume on", async () => {
+    const { result } = await sendAndStopAfterWords(true);
+
+    expect(result.current.live).toMatchObject({
+      turnId: TURN_ID,
+      conversationId: CONVERSATION_ID,
+      text: "Yesterday you ate",
+      stopped: false,
+      notice: null,
+      outcome: null,
+    });
+    expect(result.current.live?.detached).toBeDefined();
+  });
+
+  it("should still mark the turn stopped when stop is called with resume off", async () => {
+    const { result } = await sendAndStopAfterWords(false);
+
+    expect(result.current.live).toMatchObject({ stopped: true });
+    expect(result.current.live?.detached).toBeUndefined();
+  });
+
+  it("should leave the turn detached, with no failed notice, when the stream drops", async () => {
+    answerWith(replyEvents("Half").slice(0, 2));
+    const rendered = await renderTurn({ resumeDetachedTurns: true });
+
+    await sendAndSettle(rendered);
+
+    expect(rendered.result.current.live).toMatchObject({
+      text: "Half",
+      notice: null,
+      outcome: null,
+    });
+    expect(rendered.result.current.live?.detached).toBeDefined();
+  });
+
+  it("should read the conversation again when a turn detaches, as the server may have written", async () => {
+    answerWith(replyEvents("Half").slice(0, 2));
+    const rendered = await renderTurn({ resumeDetachedTurns: true });
+    const isInvalidated = watchInvalidations(rendered.queryClient, keys.assistant.conversation);
+
+    await sendAndSettle(rendered);
+
+    expect(isInvalidated(keys.assistant.conversation)).toBe(true);
+  });
+
+  it("should let the live turn go when the stored conversation has decided it", async () => {
+    answerWith(replyEvents("Half").slice(0, 2));
+    const rendered = await renderTurn({ resumeDetachedTurns: true });
+    await sendAndSettle(rendered);
+
+    act(() => {
+      rendered.result.current.settleDetached("stored");
+    });
+
+    expect(rendered.result.current.live).toBeNull();
+  });
+
+  it("should show the failed turn notice when a detached turn is settled as failed", async () => {
+    answerWith(replyEvents("Half").slice(0, 2));
+    const rendered = await renderTurn({ resumeDetachedTurns: true });
+    await sendAndSettle(rendered);
+
+    act(() => {
+      rendered.result.current.settleDetached("failed");
+    });
+
+    expect(rendered.result.current.live).toMatchObject({
+      notice: { code: "turn_failed" },
+      outcome: "failed",
+    });
+    expect(rendered.result.current.live?.detached).toBeUndefined();
+  });
+
+  it("should settle nothing for a turn that is not detached", async () => {
+    answerWith(replyEvents("Hello"));
+    const rendered = await renderTurn({ resumeDetachedTurns: true });
+    await sendAndSettle(rendered);
+
+    act(() => {
+      rendered.result.current.settleDetached("stored");
+    });
+
+    expect(rendered.result.current.live).toMatchObject({ outcome: "complete", text: "Hello" });
+  });
+
+  it("should fail, not detach, when the connection gives no answer, even with resume on", async () => {
+    const rendered = await renderTurn({
+      resumeDetachedTurns: true,
+      fetchOverride: () => Promise.reject(new TypeError("Network request failed")),
+    });
+
+    await sendAndSettle(rendered);
+
+    expect(rendered.result.current.live).toMatchObject({ notice: { code: "turn_failed" } });
+    expect(rendered.result.current.live?.detached).toBeUndefined();
   });
 });

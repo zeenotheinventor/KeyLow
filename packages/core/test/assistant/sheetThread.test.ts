@@ -1514,3 +1514,38 @@ describe("isSentTurnStored", () => {
     expect(isSentTurnStored([], "r1", withWords)).toBe(true);
   });
 });
+
+describe("buildAssistantSheetThread, a stored turn that is still open", () => {
+  const items: AssistantThreadItem[] = [{ kind: "user", id: "u1", text: "What's left for today?" }];
+
+  it("should draw the working line under the stored message when no turn is being sent from here", () => {
+    const thread = buildAssistantSheetThread({
+      items,
+      sent: null,
+      live: null,
+      isStreaming: false,
+      isStoredTurnOpen: true,
+    });
+
+    expect(thread.entries.map((entry) => entry.kind)).toEqual(["you", "status"]);
+    expect(thread.entries.at(-1)).toMatchObject({ kind: "status", text: "Thinking" });
+  });
+
+  it("should draw no working line when the flag is off, as before", () => {
+    const thread = buildAssistantSheetThread({ items, sent: null, live: null, isStreaming: false });
+
+    expect(thread.entries.map((entry) => entry.kind)).toEqual(["you"]);
+  });
+
+  it("should draw the working line once, not twice, while the sent message is shown", () => {
+    const thread = buildAssistantSheetThread({
+      items,
+      sent: { text: "Hi", afterItemId: null },
+      live: liveTurn(),
+      isStreaming: true,
+      isStoredTurnOpen: true,
+    });
+
+    expect(thread.entries.filter((entry) => entry.kind === "status")).toHaveLength(1);
+  });
+});

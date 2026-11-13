@@ -9,7 +9,7 @@ import {
 import { fetch as streamingFetch } from "expo/fetch";
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { AccessibilityInfo, View } from "react-native";
+import { AccessibilityInfo, AppState, View } from "react-native";
 
 import { AssistantEmpty } from "./AssistantEmpty";
 import { AssistantThread } from "./AssistantThread";
@@ -59,8 +59,11 @@ const threadClassNames = {
 /**
  * The assistant's chat sheet over the diary (`assistant · empty`, `streaming`, `conversation`,
  * `unavailable`, and the access states `consent-needed`, `day-limit`, `plus` and `resting`). It reads the newest conversation, sends a typed message or a starter through the streaming
- * turn, and draws the reply as it grows. Closing the sheet during a stream stops it and keeps what arrived,
- * marked as stopped, with Ask again. The sheet owns the draft and the message sent from it, and the pure
+ * turn, and draws the reply as it grows. Closing the sheet during a stream only ends the phone's reading of
+ * it: the server finishes the turn and stores the reply. So does the app going to the background or the
+ * connection dropping. The turn then shows as still working while the stored conversation is read every 2 s
+ * (and at once when the app comes back to the foreground with the sheet open), and the stored reply draws when
+ * the turn has a final status. The sheet owns the draft and the message sent from it, and the pure
  * work of what to draw is core's `buildAssistantSheetThread`, and of what the person may do (the consent
  * card, a disabled composer under a limit) is `resolveAssistantSheetAccess`. The status is read again each
  * time the sheet opens.
@@ -90,6 +93,7 @@ export function AssistantSheet({
     fetch: streamingFetch,
     isOnline,
     deviceTimeZone: deviceTimeZone(),
+    resumeDetachedTurns: true,
     // The streaming message is not a live region (Android would read all of it again for each chunk, and iOS
     // ignores a live region), so a screen reader hears the finished answer once, on both, when it is complete.
     onAnswerFinished: (words) => {
@@ -119,6 +123,31 @@ export function AssistantSheet({
       isFollowingEnd.current = true;
     }
   }, [open]);
+  // A turn can finish while the app is in the background, so coming back with the sheet open reads it again.
+  // The system may kill the socket of a stream in the background without telling the app, and the read would
+  // then hang for good, so going to the background lets the phone's read of a running turn go (the server goes
+  // on with it) and the turn shows as still working until the stored reply is read.
+  const refreshStored = useStableCallback(chat.refresh);
+  const detachRunningTurn = useStableCallback(() => {
+    if (chat.isStreaming) {
+      chat.stop();
+    }
+  });
+  useEffect(() => {
+    if (!open) {
+      return undefined;
+    }
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state === "active") {
+        refreshStored();
+      } else if (state === "background") {
+        detachRunningTurn();
+      }
+    });
+    return () => {
+      subscription.remove();
+    };
+  }, [open, refreshStored, detachRunningTurn]);
   // A prefill puts its words in the field each time the sheet opens, and nothing is sent until Send is pressed.
   useEffect(() => {
     if (open && draft !== undefined) {
