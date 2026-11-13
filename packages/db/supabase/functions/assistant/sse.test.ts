@@ -106,3 +106,36 @@ Deno.test(
     assertEquals(finished.stream.signal.aborted, false);
   },
 );
+
+Deno.test("a contract-breaking event is reported even when the reader is gone", async () => {
+  const { stream, body } = createEventStream();
+  const spy = reportSpy();
+
+  await body.cancel();
+  const written = writeEvent(
+    stream,
+    JSON.parse('{"type":"done","outcome":"sideways"}'),
+    spy.report,
+  );
+
+  assertEquals(written, false);
+  assertEquals(spy.reports, [["assistant", "internal_error"]]);
+});
+
+Deno.test(
+  "after the reader went away every write path is a no-op and none throws on the closed controller",
+  async () => {
+    const { stream, body } = createEventStream();
+    const spy = reportSpy();
+
+    await body.cancel();
+    stream.write("data: late\n\n");
+    writeEvent(stream, { type: "done", outcome: "complete" }, spy.report);
+    endAsFailed(stream);
+    stream.close();
+
+    assertEquals(stream.signal.aborted, true);
+    assertEquals(stream.closed, true);
+    assertEquals(spy.reports, []);
+  },
+);
