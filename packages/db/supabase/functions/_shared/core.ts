@@ -333,6 +333,7 @@ export {
   SUGGEST_PARAMS_V2,
   routinePayload,
   assistantExerciseFormMediaSchema,
+  formMediaToShow,
   assistantExerciseMusclesSchema,
   describeRoleRow,
   musclesByRole,

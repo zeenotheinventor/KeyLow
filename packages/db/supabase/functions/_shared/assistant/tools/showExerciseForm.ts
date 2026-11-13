@@ -4,6 +4,7 @@
 // works during a workout and has no Undo.
 import { z } from "zod";
 
+import { formMediaToShow } from "../../core.ts";
 import { getExercise, getExerciseFormMedia } from "../../repos.ts";
 import { dataNotice } from "./shared.ts";
 
@@ -33,7 +34,8 @@ export const showExerciseFormTool: ReadToolDefinition<z.infer<typeof showExercis
     if (exercise === null) {
       return { data: { error: "not_found" } };
     }
-    const media = await getExerciseFormMedia(ctx.caller, exercise_id);
+    // The video first, as before: this tool sends one kind only until the app shows a preference.
+    const media = formMediaToShow(await getExerciseFormMedia(ctx.caller, exercise_id), "video");
     switch (media.kind) {
       case "video":
         return {

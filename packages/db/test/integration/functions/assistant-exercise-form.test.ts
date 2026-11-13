@@ -3,6 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { getExerciseFormMedia } from "../../../../api-client/src/repos/exerciseFormMedia";
 import { getExercise } from "../../../../api-client/src/repos/exercises";
 import { saveExercise } from "../../../../api-client/test/integration/support/training";
+import { formMediaToShow } from "../../../../core/src/training";
 import { adminClient } from "../support/stack";
 import { createTestUser, deleteCreatedTestUsers } from "../support/users";
 
@@ -59,7 +60,7 @@ async function libraryExerciseIdWithPhotos(user: TestUser): Promise<string> {
     throw new Error(`Could not read library exercises (${error.code})`);
   }
   for (const { id } of data) {
-    if ((await getExerciseFormMedia(user.client, id)).kind === "photos") {
+    if (formMediaToShow(await getExerciseFormMedia(user.client, id), "video").kind === "photos") {
       return id;
     }
   }
@@ -89,12 +90,17 @@ describe("show_exercise_form", () => {
 
   it("reads the caller's own custom exercise, which holds no video and no photos", async () => {
     expect((await getExercise(alice.client, aliceExercise.id))?.name).toBe(aliceExercise.name);
-    expect(await getExerciseFormMedia(alice.client, aliceExercise.id)).toEqual({ kind: "none" });
+    expect(
+      formMediaToShow(await getExerciseFormMedia(alice.client, aliceExercise.id), "video"),
+    ).toEqual({ kind: "none" });
   });
 
   it("reads the curated video of a library exercise, for either user", async () => {
     for (const user of [alice, bob]) {
-      const media = await getExerciseFormMedia(user.client, seededExerciseId);
+      const media = formMediaToShow(
+        await getExerciseFormMedia(user.client, seededExerciseId),
+        "video",
+      );
 
       expect(media.kind).toBe("video");
       expect(media.kind === "video" ? media.videoId : null).toBe(SEEDED_VIDEO_ID);
@@ -102,7 +108,10 @@ describe("show_exercise_form", () => {
   });
 
   it("reads the start and end photos of a library exercise that has no video", async () => {
-    const media = await getExerciseFormMedia(bob.client, photosExerciseId);
+    const media = formMediaToShow(
+      await getExerciseFormMedia(bob.client, photosExerciseId),
+      "video",
+    );
 
     expect(media.kind).toBe("photos");
     expect(media.kind === "photos" ? media.imagePaths : []).toHaveLength(2);
