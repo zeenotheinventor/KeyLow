@@ -18,4 +18,7 @@ export const storyStates = [
   "TrailingAction",
   "TrailingLabel",
   "TrailingTick",
+  "PalateItem",
+  "AccentTitle",
+  "LinkRow",
 ];

@@ -38,5 +38,7 @@ export const samples: Record<string, () => string[]> = {
   describeGroupTitle: () => [copy.describeGroupTitle("legumes and nuts")],
   describeRareGroupDetail: () => [copy.describeRareGroupDetail(0), copy.describeRareGroupDetail(1)],
   describeNotTrue: () => [copy.describeNotTrue("Eggs, chicken, whole, boiled")],
+  describeUndo: () => [copy.describeUndo("Eggs, chicken, whole, boiled")],
+  describeShowAll: () => [copy.describeShowAll(10)],
   describeEmptyPalate: () => [0, 1, 2].map(copy.describeEmptyPalate),
 };

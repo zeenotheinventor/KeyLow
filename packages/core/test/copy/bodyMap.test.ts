@@ -27,6 +27,7 @@ import {
   describeSets,
   describeShortDate,
   describeWeekdayName,
+  describeDateRange,
   describeWeekRange,
   formatSetCount,
   GAP_VALUE_NAMES,
@@ -909,5 +910,19 @@ describe("describeMuscleCount", () => {
     [22, "22 muscles"],
   ])("should write %s as %s", (count, expected) => {
     expect(describeMuscleCount(count)).toBe(expected);
+  });
+});
+
+describe("describeDateRange", () => {
+  it("should name the month once when both ends share it", () => {
+    expect(describeDateRange("2026-11-18", "2026-11-22")).toBe("Wed 18 to Sun 22 Nov");
+  });
+
+  it("should name the month on both ends when they differ", () => {
+    expect(describeDateRange("2026-11-27", "2026-12-06")).toBe("Fri 27 Nov to Sun 6 Dec");
+  });
+
+  it("should give the short date alone for one day", () => {
+    expect(describeDateRange("2026-11-18", "2026-11-18")).toBe("Wed 18 Nov");
   });
 });

@@ -44,7 +44,6 @@ describe("YOUR_FOOD", () => {
       groupTitle: "Your food",
       groupCaption: "The assistant uses these when it suggests recipes and meal plans.",
       avoidRowSubtitle: "Dislikes and allergies",
-      comingSoon: "Coming soon",
     });
   });
 });

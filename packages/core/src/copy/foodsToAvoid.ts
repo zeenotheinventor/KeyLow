@@ -34,8 +34,6 @@ export const YOUR_FOOD = {
   groupTitle: "Your food",
   groupCaption: "The assistant uses these when it suggests recipes and meal plans.",
   avoidRowSubtitle: "Dislikes and allergies",
-  // NOT ON THE CANVAS: the stand-in body of the palate screen until it is built.
-  comingSoon: "Coming soon",
 } as const;
 
 /** "peanuts" is listed as "Peanuts", as the board writes it. */

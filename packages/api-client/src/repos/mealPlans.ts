@@ -403,3 +403,26 @@ export async function archiveMealPlan(
     throw new Error(`Could not ${action}: no plan was changed`);
   }
 }
+
+/**
+ * Brings an archived plan back by clearing `archived_at`, which is what the Undo of a plan that replaced an older
+ * one does for the older plan. An update that reaches no row throws rather than reporting a success.
+ */
+export async function restoreMealPlan(
+  client: SupabaseClient<Database>,
+  planId: string,
+): Promise<void> {
+  const action = "bring back your meal plan";
+  const { data, error } = await client
+    .from("meal_plans")
+    .update({ archived_at: null })
+    .eq("id", planId)
+    .select("id");
+
+  if (error) {
+    throw repoError(action, error);
+  }
+  if (data.length === 0) {
+    throw new Error(`Could not ${action}: no plan was changed`);
+  }
+}

@@ -35,6 +35,8 @@ export const PALATE_WORDS = {
   noneYet: "None yet",
   noneYetCaption: "The assistant already leaves these out, even before it knows your habits.",
   emptyTitle: "Not enough to go on yet",
+  loadFailedTitle: "Couldn't load what you usually eat",
+  loadFailedBody: "Check your connection and try again.",
 };
 
 const capitalise = (text: string): string => `${text.slice(0, 1).toUpperCase()}${text.slice(1)}`;
@@ -103,3 +105,9 @@ export const describeNotTrue = (item: string): string => `Not true: ${item}`;
 /** The body of the empty card, with the days logged so far. */
 export const describeEmptyPalate = (loggedDays: number): string =>
   `Log your food on ${PALATE_USUAL_MIN_DAYS} days and this page shows what you usually eat. So far you have logged ${describeCount(loggedDays, "day", "days")}.`;
+
+/** The accessible name of an Undo button, which says which item it is on. */
+export const describeUndo = (item: string): string => `Undo, ${item}`;
+
+/** The row that opens the rest of a list in place: "Show all 10". */
+export const describeShowAll = (count: number): string => `Show all ${count}`;

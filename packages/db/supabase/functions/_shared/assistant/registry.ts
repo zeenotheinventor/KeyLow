@@ -24,6 +24,7 @@ import { getWeighInsTool } from "./tools/getWeighIns.ts";
 import { getWorkoutsTool } from "./tools/getWorkouts.ts";
 import { importRecipeFromUrlTool } from "./tools/importRecipeFromUrl.ts";
 import { logEntryTool } from "./tools/logEntry.ts";
+import { planMealsTool } from "./tools/planMeals.ts";
 import { searchExercisesTool } from "./tools/searchExercises.ts";
 import { searchFoodsTool } from "./tools/searchFoods.ts";
 import { setDayCompleteTool } from "./tools/setDayComplete.ts";
@@ -116,6 +117,7 @@ const toolDefinitions: readonly ToolDefinition[] = [
   askUserTool,
   getPalateProfileTool,
   suggestRecipeTool,
+  planMealsTool,
   adjustRecipeTool,
 ];
 

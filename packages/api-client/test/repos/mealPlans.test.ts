@@ -9,6 +9,7 @@ import {
   confirmMealPlanDay,
   listMealPlans,
   replaceMealPlanDay,
+  restoreMealPlan,
   saveMealPlan,
 } from "../../src/repos/mealPlans";
 import { createTestClient } from "../createTestClient";
@@ -546,5 +547,32 @@ describe("archiveMealPlan", () => {
     const error = await errorThrownBy(() => archiveMealPlan(createTestClient(), PLAN_ID));
 
     expectOnlyTheCode(error, "remove your meal plan", "42501");
+  });
+});
+
+describe("restoreMealPlan", () => {
+  it("should clear archived_at on the plan", async () => {
+    answer("patch", "meal_plans", (request) => postgrestRows(request, [{ id: PLAN_ID }]));
+
+    await restoreMealPlan(createTestClient(), PLAN_ID);
+
+    expect(recorded[0]?.body).toEqual({ archived_at: null });
+    expect(recorded[0]?.url.searchParams.get("id")).toBe(`eq.${PLAN_ID}`);
+  });
+
+  it("should throw when no plan was changed", async () => {
+    answer("patch", "meal_plans", (request) => postgrestRows(request, []));
+
+    const error = await errorThrownBy(() => restoreMealPlan(createTestClient(), PLAN_ID));
+
+    expect(error.message).toBe("Could not bring back your meal plan: no plan was changed");
+  });
+
+  it("should fail with the action and the code only when the database quotes the row", async () => {
+    answer("patch", "meal_plans", () => databaseErrorQuotingTheRow("42501"));
+
+    const error = await errorThrownBy(() => restoreMealPlan(createTestClient(), PLAN_ID));
+
+    expectOnlyTheCode(error, "bring back your meal plan", "42501");
   });
 });

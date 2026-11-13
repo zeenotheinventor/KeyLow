@@ -530,3 +530,50 @@ Deno.test("the pending confirmation of a surfaced kitchen tool is allowed", () =
 
   assert(names.includes("kitchen_write"));
 });
+
+// ADR 0006, Amendment 5, the plan exception. A read-shaped message reaches `plan_meals` only when it matches the
+// meal plan words of `kitchen.ts`, and only while the kitchen group is surfaced.
+const planMealsTool: AllowlistTool = { name: "plan_meals", readOnlyHint: false, group: "kitchen" };
+const allowedForPlan = (text: string, kitchenSurfaced: boolean) =>
+  allowedToolsFor({
+    text,
+    pendingConfirmationTool: null,
+    tools: [...tools, kitchenRead, planMealsTool],
+    kitchenSurfaced,
+  });
+
+Deno.test("plan_meals is allowed on a read-shaped message that matches the meal plan words", () => {
+  for (const text of [
+    "What should I eat this week?",
+    "What can I cook for the week?",
+    // Recorded and accepted (KEY-1031 review): these read-shaped questions also match the plan words, and
+    // reaching `plan_meals` costs one turn and Undo at most.
+    "Should I plan my meals for next week?",
+    "How should I plan my meals?",
+  ]) {
+    const names = allowedForPlan(text, true);
+    assertEquals(names.includes("plan_meals"), true, text);
+    assertEquals(names.includes("kitchen_read"), true, text);
+  }
+});
+
+Deno.test("plan_meals is not allowed on other read-shaped text in a kitchen conversation", () => {
+  for (const text of [
+    "Why was Tuesday so high?",
+    "What do I usually eat?",
+    "How much protein did I have today?",
+    "What should I eat for dinner tonight?",
+  ]) {
+    assertEquals(allowedForPlan(text, true).includes("plan_meals"), false, text);
+  }
+});
+
+Deno.test(
+  "plan_meals is not allowed on a matching read message when the kitchen is not surfaced",
+  () => {
+    assertEquals(
+      allowedForPlan("What should I eat this week?", false).includes("plan_meals"),
+      false,
+    );
+  },
+);

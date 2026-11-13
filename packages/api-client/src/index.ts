@@ -498,10 +498,12 @@ export {
 export type { ShoppingSourceRecipe } from "./repos";
 export {
   useAddPalatePreference,
+  usePalateFoods,
   usePalateLoggedDays,
   usePalatePreferences,
   usePalateStats,
   useRemovePalatePreference,
+  useSetNotUsual,
 } from "./hooks";
 export {
   addPalatePreference,

@@ -495,6 +495,7 @@ With the formula of `promptPrefix.test.ts` (system prompt length plus the tools 
 - A kitchen tool opts out of `strict`, as the training tools do. Whether the API counts a deferred tool against the caps on strict tools is not documented, so the registry's strict budget keeps counting them until a live run shows otherwise.
 - The trigger list will miss some phrasings and catch some it should not. A miss costs one turn on the visible tools, and a false catch costs about 2,000 tokens and the kitchen rules for the rest of the conversation. Both are small, and the word list is one file.
 - The rules text and the trigger list are the two things to tune when M9's evals show a kitchen conversation going wrong.
+- **One write in the read set, added for `plan_meals` (KEY-1031).** A read-shaped message such as "What should I eat this week?" is a request for a plan, so `plan_meals` is in the read set, as `request_feature` is, but only when the text matches the meal plan words of `kitchen.ts` (`isMealPlanRequest`) and the kitchen group is surfaced. "Why was Tuesday so high?" in a kitchen conversation does not reach it. The exception is bounded three ways. The turn loop allows one call to a `generation` tool in a turn, so a message cannot make it plan twice. The monthly spend cap still applies to the Opus call. And the plan is a new row that Undo archives, restoring the days of any older plan it cleared, with nothing deleted.
 
 ### Implemented by
 

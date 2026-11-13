@@ -259,6 +259,8 @@ export { useAddPalatePreference } from "./useAddPalatePreference";
 export { useRemovePalatePreference } from "./useRemovePalatePreference";
 export { usePalatePreferences } from "./usePalatePreferences";
 export { usePalateStats } from "./usePalateStats";
+export { usePalateFoods } from "./usePalateFoods";
+export { useSetNotUsual } from "./useSetNotUsual";
 export { usePalateLoggedDays } from "./usePalateLoggedDays";
 export { useMealPlans } from "./useMealPlans";
 export { useSaveMealPlan } from "./useSaveMealPlan";
