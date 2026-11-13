@@ -19,4 +19,9 @@ export const storyStates = [
   "RoutineThreeDaysOpenCantUndo",
   "RoutineSevenDaysCantUndo",
   "RoutineSevenDaysOpenCantUndo",
+  "RecipeDraft",
+  "RecipeDraftShort",
+  "RecipeDraftUnmatched",
+  "RecipeDraftSaved",
+  "RecipeDraftSaveFailed",
 ];

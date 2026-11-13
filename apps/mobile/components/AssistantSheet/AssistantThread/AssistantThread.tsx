@@ -2,6 +2,7 @@ import { ASSISTANT_SHEET, ASSISTANT_STOPPED, describeAssistantNotice } from "@ke
 
 import { AssistantLinkRow, AssistantNotice, ChatMessage, ChipGroup } from "../../ui";
 import { AssistantCardEntry } from "../AssistantCardEntry";
+import { AssistantRecipeDraftEntry } from "../AssistantRecipeDraftEntry";
 import { ConfirmButtons } from "../ConfirmButtons";
 import { ExerciseFormEntry } from "../ExerciseFormEntry";
 import { ExerciseMusclesEntry } from "../ExerciseMusclesEntry";
@@ -29,7 +30,7 @@ const askAgainOptions = [{ value: "ask-again", label: ASSISTANT_STOPPED.askAgain
  * The messages and action cards of the conversation, oldest first, with the quick reply under an answer
  * that was cut short or that asked for it, the quick replies under a clarifying question, the two buttons under a
  * confirmation, the citation and Estimate lines under an answer from the person's data, a link on its own
- * under an answer that made no card, the muscles an exercise works as a figure and its form video or photos as a card under the reply, and the working line while the assistant works with no words to show.
+ * under an answer that made no card, the muscles an exercise works as a figure, its form video or photos as a card and a suggested recipe as a card under the reply, and the working line while the assistant works with no words to show.
  * Every word comes from the thread the screen was given or from core's copy, so nothing here words a
  * message, and nothing in it decides what to show.
  */
@@ -39,6 +40,9 @@ export function AssistantThread({
   onTryAgain,
   onAskAgain,
   onOpenCardLink,
+  onOpenRecipeEditor,
+  onOpenSavedRecipe,
+  onAdjustRecipe,
   canAnswer,
   onAnswer,
 }: AssistantThreadProps) {
@@ -59,6 +63,16 @@ export function AssistantThread({
         return <ExerciseMusclesEntry exercise={entry.exercise} key={entry.key} />;
       case "exerciseFormMedia":
         return <ExerciseFormEntry exercise={entry.exercise} key={entry.key} />;
+      case "recipeDraft":
+        return (
+          <AssistantRecipeDraftEntry
+            draft={entry.draft}
+            key={entry.key}
+            onAdjust={onAdjustRecipe}
+            onOpenEditor={onOpenRecipeEditor}
+            onOpenSavedRecipe={onOpenSavedRecipe}
+          />
+        );
       case "link":
         return (
           <AssistantLinkRow
@@ -87,7 +101,7 @@ export function AssistantThread({
           />
         );
       case "status":
-        return <WorkingLine key={entry.key} text={entry.text} />;
+        return <WorkingLine hint={entry.hint} key={entry.key} text={entry.text} />;
       case "quickReplies":
         return (
           <ChipGroup

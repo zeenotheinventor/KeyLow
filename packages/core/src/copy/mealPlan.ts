@@ -97,7 +97,7 @@ type Figures = { kcal: number | null; protein_g: number | null };
  * A day's figures against its target: "1,296 of 1,300 kcal · P 86 of 90 g". A figure with no target is said
  * on its own, and a figure the plan has no value for is left out.
  */
-export const describePlanDayFigures = (totals: Figures, target: Figures): string => {
+export const describePlanDayTotals = (totals: Figures, target: Figures): string => {
   const parts: string[] = [];
   if (totals.kcal !== null) {
     parts.push(

@@ -17,9 +17,9 @@ export const samples: Record<string, () => string[]> = {
   ],
   describePlanDaySubtitle: () => [copy.describePlanDaySubtitle("2026-11-16", "2026-11-22")],
   describePlanDayTitle: () => [copy.describePlanDayTitle("2026-11-18")],
-  describePlanDayFigures: () => [
-    copy.describePlanDayFigures({ kcal: 1296, protein_g: 86 }, { kcal: 1300, protein_g: 90 }),
-    copy.describePlanDayFigures({ kcal: 1296, protein_g: 86 }, { kcal: null, protein_g: null }),
+  describePlanDayTotals: () => [
+    copy.describePlanDayTotals({ kcal: 1296, protein_g: 86 }, { kcal: 1300, protein_g: 90 }),
+    copy.describePlanDayTotals({ kcal: 1296, protein_g: 86 }, { kcal: null, protein_g: null }),
   ],
   describePlanBandFigures: () => [copy.describePlanBandFigures({ kcal: 389, protein_g: 13 })],
   describePlanTolerance: () =>

@@ -14,4 +14,10 @@ export type AssistantThreadProps = {
   onAnswer: (words: string) => void;
   /** Opens what a card's link leads to. */
   onOpenCardLink: (target: AssistantCardLink["target"]) => void;
+  /** Opens the new recipe editor at this address, filled in with a suggested recipe, and answers whether it did. Give it a stable function, so the recipe card's memo holds. */
+  onOpenRecipeEditor: (href: string) => boolean;
+  /** Opens a saved recipe in its editor, from the card's link once the draft was saved. Give it a stable function. */
+  onOpenSavedRecipe: (recipeId: string) => void;
+  /** Puts the words for changing a recipe in the composer, from Adjust on a suggested recipe. Give it a stable function. */
+  onAdjustRecipe: () => void;
 };

@@ -71,6 +71,7 @@ export * from "./assistantDayCards";
 export * from "./assistantPlanCards";
 export * from "./mealPlan";
 export * from "./assistantRecipeCards";
+export * from "./assistantRecipeDraftCard";
 export * from "./assistantFoodCards";
 export * from "./assistantTargetCards";
 export * from "./assistantTrainingCards";

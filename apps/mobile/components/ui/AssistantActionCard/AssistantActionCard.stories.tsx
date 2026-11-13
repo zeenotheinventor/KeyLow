@@ -1,8 +1,12 @@
+import { describeRecipeDraftCard } from "@keylow/core";
 import { View } from "react-native";
 
 import { AssistantActionCard } from "./AssistantActionCard";
+import { AssistantRecipeDraftCard } from "./AssistantRecipeDraftCard";
 
+import type { AssistantRecipeDraftCardProps } from "./AssistantRecipeDraftCard";
 import type { AssistantActionCardDay, AssistantActionCardRow } from "./types";
+import type { SuggestionDraft } from "@keylow/core";
 import type { Meta, StoryObj } from "@storybook/react-native";
 
 // Each story is one `assistant-card` board, or the `assistant` board named in its comment, with the
@@ -344,4 +348,161 @@ export const RoutineSevenDaysCantUndo: Story = {
 
 export const RoutineSevenDaysOpenCantUndo: Story = {
   args: { ...sevenDayRoutine, ...undoOffForActiveRoutine, initiallyOpenDay: 3 },
+};
+
+// The suggested recipe boards. The card is its own component, so each story draws it with a `render`. The foods
+// are the CoFID ones the boards use, and the ids are made up.
+type DraftLine = SuggestionDraft["ingredients"][number];
+
+const draftLine = (
+  name: string,
+  foodName: string,
+  grams: number,
+  kcal: number,
+  id: number,
+): DraftLine => ({
+  name,
+  foodId: `00000000-0000-4000-8000-0000000000f${id}`,
+  foodName,
+  foodSource: "cofid",
+  grams,
+  beforeGrams: null,
+  kcal,
+  change: "same",
+});
+
+const chickenAndRiceDraft: SuggestionDraft = {
+  variant: "suggestion",
+  name: "Chicken and rice with yogurt sauce",
+  servings: 2,
+  ingredients: [
+    draftLine("chicken breast", "Chicken, breast, grilled without skin, meat only", 220, 326, 1),
+    draftLine(
+      "cooked white rice",
+      "Rice, white, long grain, boiled in unsalted water",
+      390,
+      511,
+      2,
+    ),
+    draftLine("broccoli", "Broccoli, green, boiled in unsalted water", 100, 28, 3),
+    draftLine("Greek yogurt", "Yogurt, Greek style, plain", 115, 153, 4),
+    draftLine("olive oil", "Oil, olive", 20, 180, 5),
+  ],
+  dropped: [],
+  perServing: { kcal: 599, protein_g: 46, carbs_g: 65, fat_g: 19 },
+  fit: { status: "within", target: { kcal: 600, protein_g: 45 }, misses: [] },
+  steps: [
+    "Cook the rice.",
+    "Grill the chicken.",
+    "Stir the yogurt into the rice.",
+    "Serve with the broccoli.",
+  ],
+};
+
+const salmonDraft: SuggestionDraft = {
+  ...chickenAndRiceDraft,
+  name: "Salmon, potatoes and broccoli",
+  ingredients: [
+    draftLine("salmon fillet", "Salmon, farmed, flesh only, grilled", 360, 860, 6),
+    draftLine(
+      "boiled potatoes",
+      "Potatoes, old, boiled in unsalted water, flesh only",
+      250,
+      185,
+      7,
+    ),
+    draftLine("broccoli", "Broccoli, green, boiled in unsalted water", 400, 112, 3),
+    draftLine("olive oil", "Oil, olive", 10, 90, 5),
+  ],
+  perServing: { kcal: 624, protein_g: 53, carbs_g: 27, fat_g: 34 },
+  fit: {
+    status: "unreachable",
+    target: { kcal: 600, protein_g: 60 },
+    misses: [
+      {
+        nutrient: "protein_g",
+        target: 60,
+        achieved: 53,
+        reason: "ingredient_bounds",
+        limitedBy: ["salmon fillet"],
+      },
+    ],
+  },
+};
+
+const traybakeDraft: SuggestionDraft = {
+  ...chickenAndRiceDraft,
+  name: "Spicy chicken traybake",
+  ingredients: [
+    ...chickenAndRiceDraft.ingredients.slice(0, 1),
+    {
+      name: "harissa paste",
+      foodId: null,
+      foodName: null,
+      grams: 30,
+      beforeGrams: null,
+      kcal: null,
+      change: "same",
+    },
+  ],
+  perServing: { kcal: 499, protein_g: 51, carbs_g: 52, fat_g: 11 },
+  fit: { status: "within", target: { kcal: 500, protein_g: 50 }, misses: [] },
+};
+
+const draftCardArgs = (
+  draft: SuggestionDraft,
+  overrides: Partial<AssistantRecipeDraftCardProps> = {},
+): AssistantRecipeDraftCardProps => ({
+  card: describeRecipeDraftCard(draft, { isSaved: overrides.savedLink !== undefined }),
+  isSaving: false,
+  saveLabel: "Save to recipes",
+  adjustLabel: "Adjust",
+  onSave: () => undefined,
+  onAdjust: () => undefined,
+  ...overrides,
+});
+
+// The meta's own props, which the render below does not use.
+const draftStoryArgs = { icon: "ChefHat", title: "Suggested recipe" } as const;
+
+const renderDraft = (args: AssistantRecipeDraftCardProps) => <AssistantRecipeDraftCard {...args} />;
+
+// `assistant-card · recipe-draft`: a suggested recipe that fits, with Save to recipes and Adjust.
+export const RecipeDraft: Story = {
+  args: draftStoryArgs,
+  render: () => renderDraft(draftCardArgs(chickenAndRiceDraft)),
+};
+
+// `assistant-card · recipe-draft-short`: the protein fell short, so its Asked caption and the fit line warn.
+export const RecipeDraftShort: Story = {
+  args: draftStoryArgs,
+  render: () => renderDraft(draftCardArgs(salmonDraft)),
+};
+
+// `assistant-card · recipe-draft-unmatched`: a line that matched no food, shown last and left out of the numbers.
+export const RecipeDraftUnmatched: Story = {
+  args: draftStoryArgs,
+  render: () => renderDraft(draftCardArgs(traybakeDraft)),
+};
+
+// `assistant-card · recipe-draft-saved`: back from the recipe editor, the buttons give way to the link.
+export const RecipeDraftSaved: Story = {
+  args: draftStoryArgs,
+  render: () =>
+    renderDraft(
+      draftCardArgs(chickenAndRiceDraft, {
+        savedLink: { label: "Open in recipe editor", onPress: () => undefined },
+      }),
+    ),
+};
+
+// `assistant-card · recipe-draft-failed`, "Save failed": the card stays, with a danger line above the buttons.
+export const RecipeDraftSaveFailed: Story = {
+  args: draftStoryArgs,
+  render: () =>
+    renderDraft(
+      draftCardArgs(chickenAndRiceDraft, {
+        saveError: "Not saved. Check your connection and try again.",
+      }),
+    ),
 };

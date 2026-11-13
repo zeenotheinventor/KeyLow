@@ -40,14 +40,17 @@ export const planDaysOf = (
 
 /**
  * Plans the days. When the person gave wishes and the model ranked something, only the ranked items are
- * planned, because the model left out what clashes with the wishes. If that places nothing at all, the whole
- * pool is planned instead and `wishesKept` is false, so the person is told.
+ * planned, because the model left out what clashes with the wishes. If that places nothing at all, or the model
+ * ranked nothing, the whole pool is planned instead and `wishesKept` is false, so the person is told.
  */
 export const planWeek = (
   input: PlanMealsInput & { hasWishes: boolean },
 ): { plan: PlannedWeek; wishesKept: boolean } => {
   const { hasWishes, ...pool } = input;
-  if (hasWishes && pool.ranking.length > 0) {
+  if (hasWishes && pool.ranking.length === 0) {
+    return { plan: planMeals(pool), wishesKept: false };
+  }
+  if (hasWishes) {
     const ranked = new Set(pool.ranking);
     const focused = planMeals({
       ...pool,

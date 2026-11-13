@@ -7,6 +7,13 @@ import { Text } from "react-native";
 
 import { AuthGate } from "../components/AuthGate";
 import { announceNewTargets, hasNewTargets, takeNewTargets } from "../lib/checkinToast";
+import {
+  beginRecipePrefill,
+  markRecipePrefillSaved,
+  peekRecipePrefill,
+  savedRecipeIdOfDraft,
+} from "../lib/recipePrefill";
+import { resetRecipePrefillForTests } from "../lib/recipePrefill/testing";
 import { scheduledRemindersStorageKey } from "../lib/reminderScheduler";
 import { ThemeProvider } from "../lib/theme";
 import { notificationsState, resetNotificationsMock } from "./support/expoNotificationsMock";
@@ -419,6 +426,41 @@ describe("AuthGate", () => {
       });
 
       expect(hasNewTargets()).toBe(true);
+    });
+  });
+
+  describe("a recipe the assistant drafted", () => {
+    beforeEach(() => {
+      resetRecipePrefillForTests();
+      routerMock.segments = ["(tabs)", "diary"];
+    });
+
+    it("should be forgotten when the user signs out, with what was saved from it", async () => {
+      await renderGate();
+      const id = beginRecipePrefill({
+        draft: { name: "Chicken", servings: "2", cookedWeight: "", ingredients: [], steps: [] },
+        draftKey: "key-a",
+        searchWord: null,
+      });
+      markRecipePrefillSaved("key-b", "55555555-5555-4555-8555-555555555555");
+
+      await act(() => {
+        emitAuthStateChange("SIGNED_OUT", null);
+      });
+
+      expect(peekRecipePrefill(id)).toBeUndefined();
+      expect(savedRecipeIdOfDraft("key-b")).toBeUndefined();
+    });
+
+    it("should be kept when the session is only refreshed", async () => {
+      await renderGate();
+      markRecipePrefillSaved("key-b", "55555555-5555-4555-8555-555555555555");
+
+      await act(() => {
+        emitAuthStateChange("TOKEN_REFRESHED", fakeSession);
+      });
+
+      expect(savedRecipeIdOfDraft("key-b")).toBeDefined();
     });
   });
 

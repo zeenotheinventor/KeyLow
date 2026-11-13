@@ -35,9 +35,11 @@ export function RoutineDayRow({ day, isOpen, onPress }: RoutineDayRowProps) {
           {day.exercises.map((exercise, index) => (
             <View key={`${index}-${exercise.name}`}>
               <Text>{exercise.name}</Text>
-              <Text tone="muted" variant="caption">
-                {exercise.detail}
-              </Text>
+              {exercise.detail === undefined ? null : (
+                <Text tone="muted" variant="caption">
+                  {exercise.detail}
+                </Text>
+              )}
             </View>
           ))}
         </View>

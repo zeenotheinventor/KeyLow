@@ -36,6 +36,7 @@ describe("applyAssistantEvent", () => {
       link: null,
       exerciseMuscles: [],
       exerciseFormMedia: [],
+      recipeDrafts: [],
       askAgain: false,
       notice: null,
       stopped: false,
@@ -136,7 +137,7 @@ describe("applyAssistantEvent", () => {
     });
   });
 
-  describe("a recipe draft, which the app does not draw yet", () => {
+  describe("a recipe draft", () => {
     const draft: AssistantStreamEvent = {
       type: "recipe_draft",
       draft: {
@@ -151,11 +152,19 @@ describe("applyAssistantEvent", () => {
       },
     };
 
-    it("should leave the turn as it was, apart from ending the step", () => {
+    it("should hold each draft in call order and end the step", () => {
       const thinking = { type: "status", code: "thinking" } as const;
       const text = { type: "text", delta: "Here you go." } as const;
+      const second: AssistantStreamEvent = {
+        type: "recipe_draft",
+        draft: { ...draft.draft, name: "Second" },
+      };
 
-      expect(applyAll([text, thinking, draft])).toEqual({ ...applyAll([text]), status: null });
+      expect(applyAll([text, thinking, draft, second])).toEqual({
+        ...applyAll([text]),
+        status: null,
+        recipeDrafts: [draft.draft, second.draft],
+      });
     });
   });
 

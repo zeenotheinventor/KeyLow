@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { EVAL_FOODS, EVAL_RECIPES } from "./evalKitchen";
 import { buildLogEntry } from "../../src/diary/buildLogEntry";
 import { buildRecipeLogEntry } from "../../src/diary/buildRecipeLogEntry";
-import { planMeals, planSaveInput } from "../../src/plans";
+import { planMeals, plannedDayItems, planSaveInput } from "../../src/plans";
 import { buildFood } from "../../src/testing";
 
 import type { LoggableRecipe } from "../../src/diary/recipeSnapshotQuantity";
@@ -163,5 +163,22 @@ describe("planSaveInput", () => {
   it("should throw for an item whose food or recipe is not given", () => {
     expect(() => planSaveInput({ plan, rules, foods: new Map(), recipes })).toThrow(RangeError);
     expect(() => planSaveInput({ plan, rules, foods, recipes: new Map() })).toThrow(RangeError);
+  });
+});
+
+describe("plannedDayItems", () => {
+  it("should give a day the items planSaveInput gives it, numbered from 0 in the day", () => {
+    const input = planSaveInput({ plan, rules, foods, recipes });
+    const date = "2026-11-17";
+
+    expect(plannedDayItems({ plan, localDate: date, foods, recipes })).toEqual(
+      input.items.filter((item) => item.localDate === date),
+    );
+  });
+
+  it("should throw for a day that is not in the plan", () => {
+    expect(() => plannedDayItems({ plan, localDate: "2027-01-01", foods, recipes })).toThrow(
+      RangeError,
+    );
   });
 });

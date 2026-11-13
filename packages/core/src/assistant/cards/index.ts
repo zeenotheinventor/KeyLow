@@ -63,3 +63,5 @@ export {
 } from "./confirmFeatureRequest";
 export { buildPlanCreatedCard } from "./planCreated";
 export type { PlanCreatedCardInput } from "./planCreated";
+export { buildPlanDayReplannedCard } from "./planDayReplanned";
+export type { PlanDayReplannedCardInput } from "./planDayReplanned";

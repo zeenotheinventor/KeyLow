@@ -7,6 +7,8 @@ export type ComposerProps = {
   /** Dims the whole field and stops it taking typing, as the offline board draws it. */
   isFieldDisabled: boolean;
   placeholder: string;
+  /** Puts the cursor in the field each time this number goes up, such as when Adjust fills the field. Leave it out, or 0, to leave focus alone. */
+  focusRequest?: number | undefined;
   /** Puts the cursor in the field as the sheet opens, as Describe does. */
   isAutoFocused?: boolean | undefined;
 };

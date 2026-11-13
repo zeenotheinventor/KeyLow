@@ -31,6 +31,8 @@ export function AssistantActionCard({
   total,
   note,
   link,
+  lead,
+  footer,
   undo,
 }: AssistantActionCardProps) {
   const [openDayIndex, setOpenDayIndex] = useState(initiallyOpenDay);
@@ -43,7 +45,7 @@ export function AssistantActionCard({
           <Icon name={icon} tone={iconTone} />
         </View>
         <View className="min-w-0 flex-1 gap-[2px]">
-          <Text tone={undo.state === "done" ? "secondary" : "primary"} variant="body-strong">
+          <Text tone={undo?.state === "done" ? "secondary" : "primary"} variant="body-strong">
             {title}
           </Text>
           {subtitle === undefined ? null : (
@@ -52,8 +54,9 @@ export function AssistantActionCard({
             </Text>
           )}
         </View>
-        <UndoAction undo={undo} />
+        {undo === undefined ? null : <UndoAction undo={undo} />}
       </View>
+      {lead}
       {rows.map((row, index) => (
         <Row key={`${index}-${row.name}`} row={row} />
       ))}
@@ -82,6 +85,7 @@ export function AssistantActionCard({
         </View>
       )}
       {link === undefined ? null : <AssistantLinkRow label={link.label} onPress={link.onPress} />}
+      {footer}
     </View>
   );
 }

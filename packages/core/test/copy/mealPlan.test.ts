@@ -10,7 +10,7 @@ import {
   describePlanBandFigures,
   describePlanConfirmCaption,
   describePlanConfirmedBody,
-  describePlanDayFigures,
+  describePlanDayTotals,
   describePlanDaySubtitle,
   describePlanDayTitle,
   describePlanPrefill,
@@ -80,19 +80,19 @@ describe("the day words", () => {
 
   it("should write a day's figures against its target", () => {
     expect(
-      describePlanDayFigures({ kcal: 1296, protein_g: 86 }, { kcal: 1300, protein_g: 90 }),
+      describePlanDayTotals({ kcal: 1296, protein_g: 86 }, { kcal: 1300, protein_g: 90 }),
     ).toBe("1,296 of 1,300 kcal · P 86 of 90 g");
   });
 
   it("should write a figure alone when the day has no target for it", () => {
     expect(
-      describePlanDayFigures({ kcal: 1296, protein_g: 86 }, { kcal: 1300, protein_g: null }),
+      describePlanDayTotals({ kcal: 1296, protein_g: 86 }, { kcal: 1300, protein_g: null }),
     ).toBe("1,296 of 1,300 kcal · P 86 g");
   });
 
   it("should leave out a figure the plan has no value for", () => {
     expect(
-      describePlanDayFigures({ kcal: 1296, protein_g: null }, { kcal: 1300, protein_g: 90 }),
+      describePlanDayTotals({ kcal: 1296, protein_g: null }, { kcal: 1300, protein_g: 90 }),
     ).toBe("1,296 of 1,300 kcal");
     expect(describePlanBandFigures({ kcal: 389, protein_g: 13 })).toBe("389 kcal · P 13 g");
   });

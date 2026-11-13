@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { View } from "react-native";
 
 import { takeNewTargets } from "../../lib/checkinToast";
+import { clearRecipePrefill } from "../../lib/recipePrefill";
 import { useCancelRemindersWhenSignedOut } from "../../lib/reminderScheduler";
 import { identifyUser } from "../../lib/sentry/identifyUser";
 import { supabase } from "../../lib/supabase";
@@ -87,6 +88,8 @@ export function AuthGate({ children, readStoredUserId = readNoStoredUserId }: Au
       // A new target is one account's news, so it goes with the session and the next account never sees it.
       if (event === "SIGNED_OUT") {
         takeNewTargets();
+        // The same goes for a recipe the assistant drafted and what was saved from it.
+        clearRecipePrefill();
       }
       identify(nextSession?.user.id ?? null);
       setIsSignedIn(nextSession !== null);

@@ -1,9 +1,14 @@
 import { useAssistantChat } from "@keylow/api-client";
 import { composerTextForPrefill, composerTextOnClose } from "@keylow/core";
-import { ASSISTANT_OFFLINE, ASSISTANT_SHEET, SAVE_FAILED_BANNER } from "@keylow/core/copy";
+import {
+  ASSISTANT_OFFLINE,
+  ASSISTANT_SHEET,
+  composerTextForAdjust,
+  SAVE_FAILED_BANNER,
+} from "@keylow/core/copy";
 import { fetch as streamingFetch } from "expo/fetch";
 import { useRouter } from "expo-router";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AccessibilityInfo, View } from "react-native";
 
 import { AssistantEmpty } from "./AssistantEmpty";
@@ -14,6 +19,7 @@ import { OpeningPlaceholder } from "./OpeningPlaceholder";
 import { assistantCardHref } from "../../lib/assistantCardRoutes";
 import { useIsOnline } from "../../lib/connectivity";
 import { recordSkippedKind } from "../../lib/sentry/trail";
+import { useStableCallback } from "../../lib/useStableCallback";
 import { Badge, Banner, BottomSheet, SheetHeader, SheetScrollView, Text, useToast } from "../ui";
 
 import type { AssistantSheetProps } from "./types";
@@ -103,6 +109,8 @@ export function AssistantSheet({
   });
   const { access, thread, composer, isOpening, isEmpty, setDraft } = chat;
   const scrollRef = useRef<ComponentRef<typeof SheetScrollView>>(null);
+  // Goes up each time Adjust fills the field, so the field takes the cursor.
+  const [composerFocusRequest, setComposerFocusRequest] = useState(0);
   const isUserScrolling = useRef(false);
   const scrollSettledTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
@@ -169,6 +177,28 @@ export function AssistantSheet({
     router.push(assistantCardHref(target));
   }
 
+  // The new recipe editor opens over the diary, so the sheet closes first, as it does for a link. A save that
+  // finishes after the sheet was closed opens nothing. These are stable, so the recipe card's memo holds.
+  const openRecipeEditor = useStableCallback((href: string) => {
+    if (!open) {
+      return false;
+    }
+    close();
+    router.push(href);
+    return true;
+  });
+
+  const openSavedRecipe = useStableCallback((recipeId: string) => {
+    openCardLink({ screen: "recipe_editor", recipeId });
+  });
+
+  // Adjust only puts the words in the field and takes the cursor there: the person finishes the sentence and
+  // sends it. Words already typed are kept.
+  const adjustRecipe = useStableCallback(() => {
+    chat.setDraft(composerTextForAdjust(chat.draft));
+    setComposerFocusRequest((request) => request + 1);
+  });
+
   function renderBody() {
     if (isOpening) {
       return <OpeningPlaceholder />;
@@ -202,6 +232,9 @@ export function AssistantSheet({
           onAskAgain={chat.sendLastMessageAgain}
           onTryAgain={chat.sendLastMessageAgain}
           onOpenCardLink={openCardLink}
+          onOpenRecipeEditor={openRecipeEditor}
+          onOpenSavedRecipe={openSavedRecipe}
+          onAdjustRecipe={adjustRecipe}
           canAnswer={chat.canAnswer}
           onAnswer={chat.sendMessage}
         />
@@ -287,6 +320,7 @@ export function AssistantSheet({
             )}
             <Composer
               isAutoFocused={describeAt !== undefined || draft !== undefined}
+              focusRequest={composerFocusRequest}
               isFieldDisabled={composer.isFieldDisabled}
               isSendDisabled={!chat.canSendDraft}
               placeholder={composer.placeholder}

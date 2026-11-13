@@ -165,11 +165,14 @@ const withReference = (item: StoredPlanItem): RestoredCore | null => {
 };
 
 /**
- * The items of one day of a stored plan, as `replaceMealPlanDay` takes them back, so a cleared day can be put
- * back as it was. An item whose recipe or food is gone cannot be put back and is left out. A leftover names its
- * cook by day and position, and loses the link when the cook cannot be put back.
+ * The items of one day of a stored plan, each with the id it has now, as `replaceMealPlanDay` takes them back,
+ * so a day can be put back as it was. An item whose recipe or food is gone cannot be put back and is left out.
+ * A leftover names its cook by day and position, and loses the link when the cook cannot be put back.
  */
-export const restorableItemsOfDay = (plan: StoredPlan, dayId: string): RestoredItem[] => {
+export const restorableEntriesOfDay = (
+  plan: StoredPlan,
+  dayId: string,
+): { id: string; item: RestoredItem }[] => {
   const cookOf = new Map<string, { localDate: string; position: number }>();
   for (const day of plan.days) {
     for (const item of day.items.filter((candidate) => withReference(candidate) !== null)) {
@@ -180,19 +183,23 @@ export const restorableItemsOfDay = (plan: StoredPlan, dayId: string): RestoredI
   if (day === undefined) {
     return [];
   }
-  return day.items.flatMap((item): RestoredItem[] => {
+  return day.items.flatMap((item): { id: string; item: RestoredItem }[] => {
     const restored = withReference(item);
     if (restored === null) {
       return [];
     }
     const cook = item.leftoverOf === null ? undefined : cookOf.get(item.leftoverOf);
     if (cook === undefined) {
-      return [restored];
+      return [{ id: item.id, item: restored }];
     }
     const leftoverOf =
       cook.localDate === day.localDate
         ? { position: cook.position }
         : { localDate: cook.localDate, position: cook.position };
-    return [{ ...restored, leftoverOf }];
+    return [{ id: item.id, item: { ...restored, leftoverOf } }];
   });
 };
+
+/** The items of one day of a stored plan as `replaceMealPlanDay` takes them back. See `restorableEntriesOfDay`. */
+export const restorableItemsOfDay = (plan: StoredPlan, dayId: string): RestoredItem[] =>
+  restorableEntriesOfDay(plan, dayId).map(({ item }) => item);

@@ -1,7 +1,7 @@
 import {
   MEAL_PLAN_BAND_NAMES,
   MEAL_PLAN_WORDS,
-  describePlanDayFigures,
+  describePlanDayTotals,
   describePlanDayTitle,
 } from "@keylow/core/copy";
 import { PLAN_STATUS_BADGE } from "@keylow/core/plans";
@@ -18,7 +18,7 @@ import type { PlanDayCardProps } from "./types";
  */
 export function PlanDayCard({ view, isToday, onPress }: PlanDayCardProps) {
   const badge = PLAN_STATUS_BADGE[view.status];
-  const figures = describePlanDayFigures(view.totals, view.target);
+  const figures = describePlanDayTotals(view.totals, view.target);
   const title = describePlanDayTitle(view.localDate);
 
   return (

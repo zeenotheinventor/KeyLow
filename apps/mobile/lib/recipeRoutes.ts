@@ -17,6 +17,13 @@ export const newRecipePath = (name?: string): string => {
     : `${RECIPE_SCREENS_BASE}/new?${NEW_RECIPE_NAME_PARAMETER}=${encodeURIComponent(trimmedName)}`;
 };
 
+/** The query parameter that opens the new recipe editor on a recipe the assistant drafted, as the id the draft was left under (`beginRecipePrefill`). It never carries the recipe. */
+export const RECIPE_PREFILL_PARAMETER = "prefill";
+
+/** The editor for a new recipe, filled in with the draft left under `prefillId`. */
+export const newRecipePrefillPath = (prefillId: string): string =>
+  `${RECIPE_SCREENS_BASE}/new?${RECIPE_PREFILL_PARAMETER}=${encodeURIComponent(prefillId)}`;
+
 /** The editor for a saved recipe. */
 export const editRecipePath = (id: string): string => `${RECIPE_SCREENS_BASE}/${id}/edit`;
 
