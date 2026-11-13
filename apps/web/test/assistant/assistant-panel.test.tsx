@@ -806,6 +806,37 @@ describe("the assistant panel", () => {
       await screen.findByRole("heading", { name: ASSISTANT_SHEET.emptyHeading });
       expect(panelBackend.newConversationRequests).toBe(1);
     });
+
+    describe.each([
+      { name: "docked", width: 1280 },
+      { name: "a modal sheet", width: 375 },
+    ])("when it is $name", ({ width }) => {
+      it("should move focus to the field after a new conversation, so Escape closes the panel and focus returns to the Assistant button", async () => {
+        setWindowWidth(width);
+        panelBackend.storedTurns = [
+          { userText: "What's left?", assistantText: "1,693 kcal left." },
+        ];
+        const user = userEvent.setup();
+        await renderApp();
+        await user.click(assistantButton());
+        await screen.findByRole("group", { name: "Assistant: 1,693 kcal left." });
+
+        await user.click(
+          screen.getByRole("button", { name: ASSISTANT_SHEET.newConversationLabel }),
+        );
+        await screen.findByRole("heading", { name: ASSISTANT_SHEET.emptyHeading });
+
+        await waitFor(() => {
+          expect(document.activeElement).toBe(field());
+        });
+        await user.keyboard("{Escape}");
+
+        await waitFor(() => {
+          expect(document.activeElement).toBe(assistantButton());
+        });
+        expect(assistantButton().getAttribute("aria-expanded")).toBe("false");
+      });
+    });
   });
 
   describe("following the end of the thread", () => {
