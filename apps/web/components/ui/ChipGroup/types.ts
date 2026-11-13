@@ -31,5 +31,20 @@ export type ChipGroupMultipleProps<Value extends string> = ChipGroupSharedProps<
   onChange: (next: Value[]) => void;
 };
 
+/**
+ * Chips that are one-shot buttons, for a quick reply such as the assistant's: each press does something at
+ * once and nothing is chosen. The chips are buttons in a plain group, with no radio group and no selected
+ * state, and `onChipPress` hears each press. Every chip is in the tab order, and the arrow keys are not used.
+ */
+export type ChipGroupActionProps<Value extends string> = Omit<
+  ChipGroupSharedProps<Value>,
+  "onChipPress"
+> & {
+  selection: "action";
+  /** Dims every chip and stops it responding, for a quick reply to a question that cannot be answered now. */
+  disabled?: boolean | undefined;
+  onChipPress: (value: Value) => void;
+};
+
 export type ChipGroupProps<Value extends string> =
-  ChipGroupSingleProps<Value> | ChipGroupMultipleProps<Value>;
+  ChipGroupSingleProps<Value> | ChipGroupMultipleProps<Value> | ChipGroupActionProps<Value>;

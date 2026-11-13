@@ -89,6 +89,21 @@ export const WithEstimate: Story = {
   ),
 };
 
+// The answer-estimate board: the Estimate badge and then the citation, under the words.
+export const WithEstimateAndCitation: Story = {
+  render: () => (
+    <ChatMessage
+      citation="Based on 24 weigh-ins, 21 Sep to 18 Oct"
+      estimate={{ badgeLabel: "Estimate", label: "Trend weight is an estimate" }}
+      paragraphs={[
+        "Your trend weight fell by 0.4 kg a week over the last 4 weeks, from 81.2 kg to 79.6 kg.",
+      ]}
+      sender="assistant"
+      speakerLabel={assistant}
+    />
+  ),
+};
+
 export const Formatted: Story = {
   render: () => (
     <ChatMessage

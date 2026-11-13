@@ -107,3 +107,34 @@ export const MultipleFocused: Story = {
     await userEvent.tab();
   },
 };
+
+const quickReplies = [
+  { value: "a", label: "1 chicken breast, 150 g rice" },
+  { value: "b", label: "1 chicken breast, 200 g rice" },
+  { value: "c", label: "2 chicken thighs, 200 g rice" },
+] as const;
+
+// The assistant's quick replies: one-shot buttons that wrap, with nothing chosen.
+export const ActionQuickReplies: Story = {
+  render: () => (
+    <ChipGroup
+      label="Quick replies"
+      options={quickReplies}
+      selection="action"
+      onChipPress={() => undefined}
+    />
+  ),
+};
+
+// While a turn streams the replies are dimmed and cannot be pressed.
+export const ActionDisabled: Story = {
+  render: () => (
+    <ChipGroup
+      disabled
+      label="Quick replies"
+      options={quickReplies}
+      selection="action"
+      onChipPress={() => undefined}
+    />
+  ),
+};

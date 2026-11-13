@@ -4,6 +4,7 @@ export const storyStates = [
   "SourceUsda",
   "SourceYours",
   "Neutral",
+  "Outlined",
   "Accent",
   "Success",
   "Warning",
