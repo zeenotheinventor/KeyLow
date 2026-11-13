@@ -52,6 +52,12 @@ export type FieldFrameProps = {
    * for a nutrient the source leaves out. An error replaces it.
    */
   missingNote?: string | undefined;
+  /**
+   * What the box is filled with. `raised`, the default, is the raised surface, for a field on the screen's
+   * background. `well` is the background itself, a well sunk in the card the field sits in, as the Foods to
+   * avoid board draws its add field. A locked or disabled field sits on the surface whatever it is.
+   */
+  fill?: "raised" | "well" | undefined;
   /** Drops the whole field to half strength and stops it taking typing. */
   disabled?: boolean | undefined;
   /**

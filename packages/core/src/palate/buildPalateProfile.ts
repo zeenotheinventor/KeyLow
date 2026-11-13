@@ -1,3 +1,4 @@
+import { listAvoidedFoods } from "./avoidedFoods";
 import { avoidsFood } from "./avoidsFood";
 import {
   PALATE_FOODS_PER_TIME_BAND,
@@ -18,7 +19,6 @@ import { dayNumber } from "../dates/calendarDay";
 
 import type { PalateGroup } from "./palateGroups";
 import type {
-  PalateAvoidItem,
   PalateBandFood,
   PalateCorrectedItem,
   PalateFood,
@@ -109,22 +109,6 @@ function weeksCovered(rows: readonly CountedRow[], today: string): number {
   return Math.ceil(Math.min(observedDays, PALATE_WINDOW_DAYS) / DAYS_PER_WEEK);
 }
 
-function listAvoided(preferences: readonly PalatePreference[]): PalateAvoidItem[] {
-  const items = preferences.flatMap((preference): PalateAvoidItem[] => {
-    const label = (preference.label ?? "").trim();
-    return label !== "" && (preference.kind === "allergy" || preference.kind === "dislike")
-      ? [{ preferenceId: preference.id, label, kind: preference.kind }]
-      : [];
-  });
-  const allergies = items.filter(({ kind }) => kind === "allergy");
-  const dislikes = items.filter(({ kind }) => kind === "dislike");
-  const seen = new Set<string>();
-  return [...allergies, ...dislikes].filter(({ label }) => {
-    const key = label.toLowerCase();
-    return seen.has(key) ? false : Boolean(seen.add(key));
-  });
-}
-
 type Corrections = {
   foods: Map<string, string>;
   recipes: Map<string, string>;
@@ -176,7 +160,7 @@ export function buildPalateProfile(
   preferences: readonly PalatePreference[],
   options: PalateOptions,
 ): PalateProfile {
-  const avoid = listAvoided(preferences);
+  const avoid = listAvoidedFoods(preferences);
   const hasEnoughToGoOn = options.loggedDays >= PALATE_USUAL_MIN_DAYS;
   const profile: PalateProfile = {
     loggedDays: options.loggedDays,

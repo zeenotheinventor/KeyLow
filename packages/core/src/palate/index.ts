@@ -3,6 +3,7 @@ export { PALATE_GROUPS, PALATE_RARE_CANDIDATE_GROUPS } from "./palateGroups";
 export type { PalateGroup } from "./palateGroups";
 export { avoidsFood } from "./avoidsFood";
 export type { FoodAvoidance } from "./avoidsFood";
+export { findAvoidedFood, listAvoidedFoods } from "./avoidedFoods";
 export { buildPalateProfile } from "./buildPalateProfile";
 export type { PalateOptions } from "./buildPalateProfile";
 export {

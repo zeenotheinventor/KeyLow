@@ -92,6 +92,7 @@ export function TextField({
   disabled = false,
   dimsWhenDisabled = true,
   density = "comfortable",
+  fill = "raised",
   size = "default",
   inputRef,
   locked = false,
@@ -147,7 +148,8 @@ export function TextField({
 
   const borderClassName =
     errorText !== undefined ? "border-danger" : isFocused ? "border-accent" : "border-border";
-  const fillClassName = locked || disabled ? "bg-surface" : "bg-surface-raised";
+  const fillClassName =
+    locked || disabled ? "bg-surface" : fill === "well" ? "bg-background" : "bg-surface-raised";
 
   return (
     <View className={`gap-1 ${disabled && dimsWhenDisabled ? "opacity-50" : ""}`}>

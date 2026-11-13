@@ -11,6 +11,20 @@ import { compileKitStyles } from "./support/kitStyles";
 import { registerAppStyles } from "./support/nativeWindStyles";
 import { resolvedColor } from "./support/themeColor";
 
+import type { PalatePreference } from "@keylow/api-client";
+
+const preference = (
+  id: string,
+  kind: PalatePreference["kind"],
+  label: string | null,
+): PalatePreference => ({ id, kind, foodId: null, recipeId: null, label });
+
+const BOARD_PREFERENCES = [
+  preference("a", "allergy", "peanuts"),
+  preference("b", "dislike", "mushrooms"),
+  preference("c", "dislike", "coriander"),
+];
+
 type MutationOptions = { onSuccess?: () => void; onError?: () => void };
 
 // What the three assistant hooks answer. The hooks are tested where they live, in `@keylow/api-client`.
@@ -22,6 +36,7 @@ const mockAssistant: {
     isPending: boolean;
   };
   deleteAll: { mutate: jest.Mock<undefined, [undefined, MutationOptions]>; isPending: boolean };
+  palate: { data: PalatePreference[] | undefined };
 } = {
   consent: { data: { isOn: false } },
   changes: { data: { count: 5 } },
@@ -30,6 +45,7 @@ const mockAssistant: {
     isPending: false,
   },
   deleteAll: { mutate: jest.fn<undefined, [undefined, MutationOptions]>(), isPending: false },
+  palate: { data: BOARD_PREFERENCES },
 };
 
 jest.mock("@keylow/api-client", () => ({
@@ -38,6 +54,7 @@ jest.mock("@keylow/api-client", () => ({
   useSetAssistantConsent: () => mockAssistant.setConsent,
   useDeleteAllAssistantConversations: () => mockAssistant.deleteAll,
   useAssistantChanges: () => mockAssistant.changes,
+  usePalatePreferences: () => mockAssistant.palate,
 }));
 jest.mock("@react-native-async-storage/async-storage", () => ({
   __esModule: true,
@@ -86,6 +103,7 @@ describe("the Assistant settings screen", () => {
     resetRouterMock();
     mockAssistant.consent = { data: { isOn: false } };
     mockAssistant.changes = { data: { count: 5 } };
+    mockAssistant.palate = { data: BOARD_PREFERENCES };
     mockAssistant.setConsent = {
       mutate: jest.fn<undefined, [{ on: boolean }, MutationOptions]>(),
       isPending: false,
@@ -165,15 +183,16 @@ describe("the Assistant settings screen", () => {
       ).toBeOnTheScreen();
     });
 
-    it("should be headed Assistant, What it does and Your conversations, in that order", async () => {
+    it("should be headed Assistant, What it does, Your food and Your conversations, in that order", async () => {
       await renderSettings();
 
       const headings = screen.getAllByRole("heading");
 
-      expect(headings).toHaveLength(3);
+      expect(headings).toHaveLength(4);
       expect(headings[0]).toHaveTextContent("Assistant");
       expect(headings[1]).toHaveTextContent("What it does");
-      expect(headings[2]).toHaveTextContent("Your conversations");
+      expect(headings[2]).toHaveTextContent("Your food");
+      expect(headings[3]).toHaveTextContent("Your conversations");
     });
   });
 
@@ -223,6 +242,79 @@ describe("the Assistant settings screen", () => {
       expect(
         screen.root?.queryAll((node) => node.type === "RNSVGSvgView" && isInside(node, row)),
       ).toHaveLength(0);
+    });
+  });
+
+  describe("the Your food group", () => {
+    const yourFood = () => within(screen.getByLabelText("Your food"));
+
+    it("should sit between What it does and Your conversations, with the board's caption", async () => {
+      await renderSettings();
+
+      const headings = screen.getAllByRole("heading");
+      expect(headings[1]).toHaveTextContent("What it does");
+      expect(headings[2]).toHaveTextContent("Your food");
+      expect(headings[3]).toHaveTextContent("Your conversations");
+      expect(
+        screen.getByText("The assistant uses these when it suggests recipes and meal plans."),
+      ).toBeOnTheScreen();
+    });
+
+    it("should hold What you usually eat, then Foods to avoid with its count", async () => {
+      await renderSettings();
+
+      const [usual, avoid] = yourFood().getAllByRole("button");
+      expect(usual).toHaveAccessibleName(
+        "What you usually eat, Your habits, as the assistant sees them",
+      );
+      expect(avoid).toHaveAccessibleName("Foods to avoid, Dislikes and allergies, 3");
+    });
+
+    it("should count dislikes and allergies, and not the corrections", async () => {
+      mockAssistant.palate = {
+        data: [
+          preference("a", "allergy", "peanuts"),
+          preference("b", "not_usual", "drinks"),
+          preference("c", "not_usual", null),
+        ],
+      };
+      await renderSettings();
+
+      expect(
+        yourFood().getByRole("button", { name: "Foods to avoid, Dislikes and allergies, 1" }),
+      ).toBeOnTheScreen();
+    });
+
+    it("should show no count until the list is read", async () => {
+      mockAssistant.palate = { data: undefined };
+      await renderSettings();
+
+      expect(
+        yourFood().getByRole("button", { name: "Foods to avoid, Dislikes and allergies" }),
+      ).toBeOnTheScreen();
+    });
+
+    it("should open Foods to avoid inside this tab", async () => {
+      const user = await renderSettings();
+
+      await user.press(yourFood().getByRole("button", { name: /^Foods to avoid/ }));
+
+      expect(routerMock.push).toHaveBeenCalledWith("/more/assistant/foods-to-avoid");
+    });
+
+    it("should open What you usually eat inside this tab", async () => {
+      const user = await renderSettings();
+
+      await user.press(yourFood().getByRole("button", { name: /^What you usually eat/ }));
+
+      expect(routerMock.push).toHaveBeenCalledWith("/more/assistant/palate");
+    });
+
+    it("should be there when the assistant is off as well", async () => {
+      mockAssistant.consent = { data: { isOn: false } };
+      await renderSettings();
+
+      expect(yourFood().getAllByRole("button")).toHaveLength(2);
     });
   });
 
