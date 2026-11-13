@@ -41,8 +41,13 @@ export type {
   StoredPlan,
 } from "./plans";
 // Only what the assistant's recipe tools need. The rest of recipes is read through `@keylow/core/recipes`.
-export { buildRecipeIngredient, computeRecipe, validateRecipeDraft } from "./recipes";
-export type { RecipeDraftProblem, RecipeIngredient } from "./recipes";
+export {
+  adjustmentTarget,
+  buildRecipeIngredient,
+  computeRecipe,
+  validateRecipeDraft,
+} from "./recipes";
+export type { FitMiss, RecipeDraftProblem, RecipeIngredient } from "./recipes";
 export * from "./schemas";
 export * from "./search";
 export * from "./terms";

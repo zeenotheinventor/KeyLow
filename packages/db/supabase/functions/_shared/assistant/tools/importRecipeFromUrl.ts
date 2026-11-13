@@ -34,6 +34,7 @@ import { readRecipeJsonLd } from "../../recipeJsonLd.ts";
 import { visibleText } from "../../recipePageText.ts";
 import { picksFitLines } from "../recipeParse.ts";
 import { urlInUserMessage } from "../urls.ts";
+import { BudgetExceeded, deadlineOf } from "./deadline.ts";
 import {
   candidatesOfWords,
   inBatches,
@@ -100,8 +101,6 @@ const PICK_LINE_MAX_CHARACTERS = 300;
 // The least time left for a save to start (a write tool call measured 77 to 303 ms).
 const SAVE_MINIMUM_MILLISECONDS = 500;
 const SOURCE_URL_MAX_CHARACTERS = 2000;
-
-class BudgetExceeded extends Error {}
 
 const refuse = (error: string, extra: Record<string, string> = {}): WriteRunOutput => ({
   data: { error, ...extra },
@@ -240,18 +239,7 @@ export function createImportRecipeFromUrlTool(
       if (message === null || !urlInUserMessage(url, message)) {
         return refuse("url_not_in_message");
       }
-      const startedAt = performance.now();
-      const msLeft = () => limits.saveCutoffMilliseconds - (performance.now() - startedAt);
-      // Races a step against the cutoff, so a slow step ends the tool and not the turn.
-      const within = <T>(work: Promise<T>): Promise<T> => {
-        // The step may still end after the cutoff. Its failure then has nobody to tell.
-        work.catch(() => {});
-        let timer: ReturnType<typeof setTimeout> | undefined;
-        const cutoff = new Promise<never>((_resolve, reject) => {
-          timer = setTimeout(() => reject(new BudgetExceeded()), Math.max(0, msLeft()));
-        });
-        return Promise.race([work, cutoff]).finally(() => clearTimeout(timer));
-      };
+      const { millisecondsLeft: msLeft, within } = deadlineOf(limits.saveCutoffMilliseconds);
 
       try {
         const fetched = await within(

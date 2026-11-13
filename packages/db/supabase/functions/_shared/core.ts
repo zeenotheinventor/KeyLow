@@ -3,6 +3,8 @@
 // it, so a missing or stale bundle fails `deno check` here. Export what a function needs.
 export type {
   PlanRanking,
+  AdjustmentOutcome,
+  FitMiss,
   RecipeSuggestion,
   Substitution,
   Food,
@@ -183,6 +185,10 @@ export {
   palateRecipeOf,
   summaryLines,
   avoidsFood,
+  adjustmentCandidatesOf,
+  adjustmentSummaryOf,
+  adjustmentTarget,
+  buildAdjustmentDraft,
   assistantRecipeDraftSchema,
   buildSuggestionDraft,
   recipeDraftSummaryOf,

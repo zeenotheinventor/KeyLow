@@ -35,6 +35,7 @@ import {
   readFoodAndPortions,
   SEARCH_TEXT_MAX_CHARACTERS,
 } from "./foodMatching.ts";
+import { BudgetExceeded, deadlineOf } from "./deadline.ts";
 import { readPalate } from "./readPalate.ts";
 import { dataNotice } from "./shared.ts";
 
@@ -87,8 +88,6 @@ export const defaultSuggestLimits: SuggestLimits = {
 
 // The ingredient's own words, cut for the pick call.
 const PICK_LINE_MAX_CHARACTERS = 300;
-
-class BudgetExceeded extends Error {}
 
 const refuse = (error: string, extra: Record<string, string[]> = {}) => ({
   data: { error, ...extra },
@@ -174,18 +173,7 @@ export function createSuggestRecipeTool(
       if (generation === undefined || recipeImport === undefined) {
         throw new Error("The recipe generation is not configured");
       }
-      const startedAt = performance.now();
-      const millisecondsLeft = () => limits.totalMilliseconds - (performance.now() - startedAt);
-      // Races a step against the deadline, so a slow step ends the tool and not the turn.
-      const within = <T>(work: Promise<T>): Promise<T> => {
-        // The step may still end after the deadline. Its failure then has nobody to tell.
-        work.catch(() => {});
-        let timer: ReturnType<typeof setTimeout> | undefined;
-        const cutoff = new Promise<never>((_resolve, reject) => {
-          timer = setTimeout(() => reject(new BudgetExceeded()), Math.max(0, millisecondsLeft()));
-        });
-        return Promise.race([work, cutoff]).finally(() => clearTimeout(timer));
-      };
+      const { millisecondsLeft, within } = deadlineOf(limits.totalMilliseconds);
 
       try {
         const { profile, preferences } = await within(readPalate(ctx));

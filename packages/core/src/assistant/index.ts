@@ -24,3 +24,4 @@ export * from "./featureRequestContext";
 export * from "./chatMessage";
 export * from "./workingLine";
 export * from "./kitchenGeneration";
+export * from "./adjustmentDraft";

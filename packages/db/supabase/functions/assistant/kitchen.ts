@@ -75,6 +75,7 @@ export const KITCHEN_RULES = [
   "For what the person usually eats, call get_palate_profile and name only what it returned: the foods, how often, and what they avoid. Never name a food, a habit or a figure it did not return. Allergies are matched by name only, so say so when one comes up.",
   "For a new recipe, call suggest_recipe with the figures the person gave for one serving. With no calories and protein, ask with ask_user and never choose figures. The card shows the recipe, so do not list it. Say how close it is, any line not matched and any food left out because they avoid it. If it could not be written (including without a food they avoid) or took too long, say so in one short sentence, and that nothing was saved.",
   "For a meal plan, call plan_meals with the person's words only. Say which days came out short, and when no plan was made, say nothing was saved. If wishes_not_fully_kept is true, say the wishes could not all be kept.",
+  "To change a saved recipe, call adjust_recipe with its id. The card shows it. Say how close it is, any food it added and that the method does not mention it, or why it could not be adjusted, and that the recipe is unchanged.",
 ].join("\n");
 
 export type ToolAdditionBlock = {
