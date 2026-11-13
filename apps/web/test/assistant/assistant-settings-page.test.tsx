@@ -7,7 +7,7 @@ import {
   DELETE_FAILED_BANNER,
   LEGAL_PATHS,
   SAVE_FAILED_BANNER,
-  describeAssistantConsentCaption,
+  describeWebAssistantConsentCaption,
 } from "@keylow/core/copy";
 import { createClient } from "@supabase/supabase-js";
 import { onlineManager, QueryClient } from "@tanstack/react-query";
@@ -249,7 +249,7 @@ describe("Assistant settings page", () => {
       renderPage();
 
       expect(useSwitch().getAttribute("aria-disabled")).toBe("true");
-      expect(screen.queryByText(describeAssistantConsentCaption(false))).toBeNull();
+      expect(screen.queryByText(describeWebAssistantConsentCaption(false))).toBeNull();
       expect(
         screen.getByRole("heading", { level: 1, name: ASSISTANT_SETTINGS.title }),
       ).toBeTruthy();
@@ -280,14 +280,25 @@ describe("Assistant settings page", () => {
       await renderRead(false);
 
       expect(useSwitch().getAttribute("aria-checked")).toBe("false");
-      expect(screen.getByText(describeAssistantConsentCaption(false))).toBeTruthy();
+      expect(screen.getByText(describeWebAssistantConsentCaption(false))).toBeTruthy();
     });
 
     it("should be on with its caption when the assistant is on", async () => {
       await renderRead(true);
 
       expect(useSwitch().getAttribute("aria-checked")).toBe("true");
-      expect(screen.getByText(describeAssistantConsentCaption(true))).toBeTruthy();
+      expect(screen.getByText(describeWebAssistantConsentCaption(true))).toBeTruthy();
+    });
+
+    it("should name the web's ways in and not the phone's headers when the assistant is on", async () => {
+      await renderRead(true);
+
+      expect(
+        screen.getByText(
+          "On. Open it from the Assistant button at the top of any page, or Describe in Add food.",
+        ),
+      ).toBeTruthy();
+      expect(screen.queryByText(/Diary header|Train header|Log food/)).toBeNull();
     });
 
     it("should write the consent time and the current version when turned on", async () => {
@@ -312,7 +323,7 @@ describe("Assistant settings page", () => {
         `"assistant_consent_version":"${ASSISTANT_CONSENT_VERSION}"`,
       );
       expect(write?.query).toContain(`id=eq.${USER_ID}`);
-      expect(screen.getByText(describeAssistantConsentCaption(true))).toBeTruthy();
+      expect(screen.getByText(describeWebAssistantConsentCaption(true))).toBeTruthy();
     });
 
     it("should clear both columns when turned off", async () => {
@@ -375,7 +386,7 @@ describe("Assistant settings page", () => {
       expect(await screen.findByText(SAVE_FAILED_BANNER)).toBeTruthy();
       expect(useSwitch().getAttribute("aria-checked")).toBe("false");
       expect(useSwitch().getAttribute("aria-disabled")).toBeNull();
-      expect(screen.getByText(describeAssistantConsentCaption(false))).toBeTruthy();
+      expect(screen.getByText(describeWebAssistantConsentCaption(false))).toBeTruthy();
     });
 
     it("should leave an on switch on when turning it off is refused", async () => {

@@ -27,4 +27,8 @@ export const samples: Record<string, () => string[]> = {
     copy.describeAssistantConsentCaption(false),
     copy.describeAssistantConsentCaption(true),
   ],
+  describeWebAssistantConsentCaption: () => [
+    copy.describeWebAssistantConsentCaption(false),
+    copy.describeWebAssistantConsentCaption(true),
+  ],
 };

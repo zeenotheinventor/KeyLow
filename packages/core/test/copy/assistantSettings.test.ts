@@ -8,6 +8,7 @@ import {
   describeAssistantChangeRow,
   describeAssistantConsentCaption,
   describeAssistantMoreRow,
+  describeWebAssistantConsentCaption,
 } from "../../src/copy";
 
 import type { AssistantChangeRow } from "../../src/assistant";
@@ -48,6 +49,18 @@ describe("describeAssistantConsentCaption", () => {
   it("should say where to open the assistant from once it is on", () => {
     expect(describeAssistantConsentCaption(true)).toBe(
       "On. Open it from the Diary header, the Train header or Describe in Log food.",
+    );
+  });
+});
+
+describe("describeWebAssistantConsentCaption", () => {
+  it("should say the assistant is off until the person turns it on", () => {
+    expect(describeWebAssistantConsentCaption(false)).toBe("Off until you turn it on.");
+  });
+
+  it("should name the top bar button and Describe in Add food once it is on", () => {
+    expect(describeWebAssistantConsentCaption(true)).toBe(
+      "On. Open it from the Assistant button at the top of any page, or Describe in Add food.",
     );
   });
 });
