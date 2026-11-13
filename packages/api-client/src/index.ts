@@ -496,10 +496,17 @@ export {
   setShoppingItemChecked,
 } from "./repos";
 export type { ShoppingSourceRecipe } from "./repos";
-export { usePalateLoggedDays, usePalatePreferences, usePalateStats } from "./hooks";
+export {
+  useAddPalatePreference,
+  usePalateLoggedDays,
+  usePalatePreferences,
+  usePalateStats,
+  useRemovePalatePreference,
+} from "./hooks";
 export {
   addPalatePreference,
   getPalateLoggedDays,
+  isDuplicatePalatePreference,
   listPalatePreferences,
   listPalateStats,
   removePalatePreference,

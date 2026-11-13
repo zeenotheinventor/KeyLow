@@ -1,0 +1,1 @@
+export { PalateScreen } from "./PalateScreen";

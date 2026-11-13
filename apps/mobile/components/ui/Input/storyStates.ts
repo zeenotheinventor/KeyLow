@@ -10,5 +10,6 @@ export const storyStates = [
   "WithAccessibleLabel",
   "Disabled",
   "Locked",
+  "Well",
   "Password",
 ];

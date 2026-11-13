@@ -472,6 +472,23 @@ describe("Input", () => {
       ).toHaveLength(1);
     });
 
+    it("should sit on the background, a well in the card it is in, when its fill is well", async () => {
+      await renderInput({ fill: "well" }, "dark");
+      await screen.findByLabelText("Name");
+
+      expect(
+        boxOf({ backgroundColor: colorOf("background"), borderColor: colorOf("border") }),
+      ).toHaveLength(1);
+      expect(boxOf({ backgroundColor: colorOf("surface-raised") })).toHaveLength(0);
+    });
+
+    it("should still sit on the surface when it is locked, whatever its fill", async () => {
+      await renderInput({ fill: "well", locked: true }, "dark");
+      await screen.findByLabelText("Name");
+
+      expect(boxOf({ backgroundColor: colorOf("surface") })).toHaveLength(1);
+    });
+
     it("should sit on the surface and drop to half strength when it is disabled", async () => {
       await renderInput({ disabled: true }, "dark");
       await screen.findByLabelText("Name");

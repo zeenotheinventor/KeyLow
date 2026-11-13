@@ -5,12 +5,14 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from
 import {
   addPalatePreference,
   getPalateLoggedDays,
+  isDuplicatePalatePreference,
   listPalateFoods,
   listPalatePreferences,
   listPalateStats,
   removePalatePreference,
   setNotUsual,
 } from "../../src/repos/palatePreferences";
+import { repoError } from "../../src/repos/repoError";
 import { createTestClient } from "../createTestClient";
 import { REST_URL, postgrestError, postgrestRows } from "../support/postgrest";
 import {
@@ -417,5 +419,18 @@ describe("listPalateFoods", () => {
     const error = await errorThrownBy(() => listPalateFoods(createTestClient(), [FOOD_ID]));
 
     expectOnlyTheCode(error, "load the foods in your palate", "42501");
+  });
+});
+
+describe("isDuplicatePalatePreference", () => {
+  it("should be true for the error of a word added twice, and only for it", () => {
+    expect(isDuplicatePalatePreference(repoError("add to your palate", { code: "23505" }))).toBe(
+      true,
+    );
+    expect(isDuplicatePalatePreference(repoError("add to your palate", { code: "42501" }))).toBe(
+      false,
+    );
+    expect(isDuplicatePalatePreference(new Error("no cause"))).toBe(false);
+    expect(isDuplicatePalatePreference("23505")).toBe(false);
   });
 });

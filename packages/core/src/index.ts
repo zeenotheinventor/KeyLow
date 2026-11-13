@@ -23,7 +23,7 @@ export {
 } from "./plans";
 export type { Plan, PlanOffer, PlanPoolResult, PlannedWeek } from "./plans";
 // Only what the assistant's recipe tools need. The rest of recipes is read through `@keylow/core/recipes`.
-export { buildRecipeIngredient, validateRecipeDraft } from "./recipes";
+export { buildRecipeIngredient, computeRecipe, validateRecipeDraft } from "./recipes";
 export type { RecipeDraftProblem, RecipeIngredient } from "./recipes";
 export * from "./schemas";
 export * from "./search";

@@ -10,6 +10,8 @@ import {
   MAX_RECIPE_STEP_LENGTH,
 } from "../recipes/bounds";
 
+import type { FitMiss, FitMissReason, FitNutrient, FitResult, FitTarget } from "../recipes/fit";
+
 /*
  * The objects here are deliberately not strict. The draft ships to phones over the air and a later change
  * adds fields to it, so an app that is behind strips what it does not know instead of failing the turn.
@@ -114,3 +116,29 @@ export const assistantRecipeDraftSchema = z.discriminatedUnion("variant", [
 ]);
 
 export type AssistantRecipeDraft = z.infer<typeof assistantRecipeDraftSchema>;
+
+/*
+ * The fit shapes above are copies of the recipe fitter's, so the two cannot drift: this fails to compile when a
+ * nutrient key, a miss's reason, the status or the shape of a target changes on one side only. The one allowed
+ * difference is a miss's `limitedBy`, which the draft states as ingredient names and the fitter as food ids, and
+ * both are lists of strings. Each pair has to be assignable both ways.
+ */
+type IsEqual<Left, Right> = [Left] extends [Right]
+  ? [Right] extends [Left]
+    ? true
+    : false
+  : false;
+// A target names its nutrients as optional keys, which zod writes with `| undefined` and the fitter without, so
+// they are compared by their keys and the type of each value.
+type NamedNutrients<Target> = { [Nutrient in keyof Target]-?: NonNullable<Target[Nutrient]> };
+type DraftFit = NonNullable<AssistantRecipeDraft["fit"]>;
+
+type AssertTrue<Condition extends true> = Condition;
+
+export type DraftFitMatchesTheFitter = [
+  AssertTrue<IsEqual<NamedNutrients<DraftFit["target"]>, NamedNutrients<FitTarget>>>,
+  AssertTrue<IsEqual<DraftFit["misses"][number], FitMiss>>,
+  AssertTrue<IsEqual<DraftFit["misses"][number]["nutrient"], FitNutrient>>,
+  AssertTrue<IsEqual<DraftFit["misses"][number]["reason"], FitMissReason>>,
+  AssertTrue<IsEqual<DraftFit["status"], FitResult["status"]>>,
+];

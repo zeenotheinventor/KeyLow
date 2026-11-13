@@ -2,15 +2,20 @@ import {
   useAssistantChanges,
   useAssistantConsent,
   useDeleteAllAssistantConversations,
+  usePalatePreferences,
   useSetAssistantConsent,
 } from "@keylow/api-client";
+import { listAvoidedFoods } from "@keylow/core";
 import {
   ASSISTANT_CONSENT_CARD,
   ASSISTANT_DELETE_ALL_DIALOG,
   ASSISTANT_SETTINGS,
   DELETE_FAILED_BANNER,
+  FOODS_TO_AVOID,
   LEGAL_URLS,
+  PALATE_WORDS,
   SAVE_FAILED_BANNER,
+  YOUR_FOOD,
   describeAssistantConsentCaption,
 } from "@keylow/core/copy";
 import { useRouter } from "expo-router";
@@ -58,11 +63,13 @@ export function AssistantSettingsScreen() {
   const setConsent = useSetAssistantConsent();
   const deleteAll = useDeleteAllAssistantConversations();
   const changes = useAssistantChanges();
+  const palate = usePalatePreferences();
   const openOnce = useOpenOnce();
   const toast = useToast();
   const [isAskingToDelete, setIsAskingToDelete] = useState(false);
   const isRead = consent.data !== undefined;
   const isOn = consent.data?.isOn ?? false;
+  const avoidedCount = palate.data === undefined ? undefined : listAvoidedFoods(palate.data).length;
 
   function goBack() {
     // A cold link to this screen has nothing before it, so Back goes to More instead.
@@ -153,6 +160,37 @@ export function AssistantSettingsScreen() {
               </Pressable>
             </View>
           </Card>
+        </View>
+        <View className="gap-2">
+          <GroupedList title={YOUR_FOOD.groupTitle}>
+            <ListRow
+              icon="Utensils"
+              subtitle={PALATE_WORDS.subLine}
+              title={PALATE_WORDS.title}
+              onPress={() => {
+                openOnce(() => {
+                  router.push("/more/assistant/palate");
+                });
+              }}
+            />
+            <ListRow
+              icon="ShieldAlert"
+              subtitle={YOUR_FOOD.avoidRowSubtitle}
+              title={FOODS_TO_AVOID.title}
+              value={avoidedCount?.toString()}
+              valueLook="quiet"
+              onPress={() => {
+                openOnce(() => {
+                  router.push("/more/assistant/foods-to-avoid");
+                });
+              }}
+            />
+          </GroupedList>
+          <View className="px-1">
+            <Text tone="muted" variant="caption">
+              {YOUR_FOOD.groupCaption}
+            </Text>
+          </View>
         </View>
         {/* The board draws this group only when the assistant is on. It is drawn off as well, a recommended
             departure awaiting Zee: the consent card promises conversations are kept until the person deletes

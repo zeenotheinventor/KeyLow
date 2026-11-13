@@ -77,6 +77,8 @@ export type {
   PalatePreference,
   PalateProfile,
   PalateRecipe,
+  AssistantRecipeDraft,
+  SuggestionLine,
 } from "./core/index.js";
 export {
   addCalendarDays,
@@ -111,6 +113,7 @@ export {
   buildRecipeCreatedCard,
   buildRecipeImportedCard,
   buildRecipeIngredient,
+  computeRecipe,
   buildRecipeUpdatedCard,
   buildTargetsChangedCard,
   buildUpdatedCard,
@@ -166,6 +169,10 @@ export {
   summariseSession,
   buildPalateProfile,
   summaryLines,
+  avoidsFood,
+  assistantRecipeDraftSchema,
+  buildSuggestionDraft,
+  recipeDraftSummaryOf,
   dueCheckinDates,
   EQUIPMENT,
   buildRoutineDraft,
