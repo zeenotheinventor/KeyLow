@@ -34,6 +34,20 @@ const LABEL_MAX_LENGTH = 100;
 /** What Postgres raises when the unique index on a preference collides. */
 const UNIQUE_VIOLATION_CODE = "23505";
 
+/**
+ * Whether a failed add was refused because the word is already on the person's list: the unique index
+ * collided. A repo error keeps the code alone as its cause, and this reads it.
+ */
+export function isDuplicatePalatePreference(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    typeof error.cause === "object" &&
+    error.cause !== null &&
+    "code" in error.cause &&
+    error.cause.code === UNIQUE_VIOLATION_CODE
+  );
+}
+
 /** The most ids one request names, so the address of a read stays far inside what a server accepts. */
 const FOODS_PER_REQUEST = 100;
 

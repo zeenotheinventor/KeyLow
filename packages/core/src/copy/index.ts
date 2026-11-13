@@ -59,6 +59,7 @@ export * from "./program";
 export * from "./plate";
 export * from "./shoppingList";
 export * from "./palate";
+export * from "./foodsToAvoid";
 export * from "./assistantNotices";
 export * from "./assistantSettings";
 export * from "./assistantEntryCards";

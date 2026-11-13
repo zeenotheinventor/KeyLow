@@ -95,6 +95,9 @@ export const Locked: Story = {
   },
 };
 
+// A well sunk in a card, as the Foods to avoid board draws its add field.
+export const Well: Story = { args: { fill: "well", labelHidden: true } };
+
 // The sign in boards' password field.
 export const Password: Story = {
   args: {

@@ -255,6 +255,8 @@ export { useExpenditureHistory } from "./useExpenditureHistory";
 export { useTargetsHistory } from "./useTargetsHistory";
 export type { ProgramHistoryOptions } from "./ProgramHistoryOptions";
 export { useShoppingList } from "./useShoppingList";
+export { useAddPalatePreference } from "./useAddPalatePreference";
+export { useRemovePalatePreference } from "./useRemovePalatePreference";
 export { usePalatePreferences } from "./usePalatePreferences";
 export { usePalateStats } from "./usePalateStats";
 export { usePalateLoggedDays } from "./usePalateLoggedDays";
