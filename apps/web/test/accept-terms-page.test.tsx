@@ -6,11 +6,10 @@ import { compileUtilities } from "./ui/compileUtilities";
 
 import AcceptTermsPage from "@/app/accept-terms/page";
 
-const { getUser, maybeSingle, redirect, signOut } = vi.hoisted(() => ({
+const { getUser, maybeSingle, redirect } = vi.hoisted(() => ({
   getUser: vi.fn(),
   maybeSingle: vi.fn(),
   redirect: vi.fn(),
-  signOut: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -20,10 +19,8 @@ vi.mock("@/lib/supabase/server", () => ({
 
 vi.mock("next/navigation", () => ({
   redirect,
-  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
+  useRouter: () => ({ push: vi.fn(), refresh: vi.fn(), prefetch: vi.fn(), replace: vi.fn() }),
 }));
-
-vi.mock("@/app/(dashboard)/actions", () => ({ signOut }));
 
 vi.mock("@/lib/supabase/client", () => ({ createClient: () => ({ rpc: vi.fn() }) }));
 
@@ -133,6 +130,6 @@ describe("Accept-terms page", () => {
   it("should offer Sign out", async () => {
     render(await AcceptTermsPage());
 
-    expect(screen.getByRole("button", { name: "Sign out" }).getAttribute("type")).toBe("submit");
+    expect(screen.getByRole("button", { name: "Sign out" }).getAttribute("type")).toBe("button");
   });
 });

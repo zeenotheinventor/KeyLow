@@ -3,8 +3,7 @@ import { redirect } from "next/navigation";
 
 import { AcceptTermsForm } from "./AcceptTermsForm";
 
-import { signOut } from "@/app/(dashboard)/actions";
-import { Button } from "@/components/ui/Button";
+import { SignOutButton } from "@/components/account";
 import { Card } from "@/components/ui/Card";
 import { KiLoMark } from "@/components/ui/KiLoMark";
 import { createClient } from "@/lib/supabase/server";
@@ -33,11 +32,9 @@ export default async function AcceptTermsPage() {
           <p className="text-caption text-text-secondary">{ACCEPT_TERMS_SCREEN.caption}</p>
         </div>
         <AcceptTermsForm />
-        <form action={signOut} className="flex flex-col">
-          <Button type="submit" variant="ghost">
-            {ACCEPT_TERMS_SCREEN.signOutLabel}
-          </Button>
-        </form>
+        <div className="flex flex-col">
+          <SignOutButton>{ACCEPT_TERMS_SCREEN.signOutLabel}</SignOutButton>
+        </div>
       </Card>
     </main>
   );
