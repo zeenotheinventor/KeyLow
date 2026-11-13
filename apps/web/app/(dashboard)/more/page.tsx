@@ -51,6 +51,11 @@ export default async function MorePage() {
           <BodyMapRendererSetting />
           <DashboardBodyChartSetting />
           <ListRow title={MORE_SCREEN.settings.about.title} href="/about" />
+          <ListRow
+            title={MORE_SCREEN.settings.featureRequest.title}
+            subtitle={MORE_SCREEN.settings.featureRequest.subtitle}
+            href="/more/feature-request"
+          />
         </GroupedList>
         <GroupedList title={MORE_SCREEN.account.title} headerSize="compact">
           <ListRow
