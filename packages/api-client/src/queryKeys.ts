@@ -89,6 +89,19 @@ export const keys = {
     loggedDays: ["palate", "logged-days"] as const,
   },
   /**
+   * The meal plan reads (ADR 0003, Amendment 22): the person's plans with their days and items, and the
+   * repeat limit they chose. A plan says what a person intends to eat, so it is health data, with a family of
+   * its own outside every list a persisted cache keeps: nothing about a plan is stored on the device. Every
+   * key sits under `["meal-plans"]`, so one invalidation of `keys.mealPlans.all` refreshes both.
+   */
+  mealPlans: {
+    all: ["meal-plans"] as const,
+    /** The plans that are not archived, with their days and items. */
+    list: ["meal-plans", "list"] as const,
+    /** The most times one recipe may appear in a week's plan, as the person chose it. */
+    repeatLimit: ["meal-plans", "repeat-limit"] as const,
+  },
+  /**
    * The training reads. Unlike `recipes` and `weighIns`, these are persisted on mobile: the mobile app
    * keeps each family below by its prefix (`setsAll`, `activeRoutine`, `weekSessionsAll`), so heat, the
    * plan and the week open without a connection. The exercise search and the exercise read, at the

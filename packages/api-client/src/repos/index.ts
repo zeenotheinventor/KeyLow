@@ -206,6 +206,25 @@ export type {
   PalatePreference,
   PalateStatement,
 } from "./palatePreferences";
+export {
+  archiveMealPlan,
+  confirmMealPlanDay,
+  listMealPlans,
+  replaceMealPlanDay,
+  saveMealPlan,
+} from "./mealPlans";
+export type {
+  MealPlan,
+  MealPlanDay,
+  MealPlanItem,
+  MealPlanItemInput,
+  SaveMealPlanInput,
+} from "./mealPlans";
+export {
+  MEAL_PLAN_REPEAT_LIMIT_MAX,
+  getMealPlanRepeatLimit,
+  setMealPlanRepeatLimit,
+} from "./mealPlanRepeatLimit";
 export { getAssistantConsent, getAssistantStatus, setAssistantConsent } from "./assistant";
 export type { AssistantConsent, AssistantStatus } from "./assistant";
 export {

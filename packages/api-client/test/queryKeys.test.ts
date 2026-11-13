@@ -163,6 +163,15 @@ describe("keys.palate", () => {
   });
 });
 
+describe("keys.mealPlans", () => {
+  it("should sit in a family of its own, so nothing about a plan is kept with another list", () => {
+    expect(keys.mealPlans.all).toEqual(["meal-plans"]);
+    expect(keys.mealPlans.list).toEqual(["meal-plans", "list"]);
+    expect(keys.mealPlans.repeatLimit).toEqual(["meal-plans", "repeat-limit"]);
+    expect(keys.mealPlans.all[0]).not.toBe(keys.recipes.all[0]);
+  });
+});
+
 describe("keys.recipes", () => {
   it("should expose the recipes root key", () => {
     expect(keys.recipes.all).toEqual(["recipes"]);
