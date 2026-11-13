@@ -166,6 +166,15 @@ export const PLAN_NOT_SAVED_WORDS = {
   generation_failed:
     "The planner could not be reached, so no plan was made. Try again in a moment.",
   no_calorie_target: "There is no calorie target to plan against yet, so no plan was made.",
+  all_days_confirmed:
+    "Every one of those days is already confirmed in the diary, so no plan was made.",
   nothing_to_plan_from:
     "There are no recipes or usual foods to plan from yet, so no plan was made.",
+} as const;
+
+/** Plain words for what else happened when a plan was saved, for the model to pass on. */
+export const PLAN_RESULT_NOTES = {
+  left_out_confirmed: "Days already confirmed in the diary were left out of the plan.",
+  cleanup_failed:
+    "Some older planned days could not be cleared, so they may still show beside this plan.",
 } as const;

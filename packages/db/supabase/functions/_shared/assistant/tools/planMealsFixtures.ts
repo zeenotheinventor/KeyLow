@@ -10,8 +10,8 @@ import type { RpcHandler } from "./writeStub.ts";
 
 const idOf = (number: number) => `00000000-0000-4000-8000-${String(number).padStart(12, "0")}`;
 
-const oatsId = idOf(11);
-const bananaId = idOf(12);
+export const oatsId = idOf(11);
+export const bananaId = idOf(12);
 const chickenId = idOf(13);
 const riceId = idOf(14);
 const broccoliId = idOf(15);
@@ -140,16 +140,86 @@ export const kitchenTables = (profile: Record<string, unknown> = {}) => ({
   meal_plans: [],
 });
 
-// `save_meal_plan` as the database runs it: the plan and its days are stored together and the id is answered. The
-// arguments are kept, so a test can read what was saved.
+// The plan tables as the database holds them, in the shape `listMealPlans` reads. `save_meal_plan` and
+// `replace_meal_plan_day` write them, as the functions do: a plan and its days together, and a day's items
+// replaced as a whole, refusing a confirmed day. The arguments are kept, so a test can read what was saved.
 export type SavedPlan = { plan: Record<string, unknown>; days: unknown[]; items: unknown[] };
+
+type Row = Record<string, unknown>;
+
+const itemRowOf = (item: Row, at: number, ids: { next: () => string }): Row => ({
+  id: ids.next(),
+  position: item["position"],
+  slot_time: item["slot_time"] ?? null,
+  item_type: item["item_type"],
+  food_id: item["food_id"] ?? null,
+  recipe_id: item["recipe_id"] ?? null,
+  servings: item["servings"] ?? null,
+  grams: item["grams"] ?? null,
+  portion_id: item["portion_id"] ?? null,
+  nutrients: item["nutrients"],
+  leftover_of: null,
+  snapshot: item["snapshot"],
+  // Where the item sat in the call, so a leftover can be pointed at its cook.
+  at,
+  leftover_of_position: item["leftover_of_position"] ?? null,
+  leftover_of_day: item["leftover_of_day"] ?? null,
+});
+
+// The items as the table keeps them, with each leftover pointing at the item that cooked it, found by day and
+// position in the plan, as the function finds it.
+function withCooks(items: Row[], planDays: Row[], ownDate: string): Row[] {
+  return items.map((item) => {
+    const position = item["leftover_of_position"];
+    if (position === null) {
+      return item;
+    }
+    const date = item["leftover_of_day"] ?? ownDate;
+    const cookDay = planDays.find((day) => day["local_date"] === date);
+    const cook = (cookDay?.["meal_plan_items"] as Row[] | undefined)?.find(
+      (candidate) => candidate["position"] === position,
+    );
+    return { ...item, leftover_of: cook?.["id"] ?? null };
+  });
+}
+
+let nextRowNumber = 1000;
+const ids = { next: () => idOf(nextRowNumber++) };
 
 export function saveMealPlanRpc(saved: SavedPlan[]): RpcHandler {
   return (args, tables) => {
-    const planId = idOf(900 + saved.length);
-    const plan = args["p_plan"] as Record<string, unknown>;
-    const days = args["p_days"] as { local_date: string; target: unknown }[];
-    saved.push({ plan, days, items: args["p_items"] as unknown[] });
+    const planId = ids.next();
+    const plan = args["p_plan"] as Row;
+    const days = args["p_days"] as Row[];
+    const items = args["p_items"] as Row[];
+    saved.push({ plan, days, items });
+    const planDays: Row[] = days.map((day) => ({
+      id: ids.next(),
+      local_date: day["local_date"],
+      target: day["target"],
+      confirmed_at: null,
+      confirmed_entry_ids: null,
+      meal_plan_items: [],
+    }));
+    // The cooks first, then the leftovers that point at them, as the function inserts them.
+    for (const pass of ["cooks", "leftovers"]) {
+      for (const day of planDays) {
+        const rows = items
+          .filter((item) => item["local_date"] === day["local_date"])
+          .filter((item) => (item["leftover_of_position"] === undefined) === (pass === "cooks"))
+          .map((item, at) =>
+            itemRowOf(
+              { ...item, leftover_of_position: item["leftover_of_position"] ?? null },
+              at,
+              ids,
+            ),
+          );
+        day["meal_plan_items"] = [
+          ...(day["meal_plan_items"] as Row[]),
+          ...withCooks(rows, planDays, String(day["local_date"])),
+        ];
+      }
+    }
     tables["meal_plans"] = [
       ...(tables["meal_plans"] ?? []),
       {
@@ -157,18 +227,56 @@ export function saveMealPlanRpc(saved: SavedPlan[]): RpcHandler {
         ...plan,
         archived_at: null,
         created_at: "2026-11-03T09:00:00+00:00",
-        meal_plan_days: days.map((day, at) => ({
-          id: idOf(950 + at),
-          local_date: day.local_date,
-          target: day.target,
-          confirmed_at: null,
-          confirmed_entry_ids: null,
-          meal_plan_items: [],
-        })),
+        meal_plan_days: planDays,
       },
     ];
     return { data: planId, error: null };
   };
+}
+
+// `replace_meal_plan_day`: the day's items become exactly the ones given. A confirmed day is refused with 22023.
+// `fails` makes the call fail, as a day the database could not write.
+export function replaceMealPlanDayRpc(options: { fails?: () => boolean } = {}): RpcHandler {
+  return (args, tables) => {
+    if (options.fails?.() === true) {
+      return { data: null, error: { code: "XX000", message: "unavailable" } };
+    }
+    for (const plan of tables["meal_plans"] ?? []) {
+      const planDays = plan["meal_plan_days"] as Row[];
+      const day = planDays.find((candidate) => candidate["id"] === args["p_day_id"]);
+      if (day === undefined) {
+        continue;
+      }
+      if (day["confirmed_at"] !== null) {
+        return {
+          data: null,
+          error: { code: "22023", message: "a confirmed day cannot be replaced" },
+        };
+      }
+      const given = args["p_items"] as Row[];
+      const rows = given.map((item, at) => itemRowOf(item, at, ids));
+      day["meal_plan_items"] = withCooks(rows, planDays, String(day["local_date"]));
+      return { data: null, error: null };
+    }
+    return { data: null, error: { code: "22023", message: "the day was not found" } };
+  };
+}
+
+// The live plans' days that hold something on each date, which is who owns the date.
+export function ownersByDate(tables: Record<string, Row[]>): Record<string, string[]> {
+  const owners: Record<string, string[]> = {};
+  for (const plan of tables["meal_plans"] ?? []) {
+    if (plan["archived_at"] !== null && plan["archived_at"] !== undefined) {
+      continue;
+    }
+    for (const day of plan["meal_plan_days"] as Row[]) {
+      if ((day["meal_plan_items"] as Row[]).length > 0) {
+        const date = String(day["local_date"]);
+        owners[date] = [...(owners[date] ?? []), String(plan["id"])];
+      }
+    }
+  }
+  return owners;
 }
 
 export type RankingCall = GenerationRequest<unknown>;
@@ -213,12 +321,22 @@ export function planContext(
     profile?: Record<string, unknown>;
     tables?: Record<string, Record<string, unknown>[]>;
     localDate?: string;
+    // Makes `replace_meal_plan_day` fail while this answers true.
+    replaceFails?: () => boolean;
   } = {},
 ) {
   const saved: SavedPlan[] = [];
   const stub = writeStub(
     { ...kitchenTables(options.profile), ...options.tables },
-    { callerUserId: userId, rpc: { save_meal_plan: saveMealPlanRpc(saved) } },
+    {
+      callerUserId: userId,
+      rpc: {
+        save_meal_plan: saveMealPlanRpc(saved),
+        replace_meal_plan_day: replaceMealPlanDayRpc(
+          options.replaceFails === undefined ? {} : { fails: options.replaceFails },
+        ),
+      },
+    },
   );
   const made = createFakeContext([tool], { localDate: options.localDate ?? "2026-11-16" });
   const ctx: ToolContext = {
@@ -227,4 +345,56 @@ export function planContext(
     ...(options.generation === undefined ? {} : { generation: options.generation }),
   };
   return { ...made, ctx, stub, saved };
+}
+
+// A kitchen of generated foods and recipes, each usual at every time of day, with calories, protein, carbs and fat
+// that add up, so four named targets are all in play and a plan spends the planner's work budget.
+export function crowdedKitchenTables(foodCount: number, recipeCount: number) {
+  const mixed = (kcal: number, protein_g: number) => ({
+    kcal,
+    protein_g,
+    fat_g: (kcal * 0.3) / 9,
+    carbs_g: (kcal * 0.45) / 4,
+    fibre_g: 0,
+  });
+  const foodIds = Array.from({ length: foodCount }, (_, at) => idOf(3000 + at));
+  const recipeIds = Array.from({ length: recipeCount }, (_, at) => idOf(4000 + at));
+  return {
+    foods: foodIds.map((id, at) => {
+      const figures = mixed(40 + ((at * 37) % 400), 1 + ((at * 7) % 30));
+      return food(
+        id,
+        `Crowded food ${at}`,
+        figures.kcal,
+        figures.protein_g,
+        figures.fat_g,
+        figures.carbs_g,
+      );
+    }),
+    recipes: recipeIds.map((id, at) => {
+      const perServing = mixed(300 + ((at * 53) % 500), 15 + ((at * 11) % 40));
+      const servings = 1 + (at % 4);
+      return {
+        id,
+        owner_id: userId,
+        name: `Crowded recipe ${at}`,
+        servings,
+        yield_grams: servings * 300,
+        is_archived: false,
+        computed: {
+          total: perServing,
+          perServing,
+          per100g: perServing,
+          totalGrams: servings * 300,
+          effectiveGrams: servings * 300,
+          servingsOnly: false,
+          engineVersion: 1,
+        },
+      };
+    }),
+    palate_food_stats: [
+      ...foodIds.map((id) => stat({ food: id }, [3, 3, 3], 100)),
+      ...recipeIds.map((id) => stat({ recipe: id }, [3, 3, 3], 300)),
+    ],
+  };
 }

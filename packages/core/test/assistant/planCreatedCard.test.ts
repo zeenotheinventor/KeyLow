@@ -24,12 +24,11 @@ const plan: Plan = planMeals({
 const input: PlanCreatedCardInput = {
   plan,
   repeatLimit: { maxRepeats: 2, source: "default" },
-  recipeNames: new Map([
-    ["porridge-bowl", "Eval porridge bowl"],
-    ["chicken-and-rice", "Eval chicken and rice"],
+  recipes: new Map([
+    ["porridge-bowl", { name: "Eval porridge bowl", servings: 1, effectiveGrams: 340 }],
+    ["chicken-and-rice", { name: "Eval chicken and rice", servings: 2, effectiveGrams: 700 }],
   ]),
   foodNames: new Map(EVAL_FOODS.map(({ id }) => [id, `${id}, whole, boiled`])),
-  recipeServingGrams: new Map([["porridge-bowl", 340]]),
 };
 
 const shortDay = (day: PlanDay, reason: "work_limit" | "ingredient_bounds"): PlanDay => ({

@@ -7,12 +7,23 @@ import {
 } from "@std/assert";
 
 import { executeTool } from "../executor.ts";
+import { userId } from "../testing.ts";
 import { undoAction } from "../undo.ts";
 import { toJsonSchema } from "../tool.ts";
 import { planMealsTool } from "./planMeals.ts";
-import { peanutStewId, planContext, scriptedGeneration } from "./planMealsFixtures.ts";
+import {
+  bananaId as bananaFood,
+  crowdedKitchenTables,
+  oatsId as oatsFood,
+  ownersByDate,
+  peanutStewId,
+  planContext,
+  scriptedGeneration,
+} from "./planMealsFixtures.ts";
 import { payloadOf } from "./testing.ts";
 import { structuredOf } from "./writeFixtures.ts";
+
+import type { StoredUndo } from "../store.ts";
 
 const input = {
   start_date: null,
@@ -395,3 +406,371 @@ Deno.test(
     assertEquals(saved.length, 0);
   },
 );
+
+type Row = Record<string, unknown>;
+const livePlanDays = (tables: Record<string, Row[]>) =>
+  (tables["meal_plans"] ?? []).flatMap((plan) => plan["meal_plan_days"] as Row[]);
+const itemCounts = (tables: Record<string, Row[]>, planAt: number) =>
+  Object.fromEntries(
+    ((tables["meal_plans"]?.[planAt]?.["meal_plan_days"] ?? []) as Row[]).map((day) => [
+      String(day["local_date"]),
+      (day["meal_plan_items"] as Row[]).length,
+    ]),
+  );
+// What the turn loop does with `structured.undo`: keeps it beside the action, for the inverse to read.
+const keepUndo = (
+  store: { previousValues: Map<string, StoredUndo> },
+  result: Awaited<ReturnType<typeof executeTool>>,
+) => {
+  assert(result.status === "ok" && result.actionId !== null);
+  const undo = structuredOf(result)["undo"] as StoredUndo;
+  store.previousValues.set(result.actionId, undo);
+};
+const plannedDates = (saved: { days: unknown[] }) =>
+  (saved.days as { local_date: string }[]).map(({ local_date }) => local_date);
+const dates = (from: number, to: number) =>
+  Array.from({ length: to - from + 1 }, (_, at) => `2026-11-${from + at}`);
+
+Deno.test("a second plan over some of the dates leaves one live owner for each date", async () => {
+  const { generation } = scriptedGeneration([ranking]);
+  const { ctx, stub, saved } = planContext(planMealsTool, { generation });
+  await executeTool(ctx, "plan_meals", input);
+
+  const second = await executeTool(ctx, "plan_meals", {
+    ...input,
+    start_date: "2026-11-18",
+    days: 3,
+  });
+
+  assertEquals(second.status, "ok");
+  assertEquals(plannedDates(saved[1] ?? { days: [] }), dates(18, 20));
+  const [older, newer] = (stub.tables["meal_plans"] ?? []).map((plan) => String(plan["id"]));
+  const owners = ownersByDate(stub.tables);
+  for (const date of dates(16, 22)) {
+    assertEquals(owners[date]?.length, 1, date);
+  }
+  assertEquals(
+    dates(16, 22).map((date) => owners[date]?.[0]),
+    [older, older, newer, newer, newer, older, older],
+  );
+  assertEquals(stub.tables["meal_plans"]?.[0]?.["archived_at"], null);
+});
+
+Deno.test("a second plan that covers an older plan whole archives the older plan", async () => {
+  const { generation } = scriptedGeneration([ranking]);
+  const { ctx, stub } = planContext(planMealsTool, { generation });
+  await executeTool(ctx, "plan_meals", input);
+
+  await executeTool(ctx, "plan_meals", input);
+
+  const [older, newer] = (stub.tables["meal_plans"] ?? []).map((plan) => String(plan["id"]));
+  assert(typeof stub.tables["meal_plans"]?.[0]?.["archived_at"] === "string");
+  assertEquals(stub.tables["meal_plans"]?.[1]?.["archived_at"], null);
+  assertEquals(
+    Object.values(ownersByDate(stub.tables))
+      .flat()
+      .every((owner) => owner === newer),
+    true,
+  );
+  assert(older !== newer);
+});
+
+Deno.test(
+  "a date confirmed in a live plan is never planned again, and the model is told",
+  async () => {
+    const { generation } = scriptedGeneration([ranking]);
+    const { ctx, stub, saved } = planContext(planMealsTool, { generation });
+    await executeTool(ctx, "plan_meals", input);
+    Object.assign(livePlanDays(stub.tables)[0] ?? {}, {
+      confirmed_at: "2026-11-16T12:00:00+00:00",
+      confirmed_entry_ids: [],
+    });
+
+    const second = await executeTool(ctx, "plan_meals", input);
+
+    assertEquals(plannedDates(saved[1] ?? { days: [] }), dates(17, 22));
+    assertEquals((payloadOf(second) as { notes: string[] }).notes, [
+      "Days already confirmed in the diary were left out of the plan.",
+    ]);
+    assertEquals(ownersByDate(stub.tables)["2026-11-16"]?.length, 1);
+    assertEquals(stub.tables["meal_plans"]?.[0]?.["archived_at"], null);
+  },
+);
+
+Deno.test("when every date is confirmed no plan is made and the model is not called", async () => {
+  const { generation, calls } = scriptedGeneration([ranking]);
+  const { ctx, stub, saved } = planContext(planMealsTool, { generation });
+  await executeTool(ctx, "plan_meals", { ...input, days: 2 });
+  for (const day of livePlanDays(stub.tables)) {
+    Object.assign(day, { confirmed_at: "2026-11-16T12:00:00+00:00", confirmed_entry_ids: [] });
+  }
+
+  const second = await executeTool(ctx, "plan_meals", { ...input, days: 2 });
+
+  assertEquals(payloadOf(second), {
+    planned: false,
+    reason: "all_days_confirmed",
+    message: "Every one of those days is already confirmed in the diary, so no plan was made.",
+  });
+  assertEquals(calls.length, 1);
+  assertEquals(saved.length, 1);
+});
+
+Deno.test(
+  "Undo of a plan that replaced an older one brings the older plan back as it was",
+  async () => {
+    const { generation } = scriptedGeneration([ranking]);
+    const { ctx, stub, store } = planContext(planMealsTool, { generation });
+    await executeTool(ctx, "plan_meals", input);
+    const before = itemCounts(stub.tables, 0);
+    const leftoversBefore = livePlanDays(stub.tables)
+      .flatMap((day) => day["meal_plan_items"] as Row[])
+      .filter((item) => item["leftover_of"] !== null).length;
+    const second = await executeTool(ctx, "plan_meals", input);
+    assert(second.status === "ok" && second.actionId !== null);
+    keepUndo(store, second);
+    assertEquals(
+      Object.values(itemCounts(stub.tables, 0)).every((count) => count === 0),
+      true,
+    );
+
+    const undone = await undoAction(ctx, second.actionId);
+
+    assertEquals(undone, { status: "undone", actionId: second.actionId });
+    assertEquals(itemCounts(stub.tables, 0), before);
+    assertEquals(stub.tables["meal_plans"]?.[0]?.["archived_at"], null);
+    assert(typeof stub.tables["meal_plans"]?.[1]?.["archived_at"] === "string");
+    const owners = ownersByDate(stub.tables);
+    assertEquals(Object.keys(owners).length, 7);
+    assertEquals(
+      ((stub.tables["meal_plans"]?.[0]?.["meal_plan_days"] ?? []) as Row[])
+        .flatMap((day) => day["meal_plan_items"] as Row[])
+        .filter((item) => item["leftover_of"] !== null).length,
+      leftoversBefore,
+    );
+  },
+);
+
+Deno.test("Undo of a partly overlapping plan puts back only the days it cleared", async () => {
+  const { generation } = scriptedGeneration([ranking]);
+  const { ctx, stub, store } = planContext(planMealsTool, { generation });
+  await executeTool(ctx, "plan_meals", input);
+  const before = itemCounts(stub.tables, 0);
+  const second = await executeTool(ctx, "plan_meals", {
+    ...input,
+    start_date: "2026-11-18",
+    days: 3,
+  });
+  assert(second.status === "ok" && second.actionId !== null);
+  keepUndo(store, second);
+
+  await undoAction(ctx, second.actionId);
+
+  assertEquals(itemCounts(stub.tables, 0), before);
+  assertEquals(stub.tables["meal_plans"]?.[0]?.["archived_at"], null);
+});
+
+Deno.test(
+  "a clean-up that fails is reported in the result, and the new plan still stands",
+  async () => {
+    const { generation } = scriptedGeneration([ranking]);
+    let failing = false;
+    const { ctx, stub, saved, reported } = planContext(planMealsTool, {
+      generation,
+      replaceFails: () => failing,
+    });
+    await executeTool(ctx, "plan_meals", input);
+    failing = true;
+
+    const second = await executeTool(ctx, "plan_meals", input);
+
+    assertEquals(second.status, "ok");
+    assertEquals(saved.length, 2);
+    assertEquals((payloadOf(second) as { planned: boolean }).planned, true);
+    assertEquals((payloadOf(second) as { notes: string[] }).notes, [
+      "Some older planned days could not be cleared, so they may still show beside this plan.",
+    ]);
+    assertEquals(stub.tables["meal_plans"]?.[0]?.["archived_at"], null);
+    assert(reported.length > 0);
+  },
+);
+
+Deno.test("Undo cannot reach a plan owned by another user", async () => {
+  const { generation } = scriptedGeneration([ranking]);
+  const otherPlan = "00000000-0000-4000-8000-0000000009ff";
+  const { ctx, stub, store } = planContext(planMealsTool, {
+    generation,
+    tables: {
+      meal_plans: [
+        {
+          id: otherPlan,
+          user_id: "00000000-0000-4000-8000-0000000000b2",
+          start_date: "2026-11-16",
+          day_count: 1,
+          rules: {},
+          source: "assistant",
+          archived_at: null,
+          created_at: "2026-11-03T09:00:00+00:00",
+          meal_plan_days: [],
+        },
+      ],
+    },
+  });
+  store.actions.push({
+    id: "action-theirs",
+    userId,
+    conversationId: ctx.turn.conversationId,
+    turnId: ctx.turn.id,
+    turnSeq: 1,
+    tool: "plan_meals",
+    targetTable: "meal_plans",
+    targetId: otherPlan,
+    targetIds: null,
+    targetLocalDate: null,
+    targetUpdatedAt: null,
+    undoneAt: null,
+  });
+
+  const result = await undoAction(ctx, "action-theirs");
+
+  assertEquals(result, { status: "error", code: "undo_unavailable" });
+  assertEquals(stub.tables["meal_plans"]?.[0]?.["archived_at"], null);
+});
+
+Deno.test("with wishes only the ranked items are planned", async () => {
+  const { generation } = scriptedGeneration([{ ranking: ["f1", "f5", "f6"] }]);
+  const { ctx, saved } = planContext(planMealsTool, { generation });
+
+  const result = await executeTool(ctx, "plan_meals", { ...input, request: "simple food" });
+
+  assertEquals(result.status, "ok");
+  assertFalse("wishes_not_fully_kept" in (payloadOf(result) as object));
+  const foods = new Set(
+    (saved[0]?.items as { food_id?: string; recipe_id?: string }[]).map(
+      (item) => item.food_id ?? item.recipe_id,
+    ),
+  );
+  assertEquals(foods.size <= 3, true);
+  assertEquals(foods.has(undefined), false);
+});
+
+Deno.test("with no wishes a ranking only reorders, and every item may still be used", async () => {
+  const { generation } = scriptedGeneration([{ ranking: ["f1"] }]);
+  const { ctx, saved } = planContext(planMealsTool, { generation });
+
+  await executeTool(ctx, "plan_meals", input);
+
+  const ids = new Set(
+    (saved[0]?.items as { food_id?: string; recipe_id?: string }[]).map(
+      (item) => item.food_id ?? item.recipe_id,
+    ),
+  );
+  assertEquals(ids.size > 1, true);
+});
+
+Deno.test(
+  "when the ranked items place nothing the whole pool is used, and the result says so",
+  async () => {
+    // Oats have a usual amount of 0 g, which the planner cannot place, so wishes that rank only the oats place
+    // nothing at all. The bananas can be placed.
+    const statOf = (food: string, grams: number) => ({
+      food_id: food,
+      recipe_id: null,
+      entry_count: 8,
+      distinct_days: 8,
+      first_local_date: "2026-10-01",
+      last_local_date: "2026-11-02",
+      median_resolved_grams: grams,
+      before_eleven_count: 8,
+      eleven_to_sixteen_count: 0,
+      sixteen_or_later_count: 0,
+    });
+    const { generation, calls } = scriptedGeneration([{ ranking: ["f2"] }]);
+    const { ctx, saved } = planContext(planMealsTool, {
+      generation,
+      tables: {
+        recipes: [],
+        palate_food_stats: [statOf(oatsFood, 0), statOf(bananaFood, 90)],
+      },
+    });
+
+    const result = await executeTool(ctx, "plan_meals", { ...input, request: "just oats" });
+
+    assertEquals(result.status, "ok");
+    assertStringIncludes(calls[0]?.userContent ?? "", "Oats");
+    assertEquals(
+      (payloadOf(result) as { wishes_not_fully_kept: boolean }).wishes_not_fully_kept,
+      true,
+    );
+    assertEquals(saved.length, 1);
+    assertEquals(
+      (saved[0]?.items as { food_id: string }[]).every((item) => item.food_id === bananaFood),
+      true,
+    );
+  },
+);
+
+const shortDays = (result: Awaited<ReturnType<typeof executeTool>>) =>
+  (
+    payloadOf(result) as {
+      days: { status: string; short_of: { not_fully_worked_out: boolean }[] }[];
+    }
+  ).days.filter(({ status }) => status === "short");
+
+const unreachableTargets = {
+  target_kcal: 1500,
+  target_protein_g: 100,
+  target_carbs_g: 300,
+  target_fat_g: 10,
+};
+
+Deno.test(
+  "a day the planner proved out of reach is short, and the card says by how much",
+  async () => {
+    const { generation } = scriptedGeneration([{ ranking: [] }]);
+    const { ctx } = planContext(planMealsTool, {
+      generation,
+      profile: unreachableTargets,
+      tables: crowdedKitchenTables(4, 2),
+    });
+
+    const result = await executeTool(ctx, "plan_meals", {
+      ...input,
+      named_macros: ["carbs_g", "fat_g"],
+    });
+
+    const short = shortDays(result);
+    assertEquals(short.length, 7);
+    const flags = short.flatMap(({ short_of }) =>
+      short_of.map((miss) => miss.not_fully_worked_out),
+    );
+    assertEquals(flags.length > 0 && flags.every((flag) => !flag), true);
+    const note = (structuredOf(result)["card"] as { note: string }).note;
+    assertStringIncludes(note, "Mon 16 Nov is ");
+    assertFalse(note.includes("was not fully worked out"));
+  },
+);
+
+Deno.test("a day the planner ran out of work on is short with its own words", async () => {
+  const { generation } = scriptedGeneration([{ ranking: [] }]);
+  const { ctx } = planContext(planMealsTool, {
+    generation,
+    profile: unreachableTargets,
+    tables: crowdedKitchenTables(20, 20),
+  });
+
+  const result = await executeTool(ctx, "plan_meals", {
+    ...input,
+    max_repeats: 0,
+    named_macros: ["carbs_g", "fat_g"],
+  });
+
+  const flags = shortDays(result).flatMap(({ short_of }) =>
+    short_of.map((miss) => miss.not_fully_worked_out),
+  );
+  assertEquals(flags.includes(true), true);
+  const note = (structuredOf(result)["card"] as { note: string }).note;
+  assertStringIncludes(note, "was not fully worked out");
+  assertStringIncludes(note, "Ask me to replan it.");
+  assertFalse(/closest the plan gets/i.test(note));
+});

@@ -9,16 +9,23 @@ import { z } from "zod";
 
 import {
   PLAN_NOT_SAVED_WORDS,
+  PLAN_RESULT_NOTES,
   buildPalateProfile,
   buildPlanCreatedCard,
   buildPlanPool,
+  daysToClear,
+  isPlanUndoable,
+  planDatesAround,
   planDatesOf,
-  planMeals,
+  planDaysOf,
+  planHasNoItems,
   planRankingSchema,
   planSaveInput,
-  planTargetOf,
+  planWeek,
+  plansToArchive,
   rankedIdsOfReply,
   resolveRepeatLimit,
+  restorableItemsOfDay,
   roundCalories,
   roundGrams,
 } from "../../core.ts";
@@ -33,6 +40,8 @@ import {
   listPalatePreferences,
   listPalateStats,
   listRecipes,
+  replaceMealPlanDay,
+  restoreMealPlan,
   saveMealPlan,
 } from "../../repos.ts";
 import { PLAN_SYSTEM_PROMPT, planPromptContent } from "../planPrompt.ts";
@@ -40,7 +49,8 @@ import { targetsOfDay } from "./diaryView.ts";
 import { invalidInput } from "./entryWrite.ts";
 import { localDateSchema } from "./shared.ts";
 
-import type { Food, PalateRecipe, Plan } from "../../core.ts";
+import type { Food, LivePlan, PalateRecipe, Plan } from "../../core.ts";
+import type { MealPlanItemInput } from "../../repos.ts";
 import type { ToolContext, WriteRunOutput, WriteToolDefinition } from "../tool.ts";
 
 const planMealsInput = z.strictObject({
@@ -64,13 +74,13 @@ const planMealsInput = z.strictObject({
   named_macros: z
     .array(z.enum(["carbs_g", "fat_g"]))
     .max(2)
-    .describe("Carbs or fat, only if the user named them as a goal. Else an empty list."),
+    .describe("Carbs or fat, only if the user named them as a goal."),
   request: z
     .string()
     .trim()
     .max(300)
     .nullable()
-    .describe("The user's wishes in their own words, such as what they like. Else null."),
+    .describe("The user's wishes in their own words, such as what they like."),
 });
 
 type PlanMealsInput = z.infer<typeof planMealsInput>;
@@ -129,12 +139,82 @@ const caloriesAndProtein = (day: Plan["days"][number]) => ({
   })),
 });
 
+// The live plans as core picks days from them, and as the cleanup reads what to put back.
+const livePlansOf = (plans: Awaited<ReturnType<typeof listMealPlans>>): LivePlan[] =>
+  plans.map(({ id, days }) => ({
+    id,
+    days: days.map((day) => ({
+      id: day.id,
+      localDate: day.localDate,
+      isConfirmed: day.confirmedAt !== null,
+      itemCount: day.items.length,
+    })),
+  }));
+
+// What Undo needs to put the older plans back: the cleared days with their items, and the plans archived.
+type ClearedDay = { dayId: string; localDate: string; items: MealPlanItemInput[] };
+type PreviousPlans = { days: ClearedDay[]; archivedPlanIds: string[] };
+
+// One older plan's day is cleared with `replaceMealPlanDay(dayId, [])`. Clearing a cook day nulls `leftover_of` on
+// later leftovers outside the new plan, which the database does when a cooking item goes, and is accepted.
+// Nothing here throws: the new plan is saved already, so a failure is reported and counted and the rest carries on.
+async function clearOlderPlans(
+  ctx: ToolContext,
+  stored: Awaited<ReturnType<typeof listMealPlans>>,
+  live: readonly LivePlan[],
+  dates: readonly string[],
+): Promise<{ previous: PreviousPlans; failures: number }> {
+  const previous: PreviousPlans = { days: [], archivedPlanIds: [] };
+  let failures = 0;
+  const reportFailure = (caught: unknown) => {
+    failures += 1;
+    try {
+      ctx.reportError("assistant tool plan_meals", "internal_error", caught);
+    } catch {
+      // Reporting is a side channel.
+    }
+  };
+  const cleared = new Set<string>();
+  for (const { planId, dayId, localDate } of daysToClear(live, dates)) {
+    const plan = stored.find(({ id }) => id === planId);
+    try {
+      const items = plan === undefined ? [] : restorableItemsOfDay(plan, dayId);
+      await replaceMealPlanDay(ctx.caller, dayId, []);
+      cleared.add(dayId);
+      previous.days.push({ dayId, localDate, items });
+    } catch (caught) {
+      reportFailure(caught);
+    }
+  }
+  for (const planId of plansToArchive(live, cleared)) {
+    try {
+      await archiveMealPlan(ctx.caller, planId);
+      previous.archivedPlanIds.push(planId);
+    } catch (caught) {
+      reportFailure(caught);
+    }
+  }
+  return { previous, failures };
+}
+
+const previousPlansSchema = z.object({
+  days: z.array(
+    z.object({
+      dayId: z.guid(),
+      localDate: z.iso.date(),
+      // `replaceMealPlanDay` checks every item against its own schema before sending anything.
+      items: z.array(z.custom<MealPlanItemInput>()),
+    }),
+  ),
+  archivedPlanIds: z.array(z.guid()),
+});
+
 export const planMealsTool: WriteToolDefinition<PlanMealsInput> = {
   name: "plan_meals",
   description:
     "Plans the user's meals for up to 7 days from their own recipes and usual foods, to their calorie and " +
     "protein targets, and saves it with a card and Undo. Pass only their words. The tool works out every " +
-    "amount. Say which days are short and that nothing was saved if planned is false.",
+    "amount.",
   kind: "write",
   group: "kitchen",
   generation: true,
@@ -152,18 +232,25 @@ export const planMealsTool: WriteToolDefinition<PlanMealsInput> = {
     if (startDate < ctx.turn.localDate) {
       return invalidInput(["start_date"]);
     }
-    const dates = planDatesOf(startDate, input.days);
 
-    const [targets, profileLimit, kitchen] = await Promise.all([
+    const [targets, profileLimit, kitchen, stored] = await Promise.all([
       getMyTargets(ctx.caller),
       getMealPlanRepeatLimit(ctx.caller),
       readKitchen(ctx),
+      listMealPlans(ctx.caller),
     ]);
-    const days = dates.flatMap((localDate) => {
-      const target = planTargetOf(targetsOfDay(targets, localDate), input.named_macros);
-      return target === null ? [] : [{ localDate, target }];
-    });
-    if (days.length !== dates.length) {
+    // A date that is confirmed in any live plan is never planned again.
+    const live = livePlansOf(stored);
+    const { dates, leftOut } = planDatesAround(planDatesOf(startDate, input.days), live);
+    if (dates.length === 0) {
+      return refusal("all_days_confirmed");
+    }
+    const days = planDaysOf(
+      dates,
+      (localDate) => targetsOfDay(targets, localDate),
+      input.named_macros,
+    );
+    if (days === null) {
       return refusal("no_calorie_target");
     }
 
@@ -202,14 +289,15 @@ export const planMealsTool: WriteToolDefinition<PlanMealsInput> = {
       leftovers: true,
       slots: ["morning", "midday", "evening"] as const,
     };
-    const plan = planMeals({
+    const { plan, wishesKept } = planWeek({
       recipes: pool.recipes,
       foods: pool.foods,
       ranking: ranked.value,
       rules,
       days,
+      hasWishes: input.request !== null,
     });
-    if (plan.days.every(({ items }) => items.length === 0)) {
+    if (planHasNoItems(plan)) {
       return refusal("nothing_to_plan_from");
     }
 
@@ -218,15 +306,13 @@ export const planMealsTool: WriteToolDefinition<PlanMealsInput> = {
     const card = buildPlanCreatedCard({
       plan,
       repeatLimit: limit,
-      recipeNames: new Map(kitchen.recipes.map(({ id, name }) => [id, name])),
-      foodNames: new Map(kitchen.foods.map(({ id, name }) => [id, name])),
-      recipeServingGrams: new Map(
-        kitchen.recipes.flatMap(({ id, servings, computed }) =>
-          computed.effectiveGrams > 0 && servings > 0
-            ? [[id, computed.effectiveGrams / servings]]
-            : [],
-        ),
+      recipes: new Map(
+        kitchen.recipes.map(({ id, name, servings, computed }) => [
+          id,
+          { name, servings, effectiveGrams: computed.effectiveGrams },
+        ]),
       ),
+      foodNames: new Map(kitchen.foods.map(({ id, name }) => [id, name])),
     });
     const saved = planSaveInput({
       plan,
@@ -235,30 +321,64 @@ export const planMealsTool: WriteToolDefinition<PlanMealsInput> = {
       recipes: recipesById,
     });
 
-    // The write is last. Everything the answer holds is built already, so nothing after it can throw.
+    // The new plan is saved first. Everything below it is caught, so the write that landed is never undone by a
+    // throw, which the model would retry.
     const planId = await saveMealPlan(ctx.caller, saved);
+    const cleanup = await clearOlderPlans(ctx, stored, live, dates);
+    const notes = [
+      ...(leftOut.length > 0 ? [PLAN_RESULT_NOTES.left_out_confirmed] : []),
+      ...(cleanup.failures > 0 ? [PLAN_RESULT_NOTES.cleanup_failed] : []),
+    ];
     return {
       data: {
         planned: true,
         repeat_limit: { max_repeats: limit.maxRepeats, chosen_by: limit.source },
         days: plan.days.map(caloriesAndProtein),
+        ...(wishesKept ? {} : { wishes_not_fully_kept: true }),
+        ...(notes.length === 0 ? {} : { notes }),
       },
-      structured: { card },
+      structured: {
+        card,
+        undo: { previous: cleanup.previous, fingerprint: planId },
+      },
       target: { targetId: planId },
     };
   },
-  // Archives the plan, unless it is archived already or a day of it was confirmed into the diary, which then
-  // holds entries the plan wrote.
+  // Archives the plan and puts back the older plans' days that it cleared, unless the plan is gone or a day of it
+  // was confirmed into the diary, which then holds entries the plan wrote. A day that cannot be put back is
+  // reported and left, and the rest carries on.
   async inverse(ctx, action) {
     const { targetId } = action;
     if (targetId === null) {
       return "unavailable";
     }
-    const plan = (await listMealPlans(ctx.caller)).find(({ id }) => id === targetId);
-    if (plan === undefined || plan.days.some(({ confirmedAt }) => confirmedAt !== null)) {
+    const found = (await listMealPlans(ctx.caller)).find(({ id }) => id === targetId);
+    const [live] = livePlansOf(found === undefined ? [] : [found]);
+    if (!isPlanUndoable(live)) {
       return "unavailable";
     }
     await archiveMealPlan(ctx.caller, targetId);
+
+    const previous = previousPlansSchema.safeParse((await ctx.previousValueOf(action))?.previous);
+    if (!previous.success) {
+      return "undone";
+    }
+    for (const day of [...previous.data.days].sort((a, b) =>
+      a.localDate.localeCompare(b.localDate),
+    )) {
+      try {
+        await replaceMealPlanDay(ctx.caller, day.dayId, day.items);
+      } catch (caught) {
+        ctx.reportError("assistant tool plan_meals", "internal_error", caught);
+      }
+    }
+    for (const planId of previous.data.archivedPlanIds) {
+      try {
+        await restoreMealPlan(ctx.caller, planId);
+      } catch (caught) {
+        ctx.reportError("assistant tool plan_meals", "internal_error", caught);
+      }
+    }
     return "undone";
   },
 };

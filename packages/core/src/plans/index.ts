@@ -19,6 +19,22 @@ export type {
 } from "./planPool";
 export { planDatesOf, planTargetOf, resolveRepeatLimit } from "./planRequest";
 export type { DayTargetFigures } from "./planRequest";
+export {
+  daysToClear,
+  isPlanUndoable,
+  planDatesAround,
+  plansToArchive,
+  restorableItemsOfDay,
+} from "./planOverlap";
+export type {
+  DayToClear,
+  LivePlan,
+  LivePlanDay,
+  RestoredItem,
+  StoredPlan,
+  StoredPlanItem,
+} from "./planOverlap";
+export { planDaysOf, planHasNoItems, planServingGrams, planWeek } from "./planWeek";
 export { rankedIdsOfReply } from "./readRanking";
 export { planSaveInput } from "./planSaveInput";
 export type { PlanSaveInputSource, StoredPlanRules } from "./planSaveInput";

@@ -13,15 +13,32 @@ export * from "./plate";
 export {
   PLAN_FIT_BUDGET,
   buildPlanPool,
+  daysToClear,
+  isPlanUndoable,
+  planDatesAround,
   planDatesOf,
+  planDaysOf,
+  planHasNoItems,
   planMeals,
+  planServingGrams,
+  planWeek,
+  plansToArchive,
+  restorableItemsOfDay,
   planTargetOf,
   resolveRepeatLimit,
   planSaveInput,
   rankedIdsOfReply,
   repeatLimitOfProfile,
 } from "./plans";
-export type { Plan, PlanOffer, PlanPoolResult, PlannedWeek } from "./plans";
+export type {
+  LivePlan,
+  Plan,
+  PlanOffer,
+  PlanPoolResult,
+  PlannedWeek,
+  RestoredItem,
+  StoredPlan,
+} from "./plans";
 // Only what the assistant's recipe tools need. The rest of recipes is read through `@keylow/core/recipes`.
 export { buildRecipeIngredient, computeRecipe, validateRecipeDraft } from "./recipes";
 export type { RecipeDraftProblem, RecipeIngredient } from "./recipes";

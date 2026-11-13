@@ -5,6 +5,7 @@ import {
   KITCHEN_RULES,
   holdsKitchenAddition,
   isKitchenRequest,
+  isMealPlanRequest,
   isKitchenSwitchOn,
   kitchenAdditionContent,
   planKitchen,
@@ -215,4 +216,23 @@ Deno.test("a conversation that had the addition but whose replay lost it appends
     surfaced: true,
     append: true,
   });
+});
+
+Deno.test("isMealPlanRequest matches the plan words and not other kitchen or diary text", () => {
+  for (const text of [
+    "What should I eat this week?",
+    "Make me a meal plan",
+    "Plan my meals for the week",
+    "Replan Thursday",
+  ]) {
+    assertEquals(isMealPlanRequest(text), true, text);
+  }
+  for (const text of [
+    "Why was Tuesday so high?",
+    "Suggest a recipe for dinner",
+    "What do I usually eat?",
+    "Log my lunch",
+  ]) {
+    assertEquals(isMealPlanRequest(text), false, text);
+  }
 });

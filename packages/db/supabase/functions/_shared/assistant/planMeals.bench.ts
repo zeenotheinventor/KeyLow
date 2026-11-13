@@ -1,5 +1,5 @@
 // The CPU of core's `planMeals` under Deno with the bundled core, on the two shapes of KEY-1031's acceptance: a
-// realistic week of the eval kitchen, and the slowest shape (7 days, 50 foods, 20 recipes, four named targets).
+// realistic week of the eval kitchen, and the largest pool the tool offers (7 days, 30 recipes, 20 foods, four named targets).
 // Run it with `deno bench --config supabase/functions/deno.json supabase/functions/_shared/assistant/planMeals.bench.ts`.
 // It measures the planner alone, and an Edge Function's CPU also pays for the reads and the writes around it. All
 // figures are invented.
@@ -171,24 +171,24 @@ const kitchen = {
 const mixed = (kcal: number, protein_g: number): Per =>
   per(kcal, protein_g, (kcal * 0.3) / 9, (kcal * 0.45) / 4, 0);
 
-// The shape that took 600 ms locally and 1,758 ms on a shared CI runner before the fit budget was set: every
+// The largest pool `plan_meals` offers (`PLAN_POOL_LIMITS`), in the shape that was slowest in core's tests: every
 // candidate in every band, ranked, no repeat limit, and four named targets the fits cannot meet.
 const large = {
-  recipes: Array.from({ length: 20 }, (_, at) => ({
+  recipes: Array.from({ length: 30 }, (_, at) => ({
     id: `recipe-${at}`,
     servings: 1 + (at % 4),
     bands: [...BANDS],
     perServing: mixed(300 + ((at * 53) % 500), 15 + ((at * 11) % 40)),
   })),
-  foods: Array.from({ length: 50 }, (_, at) => ({
+  foods: Array.from({ length: 20 }, (_, at) => ({
     id: `food-${at}`,
     per100: mixed(40 + ((at * 37) % 400), 1 + ((at * 7) % 30)),
     typicalGrams: 40 + ((at * 25) % 200),
     bands: [...BANDS],
   })),
   ranking: [
-    ...Array.from({ length: 20 }, (_, at) => `recipe-${at}`),
-    ...Array.from({ length: 50 }, (_, at) => `food-${at}`),
+    ...Array.from({ length: 30 }, (_, at) => `recipe-${at}`),
+    ...Array.from({ length: 20 }, (_, at) => `food-${at}`),
   ],
   rules: { ...rules, maxRepeats: null },
   days: week({ kcal: 1500, protein_g: 100, carbs_g: 300, fat_g: 10 }),
@@ -198,6 +198,9 @@ Deno.bench("planMeals, a realistic eval kitchen week", () => {
   planMeals(kitchen);
 });
 
-Deno.bench("planMeals, the large pool (7 days, 50 foods, 20 recipes, four named targets)", () => {
-  planMeals(large);
-});
+Deno.bench(
+  "planMeals, the tool's largest pool (7 days, 30 recipes, 20 foods, four named targets)",
+  () => {
+    planMeals(large);
+  },
+);

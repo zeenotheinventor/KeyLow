@@ -11,6 +11,7 @@ import {
   describeRepeatLimitNote,
   describeShortDayNote,
 } from "../../copy/assistantPlanCards";
+import { planServingGrams } from "../../plans/planWeek";
 
 import type { AssistantCardDraft } from "./entryCardEntry";
 import type { RepeatLimitSource } from "../../copy/assistantPlanCards";
@@ -21,11 +22,13 @@ export type PlanCreatedCardInput = Readonly<{
   plan: Plan;
   /** The limit that applied, and where it came from. A limit of null is no limit. */
   repeatLimit: Readonly<{ maxRepeats: number | null; source: RepeatLimitSource }>;
-  /** The names of the recipes and foods the plan placed, by id. */
-  recipeNames: ReadonlyMap<string, string>;
+  /** The recipes the plan placed, by id: the name, and what the serving weight is worked out from. */
+  recipes: ReadonlyMap<
+    string,
+    Readonly<{ name: string; servings: number; effectiveGrams: number }>
+  >;
+  /** The names of the foods the plan placed, by id. */
   foodNames: ReadonlyMap<string, string>;
-  /** The weight of one serving of each recipe that has one, by id. */
-  recipeServingGrams: ReadonlyMap<string, number>;
 }>;
 
 /**
@@ -40,16 +43,19 @@ export function buildPlanCreatedCard(input: PlanCreatedCardInput): AssistantCard
   if (first === undefined || last === undefined) {
     throw new RangeError("A plan card needs at least one day");
   }
-  const itemOf = (item: PlanItem) =>
-    item.kind === "recipe"
-      ? {
-          name: input.recipeNames.get(item.recipeId) ?? "Recipe",
-          amount: describePlanRecipeAmount(input.recipeServingGrams.get(item.recipeId) ?? null),
-        }
-      : {
-          name: describePlanFoodName(input.foodNames.get(item.foodId) ?? "Food"),
-          amount: describePlanFoodAmount(item.grams),
-        };
+  const itemOf = (item: PlanItem) => {
+    if (item.kind === "recipe") {
+      const recipe = input.recipes.get(item.recipeId);
+      return {
+        name: recipe?.name ?? "Recipe",
+        amount: describePlanRecipeAmount(recipe === undefined ? null : planServingGrams(recipe)),
+      };
+    }
+    return {
+      name: describePlanFoodName(input.foodNames.get(item.foodId) ?? "Food"),
+      amount: describePlanFoodAmount(item.grams),
+    };
+  };
   const notes = [
     ...plan.days
       .filter(({ status }) => status === "short")
