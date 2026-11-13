@@ -3,6 +3,7 @@ import {
   FIRST_PLAN_VARIETY_WORDS,
   MEAL_PLAN_WORDS,
   RETRY_LABEL,
+  SHOPPING_LIST,
   describePlanPrefill,
   describeWeekRange,
 } from "@keylow/core/copy";
@@ -11,6 +12,7 @@ import { nextWeek, previousWeek } from "@keylow/core/diary";
 import {
   planOpeningDayOf,
   planPrefillDatesOf,
+  planShoppingOf,
   planStripMarkOf,
   planWeekViewOf,
 } from "@keylow/core/plans";
@@ -22,10 +24,15 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { PlanDayCard } from "./PlanDayCard";
 import { usePlanData } from "./usePlanData";
-import { PLAN_DAY_PARAMETER, PLAN_SETTINGS_PATH, planDayPath } from "../../lib/planRoutes";
+import {
+  PLAN_DAY_PARAMETER,
+  PLAN_SETTINGS_PATH,
+  planAddToListPath,
+  planDayPath,
+} from "../../lib/planRoutes";
 import { useReadsEnabled } from "../../lib/useReadsEnabled";
 import { useOpenAssistant } from "../AssistantSheetHost";
-import { Banner, EmptyState, ErrorState, SheetHeader, Skeleton, WeekStrip } from "../ui";
+import { Banner, Button, EmptyState, ErrorState, SheetHeader, Skeleton, WeekStrip } from "../ui";
 
 /**
  * The Plan screen, pushed over the tabs from the Diary's More sheet or its planned row, or from a plan card's
@@ -34,14 +41,15 @@ import { Banner, EmptyState, ErrorState, SheetHeader, Skeleton, WeekStrip } from
  * figures against that day's own target and opens the day. The newest plan wins a date several plans cover.
  * With nothing planned in the week the empty state offers Plan my week, which opens the assistant with the
  * words in its composer and sends nothing. While the person has not chosen a repeat limit a banner says the
- * starting limit applies, with a link to the settings.
+ * starting limit applies, with a link to the settings. Under the days Add to shopping list adds the days not yet
+ * confirmed to the shopping list (`plan · shopping-added`), and is not there when there are none.
  */
 export function PlanScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const openAssistant = useOpenAssistant();
   const isReadEnabled = useReadsEnabled();
-  const { views, today, isError, refetch } = usePlanData();
+  const { views, planRows, today, isError, refetch } = usePlanData();
   const repeatLimit = useMealPlanRepeatLimit({ enabled: isReadEnabled });
   const { [PLAN_DAY_PARAMETER]: dayParameter } = useLocalSearchParams<{
     day?: string | string[];
@@ -95,6 +103,11 @@ export function PlanScreen() {
         </View>
       );
     }
+    // The days of the week on show that are not confirmed, which the footer adds to the shopping list.
+    const weekEnd = week.days.at(-1)?.localDate ?? week.weekStart;
+    const hasShopping =
+      planRows !== undefined &&
+      planShoppingOf(planRows, { start: week.weekStart, end: weekEnd }) !== null;
     const strip = (
       <WeekStrip
         canSelectFutureDays
@@ -172,6 +185,20 @@ export function PlanScreen() {
             />
           ))}
         </ScrollView>
+        {hasShopping ? (
+          <View className="border-t border-border bg-background px-4 pb-2 pt-3">
+            <Button
+              fullWidth
+              icon="ShoppingCart"
+              variant="secondary"
+              onPress={() => {
+                router.push(planAddToListPath(week.weekStart, weekEnd));
+              }}
+            >
+              {SHOPPING_LIST.addToList}
+            </Button>
+          </View>
+        ) : null}
       </>
     );
   }

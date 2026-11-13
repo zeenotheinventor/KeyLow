@@ -7,6 +7,7 @@ import { idOfRow, parseRow } from "./diaryRows";
 import { repoError } from "./repoError";
 
 import type { Database } from "../database.types";
+import type { PlanShoppingFood } from "@keylow/core/plans";
 import type { ShoppingIngredient, ShoppingItem, ShoppingItemWrite } from "@keylow/core/shopping";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -110,6 +111,36 @@ export async function getShoppingSources(
     parseRow(sourceRecipeSchema, row, "load the recipes for your shopping list", idOfRow),
   );
   return recipeIds.flatMap((id) => recipes.find((recipe) => recipe.id === id) ?? []);
+}
+
+const plannedFoodSchema = z.object({
+  id: z.guid(),
+  name: z.string(),
+  food_group: z.string().nullable(),
+});
+
+/**
+ * The foods a plan names on its own, with what the store cupboard rules read of each (its name and group), in
+ * the order the ids were given. A food the user cannot see is left out, which is the same for one that does not
+ * exist, and core buys it under the name it was planned under. Nothing is sent for no foods.
+ */
+export async function getPlannedFoods(
+  client: SupabaseClient<Database>,
+  foodIds: readonly string[],
+): Promise<PlanShoppingFood[]> {
+  if (foodIds.length === 0) {
+    return [];
+  }
+  const action = "load the foods for your shopping list";
+  const ids = [...new Set(foodIds)];
+  const { data, error } = await client.from("foods").select("id,name,food_group").in("id", ids);
+
+  if (error) {
+    throw repoError(action, error);
+  }
+
+  const foods = data.map((row) => parseRow(plannedFoodSchema, row, action, idOfRow));
+  return ids.flatMap((id) => foods.find((food) => food.id === id) ?? []);
 }
 
 // A row core built is checked before it is sent, so a mistake is reported here by the paths that

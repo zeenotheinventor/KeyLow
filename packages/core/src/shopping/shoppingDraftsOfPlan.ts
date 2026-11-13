@@ -8,7 +8,6 @@ import type {
   AggregatedIngredients,
 } from "./aggregateIngredients";
 import type { ClassifiableFood } from "./classifyIngredient";
-import type { PlanItem } from "../plans/types";
 
 /** A recipe the plan names, with its ingredients as the list reads them. */
 export type PlannedRecipeSource = {
@@ -25,7 +24,12 @@ export type PlannedFoodSource = {
   food: ClassifiableFood | null;
 };
 
-export type ShoppableDay = { isConfirmed: boolean; items: readonly PlanItem[] };
+/** What buying needs of a planned item: which food or recipe, how much, and the cook a leftover points at by `key`. */
+export type ShoppableItem = { key: string; leftoverOf: string | null } & (
+  { kind: "recipe"; recipeId: string } | { kind: "food"; foodId: string; grams: number }
+);
+
+export type ShoppableDay = { isConfirmed: boolean; items: readonly ShoppableItem[] };
 
 export type ShoppingDraftsOfPlanInput = {
   /** Every day of the plan, so a recipe's leftovers are found wherever they sit. */
