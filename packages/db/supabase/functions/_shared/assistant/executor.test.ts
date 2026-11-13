@@ -1026,7 +1026,7 @@ Deno.test(
       profile: { note: "kept" },
     });
     assertFalse(result.text.includes(userId));
-    assertEquals(spy.lines, ["assistant get_day denied_key_removed"]);
+    assertEquals(spy.lines, ["assistant tool=get_day code=denied_key_removed"]);
   },
 );
 
@@ -1062,8 +1062,8 @@ Deno.test("the user id never reaches the model, whichever key or string it is in
 
   assertEquals(payloadOf(result), { note: "owned by [removed]", kcal: 1800 });
   assertEquals(spy.lines, [
-    "assistant get_day denied_key_removed",
-    "assistant get_day user_id_value_removed",
+    "assistant tool=get_day code=denied_key_removed",
+    "assistant tool=get_day code=user_id_value_removed",
   ]);
 });
 

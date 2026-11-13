@@ -99,7 +99,7 @@ Deno.test("a removed key is logged as the tool name and a code only", () => {
     spy.restore();
   }
 
-  assertEquals(spy.lines, ["assistant get_day denied_key_removed"]);
+  assertEquals(spy.lines, ["assistant tool=get_day code=denied_key_removed"]);
 });
 
 Deno.test("nothing is logged when no key had to be removed", () => {
@@ -173,7 +173,7 @@ Deno.test("the value of the user id is removed from any key, any depth and insid
     "key-[removed]": 1,
     kcal: 520,
   });
-  assertEquals(spy.lines, ["assistant get_day user_id_value_removed"]);
+  assertEquals(spy.lines, ["assistant tool=get_day code=user_id_value_removed"]);
 });
 
 Deno.test("a result without the user id is left alone and logs nothing", () => {
@@ -199,7 +199,7 @@ Deno.test(
     }
 
     assertEquals(payloadOf(wrapped), { n: 12345, text: "row 12345" });
-    assertEquals(spy.lines, ["assistant get_day user_id_not_uuid"]);
+    assertEquals(spy.lines, ["assistant tool=get_day code=user_id_not_uuid"]);
   },
 );
 

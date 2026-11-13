@@ -6,6 +6,7 @@ import { checkErrorMessageInJsx } from "./rules/errorMessage";
 import { checkInlineStyle } from "./rules/inlineStyle";
 import { checkLightModeColouredText } from "./rules/lightModeColouredText";
 import { checkLocalCoreHelper } from "./rules/localCoreHelper";
+import { checkRawConsole } from "./rules/rawConsole";
 import { checkRawHex, hexColoursIn } from "./rules/rawHex";
 
 import type { Report, RuleName, SourceContext, Violation } from "./types";
@@ -70,6 +71,7 @@ function checkScript({ path, source, coreHelperNames }: SourceInput): Violation[
   checkLightModeColouredText(context, report);
   checkErrorMessageInJsx(context, report);
   checkLocalCoreHelper(context, report);
+  checkRawConsole(context, report);
 
   return violations;
 }

@@ -139,18 +139,3 @@ export async function runBackstop(
   }
   return { users: visited.length, ran, failed };
 }
-
-/** The line a finished run logs: the counts and the duration. */
-export function backstopLogLine({
-  users,
-  ran,
-  failed,
-  durationMilliseconds,
-}: BackstopRun & Readonly<{ durationMilliseconds: number }>): string {
-  return `run-checkin backstop users=${users} ran=${ran} failed=${failed} duration_ms=${durationMilliseconds}`;
-}
-
-/** The line a failed user logs: the user id and the code. */
-export function backstopFailureLogLine(userId: string, code: BackstopFailureCode): string {
-  return `run-checkin backstop failed user=${userId} code=${code}`;
-}

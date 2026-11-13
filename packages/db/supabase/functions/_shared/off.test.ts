@@ -54,7 +54,7 @@ Deno.test(
     assertEquals(body.error.code, "rate_limited");
     assertEquals(body.error.retryAfterSeconds, 42);
     assertEquals(lines.length, 1);
-    assertEquals(lines[0].startsWith("off-search rate_limited"), true);
+    assertEquals(lines[0].startsWith("report function=off-search code=rate_limited"), true);
   },
 );
 
@@ -96,7 +96,7 @@ Deno.test("offRequest keeps answering upstream_error for any other error status"
 
   assertEquals(response.status, 502);
   assertEquals((await response.json()).error.code, "upstream_error");
-  assertEquals(lines[0].startsWith("off-search upstream_error"), true);
+  assertEquals(lines[0].startsWith("report function=off-search code=upstream_error"), true);
 });
 
 Deno.test(
@@ -224,7 +224,7 @@ Deno.test(
     });
 
     assertEquals(lines.length, 1);
-    assertEquals(lines[0].startsWith("off-search rate_limited"), true);
+    assertEquals(lines[0].startsWith("report function=off-search code=rate_limited"), true);
   },
 );
 
