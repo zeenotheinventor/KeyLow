@@ -34,9 +34,25 @@ export const showExerciseFormTool: ReadToolDefinition<z.infer<typeof showExercis
     if (exercise === null) {
       return { data: { error: "not_found" } };
     }
-    // The video first, as before: this tool sends one kind only until the app shows a preference.
-    const media = formMediaToShow(await getExerciseFormMedia(ctx.caller, exercise_id), "video");
+    // An exercise with both sends the video with the photo paths too, and the app draws what the person chose.
+    const media = formMediaToShow(await getExerciseFormMedia(ctx.caller, exercise_id), "both");
     switch (media.kind) {
+      case "both":
+        return {
+          data: { exercise: exercise.name, shown: "video and photos" },
+          structured: {
+            exerciseFormMedia: {
+              exerciseName: exercise.name,
+              media: {
+                kind: "video",
+                videoId: media.video.videoId,
+                title: media.video.title,
+                channel: media.video.channel,
+                imagePaths: [...media.imagePaths],
+              },
+            },
+          },
+        };
       case "video":
         return {
           data: { exercise: exercise.name, shown: "video" },

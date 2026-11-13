@@ -21,6 +21,8 @@ const videoRow = {
   image_paths: ["Barbell_Squat/0.jpg", "Barbell_Squat/1.jpg"],
 };
 
+const videoOnlyRow = { ...videoRow, image_paths: null };
+
 const photosRow = {
   video_id: null,
   video_title: null,
@@ -84,7 +86,7 @@ Deno.test("show_exercise_form does not model a first person reply", () => {
 Deno.test(
   "show_exercise_form tells the model a video is shown, with no title and no channel",
   async () => {
-    const { result } = await showForm(dataOf(videoRow, barbellSquat), askedFor(exerciseId(1)));
+    const { result } = await showForm(dataOf(videoOnlyRow, barbellSquat), askedFor(exerciseId(1)));
 
     assertEquals(payloadOf(result), { exercise: "Barbell Squat", shown: "video" });
     for (const hidden of [
@@ -105,7 +107,7 @@ Deno.test(
 Deno.test(
   "show_exercise_form hands the app the video as an id, a title and a channel",
   async () => {
-    const { result } = await showForm(dataOf(videoRow, barbellSquat), askedFor(exerciseId(1)));
+    const { result } = await showForm(dataOf(videoOnlyRow, barbellSquat), askedFor(exerciseId(1)));
 
     const structured = structuredOf(result);
     assertEquals(structured, {
@@ -144,8 +146,46 @@ Deno.test("show_exercise_form tells the model photos are shown, with no path", a
   });
 });
 
-Deno.test("show_exercise_form sends no citation or estimate beside the card", async () => {
+Deno.test(
+  "show_exercise_form sends the video with both photo paths when the exercise has both",
+  async () => {
+    const { result } = await showForm(dataOf(videoRow, barbellSquat), askedFor(exerciseId(1)));
+
+    assertEquals(payloadOf(result), { exercise: "Barbell Squat", shown: "video and photos" });
+    const structured = structuredOf(result);
+    assertEquals(structured, {
+      exerciseFormMedia: {
+        exerciseName: "Barbell Squat",
+        media: {
+          kind: "video",
+          videoId: "dQw4w9WgXcQ",
+          title: "Sentinel squat tutorial",
+          channel: "Sentinel Channel",
+          imagePaths: ["Barbell_Squat/0.jpg", "Barbell_Squat/1.jpg"],
+        },
+      },
+    });
+    assertEquals(
+      assistantExerciseFormMediaSchema.safeParse(
+        typeof structured === "object" && structured !== null && "exerciseFormMedia" in structured
+          ? structured.exerciseFormMedia
+          : null,
+      ).success,
+      true,
+    );
+  },
+);
+
+Deno.test("show_exercise_form puts no path or URL in what the model reads, for both", async () => {
   const { result } = await showForm(dataOf(videoRow, barbellSquat), askedFor(exerciseId(1)));
+
+  for (const hidden of ["Barbell_Squat", ".jpg", "dQw4w9WgXcQ", "Sentinel", "http", "youtube"]) {
+    assertFalse(result.text.includes(hidden), hidden);
+  }
+});
+
+Deno.test("show_exercise_form sends no citation or estimate beside the card", async () => {
+  const { result } = await showForm(dataOf(videoOnlyRow, barbellSquat), askedFor(exerciseId(1)));
 
   const structured = structuredOf(result);
   assertEquals(
