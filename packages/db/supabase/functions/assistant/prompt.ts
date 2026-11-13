@@ -22,6 +22,7 @@ import { describeShortDate, isValidTimeZone, localToday } from "../_shared/core.
 import { logLine } from "../_shared/log.ts";
 
 import type { AnthropicTool } from "../_shared/assistant/adapters/anthropic.ts";
+import type { KitchenSystemMessage, SystemBlock } from "./kitchen.ts";
 import type { JsonSchemaObject } from "../_shared/assistant/tool.ts";
 import type { AssistantStoredMessage } from "../_shared/core.ts";
 import type { ConversationNote } from "./turnStore.ts";
@@ -137,6 +138,15 @@ const redactedThinkingBlockSchema = z.looseObject({
   data: z.string(),
 });
 
+// A stored system row holds the kitchen addition: `tool_addition` blocks by reference and a text block.
+const toolAdditionBlockSchema = z.looseObject({
+  type: z.literal("tool_addition"),
+  tool: z.looseObject({ type: z.literal("tool_reference"), name: z.string() }),
+});
+const systemContentSchema = z.array(
+  z.discriminatedUnion("type", [textBlockSchema, toolAdditionBlockSchema]),
+);
+
 const storedContentSchema = z.union([
   z.string(),
   z.array(
@@ -161,10 +171,24 @@ export class StoredMessageError extends Error {
   }
 }
 
-// A stored message as the replay reads it: `AssistantStoredMessage` without the status of its turn.
-export type StoredHistoryMessage = Omit<AssistantStoredMessage, "turnStatus">;
+// A stored message as the replay reads it: `AssistantStoredMessage` without the status of its turn. The role can
+// also be `system`, the stored kitchen addition (ADR 0006, Amendment 5).
+export type StoredHistoryMessage = Omit<AssistantStoredMessage, "turnStatus" | "role"> & {
+  role: AssistantStoredMessage["role"] | "system";
+};
+
+// A message of the replay: the SDK's, or the kitchen addition that the SDK types on its beta resource only.
+export type ApiMessage = Anthropic.MessageParam | KitchenSystemMessage;
 
 export type OpenToolUse = { id: string; name: string };
+
+function systemBlocksOf(message: StoredHistoryMessage): SystemBlock[] {
+  const content = systemContentSchema.safeParse(message.content);
+  if (!content.success) {
+    throw new StoredMessageError();
+  }
+  return content.data;
+}
 
 function blocksOf(message: StoredHistoryMessage): Anthropic.ContentBlockParam[] {
   const content = storedContentSchema.safeParse(message.content);
@@ -302,11 +326,12 @@ function messageKeepingThinking(
 export function toApiMessages(
   history: readonly StoredHistoryMessage[],
   currentTurnId: string,
-): Anthropic.MessageParam[] {
+): ApiMessage[] {
   return joinedMessages(history, currentTurnId);
 }
 
-type JoinedMessage = { role: "user" | "assistant"; content: Anthropic.ContentBlockParam[] };
+type JoinedMessage =
+  { role: "user" | "assistant"; content: Anthropic.ContentBlockParam[] } | KitchenSystemMessage;
 
 function joinedMessages(
   history: readonly StoredHistoryMessage[],
@@ -314,7 +339,17 @@ function joinedMessages(
 ): JoinedMessage[] {
   const messages: JoinedMessage[] = [];
   const keeping = messageKeepingThinking(history, currentTurnId);
-  for (const message of history) {
+  for (const [index, message] of history.entries()) {
+    if (message.role === "system") {
+      // The API takes a system message only as the last one or before an assistant message. A turn that failed
+      // after its addition was stored leaves one that the next turn's user row follows, and that one is not
+      // sent. The loop then sees the conversation without the addition and appends it again.
+      const next = history[index + 1];
+      if (next === undefined || next.role === "assistant") {
+        messages.push({ role: "system", content: systemBlocksOf(message) });
+      }
+      continue;
+    }
     const blocks = replayBlocks(message, currentTurnId, message === keeping);
     if (blocks.length === 0) {
       continue;
@@ -350,7 +385,7 @@ export function toApiMessagesWithNote(
   history: readonly StoredHistoryMessage[],
   note: ConversationNote | null,
   currentTurnId: string,
-): Anthropic.MessageParam[] {
+): ApiMessage[] {
   if (note === null) {
     return toApiMessages(history, currentTurnId);
   }
@@ -369,6 +404,10 @@ export function toApiMessagesWithNote(
   if (first === undefined) {
     return [];
   }
+  if (first.role === "system") {
+    // The row after the cut is a user row, so the first message is never a system one. This is the fallback.
+    return toApiMessages(history, currentTurnId);
+  }
   const noteBlock: Anthropic.TextBlockParam = {
     type: "text",
     text: `<conversation_summary>\n${note.summary}\n</conversation_summary>`,
@@ -380,17 +419,20 @@ const breakpoint = { type: "ephemeral" } as const;
 
 // A copy of the messages with a breakpoint on the last block of the last one, so each request reads
 // everything before it from the cache. Stored content is never given one. A turn's user message ends in
-// text or a tool result, which can carry one, and a thinking block cannot.
-function withBreakpoint(messages: readonly Anthropic.MessageParam[]): Anthropic.MessageParam[] {
-  const last = messages.at(-1);
-  if (last === undefined) {
-    return [];
-  }
-  if (last.role === "system") {
+// text or a tool result, which can carry one, and a thinking block cannot. When the last message is the
+// kitchen addition, the breakpoint goes on the message before it (always a user message), so the history
+// is still read from the cache and the addition is not asked to carry one.
+function withBreakpoint(messages: readonly ApiMessage[]): ApiMessage[] {
+  const carrierIndex =
+    messages.at(-1)?.role === "system" ? messages.length - 2 : messages.length - 1;
+  const carrier = messages[carrierIndex];
+  if (carrier === undefined || carrier.role === "system") {
     return [...messages];
   }
   const blocks: Anthropic.ContentBlockParam[] =
-    typeof last.content === "string" ? [{ type: "text", text: last.content }] : [...last.content];
+    typeof carrier.content === "string"
+      ? [{ type: "text", text: carrier.content }]
+      : [...carrier.content];
   const lastBlock = blocks.at(-1);
   if (
     lastBlock?.type !== "text" &&
@@ -400,12 +442,20 @@ function withBreakpoint(messages: readonly Anthropic.MessageParam[]): Anthropic.
     return [...messages];
   }
   return [
-    ...messages.slice(0, -1),
+    ...messages.slice(0, carrierIndex),
     {
-      role: last.role,
+      role: carrier.role,
       content: [...blocks.slice(0, -1), { ...lastBlock, cache_control: breakpoint }],
     },
+    ...messages.slice(carrierIndex + 1),
   ];
+}
+
+// The messages in the SDK's type. It types `tool_addition` on its beta resource only, and a request that
+// holds one is sent to the same endpoint with `KITCHEN_BETA`, so the wire shape is the one the API documents.
+function sdkMessages(messages: readonly ApiMessage[]): Anthropic.MessageParam[] {
+  // @ts-expect-error SDK 1.3.0 has no `tool_addition` block on the stable system message.
+  return [...messages];
 }
 
 const isObjectSchema = (
@@ -430,7 +480,7 @@ export function buildTurnRequest({
   messages,
 }: {
   tools: readonly AnthropicTool[];
-  messages: readonly Anthropic.MessageParam[];
+  messages: readonly ApiMessage[];
 }): Anthropic.MessageStreamParams {
   return {
     model: MODEL,
@@ -440,6 +490,6 @@ export function buildTurnRequest({
     tool_choice: { type: "auto" },
     tools: sdkTools(tools),
     system: [{ type: "text", text: SYSTEM_PROMPT, cache_control: breakpoint }],
-    messages: withBreakpoint(messages),
+    messages: sdkMessages(withBreakpoint(messages)),
   };
 }

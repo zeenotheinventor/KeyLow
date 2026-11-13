@@ -37,6 +37,12 @@ import { COMPACTION_TIMEOUT_MILLISECONDS, planCompaction, promptTokensOf } from 
 import { confirmedCallOf } from "./confirmedCall.ts";
 import { confirmWordsFor } from "./confirmWords.ts";
 import {
+  holdsKitchenAddition,
+  KITCHEN_BETA,
+  kitchenAdditionContent,
+  planKitchen,
+} from "./kitchen.ts";
+import {
   buildTurnRequest,
   contextBlock,
   MODEL,
@@ -203,6 +209,8 @@ export type TurnDependencies = {
   createModelClient(): Anthropic | null;
   // The tools the allowlist chooses from: the registry's, by name and read-only hint.
   availableTools: readonly AllowlistTool[];
+  // The `ASSISTANT_KITCHEN` switch, read per turn. Off surfaces no kitchen tool (ADR 0006, Amendment 5).
+  kitchenEnabled(): boolean;
   functionsBaseUrl(): string | undefined;
   report: ReportError;
   now(): Date;
@@ -411,6 +419,11 @@ async function callModel(
   run.counts.modelCalls += 1;
   const modelStream = session.client.messages.stream(request, {
     signal: AbortSignal.any([run.signal, run.limitSignal.signal]),
+    // A deferred tool and a `tool_addition` need the beta, so it goes with every request that has a deferred
+    // tool, kitchen turn or not. A header is not part of the cache's prefix.
+    ...(session.tools.some((tool) => tool.defer_loading === true)
+      ? { headers: { "anthropic-beta": KITCHEN_BETA } }
+      : {}),
   });
   // Armed when the response headers arrive (`connect`, before the first stream event) and pushed back by
   // every stream event after it (`streamEvent`: message_start, each block start, delta and stop, the
@@ -913,11 +926,13 @@ async function takeTurn(run: Run): Promise<Ending> {
   // after that leaves a message the next turn can join, and a turn that fails before it leaves the raw text,
   // which `toApiMessages` puts behind the open results.
   const timeZone = await turns.readTimeZone(context.userId);
-  const { messages: history, previousTurn } = await turns.readConversation(
-    context.userId,
-    context.conversationId,
-    { excludeMessageId: context.userMessageId },
-  );
+  const {
+    messages: history,
+    previousTurn,
+    compaction,
+  } = await turns.readConversation(context.userId, context.conversationId, {
+    excludeMessageId: context.userMessageId,
+  });
   const content = userContent({
     openToolUses: openToolUses(history),
     context: contextBlock({
@@ -942,6 +957,19 @@ async function takeTurn(run: Run): Promise<Ending> {
     );
     return failedEnding("not_configured");
   }
+  // The rows the next request is built from, with this turn's user message as it is now stored, so a row that
+  // is not sent (a system row the user message follows) is not counted as held.
+  const rowsNow: StoredMessage[] = [
+    ...history,
+    { id: context.userMessageId, turnId: context.turnId, role: "user", content, display: null },
+  ];
+  const kitchen = planKitchen({
+    enabled: dependencies.kitchenEnabled(),
+    text: context.text,
+    entry: context.entry,
+    held: holdsKitchenAddition(toApiMessagesWithNote(rowsNow, compaction, context.turnId)),
+    everStored: holdsKitchenAddition(rowsNow),
+  });
   const pressedConfirm = isConfirmAnswer(context.text, previousTurn?.pendingConfirmLabel ?? null);
   const allowedTools = allowedToolsFor({
     text: context.text,
@@ -949,6 +977,7 @@ async function takeTurn(run: Run): Promise<Ending> {
     // read-looking message after one no longer has the write at all.
     pendingConfirmationTool: pressedConfirm ? (previousTurn?.pendingTool ?? null) : null,
     tools: dependencies.availableTools,
+    kitchenSurfaced: kitchen.surfaced,
   });
   const cachedTools = dependencies.toolListCache.read();
   const connection = await dependencies.connect({
@@ -971,6 +1000,15 @@ async function takeTurn(run: Run): Promise<Ending> {
       if (listedTools.length > 0) {
         dependencies.toolListCache.write(listedTools);
       }
+    }
+    const kitchenToolNames = listedTools.flatMap((tool) =>
+      tool.group === "kitchen" ? [tool.name] : [],
+    );
+    if (kitchen.append && kitchenToolNames.length > 0) {
+      // After the user message and before any model call, so the row is followed by the model's own message.
+      await turns.appendMessages(context.userId, context.conversationId, context.turnId, [
+        { role: "system", content: toJson(kitchenAdditionContent(kitchenToolNames)) },
+      ]);
     }
     const session: Session = {
       client,

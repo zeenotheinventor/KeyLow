@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted when the pull request that carries it merges. Written on 2026-10-26 under KEY-662, part of KEY-185 (the M8 brief). The tables, columns and functions it needs are in ADR 0003, Amendment 14. Every M8 migration waits for both documents. Amended on 2026-11-07 under KEY-883, part of KEY-881 (the brief for weight training): see Amendment 1, Amendment 2, Amendment 3 and Amendment 4 at the end. Two decisions in it were taken by the orchestrator while Zee was away, for his review, and are marked as such.
+Accepted when the pull request that carries it merges. Written on 2026-10-26 under KEY-662, part of KEY-185 (the M8 brief). The tables, columns and functions it needs are in ADR 0003, Amendment 14. Every M8 migration waits for both documents. Amended on 2026-11-07 under KEY-883, part of KEY-881 (the brief for weight training): see Amendment 1, Amendment 2, Amendment 3, Amendment 4 and Amendment 5 at the end. Two decisions in it were taken by the orchestrator while Zee was away, for his review, and are marked as such.
 
 ## Context
 
@@ -453,3 +453,47 @@ A new opt-in set, `featureRequest`, with 8 cases at a threshold of 90% (`tools/a
 ### Implemented by
 
 - KEY-977, the tool, the context builder, the card, the copy, the allowlist exception, the prompt clauses, the eval set and this amendment.
+
+## Amendment 5 to this ADR: the hidden kitchen tool group (2026-11-13)
+
+### Status
+
+Recorded on 2026-11-13 under KEY-1022, part of KEY-216 (the M9 brief for the palate, recipe generation and meal plans). It follows Zee's ruling of 2026-11-13 on KEY-216: M9's tools are a hidden group that code surfaces, and the fallback is a compaction threshold of 50,000. It adds no table, column or migration. The check that lets `assistant_messages.role` hold `system` is ADR 0003, Amendment 22 (KEY-1016).
+
+### Context
+
+The prefix of a chat turn (the system prompt and the tools, `promptPrefix.test.ts`) was about 26,929 estimated tokens against a limit of 27,600, which is 60% of `DEFAULT_COMPACT_AT_TOKENS` (46,000). M9 needs about 2,000 more tokens for its tools and rules. Trimming the existing text was tried under KEY-964 and the writes eval fell from 34 of 34 to between 31 and 33. Raising the threshold again would show every conversation 44 tools, with `suggest_recipe` and `adjust_recipe` beside `create_recipe` and `update_recipe`, and every set would need a new baseline. Changing `tools[]` per conversation is rejected, because the API treats it as an edit of history.
+
+### Decision
+
+- **A tool says which group it belongs to.** `ToolBase` has an optional `group`, and `"kitchen"` is the only value. `tools/list` carries it as `_meta["kilo/group"]`, the same way it carries `kilo/strict`, and the MCP client reads it into `ListedTool.group`. `tools/list` is still never filtered per turn.
+- **The adapter sends a kitchen tool with `defer_loading: true`.** The key is the last key of the tool and only those tools have it, so the bytes of every other tool are unchanged. The order of `tools[]` is still the registry's order. `tools[]` is byte-identical on every turn of every conversation, whatever the switch below says. At least one tool must stay visible, because a request with every tool deferred is a 400.
+- **The beta goes with every request that holds a deferred tool.** The header is `anthropic-beta: mid-conversation-tool-changes-2026-07-01`. It is listed for Haiku 5.5 and Opus 5.5 and not for Foundry. A header is not part of the cache prefix. SDK 1.3.0 types `tool_addition` on its beta resource only, so `prompt.ts` has one narrow `@ts-expect-error` in `sdkMessages` and the rest of the code carries its own `KitchenSystemMessage` type.
+- **Code decides, never the model.** A turn is a kitchen turn when the person's words match the list in `assistant/kitchen.ts` or when the turn request carries `entry` (`"plan"` or `"recipe"`, sent by the app's Plan screen and recipe screen). The list is a judgement for Zee to change, kept narrow on purpose so that "create a recipe called ..." and "I need more protein today" are not kitchen turns, because the rules push the model towards the kitchen tools. It covers: "meal plan", "plan my week" and its forms, "replan", "weekly menu", "suggest or recommend a recipe", "dinner ideas", "dinner around 650", "what should I cook tonight", "higher or lower in protein, carbs, fat, calories, fibre or sugar", "cut the carbs", "what do I usually eat", "my palate" and "foods I avoid or do not like".
+- **The addition is one stored system message.** It follows the user message of the turn and comes before the first model call. Its content is one `{"type": "tool_addition", "tool": {"type": "tool_reference", "name": "<tool>"}}` block for each kitchen tool in the list's order, then one text block with the short kitchen rules (`KITCHEN_RULES`). It is stored as an `assistant_messages` row with role `system` and replayed as it was stored, so history stays append-only. Nothing earlier is edited, because on Haiku 5.5 the history-editing check invalidates earlier thinking blocks. `clear_at` is left at its default, so the message stays in front of the model. The rules text is stored with the row, so changing it reaches new conversations only. A conversation with no kitchen tool in the list (the switch is on and none is registered) appends nothing.
+- **The group is sticky.** Once a conversation holds the addition, every later turn replays it and the group stays surfaced. `planKitchen` decides each turn from three facts: the switch, whether the messages the next request will replay already hold the addition, and whether any row of the conversation ever did.
+- **Replay after compaction.** A compaction replaces the turns up to its cut with a note, so the replay no longer holds a row from before the cut. When the conversation had the addition and the replay lost it, the turn stores a new addition after its user message, which is the first message after the note, and the group stays surfaced. The new row is as append-only as the first.
+- **A row that is not sent.** The API takes a system message only as the last message or before an assistant message. A turn that failed after its addition was stored leaves a row that the next turn's user row follows. The replay does not send that row, and the next turn sees a conversation that had the addition and lost it, and stores it again.
+- **Cache.** The addition is appended after the history, so the cached prefix holds. When the last message of a request is the addition, the cache breakpoint goes on the last block of the user message before it, so the history is still read from the cache and the system message is not asked to carry a breakpoint. `renderTranscript` skips system rows, so a compaction note never quotes the rules.
+- **The switch.** `ASSISTANT_KITCHEN` is a function secret read per turn. `1` or `true` is on, and unset, empty or anything else is off. It is turned on in production only after the recipe card and Plan screens reach phones. Off means no turn surfaces the group and no kitchen tool is allowed. `tools[]` and the beta header are the same with the switch on or off. A conversation that already holds the row keeps it in the replay after the switch is turned off, and a kitchen call is then refused as `tool_not_allowed`.
+- **The allowlist rule.** A tool of the kitchen group is in no set on a turn where the group is not surfaced, a pending confirmation of that tool included. On a turn where it is surfaced the tool is placed by the usual rules: a read is in the read set, a write is in the general set, and it is never in the recipe import set. The model never picks its own set, and the executor still checks the header.
+- **The prefix test counts visible tools only.** `promptPrefix.test.ts` leaves the deferred tools out of the prefix figure and has a second test that caps what a kitchen turn adds, the deferred tool definitions as sent plus the stored system message, at 2,500 tokens.
+- **One test-only tool proves it.** `kitchen_probe` is a read of the kitchen group that answers `ok`. It is last in the registry and is listed only when the function secret `ASSISTANT_KITCHEN_PROBE` is `1`, so no deployment lists it by default. The kitchen tools of M9 replace it.
+- **If the API refuses.** If the API refuses the beta, `defer_loading` or a `tool_addition` on Haiku 5.5, the work stops and is reported, and the fallback is Zee's: raise `DEFAULT_COMPACT_AT_TOKENS` to 50,000 and record it as an amendment. `assistant/kitchenCacheProbe.ts` is a script that sends a two-turn kitchen conversation to the Messages API with the loop's own request builder and prints the usage of every call, so the live check needs no stack.
+
+### Measured
+
+With the formula of `promptPrefix.test.ts` (system prompt length plus the tools as sent, over 2.94), on the tree of this amendment: 39 tools and 26,929 estimated tokens of visible prefix before and after, against a limit of 27,600. With the probe listed there are 40 tools, 39 of them visible, the visible prefix is the same 26,929, and a kitchen turn adds about 243 tokens. The real kitchen tools are expected to add about 2,000 tokens, which the second test caps at 2,500.
+
+### Consequences
+
+- Normal turns send the same prompt and the same tools as before, so the eleven existing eval sets see no change until a kitchen turn happens. The live checks are KEY-1022's acceptance: the API accepts the beta on Haiku 5.5, the second kitchen turn reads at least the visible prefix from the cache, and ask, describe, writes and redTeam hold within 2 points of a baseline taken on the same commit.
+- A kitchen conversation carries about 2,000 more tokens from its kitchen turn on, so it has about 17,000 tokens of conversation before compaction instead of about 19,000.
+- **Every reader of `assistant_messages` must skip a row whose role is `system`** before `ASSISTANT_KITCHEN` is turned on. The thread reader (`api-client`'s `assistantConversations`, whose role enum is `user` and `assistant`, and core's `threadFromMessages`) would otherwise fail or draw the rules as a reply. The account export and any other reader of message roles need the same check.
+- A kitchen tool opts out of `strict`, as the training tools do. Whether the API counts a deferred tool against the caps on strict tools is not documented, so the registry's strict budget keeps counting them until a live run shows otherwise.
+- The trigger list will miss some phrasings and catch some it should not. A miss costs one turn on the visible tools, and a false catch costs about 2,000 tokens and the kitchen rules for the rest of the conversation. Both are small, and the word list is one file.
+- The rules text and the trigger list are the two things to tune when M9's evals show a kitchen conversation going wrong.
+
+### Implemented by
+
+- KEY-1022, the group, the adapter field, the beta header, the trigger, the stored addition, the replay rules, the allowlist rule, the switch, the prefix tests, the probe tool, `kitchenCacheProbe.ts` and this amendment.

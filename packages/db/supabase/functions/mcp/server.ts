@@ -6,7 +6,7 @@ import { Server } from "@modelcontextprotocol/server";
 
 import type { ExecutionResult } from "../_shared/assistant/executor.ts";
 import type { ToolRegistry } from "../_shared/assistant/tool.ts";
-import { strictMetaKey, toJsonSchema } from "../_shared/assistant/tool.ts";
+import { groupMetaKey, strictMetaKey, toJsonSchema } from "../_shared/assistant/tool.ts";
 import type { CallToolResult } from "@modelcontextprotocol/server";
 
 export const serverInfo = { name: "kilo-assistant-tools", version: "1.0.0" };
@@ -54,7 +54,10 @@ export function createToolServer(registry: ToolRegistry, callTool: CallTool): Se
       description: tool.description,
       inputSchema: { ...toJsonSchema(tool), type: "object" as const },
       annotations: tool.annotations,
-      _meta: { [strictMetaKey]: tool.strict !== false },
+      _meta: {
+        [strictMetaKey]: tool.strict !== false,
+        ...(tool.group === undefined ? {} : { [groupMetaKey]: tool.group }),
+      },
     })),
   }));
   server.setRequestHandler("tools/call", async (request) =>

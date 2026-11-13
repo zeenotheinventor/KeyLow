@@ -5,13 +5,16 @@
 // header is the same for the same input.
 import type { ListedTool } from "../_shared/assistant/mcpClient.ts";
 
-export type AllowlistTool = Pick<ListedTool, "name" | "readOnlyHint">;
+export type AllowlistTool = Pick<ListedTool, "name" | "readOnlyHint" | "group">;
 
 export type AllowlistInput = {
   text: string;
   // The tool of a confirmation the previous turn left waiting, or null.
   pendingConfirmationTool: string | null;
   tools: readonly AllowlistTool[];
+  // Whether this turn's conversation has the kitchen group surfaced (ADR 0006, Amendment 5). A tool of the group
+  // is in no set until then. Absent means not surfaced.
+  kitchenSurfaced?: boolean;
 };
 
 const importToolName = "import_recipe_from_url";
@@ -128,8 +131,13 @@ export function allowedToolsFor({
   text,
   pendingConfirmationTool,
   tools,
+  kitchenSurfaced = false,
 }: AllowlistInput): string[] {
   const inSet = (tool: AllowlistTool): boolean => {
+    // A hidden tool is not callable before the model has been shown it, a confirmation included.
+    if (tool.group === "kitchen" && !kitchenSurfaced) {
+      return false;
+    }
     if (tool.name === pendingConfirmationTool) {
       return true;
     }

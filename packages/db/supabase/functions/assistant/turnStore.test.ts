@@ -871,3 +871,31 @@ Deno.test("storeCompaction throws the code of a failed write and never the note"
   assertEquals(error.message.includes("42501"), true);
   assertEquals(error.message.includes("eggs"), false);
 });
+
+Deno.test(
+  "a system message is stored with its role and read back as a system message",
+  async () => {
+    const content = [
+      { type: "tool_addition", tool: { type: "tool_reference", name: "kitchen_one" } },
+      { type: "text", text: "Rules." },
+    ];
+    const { store, tables } = build({
+      tables: { assistant_messages: [existingMessage(1)] },
+    });
+
+    await store.appendMessages(userId, conversationId, turnId, [{ role: "system", content }]);
+    const read = await store.readConversation(userId, conversationId, {
+      excludeMessageId: messageId,
+    });
+
+    assertEquals(
+      (tables["assistant_messages"] ?? []).map((row) => row["role"]),
+      ["user", "system"],
+    );
+    assertEquals(
+      read.messages.map((message) => message.role),
+      ["user", "system"],
+    );
+    assertEquals(read.messages[1]?.content, content);
+  },
+);

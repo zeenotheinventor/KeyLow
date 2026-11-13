@@ -16,9 +16,9 @@ import {
 import { z } from "zod";
 
 import { logLine } from "../log.ts";
-import { strictMetaKey } from "./tool.ts";
+import { groupMetaKey, strictMetaKey } from "./tool.ts";
 
-import type { JsonSchemaObject } from "./tool.ts";
+import type { JsonSchemaObject, ToolGroup } from "./tool.ts";
 
 const functionPath = "/functions/v1/mcp";
 const clientInfo = { name: "kilo-assistant", version: "1.0.0" };
@@ -52,6 +52,8 @@ export type ListedTool = {
   readOnlyHint: boolean;
   // Whether the model's API should hold the tool to its schema. A tool that does not say it opted out.
   strict: boolean;
+  // The group the tool starts hidden in, when it has one. The kitchen group is sent with `defer_loading`.
+  group?: ToolGroup;
 };
 
 // The executor's outcome, which `mcp` returns as `structuredContent`. Only the turn loop reads it.
@@ -282,6 +284,7 @@ export async function connectToolServer(
             inputSchema: tool.inputSchema,
             readOnlyHint: tool.annotations?.readOnlyHint === true,
             strict: tool._meta?.[strictMetaKey] !== false,
+            ...(tool._meta?.[groupMetaKey] === "kitchen" ? { group: "kitchen" as const } : {}),
           }));
         },
       }).then((tools) => {

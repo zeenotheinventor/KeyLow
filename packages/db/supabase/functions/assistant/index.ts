@@ -15,6 +15,7 @@ import { handle } from "../_shared/http.ts";
 import { reportError } from "../_shared/report.ts";
 import { runInBackground } from "../_shared/runtime.ts";
 import { createAccessStore } from "./gates.ts";
+import { isKitchenSwitchOn } from "./kitchen.ts";
 import { createAssistantHandler } from "./routes.ts";
 import { createModelClient, createRunTurn, createToolListCache } from "./turn.ts";
 import { createTurnStore } from "./turnStore.ts";
@@ -70,7 +71,10 @@ Deno.serve(
         availableTools: toolRegistry.list.map((tool) => ({
           name: tool.name,
           readOnlyHint: tool.annotations.readOnlyHint,
+          ...(tool.group === undefined ? {} : { group: tool.group }),
         })),
+        // Read per turn. Unset is off, so kitchen tools merge dark (ADR 0006, Amendment 5).
+        kitchenEnabled: () => isKitchenSwitchOn(Deno.env.get("ASSISTANT_KITCHEN")),
         functionsBaseUrl: () => Deno.env.get("SUPABASE_URL"),
         report: reportError,
         now: () => new Date(),
