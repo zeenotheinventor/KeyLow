@@ -26,6 +26,7 @@ export const importFoodIds = {
   onion: id(8),
   stock: id(9),
   flour: id(10),
+  broth: id(11),
 };
 
 // Per 100 g, chosen so the lemon chicken traybake without the milk is 564 kcal, P 42 g, C 35 g and F 29 g
@@ -99,6 +100,17 @@ const importFoods = () => [
     protein_g: 1.2,
     fat_g: 0.2,
     carbs_g: 7.9,
+  }),
+  // Per 100 ml with a density, so a recipe line in grams must be converted to millilitres to be counted.
+  cofid({
+    id: importFoodIds.broth,
+    name: "Broth, chicken, concentrated",
+    basis: "per_100ml",
+    density_g_per_ml: 1.1,
+    kcal: 60,
+    protein_g: 8,
+    fat_g: 1.5,
+    carbs_g: 3,
   }),
   cofid({
     id: importFoodIds.flour,

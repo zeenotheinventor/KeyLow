@@ -41,6 +41,7 @@ import { saveCustomExerciseTool } from "./tools/saveCustomExercise.ts";
 import { deleteWorkoutTool } from "./tools/deleteWorkout.ts";
 import { kitchenProbeTool } from "./tools/kitchenProbe.ts";
 import { showExerciseFormTool } from "./tools/showExerciseForm.ts";
+import { suggestRecipeTool } from "./tools/suggestRecipe.ts";
 import { strictSchemaProblem } from "./tool.ts";
 
 import type { ToolDefinition, ToolRegistry } from "./tool.ts";
@@ -113,6 +114,7 @@ const toolDefinitions: readonly ToolDefinition[] = [
   requestFeatureTool,
   askUserTool,
   getPalateProfileTool,
+  suggestRecipeTool,
 ];
 
 // The registry of a deployment. The kitchen probe is last and present only when asked for, so the order of every

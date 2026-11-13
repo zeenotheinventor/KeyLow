@@ -25,6 +25,7 @@ import {
   assistantCardSchema,
   assistantExerciseFormMediaSchema,
   assistantExerciseMusclesSchema,
+  assistantRecipeDraftSchema,
   describeTurnEndedAfterWrite,
   describeWorkoutInProgressRefusal,
   isConfirmAnswer,
@@ -66,6 +67,7 @@ import type {
   AssistantCard,
   AssistantExerciseFormMedia,
   AssistantExerciseMuscles,
+  AssistantRecipeDraft,
   AssistantStreamEvent,
 } from "../_shared/core.ts";
 import type { Json } from "../_shared/core/database.types.ts";
@@ -151,6 +153,10 @@ export const MAX_EXERCISE_MUSCLES_CARDS = 4;
 // The most form cards (a video or two photos) one turn draws, for the same reason as the figures above. 2 is the
 // tech lead's number, for Zee to change.
 export const MAX_EXERCISE_FORM_CARDS = 2;
+
+// The most calls one turn makes to tools that carry the `generation` flag, each of which is an Opus call that costs
+// money and up to 55 s. 1 is the orchestrator's ruling (KEY-1030). A second call is answered before it runs.
+export const MAX_GENERATION_CALLS_PER_TURN = 1;
 
 // The SDK parses a streamed tool input as it arrives, and a model that emits invalid JSON makes the stream
 // fail with a plain `AnthropicError` whose cause is a `SyntaxError`, never an API error. That one failure
@@ -264,6 +270,10 @@ type Run = {
   pendingExerciseMuscles: AssistantExerciseMuscles[];
   // The form card of each exercise shown, held to the end of the turn for the same reason.
   pendingExerciseFormMedia: AssistantExerciseFormMedia[];
+  // The recipe each `suggest_recipe` call drafted, held to the end of the turn for the same reason.
+  pendingRecipeDrafts: AssistantRecipeDraft[];
+  // The calls this turn has made to generation tools.
+  generationCalls: number;
   citations: (string | null)[];
   estimates: (string | null)[];
 };
@@ -507,6 +517,7 @@ const structuredSchema = z.looseObject({
   undo: z.unknown().optional(),
   exerciseMuscles: z.unknown().optional(),
   exerciseFormMedia: z.unknown().optional(),
+  recipeDraft: z.unknown().optional(),
 });
 const cardDraftSchema = assistantCardSchema.omit({ actionIds: true });
 
@@ -580,6 +591,7 @@ async function finishCall(
   let card: AssistantCard | null = null;
   let figure: AssistantExerciseMuscles | null = null;
   let formCard: AssistantExerciseFormMedia | null = null;
+  let recipeDraft: AssistantRecipeDraft | null = null;
   if (structured.success) {
     const { citation = null, estimate = null } = structured.data;
     run.citations.push(citation);
@@ -630,6 +642,22 @@ async function finishCall(
         );
       }
     }
+    // The recipe a kitchen tool drafted, in the same row. A read too: nothing is saved until the person presses
+    // Save to recipes, so it has no action and no Undo.
+    if (structured.data.recipeDraft !== undefined) {
+      const parsed = assistantRecipeDraftSchema.safeParse(structured.data.recipeDraft);
+      if (parsed.success) {
+        recipeDraft = parsed.data;
+        entry["recipeDraft"] = toJson(parsed.data);
+      } else {
+        // Fixed words only. A parse failure's own message is not reported, because it can quote the recipe.
+        run.dependencies.report(
+          "assistant",
+          "internal_error",
+          new Error("a recipe draft cannot be drawn"),
+        );
+      }
+    }
     // A link on its own, under the words of an answer that changed nothing (a day that cannot be removed here).
     if (structured.data.link !== undefined) {
       const link = assistantCardLinkSchema.safeParse(structured.data.link);
@@ -671,6 +699,9 @@ async function finishCall(
   }
   if (formCard !== null) {
     run.pendingExerciseFormMedia.push(formCard);
+  }
+  if (recipeDraft !== null) {
+    run.pendingRecipeDrafts.push(recipeDraft);
   }
   return null;
 }
@@ -765,6 +796,15 @@ async function runToolUse(
     );
     return null;
   }
+  if (session.generationTools.has(name) && run.generationCalls >= MAX_GENERATION_CALLS_PER_TURN) {
+    // Nothing was spent, and the model is told to say that one recipe or plan comes at a time.
+    await storeToolResult(
+      run,
+      toolResultBlock(id, wrapUntrusted(name, { error: "one_generation_per_turn" }), true),
+      null,
+    );
+    return null;
+  }
   if (
     session.generationTools.has(name) &&
     (run.limits.wallClockMilliseconds ?? WALL_CLOCK_MILLISECONDS) -
@@ -797,6 +837,9 @@ async function runToolUse(
     });
   }
   run.counts.toolCalls += 1;
+  if (session.generationTools.has(name)) {
+    run.generationCalls += 1;
+  }
   // Once. A throw is a `McpClientError`, the turn ends, and the call is not made again.
   const result = await session.connection.callTool(name, input);
   if (result.outcome.status === "error" && result.outcome.code === "unknown_tool") {
@@ -1167,6 +1210,10 @@ async function conclude(run: Run, reached: Ending): Promise<Ending> {
       emit(run, { type: "exercise_form_media", exercise });
     }
     run.pendingExerciseFormMedia = [];
+    for (const draft of run.pendingRecipeDrafts) {
+      emit(run, { type: "recipe_draft", draft });
+    }
+    run.pendingRecipeDrafts = [];
   }
   const final = endedAfterWrite ? await endWithWordsAfterWrite(run, early) : early;
   if (final.status === "complete") {
@@ -1236,6 +1283,8 @@ export function createRunTurn(
       pendingCards: [],
       pendingExerciseMuscles: [],
       pendingExerciseFormMedia: [],
+      pendingRecipeDrafts: [],
+      generationCalls: 0,
       citations: [],
       estimates: [],
     };

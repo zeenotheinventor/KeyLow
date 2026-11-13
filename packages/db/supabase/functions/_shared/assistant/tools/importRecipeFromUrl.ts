@@ -28,14 +28,19 @@ import {
   buildRecipeIngredient,
   importCandidate,
   importedAmountOf,
-  importFoodCandidates,
-  importSearchWords,
 } from "../../core.ts";
-import { createRecipe, getFood, listFoodPortions, searchFoods } from "../../repos.ts";
+import { createRecipe } from "../../repos.ts";
 import { readRecipeJsonLd } from "../../recipeJsonLd.ts";
 import { visibleText } from "../../recipePageText.ts";
 import { picksFitLines } from "../recipeParse.ts";
 import { urlInUserMessage } from "../urls.ts";
+import {
+  candidatesOfWords,
+  inBatches,
+  readFoodAndPortions,
+  SEARCH_TEXT_MAX_CHARACTERS,
+  SEARCHES_AT_ONCE,
+} from "./foodMatching.ts";
 import {
   archiveMadeRecipe,
   cardRecipeOf,
@@ -47,6 +52,7 @@ import {
 } from "./recipeWrite.ts";
 
 import type { RecipeImportedLine, RecipeIngredient } from "../../core.ts";
+import type { FoodAndPortions } from "./foodMatching.ts";
 import type { FoodPickLine, ParsedMeasure } from "../recipeParse.ts";
 import type { ToolContext, WriteRunOutput, WriteToolDefinition } from "../tool.ts";
 
@@ -89,11 +95,6 @@ export const defaultImportLimits: ImportLimits = {
 
 // The visible text of a page with no JSON-LD, cut here, which is about 4,000 tokens.
 const PAGE_TEXT_MAX_CHARACTERS = 15_000;
-// The most searches at once, so a long ingredient list does not open forty requests together.
-const SEARCHES_AT_ONCE = 8;
-// Hits asked of the search for one word. The line's candidates are cut from them in core.
-const HITS_PER_SEARCH = 50;
-const SEARCH_TEXT_MAX_CHARACTERS = 80;
 // The page's own line, cut for the pick call.
 const PICK_LINE_MAX_CHARACTERS = 300;
 // The least time left for a save to start (a write tool call measured 77 to 303 ms).
@@ -113,35 +114,12 @@ type Resolution = {
   guess: { amount: number; unit: "g" | "ml" } | null;
 };
 
-type FoodHit = Awaited<ReturnType<typeof searchFoods>>[number];
-
-// The foods to offer for each line: the hits of every search word of the line, joined and cut in core. A line
-// with no food word has none. At most `SEARCHES_AT_ONCE` searches run together, across all the lines.
-async function candidatesOf(ctx: ToolContext, lines: readonly ReadLine[]): Promise<FoodHit[][]> {
-  const searches = lines.flatMap((line, lineIndex) =>
-    (line.food_name?.trim() ?? "").length < 2
-      ? []
-      : importSearchWords(line.food_name?.trim().slice(0, SEARCH_TEXT_MAX_CHARACTERS) ?? "").map(
-          (word) => ({ lineIndex, word }),
-        ),
+// The foods to offer for each line, from the words the model read from it (see `candidatesOfWords`).
+const candidatesOf = (ctx: ToolContext, lines: readonly ReadLine[]) =>
+  candidatesOfWords(
+    ctx,
+    lines.map((line) => line.food_name),
   );
-  const hits = await inBatches(searches, SEARCHES_AT_ONCE, ({ word }) =>
-    searchFoods(ctx.caller, word, HITS_PER_SEARCH),
-  );
-  return lines.map((line, lineIndex) =>
-    importFoodCandidates(
-      line.food_name?.trim().slice(0, SEARCH_TEXT_MAX_CHARACTERS) ?? "",
-      searches.flatMap(({ lineIndex: searched }, searchIndex) =>
-        searched === lineIndex ? [hits[searchIndex] ?? []] : [],
-      ),
-    ),
-  );
-}
-
-type FoodAndPortions = {
-  food: NonNullable<Awaited<ReturnType<typeof getFood>>>;
-  portions: Awaited<ReturnType<typeof listFoodPortions>>;
-};
 
 // The line saved with the food the model chose, from there on as before: its portions, its amount and its check.
 async function resolveLine(
@@ -153,14 +131,7 @@ async function resolveLine(
   if (foodId === null) {
     return null;
   }
-  let read = foods.get(foodId);
-  if (read === undefined) {
-    read = Promise.all([getFood(ctx.caller, foodId), listFoodPortions(ctx.caller, foodId)]).then(
-      ([food, portions]) => (food === null || food.deleted_at !== null ? null : { food, portions }),
-    );
-    foods.set(foodId, read);
-  }
-  const found = await read;
+  const found = await readFoodAndPortions(ctx, foodId, foods);
   if (found === null) {
     return null;
   }
@@ -205,25 +176,6 @@ async function resolveLine(
         guess: amount.guess,
       }
     : null;
-}
-
-// Runs `work` for every item, at most `limit` at once, and keeps the order.
-async function inBatches<Item, Result>(
-  items: readonly Item[],
-  limit: number,
-  work: (item: Item) => Promise<Result>,
-): Promise<Result[]> {
-  const results: Result[] = [];
-  let next = 0;
-  const worker = async () => {
-    while (next < items.length) {
-      const index = next;
-      next += 1;
-      results[index] = await work(items[index] as Item);
-    }
-  };
-  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
-  return results;
 }
 
 type ReadLine = ParsedMeasure & { text: string };
