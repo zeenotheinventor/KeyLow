@@ -9,14 +9,16 @@
 // - It also needs `X-Kilo-Local-Date` (YYYY-MM-DD, else 400) and may send `X-Kilo-Local-Time` (HH:MM),
 //   the day and hour of the turn's sheet, which a write defaults to. `tools/list` says in each tool's
 //   `_meta["kilo/strict"]` whether the model's API should hold it to its schema.
-// - `import_recipe_from_url` is the one tool that reaches outside the project: it fetches a recipe page and makes one
-//   tool-less Haiku call, so this function reads `ANTHROPIC_API_KEY` and `ANTHROPIC_BASE_URL` too.
+// - `import_recipe_from_url` fetches a recipe page and makes tool-less Haiku calls, and the kitchen tools make one
+//   tool-less Opus 5.5 call each (`_shared/assistant/generate.ts`), so this function reads `ANTHROPIC_API_KEY`
+//   and `ANTHROPIC_BASE_URL` too.
 // - `search_foods` and `get_food` call the project's `off-search` and `off-product` functions over HTTP with
 //   the caller's JWT, and read `SUPABASE_URL` for it. They never call Open Food Facts themselves.
 // - `tools/call` answers the executor's wrapped text as `content`, which is all the model reads, and
 //   its outcome as `structuredContent`, which only the turn loop reads. Nothing here logs an argument
 //   or a result.
 import { requireUser } from "../_shared/auth.ts";
+import { createGenerationServices } from "../_shared/assistant/generate.ts";
 import { createOffLookup } from "../_shared/assistant/offLookup.ts";
 import { createRecipeImportServices } from "../_shared/assistant/recipeParse.ts";
 import { toolRegistry } from "../_shared/assistant/registry.ts";
@@ -26,7 +28,7 @@ import { handle } from "../_shared/http.ts";
 import { fetchRecipePage } from "../_shared/recipePage.ts";
 import { recipePageTestOverrides } from "../_shared/recipePageTestOrigin.ts";
 import { reportError } from "../_shared/report.ts";
-import { recordUsage } from "../assistant/usage.ts";
+import { hasPrice, recordUsage } from "../assistant/usage.ts";
 import { createMcpEndpoint } from "./routes.ts";
 import { createMcpTurnStore } from "./turns.ts";
 
@@ -51,6 +53,14 @@ Deno.serve(
             timeoutMilliseconds,
             ...recipePageTestOverrides((name) => Deno.env.get(name)),
           }),
+      }),
+      // The Opus generation call of the kitchen tools reads the same two variables, as the import does
+      // (ADR 0006, Amendment 6). A missing key is `generation_failed`, never a throw.
+      generation: createGenerationServices({
+        readEnv: (name) => Deno.env.get(name),
+        recordUsage: (call) => recordUsage(service, call),
+        report: reportError,
+        hasPrice,
       }),
       // `search_foods` and `get_food` reach Open Food Facts only through `off-search` and `off-product`,
       // under the caller's JWT, so their limits and the shared store apply (ADR 0006, Amendment 3).

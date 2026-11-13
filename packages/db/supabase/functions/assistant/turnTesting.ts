@@ -384,6 +384,12 @@ export const listedKitchen = (
   properties: Record<string, unknown> = {},
 ): ListedTool => ({ ...listed(name, readOnlyHint, properties, false), group: "kitchen" });
 
+// A tool that makes an Opus generation call (ADR 0006, Amendment 6).
+export const listedGeneration = (
+  name: string,
+  properties: Record<string, unknown> = {},
+): ListedTool => ({ ...listed(name, true, properties, false), generation: true });
+
 export const allowlistToolsOf = (tools: readonly ListedTool[]): AllowlistTool[] =>
   tools.map(({ name, readOnlyHint, group }) => ({
     name,

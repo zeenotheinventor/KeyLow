@@ -1,6 +1,11 @@
 import { assert, assertEquals, assertInstanceOf, assertRejects } from "@std/assert";
 
-import { connectToolServer, McpClientError, mayRetry } from "./mcpClient.ts";
+import {
+  connectToolServer,
+  GENERATION_CALL_TIMEOUT_MILLISECONDS,
+  McpClientError,
+  mayRetry,
+} from "./mcpClient.ts";
 import { readToolName, startTestServer, writeToolName } from "./mcpTestServer.ts";
 import { createRegistry } from "./registry.ts";
 import { fakeReadTool, fakeWriteTool, spyOnConsole, turnId } from "./testing.ts";
@@ -659,6 +664,18 @@ Deno.test("mayRetry follows the rule for each step and error", async () => {
       false,
     ],
   ];
+  rows.push([
+    "a generation tool that only reads is never repeated",
+    {
+      turnId,
+      step: "call_tool",
+      tool: { readOnlyHint: true, generation: true },
+      attempt: 1,
+      error: error("mcp_unreachable"),
+    },
+    false,
+    false,
+  ]);
   for (const [label, failure, hasRow, expected] of rows) {
     assertEquals(await mayRetry(failure, () => Promise.resolve(hasRow)), expected, label);
   }
@@ -765,3 +782,103 @@ Deno.test(
     });
   },
 );
+
+const generationToolName = "generate_one";
+const generationRegistry = () =>
+  createRegistry([
+    fakeReadTool(readToolName).definition,
+    { ...fakeReadTool(generationToolName).definition, generation: true },
+  ]);
+const generationOptions = (server: TestServer, overrides: Partial<ConnectToolServerOptions> = {}) =>
+  connectionOptions(server, {
+    allowedTools: [readToolName, generationToolName],
+    ...overrides,
+  });
+
+Deno.test("a generation call has a 55 s timeout", () => {
+  assertEquals(GENERATION_CALL_TIMEOUT_MILLISECONDS, 55_000);
+});
+
+Deno.test(
+  "listTools says which tools make a generation call and leaves the rest unmarked",
+  async () => {
+    await withServer({ registry: generationRegistry() }, async (server) => {
+      const connection = await connectToolServer(generationOptions(server));
+
+      const tools = await connection.listTools();
+
+      assertEquals(
+        tools.map((tool) => tool.generation === true),
+        [false, true],
+      );
+      await connection.close();
+    });
+  },
+);
+
+const slowToolCall = (milliseconds: number) => async (request: RecordedRequest) => {
+  if (request.rpc.method === "tools/call") {
+    await new Promise((resolve) => setTimeout(resolve, milliseconds));
+  }
+  return undefined;
+};
+
+Deno.test(
+  "a generation call waits for its own timeout, longer than the request timeout",
+  async () => {
+    await withServer(
+      { registry: generationRegistry(), answer: slowToolCall(400) },
+      async (server) => {
+        const connection = await connectToolServer(
+          generationOptions(server, {
+            requestTimeoutMilliseconds: 150,
+            generationCallTimeoutMilliseconds: 2_000,
+          }),
+        );
+        await connection.listTools();
+
+        const result = await connection.callTool(generationToolName, { note: "x" });
+
+        assertEquals(result.outcome.status, "ok");
+        await connection.close();
+      },
+    );
+  },
+);
+
+Deno.test("another tool still gets the request timeout", async () => {
+  await withServer(
+    { registry: generationRegistry(), answer: slowToolCall(400) },
+    async (server) => {
+      const connection = await connectToolServer(
+        generationOptions(server, {
+          requestTimeoutMilliseconds: 150,
+          generationCallTimeoutMilliseconds: 2_000,
+        }),
+      );
+      await connection.listTools();
+
+      await assertClientError(connection.callTool(readToolName, { note: "x" }), "mcp_unreachable");
+      await connection.close();
+    },
+  );
+});
+
+Deno.test("a generation call that times out is not repeated, though it only reads", async () => {
+  await withServer(
+    { registry: generationRegistry(), answer: slowToolCall(600) },
+    async (server) => {
+      const connection = await connectToolServer(
+        generationOptions(server, { generationCallTimeoutMilliseconds: 150 }),
+      );
+      await connection.listTools();
+
+      await assertClientError(
+        connection.callTool(generationToolName, { note: "x" }),
+        "mcp_unreachable",
+      );
+      assertEquals(requestsFor(server, "tools/call").length, 1);
+      await connection.close();
+    },
+  );
+});

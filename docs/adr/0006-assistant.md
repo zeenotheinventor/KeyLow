@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted when the pull request that carries it merges. Written on 2026-10-26 under KEY-662, part of KEY-185 (the M8 brief). The tables, columns and functions it needs are in ADR 0003, Amendment 14. Every M8 migration waits for both documents. Amended on 2026-11-07 under KEY-883, part of KEY-881 (the brief for weight training): see Amendment 1, Amendment 2, Amendment 3, Amendment 4 and Amendment 5 at the end. Two decisions in it were taken by the orchestrator while Zee was away, for his review, and are marked as such.
+Accepted when the pull request that carries it merges. Written on 2026-10-26 under KEY-662, part of KEY-185 (the M8 brief). The tables, columns and functions it needs are in ADR 0003, Amendment 14. Every M8 migration waits for both documents. Amended on 2026-11-07 under KEY-883, part of KEY-881 (the brief for weight training): see Amendment 1, Amendment 2, Amendment 3, Amendment 4, Amendment 5 and Amendment 6 at the end. Two decisions in it were taken by the orchestrator while Zee was away, for his review, and are marked as such.
 
 ## Context
 
@@ -106,11 +106,12 @@ These come from the health-data rules in `AGENTS.md`.
 
 ### Models and request rules
 
-| Route                          | Model                          | Use                                                                                                       |
-| ------------------------------ | ------------------------------ | --------------------------------------------------------------------------------------------------------- |
-| Chat, describe, recipe parsing | Haiku 5.5 (`claude-haiku-5-5`) | The streaming turn loop, the tool-less recipe parse and the tool-less choice of each imported line's food |
-| Compaction                     | Haiku 5.5, no tools            | One call per compaction                                                                                   |
-| Coaching, later                | Opus 5.5 (`claude-opus-5-5`)   | After M6, not part of M8's build                                                                          |
+| Route                          | Model                          | Use                                                                                                             |
+| ------------------------------ | ------------------------------ | --------------------------------------------------------------------------------------------------------------- |
+| Chat, describe, recipe parsing | Haiku 5.5 (`claude-haiku-5-5`) | The streaming turn loop, the tool-less recipe parse and the tool-less choice of each imported line's food       |
+| Compaction                     | Haiku 5.5, no tools            | One call per compaction                                                                                         |
+| Coaching, later                | Opus 5.5 (`claude-opus-5-5`)   | After M6, not part of M8's build                                                                                |
+| Recipe and plan generation     | Opus 5.5 (`claude-opus-5-5`)   | One tool-less structured-output call inside each generation tool, effort `low`, refusal fallbacks (Amendment 6) |
 
 - Never send `temperature`, `top_p` or `top_k`. On API version `2026-10-21` any value is a 400 on every model.
 - `tool_choice` is always `auto`, with the rules in the system prompt and `strict: true` on every tool, except a tool that opts out to stay inside the API's caps on strict tools (KEY-688: strict by default, and the executor validates every input either way). Every training tool opts out (Amendment 1). A forced tool choice is a 400 on Opus 5.5.
@@ -498,3 +499,36 @@ With the formula of `promptPrefix.test.ts` (system prompt length plus the tools 
 ### Implemented by
 
 - KEY-1022, the group, the adapter field, the beta header, the trigger, the stored addition, the replay rules, the allowlist rule, the switch, the prefix tests, the probe tool, the `kitchenProbe` eval set and this amendment.
+
+## Amendment 6 to this ADR: Opus generation inside the kitchen tools (2026-11-13)
+
+### Status
+
+Recorded on 2026-11-13 under KEY-1026, part of KEY-216 (the M9 brief for the palate, recipe generation and meal plans). It follows Zee's ruling of 2026-11-12 that generation runs on Opus 5.5 while the chat turn loop stays on Haiku, and the ruling of 2026-11-13 that production is on the Supabase free plan, with a 150 s wall clock. The two new `assistant_usage.route` values are ADR 0003, Amendment 22 (KEY-1016). This amendment adds no table or column. The live timing waits for KEY-1020, so the figures below are the plan's estimates until KEY-1026 records its measurements.
+
+### Context
+
+Haiku 5.5 routes a kitchen turn. It passes the person's words and any figures to a kitchen tool and reports what the tool returned. Proposing a recipe, a substitution or a ranking for a plan needs a stronger model, and moving the turn loop to Opus would re-bill the chat prefix as an Opus cache write, mix two models' thinking blocks in one history and put every existing eval set on a second model. The generation therefore happens inside the tool, the way `recipe_parse` makes its tool-less call (KEY-838).
+
+### Decision
+
+- **Models table, new row.** Recipe and plan generation: Opus 5.5 (`claude-opus-5-5`), one tool-less structured-output call inside each of the three generation tools, effort `low`, refusal fallbacks. The Coaching row of the table is unchanged, because coaching is not built.
+- **One module makes the call.** `_shared/assistant/generate.ts` takes the system prompt, the user message already wrapped as untrusted data, the schema for `output_config.format` and a reader, and answers a typed value or a typed failure. The reader is a core function (`packages/core/src/assistant/kitchenGeneration.ts`) that bounds every string and array and checks every position and id against what the tool offered. A reply that does not fit is `generation_failed`. Opus proposes structure and core computes every number.
+- **The request.** `max_tokens` 3,000. `output_config` holds `effort: "low"`, set explicitly because the default on Opus 5.5 is `medium`, and `format` (not the deprecated `output_format`). `thinking` is left out, because it cannot be disabled on Opus 5.5 and effort is its control. There is no `temperature`, `top_p`, `top_k`, `tool_choice`, `tools`, prefill or `inference_geo`.
+- **Refusals.** The request opts into server-side fallbacks with the beta `server-side-fallback-2026-07-01` and `fallbacks: "default"`. `stop_reason` is read before the content. A final `refusal` means the whole chain refused and is `generation_refused`. A fallback model may have served the request, so the usage row names the model in `response.model`. A model that `usage.ts` has no price for is recorded under Opus 5.5, which is the dearest model a request can start on, so the spend still counts against the monthly cap and no call is dropped from it.
+- **Failures are three codes and carry no content.** `generation_refused`, `generation_timeout` (the 40 s call timeout) and `generation_failed` (an API error, a cut-off answer, an unreadable answer, an answer outside the bounds or the offered list, or a missing key). A reported error is the SDK's or the database's, and none quotes the person's words, a recipe or a plan.
+- **One usage row for each billed attempt,** whether the call answered or not, with route `recipe_generate` or `plan_generate` and transport `none`. When the response carries `usage.iterations`, which is the per-attempt source of truth (the top-level `usage` covers only the attempt that produced the returned message), there is one row for each entry: a declined Opus hop is a `message` entry recorded at Opus rates, and the fallback that served is a `fallback_message` entry recorded under its own model and tokens, or at Opus rates when that model has no price. Without iterations there is one row from the top-level usage. The answer is read only from the text after the last `fallback` content block, so partial text from a declined hop never reaches the reader. A missing key makes no call and writes no row. `usage.ts` prices Opus 5.5 at $4 per million input tokens, $20 output and $0.20 for cache reads. The cache write is 1.25 times the input rate ($5), the rule the Haiku rates already follow, and there is one rate card whatever the length of the prompt. The unknown-model throw therefore cannot fire for a call this module makes.
+- **Timeouts in the turn loop.** A tool carries `generation: true` on its definition, which `tools/list` sends as `_meta["kilo/generation"]` and the MCP client reads into `ListedTool.generation`. The three generation tools wait 55 s for a call (every other tool keeps 20 s) and are never repeated, as a write is not, even when the tool only reads. The Opus call inside has its own 40 s timeout, which leaves 15 s for what the tool does after it. The loop starts a generation tool only while at least 65 s of the 150 s wall clock remain: 55 s for the call and 10 s for what follows it. Otherwise the tool is not called, nothing is spent and the model receives the error `busy_try_again`. The turn deadline of 100 s and the 20 s of every other tool are unchanged.
+- **The `mcp` function reads the Anthropic key for generation too.** It already reads `ANTHROPIC_API_KEY` and `ANTHROPIC_BASE_URL` for the recipe import, from the project's function secrets, so no second secret is set. The generation services reach a tool as `ToolContext.generation`, and a context without it makes a generation tool answer `tool_failed`.
+
+### Consequences
+
+- **The monthly cap undercounts a call that timed out or errored.** Such a call is recorded with 0 tokens, because no usage arrived to read, although the API may have billed it. The USD 10 cap and the Console workspace limit behind it bound the error.
+- A kitchen job costs about $0.05 for a suggestion, $0.03 for a substitution and $0.08 to $0.13 for a seven-day plan, from the plan's estimates. The daily limit counts turns and not money, so it does not bound Opus spend. The monthly cap of USD 10 (`ASSISTANT_MONTHLY_CAP_USD_MICROS`) does, for the whole app.
+- A turn that reaches a generation tool late answers `busy_try_again`, and the person asks again. That is a worse answer than a long wait, and it is the price of ending inside 150 s on the free plan. On a paid plan (400 s) the 65 s and the 55 s can relax.
+- The acceptance of 10 live calls of each of the three jobs, with a 95th percentile under 40 s, has not run. It waits for the eval workspace and key of KEY-1020, and KEY-1026 records the measured cost and timing when it does. If a seven-day plan misses 40 s, the plan job ranks once for each time band and not for each day.
+- The chat prompt, the tool prefix and every eval set that runs on Haiku are untouched.
+
+### Implemented by
+
+- KEY-1026, `generate.ts`, the Opus 5.5 prices, the readers in core, the generation flag and its two timeouts, the start guard in the turn loop and this amendment.

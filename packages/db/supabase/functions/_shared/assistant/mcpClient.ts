@@ -16,9 +16,13 @@ import {
 import { z } from "zod";
 
 import { logLine } from "../log.ts";
-import { groupMetaKey, strictMetaKey } from "./tool.ts";
+import { generationMetaKey, groupMetaKey, strictMetaKey } from "./tool.ts";
 
 import type { JsonSchemaObject, ToolGroup } from "./tool.ts";
+
+// A tool that makes an Opus generation call waits this long for its answer. Every other tool waits the request
+// timeout (20 s in the turn loop). The tool keeps its own call inside 40 s (`generate.ts`).
+export const GENERATION_CALL_TIMEOUT_MILLISECONDS = 55_000;
 
 const functionPath = "/functions/v1/mcp";
 const clientInfo = { name: "kilo-assistant", version: "1.0.0" };
@@ -54,6 +58,8 @@ export type ListedTool = {
   strict: boolean;
   // The group the tool starts hidden in, when it has one. The kitchen group is sent with `defer_loading`.
   group?: ToolGroup;
+  // The tool makes one Opus generation call. It is waited for longer and never repeated.
+  generation?: true;
 };
 
 // The executor's outcome, which `mcp` returns as `structuredContent`. Only the turn loop reads it.
@@ -95,6 +101,8 @@ export type ConnectToolServerOptions = {
   // Whether the turn has an `assistant_actions` row, read with the service client by the caller.
   turnHasAction: TurnHasAction;
   requestTimeoutMilliseconds?: number;
+  // How long a call to a generation tool waits. Defaults to `GENERATION_CALL_TIMEOUT_MILLISECONDS`.
+  generationCallTimeoutMilliseconds?: number;
   // A list the caller already holds. The connection then knows which tools only read, for the retry rule,
   // without a `tools/list` round trip of its own.
   knownTools?: readonly ListedTool[];
@@ -112,7 +120,7 @@ export type RetryFailure = {
   turnId: string;
   step: RetryStep;
   // The tool of a `call_tool` step, or undefined when the list did not name it.
-  tool?: Pick<ListedTool, "readOnlyHint"> | undefined;
+  tool?: Pick<ListedTool, "readOnlyHint" | "generation"> | undefined;
   // How many attempts have failed so far, this one included.
   attempt: number;
   error: McpClientError;
@@ -136,7 +144,8 @@ export async function mayRetry(
   if (step !== "call_tool") {
     return true;
   }
-  if (tool?.readOnlyHint !== true) {
+  // A generation call spends money, so it is never repeated, as a write is not.
+  if (tool?.readOnlyHint !== true || tool.generation === true) {
     return false;
   }
   try {
@@ -220,7 +229,7 @@ type Step<Value> = {
   // A name the list gave, "unknown" for one it did not, "none" outside a call. The model chose the name
   // of a call, so an unlisted one is not copied into the log.
   toolLabel: string;
-  tool?: Pick<ListedTool, "readOnlyHint"> | undefined;
+  tool?: Pick<ListedTool, "readOnlyHint" | "generation"> | undefined;
   codeOf?: (value: Value) => string;
   run: () => Promise<Value>;
 };
@@ -263,6 +272,8 @@ export async function connectToolServer(
     run: () => openClient(options),
   });
   const timeout = options.requestTimeoutMilliseconds ?? DEFAULT_REQUEST_TIMEOUT_MSEC;
+  const generationTimeout =
+    options.generationCallTimeoutMilliseconds ?? GENERATION_CALL_TIMEOUT_MILLISECONDS;
   // What the last list said, to tell a read from a write when a call fails. The list itself is fetched
   // again on every call to `listTools` and the SDK's own cache is bypassed. On the served local stack the
   // round trip measured 0.2 s at the median (KEY-795), because every request to `mcp` pays the JWT check
@@ -285,6 +296,7 @@ export async function connectToolServer(
             readOnlyHint: tool.annotations?.readOnlyHint === true,
             strict: tool._meta?.[strictMetaKey] !== false,
             ...(tool._meta?.[groupMetaKey] === "kitchen" ? { group: "kitchen" as const } : {}),
+            ...(tool._meta?.[generationMetaKey] === true ? { generation: true as const } : {}),
           }));
         },
       }).then((tools) => {
@@ -303,7 +315,10 @@ export async function connectToolServer(
         tool,
         codeOf: outcomeCode,
         async run() {
-          const result = await client.callTool({ name, arguments: input }, { timeout });
+          const result = await client.callTool(
+            { name, arguments: input },
+            { timeout: tool?.generation === true ? generationTimeout : timeout },
+          );
           const outcome = outcomeSchema.safeParse(result.structuredContent);
           if (!outcome.success) {
             throw new McpClientError("mcp_protocol");

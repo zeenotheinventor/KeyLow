@@ -2,6 +2,9 @@
 // bundle behind it is written by `bundle-core-for-deno` and typed by the @ts-self-types pragma in
 // it, so a missing or stale bundle fails `deno check` here. Export what a function needs.
 export type {
+  PlanRanking,
+  RecipeSuggestion,
+  Substitution,
   Food,
   PortionEstimateItemResult,
   FoodPortion,
@@ -70,6 +73,12 @@ export type {
 } from "./core/index.js";
 export {
   addCalendarDays,
+  planRankingSchema,
+  readPlanRanking,
+  readRecipeSuggestion,
+  readSubstitution,
+  recipeSuggestionSchema,
+  substitutionSchema,
   ASSISTANT_CONSENT_VERSION,
   isAssistantConsentCurrent,
   assistantCardSchema,
