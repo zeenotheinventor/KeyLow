@@ -22,6 +22,7 @@ import { createFood, logQuickEntry } from "@keylow/api-client";
 import { confirmArchiveRoutineButtons } from "@keylow/core";
 
 import { createEditWorld } from "./redTeamEdits.ts";
+import { createKitchenRedTeamWorld } from "./redTeamKitchen.ts";
 import {
   TRAINING_DAY_OFFSETS,
   TRAINING_TEXTS,
@@ -31,6 +32,7 @@ import {
 } from "./redTeamTraining.ts";
 
 import type { EditWorld } from "./redTeamEdits.ts";
+import type { KitchenRedTeamWorld } from "./redTeamKitchen.ts";
 import type { TrainingOfB, TrainingRowIds } from "./redTeamTraining.ts";
 import type { FixtureUser, StackConfig } from "../src/fixtureUser.ts";
 import type { Database } from "@keylow/api-client";
@@ -152,6 +154,8 @@ export type RedTeamWorld = Readonly<{
   callMcpGetWorkoutAsB: () => Promise<McpAttempt>;
   /** The rows and the direct calls of the cases of the training edits (KEY-912). See `redTeamEdits.ts`. */
   edits: EditWorld;
+  /** The rows and the direct calls of the kitchen cases (KEY-1038). See `redTeamKitchen.ts`. */
+  kitchen: KitchenRedTeamWorld;
   /** A calls `log_entry` through the `mcp` function on an open turn of A whose message has no text. */
   callMcpOnBlankTurnOfA: () => Promise<McpAttempt>;
   /**
@@ -591,6 +595,16 @@ export async function createRedTeamWorld({
       callMcp,
       archiveRoutineButtonWords: confirmArchiveRoutineButtons().confirmLabel,
       undoTurn,
+    }),
+    kitchen: createKitchenRedTeamWorld({
+      stack,
+      userA,
+      userB,
+      anchorDate,
+      serviceClient,
+      token,
+      withOpenTurn,
+      callMcp,
     }),
     callMcpOnBlankTurnOfA: () =>
       withOpenTurn(userA, "", ({ turnId }) =>

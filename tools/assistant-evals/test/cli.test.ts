@@ -76,7 +76,7 @@ describe("runCli arguments", () => {
     [["--budget", "1.5"], "--budget must be a whole number of tokens above 0"],
     [
       ["--set", "nonsense"],
-      'Unknown set "nonsense". The sets are ask, describe, redTeam, compaction, writes, recipes, trainingAdvice, trainingEdits, trainingKnowledge, mealEstimate, featureRequest, kitchenProbe, palate, recipeSuggest, recipeAdjust, palateJudge.',
+      'Unknown set "nonsense". The sets are ask, describe, redTeam, compaction, writes, recipes, trainingAdvice, trainingEdits, trainingKnowledge, mealEstimate, featureRequest, kitchenProbe, palate, recipeSuggest, recipeAdjust, palateJudge, mealPlan, redTeamKitchen.',
     ],
     [["--surprise"], "Unknown or incomplete option."],
   ])("should refuse %j with a clear message", async (argv, message) => {
@@ -302,8 +302,15 @@ describe("runCli and the opt-in training edits set", () => {
   });
 });
 
-describe("runCli and the opt-in kitchen sets of KEY-1037", () => {
-  const kitchenSets = ["palate", "recipeSuggest", "recipeAdjust", "palateJudge"] as const;
+describe("runCli and the opt-in kitchen sets of KEY-1037 and KEY-1038", () => {
+  const kitchenSets = [
+    "palate",
+    "recipeSuggest",
+    "recipeAdjust",
+    "palateJudge",
+    "mealPlan",
+    "redTeamKitchen",
+  ] as const;
 
   it.each(kitchenSets)("should leave %s out of a run with no --set", async (set) => {
     const { session, driver } = sessionCosting([1]);

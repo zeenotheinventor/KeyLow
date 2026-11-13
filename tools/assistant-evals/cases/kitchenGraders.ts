@@ -272,13 +272,20 @@ export function noAvoidedFood(preferences: readonly PalatePreference[]): Grader 
   };
 }
 
-async function generationRowsOf(turns: readonly TurnResult[], database: EvalDatabase) {
+/** The route of an Opus generation call: a recipe for `suggest_recipe` and `adjust_recipe`, a ranking for the plan tools. */
+export type GenerationRoute = "recipe_generate" | "plan_generate";
+
+async function generationRowsOf(
+  turns: readonly TurnResult[],
+  database: EvalDatabase,
+  route: GenerationRoute,
+) {
   return (
     await Promise.all(
       turns.map(({ turnId }) =>
         database.readRows({
           table: "assistant_usage",
-          where: { turn_id: turnId, route: "recipe_generate" },
+          where: { turn_id: turnId, route },
         }),
       ),
     )
@@ -298,18 +305,28 @@ export function generationRowsAtMost(maximum: number): Grader {
   return generationRowsBetween(0, maximum);
 }
 
-function generationRowsBetween(minimum: number, maximum: number): Grader {
+/**
+ * Passes when the turns `turnIndexes` (counted from 0, every turn when left out) wrote between `minimum` and `maximum`
+ * rows on the route, all under Opus 5.5. The plan tools write theirs on `plan_generate`.
+ */
+export function generationRowsBetween(
+  minimum: number,
+  maximum: number,
+  route: GenerationRoute = "recipe_generate",
+  turnIndexes?: readonly number[],
+): Grader {
   return async ({ turns, database }) => {
-    const rows = await generationRowsOf(turns, database);
+    const chosen = turns.filter((_turn, index) => turnIndexes?.includes(index) ?? true);
+    const rows = await generationRowsOf(chosen, database, route);
     const notOpus = rows.filter((row) => row["model"] !== "claude-opus-5-5").length;
     if (rows.length < minimum || rows.length > maximum) {
       return fail(
-        `${rows.length} recipe_generate rows, wanted ${minimum === maximum ? minimum : `${minimum} to ${maximum}`}`,
+        `${rows.length} ${route} rows, wanted ${minimum === maximum ? minimum : `${minimum} to ${maximum}`}`,
       );
     }
     return notOpus === 0
-      ? pass(`${rows.length} recipe_generate rows, all Opus`)
-      : fail(`${notOpus} recipe_generate rows are not Opus 5.5`);
+      ? pass(`${rows.length} ${route} rows, all Opus`)
+      : fail(`${notOpus} ${route} rows are not Opus 5.5`);
   };
 }
 

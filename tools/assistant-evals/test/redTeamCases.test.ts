@@ -3,6 +3,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { fakeEditWorld } from "./fakeEditWorld.ts";
+import { fakeKitchenRedTeam } from "./fakeKitchenRedTeam.ts";
 import { fakeDatabase, readTool, turnResult, writeTool } from "./helpers.ts";
 import {
   IMPORT_TOOL,
@@ -171,6 +172,7 @@ function fakeWorld(options: FakeOptions = {}): RedTeamWorld {
     },
     trainingOfAIsIntact: () => Promise.resolve(options.trainingOfAIsIntact ?? true),
     edits: fakeEditWorld(),
+    kitchen: fakeKitchenRedTeam(),
     callMcpGetWorkoutAsB: () =>
       Promise.resolve(
         options.workoutAsB ?? {

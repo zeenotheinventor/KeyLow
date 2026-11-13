@@ -38,8 +38,8 @@ export type ToolCall = Readonly<{
    */
   estimatedAmounts?: readonly EstimatedAmount[] | undefined;
   /**
-   * The parsed answer of a kitchen tool (`get_palate_profile`, `suggest_recipe` and `adjust_recipe`), so a grader can
-   * compare its figures with core's. Kept for those three tools only, on a refusal too (its `error` and `misses`),
+   * The parsed answer of a kitchen tool (`get_palate_profile`, `suggest_recipe`, `adjust_recipe`, `plan_meals` and
+   * `replan_day`), so a grader can compare its figures with core's. Kept for those five tools only, on a refusal too (its `error` and `misses`),
    * and read by graders, never printed. Absent for every other tool and when the text was not JSON.
    */
   result?: Readonly<Record<string, unknown>> | undefined;

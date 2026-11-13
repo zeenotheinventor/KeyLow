@@ -9,6 +9,7 @@ import { exerciseMusclesCases } from "../cases/exerciseMuscles.ts";
 import { featureRequestCases } from "../cases/featureRequest.ts";
 import { kitchenProbeCases } from "../cases/kitchenProbe.ts";
 import { mealEstimateCases } from "../cases/mealEstimate.ts";
+import { mealPlanCases } from "../cases/mealPlan.ts";
 import { palateCases } from "../cases/palate.ts";
 import { palateJudgeCases } from "../cases/palateJudge.ts";
 import { recipeAdjustCases } from "../cases/recipeAdjust.ts";
@@ -16,6 +17,7 @@ import { recipeCases } from "../cases/recipes.ts";
 import { recipeSuggestCases } from "../cases/recipeSuggest.ts";
 import { redTeamCases } from "../cases/redteam.ts";
 import { redTeamEditCases } from "../cases/redteamEdits.ts";
+import { redTeamKitchenDirectCases, redTeamKitchenModelCases } from "../cases/redteamKitchen.ts";
 import { trainingAdviceCases } from "../cases/trainingAdvice.ts";
 import { trainingEditsCases } from "../cases/trainingEdits.ts";
 import { trainingKnowledgeCases } from "../cases/trainingKnowledge.ts";
@@ -53,9 +55,12 @@ export function createRunDependencies(
       ...palateCases,
       ...recipeSuggestCases,
       ...recipeAdjustCases,
+      ...mealPlanCases,
       ...palateJudgeCases(judge),
+      ...redTeamKitchenModelCases,
       ...redTeamCases,
       ...redTeamEditCases,
+      ...redTeamKitchenDirectCases,
     ],
     openSession,
     judgeTokens: judge.tokens,

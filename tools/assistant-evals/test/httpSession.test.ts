@@ -192,6 +192,27 @@ describe("toolCallsOfTurn, the answer of a kitchen tool", () => {
     expect(adjustment?.errorCode).toBe("could_not_reach_target");
   });
 
+  it("should keep the parsed answer of plan_meals and replan_day, which graders compare with core", () => {
+    const contents = [
+      [call("t1", "plan_meals"), call("t2", "replan_day")],
+      [
+        result(
+          "t1",
+          '<untrusted_data tool="plan_meals">{"planned":true,"repeat_limit":{"max_repeats":2,"chosen_by":"default"}}</untrusted_data>',
+        ),
+        result("t2", '{"replanned":false,"reason":"day_not_planned"}'),
+      ],
+    ];
+
+    const [plan, replan] = toolCallsOfTurn(contents);
+
+    expect(plan?.result).toEqual({
+      planned: true,
+      repeat_limit: { max_repeats: 2, chosen_by: "default" },
+    });
+    expect(replan?.result).toEqual({ replanned: false, reason: "day_not_planned" });
+  });
+
   it("should keep no answer for any other tool", () => {
     const contents = [
       [call("t1", "get_recipes")],
