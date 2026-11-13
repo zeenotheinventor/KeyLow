@@ -12,6 +12,9 @@ import type { JsonValue } from "./untrusted.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ZodType } from "zod";
 
+// The one group of tools that starts hidden: the kitchen tools (recipes, adjustments, plans).
+export type ToolGroup = "kitchen";
+
 // The MCP annotations. A read is `readOnlyHint: true`. `destructiveHint` is meaningful for a write.
 export type ToolAnnotations = { readOnlyHint: boolean; destructiveHint?: boolean };
 
@@ -86,6 +89,9 @@ type ToolBase<Input> = {
   // `registry.test.ts`), so a tool with many nullable fields opts out with `false`. The executor
   // validates every input with zod whatever this says.
   strict?: boolean;
+  // A tool of a group stays in `tools[]` with `defer_loading` and is shown to the model only on a turn where
+  // code surfaces its group (ADR 0006, Amendment 5). Absent means the tool is visible on every turn.
+  group?: ToolGroup;
 };
 
 // Methods and not function properties, so a tool of one input type is a tool of the registry's list.
@@ -297,6 +303,9 @@ export function toStrictJsonSchema(input: ZodType): JsonSchemaObject {
 
 // Where `tools/list` says whether a tool is strict, in the tool's `_meta`.
 export const strictMetaKey = "kilo/strict";
+
+// Where `tools/list` names the group of a tool that has one, in the tool's `_meta`. Ungrouped tools leave it out.
+export const groupMetaKey = "kilo/group";
 
 export const confirmationIdKey = "confirmation_id";
 

@@ -5,6 +5,7 @@ import { toolRegistry } from "../_shared/assistant/registry.ts";
 import { spyOnConsole } from "../_shared/assistant/testing.ts";
 import { toJsonSchema } from "../_shared/assistant/tool.ts";
 import { threadFromMessages } from "../_shared/core.ts";
+import { holdsKitchenAddition, kitchenAdditionContent } from "./kitchen.ts";
 import {
   SYSTEM_PROMPT,
   StoredMessageError,
@@ -16,7 +17,7 @@ import {
   userContent,
 } from "./prompt.ts";
 
-import type { StoredHistoryMessage } from "./prompt.ts";
+import type { ApiMessage, StoredHistoryMessage } from "./prompt.ts";
 import type Anthropic from "@anthropic-ai/sdk";
 
 const tools = toAnthropicTools(
@@ -907,7 +908,11 @@ Deno.test(
     ];
 
     const users = threadFromMessages(
-      history.map((message) => ({ ...message, turnStatus: "complete" as const })),
+      history.flatMap((message) =>
+        message.role === "system"
+          ? []
+          : [{ ...message, role: message.role, turnStatus: "complete" as const }],
+      ),
       [],
     ).flatMap((item) => (item.kind === "user" ? [item.text] : []));
 
@@ -1110,7 +1115,7 @@ Deno.test(
   },
 );
 
-const signaturesOf = (messages: readonly Anthropic.MessageParam[]) =>
+const signaturesOf = (messages: readonly ApiMessage[]) =>
   messages.flatMap((message) =>
     typeof message.content === "string"
       ? []
@@ -1612,4 +1617,197 @@ Deno.test("a replay after a note sends no thinking from before the current turn"
     messages.map((message) => message.role),
     ["user", "assistant", "user", "assistant", "user"],
   );
+});
+
+// ADR 0006, Amendment 5. The kitchen addition is a stored system row that replays as it was stored.
+const additionContent = kitchenAdditionContent(["kitchen_one"]);
+
+const kitchenTurn = (turnId = "turn-2") => [
+  userText("plan my week", turnId),
+  stored("system", additionContent, turnId),
+  stored("assistant", [{ type: "text", text: "Here is a plan." }], turnId),
+];
+
+Deno.test(
+  "a stored system row replays as a system message with its blocks as they were stored",
+  () => {
+    const messages = toApiMessages(
+      [
+        userText("hi", "turn-1"),
+        stored("assistant", [{ type: "text", text: "Hello." }], "turn-1"),
+        ...kitchenTurn(),
+      ],
+      "turn-2",
+    );
+
+    assertEquals(
+      messages.map((message) => message.role),
+      ["user", "assistant", "user", "system", "assistant"],
+    );
+    assertEquals<unknown>(messages[3]?.content, additionContent);
+  },
+);
+
+Deno.test("a stored system row that the next turn's user row follows is not replayed", () => {
+  // The turn failed after the row was stored and before the model answered.
+  const messages = toApiMessages(
+    [
+      userText("plan my week", "turn-1"),
+      stored("system", additionContent, "turn-1"),
+      userText("hello again", "turn-2"),
+    ],
+    "turn-2",
+  );
+
+  assertEquals(
+    messages.map((message) => message.role),
+    ["user"],
+  );
+  assertEquals(holdsKitchenAddition(messages), false);
+});
+
+Deno.test("a stored system row that ends the history is replayed", () => {
+  const messages = toApiMessages(
+    [userText("plan my week", "turn-1"), stored("system", additionContent, "turn-1")],
+    "turn-1",
+  );
+
+  assertEquals(
+    messages.map((message) => message.role),
+    ["user", "system"],
+  );
+});
+
+Deno.test("a system row from before the note is not sent, and one after it is", () => {
+  const history = [
+    ...kitchenTurn("turn-1"),
+    userText("second words", "turn-2"),
+    ...kitchenTurn("turn-3"),
+  ];
+
+  const afterFirst = toApiMessagesWithNote(
+    history.slice(0, 4),
+    { summary: "A note.", throughTurnId: "turn-1" },
+    "turn-2",
+  );
+  const sent = toApiMessagesWithNote(
+    history,
+    { summary: "A note.", throughTurnId: "turn-1" },
+    "turn-3",
+  );
+
+  assertEquals(holdsKitchenAddition(afterFirst), false);
+  assertEquals(
+    sent.map((message) => message.role),
+    ["user", "system", "assistant"],
+  );
+  assertEquals(JSON.stringify(sent).split("tool_addition").length - 1, 1);
+});
+
+Deno.test(
+  "the breakpoint goes on the last block of the message before a trailing system message",
+  () => {
+    const request = buildTurnRequest({
+      tools,
+      messages: toApiMessages(
+        [userText("plan my week", "turn-1"), stored("system", additionContent, "turn-1")],
+        "turn-1",
+      ),
+    });
+
+    const [user, system] = request.messages;
+    assertEquals(user?.role, "user");
+    const userBlocks = user?.content;
+    assert(Array.isArray(userBlocks));
+    assertEquals<unknown>(userBlocks.at(-1), {
+      type: "text",
+      text: "plan my week",
+      cache_control: { type: "ephemeral" },
+    });
+    assertEquals<unknown>(system?.content, additionContent);
+    assertEquals(JSON.stringify(system).includes("cache_control"), false);
+  },
+);
+
+Deno.test(
+  "a request with a kitchen tool sends it with defer_loading after the others, as the adapter gave it",
+  () => {
+    const kitchenTools = toAnthropicTools([
+      {
+        name: "kitchen_one",
+        description: "A kitchen tool.",
+        inputSchema: { type: "object", properties: {}, additionalProperties: false },
+        readOnlyHint: true,
+        strict: true,
+        group: "kitchen",
+      },
+    ]);
+    const all = [...tools, ...kitchenTools];
+
+    const request = buildTurnRequest({ tools: all, messages: replay([userText("hi")]) });
+
+    assertEquals(JSON.stringify(request.tools), JSON.stringify(all));
+    assertEquals(JSON.stringify(request.tools?.slice(0, tools.length)), JSON.stringify(tools));
+  },
+);
+
+Deno.test("open tool uses skip a system row left after the last assistant message", () => {
+  const history = [
+    userText("hi", "turn-1"),
+    stored("assistant", [toolUse("call-1", "ask_user")], "turn-1"),
+    userText("plan my week", "turn-2"),
+    stored("system", additionContent, "turn-2"),
+  ];
+
+  assertEquals(openToolUses(history), [{ id: "call-1", name: "ask_user" }]);
+});
+
+Deno.test(
+  "open tool uses are empty after a failed kitchen turn that follows an answered one",
+  () => {
+    const history = [
+      userText("hi", "turn-1"),
+      stored("assistant", [{ type: "text", text: "Hello." }], "turn-1"),
+      userText("plan my week", "turn-2"),
+      stored("system", additionContent, "turn-2"),
+    ];
+
+    assertEquals(openToolUses(history), []);
+  },
+);
+
+Deno.test(
+  "a system row is not sent when the assistant row after it holds nothing that is sent",
+  () => {
+    // The model hit max_tokens while thinking, so the only block of its message is thinking, which a later turn does
+    // not replay. The API would get user, system, user, and refuses that.
+    const messages = toApiMessages(
+      [
+        userText("plan my week", "turn-1"),
+        stored("system", additionContent, "turn-1"),
+        stored("assistant", [{ type: "thinking", thinking: "hm", signature: "sig" }], "turn-1"),
+        userText("hello again", "turn-2"),
+      ],
+      "turn-2",
+    );
+
+    assertEquals(
+      messages.map((message) => message.role),
+      ["user"],
+    );
+    assertEquals(holdsKitchenAddition(messages), false);
+  },
+);
+
+Deno.test("a system row is not sent when it would be the first message", () => {
+  const messages = toApiMessages(
+    [
+      stored("system", additionContent, "turn-1"),
+      stored("assistant", [{ type: "text", text: "Hello." }], "turn-1"),
+      userText("hi", "turn-2"),
+    ],
+    "turn-2",
+  );
+
+  assertEquals(holdsKitchenAddition(messages), false);
 });

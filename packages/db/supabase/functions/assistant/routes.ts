@@ -155,6 +155,7 @@ export function createAssistantHandler(
         text: input.text,
         localDate: input.localDate,
         localTime: input.localTime,
+        ...(input.entry === undefined ? {} : { entry: input.entry }),
         request,
       },
       stream,

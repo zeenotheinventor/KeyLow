@@ -5,6 +5,7 @@
 import { MODEL } from "./prompt.ts";
 
 import type Anthropic from "@anthropic-ai/sdk";
+import type { ApiMessage } from "./prompt.ts";
 
 // A note is asked to stay under 60 short lines, which is about 900 tokens. The cap is above the 1,500 tokens
 // a note should stay under, so a note that runs long is finished and not cut off. A note cut off would lose
@@ -66,7 +67,7 @@ export function renderTranscript({
   messages,
 }: {
   note: string | null;
-  messages: readonly Anthropic.MessageParam[];
+  messages: readonly ApiMessage[];
 }): string {
   const toolNames = new Map<string, string>();
   const rendered = messages.flatMap((message) => {

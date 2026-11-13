@@ -1,10 +1,14 @@
-import { assert } from "@std/assert";
+import { assert, assertEquals } from "@std/assert";
 
 import { toAnthropicTools } from "../_shared/assistant/adapters/anthropic.ts";
-import { toolRegistry } from "../_shared/assistant/registry.ts";
+import { createToolRegistry, toolRegistry } from "../_shared/assistant/registry.ts";
 import { toJsonSchema } from "../_shared/assistant/tool.ts";
 import { DEFAULT_COMPACT_AT_TOKENS } from "./compact.ts";
+import { kitchenAdditionContent } from "./kitchen.ts";
 import { SYSTEM_PROMPT } from "./prompt.ts";
+
+import type { ListedTool } from "../_shared/assistant/mcpClient.ts";
+import type { ToolRegistry } from "../_shared/assistant/tool.ts";
 
 // KEY-927. The compaction threshold counts the whole prompt of a turn's last model call, and the tools and the
 // system prompt are most of it before the first word of the conversation. When the registry grew past the old
@@ -22,26 +26,83 @@ const LARGEST_SHARE_OF_THRESHOLD = 0.6;
 // real first call disagrees.
 const PREFIX_CHARACTERS_PER_TOKEN = 2.94;
 
-const toolsAsSent = toAnthropicTools(
-  toolRegistry.list.map((tool) => ({
+const listedToolsOf = (registry: ToolRegistry): ListedTool[] =>
+  registry.list.map((tool) => ({
     name: tool.name,
     description: tool.description,
     inputSchema: toJsonSchema(tool),
     readOnlyHint: tool.annotations.readOnlyHint,
     strict: tool.strict !== false,
-  })),
-);
+    ...(tool.group === undefined ? {} : { group: tool.group }),
+  }));
+
+const estimatedTokens = (characters: number): number =>
+  Math.ceil(characters / PREFIX_CHARACTERS_PER_TOKEN);
+
+// ADR 0006, Amendment 5. A tool of the kitchen group is in `tools[]` with `defer_loading` and is not in the
+// model's context until a turn surfaces it, so the prefix of an ordinary turn counts the visible tools only.
+const visibleToolsAsSent = (tools: readonly ListedTool[]) =>
+  toAnthropicTools(tools.filter((tool) => tool.group === undefined));
+
+const prefixTokensOf = (tools: readonly ListedTool[]): number =>
+  estimatedTokens(SYSTEM_PROMPT.length + JSON.stringify(visibleToolsAsSent(tools)).length);
+
+// What a kitchen turn adds: the deferred tools as sent, and the stored system message that surfaces them.
+const kitchenAdditionTokensOf = (tools: readonly ListedTool[]): number => {
+  const kitchenTools = tools.filter((tool) => tool.group === "kitchen");
+  return estimatedTokens(
+    JSON.stringify(toAnthropicTools(kitchenTools)).length +
+      JSON.stringify(kitchenAdditionContent(kitchenTools.map((tool) => tool.name))).length,
+  );
+};
+
+// What a kitchen turn may add to the prefix, deferred tool definitions and the system message together. The
+// conversation's room is 40 % of the compaction threshold, so this is a fixed 2,500 tokens of it (KEY-1022).
+const KITCHEN_ADDITION_LIMIT_TOKENS = 2_500;
 
 Deno.test(
   "the tools and the system prompt leave most of the compaction threshold to the conversation",
   () => {
-    const prefixCharacters = SYSTEM_PROMPT.length + JSON.stringify(toolsAsSent).length;
-    const estimatedTokens = Math.ceil(prefixCharacters / PREFIX_CHARACTERS_PER_TOKEN);
+    const tokens = prefixTokensOf(listedToolsOf(toolRegistry));
     const limit = Math.floor(DEFAULT_COMPACT_AT_TOKENS * LARGEST_SHARE_OF_THRESHOLD);
 
     assert(
-      estimatedTokens <= limit,
-      `The tools and the system prompt are about ${estimatedTokens} tokens, over ${limit}, which is ${LARGEST_SHARE_OF_THRESHOLD * 100} % of the ${DEFAULT_COMPACT_AT_TOKENS} token compaction threshold. A conversation would have too little room before it compacts. Shorten the new tool or prompt text, or raise DEFAULT_COMPACT_AT_TOKENS in compact.ts and say so in ADR 0006.`,
+      tokens <= limit,
+      `The tools and the system prompt are about ${tokens} tokens, over ${limit}, which is ${LARGEST_SHARE_OF_THRESHOLD * 100} % of the ${DEFAULT_COMPACT_AT_TOKENS} token compaction threshold. A conversation would have too little room before it compacts. Shorten the new tool or prompt text, or raise DEFAULT_COMPACT_AT_TOKENS in compact.ts and say so in ADR 0006.`,
     );
   },
 );
+
+const heavyKitchenTool = (characters: number): ListedTool => ({
+  name: "heavy_kitchen_tool",
+  description: "x".repeat(characters),
+  inputSchema: { type: "object", properties: {}, additionalProperties: false },
+  readOnlyHint: true,
+  strict: false,
+  group: "kitchen",
+});
+
+Deno.test("a kitchen tool does not count towards the prefix of an ordinary turn", () => {
+  const visible = listedToolsOf(toolRegistry);
+
+  assertEquals(prefixTokensOf([...visible, heavyKitchenTool(60_000)]), prefixTokensOf(visible));
+});
+
+Deno.test("the kitchen addition stays within 2,500 tokens, the kitchen probe included", () => {
+  const tokens = kitchenAdditionTokensOf(listedToolsOf(createToolRegistry({ kitchenProbe: true })));
+
+  assert(
+    tokens <= KITCHEN_ADDITION_LIMIT_TOKENS,
+    `The kitchen tools and their system message are about ${tokens} tokens, over ${KITCHEN_ADDITION_LIMIT_TOKENS}. Shorten the tool text or move the rules into the Opus call's own prompt.`,
+  );
+});
+
+Deno.test("a kitchen group that is too big for its limit is measured as over it", () => {
+  const tokens = kitchenAdditionTokensOf([heavyKitchenTool(20_000)]);
+
+  assert(tokens > KITCHEN_ADDITION_LIMIT_TOKENS);
+});
+
+Deno.test("the limit of the kitchen addition is 2,500 tokens", () => {
+  assertEquals(KITCHEN_ADDITION_LIMIT_TOKENS, 2_500);
+});

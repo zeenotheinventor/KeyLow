@@ -13,6 +13,7 @@ import { recordUsage } from "./usage.ts";
 import type { ListedTool, ToolCallResult, ToolConnection } from "../_shared/assistant/mcpClient.ts";
 import type { AssistantStoredMessage, AssistantStreamEvent } from "../_shared/core.ts";
 import type { AllowlistTool } from "./allowlist.ts";
+import type { KitchenEntry } from "./kitchen.ts";
 import type { TurnContext } from "./runTurn.ts";
 import type { TurnDependencies, TurnLimits } from "./turn.ts";
 import type { TurnStore } from "./turnStore.ts";
@@ -50,6 +51,8 @@ export type ModelMock = {
   baseUrl: string;
   // The body of every request, as text and as JSON.
   bodies: string[];
+  // The `anthropic-beta` header of every request, or null when it had none.
+  betaHeaders: (string | null)[];
   json: () => Record<string, unknown>[];
   firstTextSent: Promise<void>;
   shutdown(): Promise<void>;
@@ -167,6 +170,7 @@ function messageOf(response: ScriptedResponse, index: number) {
 
 export async function startModelMock(responses: ScriptedResponse[]): Promise<ModelMock> {
   const bodies: string[] = [];
+  const betaHeaders: (string | null)[] = [];
   const encoder = new TextEncoder();
   const listening = Promise.withResolvers<number>();
   const firstText = Promise.withResolvers<void>();
@@ -182,6 +186,7 @@ export async function startModelMock(responses: ScriptedResponse[]): Promise<Mod
   async function handle(request: Request): Promise<Response> {
     const body = await request.text();
     bodies.push(body);
+    betaHeaders.push(request.headers.get("anthropic-beta"));
     const index = next;
     next += 1;
     const scripted = responses[index];
@@ -235,6 +240,7 @@ export async function startModelMock(responses: ScriptedResponse[]): Promise<Mod
   return {
     baseUrl: `http://127.0.0.1:${await listening.promise}`,
     bodies,
+    betaHeaders,
     json: () => bodies.map((body) => JSON.parse(body)),
     firstTextSent: firstText.promise,
     async shutdown() {
@@ -371,15 +377,30 @@ export const fakeTools: ListedTool[] = [
   listed("update_targets", false, { current_kcal: { type: "number" } }),
 ];
 
+// A tool of the hidden kitchen group (ADR 0006, Amendment 5).
+export const listedKitchen = (
+  name: string,
+  readOnlyHint: boolean,
+  properties: Record<string, unknown> = {},
+): ListedTool => ({ ...listed(name, readOnlyHint, properties, false), group: "kitchen" });
+
 export const allowlistToolsOf = (tools: readonly ListedTool[]): AllowlistTool[] =>
-  tools.map(({ name, readOnlyHint }) => ({ name, readOnlyHint }));
+  tools.map(({ name, readOnlyHint, group }) => ({
+    name,
+    readOnlyHint,
+    ...(group === undefined ? {} : { group }),
+  }));
 
 // ---- The harness ----
+
+// A stored row with the status of its turn. The role is `system` for the stored kitchen addition.
+export type HarnessRow = AssistantStoredMessage;
 
 export type TurnResult = {
   events: AssistantStreamEvent[];
   turnId: string;
-  // The messages of the conversation, in order, with the status of their turn.
+  // The messages of the conversation, in order, with the status of their turn. The stored kitchen addition is
+  // not among them: it is not something the app draws.
   rows: AssistantStoredMessage[];
 };
 
@@ -396,14 +417,19 @@ export type Harness = {
   usageRows: () => Record<string, unknown>[];
   turnRows: () => Record<string, unknown>[];
   rows: () => AssistantStoredMessage[];
+  // Every stored row, the kitchen addition included.
+  storedRows: () => HarnessRow[];
   conversationRows: () => Record<string, unknown>[];
   // Waits for the work a turn handed to `runInBackground`, which is the compaction.
   finishBackground(): Promise<void>;
   start(
     text: string,
-    options?: { request?: Request; localTime?: string | null },
+    options?: { request?: Request; localTime?: string | null; entry?: KitchenEntry },
   ): { cancel(): Promise<void>; textReceived: Promise<void>; finished: Promise<TurnResult> };
-  take(text: string, options?: { localTime?: string | null }): Promise<TurnResult>;
+  take(
+    text: string,
+    options?: { localTime?: string | null; entry?: KitchenEntry },
+  ): Promise<TurnResult>;
   shutdown(): Promise<void>;
 };
 
@@ -420,6 +446,8 @@ export type HarnessOptions = {
   limits?: TurnLimits;
   // The turn store's clock, for a test that needs `updated_at` to move by a known step.
   storeNow?: () => Date;
+  // `ASSISTANT_KITCHEN`. Off unless set.
+  kitchen?: boolean;
 };
 
 export async function createHarness(options: HarnessOptions): Promise<Harness> {
@@ -473,6 +501,7 @@ export async function createHarness(options: HarnessOptions): Promise<Harness> {
     },
     createModelClient: () => createModelClient((name) => environment[name]),
     availableTools: allowlistToolsOf(tools),
+    kitchenEnabled: () => options.kitchen === true,
     functionsBaseUrl: () => "http://127.0.0.1:54321",
     report: (_functionName, code, caught) => {
       reports.push({ code, caught });
@@ -481,18 +510,18 @@ export async function createHarness(options: HarnessOptions): Promise<Harness> {
   };
   const runTurn = createRunTurn(dependencies, options.limits);
 
-  const rows = (): AssistantStoredMessage[] => {
+  const storedRows = (): HarnessRow[] => {
     const statusOf = new Map(
       (database.tables["assistant_turns"] ?? []).map((turn) => [turn["id"], turn["status"]]),
     );
     return [...(database.tables["assistant_messages"] ?? [])]
       .sort((left, right) => Number(left["seq"]) - Number(right["seq"]))
-      .map((row): AssistantStoredMessage => {
+      .map((row): HarnessRow => {
         const status = statusOf.get(row["turn_id"]);
         return {
           id: String(row["id"]),
           turnId: String(row["turn_id"]),
-          role: row["role"] === "assistant" ? "assistant" : "user",
+          role: row["role"] === "assistant" || row["role"] === "system" ? row["role"] : "user",
           content: row["content"],
           display: row["display"],
           turnStatus: status === "open" || status === undefined ? "open" : toStatus(status),
@@ -500,9 +529,11 @@ export async function createHarness(options: HarnessOptions): Promise<Harness> {
       });
   };
 
+  const rows = (): AssistantStoredMessage[] => storedRows().filter((row) => row.role !== "system");
+
   function start(
     text: string,
-    startOptions: { request?: Request; localTime?: string | null } = {},
+    startOptions: { request?: Request; localTime?: string | null; entry?: KitchenEntry } = {},
   ) {
     const textReceived = Promise.withResolvers<void>();
     const prepared = turns.startTurn({ userId, conversationId, text }).then((started) => {
@@ -523,6 +554,7 @@ export async function createHarness(options: HarnessOptions): Promise<Harness> {
         text,
         localDate: "2026-11-03",
         localTime: startOptions.localTime ?? null,
+        ...(startOptions.entry === undefined ? {} : { entry: startOptions.entry }),
         request:
           startOptions.request ??
           new Request("http://localhost/functions/v1/assistant/turn", {
@@ -567,6 +599,7 @@ export async function createHarness(options: HarnessOptions): Promise<Harness> {
     usageRows: () => database.tables["assistant_usage"] ?? [],
     turnRows: () => database.tables["assistant_turns"] ?? [],
     rows,
+    storedRows,
     conversationRows: () => database.tables["assistant_conversations"] ?? [],
     async finishBackground() {
       await Promise.all(background.splice(0));

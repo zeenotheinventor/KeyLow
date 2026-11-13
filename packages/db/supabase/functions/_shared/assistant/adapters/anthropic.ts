@@ -12,6 +12,10 @@ export type AnthropicTool = {
   // tool that opted out, because the API caps strict tools, optional and union parameters per request.
   strict?: true;
   eager_input_streaming: true;
+  // A tool of the kitchen group starts hidden: it is known to the request and not shown to the model until a
+  // `tool_addition` surfaces it (ADR 0006, Amendment 5). Only those tools carry the key, and it is the last key,
+  // so every other tool's bytes are what they were.
+  defer_loading?: true;
 };
 
 // A schema the registry should never have let through. It is a bug, so it is thrown and never sent.
@@ -89,6 +93,7 @@ export function toAnthropicTools(tools: readonly ListedTool[]): AnthropicTool[] 
       input_schema: tool.inputSchema,
       ...(tool.strict ? { strict: true as const } : {}),
       eager_input_streaming: true,
+      ...(tool.group === undefined ? {} : { defer_loading: true as const }),
     };
   });
 }

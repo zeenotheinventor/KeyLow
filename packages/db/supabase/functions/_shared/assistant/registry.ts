@@ -38,6 +38,7 @@ import { archiveCustomExerciseTool } from "./tools/archiveCustomExercise.ts";
 import { requestFeatureTool } from "./tools/requestFeature.ts";
 import { saveCustomExerciseTool } from "./tools/saveCustomExercise.ts";
 import { deleteWorkoutTool } from "./tools/deleteWorkout.ts";
+import { kitchenProbeTool } from "./tools/kitchenProbe.ts";
 import { showExerciseFormTool } from "./tools/showExerciseForm.ts";
 import { strictSchemaProblem } from "./tool.ts";
 
@@ -112,4 +113,12 @@ const toolDefinitions: readonly ToolDefinition[] = [
   askUserTool,
 ];
 
-export const toolRegistry: ToolRegistry = createRegistry(toolDefinitions);
+// The registry of a deployment. The kitchen probe is last and present only when asked for, so the order of every
+// other tool, and the bytes the prompt cache reads, are the same with it and without it.
+export function createToolRegistry({ kitchenProbe }: { kitchenProbe: boolean }): ToolRegistry {
+  return createRegistry(kitchenProbe ? [...toolDefinitions, kitchenProbeTool] : toolDefinitions);
+}
+
+export const toolRegistry: ToolRegistry = createToolRegistry({
+  kitchenProbe: Deno.env.get("ASSISTANT_KITCHEN_PROBE") === "1",
+});

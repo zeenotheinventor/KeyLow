@@ -28,7 +28,8 @@ export type AssistantTurnStatus =
 export type AssistantStoredMessage = {
   id: string;
   turnId: string;
-  role: "user" | "assistant";
+  /** `system` is the stored kitchen addition (ADR 0006, Amendment 5). It is never drawn. */
+  role: "user" | "assistant" | "system";
   /** The Messages API content: a string, or a list of blocks. */
   content: unknown;
   /**
@@ -358,7 +359,8 @@ export function threadFromMessages(
 ): AssistantThreadItem[] {
   const actionsById = new Map(actions.map((action) => [action.id, action]));
   const turns: AssistantStoredMessage[][] = [];
-  for (const message of rawMessages) {
+  // A system row holds the kitchen tool addition and its rules, which are for the model and never a reply.
+  for (const message of rawMessages.filter(({ role }) => role !== "system")) {
     const turn = turns.at(-1);
     if (turn?.[0]?.turnId === message.turnId) {
       turn.push(message);
