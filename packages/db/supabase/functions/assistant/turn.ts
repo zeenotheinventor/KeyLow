@@ -26,6 +26,8 @@ import {
   assistantExerciseFormMediaSchema,
   assistantExerciseMusclesSchema,
   assistantRecipeDraftSchema,
+  assistantRecipeNoticeSchema,
+  assistantRecipeRefusalSchema,
   describeTurnEndedAfterWrite,
   describeWorkoutInProgressRefusal,
   isConfirmAnswer,
@@ -68,6 +70,8 @@ import type {
   AssistantExerciseFormMedia,
   AssistantExerciseMuscles,
   AssistantRecipeDraft,
+  AssistantRecipeNotice,
+  AssistantRecipeRefusal,
   AssistantStreamEvent,
 } from "../_shared/core.ts";
 import type { Json } from "../_shared/core/database.types.ts";
@@ -272,6 +276,9 @@ type Run = {
   pendingExerciseFormMedia: AssistantExerciseFormMedia[];
   // The recipe each `suggest_recipe` call drafted, held to the end of the turn for the same reason.
   pendingRecipeDrafts: AssistantRecipeDraft[];
+  // The refused adjustments and the notices for a recipe that did not come, held to the end of the turn too.
+  pendingRecipeRefusals: AssistantRecipeRefusal[];
+  pendingRecipeNotices: AssistantRecipeNotice[];
   // The calls this turn has made to generation tools.
   generationCalls: number;
   citations: (string | null)[];
@@ -518,6 +525,8 @@ const structuredSchema = z.looseObject({
   exerciseMuscles: z.unknown().optional(),
   exerciseFormMedia: z.unknown().optional(),
   recipeDraft: z.unknown().optional(),
+  recipeNotice: z.unknown().optional(),
+  recipeRefusal: z.unknown().optional(),
 });
 const cardDraftSchema = assistantCardSchema.omit({ actionIds: true });
 
@@ -592,6 +601,8 @@ async function finishCall(
   let figure: AssistantExerciseMuscles | null = null;
   let formCard: AssistantExerciseFormMedia | null = null;
   let recipeDraft: AssistantRecipeDraft | null = null;
+  let recipeRefusal: AssistantRecipeRefusal | null = null;
+  let recipeNotice: AssistantRecipeNotice | null = null;
   if (structured.success) {
     const { citation = null, estimate = null } = structured.data;
     run.citations.push(citation);
@@ -658,6 +669,36 @@ async function finishCall(
         );
       }
     }
+    // A recipe tool that could not make the recipe, in the same row: the figures of a refused adjustment, or the
+    // notice for a generation that timed out or was refused. Reads too, so no action and no Undo.
+    if (structured.data.recipeRefusal !== undefined) {
+      const parsed = assistantRecipeRefusalSchema.safeParse(structured.data.recipeRefusal);
+      if (parsed.success) {
+        recipeRefusal = parsed.data;
+        entry["recipeRefusal"] = toJson(parsed.data);
+      } else {
+        // Fixed words only. A parse failure's own message is not reported, because it can quote the recipe.
+        run.dependencies.report(
+          "assistant",
+          "internal_error",
+          new Error("a recipe refusal cannot be drawn"),
+        );
+      }
+    }
+    if (structured.data.recipeNotice !== undefined) {
+      const parsed = assistantRecipeNoticeSchema.safeParse(structured.data.recipeNotice);
+      if (parsed.success) {
+        recipeNotice = parsed.data;
+        entry["recipeNotice"] = toJson(parsed.data);
+      } else {
+        // Fixed words only, as for the draft.
+        run.dependencies.report(
+          "assistant",
+          "internal_error",
+          new Error("a recipe notice cannot be drawn"),
+        );
+      }
+    }
     // A link on its own, under the words of an answer that changed nothing (a day that cannot be removed here).
     if (structured.data.link !== undefined) {
       const link = assistantCardLinkSchema.safeParse(structured.data.link);
@@ -702,6 +743,12 @@ async function finishCall(
   }
   if (recipeDraft !== null) {
     run.pendingRecipeDrafts.push(recipeDraft);
+  }
+  if (recipeRefusal !== null) {
+    run.pendingRecipeRefusals.push(recipeRefusal);
+  }
+  if (recipeNotice !== null) {
+    run.pendingRecipeNotices.push(recipeNotice);
   }
   return null;
 }
@@ -1214,6 +1261,14 @@ async function conclude(run: Run, reached: Ending): Promise<Ending> {
       emit(run, { type: "recipe_draft", draft });
     }
     run.pendingRecipeDrafts = [];
+    for (const refusal of run.pendingRecipeRefusals) {
+      emit(run, { type: "recipe_refusal", refusal });
+    }
+    run.pendingRecipeRefusals = [];
+    for (const notice of run.pendingRecipeNotices) {
+      emit(run, { type: "recipe_notice", notice });
+    }
+    run.pendingRecipeNotices = [];
   }
   const final = endedAfterWrite ? await endWithWordsAfterWrite(run, early) : early;
   if (final.status === "complete") {
@@ -1284,6 +1339,8 @@ export function createRunTurn(
       pendingExerciseMuscles: [],
       pendingExerciseFormMedia: [],
       pendingRecipeDrafts: [],
+      pendingRecipeRefusals: [],
+      pendingRecipeNotices: [],
       generationCalls: 0,
       citations: [],
       estimates: [],

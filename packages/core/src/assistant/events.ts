@@ -6,6 +6,8 @@ import { assistantExerciseMusclesSchema } from "./exerciseMusclesCard";
 import { assistantIdSchema } from "./ids";
 import { assistantNoticeSchema } from "./notice";
 import { assistantRecipeDraftSchema } from "./recipeDraft";
+import { assistantRecipeNoticeSchema } from "./recipeNotice";
+import { assistantRecipeRefusalSchema } from "./recipeRefusal";
 
 /*
  * The events the `assistant` Edge Function streams to the app, one JSON event per Server-Sent Events
@@ -97,6 +99,26 @@ const recipeDraftEventSchema = z.object({
 });
 
 /**
+ * Why a recipe did not come (`assistant-card · recipe-draft-failed`): `suggest_recipe` or `adjust_recipe` ended timed
+ * out or refused. Drawn by the app as a notice under the reply. It is an event of its own and not a `notice`,
+ * because the notices are the gates of the whole assistant, and an app that is behind skips an event it does not
+ * know. Not strict, like `recipe_draft`.
+ */
+const recipeNoticeEventSchema = z.object({
+  type: z.literal("recipe_notice"),
+  notice: assistantRecipeNoticeSchema,
+});
+
+/**
+ * A saved recipe `adjust_recipe` could not change as asked (`assistant-card · recipe-compare`, refused): the
+ * card with what a serving reaches against what was asked. Not strict, like `recipe_draft`.
+ */
+const recipeRefusalEventSchema = z.object({
+  type: z.literal("recipe_refusal"),
+  refusal: assistantRecipeRefusalSchema,
+});
+
+/**
  * The Ask again quick reply under the reply (`assistant · workout-in-progress`, A change refused): a press
  * sends the person's last message again. A later turn takes it away.
  */
@@ -157,6 +179,8 @@ export const assistantStreamEventSchema = z.discriminatedUnion("type", [
   exerciseMusclesEventSchema,
   exerciseFormMediaEventSchema,
   recipeDraftEventSchema,
+  recipeNoticeEventSchema,
+  recipeRefusalEventSchema,
   askAgainEventSchema,
   clarifyEventSchema,
   confirmEventSchema,

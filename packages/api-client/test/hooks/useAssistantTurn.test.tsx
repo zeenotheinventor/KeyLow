@@ -180,6 +180,8 @@ describe("useAssistantTurn, what each board shows", () => {
       exerciseMuscles: [],
       exerciseFormMedia: [],
       recipeDrafts: [],
+      recipeRefusals: [],
+      recipeNotices: [],
       askAgain: false,
       status: null,
       notice: null,

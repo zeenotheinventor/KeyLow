@@ -37,6 +37,8 @@ describe("applyAssistantEvent", () => {
       exerciseMuscles: [],
       exerciseFormMedia: [],
       recipeDrafts: [],
+      recipeRefusals: [],
+      recipeNotices: [],
       askAgain: false,
       notice: null,
       stopped: false,
@@ -165,6 +167,41 @@ describe("applyAssistantEvent", () => {
         status: null,
         recipeDrafts: [draft.draft, second.draft],
       });
+    });
+  });
+
+  describe("a recipe that did not come", () => {
+    const thinking = { type: "status", code: "thinking" } as const;
+    const notice: AssistantStreamEvent = {
+      type: "recipe_notice",
+      notice: { code: "timed_out" },
+    };
+    const refusal: AssistantStreamEvent = {
+      type: "recipe_refusal",
+      refusal: {
+        recipeName: "Eval porridge bowl",
+        nutrient: "protein_g",
+        target: 53,
+        reached: 17,
+        reachedKcal: 389,
+      },
+    };
+
+    it("should keep each notice, in call order, and clear the step", () => {
+      expect(applyAll([thinking, notice, notice]).recipeNotices).toEqual([
+        notice.notice,
+        notice.notice,
+      ]);
+      expect(applyAll([thinking, notice]).status).toBeNull();
+    });
+
+    it("should keep each refusal, in call order, and clear the step", () => {
+      expect(applyAll([thinking, refusal]).recipeRefusals).toEqual([refusal.refusal]);
+      expect(applyAll([thinking, refusal]).status).toBeNull();
+    });
+
+    it("should not make either a gate notice, which would stop the assistant taking a turn", () => {
+      expect(applyAll([notice, refusal]).notice).toBeNull();
     });
   });
 

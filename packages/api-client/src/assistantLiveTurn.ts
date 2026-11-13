@@ -7,6 +7,8 @@ import type {
   AssistantExerciseMuscles,
   AssistantNotice,
   AssistantRecipeDraft,
+  AssistantRecipeNotice,
+  AssistantRecipeRefusal,
   AssistantStatus,
   AssistantStreamEvent,
 } from "@keylow/core";
@@ -21,7 +23,7 @@ type EventOfType<Type extends AssistantStreamEvent["type"]> = Omit<
  * `text` grows with the reply (`assistant · streaming`), `cards` are the writes with their Undo, `clarify`
  * and `confirm` end the turn with a question, `answerMeta` sits under an answer, `status` is the step the
  * assistant is on, `notice` is a gate or a failure, and `stopped` is set when the person closed the sheet
- * before the end. `exerciseMuscles` are the muscles of each exercise the turn showed, and `exerciseFormMedia` the form video or photos of each, both in call order. `recipeDrafts` are the recipes the turn drafted, in call order. `link` is a
+ * before the end. `exerciseMuscles` are the muscles of each exercise the turn showed, and `exerciseFormMedia` the form video or photos of each, both in call order. `recipeDrafts` are the recipes the turn drafted, in call order, `recipeRefusals` the adjustments it refused and `recipeNotices` the notices for a recipe that did not come, both in call order and neither a gate `notice`. `link` is a
  * link that arrived on its own, and `askAgain` whether the turn offered the Ask
  * again quick reply. `outcome` is how the turn ended, null while it is still going or when it was stopped.
  */
@@ -36,6 +38,8 @@ export type AssistantLiveTurn = {
   exerciseMuscles: AssistantExerciseMuscles[];
   exerciseFormMedia: AssistantExerciseFormMedia[];
   recipeDrafts: AssistantRecipeDraft[];
+  recipeRefusals: AssistantRecipeRefusal[];
+  recipeNotices: AssistantRecipeNotice[];
   link: AssistantCardLink | null;
   askAgain: boolean;
   status: AssistantStatus | null;
@@ -56,6 +60,8 @@ export function newLiveTurn(): AssistantLiveTurn {
     exerciseMuscles: [],
     exerciseFormMedia: [],
     recipeDrafts: [],
+    recipeRefusals: [],
+    recipeNotices: [],
     link: null,
     askAgain: false,
     status: null,
@@ -94,6 +100,10 @@ export function applyAssistantEvent(
       };
     case "recipe_draft":
       return { ...live, status: null, recipeDrafts: [...live.recipeDrafts, event.draft] };
+    case "recipe_refusal":
+      return { ...live, status: null, recipeRefusals: [...live.recipeRefusals, event.refusal] };
+    case "recipe_notice":
+      return { ...live, status: null, recipeNotices: [...live.recipeNotices, event.notice] };
     case "link":
       return { ...live, status: null, link: event.link };
     case "ask_again":
