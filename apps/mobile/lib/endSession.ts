@@ -3,7 +3,8 @@ import { onlineManager } from "@tanstack/react-query";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
- * Signs the person out of this phone, whether or not the server can be reached.
+ * Signs the person out of this phone only, whether or not the server can be reached. The account's other
+ * sessions (the web, another phone) stay signed in, because the online call uses the local scope.
  *
  * Supabase's `signOut` first reads the session, and offline with an access token that has expired that read
  * tries a refresh and fails. It then returns the error and stops: the session is not removed and no
@@ -24,7 +25,7 @@ export async function endSession(
   await clearWidgets().catch(() => undefined);
 
   if (onlineManager.isOnline()) {
-    const { error } = await auth.signOut();
+    const { error } = await auth.signOut({ scope: "local" });
     if (error === null) {
       return;
     }
