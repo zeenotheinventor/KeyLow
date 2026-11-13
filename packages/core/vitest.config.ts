@@ -10,6 +10,7 @@ const FILES_THAT_NEED_ISOLATION = [
   "test/dates/formatClockTime.test.ts",
   "test/diary/densityEstimateFreezing.test.ts",
   "test/nutrition/volume.test.ts",
+  "test/plans/fitCalls.test.ts",
 ];
 
 export default defineConfig({
