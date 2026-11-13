@@ -65,6 +65,7 @@ export function AssistantPanel({
   isOpen,
   onClose,
   localDate,
+  describeAt,
   from,
   buttonRef,
   topOffset,
@@ -90,6 +91,7 @@ export function AssistantPanel({
   const chat = useAssistantChat({
     open: isOpen,
     localDate,
+    describeAt,
     from,
     fetch: streamingFetch,
     isOnline,
@@ -127,13 +129,22 @@ export function AssistantPanel({
   }, [isOpen]);
 
   // Opening moves focus to the field, or to the panel while the consent card has none. Focus that is
-  // somewhere else on the page is left alone, as is a field that is off.
+  // somewhere else on the page is left alone, as is a field that is off. Describe is the exception, for its
+  // opening: it opens the panel from a dialog that has just closed and given focus back to the page, so the field is
+  // where focus goes whatever the page holds.
+  const hasFocusedDescribe = useRef(false);
   useEffect(() => {
     if (!isOpen) {
+      hasFocusedDescribe.current = false;
       return;
     }
+    // Once for the opening: a field that appears later (consent given, a limit cleared) is not a reason to
+    // take focus from where the person has gone.
+    const isDescribeOpening = describeAt !== undefined && !hasFocusedDescribe.current;
+    hasFocusedDescribe.current = hasFocusedDescribe.current || describeAt !== undefined;
     const focused = document.activeElement;
     const isFocusFree =
+      isDescribeOpening ||
       focused === null ||
       focused === document.body ||
       focused === buttonRef.current ||
@@ -141,7 +152,7 @@ export function AssistantPanel({
     if (isFocusFree) {
       (isFieldShown ? fieldRef.current : panelRef.current)?.focus();
     }
-  }, [isOpen, isFieldShown, buttonRef]);
+  }, [isOpen, isFieldShown, buttonRef, describeAt]);
 
   const firstKey = thread.entries[0]?.key;
   const isLoadingOlder = chat.isLoadingOlder;
@@ -251,6 +262,7 @@ export function AssistantPanel({
     if (isEmpty) {
       return (
         <AssistantEmpty
+          describeAt={describeAt}
           from={from}
           isDisabled={chat.isStarterDisabled}
           onStarterPress={chat.sendMessage}
@@ -322,6 +334,7 @@ export function AssistantPanel({
           )}
           <AssistantComposer
             fieldRef={fieldRef}
+            hint={composer.hint}
             isFieldDisabled={composer.isFieldDisabled}
             isSendDisabled={!chat.canSendDraft}
             placeholder={composer.placeholder}

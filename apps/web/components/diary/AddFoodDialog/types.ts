@@ -1,4 +1,5 @@
 import type { AddFoodRequest } from "@/lib/foodLogActions";
+import type { DescribeInLogOpening } from "@keylow/core";
 
 export type AddFoodDialogProps = {
   /** The day to log on, and the hour when an hour's plus asked for one. */
@@ -15,4 +16,10 @@ export type AddFoodDialogProps = {
    * person when the page changes, such as with the browser's Back. It is called with false when the dialog goes.
    */
   onHoldsPlateChange?: ((holdsPlate: boolean) => void) | undefined;
+  /**
+   * Called with the day and time being logged when the person describes a meal to the assistant, which opens
+   * in the dialog's place. With food on the plate it is called once the plate is discarded. Without it the
+   * dialog has no Describe row.
+   */
+  onDescribe?: ((opening: DescribeInLogOpening) => void) | undefined;
 };

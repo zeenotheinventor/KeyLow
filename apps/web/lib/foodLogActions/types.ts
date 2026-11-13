@@ -1,3 +1,4 @@
+import type { DescribeInLogOpening } from "@keylow/core";
 import type { ReactNode } from "react";
 
 /**
@@ -34,7 +35,15 @@ export type FoodLogActions = {
   /** The day the diary is showing, `YYYY-MM-DD`, or undefined away from the diary. The top bar's search adds food to it. */
   viewedDate: string | undefined;
   setViewedDate: (date: string | undefined) => void;
+  /**
+   * Where Describe in the add food dialog sends its opening. The assistant panel sits below this provider (it
+   * reads the day on view), so it registers how it opens here, and clears it when it goes.
+   */
+  setAssistantDescribeOpener: (opener: AssistantDescribeOpener | undefined) => void;
 };
+
+/** Opens the assistant on the day and the time a described meal is logged at. */
+export type AssistantDescribeOpener = (opening: DescribeInLogOpening) => void;
 
 export type FoodLogActionsProviderProps = {
   children: ReactNode;

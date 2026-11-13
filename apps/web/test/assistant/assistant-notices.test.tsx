@@ -31,7 +31,11 @@ vi.mock("next/navigation", () => ({
 }));
 
 vi.mock("@/lib/foodLogActions", () => ({
-  useFoodLogActions: () => ({ openAddFood: vi.fn(), viewedDate: undefined }),
+  useFoodLogActions: () => ({
+    openAddFood: vi.fn(),
+    viewedDate: undefined,
+    setAssistantDescribeOpener: vi.fn(),
+  }),
 }));
 
 async function openPanel(user: ReturnType<typeof userEvent.setup>) {

@@ -5,6 +5,8 @@ export type AssistantEmptyProps = {
   onStarterPress: (words: string) => void;
   /** Turns the starters off, while the conversation is read again or the app is offline. */
   isDisabled: boolean;
+  /** The time Describe logs at, from the add food dialog, which has its own intro and no starters. */
+  describeAt?: string | undefined;
   /** The Train pages, which have their own heading and starters. */
   from?: AssistantOpenedFrom | undefined;
 };
