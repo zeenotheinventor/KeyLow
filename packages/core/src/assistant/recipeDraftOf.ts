@@ -1,3 +1,4 @@
+import { figuresOf, per100Of } from "./draftNutrients";
 import { avoidsFood } from "../palate";
 import { buildRecipeIngredient, computeRecipe } from "../recipes";
 import { fitRecipeToTargets } from "../recipes/fit";
@@ -42,32 +43,6 @@ type CountedLine = {
   food: Food;
   per100: NullableNutrients;
 };
-
-// The nutrients of 100 g of the food, from the same snapshot the recipe's own lines are built with.
-const per100Of = (food: Food, portions: readonly FoodPortion[]): NullableNutrients | null => {
-  try {
-    return computeRecipe({
-      servings: 1,
-      yieldGrams: null,
-      ingredients: [
-        buildRecipeIngredient(food, { quantity: 100, unit: "g", foodPortions: portions }),
-      ],
-    }).total;
-  } catch (caught) {
-    // A food per portion has no weight, so its grams are not an amount. The line is not counted.
-    if (caught instanceof RangeError) {
-      return null;
-    }
-    throw caught;
-  }
-};
-
-const perServingOf = (nutrients: NullableNutrients): SuggestionDraft["perServing"] => ({
-  kcal: nutrients.kcal,
-  protein_g: nutrients.protein_g,
-  carbs_g: nutrients.carbs_g,
-  fat_g: nutrients.fat_g,
-});
 
 // The lines that share a food are fitted as one ingredient, since the fitter holds one amount for each food, and
 // the fitted amount is shared back in the proportion they were proposed in.
@@ -217,7 +192,7 @@ export function buildSuggestionDraft(input: SuggestionInput): SuggestionOutcome 
       servings,
       ingredients: [...matchedLines, ...unmatchedLines],
       dropped: dropped.map((line) => ({ name: line.name, reason: "avoided" })),
-      perServing: perServingOf(computed.perServing),
+      perServing: figuresOf(computed.perServing),
       fit:
         fit === null
           ? null

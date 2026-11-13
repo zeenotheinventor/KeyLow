@@ -155,8 +155,8 @@ Deno.test(
   },
 );
 
-Deno.test("the kitchen rules are no longer than 1,400 characters", () => {
-  assert(KITCHEN_RULES.length <= 1_400);
+Deno.test("the kitchen rules are no longer than 2,000 characters", () => {
+  assert(KITCHEN_RULES.length <= 2_000);
 });
 
 Deno.test("the kitchen rules say that allergies are matched by name only", () => {
@@ -216,3 +216,12 @@ Deno.test("a conversation that had the addition but whose replay lost it appends
     append: true,
   });
 });
+
+Deno.test(
+  "the kitchen rules send a change to a saved recipe to adjust_recipe and say the recipe is unchanged",
+  () => {
+    assertStringIncludes(KITCHEN_RULES, "adjust_recipe");
+    assertStringIncludes(KITCHEN_RULES, "The card shows it");
+    assertStringIncludes(KITCHEN_RULES, "the recipe is unchanged");
+  },
+);

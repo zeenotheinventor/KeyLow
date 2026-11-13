@@ -500,6 +500,8 @@ With the formula of `promptPrefix.test.ts` (system prompt length plus the tools 
 
 - KEY-1022, the group, the adapter field, the beta header, the trigger, the stored addition, the replay rules, the allowlist rule, the switch, the prefix tests, the probe tool, the `kitchenProbe` eval set and this amendment.
 
+- **Amendment of 2026-11-13 (KEY-1032): the kitchen addition cap is 3,500 tokens.** The cap on what a kitchen turn adds, the deferred tool definitions as sent plus the stored system message, was 2,500 estimated tokens. M9 adds three more kitchen tools (`adjust_recipe`, `plan_meals` and `replan_day`), and `replan_day` cannot fit under 2,500. Trimming the tool text was not chosen, because trimming prose has already cost eval passes (KEY-964). The cap in `promptPrefix.test.ts` is now 3,500, and the failure message is unchanged. The cost is one cache write of about 1,000 more tokens for a kitchen conversation, about $0.000125 per 1,000 tokens, and a kitchen turn now takes up to about 19 % of the conversation room (40 % of the 46,000 threshold, 18,400 tokens) instead of 13.6 %. The prefix of an ordinary turn is unchanged. The cap on the length of `KITCHEN_RULES` rises with it, from 1,400 to 2,000 characters, for the same three tools, and the token cap is the real bound. This note takes no Amendment number, because it only moves the figure that Amendment 5 set.
+
 ## Amendment 6 to this ADR: Opus generation inside the kitchen tools (2026-11-13)
 
 ### Status
