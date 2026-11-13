@@ -130,7 +130,7 @@ describe("the first-time card's Set your goal", () => {
 
   const setYourGoal = () => screen.findByRole("button", { name: TRAIN_FIRST_TIME.goalAction });
 
-  it("should open the first question when there is no goal", async () => {
+  it("should open the Goal page, told it came from Train, when there is no goal", async () => {
     const { queryClient } = renderRoute();
     const button = await setYourGoal();
     await waitFor(() => {
@@ -139,7 +139,7 @@ describe("the first-time card's Set your goal", () => {
 
     await userEvent.click(button);
 
-    expect(router.push).toHaveBeenCalledExactlyOnceWith("/goal/1");
+    expect(router.push).toHaveBeenCalledExactlyOnceWith("/goal?from=train");
   });
 
   it("should open the Goal page when a goal was read", async () => {
@@ -155,17 +155,17 @@ describe("the first-time card's Set your goal", () => {
     expect(router.push).toHaveBeenCalledExactlyOnceWith("/goal?from=train");
   });
 
-  it("should open the first question while the goal is not yet known", async () => {
+  it("should open the Goal page, told it came from Train, while the goal is not yet known", async () => {
     trainBackend.goal = storedGoalRow;
     trainBackend.hangingReads.add("training_goals");
     renderRoute();
 
     await userEvent.click(await setYourGoal());
 
-    expect(router.push).toHaveBeenCalledExactlyOnceWith("/goal/1");
+    expect(router.push).toHaveBeenCalledExactlyOnceWith("/goal?from=train");
   });
 
-  it("should open the first question when the goal could not be read", async () => {
+  it("should open the Goal page, told it came from Train, when the goal could not be read", async () => {
     trainBackend.goal = storedGoalRow;
     trainBackend.failingReads.add("training_goals");
     const { queryClient } = renderRoute();
@@ -176,6 +176,6 @@ describe("the first-time card's Set your goal", () => {
 
     await userEvent.click(button);
 
-    expect(router.push).toHaveBeenCalledExactlyOnceWith("/goal/1");
+    expect(router.push).toHaveBeenCalledExactlyOnceWith("/goal?from=train");
   });
 });

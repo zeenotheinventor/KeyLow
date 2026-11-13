@@ -405,14 +405,14 @@ describe("the suggestion card on the Train page, on the golden Wednesday at 12:0
   });
 
   describe("with no goal", () => {
-    it("should offer the questionnaire, and Set your goal opens its first question", async () => {
+    it("should offer the questionnaire, and Set your goal opens the Goal page, told it came from Train", async () => {
       suggestionBackend.goal = null;
       renderRoute();
 
       const card = await screen.findByRole("region", { name: SUGGESTION_NO_GOAL.sectionName });
       await userEvent.click(within(card).getByRole("button", { name: SUGGESTION_NO_GOAL.action }));
 
-      expect(router.push).toHaveBeenCalledWith("/goal/1");
+      expect(router.push).toHaveBeenCalledWith("/goal?from=train");
     });
   });
 });

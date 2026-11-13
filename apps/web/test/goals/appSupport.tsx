@@ -135,14 +135,16 @@ type History = { entries: string[]; index: number };
  * in state so that push, replace and back on the router mock move between pages as the browser does, and
  * the browser's Back and Forward too. Each page is keyed by its address, so it mounts anew when reached, while
  * the layout above stays mounted for as long as the address is under /goal. More and Train are stand-ins
- * outside the layout, so leaving the flow drops its answers. A page reads its `from` parameter as the route
+ * outside the layout, so leaving the flow drops its answers. A page reads its `from` and `origin` parameters as the route
  * files do.
  */
 function GoalApp({ entries, router }: { entries: string[]; router: AppRouter }) {
   const [history, setHistory] = useState<History>({ entries, index: entries.length - 1 });
   const address = history.entries[history.index] ?? "";
   const [path = "", query = ""] = address.split("?");
-  const from = new URLSearchParams(query).get("from") ?? undefined;
+  const params = new URLSearchParams(query);
+  const from = params.get("from") ?? undefined;
+  const origin = params.get("origin") ?? undefined;
 
   useLayoutEffect(() => {
     visited.entries = history.entries;
@@ -195,9 +197,9 @@ function GoalApp({ entries, router }: { entries: string[]; router: AppRouter }) 
     path === "/goal" ? (
       <GoalRoute key={address} from={from} />
     ) : segment === "summary" ? (
-      <GoalSummaryRoute key={address} />
+      <GoalSummaryRoute key={address} origin={origin} />
     ) : (
-      <GoalQuestionRoute key={address} step={segment} from={from} />
+      <GoalQuestionRoute key={address} step={segment} from={from} origin={origin} />
     );
 
   return <GoalFlow>{page}</GoalFlow>;

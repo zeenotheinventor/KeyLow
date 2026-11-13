@@ -20,16 +20,21 @@ import type { GoalQuestionScreenProps } from "./types";
 import { goalLeavePath, goalQuestionPath, goalSummaryPath } from "@/lib/goalRoutes";
 
 /**
- * One question of the goal questionnaire. The answers are kept by the flow's layout, so Back loses none. Back
- * goes one step back in the history when the address says a row of the Goal page opened this question, or
- * Next from one that it opened: the question before it, or the Goal page. Any other question, reached cold or
- * after a cancel, goes to the question before it. Cancel asks first when
- * the answers differ from those the flow opened with, so there is something to lose, and leaves for the Goal
- * page when a goal was stored and for More when it is the first. The phone leaves the whole flow for More from
- * any question. Here that would throw a person out of the page they were changing a row on.
- * Next on the sixth question opens the summary, which saves.
+ * One question of the goal questionnaire. The answers are kept by the flow's layout, so Back loses none.
+ * Back goes one step back in the history when the address says a row of the Goal page opened this question,
+ * or Next from one that it opened: the question before it, or the Goal page. Any other question, reached
+ * cold or after a cancel, goes to the question before it. Cancel asks first when the answers differ from
+ * those the flow opened with, so there is something to lose, and leaves for the Goal page when a goal was
+ * stored and for More when it is the first. When the address says Train opened the flow, every address it
+ * moves to carries that, and Cancel leaves for Train, or for the Goal page as Train opens it. The phone
+ * leaves the whole flow for More from any question. Here that would throw a person out of the page they were
+ * changing a row on. Next on the sixth question opens the summary, which saves.
  */
-export function GoalQuestionScreen({ step: stepName, isFromGoalPage }: GoalQuestionScreenProps) {
+export function GoalQuestionScreen({
+  step: stepName,
+  isFromGoalPage,
+  isFromTrain,
+}: GoalQuestionScreenProps) {
   const router = useRouter();
   const { draft, hasChanges, answer, hasStoredGoal } = useGoalDraft();
   const [isAsking, setIsAsking] = useState(false);
@@ -37,7 +42,7 @@ export function GoalQuestionScreen({ step: stepName, isFromGoalPage }: GoalQuest
   const question = GOAL_QUESTIONS[stepName];
 
   function leave() {
-    router.replace(goalLeavePath(hasStoredGoal));
+    router.replace(goalLeavePath(hasStoredGoal, { fromTrain: isFromTrain }));
   }
 
   function renderAnswers() {
@@ -114,7 +119,7 @@ export function GoalQuestionScreen({ step: stepName, isFromGoalPage }: GoalQuest
                 if (isFromGoalPage) {
                   router.back();
                 } else {
-                  router.push(goalQuestionPath(step - 1));
+                  router.push(goalQuestionPath(step - 1, { fromTrain: isFromTrain }));
                 }
               }
         }
@@ -128,8 +133,11 @@ export function GoalQuestionScreen({ step: stepName, isFromGoalPage }: GoalQuest
         onNext={() => {
           router.push(
             step === GOAL_QUESTION_STEPS.length
-              ? goalSummaryPath()
-              : goalQuestionPath(step + 1, { fromGoalPage: isFromGoalPage }),
+              ? goalSummaryPath({ fromTrain: isFromTrain })
+              : goalQuestionPath(step + 1, {
+                  fromGoalPage: isFromGoalPage,
+                  fromTrain: isFromTrain,
+                }),
           );
         }}
       >
