@@ -5,13 +5,15 @@ import { assistantExerciseFormMediaSchema } from "./exerciseFormCard";
 import { assistantExerciseMusclesSchema } from "./exerciseMusclesCard";
 import { assistantIdSchema } from "./ids";
 import { assistantNoticeSchema } from "./notice";
+import { assistantRecipeDraftSchema } from "./recipeDraft";
 
 /*
  * The events the `assistant` Edge Function streams to the app, one JSON event per Server-Sent Events
  * `data:` line (M8 plan, section 5, "Contracts"). Both sides parse them with these schemas, so a field
  * the other side does not know is an error, never a silent extra. The one place that is lenient is
- * `parseAssistantEvent`: a status it cannot read is the default step, so a server that is ahead of the app
- * (a new status code, a new field) never fails the person's turn.
+ * `parseAssistantEvent`: a status it cannot read is the default step, and an event type or a card kind it
+ * does not know is reported as skippable, so a server that is ahead of the app (a new status code, a new
+ * event, a new card kind) never fails the person's turn.
  */
 
 /** The first event of every turn: which turn this is and the conversation it belongs to. */
@@ -84,6 +86,17 @@ const exerciseFormMediaEventSchema = z.strictObject({
 });
 
 /**
+ * A recipe the assistant drafted (`suggest_recipe`, `adjust_recipe`), drawn by the app under the reply. A
+ * read: nothing is saved until the person presses Save to recipes. One event for each draft, in call order.
+ */
+// Not strict, unlike the other events, so a field a later version adds beside `draft` is stripped by an app
+// that is behind instead of failing the turn.
+const recipeDraftEventSchema = z.object({
+  type: z.literal("recipe_draft"),
+  draft: assistantRecipeDraftSchema,
+});
+
+/**
  * The Ask again quick reply under the reply (`assistant · workout-in-progress`, A change refused): a press
  * sends the person's last message again. A later turn takes it away.
  */
@@ -143,6 +156,7 @@ export const assistantStreamEventSchema = z.discriminatedUnion("type", [
   linkEventSchema,
   exerciseMusclesEventSchema,
   exerciseFormMediaEventSchema,
+  recipeDraftEventSchema,
   askAgainEventSchema,
   clarifyEventSchema,
   confirmEventSchema,
@@ -161,14 +175,21 @@ export type AssistantStatus = WithoutType<Extract<AssistantStreamEvent, { type: 
 
 /**
  * One SSE `data:` payload that did not parse. `invalid_json` is a payload that is not JSON, and
- * `invalid_event` a JSON value that is not an event, with the paths of the fields that broke, such as
+ * `unknown_kind` an event type, or the kind of a card, that this app has no schema for because the server is
+ * ahead of it: the reader skips it and the turn goes on. It carries the kind's name and nothing else, and
+ * only when the name is a plain word of the kind of name the contract uses (`kindNamePattern`). Any other
+ * value is `invalid_event`, so what a payload holds never reaches a log by way of its kind. `invalid_event`
+ * is a JSON value that is not an event, with the paths of the fields that broke, such as
  * `outcome`. An extra key is named by its whole path, such as `card.rows.0.grams`, because a key's name
  * is not a value. Never a value: the text is the person's, so nothing the event holds reaches a log or
  * an error report from here.
  */
+export type SkippedLink = { subject: "link"; kind: string };
+
 export type ParsedAssistantEvent =
-  | { ok: true; event: AssistantStreamEvent }
-  | { ok: false; reason: "invalid_json" | "invalid_event"; fieldPaths: string[] };
+  | { ok: true; event: AssistantStreamEvent; skipped?: SkippedLink }
+  | { ok: false; reason: "invalid_json" | "invalid_event"; fieldPaths: string[] }
+  | { ok: false; reason: "unknown_kind"; subject: "event" | "card"; kind: string };
 
 const readJson = (line: string): { ok: true; value: unknown } | { ok: false } => {
   try {
@@ -178,11 +199,81 @@ const readJson = (line: string): { ok: true; value: unknown } | { ok: false } =>
   }
 };
 
+// The status events are a union of their own, keyed by `code`, so one member stands for all of them.
+const eventTypeOf = (option: (typeof assistantStreamEventSchema.options)[number]): string =>
+  "shape" in option ? option.shape.type.value : option.options[0].shape.type.value;
+
+const knownEventTypes: ReadonlySet<string> = new Set(
+  assistantStreamEventSchema.options.map(eventTypeOf),
+);
+const knownCardKinds: ReadonlySet<string> = new Set(assistantCardSchema.shape.kind.options);
+
+// The shape of every event type and card kind name in the contract.
+const kindNamePattern = /^[a-z][a-z0-9_]{0,63}$/;
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
+const nameOfUnknownKind = (known: ReadonlySet<string>, name: unknown): string | null =>
+  typeof name === "string" && kindNamePattern.test(name) && !known.has(name) ? name : null;
+
+// The type of an event, or the kind of the card in a card event, when the schema refused it for being
+// ahead of this app.
+function unknownKindOf(value: unknown): { subject: "event" | "card"; kind: string } | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+  const eventType = nameOfUnknownKind(knownEventTypes, value["type"]);
+  if (eventType !== null) {
+    return { subject: "event", kind: eventType };
+  }
+  const cardKind =
+    value["type"] === "card" && isRecord(value["card"])
+      ? nameOfUnknownKind(knownCardKinds, value["card"]["kind"])
+      : null;
+  return cardKind === null ? null : { subject: "card", kind: cardKind };
+}
+
+const knownLinkScreens: ReadonlySet<string> = new Set(
+  assistantCardLinkSchema.shape.target.options.map((option) => option.shape.screen.value),
+);
+
+// A card of a known kind whose link this app cannot read (a screen it does not know) is kept with no link,
+// and `skipped` names the screen when it is a plain word of the kind of name the contract uses, and
+// `unreadable` when it is not. The card is tried again with its link removed, so a card that is wrong
+// anywhere else still fails.
+function cardWithoutUnreadableLink(value: unknown): ParsedAssistantEvent | null {
+  if (!isRecord(value) || value["type"] !== "card" || !isRecord(value["card"])) {
+    return null;
+  }
+  const { link } = value["card"];
+  if (!isRecord(link)) {
+    return null;
+  }
+  const retried = assistantStreamEventSchema.safeParse({
+    ...value,
+    card: { ...value["card"], link: null },
+  });
+  if (!retried.success) {
+    return null;
+  }
+  const screen = isRecord(link["target"]) ? link["target"]["screen"] : undefined;
+  // A screen the app knows with bad parameters is unreadable, not an unknown screen, so it is not named.
+  const kind =
+    typeof screen === "string" && kindNamePattern.test(screen) && !knownLinkScreens.has(screen)
+      ? screen
+      : "unreadable";
+  return { ok: true, event: retried.data, skipped: { subject: "link", kind } };
+}
+
 // A status the schema refused is a step this app has no words for, so it reads as the default step.
 const isStatusObject = (value: unknown): boolean =>
   typeof value === "object" && value !== null && "type" in value && value.type === "status";
 
-/** Reads one SSE `data:` payload as an assistant event. It never throws, and a status it cannot read is `thinking`. */
+/**
+ * Reads one SSE `data:` payload as an assistant event. It never throws, a status it cannot read is
+ * `thinking`, and an event type or card kind it does not know is `unknown_kind`.
+ */
 export const parseAssistantEvent = (line: string): ParsedAssistantEvent => {
   const json = readJson(line);
   if (!json.ok) {
@@ -194,6 +285,14 @@ export const parseAssistantEvent = (line: string): ParsedAssistantEvent => {
   }
   if (isStatusObject(json.value)) {
     return { ok: true, event: { type: "status", code: "thinking" } };
+  }
+  const withoutLink = cardWithoutUnreadableLink(json.value);
+  if (withoutLink !== null) {
+    return withoutLink;
+  }
+  const unknownKind = unknownKindOf(json.value);
+  if (unknownKind !== null) {
+    return { ok: false, reason: "unknown_kind", ...unknownKind };
   }
   const fieldPaths = result.error.issues
     .flatMap((issue) =>

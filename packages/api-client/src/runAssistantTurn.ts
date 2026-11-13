@@ -27,12 +27,17 @@ export type StreamingFetch = (
   init: { method: "POST"; headers: Record<string, string>; body: string; signal: AbortSignal },
 ) => Promise<StreamingResponse>;
 
+/** An event type, a card kind or a card link screen that the server sent and this app has no schema for. */
+export type SkippedKind = { subject: "event" | "card" | "link"; kind: string };
+
 type RunAssistantTurnOptions = {
   fetch: StreamingFetch;
   turnUrl: string;
   accessToken: string;
   request: AssistantTurnRequest;
   signal: AbortSignal;
+  /** Called with the name of each event type or card kind that was skipped, and nothing else of it. */
+  onKindSkipped?: ((skipped: SkippedKind) => void) | undefined;
 };
 
 const isEventStream = (response: StreamingResponse) =>
@@ -56,7 +61,11 @@ export type AssistantTurnEnd = { live: AssistantLiveTurn; streamed: boolean };
  * - an answer that is not an event stream (the route answers 400 JSON for a body it refuses and 401 JSON
  *   for no sign-in, and a proxy can answer anything) or a connection that fails is the failed turn notice,
  *   without waiting for events,
- * - a line that is not an event the contract knows stops the reading with the failed turn notice, and
+ * - an event type or a card kind the contract does not know, which is a server ahead of the app, is skipped
+ *   and the turn goes on, with its name (and nothing of what it held) given to `onKindSkipped`,
+ * - a card whose link screen the contract does not know is drawn with no link, and the screen's name goes to
+ *   `onKindSkipped` the same way,
+ * - a line that is not an event the contract knows otherwise stops the reading with the failed turn notice, and
  * - an abort through `signal` keeps what arrived and marks the turn stopped, and a signal that is already
  *   aborted sends nothing.
  * It also says whether the answer was an event stream, because from then on the function may have written,
@@ -64,7 +73,7 @@ export type AssistantTurnEnd = { live: AssistantLiveTurn; streamed: boolean };
  * The message and the events are never logged, because they hold what the person said and ate.
  */
 export async function runAssistantTurn(
-  { fetch, turnUrl, accessToken, request, signal }: RunAssistantTurnOptions,
+  { fetch, turnUrl, accessToken, request, signal, onKindSkipped }: RunAssistantTurnOptions,
   onChange: (live: AssistantLiveTurn) => void,
 ): Promise<AssistantTurnEnd> {
   let live = newLiveTurn();
@@ -101,7 +110,14 @@ export async function runAssistantTurn(
     await readServerSentData(response.body, (data) => {
       const parsed = parseAssistantEvent(data);
       if (!parsed.ok) {
-        return false;
+        if (parsed.reason !== "unknown_kind") {
+          return false;
+        }
+        onKindSkipped?.({ subject: parsed.subject, kind: parsed.kind });
+        return true;
+      }
+      if (parsed.skipped !== undefined) {
+        onKindSkipped?.(parsed.skipped);
       }
       show(applyAssistantEvent(live, parsed.event));
       // Nothing follows `done`, so a connection a proxy holds open is not waited on.

@@ -9,7 +9,7 @@ import { runAssistantTurn } from "../runAssistantTurn";
 
 import type { AssistantLiveTurn } from "../assistantLiveTurn";
 import type { Database } from "../database.types";
-import type { StreamingFetch } from "../runAssistantTurn";
+import type { SkippedKind, StreamingFetch } from "../runAssistantTurn";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 // The access token of the session, or null when there is none or it cannot be read.
@@ -45,6 +45,8 @@ type SendOptions = {
  * - `stop` aborts the request and keeps the text that arrived, marked `stopped`. Unmounting aborts too.
  * - `live` is the turn being written, or null before the first send. A network failure, a refused request
  *   or an event the app cannot read gives the `turn_failed` notice and never throws.
+ * - An event type or card kind this app does not know is skipped and the turn goes on, with its name given to
+ *   `onKindSkipped` (the phone leaves a breadcrumb with it).
  * - `isStreaming` is true from the send to the end of the stream.
  *
  * Once the answer was an event stream, the function may have written, so when the turn ends (done, stopped
@@ -52,7 +54,13 @@ type SendOptions = {
  * foods and targets. A refused request changes nothing. A notice in the stream is the authority over the
  * status read: a day limit shows even when the status said the assistant was open.
  */
-export function useAssistantTurn({ fetch }: { fetch: StreamingFetch }) {
+export function useAssistantTurn({
+  fetch,
+  onKindSkipped,
+}: {
+  fetch: StreamingFetch;
+  onKindSkipped?: ((skipped: SkippedKind) => void) | undefined;
+}) {
   const client = useSupabase();
   const functionsUrl = useFunctionsUrl();
   const queryClient = useQueryClient();
@@ -100,6 +108,7 @@ export function useAssistantTurn({ fetch }: { fetch: StreamingFetch }) {
             accessToken,
             request: { conversationId, text, localDate, localTime: localTime ?? null },
             signal: controller.signal,
+            onKindSkipped,
           },
           show,
         );
@@ -120,7 +129,7 @@ export function useAssistantTurn({ fetch }: { fetch: StreamingFetch }) {
         }
       }
     },
-    [client, fetch, functionsUrl, queryClient],
+    [client, fetch, functionsUrl, onKindSkipped, queryClient],
   );
 
   const stop = useCallback(() => {

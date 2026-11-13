@@ -62,6 +62,7 @@ export * from "./assistantNotices";
 export * from "./assistantSettings";
 export * from "./assistantEntryCards";
 export * from "./assistantFeatureRequest";
+export * from "./assistantKitchen";
 export * from "./foodReminders";
 export * from "./assistantSheet";
 export * from "./assistantDayCards";
