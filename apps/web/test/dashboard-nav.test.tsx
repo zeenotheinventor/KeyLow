@@ -13,7 +13,11 @@ const { push, pathname, openAddFood, viewedDate } = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/foodLogActions", () => ({
-  useFoodLogActions: () => ({ openAddFood, viewedDate: viewedDate() }),
+  useFoodLogActions: () => ({
+    openAddFood,
+    viewedDate: viewedDate(),
+    setAssistantDescribeOpener: vi.fn(),
+  }),
 }));
 
 vi.mock("next/navigation", () => ({

@@ -31,6 +31,7 @@ export function AssistantDock({ children }: AssistantDockProps) {
       {opening === null ? null : (
         <AssistantPanel
           buttonRef={buttonRef}
+          describeAt={opening.describeAt}
           from={opening.from}
           isOpen={isOpen}
           localDate={opening.localDate}

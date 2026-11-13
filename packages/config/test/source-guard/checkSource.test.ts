@@ -581,3 +581,110 @@ describe("a design colour name that reads like a shadcn class", () => {
     ]);
   });
 });
+
+describe("a raw console call in an Edge Function", () => {
+  const functionFile = "packages/db/supabase/functions/assistant/turn.ts";
+
+  it("should flag each console method called in a function", () => {
+    expect(
+      rulesFound(
+        functionFile,
+        `console.log("a");\nconsole.info("b");\nconsole.warn("c");\nconsole.error("d");\nconsole.debug("e");`,
+      ),
+    ).toEqual(Array<RuleName>(5).fill("raw-console-in-function"));
+  });
+
+  it("should report the line and the method", () => {
+    const [violation] = checkSource({
+      path: functionFile,
+      source: `const a = 1;\nconsole.log(a);`,
+      coreHelperNames,
+    });
+
+    expect(violation).toMatchObject({
+      rule: "raw-console-in-function",
+      line: 2,
+      detail: "console.log",
+    });
+  });
+
+  it.each([
+    [`console["log"]("a");`],
+    ["console[`log`]('a');"],
+    [`const { log } = console;`],
+    [`const { log: write } = console;`],
+    [`const c = console;\nc.log("a");`],
+    [`foo(console);`],
+    [`const all = { ...console };`],
+    [`const all = { console };`],
+    [`globalThis["console"].warn("a");`],
+    [`globalThis[name].warn("a");`],
+    [`self.console.log("a");`],
+    [`window.console.log("a");`],
+    [`console[method]("a");`],
+    [`console?.log("a");`],
+    [`(0, console.log)("a");`],
+    [`const { console: c } = globalThis;`],
+    [`import { log } from "console";`],
+    [`import { log } from "node:console";`],
+    [`const { log } = await import("node:console");`],
+    [`const { log } = await import("console");`],
+    [`const { log } = require("console");`],
+    [`const { log } = require("node:console");`],
+  ])("should flag %s", (source) => {
+    expect(rulesFound(functionFile, source)).not.toEqual([]);
+    expect(rulesFound(functionFile, source)).toEqual(
+      expect.arrayContaining(["raw-console-in-function"]),
+    );
+  });
+
+  it("should flag a console method taken by reference, so it cannot be called later", () => {
+    expect(rulesFound(functionFile, `const write = console.log;`)).toEqual([
+      "raw-console-in-function",
+    ]);
+  });
+
+  it("should flag the console reached through globalThis", () => {
+    expect(rulesFound(functionFile, `globalThis.console.log("a");`)).toEqual([
+      "raw-console-in-function",
+    ]);
+  });
+
+  it("should flag the console in a shared helper of the functions", () => {
+    expect(
+      rulesFound("packages/db/supabase/functions/_shared/http.ts", `console.error("a");`),
+    ).toEqual(["raw-console-in-function"]);
+  });
+
+  it("should allow logLine to write to the console, as the one place that does", () => {
+    expect(
+      rulesFound("packages/db/supabase/functions/_shared/log.ts", `console.info("a");`),
+    ).toEqual([]);
+  });
+
+  it("should allow the test support that replaces the console to record it", () => {
+    expect(
+      rulesFound(
+        "packages/db/supabase/functions/_shared/assistant/testing.ts",
+        `const originals = { log: console.log };`,
+      ),
+    ).toEqual([]);
+  });
+
+  it("should allow a console call in a function's test", () => {
+    expect(
+      rulesFound("packages/db/supabase/functions/_shared/off.test.ts", `console.error = () => {};`),
+    ).toEqual([]);
+  });
+
+  it("should allow a console call outside the functions", () => {
+    expect(rulesFound("packages/db/scripts/seed.ts", `console.log("seeded");`)).toEqual([]);
+    expect(rulesFound(webFile, `console.log("a");`)).toEqual([]);
+  });
+
+  it("should not flag a variable that is merely named console", () => {
+    expect(
+      rulesFound(functionFile, `const adminConsole = { log() {} };\nadminConsole.log();`),
+    ).toEqual([]);
+  });
+});

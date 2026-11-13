@@ -10,10 +10,16 @@ import { ListRow } from "@/components/ui/ListRow";
 /**
  * The empty panel in the thread (`web-assistant · empty`, `empty-train`): a heading, a line on how to say it,
  * the starters that each send their words, and the not-medical-advice line. Core says which words the
- * panel has, for the way it was opened.
+ * panel has, for the way it was opened. From Describe (`web-assistant · describe`) it is the intro alone,
+ * with no starters and no not-medical line.
  */
-export function AssistantEmpty({ onStarterPress, isDisabled, from }: AssistantEmptyProps) {
-  const words = describeAssistantEmpty(undefined, from);
+export function AssistantEmpty({
+  onStarterPress,
+  isDisabled,
+  describeAt,
+  from,
+}: AssistantEmptyProps) {
+  const words = describeAssistantEmpty(describeAt, from);
 
   return (
     <div className="flex flex-col gap-4 pt-2">
@@ -21,21 +27,23 @@ export function AssistantEmpty({ onStarterPress, isDisabled, from }: AssistantEm
         <h2 className="text-h2">{words.heading}</h2>
         <p className="text-body text-text-secondary">{words.lede}</p>
       </div>
-      <GroupedList hidesTitle title={ASSISTANT_SHEET.startersLabel}>
-        {words.starters.map((starter) => (
-          <ListRow
-            key={starter}
-            className="min-h-[52px]"
-            disabled={isDisabled}
-            title={starter}
-            titleWeight="regular"
-            trailingIcon={ArrowUp}
-            onClick={() => {
-              onStarterPress(starter);
-            }}
-          />
-        ))}
-      </GroupedList>
+      {words.starters.length > 0 && (
+        <GroupedList hidesTitle title={ASSISTANT_SHEET.startersLabel}>
+          {words.starters.map((starter) => (
+            <ListRow
+              key={starter}
+              className="min-h-[52px]"
+              disabled={isDisabled}
+              title={starter}
+              titleWeight="regular"
+              trailingIcon={ArrowUp}
+              onClick={() => {
+                onStarterPress(starter);
+              }}
+            />
+          ))}
+        </GroupedList>
+      )}
       {words.isNotMedicalLineShown ? (
         <p className="text-caption text-text-muted">{ASSISTANT_NOT_MEDICAL_ADVICE}</p>
       ) : null}

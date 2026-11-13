@@ -15,6 +15,7 @@ import {
 } from "@modelcontextprotocol/client";
 import { z } from "zod";
 
+import { logLine } from "../log.ts";
 import { strictMetaKey } from "./tool.ts";
 
 import type { JsonSchemaObject } from "./tool.ts";
@@ -209,7 +210,7 @@ async function openClient(options: ConnectToolServerOptions): Promise<Client> {
 
 function log(turnId: string, step: RetryStep, tool: string, code: string, startedAt: number): void {
   const milliseconds = Math.round(performance.now() - startedAt);
-  console.log(`mcp client turn=${turnId} step=${step} tool=${tool} code=${code} ${milliseconds}ms`);
+  logLine("info", "mcp client", { turn: turnId, step, tool, code, milliseconds });
 }
 
 type Step<Value> = {

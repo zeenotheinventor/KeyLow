@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>plan · settings (proposal)</title>
+<link rel="stylesheet" href="../../../../packages/tokens/css/kilo-tokens.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+.board{width:820px;height:844px;display:flex;gap:40px;background:var(--border-strong);font-family:Geist,system-ui,sans-serif}
+.frame{position:relative;width:390px;height:844px;box-sizing:border-box;overflow:hidden;display:flex;flex-direction:column;font-family:var(--font-sans);font-size:var(--type-body-size);line-height:var(--type-body-line);font-variant-numeric:tabular-nums;background:var(--background);color:var(--text-primary)}
+.t-h1{font-size:var(--type-h1-size);line-height:var(--type-h1-line);font-weight:var(--type-h1-weight);letter-spacing:var(--type-h1-tracking);margin:0}
+.t-h2{font-size:var(--type-h2-size);line-height:var(--type-h2-line);font-weight:var(--type-h2-weight);letter-spacing:var(--type-h2-tracking);margin:0}
+.t-bs{font-size:var(--type-body-strong-size);line-height:var(--type-body-strong-line);font-weight:var(--type-body-strong-weight);letter-spacing:var(--type-body-strong-tracking)}
+.t-cap{font-size:var(--type-caption-size);line-height:var(--type-caption-line);font-weight:var(--type-caption-weight);letter-spacing:var(--type-caption-tracking)}
+.t-ls{font-size:var(--type-label-small-size);line-height:var(--type-label-small-line);font-weight:var(--type-label-small-weight);letter-spacing:var(--type-label-small-tracking)}
+.c-sec{color:var(--text-secondary)}.c-mut{color:var(--text-muted)}.c-acc{color:var(--accent-ink)}.c-warn{color:var(--warning-ink)}.c-ok{color:var(--success-ink)}.c-succ{color:var(--success)}
+.ib{width:var(--touch-target);height:var(--control-height-md);box-sizing:border-box;display:flex;align-items:center;justify-content:center;border-radius:var(--radius-medium);border:1px solid var(--border);background:var(--surface-raised);color:var(--text-primary);flex-shrink:0}
+.ib.ghost{border-color:transparent;background:transparent;color:var(--text-secondary)}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-large);box-shadow:var(--elevation-card);overflow:hidden}
+.flat{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-large);overflow:hidden}
+.btn{height:var(--control-height-md);box-sizing:border-box;padding:0 var(--space-4);border-radius:var(--radius-medium);border:1px solid;display:flex;align-items:center;justify-content:center;gap:var(--space-2);font-size:var(--type-body-strong-size);line-height:var(--type-body-strong-line);font-weight:var(--type-body-strong-weight);white-space:nowrap}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-foreground)}
+.btn.secondary{background:var(--surface-raised);border-color:var(--border);color:var(--text-primary)}
+.btn.ghost{background:transparent;border-color:transparent;color:var(--text-primary)}
+.btn.dim{opacity:.4}
+.badge{height:20px;box-sizing:border-box;display:inline-flex;align-items:center;gap:5px;padding:0 var(--space-2);border-radius:var(--radius-pill);border:1px solid transparent;font-size:var(--type-caption-size);line-height:16px;font-weight:var(--weight-medium);white-space:nowrap;flex-shrink:0}
+.badge .dot{width:6px;height:6px;border-radius:var(--radius-pill)}
+.badge.ok{background:var(--success-muted);color:var(--success-ink)}.badge.ok .dot{background:var(--success)}
+.badge.warn{background:var(--warning-muted);color:var(--warning-ink)}.badge.warn .dot{background:var(--warning)}
+.badge.neutral{background:var(--surface-raised);border-color:var(--border);color:var(--text-secondary)}
+.badge.outlined{background:transparent;border-color:var(--border);color:var(--text-secondary)}
+.tile{width:36px;height:36px;flex-shrink:0;border-radius:var(--radius-small);background:var(--surface-raised);display:flex;align-items:center;justify-content:center}
+.bar{position:relative;height:4px;border-radius:var(--radius-pill);background:var(--border);overflow:hidden;display:block}
+.bar>span{position:absolute;top:0;bottom:0;left:0}
+.row{display:flex;align-items:center;gap:var(--space-3)}
+.hair{border-top:1px solid var(--border)}
+.banner{display:flex;align-items:flex-start;gap:var(--space-3);border-radius:var(--radius-medium);border:1px solid;padding:var(--space-3) var(--space-4)}
+.banner.info{background:var(--surface-raised);border-color:var(--border);padding:var(--space-3)}
+.banner.warn{background:var(--warning-muted);border-color:var(--warning)}
+.banner.ok{background:var(--success-muted);border-color:var(--success)}
+.link{font-size:var(--type-body-strong-size);line-height:var(--type-body-strong-line);font-weight:var(--weight-semibold);color:var(--accent-ink);text-decoration:underline}
+.pill{flex:1;max-width:48px;height:56px;box-sizing:border-box;border:1px solid var(--border);border-radius:var(--radius-pill);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.pill.sel{border-color:var(--border-strong);background:var(--surface-raised)}
+.pill.future{opacity:.4}
+.chip{height:28px;box-sizing:border-box;display:inline-flex;align-items:center;padding:0 var(--space-3);border-radius:var(--radius-pill);background:var(--surface-raised);border:1px solid var(--border);color:var(--text-secondary)}
+.radio{width:20px;height:20px;box-sizing:border-box;border-radius:var(--radius-pill);border:2px solid var(--border-strong);flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.radio.on{border-color:var(--accent);background:var(--accent)}
+.radio.on>span{width:8px;height:8px;border-radius:var(--radius-pill);background:var(--accent-foreground)}
+.opt{min-height:56px;box-sizing:border-box;display:flex;align-items:center;gap:var(--space-3);padding:var(--space-3) var(--space-4);border-radius:var(--radius-medium);border:1px solid var(--border);background:var(--surface)}
+.opt.on{border-color:var(--accent);background:var(--accent-muted)}
+.check{width:24px;height:24px;box-sizing:border-box;border-radius:var(--radius-small);border:2px solid var(--border-strong);flex-shrink:0}
+.toast{position:absolute;left:var(--space-4);right:var(--space-4);top:54px;display:flex;align-items:center;gap:var(--space-3);padding:var(--space-3) var(--space-4);border-radius:var(--radius-medium);background:var(--surface-raised);border:1px solid var(--border);box-shadow:var(--elevation-toast);z-index:3}
+</style>
+</head>
+<body>
+<div class="board"><div data-screen="PlanSettingsScreen"><div data-theme="dark" class="frame" style="background:var(--background)">
+
+<div data-kilo="SheetHeader (screen)" class="row" style="gap:var(--space-2);padding:54px var(--space-3) var(--space-2);flex-shrink:0">
+  <span class="ib ghost" role="button" aria-label="Meal plan"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" ><path d="m15 18-6-6 6-6"></path></svg></span>
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:2px">
+    <span class="t-h2" role="heading" aria-level="1" style="text-align:center">Plan settings</span>
+    
+  </div>
+  <span style="width:var(--touch-target)"></span>
+</div>
+<div style="flex:1;min-height:0;overflow:hidden">
+<div style="display:flex;flex-direction:column;gap:var(--space-2);padding:var(--space-2) var(--space-4) var(--space-4)">
+  <div role="radiogroup" aria-label="How often can a recipe repeat?" style="display:flex;flex-direction:column;gap:var(--space-2)">
+    <div style="display:flex;flex-direction:column;gap:2px;padding:0 var(--space-1) var(--space-1)">
+      <span class="t-bs" role="heading" aria-level="2">How often can a recipe repeat?</span>
+      <span class="t-cap c-sec">In one week. Leftovers count toward the limit, so a recipe that makes 2 servings uses 2.</span>
+    </div>
+    <div data-kilo="OptionCard radio (reuse)" class="opt" role="radio" aria-checked="false">
+  <span class="radio"></span>
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="row" style="gap:var(--space-2)"><span class="t-bs">Once a week</span></span></div>
+</div><div data-kilo="OptionCard radio (reuse)" class="opt on" role="radio" aria-checked="true">
+  <span class="radio on"><span></span></span>
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="row" style="gap:var(--space-2)"><span class="t-bs">Twice a week</span><span class="badge neutral">Starting limit</span></span></div>
+</div><div data-kilo="OptionCard radio (reuse)" class="opt" role="radio" aria-checked="false">
+  <span class="radio"></span>
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="row" style="gap:var(--space-2)"><span class="t-bs">3 times a week</span></span></div>
+</div><div data-kilo="OptionCard radio (reuse)" class="opt" role="radio" aria-checked="false">
+  <span class="radio"></span>
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="row" style="gap:var(--space-2)"><span class="t-bs">4 times a week</span></span></div>
+</div><div data-kilo="OptionCard radio (reuse)" class="opt" role="radio" aria-checked="false">
+  <span class="radio"></span>
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="row" style="gap:var(--space-2)"><span class="t-bs">5 times a week</span></span></div>
+</div><div data-kilo="OptionCard radio (reuse)" class="opt" role="radio" aria-checked="false">
+  <span class="radio"></span>
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="row" style="gap:var(--space-2)"><span class="t-bs">6 times a week</span></span></div>
+</div><div data-kilo="OptionCard radio (reuse)" class="opt" role="radio" aria-checked="false">
+  <span class="radio"></span>
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="row" style="gap:var(--space-2)"><span class="t-bs">7 times a week</span></span></div>
+</div>
+    <div data-kilo="OptionCard radio (reuse)" class="opt" role="radio" aria-checked="false">
+  <span class="radio"></span>
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="row" style="gap:var(--space-2)"><span class="t-bs">No limit</span></span><span class="t-cap c-sec">You don't mind eating the same thing again and again.</span></div>
+</div>
+  </div>
+  <span class="t-cap c-mut" style="padding:var(--space-1) var(--space-1) 0">A new limit applies to your next plan and to any day you regenerate. Days already planned stay as they are.</span>
+</div>
+</div></div></div><div data-screen="PlanSettingsScreen"><div data-theme="light" class="frame" style="background:var(--background)">
+
+<div data-kilo="SheetHeader (screen)" class="row" style="gap:var(--space-2);padding:54px var(--space-3) var(--space-2);flex-shrink:0">
+  <span class="ib ghost" role="button" aria-label="Meal plan"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" ><path d="m15 18-6-6 6-6"></path></svg></span>
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:2px">
+    <span class="t-h2" role="heading" aria-level="1" style="text-align:center">Plan settings</span>
+    
+  </div>
+  <span style="width:var(--touch-target)"></span>
+</div>
+<div style="flex:1;min-height:0;overflow:hidden">
+<div style="display:flex;flex-direction:column;gap:var(--space-2);padding:var(--space-2) var(--space-4) var(--space-4)">
+  <div role="radiogroup" aria-label="How often can a recipe repeat?" style="display:flex;flex-direction:column;gap:var(--space-2)">
+    <div style="display:flex;flex-direction:column;gap:2px;padding:0 var(--space-1) var(--space-1)">
+      <span class="t-bs" role="heading" aria-level="2">How often can a recipe repeat?</span>
+      <span class="t-cap c-sec">In one week. Leftovers count toward the limit, so a recipe that makes 2 servings uses 2.</span>
+    </div>
+    <div data-kilo="OptionCard radio (reuse)" class="opt" role="radio" aria-checked="false">
+  <span class="radio"></span>
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="row" style="gap:var(--space-2)"><span class="t-bs">Once a week</span></span></div>
+</div><div data-kilo="OptionCard radio (reuse)" class="opt" role="radio" aria-checked="false">
+  <span class="radio"></span>
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="row" style="gap:var(--space-2)"><span class="t-bs">Twice a week</span><span class="badge neutral">Starting limit</span></span></div>
+</div><div data-kilo="OptionCard radio (reuse)" class="opt" role="radio" aria-checked="false">
+  <span class="radio"></span>
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="row" style="gap:var(--space-2)"><span class="t-bs">3 times a week</span></span></div>
+</div><div data-kilo="OptionCard radio (reuse)" class="opt" role="radio" aria-checked="false">
+  <span class="radio"></span>
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="row" style="gap:var(--space-2)"><span class="t-bs">4 times a week</span></span></div>
+</div><div data-kilo="OptionCard radio (reuse)" class="opt" role="radio" aria-checked="false">
+  <span class="radio"></span>
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="row" style="gap:var(--space-2)"><span class="t-bs">5 times a week</span></span></div>
+</div><div data-kilo="OptionCard radio (reuse)" class="opt" role="radio" aria-checked="false">
+  <span class="radio"></span>
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="row" style="gap:var(--space-2)"><span class="t-bs">6 times a week</span></span></div>
+</div><div data-kilo="OptionCard radio (reuse)" class="opt" role="radio" aria-checked="false">
+  <span class="radio"></span>
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="row" style="gap:var(--space-2)"><span class="t-bs">7 times a week</span></span></div>
+</div>
+    <div data-kilo="OptionCard radio (reuse)" class="opt on" role="radio" aria-checked="true">
+  <span class="radio on"><span></span></span>
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="row" style="gap:var(--space-2)"><span class="t-bs">No limit</span></span><span class="t-cap c-sec">You don't mind eating the same thing again and again.</span></div>
+</div>
+  </div>
+  <span class="t-cap c-mut" style="padding:var(--space-1) var(--space-1) 0">A new limit applies to your next plan and to any day you regenerate. Days already planned stay as they are.</span>
+</div>
+</div></div></div></div>
+</body>
+</html>

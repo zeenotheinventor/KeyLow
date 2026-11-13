@@ -38,8 +38,6 @@
 //   the user id, the branch and the duration.
 import { requireUser } from "../_shared/auth.ts";
 import {
-  backstopFailureLogLine,
-  backstopLogLine,
   backstopSecretHeader,
   isBackstopAuthorised,
   readBackstopUsers,
@@ -55,13 +53,10 @@ import {
   readRange,
   readRequestBody,
   readRunCheckinRequest,
-  recomputeLogLine,
   recomputeWeighInDays,
-  refusedLogLine,
   requireCompleteRead,
   requireUniqueDates,
   runCheckinLoop,
-  runLogLine,
   toCheckinInput,
   toCheckinProgram,
   toWeighIns,
@@ -78,6 +73,7 @@ import {
   toDayInputs,
 } from "../_shared/core.ts";
 import { error, handle, json } from "../_shared/http.ts";
+import { logLine } from "../_shared/log.ts";
 import { reportError } from "../_shared/report.ts";
 
 import type {
@@ -125,31 +121,27 @@ Deno.serve(
     if (mode === "recompute") {
       const recomputed = await runRecompute(service, user.id, nowIso);
       if ("code" in recomputed) {
-        console.info(refusedLogLine(user.id, recomputed.code));
+        logLine("info", "run-checkin refused", { user: user.id, code: recomputed.code });
         return error(recomputed.code, refusalMessages[recomputed.code]);
       }
-      console.info(
-        recomputeLogLine({
-          userId: user.id,
-          branch: recomputed.branch,
-          durationMilliseconds: Math.round(performance.now() - startedAt),
-        }),
-      );
+      logLine("info", "run-checkin recompute", {
+        user: user.id,
+        branch: recomputed.branch,
+        milliseconds: Math.round(performance.now() - startedAt),
+      });
       return json(runCheckinRecomputeResponseSchema.parse({ targetsId: recomputed.targetsId }));
     }
 
     const outcome = await runDueCheckins(service, user.id, nowIso);
     if ("code" in outcome) {
-      console.info(refusedLogLine(user.id, outcome.code));
+      logLine("info", "run-checkin refused", { user: user.id, code: outcome.code });
       return error(outcome.code, refusalMessages[outcome.code]);
     }
-    console.info(
-      runLogLine({
-        userId: user.id,
-        ran: outcome.ran,
-        durationMilliseconds: Math.round(performance.now() - startedAt),
-      }),
-    );
+    logLine("info", "run-checkin due", {
+      user: user.id,
+      ran: outcome.ran,
+      milliseconds: Math.round(performance.now() - startedAt),
+    });
     return json(runCheckinResponseSchema.parse(outcome));
   }),
 );
@@ -203,15 +195,16 @@ async function handleBackstop(request: Request): Promise<Response> {
     userIds,
     (userId) => runDueCheckins(service, userId, nowIso),
     (userId, code, caught) => {
-      console.info(backstopFailureLogLine(userId, code));
+      logLine("info", "run-checkin backstop failed", { user: userId, code });
       if (code === "internal_error") {
         reportError("run-checkin", code, caught);
       }
     },
   );
-  console.info(
-    backstopLogLine({ ...run, durationMilliseconds: Math.round(performance.now() - startedAt) }),
-  );
+  logLine("info", "run-checkin backstop", {
+    ...run,
+    milliseconds: Math.round(performance.now() - startedAt),
+  });
   return json(runCheckinBackstopResponseSchema.parse(run));
 }
 

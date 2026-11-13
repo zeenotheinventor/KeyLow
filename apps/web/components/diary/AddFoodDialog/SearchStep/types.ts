@@ -40,6 +40,11 @@ export type LogSearchStepProps = CommonSearchStepProps & {
   onAddRecent: (food: RecentFood) => void;
   /** A press on the Quick add row, which the idle search offers: calories and macros by hand. */
   onQuickAdd: () => void;
+  /**
+   * A press on the Describe row, under Quick add: say the meal to the assistant, which logs it at this
+   * dialog's day and time. Without it there is no assistant to open, and the row is left out.
+   */
+  onDescribe?: (() => void) | undefined;
 };
 
 /**

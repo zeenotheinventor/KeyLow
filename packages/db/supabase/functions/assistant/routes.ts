@@ -11,6 +11,7 @@ import { z } from "zod";
 import { maxWritesPerTurn } from "../_shared/assistant/store.ts";
 import { assistantTurnRequestSchema } from "../_shared/core.ts";
 import { error, json } from "../_shared/http.ts";
+import { logLine } from "../_shared/log.ts";
 import { checkAccess } from "./gates.ts";
 import { createEventStream, endAsFailed, eventResponse, writeEvent } from "./sse.ts";
 import { ConversationBusyError } from "./turnStore.ts";
@@ -57,7 +58,7 @@ async function readBody(request: Request): Promise<unknown> {
 
 function logRoute(route: string, userId: string, gate: string, startedAt: number): void {
   const milliseconds = Math.round(performance.now() - startedAt);
-  console.log(`assistant ${route} user=${userId} gate=${gate} ${milliseconds}ms`);
+  logLine("info", "assistant route", { route, user: userId, gate, milliseconds });
 }
 
 // The undo code the app knows. A failed inverse is reported by the undo itself and reads as unavailable.

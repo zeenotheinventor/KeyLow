@@ -31,6 +31,7 @@ import {
   safeWordsToShow,
   withActionIds,
 } from "../_shared/core.ts";
+import { logLine } from "../_shared/log.ts";
 import { allowedToolsFor } from "./allowlist.ts";
 import { COMPACTION_TIMEOUT_MILLISECONDS, planCompaction, promptTokensOf } from "./compact.ts";
 import { confirmedCallOf } from "./confirmedCall.ts";
@@ -1190,8 +1191,13 @@ export function createRunTurn(
     }
     const final = await conclude(run, reached);
     const milliseconds = Math.round(performance.now() - startedAt);
-    console.log(
-      `assistant turn user=${context.userId} turn=${context.turnId} modelCalls=${run.counts.modelCalls} toolCalls=${run.counts.toolCalls} ending=${final.code} ${milliseconds}ms`,
-    );
+    logLine("info", "assistant turn", {
+      user: context.userId,
+      turn: context.turnId,
+      modelCalls: run.counts.modelCalls,
+      toolCalls: run.counts.toolCalls,
+      ending: final.code,
+      milliseconds,
+    });
   };
 }

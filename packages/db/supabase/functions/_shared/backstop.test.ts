@@ -1,9 +1,7 @@
-import { assertEquals, assertInstanceOf, assertRejects, assertStringIncludes } from "@std/assert";
+import { assertEquals, assertInstanceOf, assertRejects } from "@std/assert";
 
 import {
   backstopCutoffDate,
-  backstopFailureLogLine,
-  backstopLogLine,
   backstopSecretHeader,
   isBackstopAuthorised,
   maximumBackstopUsers,
@@ -323,19 +321,4 @@ Deno.test("the backstop never runs more than 200 users, whatever it is given", a
   assertEquals(visited.length, 200);
   assertEquals(visited[0], "user-0");
   assertEquals(visited[199], "user-199");
-});
-
-Deno.test("the summary log line holds the counts and the duration only", () => {
-  assertEquals(
-    backstopLogLine({ users: 3, ran: 5, failed: 1, durationMilliseconds: 120 }),
-    "run-checkin backstop users=3 ran=5 failed=1 duration_ms=120",
-  );
-});
-
-Deno.test("the failure log line holds the user id and the code only", () => {
-  assertEquals(
-    backstopFailureLogLine("0c5f8d4e-6b1a-4c3e-9d2f-7a8b9c0d1e2f", "missing_stats"),
-    "run-checkin backstop failed user=0c5f8d4e-6b1a-4c3e-9d2f-7a8b9c0d1e2f code=missing_stats",
-  );
-  assertStringIncludes(backstopFailureLogLine("u", "internal_error"), "code=internal_error");
 });
