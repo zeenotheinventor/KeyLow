@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted, 2026-09-22. Amendment 1 appended 2026-10-07. Amendment 2 appended 2026-10-15. Amendment 3 appended 2026-10-15. Amendment 4 appended 2026-10-15. Amendment 5 appended 2026-10-15. Amendment 6 appended 2026-10-15. Amendment 7 appended 2026-10-15. Amendment 8 appended 2026-10-16. Amendment 9 appended 2026-10-18. Amendment 10 appended 2026-10-23. Amendment 11 appended 2026-10-23. Amendment 12 appended 2026-10-23. Amendment 13 appended 2026-10-23. Amendment 14 appended 2026-10-26, with addenda of 2026-11-03 and 2026-11-07. Amendment 15 appended 2026-10-29. Amendment 16 appended 2026-11-10. Amendment 17 appended 2026-11-10. Amendment 18 appended 2026-11-10. Amendment 19 appended 2026-11-11. Amendment 20 appended 2026-11-11. Amendment 21 appended 2026-11-11. Amendment 22 appended 2026-11-13. Amendment 23 appended 2026-11-13. Amendment 24 appended 2026-11-13.
+Accepted, 2026-09-22. Amendment 1 appended 2026-10-07. Amendment 2 appended 2026-10-15. Amendment 3 appended 2026-10-15. Amendment 4 appended 2026-10-15. Amendment 5 appended 2026-10-15. Amendment 6 appended 2026-10-15. Amendment 7 appended 2026-10-15. Amendment 8 appended 2026-10-16. Amendment 9 appended 2026-10-18. Amendment 10 appended 2026-10-23. Amendment 11 appended 2026-10-23. Amendment 12 appended 2026-10-23. Amendment 13 appended 2026-10-23. Amendment 14 appended 2026-10-26, with addenda of 2026-11-03 and 2026-11-07. Amendment 15 appended 2026-10-29. Amendment 16 appended 2026-11-10. Amendment 17 appended 2026-11-10. Amendment 18 appended 2026-11-10. Amendment 19 appended 2026-11-11. Amendment 20 appended 2026-11-11. Amendment 21 appended 2026-11-11. Amendment 22 appended 2026-11-13. Amendment 23 appended 2026-11-13. Amendment 24 appended 2026-11-13. Amendment 25 appended 2026-11-13.
 
 ## Context
 
@@ -2747,3 +2747,47 @@ Recorded under KEY-1027 by the orchestrator while Zee was away. Each change is r
 - **Confirming a day takes entries built in core.** `confirm_meal_plan_day(p_day_id, p_entries)` inserts rows that core built with `buildLogEntry` and `buildRecipeLogEntry`, in input order, under the same row-level security and column grants as any diary write. It locks the day row first, and stamps `confirmed_at` and `confirmed_entry_ids` in the same transaction. The function computes no snapshot.
 - **Not in the database, by design.** A new plan for an overlapping week replaces only the unconfirmed days of the old one, and Undo of a plan archives it. Both rules belong to the tools (KEY-1031, KEY-1033).
 - Implemented by KEY-1027, migration `20261113030000_meal_plans.sql`.
+
+## Amendment 25 (Push tokens: where a phone's Expo push token lives, 2026-11-13)
+
+### Status
+
+Recorded on 2026-11-13 under KEY-1066, part of KEY-1063: the assistant function sends a reply notification to a person's phone, so it needs somewhere to read that phone's Expo push token, and the phone needs a way to write it. The frozen Decision and Amendments 1 to 24 are unchanged. The table, the policies and the two functions below are interpretations. Zee confirms them by approving the pull request that carries this amendment. KEY-1063 asked for this to be numbered Amendment 23, but Amendments 23 and 24 were already taken by the sections under Amendment 22, so it takes the next free number.
+
+### The table
+
+`public.push_tokens`, one row per phone token:
+
+- `id uuid` primary key, default `gen_random_uuid()`.
+- `user_id uuid` not null, default `auth.uid()`, references `auth.users (id)` on delete cascade, so account deletion removes the rows.
+- `token text` not null, unique across all people, check `token like 'ExponentPushToken[_%]'` (at least one character inside the brackets) and char_length(token) <= 200`.
+- `platform text` not null, check `platform in ('android', 'ios')`.
+- `created_at` and `updated_at timestamptz` not null, default `now()`. A before update trigger (`push_tokens_stamp_updated_at`, `security invoker`, `set search_path = ''`) stamps `updated_at`, as `food_log_entries` does.
+- An index on `user_id`, which serves the cascade and the read of one person's tokens.
+
+### Privileges and row level security
+
+Following Amendment 14: `revoke all` from `anon`, `authenticated` and `service_role`, then to `authenticated` `select` and `delete`, `insert (token, platform)` and `update (token, platform)`, so a client cannot set `user_id`, `id` or the timestamps. The service role gets `select` and `delete`, and no `insert` or `update`. It reads a person's tokens to send a notification and deletes one that Expo reports as no longer registered. The anon role keeps nothing. Four policies, `push_tokens_select_own`, `push_tokens_insert_own`, `push_tokens_update_own` and `push_tokens_delete_own`, all on `user_id = (select auth.uid())`, with the same check on insert and update.
+
+### The functions
+
+- `register_push_token(p_token text, p_platform text)` is `security definer` with `set search_path = ''`. It upserts on `token` and sets `user_id` to `auth.uid()`, so a token another person's row holds moves to the caller. A policy cannot allow that, because it would have to let one person write another's row. Registering the same token again by the same person leaves one row and changes only `platform` and `updated_at`. It refuses a call with no signed-in person. The parameters carry the `p_` prefix like every other function here, so they cannot shadow a column.
+- `unregister_push_token(p_token text)` is `security invoker` and deletes the caller's row for that token. A token another person holds, or none, is left alone and is not an error.
+- Both are revoked from `public`, `anon` and `service_role` and granted to `authenticated` only.
+
+### Personal data, not health data
+
+A push token identifies a device, so it is personal data, but it says nothing about a person's health, so it is not health data under Amendment 9. It is still never written to a log, an error message, a Sentry event or an analytics call, because anyone holding it can send a notification to that phone.
+
+### The export
+
+The whole-account export (KEY-707) leaves the table out. A push token is a device credential and not the person's own data, and handing it out would hand out the means to notify that phone. The export coverage records it as `notExported`.
+
+### Implemented by
+
+- Migration `20261113040000_push_tokens.sql`, with pgTAP in `push_tokens_rls.test.sql`.
+- `packages/db/src/types.gen.ts` gains the table and the two functions, and the export coverage gains the `notExported` entry. No repository or core code changes here. The phone registration and the notification send are other tickets under KEY-1063.
+
+### Consequences of Amendment 25
+
+The migration inserts no row, so it applies to a database that holds any data and needs no reset. Any further deviation from the frozen Decision, from Amendments 1 to 24 or from this amendment needs an Amendment 26 before the migration or code that implements it lands.
