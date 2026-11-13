@@ -18,14 +18,14 @@ describe("endSession", () => {
     onlineManager.setOnline(true);
   });
 
-  it("should only sign out through Supabase when that works", async () => {
+  it("should only sign out this phone through Supabase when that works", async () => {
     const { auth, signOut } = createAuth(null);
     const removeStoredSession = jest.fn(() => Promise.resolve());
 
     await endSession(auth, removeStoredSession);
 
     expect(signOut).toHaveBeenCalledTimes(1);
-    expect(signOut).toHaveBeenCalledWith();
+    expect(signOut).toHaveBeenCalledWith({ scope: "local" });
     expect(removeStoredSession).not.toHaveBeenCalled();
   });
 
