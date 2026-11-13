@@ -5,13 +5,14 @@ import { ArrowUp } from "lucide-react";
 
 import type { AssistantComposerProps } from "./types";
 
+import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { TextArea } from "@/components/ui/TextArea";
 
 /**
  * The message field and the round Send button under the thread, as the boards draw them: a field that grows
  * to six lines and then scrolls, and a 44 px accent circle with an arrow, with the line that says how the
- * keyboard sends under them. Enter sends, and Shift and Enter add a line. Nothing past the cap can be typed.
+ * keyboard sends under them. From Describe a hint row sits over the field (`web-assistant · describe`). Enter sends, and Shift and Enter add a line. Nothing past the cap can be typed.
  */
 export function AssistantComposer({
   value,
@@ -20,10 +21,17 @@ export function AssistantComposer({
   isSendDisabled,
   isFieldDisabled,
   placeholder,
+  hint,
   fieldRef,
 }: AssistantComposerProps) {
   return (
     <div className="flex flex-col gap-2">
+      {hint === undefined ? null : (
+        <div className="flex items-center gap-2">
+          <Badge outlined>{hint.chip}</Badge>
+          <p className="text-caption text-text-muted">{hint.text}</p>
+        </div>
+      )}
       <div className="flex items-end gap-2">
         <div className="min-w-0 flex-1">
           <TextArea

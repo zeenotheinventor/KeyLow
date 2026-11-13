@@ -9,6 +9,7 @@ const noProvider: AssistantControls = {
   isOpen: false,
   opening: null,
   open: () => undefined,
+  describe: () => undefined,
   close: () => undefined,
   buttonRef: createRef<HTMLButtonElement>(),
 };

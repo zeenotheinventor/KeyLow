@@ -1,6 +1,7 @@
 "use client";
 
 import { useProfileTimeZone } from "@keylow/api-client";
+import { describeInLogOpening, resolveAssistantTimeZone } from "@keylow/core";
 import {
   ADD_FOOD_DIALOG,
   ENTRY_SCREEN,
@@ -11,7 +12,7 @@ import {
   describeLastLogged,
   describeLoggedAmount,
 } from "@keylow/core/copy";
-import { describeDay } from "@keylow/core/dates";
+import { describeDay, toLocalDate } from "@keylow/core/dates";
 import {
   plateItemOfHit,
   plateItemOfPickedFood,
@@ -92,6 +93,7 @@ function AddFoodDialogContent({
   opener,
   onClose,
   onHoldsPlateChange,
+  onDescribe,
 }: AddFoodDialogProps) {
   const plate = usePlate();
   const { time, isNow } = usePlateClockTime();
@@ -103,11 +105,13 @@ function AddFoodDialogContent({
   );
   const foodId = chosen?.foodId;
   const recent = chosen?.recent;
-  const timeZone = useProfileTimeZone().data ?? "UTC";
+  const profileTimeZone = useProfileTimeZone();
+  const timeZone = profileTimeZone.data ?? "UTC";
   // The moment the dialog opened, so "yesterday" does not move while it is open.
   const [openedAt] = useState(() => new Date());
   const [recipe, setRecipe] = useState<RecipeSummary | undefined>(undefined);
-  const [isAsking, setIsAsking] = useState(false);
+  // What the "Discard your plate?" question is asked for: leaving the dialog, or describing a meal to the assistant.
+  const [asking, setAsking] = useState<"leave" | "describe" | undefined>(undefined);
   // The Quick add row that opened the form, which focus goes back to when the form closes.
   const [quickAddOpener, setQuickAddOpener] = useState<Element | null | undefined>(undefined);
   // Your plate is open: the person pressed the chip. It is not shown once the plate is empty, and Undo does not reopen it.
@@ -262,10 +266,30 @@ function AddFoodDialogContent({
   // Closing with food on the plate asks first. A close during a log is blocked by the dialog itself.
   function requestClose() {
     if (plate.count > 0) {
-      setIsAsking(true);
+      setAsking("leave");
     } else {
       onClose();
     }
+  }
+
+  // The assistant opens in the dialog's place and logs to the day and time being logged. A plate cannot
+  // travel there, so with food on it the person is asked first, as for any other way of leaving.
+  function openDescribe() {
+    if (plate.count > 0) {
+      setAsking("describe");
+    } else {
+      describeMeal();
+    }
+  }
+
+  function describeMeal() {
+    const assistantZone = resolveAssistantTimeZone(
+      profileTimeZone.data,
+      Intl.DateTimeFormat().resolvedOptions().timeZone,
+    );
+    const day = request.date ?? toLocalDate(new Date(), assistantZone);
+    // The time is the plate's, which is the hour's plus until the person changes it. Now stays the clock's.
+    onDescribe?.(describeInLogOpening(isNow ? { day } : { day, time }, new Date(), assistantZone));
   }
 
   // Every way of putting a food on the plate: nothing is written, no toast is drawn, the field is cleared and
@@ -520,6 +544,7 @@ function AddFoodDialogContent({
       onQuickAdd={() => {
         setQuickAddOpener(document.activeElement);
       }}
+      onDescribe={onDescribe === undefined ? undefined : openDescribe}
     />
   );
 
@@ -668,12 +693,19 @@ function AddFoodDialogContent({
         />
       )}
       <DiscardPlateDialog
-        open={isAsking}
+        open={asking !== undefined}
         count={plate.count}
         onKeepAdding={() => {
-          setIsAsking(false);
+          setAsking(undefined);
         }}
-        onDiscard={onClose}
+        onDiscard={
+          asking === "describe"
+            ? () => {
+                setAsking(undefined);
+                describeMeal();
+              }
+            : onClose
+        }
       />
     </>
   );

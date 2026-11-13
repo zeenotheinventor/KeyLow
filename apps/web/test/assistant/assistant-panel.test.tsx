@@ -50,7 +50,11 @@ vi.mock("next/navigation", () => ({
 }));
 
 vi.mock("@/lib/foodLogActions", () => ({
-  useFoodLogActions: () => ({ openAddFood: vi.fn(), viewedDate: viewedDate() }),
+  useFoodLogActions: () => ({
+    openAddFood: vi.fn(),
+    viewedDate: viewedDate(),
+    setAssistantDescribeOpener: vi.fn(),
+  }),
 }));
 
 // jsdom has no layout, so the breakpoint is whatever a test says it is, and a test can change it while the

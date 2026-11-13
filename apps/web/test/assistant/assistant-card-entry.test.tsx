@@ -56,7 +56,11 @@ vi.mock("@/components/assistant/AssistantProvider", async (importOriginal) => {
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 vi.mock("@/lib/foodLogActions", () => ({
-  useFoodLogActions: () => ({ openAddFood: vi.fn(), viewedDate: "2026-10-25" }),
+  useFoodLogActions: () => ({
+    openAddFood: vi.fn(),
+    viewedDate: "2026-10-25",
+    setAssistantDescribeOpener: vi.fn(),
+  }),
 }));
 
 // jsdom has no layout, so the breakpoint is whatever a test says it is.
