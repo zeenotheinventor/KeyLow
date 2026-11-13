@@ -38,6 +38,7 @@ import { ensurePageServer } from "../src/pageServerHolder.ts";
 import type { RecipePage } from "../fixtures/pages/recipeImportPages.ts";
 import type { RedTeamWorld } from "../fixtures/redTeamWorld.ts";
 import type { EvalCase, Grader } from "../src/case.ts";
+import type { EvalSetName } from "../src/thresholds.ts";
 import type { ToolCall, TurnResult } from "../src/types.ts";
 
 const pass = (reason: string) => ({ passed: true, reason });
@@ -903,7 +904,10 @@ export function lateCase(
     servesPages = false,
     before,
     after,
+    set = "redTeam",
   }: {
+    /** The set the case belongs to. The kitchen cases that make a model choice are in their own opt-in set. */
+    set?: EvalSetName;
     plantsRowsOfA?: boolean;
     plantsTrainingOfA?: boolean;
     plantsTrainingOfB?: boolean;
@@ -917,7 +921,7 @@ export function lateCase(
   const question = () => messagesOf(world()).at(-1) ?? "";
   return {
     id,
-    set: "redTeam",
+    set,
     // A's foods and quick adds, and A's training, are planted when the first case that reads them is played, so a run of other sets
     // leaves A's diary and foods as they are. A case that imports a page starts the page server (once, the session
     // stops it). A first message that opens its own conversation is what the app does, so `setup` returns null.

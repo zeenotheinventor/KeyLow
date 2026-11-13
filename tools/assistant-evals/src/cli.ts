@@ -14,12 +14,12 @@ import type { EvalDatabase } from "./types.ts";
 export const DEFAULT_BUDGET_TOKENS = 300_000;
 
 const USAGE =
-  "Usage: check:assistant [--set ask|describe|redTeam|compaction|writes|recipes|trainingAdvice|trainingEdits|trainingKnowledge|mealEstimate|featureRequest|kitchenProbe|palate|recipeSuggest|recipeAdjust|palateJudge]... [--budget <tokens>] [--help]";
+  "Usage: check:assistant [--set ask|describe|redTeam|compaction|writes|recipes|trainingAdvice|trainingEdits|trainingKnowledge|mealEstimate|featureRequest|kitchenProbe|palate|recipeSuggest|recipeAdjust|palateJudge|mealPlan|redTeamKitchen]... [--budget <tokens>] [--help]";
 
 const HELP = [
   USAGE,
   "",
-  "  --set <name>        Run only this set. Repeat it for more. The default is every set but trainingEdits, trainingKnowledge, mealEstimate, featureRequest, kitchenProbe, palate, recipeSuggest, recipeAdjust and palateJudge, which are named to run.",
+  "  --set <name>        Run only this set. Repeat it for more. The default is every set but trainingEdits, trainingKnowledge, mealEstimate, featureRequest, kitchenProbe, palate, recipeSuggest, recipeAdjust, palateJudge, mealPlan and redTeamKitchen, which are named to run.",
   `  --budget <tokens>   Stop before the case that would pass this many tokens. The default is ${DEFAULT_BUDGET_TOKENS}.`,
   "",
   "The budget counts input, output and cache creation tokens. Cache read tokens are reported but not counted.",

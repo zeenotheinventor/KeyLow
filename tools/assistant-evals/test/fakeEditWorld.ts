@@ -1,3 +1,5 @@
+import { fakeKitchenRedTeam } from "./fakeKitchenRedTeam.ts";
+
 import type { DirectCall, EditRows, EditWorld } from "../fixtures/redTeamEdits.ts";
 import type { RedTeamWorld } from "../fixtures/redTeamWorld.ts";
 
@@ -181,5 +183,6 @@ export function fakeRedTeamWorld(
     callMcpOnBlankTurnOfA: unused("callMcpOnBlankTurnOfA"),
     callMcpLogEntriesOnOpenTurnOfA: unused("callMcpLogEntriesOnOpenTurnOfA"),
     edits,
+    kitchen: fakeKitchenRedTeam(),
   };
 }

@@ -69,11 +69,14 @@ export function estimatedAmountsOf(result: string): EstimatedAmount[] {
   }
 }
 
-// The kitchen tools whose answers graders compare with core's figures (KEY-1037). Every other tool keeps only its code.
+// The kitchen tools whose answers graders compare with core's figures (KEY-1037, and the plan tools of KEY-1038). Every
+// other tool keeps only its code.
 const KITCHEN_RESULT_TOOLS: ReadonlySet<string> = new Set([
   "get_palate_profile",
   "suggest_recipe",
   "adjust_recipe",
+  "plan_meals",
+  "replan_day",
 ]);
 
 /** The JSON a tool answered, from inside its untrusted wrapper. Nothing when the text is not a JSON object. */

@@ -4,9 +4,9 @@ import { isKitchenTurn } from "./kitchenMatcher.ts";
 import { createRunDependencies } from "../src/runDependencies.ts";
 import { EVAL_SET_NAMES, OPT_IN_SET_NAMES, THRESHOLD_PERCENT } from "../src/thresholds.ts";
 
-// The four sets of KEY-1037 are opt in, and no existing set moves.
+// The kitchen sets of KEY-1037 and KEY-1038 are opt in, and no existing set moves.
 
-const DEFAULT_SETS_BEFORE_KEY_1037 = [
+const DEFAULT_SETS_BEFORE_THE_KITCHEN_SETS = [
   "ask",
   "describe",
   "redTeam",
@@ -17,10 +17,19 @@ const DEFAULT_SETS_BEFORE_KEY_1037 = [
 ];
 
 describe("the default run list", () => {
-  it("should be the seven sets it was, with none of the kitchen sets of KEY-1037", () => {
+  it("should be the seven sets it was, with none of the kitchen sets of KEY-1037 or KEY-1038", () => {
     const defaults = EVAL_SET_NAMES.filter((name) => !OPT_IN_SET_NAMES.includes(name));
 
-    expect(defaults).toEqual(DEFAULT_SETS_BEFORE_KEY_1037);
+    expect(defaults).toEqual(DEFAULT_SETS_BEFORE_THE_KITCHEN_SETS);
+  });
+
+  it("should leave mealPlan and redTeamKitchen out of a run with no --set, and keep redTeam in it", () => {
+    const defaults = EVAL_SET_NAMES.filter((name) => !OPT_IN_SET_NAMES.includes(name));
+
+    expect(OPT_IN_SET_NAMES).toContain("mealPlan");
+    expect(OPT_IN_SET_NAMES).toContain("redTeamKitchen");
+    expect(defaults).toContain("redTeam");
+    expect(defaults).not.toContain("redTeamKitchen");
   });
 
   it("should leave the thresholds of the existing sets as they were", () => {
@@ -51,6 +60,8 @@ describe("the thresholds of the kitchen sets, from M9 plan section 8", () => {
     ["recipeSuggest", 90],
     ["recipeAdjust", 90],
     ["palateJudge", 80],
+    ["mealPlan", 90],
+    ["redTeamKitchen", 100],
   ] as const)("should hold %s at %i %%", (set, percent) => {
     expect(THRESHOLD_PERCENT[set]).toBe(percent);
     expect(OPT_IN_SET_NAMES).toContain(set);
@@ -60,7 +71,7 @@ describe("the thresholds of the kitchen sets, from M9 plan section 8", () => {
 describe("the registration", () => {
   const dependencies = createRunDependencies({}, () => Promise.reject(new Error("unused")));
 
-  it.each(["palate", "recipeSuggest", "recipeAdjust", "palateJudge"])(
+  it.each(["palate", "recipeSuggest", "recipeAdjust", "palateJudge", "mealPlan", "redTeamKitchen"])(
     "should register cases for %s",
     (set) => {
       expect(dependencies.cases.some((evalCase) => evalCase.set === set)).toBe(true);
