@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { collectStrings } from "./collectStrings";
 import {
   EXERCISE_FORM,
+  FORM_MEDIA_SWITCH,
   ROUTINE_EXERCISE_FORM,
   describeFormAndMusclesButton,
   describeFormPhoto,
@@ -21,8 +22,18 @@ describe("the exercise form media copy", () => {
     });
   });
 
+  it("should hold the words of the quick switch", () => {
+    expect(FORM_MEDIA_SWITCH).toEqual({
+      label: "Show form as",
+      options: { video: "Video", photos: "Photos", both: "Both" },
+    });
+  });
+
   it("should use no em dash, double hyphen or semicolon", () => {
-    for (const sentence of collectStrings(EXERCISE_FORM)) {
+    for (const sentence of [
+      ...collectStrings(EXERCISE_FORM),
+      ...collectStrings(FORM_MEDIA_SWITCH),
+    ]) {
       expect(sentence).not.toMatch(/\u2014|--|;/);
     }
   });
