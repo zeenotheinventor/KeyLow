@@ -113,6 +113,31 @@ describe("assistantRecipeDraftSchema", () => {
     ]);
   });
 
+  describe("the source of a matched food", () => {
+    const withSource = (foodSource: unknown) => ({
+      ...suggestion,
+      ingredients: [{ ...suggestion.ingredients[0], foodSource }],
+    });
+
+    it("should keep a source it knows", () => {
+      expect(assistantRecipeDraftSchema.parse(withSource("cofid")).ingredients[0]).toMatchObject({
+        foodSource: "cofid",
+      });
+    });
+
+    it("should read a draft stored before the source existed, with none", () => {
+      const parsed = assistantRecipeDraftSchema.parse(suggestion);
+
+      expect(parsed.ingredients[0]?.foodSource ?? null).toBeNull();
+    });
+
+    it("should read a source a later version adds as none, never a failed draft", () => {
+      const parsed = assistantRecipeDraftSchema.parse(withSource("a_new_source"));
+
+      expect(parsed.ingredients[0]?.foodSource).toBeNull();
+    });
+  });
+
   it("should read a figure with no data as null and never as 0", () => {
     const parsed = assistantRecipeDraftSchema.parse({
       ...suggestion,

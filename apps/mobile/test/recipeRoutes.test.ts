@@ -1,9 +1,11 @@
 import {
   NEW_RECIPE_NAME_PARAMETER,
+  RECIPE_PREFILL_PARAMETER,
   addToListPath,
   archivedRecipesPath,
   editRecipePath,
   newRecipePath,
+  newRecipePrefillPath,
   recipePath,
   recipesPath,
   refreshRecipePath,
@@ -31,6 +33,11 @@ describe("where the recipe library leads", () => {
   it("should leave out a word that is only spaces, and trim the ends of one that is not", () => {
     expect(newRecipePath("   ")).toBe("/recipes/new");
     expect(newRecipePath("  pasta ")).toBe("/recipes/new?name=pasta");
+  });
+
+  it("should open the new recipe editor on a drafted recipe by the id it was left under", () => {
+    expect(RECIPE_PREFILL_PARAMETER).toBe("prefill");
+    expect(newRecipePrefillPath("prefill-3")).toBe("/recipes/new?prefill=prefill-3");
   });
 
   it("should lead to the editor of a saved recipe at /recipes/<id>/edit", () => {

@@ -9,6 +9,7 @@ import {
   MAX_RECIPE_STEPS,
   MAX_RECIPE_STEP_LENGTH,
 } from "../recipes/bounds";
+import { foodSourceSchema } from "../schemas/food";
 
 import type { FitMiss, FitMissReason, FitNutrient, FitResult, FitTarget } from "../recipes/fit";
 
@@ -73,6 +74,11 @@ const ingredientSchema = z.object({
   foodId: assistantIdSchema.nullable(),
   /** The matched food's own name, so the card draws it with no second lookup. Null on an unmatched line. */
   foodName: nameSchema.nullable(),
+  /**
+   * Where the matched food comes from, which the card prints after its name. Absent from a draft stored before
+   * it existed and from an unmatched line. A source a later version adds reads as null on an app that is behind.
+   */
+  foodSource: foodSourceSchema.nullish().catch(null),
   grams: gramsSchema,
   beforeGrams: gramsSchema.nullable(),
   /** This line's kcal for the whole recipe, null when the food has no figure or the line is unmatched. */

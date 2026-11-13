@@ -34,6 +34,8 @@ export type {
 } from "./useFoodSearch";
 export { useFoodWithPortions } from "./useFoodWithPortions";
 export type { FoodWithPortionsState } from "./useFoodWithPortions";
+export { useFoodsWithPortionsLoader } from "./useFoodsWithPortionsLoader";
+export type { LoadedFood } from "./useFoodsWithPortionsLoader";
 export { useLogEntries } from "./useLogEntries";
 export {
   PlateFoodGoneError,

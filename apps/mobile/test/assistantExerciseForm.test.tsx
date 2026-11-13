@@ -181,7 +181,10 @@ describe("the form media of an exercise in the assistant thread", () => {
           timeZone="Europe/London"
           onAnswer={jest.fn()}
           onAskAgain={jest.fn()}
+          onAdjustRecipe={jest.fn()}
           onOpenCardLink={jest.fn()}
+          onOpenRecipeEditor={jest.fn()}
+          onOpenSavedRecipe={jest.fn()}
           onTryAgain={jest.fn()}
         />,
       );

@@ -5,6 +5,7 @@ import {
   describeAssistantNotice,
   describeAssistantStatus,
 } from "../copy/assistantNotices";
+import { RECIPE_WORKING_HINT } from "../copy/assistantRecipeDraftCard";
 import {
   ASSISTANT_DESCRIBE,
   ASSISTANT_SHEET,
@@ -18,6 +19,8 @@ import type { AssistantStatus } from "./events";
 import type { AssistantExerciseFormMedia } from "./exerciseFormCard";
 import type { AssistantExerciseMuscles } from "./exerciseMusclesCard";
 import type { AssistantNotice } from "./notice";
+import type { AssistantRecipeDraft } from "./recipeDraft";
+import type { SuggestionDraft } from "./recipeDraftOf";
 import type { AssistantThreadItem } from "./thread";
 import type { DescribableAssistantNotice } from "../copy/assistantNotices";
 
@@ -59,6 +62,8 @@ export type AssistantSheetLiveTurn = {
   exerciseMuscles?: readonly AssistantExerciseMuscles[] | undefined;
   /** The form media of each exercise the turn showed, in call order, drawn under its words. */
   exerciseFormMedia?: readonly AssistantExerciseFormMedia[] | undefined;
+  /** The recipes the turn drafted, in call order, drawn under its words. */
+  recipeDrafts?: readonly AssistantRecipeDraft[] | undefined;
   /** A link on its own that the turn sent, drawn under its words. */
   link?: AssistantCardLink | null | undefined;
   /** Whether the turn sent the Ask again quick reply. It is offered once the turn has ended. */
@@ -105,6 +110,12 @@ export type AssistantSheetEntry =
       exercise: AssistantExerciseFormMedia;
     }
   | {
+      /** A recipe the assistant suggested, the card with its figures, ingredients and Save to recipes (`assistant-card · recipe-draft`). An adjustment has no entry here, its compare card is a screen of its own. */
+      kind: "recipeDraft";
+      key: string;
+      draft: SuggestionDraft;
+    }
+  | {
       /** A link on its own, a line that opens what the answer is about (`assistant-card · routine-updated`, Removing a day). */
       kind: "link";
       key: string;
@@ -139,6 +150,8 @@ export type AssistantSheetEntry =
       kind: "status";
       key: string;
       text: string;
+      /** A second line that appears once the step has gone on this long, for a step that takes a while (`assistant · working-long`). Left off every other step. */
+      hint?: { words: string; afterMilliseconds: number };
     }
   | {
       kind: "notice";
@@ -344,6 +357,11 @@ function storedEntries(items: readonly AssistantThreadItem[], isAllAnswered = fa
       case "exercise_form_media":
         entries.push({ kind: "exerciseFormMedia", key: item.id, exercise: item.exercise });
         break;
+      case "recipe_draft":
+        if (item.draft.variant === "suggestion") {
+          entries.push({ kind: "recipeDraft", key: item.id, draft: item.draft });
+        }
+        break;
       case "link":
         entries.push({ kind: "link", key: item.id, link: item.link });
         break;
@@ -372,6 +390,17 @@ function workingLineWords(live: AssistantSheetLiveTurn, hasWords: boolean): stri
     live.notice !== null ||
     live.outcome !== null;
   return hasSomethingElseToShow ? null : describeAssistantStatus({ code: "thinking" });
+}
+
+// A recipe takes a while to write, so its step gets the second line that says how long (`assistant · working-long`).
+function workingLineHintOf(
+  status: AssistantStatus | null,
+): { words: string; afterMilliseconds: number } | null {
+  const isRecipeTool =
+    status?.code === "tool" && RECIPE_WORKING_HINT.tools.some((tool) => tool === status.tool);
+  return isRecipeTool
+    ? { words: RECIPE_WORKING_HINT.words, afterMilliseconds: RECIPE_WORKING_HINT.afterMilliseconds }
+    : null;
 }
 
 function sentEntries(
@@ -404,7 +433,13 @@ function sentEntries(
   }
   const workingWords = isStreaming ? workingLineWords(live, hasWords) : null;
   if (workingWords !== null) {
-    entries.push({ kind: "status", key: "sent:status", text: workingWords });
+    const hint = workingLineHintOf(live.status);
+    entries.push({
+      kind: "status",
+      key: "sent:status",
+      text: workingWords,
+      ...(hint === null ? {} : { hint }),
+    });
   }
   if (live.clarify !== null) {
     entries.push(...clarifyEntries("sent:clarify", live.clarify, false, entries.at(-1)));
@@ -421,6 +456,11 @@ function sentEntries(
       key: `sent:exerciseFormMedia:${position}`,
       exercise,
     });
+  }
+  for (const [position, draft] of (live.recipeDrafts ?? []).entries()) {
+    if (draft.variant === "suggestion") {
+      entries.push({ kind: "recipeDraft", key: `sent:recipeDraft:${position}`, draft });
+    }
   }
   if (live.link !== undefined && live.link !== null) {
     entries.push({ kind: "link", key: "sent:link", link: live.link });
@@ -452,7 +492,11 @@ function lastEntryBeforeCards(
 ): AssistantSheetEntry | undefined {
   for (let position = entries.length - 1; position >= 0; position -= 1) {
     const entry = entries[position];
-    if (entry?.kind !== "exerciseMuscles" && entry?.kind !== "exerciseFormMedia") {
+    if (
+      entry?.kind !== "exerciseMuscles" &&
+      entry?.kind !== "exerciseFormMedia" &&
+      entry?.kind !== "recipeDraft"
+    ) {
       return entry;
     }
   }
@@ -513,7 +557,8 @@ export function isSentTurnStored(
         ((item.kind === "card" ||
           item.kind === "link" ||
           item.kind === "exercise_muscles" ||
-          item.kind === "exercise_form_media") &&
+          item.kind === "exercise_form_media" ||
+          item.kind === "recipe_draft") &&
           !hasWords),
     );
 }
@@ -571,7 +616,10 @@ export function buildAssistantSheetThread({
       entries.some((entry) => entry.kind === "card" && isRecipeImportCard(entry.card)) ||
       endsWithBuiltRoutine(entries) ||
       entries.some(
-        (entry) => entry.kind === "exerciseMuscles" || entry.kind === "exerciseFormMedia",
+        (entry) =>
+          entry.kind === "exerciseMuscles" ||
+          entry.kind === "exerciseFormMedia" ||
+          entry.kind === "recipeDraft",
       ),
   };
 }

@@ -40,6 +40,7 @@ export {
   useFoodPortions,
   useFoodSearch,
   useFoodWithPortions,
+  useFoodsWithPortionsLoader,
   useLogEntries,
   useLogEntry,
   useLogFood,

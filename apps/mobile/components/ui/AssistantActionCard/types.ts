@@ -1,4 +1,5 @@
 import type { IconName } from "../Icon";
+import type { ReactNode } from "react";
 
 /** The colour of the icon in the card's tile. Defaults to `success`, as the boards draw a write that went through. */
 export type AssistantActionCardIconTone = "success" | "secondary" | "muted";
@@ -34,8 +35,8 @@ export type AssistantActionCardDay = {
   name: string;
   /** What the day holds, such as "5 exercises · 15 sets · about 50 min". */
   summary: string;
-  /** What the day lists when it is open: each exercise's name, and its detail such as "3 sets · 8 to 10 reps · RIR 2". */
-  exercises: readonly { name: string; detail: string }[];
+  /** What the day lists when it is open: each exercise's name, and its detail such as "3 sets · 8 to 10 reps · RIR 2". A line with no detail, such as a numbered step of a recipe, draws its name alone. */
+  exercises: readonly { name: string; detail?: string | undefined }[];
 };
 
 /**
@@ -64,10 +65,16 @@ export type AssistantActionCardProps = {
   days?: readonly AssistantActionCardDay[] | undefined;
   /** The index of the day that is open on arrival, for a story. A card in the thread leaves it out, so every day is closed. */
   initiallyOpenDay?: number | undefined;
+  /** What sits between the header and the rows, such as the figures of a suggested recipe. It is drawn as given and sets its own divider. */
+  lead?: ReactNode;
   /** The line under the rows, such as "232 kcal · P 15 g · C 17 g · F 10 g". */
   total?: string | undefined;
   note?: string | undefined;
   /** A line under the card that opens what it made, such as "Open in recipe editor". It stays after an Undo. */
   link?: { label: string; onPress: () => void } | undefined;
-  undo: AssistantActionCardUndo;
+  /** What sits at the very end of the card, under the link, such as the buttons of a suggested recipe. It is drawn as given and sets its own divider. */
+  footer?: ReactNode;
+  // Every card that records a write must pass `undo`: leaving it out is only for a card that wrote nothing.
+  /** The Undo of a write. Leave it out for a card that made no write, which draws no action and keeps its title in the primary ink. */
+  undo?: AssistantActionCardUndo | undefined;
 };

@@ -1,12 +1,13 @@
 import { ASSISTANT_MAX_TEXT_LENGTH } from "@keylow/core";
 import { ASSISTANT_SHEET } from "@keylow/core/copy";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { View } from "react-native";
 
 import { useTheme } from "../../../lib/theme";
 import { Icon, PressableSurface, SheetTextInput } from "../../ui";
 
 import type { ComposerProps } from "./types";
+import type { ComponentRef } from "react";
 
 // A field's text gives way to large text only so far, as the kit's fields do.
 const maxFontSizeMultiplier = 1.5;
@@ -24,9 +25,17 @@ export function Composer({
   isFieldDisabled,
   placeholder,
   isAutoFocused = false,
+  focusRequest = 0,
 }: ComposerProps) {
   const { colors } = useTheme();
   const [isFocused, setIsFocused] = useState(false);
+  const field = useRef<ComponentRef<typeof SheetTextInput>>(null);
+
+  useEffect(() => {
+    if (focusRequest > 0) {
+      field.current?.focus();
+    }
+  }, [focusRequest]);
 
   return (
     <View className="flex-row items-end gap-2">
@@ -44,6 +53,7 @@ export function Composer({
           editable={!isFieldDisabled}
           maxFontSizeMultiplier={maxFontSizeMultiplier}
           maxLength={ASSISTANT_MAX_TEXT_LENGTH}
+          ref={field}
           multiline
           placeholder={placeholder}
           placeholderTextColor={colors["text-muted"]}

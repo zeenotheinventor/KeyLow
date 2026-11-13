@@ -96,6 +96,8 @@ type Exit = { href: string; how: "dismiss" | "replace" };
 export function RecipeEditor({
   existing,
   initialName,
+  initialDraft,
+  onSaved,
   initialIngredientSearch,
 }: RecipeEditorProps) {
   const router = useRouter();
@@ -108,7 +110,10 @@ export function RecipeEditor({
   const [baseline, setBaseline] = useState<RecipeDraft>(() =>
     existing === undefined ? newRecipeDraft(initialName) : recipeDraftOf(existing),
   );
-  const [draft, setDraft] = useState<RecipeDraft>(baseline);
+  // A drafted recipe is filled in over an empty baseline, so leaving it is a change that asks first.
+  const [draft, setDraft] = useState<RecipeDraft>(
+    existing === undefined && initialDraft !== undefined ? initialDraft : baseline,
+  );
   const [hasTriedToSave, setHasTriedToSave] = useState(false);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [hasSaveFailed, setHasSaveFailed] = useState(false);
@@ -467,6 +472,7 @@ export function RecipeEditor({
       // A saved recipe, new or edited, stays locked until the editor has gone, so nothing can save it twice or
       // leave it a second time. The guard on `isSavingNow` is kept too, as the exit runs a render later.
       setSaveStatus("leaving");
+      onSaved?.(stored.id);
       toast.show({ message: RECIPE_TOASTS.saved, tone: "success", icon: "Check" });
       setExit({ href: recipePath(stored.id), how: existing === undefined ? "replace" : "dismiss" });
     } catch {

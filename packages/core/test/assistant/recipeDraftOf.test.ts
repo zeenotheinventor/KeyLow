@@ -159,6 +159,7 @@ describe("buildSuggestionDraft", () => {
       name: "chicken breast",
       foodId: chicken.id,
       foodName: chicken.name,
+      foodSource: "user",
       beforeGrams: null,
       change: "same",
     });
