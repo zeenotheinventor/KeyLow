@@ -128,12 +128,47 @@ export const FormattedStreaming: Story = {
   ),
 };
 
-// Plain lines until the table has a component of its own.
+const christmasMarket = [
+  "| Entry | Amount | kcal | Protein (g) | Fat (g) | Carbs (g) | Fibre (g) |",
+  "| --- | --- | --- | --- | --- | --- | --- |",
+  "| Potato wedges, with skin, cooked in sunflower oil | 300 g | 435 | 8.7 | 11 | 80 | 9 |",
+  "| Chicken breast strips, stir-fried | 100 g | 145 | 28 | 5 | 0 | 0 |",
+  "| Bratwurst roll | 1 roll (190 g) | 520 | 21 | 34 | 44 | 4 |",
+  "| Baileys Original Irish Cream | 25 ml | 79 | – | – | – | – |",
+  "| **Total** | | **2,024** | **67** | **86** | **233** | **19** |",
+].join("\n");
+
+// A table wider than the reply scrolls sideways inside it.
 export const Table: Story = {
   render: () => (
     <ChatMessage
+      paragraphs={["Your Christmas market total: 2,024 kcal.", christmasMarket]}
+      sender="assistant"
+      speakerLabel={assistant}
+    />
+  ),
+};
+
+// A table that fits fills the reply, with words after it.
+export const TableFits: Story = {
+  render: () => (
+    <ChatMessage
       paragraphs={[
-        "| Food | Amount | kcal |\n| --- | --- | --- |\n| Bratwurst roll | 1 roll (190 g) | 520 |\n| Mulled wine | 200 ml | 170 |",
+        "| Day | kcal | Protein (g) |\n| --- | --- | --- |\n| Mon 19 Oct | 2,080 | 138 |\n| Tue 20 Oct | 2,150 | 142 |\n\nA steady week.",
+      ]}
+      sender="assistant"
+      speakerLabel={assistant}
+    />
+  ),
+};
+
+// The table arriving: the next row is held back and the caret waits in an empty row under the last.
+export const TableStreaming: Story = {
+  render: () => (
+    <ChatMessage
+      isStreaming
+      paragraphs={[
+        "| Day | kcal | Protein (g) |\n| --- | --- | --- |\n| Mon 19 Oct | 2,080 | 138 |\n| Tue 20 Oct | 2,15",
       ]}
       sender="assistant"
       speakerLabel={assistant}

@@ -6,12 +6,14 @@ import { useEffect, useRef, useState } from "react";
 
 import type { WorkingLineProps } from "./types";
 
+import { KiLoMark } from "@/components/ui/KiLoMark";
+
 /**
  * The line under your message while the assistant works with no words to show (`assistant · working`): the
- * words in the secondary caption, on one line that ends in an ellipsis. Each step's words stay up for 700 ms
- * before the next replace them. The animated logo comes later. The line is a status that is not live, which
- * would read every step, so a hidden polite note beside it is written once on mounting and after that only
- * when 5 seconds have passed since the last time.
+ * animated Ki-Lo logo at 20 px (still under reduced motion) and then the words in the secondary caption, on
+ * one line that ends in an ellipsis. Each step's words stay up for 700 ms before the next replace them. The
+ * line is a status that is not live, which would read every step, so a hidden polite note beside it is
+ * written once on mounting and after that only when 5 seconds have passed since the last time.
  */
 export function WorkingLine({ text }: WorkingLineProps) {
   const words = useHeldWords(text);
@@ -32,6 +34,7 @@ export function WorkingLine({ text }: WorkingLineProps) {
   return (
     <>
       <div role="status" aria-live="off" className="flex items-center gap-2">
+        <KiLoMark isAnimated className="size-5" />
         <span className="truncate text-caption text-text-secondary">{words}</span>
       </div>
       <span aria-live="polite" className="sr-only">

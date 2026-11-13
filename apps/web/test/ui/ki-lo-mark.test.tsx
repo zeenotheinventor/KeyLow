@@ -28,6 +28,54 @@ describe("KiLoMark", () => {
     expect(screen.getByRole("img", { name: "Ki-Lo" }).classList.contains("size-12")).toBe(true);
   });
 
+  describe("animated", () => {
+    it("should be decorative, hidden from a screen reader", () => {
+      const { container } = render(<KiLoMark isAnimated />);
+
+      expect(screen.queryByRole("img")).toBeNull();
+      expect(container.querySelector("svg")?.getAttribute("aria-hidden")).toBe("true");
+    });
+
+    it("should move five parts, each of which stops under reduced motion", () => {
+      const { container } = render(<KiLoMark isAnimated />);
+      const moving = Array.from(container.querySelectorAll("[class*='animate-loading']"));
+
+      expect(moving).toHaveLength(5);
+      for (const part of moving) {
+        expect(part.classList.contains("motion-reduce:animate-none")).toBe(true);
+      }
+    });
+
+    it("should not accept a title, as it is hidden from a screen reader", () => {
+      // @ts-expect-error an animated mark is decoration, so a title is a type error
+      render(<KiLoMark isAnimated title="Other" />);
+
+      expect(screen.queryByRole("img")).toBeNull();
+    });
+
+    it("should turn its second arc to where the first one's dash pattern repeats", () => {
+      const { container } = render(<KiLoMark isAnimated />);
+      const turns = Array.from(container.querySelectorAll("circle")).map((arc) =>
+        arc.getAttribute("transform"),
+      );
+
+      // -9 degrees, then 327 units round a circle of radius 100 on, which is 187.35 degrees.
+      expect(turns).toEqual(["rotate(-9 128 128)", "rotate(178.35 128 128)"]);
+    });
+
+    it("should take the size it is given", () => {
+      const { container } = render(<KiLoMark isAnimated className="size-5" />);
+
+      expect(container.querySelector("svg")?.classList.contains("size-5")).toBe(true);
+    });
+
+    it("should move nothing when it is not animated", () => {
+      const { container } = render(<KiLoMark />);
+
+      expect(container.querySelectorAll("[class*='animate-']")).toHaveLength(0);
+    });
+  });
+
   describe("with the wordmark", () => {
     it("should be one image named Ki-Lo, so the brand has a single accessible name", () => {
       render(<KiLoMark wordmark />);

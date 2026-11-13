@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { parseReplyText, replyWords } from "../../src/assistant";
+import { parseReplyText, replyWords, tableOpening } from "../../src/assistant";
 
 import type { ReplyBlock, ReplySpan } from "../../src/assistant";
 
@@ -868,5 +868,20 @@ describe("tables", () => {
       takesUnderASecond(`| A |\n| - |\n| ${"\\|".repeat(50_000)} |`);
       takesUnderASecond(`| A |\n| - |\n| ${"*a ".repeat(33_000)} |`);
     });
+  });
+});
+
+describe("tableOpening", () => {
+  it.each([
+    ["| A | B |\n| --- | --- |\n| x | 1 |", "Table, 1 row."],
+    ["| A | B |\n| --- | --- |\n| x | 1 |\n| y | 2 |", "Table, 2 rows."],
+  ])("should be the first sentence of the table's reading", (markdown, opening) => {
+    const block = parseReplyText(markdown, finished).find((found) => found.kind === "table");
+    if (block?.kind !== "table") {
+      throw new Error("The markdown holds no table");
+    }
+
+    expect(tableOpening(block)).toBe(opening);
+    expect(replyWords(markdown, finished).startsWith(`${opening} `)).toBe(true);
   });
 });
