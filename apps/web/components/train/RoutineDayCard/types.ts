@@ -25,6 +25,8 @@ export type RoutineDayCardProps = {
   onRemove: () => void;
   onAddExercise: () => void;
   onChangeField: (exerciseKey: number, field: ExerciseField, text: string) => void;
+  /** Opens the exercise's form and muscles dialog. `opener` is the button pressed, which takes focus back. */
+  onOpenExercise: (exercise: EditorExercise, opener: HTMLButtonElement) => void;
   onMoveExercise: (exercise: EditorExercise, position: number, direction: MoveDirection) => void;
   onRemoveExercise: (exerciseKey: number) => void;
 };
