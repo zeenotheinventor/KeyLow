@@ -3,6 +3,7 @@ import { parseCalendarDay } from "../dates/calendarDay";
 import { formatCalories, formatGrams } from "../format/numbers";
 import { formatScaledCount } from "../format/scaledCount";
 import { shortFoodName } from "../palate/shortFoodName";
+import { FIT_TOLERANCE } from "../recipes/fit";
 
 import type { FitNutrient } from "../recipes/fit";
 
@@ -177,4 +178,100 @@ export const PLAN_RESULT_NOTES = {
   left_out_confirmed: "Days already confirmed in the diary were left out of the plan.",
   cleanup_failed:
     "Some older planned days could not be cleared, so they may still show beside this plan.",
+} as const;
+
+/** "Replanned Thu 19 Nov". */
+export const describePlanDayReplannedTitle = (localDate: string): string =>
+  `Replanned ${describeShortDate(localDate)}`;
+
+/** The line under "Replanned Thu 19 Nov": "Put Thu 19 Nov back as it was". */
+export const describePlanDayUndone = (localDate: string): string =>
+  `Put ${describeShortDate(localDate)} back as it was`;
+
+/** The day's figures under its title, "1,292 of 1,300 kcal · P 68 of 90 g". Null when nothing is known. */
+export const describePlanDayFigures = (
+  kcal: number | null,
+  kcalTarget: number | null,
+  protein: number | null,
+  proteinTarget: number | null,
+): string | null => {
+  const parts = [
+    ...(kcal === null
+      ? []
+      : [
+          kcalTarget === null
+            ? `${formatCalories(kcal)} kcal`
+            : `${formatCalories(kcal)} of ${formatCalories(kcalTarget)} kcal`,
+        ]),
+    ...(protein === null
+      ? []
+      : [
+          proteinTarget === null
+            ? `P ${formatGrams(protein)} g`
+            : `P ${formatGrams(protein)} of ${formatGrams(proteinTarget)} g`,
+        ]),
+  ];
+  return parts.length === 0 ? null : parts.join(" · ");
+};
+
+/** A band's row, "Morning 07:30". */
+export const describePlanBandName = (band: keyof typeof BAND_NAMES, time: string): string =>
+  `${BAND_NAMES[band]} ${time}`;
+
+/** What a band's items add up to, "564 kcal". */
+export const describePlanBandKcal = (kcal: number): string => `${formatCalories(kcal)} kcal`;
+
+/**
+ * The note of a replanned day that missed. A miss the planner proved is said as a figure, and only when
+ * calories are within tolerance and nothing was left unproven is it said to be the closest the plan gets,
+ * as the board says. A miss the planner only ran out of work on is said as what it is.
+ */
+export const describeReplannedDayNote = (misses: readonly Miss[]): string => {
+  const proven = misses.filter(({ reason }) => reason !== "work_limit");
+  const unproven = misses.length > proven.length;
+  const figures = joinInWords(proven.map(describeMiss));
+  const isClosest =
+    proven.length > 0 &&
+    !unproven &&
+    proven.every(({ nutrient, reason }) => nutrient !== "kcal" && reason !== "no_data");
+  return [
+    ...(proven.length > 0 ? [`${figures.charAt(0).toUpperCase()}${figures.slice(1)}.`] : []),
+    ...(isClosest
+      ? [`This is the closest the plan gets with calories within ${FIT_TOLERANCE.kcalPercent} %.`]
+      : []),
+    ...(unproven
+      ? [
+          "It was not fully worked out, so it may not be as close as it can get. Ask me to replan it.",
+        ]
+      : []),
+  ].join(" ");
+};
+
+/** The note for a cook that stayed because other days eat its leftovers. Recipe names, each once. */
+export const describeKeptCooksNote = (recipeNames: readonly string[]): string => {
+  const names = [...new Set(recipeNames)];
+  return names.length === 1
+    ? `Kept ${names.join("")} on this day because other days eat its leftovers.`
+    : `Kept ${joinInWords(names)} on this day because other days eat their leftovers.`;
+};
+
+/** What `replan_day` tells the model when it changed nothing, so it can say so plainly. */
+export const REPLAN_NOT_CHANGED_WORDS = {
+  generation_refused: "The planner declined that request, so the day was not changed.",
+  generation_timeout: "Planning took too long, so the day was not changed. Try again.",
+  generation_failed:
+    "The planner could not be reached, so the day was not changed. Try again in a moment.",
+  day_not_planned: "That day is not in a plan, so nothing was changed.",
+  day_confirmed:
+    "That day is already confirmed in the diary, so it cannot be replanned. The entries are changed in the diary.",
+  day_unreadable: "That day's plan could not be read, so it was not changed.",
+  nothing_to_plan_from:
+    "There are no recipes or usual foods to plan from, so the day was not changed.",
+} as const;
+
+/** Plain words for what else happened when a day was replanned, for the model to pass on. */
+export const REPLAN_RESULT_NOTES = {
+  kept_cook: "A cook on this day was kept because other days eat its leftovers.",
+  relink_failed:
+    "Some later days that eat the leftovers of a kept cook could not be rewritten, so they may no longer say where it was cooked.",
 } as const;

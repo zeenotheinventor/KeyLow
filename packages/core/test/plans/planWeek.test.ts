@@ -43,8 +43,15 @@ describe("planWeek", () => {
     expect(planHasNoItems(plan)).toBe(false);
   });
 
-  it("should plan the whole pool when the ranking is empty, with wishes", () => {
-    expect(planWeek({ ...pool, ranking: [], hasWishes: true }).wishesKept).toBe(true);
+  it("should plan the whole pool, and say the wishes were not kept, when the ranking is empty with wishes", () => {
+    const { plan, wishesKept } = planWeek({ ...pool, ranking: [], hasWishes: true });
+
+    expect(wishesKept).toBe(false);
+    expect(plan).toEqual(planMeals({ ...pool, ranking: [] }));
+  });
+
+  it("should not say wishes were dropped when there were none and the ranking is empty", () => {
+    expect(planWeek({ ...pool, ranking: [], hasWishes: false }).wishesKept).toBe(true);
   });
 });
 

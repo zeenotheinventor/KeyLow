@@ -27,9 +27,11 @@ const importToolName = "import_recipe_from_url";
 const featureRequestToolName = "request_feature";
 
 // A question about what to eat this week ("What should I eat this week?") is read-shaped, and the plan is what
-// answers it. Only a message that matches the meal plan words of `kitchen.ts` reaches it, so "Why was Tuesday so
-// high?" cannot. It is in the kitchen group, so it is in no set until the group is surfaced.
-const planMealsToolName = "plan_meals";
+// answers it. Only a message that matches the meal plan words of `kitchen.ts` reaches the two plan tools, so "Why
+// was Tuesday so high?" cannot. `replan_day` is there for the same words ("Replan Thursday"), so a read-shaped
+// replan is a one day change with Undo and not a whole week made by `plan_meals`. Both are in the kitchen group,
+// so they are in no set until the group is surfaced.
+const planToolNames: ReadonlySet<string> = new Set(["plan_meals", "replan_day"]);
 
 // The tools a recipe link needs, each only if it is listed.
 const recipeImportTools: ReadonlySet<string> = new Set([
@@ -155,7 +157,7 @@ export function allowedToolsFor({
       return (
         tool.readOnlyHint ||
         tool.name === featureRequestToolName ||
-        (tool.name === planMealsToolName && isMealPlanRequest(text))
+        (planToolNames.has(tool.name) && isMealPlanRequest(text))
       );
     }
     return tool.name !== importToolName;

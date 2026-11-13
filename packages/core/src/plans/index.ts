@@ -25,6 +25,7 @@ export {
   isPlanUndoable,
   planDatesAround,
   plansToArchive,
+  restorableEntriesOfDay,
   restorableItemsOfDay,
 } from "./planOverlap";
 export type {
@@ -39,7 +40,7 @@ export type {
 } from "./planOverlap";
 export { planDaysOf, planHasNoItems, planServingGrams, planWeek } from "./planWeek";
 export { rankedIdsOfReply } from "./readRanking";
-export { planSaveInput } from "./planSaveInput";
+export { planSaveInput, plannedDayItems } from "./planSaveInput";
 export type { PlanSaveInputSource, StoredPlanRules } from "./planSaveInput";
 export { replanDay } from "./replanDay";
 export type { ReplannedDay } from "./replanDay";
@@ -57,3 +58,13 @@ export type {
   PlanShortfall,
   PlannedWeek,
 } from "./types";
+export { replanStoredDay, storedRankingOf } from "./replanStoredDay";
+export type {
+  DayRewrite,
+  PlannedDayItem,
+  ReplanStoredDayInput,
+  ReplanStoredDayResult,
+  StoredReplanPlan,
+} from "./replanStoredDay";
+export { dayFingerprint, dayToReplan, relinkedDaysToRestore, replanUndoState } from "./storedDay";
+export type { CurrentDay, FingerprintItem } from "./storedDay";
