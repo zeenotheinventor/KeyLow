@@ -26,6 +26,7 @@ export const MEAL_PLAN_WORDS = {
   statusConfirmed: "Confirmed",
   statusWithin: "Within target",
   statusShort: "Short",
+  // NOT ON THE CANVAS. No board draws a day with nothing planned, so these two words are the engineer's until one does.
   statusEmpty: "Nothing planned",
   emptyDayCaption: "Nothing is planned for this day.",
   stripConfirmed: "confirmed",
