@@ -10,6 +10,8 @@ import { createTestUser, deleteCreatedTestUsers } from "./support/users";
 import { exportMyData, readMyDataByTable } from "../../src/repos/accountExport";
 import { addFavouriteFood, addFavouriteRecipe } from "../../src/repos/favourites";
 import { createFood } from "../../src/repos/foods";
+import { setMealPlanRepeatLimit } from "../../src/repos/mealPlanRepeatLimit";
+import { saveMealPlan } from "../../src/repos/mealPlans";
 import { addPalatePreference, setNotUsual } from "../../src/repos/palatePreferences";
 
 import type { TestUser } from "./support/users";
@@ -252,6 +254,25 @@ async function seed(user: TestUser, options: { year: boolean }): Promise<void> {
   await addFavouriteRecipe(client, recipeId);
   await addPalatePreference(client, { kind: "allergy", label: "key707 made up word" });
   await setNotUsual(client, { recipeId });
+  await setMealPlanRepeatLimit(client, user.id, 3);
+  await saveMealPlan(client, {
+    startDate: dateOf(0),
+    source: "app",
+    rules: { maxRepeats: 3, leftovers: false, slots: ["morning"] },
+    days: [{ localDate: dateOf(0), target: { kcal: 2000 } }],
+    items: [
+      {
+        localDate: dateOf(0),
+        position: 0,
+        slotTime: "07:30",
+        kind: "recipe",
+        recipeId,
+        servings: 1,
+        nutrients: { kcal: 400 },
+        snapshot: { name: `key1027-recipe-${RUN_ID}` },
+      },
+    ],
+  });
   succeeded(
     (await client.from("shopping_list_items").insert({ name: "Oats", position: 0 })).error,
     "shopping list",
@@ -484,6 +505,9 @@ const OWNED_BY_OWNER_ID: ReadonlySet<AccountExportTable> = new Set([
   "recipe_favourites",
   "shopping_list_items",
   "palate_preferences",
+  "meal_plans",
+  "meal_plan_days",
+  "meal_plan_items",
   "exercises",
   "exercise_muscles",
 ]);
@@ -615,6 +639,21 @@ describe("the whole-account export against the local stack with real user JWTs",
     expect(profile).toHaveProperty("terms_accepted_at");
     expect(profile).toHaveProperty("assistant_consent_at");
     expect(profile).toHaveProperty("assistant_consent_version");
+  });
+
+  it("should hold the repeat limit inside the profile row", () => {
+    const [profile] = exportOfA.tables.profiles;
+
+    expect(profile?.meal_plan_repeat_limit).toBe(3);
+  });
+
+  it("should hold the plan, its day and its item for the owner, whole", () => {
+    expect(exportOfA.tables.meal_plans).toHaveLength(1);
+    expect(exportOfA.tables.meal_plan_days).toHaveLength(1);
+    expect(exportOfA.tables.meal_plan_items).toHaveLength(1);
+    expect(exportOfA.tables.meal_plans[0]).toMatchObject({ owner_id: userA.id, source: "app" });
+    expect(exportOfA.tables.meal_plan_items[0]).toHaveProperty("snapshot");
+    expect(exportOfA.tables.meal_plan_items[0]).toHaveProperty("created_at");
   });
 
   it("should round trip through serialisation and the schema", () => {

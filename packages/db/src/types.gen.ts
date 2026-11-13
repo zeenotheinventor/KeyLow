@@ -977,6 +977,170 @@ export type Database = {
         };
         Relationships: [];
       };
+      meal_plan_days: {
+        Row: {
+          confirmed_at: string | null;
+          confirmed_entry_ids: string[] | null;
+          created_at: string;
+          id: string;
+          local_date: string;
+          owner_id: string;
+          plan_id: string;
+          target: Json;
+        };
+        Insert: {
+          confirmed_at?: string | null;
+          confirmed_entry_ids?: string[] | null;
+          created_at?: string;
+          id?: string;
+          local_date: string;
+          owner_id?: string;
+          plan_id: string;
+          target: Json;
+        };
+        Update: {
+          confirmed_at?: string | null;
+          confirmed_entry_ids?: string[] | null;
+          created_at?: string;
+          id?: string;
+          local_date?: string;
+          owner_id?: string;
+          plan_id?: string;
+          target?: Json;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "meal_plan_days_plan_id_fkey";
+            columns: ["plan_id"];
+            isOneToOne: false;
+            referencedRelation: "meal_plans";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      meal_plan_items: {
+        Row: {
+          created_at: string;
+          day_id: string;
+          food_id: string | null;
+          grams: number | null;
+          id: string;
+          item_type: string;
+          leftover_of: string | null;
+          nutrients: Json;
+          owner_id: string;
+          portion_id: string | null;
+          position: number;
+          recipe_id: string | null;
+          servings: number | null;
+          slot_time: string | null;
+          snapshot: Json;
+        };
+        Insert: {
+          created_at?: string;
+          day_id: string;
+          food_id?: string | null;
+          grams?: number | null;
+          id?: string;
+          item_type: string;
+          leftover_of?: string | null;
+          nutrients: Json;
+          owner_id?: string;
+          portion_id?: string | null;
+          position: number;
+          recipe_id?: string | null;
+          servings?: number | null;
+          slot_time?: string | null;
+          snapshot: Json;
+        };
+        Update: {
+          created_at?: string;
+          day_id?: string;
+          food_id?: string | null;
+          grams?: number | null;
+          id?: string;
+          item_type?: string;
+          leftover_of?: string | null;
+          nutrients?: Json;
+          owner_id?: string;
+          portion_id?: string | null;
+          position?: number;
+          recipe_id?: string | null;
+          servings?: number | null;
+          slot_time?: string | null;
+          snapshot?: Json;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "meal_plan_items_day_id_fkey";
+            columns: ["day_id"];
+            isOneToOne: false;
+            referencedRelation: "meal_plan_days";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "meal_plan_items_food_id_fkey";
+            columns: ["food_id"];
+            isOneToOne: false;
+            referencedRelation: "foods";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "meal_plan_items_leftover_of_fkey";
+            columns: ["leftover_of", "owner_id"];
+            isOneToOne: false;
+            referencedRelation: "meal_plan_items";
+            referencedColumns: ["id", "owner_id"];
+          },
+          {
+            foreignKeyName: "meal_plan_items_portion_id_fkey";
+            columns: ["portion_id"];
+            isOneToOne: false;
+            referencedRelation: "food_portions";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "meal_plan_items_recipe_id_fkey";
+            columns: ["recipe_id"];
+            isOneToOne: false;
+            referencedRelation: "recipes";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      meal_plans: {
+        Row: {
+          archived_at: string | null;
+          created_at: string;
+          day_count: number;
+          id: string;
+          owner_id: string;
+          rules: Json;
+          source: string;
+          start_date: string;
+        };
+        Insert: {
+          archived_at?: string | null;
+          created_at?: string;
+          day_count: number;
+          id?: string;
+          owner_id?: string;
+          rules: Json;
+          source: string;
+          start_date: string;
+        };
+        Update: {
+          archived_at?: string | null;
+          created_at?: string;
+          day_count?: number;
+          id?: string;
+          owner_id?: string;
+          rules?: Json;
+          source?: string;
+          start_date?: string;
+        };
+        Relationships: [];
+      };
       muscles: {
         Row: {
           created_at: string;
@@ -1075,6 +1239,7 @@ export type Database = {
           energy_unit: string | null;
           height_cm: number | null;
           id: string;
+          meal_plan_repeat_limit: number | null;
           onboarding_completed_at: string | null;
           onboarding_weight_kg: number | null;
           sex: string | null;
@@ -1098,6 +1263,7 @@ export type Database = {
           energy_unit?: string | null;
           height_cm?: number | null;
           id: string;
+          meal_plan_repeat_limit?: number | null;
           onboarding_completed_at?: string | null;
           onboarding_weight_kg?: number | null;
           sex?: string | null;
@@ -1121,6 +1287,7 @@ export type Database = {
           energy_unit?: string | null;
           height_cm?: number | null;
           id?: string;
+          meal_plan_repeat_limit?: number | null;
           onboarding_completed_at?: string | null;
           onboarding_weight_kg?: number | null;
           sex?: string | null;
@@ -1859,6 +2026,10 @@ export type Database = {
         }[];
       };
       assistant_spend_this_month: { Args: never; Returns: number };
+      confirm_meal_plan_day: {
+        Args: { p_day_id: string; p_entries: Json };
+        Returns: string[];
+      };
       consume_rate_limit: {
         Args: { p_bucket: string; p_max: number; p_window_seconds: number };
         Returns: {
@@ -1919,8 +2090,16 @@ export type Database = {
         Args: { p_food_id: string; p_portions: Json };
         Returns: Json;
       };
+      replace_meal_plan_day: {
+        Args: { p_day_id: string; p_items: Json };
+        Returns: undefined;
+      };
       save_exercise: {
         Args: { p_exercise: Json; p_exercise_id: string; p_muscles: Json };
+        Returns: string;
+      };
+      save_meal_plan: {
+        Args: { p_days: Json; p_items: Json; p_plan: Json };
         Returns: string;
       };
       save_recipe: {
