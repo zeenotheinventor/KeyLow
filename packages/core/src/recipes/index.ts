@@ -67,3 +67,4 @@ export { enteredViewServings, stepViewServings } from "./viewServings";
 export type { ServingsStepDirection } from "./viewServings";
 export { recipeViewOf } from "./recipeViewOf";
 export type { RecipeView, RecipeViewIngredient } from "./recipeViewOf";
+export * from "./fit";
