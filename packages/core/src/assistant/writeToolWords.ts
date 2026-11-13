@@ -3,6 +3,7 @@ import { z } from "zod";
 import { cardEntryOfRow, describeCardName, sharedClockTime } from "./cards";
 import { describeLoggedTitle, describeLoggedUndone } from "../copy/assistantEntryCards";
 import { describeFoodCreatedTitle, describeFoodsCount } from "../copy/assistantFoodCards";
+import { ASSISTANT_KITCHEN_CHANGE_TITLES } from "../copy/assistantKitchen";
 import {
   describeRecipeArchivedTitle,
   describeRecipeServings,
@@ -361,6 +362,8 @@ const plainTitles: Record<AssistantCardKind, (count: number) => string> = {
   set_updated: (count) => (count === 1 ? "Changed a set" : `Changed ${count} sets`),
   workout_deleted: () => "Deleted a workout",
   feature_requested: () => "Sent a feature request",
+  plan_created: () => ASSISTANT_KITCHEN_CHANGE_TITLES.plan_created,
+  plan_day_replanned: () => ASSISTANT_KITCHEN_CHANGE_TITLES.plan_day_replanned,
 };
 
 /** The title and detail of one row of "What the assistant changed". */

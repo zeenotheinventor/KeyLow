@@ -12,6 +12,7 @@ import { ConsentCard } from "./ConsentCard";
 import { OpeningPlaceholder } from "./OpeningPlaceholder";
 import { assistantCardHref } from "../../lib/assistantCardRoutes";
 import { useIsOnline } from "../../lib/connectivity";
+import { recordSkippedKind } from "../../lib/sentry/trail";
 import { Badge, Banner, BottomSheet, SheetHeader, SheetScrollView, Text, useToast } from "../ui";
 
 import type { AssistantSheetProps } from "./types";
@@ -89,6 +90,8 @@ export function AssistantSheet({
     onTurnOnFailed: () => {
       toast.show({ message: SAVE_FAILED_BANNER, tone: "danger", icon: "CircleAlert" });
     },
+    // A kind the server sent and this app does not know is skipped, and the trail says which, by name only.
+    onKindSkipped: recordSkippedKind,
     onMessageSent: () => {
       isFollowingEnd.current = true;
     },

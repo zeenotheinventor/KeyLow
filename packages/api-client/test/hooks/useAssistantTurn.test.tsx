@@ -20,7 +20,7 @@ import {
 import { AUTH_USER_URL, SIGNED_IN_USER_ID, signInAs } from "../support/postgrest";
 import { createWrapper } from "../support/wrapper";
 
-import type { StreamingFetch } from "../../src/runAssistantTurn";
+import type { SkippedKind, StreamingFetch } from "../../src/runAssistantTurn";
 import type { AssistantNotice, AssistantStreamEvent } from "@keylow/core";
 import type { QueryClient } from "@tanstack/react-query";
 
@@ -67,7 +67,12 @@ function answerWith(events: AssistantStreamEvent[]) {
 async function renderTurn({
   signedIn = true,
   fetchOverride,
-}: { signedIn?: boolean; fetchOverride?: StreamingFetch } = {}) {
+  onKindSkipped,
+}: {
+  signedIn?: boolean;
+  fetchOverride?: StreamingFetch;
+  onKindSkipped?: (skipped: SkippedKind) => void;
+} = {}) {
   const client = createTestClient();
   if (signedIn) {
     await signInAs(client, SIGNED_IN_USER_ID);
@@ -75,7 +80,9 @@ async function renderTurn({
   const { queryClient, wrapper } = createWrapper(client, { functionsUrl: FUNCTIONS_URL });
   // The spy passes the request on, so a test can read the signal the hook gave it.
   const injectedFetch = vi.fn<StreamingFetch>((url, init) => (fetchOverride ?? fetch)(url, init));
-  const rendered = renderHook(() => useAssistantTurn({ fetch: injectedFetch }), { wrapper });
+  const rendered = renderHook(() => useAssistantTurn({ fetch: injectedFetch, onKindSkipped }), {
+    wrapper,
+  });
   return { ...rendered, client, queryClient, injectedFetch };
 }
 
@@ -557,7 +564,7 @@ describe("useAssistantTurn, a turn that breaks", () => {
   });
 
   it.each([
-    ["an event type the app does not know", { type: "surprise" }],
+    ["an event with a field of the wrong kind", { type: "done", outcome: "stopped" }],
     ["an event with a key the app does not know", { type: "text", delta: "x", extra: true }],
   ])("should give the failed turn notice for %s", async (_name, event) => {
     answerTurns(() => openTurnResponse(`data: ${JSON.stringify(event)}\n\n`));
@@ -670,6 +677,97 @@ describe("useAssistantTurn, a turn that breaks", () => {
     expect(rendered.result.current.live).toMatchObject({
       notice: { code: "day_limit", resetsAt: "2026-11-04T00:00:00Z" },
       outcome: "failed",
+    });
+  });
+
+  describe("a stream from a server that is ahead of this app", () => {
+    const line = (value: unknown) => `data: ${JSON.stringify(value)}\n\n`;
+    const aheadOfTheApp =
+      line({ type: "turn", turnId: TURN_ID, conversationId: CONVERSATION_ID }) +
+      line({ type: "text", delta: "Here is " }) +
+      line({ type: "meal_plan_draft", days: [{ name: "Chicken and rice" }] }) +
+      line({ type: "card", card: { ...aCard("Planned your week"), kind: "future_card" } }) +
+      line({ type: "card", card: aCard("Logged 2 eggs") }) +
+      line({ type: "text", delta: "your week." }) +
+      line({ type: "done", outcome: "complete" });
+
+    it("should skip an unknown event and an unknown card kind and finish the turn", async () => {
+      answerTurns(() => openTurnResponse(aheadOfTheApp));
+      const rendered = await renderTurn();
+
+      await sendAndSettle(rendered);
+
+      expect(rendered.result.current.live).toMatchObject({
+        text: "Here is your week.",
+        outcome: "complete",
+        notice: null,
+      });
+      expect(rendered.result.current.live?.cards.map((card) => card.title)).toEqual([
+        "Logged 2 eggs",
+      ]);
+    });
+
+    it("should draw a known card whose link screen is unknown, with no link, and finish the turn", async () => {
+      const planLink = {
+        label: "Open the plan",
+        target: { screen: "meal_plan", planId: CONVERSATION_ID },
+      };
+      answerTurns(() =>
+        openTurnResponse(
+          line({ type: "turn", turnId: TURN_ID, conversationId: CONVERSATION_ID }) +
+            line({ type: "card", card: { ...aCard("Planned your meals"), link: planLink } }) +
+            line({ type: "done", outcome: "complete" }),
+        ),
+      );
+      const onKindSkipped = vi.fn();
+      const rendered = await renderTurn({ onKindSkipped });
+
+      await sendAndSettle(rendered);
+
+      expect(rendered.result.current.live).toMatchObject({ outcome: "complete", notice: null });
+      expect(rendered.result.current.live?.cards).toEqual([
+        { ...aCard("Planned your meals"), link: null },
+      ]);
+      expect(onKindSkipped.mock.calls).toEqual([[{ subject: "link", kind: "meal_plan" }]]);
+    });
+
+    it("should tell the caller each skipped kind by name and nothing else", async () => {
+      answerTurns(() => openTurnResponse(aheadOfTheApp));
+      const onKindSkipped = vi.fn();
+      const rendered = await renderTurn({ onKindSkipped });
+
+      await sendAndSettle(rendered);
+
+      expect(onKindSkipped.mock.calls).toEqual([
+        [{ subject: "event", kind: "meal_plan_draft" }],
+        [{ subject: "card", kind: "future_card" }],
+      ]);
+    });
+
+    it("should finish the turn when no one is told of a skipped kind", async () => {
+      answerTurns(() => openTurnResponse(aheadOfTheApp));
+      const rendered = await renderTurn();
+
+      await sendAndSettle(rendered);
+
+      expect(rendered.result.current.live?.outcome).toBe("complete");
+    });
+
+    it("should still fail the turn for an event of a known type that is malformed", async () => {
+      answerTurns(() =>
+        openTurnResponse(
+          line({ type: "turn", turnId: TURN_ID, conversationId: CONVERSATION_ID }) +
+            line({ type: "text", delta: 7 }) +
+            line({ type: "done", outcome: "complete" }),
+        ),
+      );
+      const onKindSkipped = vi.fn();
+      const rendered = await renderTurn({ onKindSkipped });
+
+      await sendAndSettle(rendered);
+
+      expect(rendered.result.current.live).toMatchObject({ outcome: "failed" });
+      expect(onKindSkipped).not.toHaveBeenCalled();
     });
   });
 

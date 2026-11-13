@@ -22,7 +22,7 @@ import { useNewAssistantConversation } from "./useNewAssistantConversation";
 import { useProfileTimeZone } from "./useProfileTimeZone";
 import { useSetAssistantConsent } from "./useSetAssistantConsent";
 
-import type { StreamingFetch } from "../runAssistantTurn";
+import type { SkippedKind, StreamingFetch } from "../runAssistantTurn";
 import type { AssistantOpenedFrom, AssistantSheetSent } from "@keylow/core";
 
 export type UseAssistantChatInput = {
@@ -45,6 +45,8 @@ export type UseAssistantChatInput = {
   onTurnOnFailed?: (() => void) | undefined;
   /** Called when a message is sent, so the screen can follow the end of the thread. */
   onMessageSent?: (() => void) | undefined;
+  /** Called with the name of an event type or card kind this app does not know, which the turn skipped. */
+  onKindSkipped?: ((skipped: SkippedKind) => void) | undefined;
   /** Called when a new conversation has started, so the screen can follow the end of the thread. */
   onNewConversationStarted?: (() => void) | undefined;
 };
@@ -68,13 +70,14 @@ export function useAssistantChat({
   onTurnOnFailed,
   onMessageSent,
   onNewConversationStarted,
+  onKindSkipped,
 }: UseAssistantChatInput) {
   const conversation = useAssistantConversation({ enabled: open });
   const status = useAssistantStatus();
   const setConsent = useSetAssistantConsent();
   const profileTimeZone = useProfileTimeZone();
   const newConversation = useNewAssistantConversation();
-  const { send, stop, live, isStreaming } = useAssistantTurn({ fetch });
+  const { send, stop, live, isStreaming } = useAssistantTurn({ fetch, onKindSkipped });
   const [draft, setDraft] = useState("");
   const [sent, setSent] = useState<AssistantSheetSent | null>(null);
 

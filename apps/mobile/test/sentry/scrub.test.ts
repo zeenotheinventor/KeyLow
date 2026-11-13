@@ -244,6 +244,40 @@ describe("scrubBreadcrumb", () => {
     expect(scrubbed).toEqual({ category: "app.restart", data: { reason: "fatal" } });
   });
 
+  it("should keep the skipped kind breadcrumb's subject and kind and drop any other key and its message", () => {
+    const scrubbed = scrubBreadcrumb({
+      category: "assistant.skipped",
+      message: FOOD_NAME,
+      data: { subject: "card", kind: "plan_archived", title: FOOD_NAME, value: WEIGHT },
+    });
+
+    expect(scrubbed).toEqual({
+      category: "assistant.skipped",
+      data: { subject: "card", kind: "plan_archived" },
+    });
+  });
+
+  it("should drop a skipped kind that is not a plain snake_case name", () => {
+    const scrubbed = scrubBreadcrumb({
+      category: "assistant.skipped",
+      data: { subject: "card", kind: FOOD_NAME },
+    });
+
+    expect(scrubbed).toEqual({ category: "assistant.skipped", data: { subject: "card" } });
+  });
+
+  it("should keep a skipped link's subject and screen name", () => {
+    const scrubbed = scrubBreadcrumb({
+      category: "assistant.skipped",
+      data: { subject: "link", kind: "meal_plan", label: FOOD_NAME },
+    });
+
+    expect(scrubbed).toEqual({
+      category: "assistant.skipped",
+      data: { subject: "link", kind: "meal_plan" },
+    });
+  });
+
   it("should not let the keys of the app state and keyboard breadcrumbs through on a request breadcrumb", () => {
     const scrubbed = scrubBreadcrumb({
       category: "fetch",

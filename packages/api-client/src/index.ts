@@ -539,7 +539,7 @@ export {
 } from "./repos";
 export type { AssistantActionsRead, AssistantConversationPage, AssistantUndoResult } from "./repos";
 export type { AssistantLiveTurn } from "./assistantLiveTurn";
-export type { StreamingFetch, StreamingResponse } from "./runAssistantTurn";
+export type { SkippedKind, StreamingFetch, StreamingResponse } from "./runAssistantTurn";
 
 export { AccountExportError, exportMyData, readMyDataByTable } from "./repos";
 export { useAccountExportFile } from "./hooks";

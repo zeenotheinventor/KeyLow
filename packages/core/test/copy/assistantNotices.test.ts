@@ -171,6 +171,11 @@ const toolWords: [string[], string, string][] = [
   [["show_exercise_muscles"], "Checking the exercise", "Checking the exercise"],
   [["show_exercise_form"], "Checking the exercise", "Checking the exercise"],
   [["estimate_portions"], "Working out the portions", "Working out the portions"],
+  [["get_palate_profile"], "Reading what you usually eat", "Reading what you usually eat"],
+  [["suggest_recipe"], "Writing a recipe for you", "Writing a recipe for you"],
+  [["adjust_recipe"], "Adjusting the recipe", "Adjusting the recipe"],
+  [["plan_meals"], "Planning your meals", "Planning your meals"],
+  [["replan_day"], "Replanning the day", "Replanning the day"],
 ];
 
 describe("describeAssistantStatus", () => {

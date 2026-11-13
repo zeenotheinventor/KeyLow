@@ -89,6 +89,9 @@ export function applyAssistantEvent(
         status: null,
         exerciseFormMedia: [...live.exerciseFormMedia, event.exercise],
       };
+    // Nothing draws a recipe draft yet (the kitchen screens come later), so it only ends the step.
+    case "recipe_draft":
+      return { ...live, status: null };
     case "link":
       return { ...live, status: null, link: event.link };
     case "ask_again":

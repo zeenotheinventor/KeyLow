@@ -60,6 +60,8 @@ const cardKinds = [
   "set_updated",
   "workout_deleted",
   "feature_requested",
+  "plan_created",
+  "plan_day_replanned",
 ];
 const undoStates = ["available", "undone", "unavailable"];
 
