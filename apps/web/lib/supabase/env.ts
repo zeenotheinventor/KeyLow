@@ -10,3 +10,8 @@ export function getSupabaseEnv() {
 
   return { url, anonKey };
 }
+
+/** The base URL of the project's Edge Functions, which the assistant's status and turn routes are under. */
+export function getFunctionsUrl() {
+  return `${getSupabaseEnv().url.replace(/\/+$/, "")}/functions/v1`;
+}

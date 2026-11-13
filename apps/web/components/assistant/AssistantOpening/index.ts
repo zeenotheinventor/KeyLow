@@ -1,0 +1,1 @@
+export { AssistantOpening } from "./AssistantOpening";

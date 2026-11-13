@@ -44,6 +44,16 @@ type ListRowContent = {
    * `primary` is the default.
    */
   titleTone?: "danger" | "secondary" | "primary" | undefined;
+  /**
+   * `regular` sets the title in the body weight, as the assistant's starter rows draw it, and `strong`, the
+   * default, in the strong weight. A row with a macro key is always regular.
+   */
+  titleWeight?: "regular" | "strong" | undefined;
+  /**
+   * An icon at the end of a row that does something, such as the assistant starters' up arrow, drawn 16 px in the
+   * muted ink and in place of the chevron. It is decorative: the title names the row.
+   */
+  trailingIcon?: ListRowIcon | undefined;
   /** The chevron marks a row that goes somewhere. Leave it off for an action such as signing out. */
   chevron?: boolean;
   disabled?: boolean;
@@ -138,6 +148,8 @@ export type ListRowProps = ListRowContent &
         valueLook?: never;
         valueTone?: never;
         chevron?: never;
+        trailingIcon?: never;
+        titleWeight?: never;
         disabled?: never;
         titleTone?: "secondary" | "primary" | undefined;
       })

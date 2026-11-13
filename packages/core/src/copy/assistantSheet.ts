@@ -25,6 +25,8 @@ export const ASSISTANT_SHEET = {
     "Add a recipe from a link",
   ],
   composerPlaceholder: "Log food or ask about your diary",
+  /** Under the web panel's field, where a keyboard is the way to send: Enter sends. */
+  composerKeyboardHint: "Enter sends. Shift and Enter add a line.",
   /** Who said a message, as a screen reader hears it first. The boards draw neither word. */
   speakerYou: "You",
   speakerAssistant: "Assistant",
