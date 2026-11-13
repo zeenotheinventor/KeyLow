@@ -36,13 +36,13 @@ const answerWith = (rows: readonly unknown[]) => {
 };
 
 describe("useExerciseFormMedia", () => {
-  it("should be loading, then ready with the media of the exercise", async () => {
+  it("should be loading, then ready with the video and photos of the exercise", async () => {
     answerWith([
       {
         video_id: "aB3_-xYz012",
         video_title: "Barbell squat form",
         video_channel: "Form Channel",
-        image_paths: [],
+        image_paths: ["Barbell_Squat/0.jpg", "Barbell_Squat/1.jpg"],
       },
     ]);
     const { wrapper } = createWrapper();
@@ -54,23 +54,21 @@ describe("useExerciseFormMedia", () => {
       expect(result.current).toEqual({
         status: "ready",
         media: {
-          kind: "video",
-          videoId: "aB3_-xYz012",
-          title: "Barbell squat form",
-          channel: "Form Channel",
+          video: { videoId: "aB3_-xYz012", title: "Barbell squat form", channel: "Form Channel" },
+          photos: { imagePaths: ["Barbell_Squat/0.jpg", "Barbell_Squat/1.jpg"] },
         },
       });
     });
   });
 
-  it("should be ready with none for an exercise that has nothing to show", async () => {
+  it("should be ready with neither for an exercise that has nothing to show", async () => {
     answerWith([]);
     const { wrapper } = createWrapper();
 
     const { result } = renderHook(() => useExerciseFormMedia(open), { wrapper });
 
     await waitFor(() => {
-      expect(result.current).toEqual({ status: "ready", media: { kind: "none" } });
+      expect(result.current).toEqual({ status: "ready", media: { video: null, photos: null } });
     });
   });
 
@@ -84,7 +82,8 @@ describe("useExerciseFormMedia", () => {
       expect(result.current.status).toBe("ready");
     });
     expect(queryClient.getQueryData(keys.training.exerciseFormMedia(EXERCISE_ID))).toEqual({
-      kind: "none",
+      video: null,
+      photos: null,
     });
     expect(
       queryClient.getQueryCache().find({ queryKey: keys.training.exerciseFormMedia(EXERCISE_ID) })

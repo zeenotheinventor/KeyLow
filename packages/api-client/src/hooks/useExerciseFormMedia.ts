@@ -4,17 +4,18 @@ import { useSupabase } from "../KeyLowProvider";
 import { keys } from "../queryKeys";
 import { getExerciseFormMedia } from "../repos/exerciseFormMedia";
 
-import type { ExerciseFormMedia } from "@keylow/core/training";
+import type { ExerciseFormMediaSet } from "@keylow/core/training";
 
 // The media changes only through a migration, so a day is as fresh as it needs to be.
 const STALE_TIME_MS = 24 * 60 * 60 * 1000;
 
 /**
- * What a surface has of an exercise's form media: the media itself, still being read, not readable
- * because the device is offline and holds no copy, or not readable because the read failed.
+ * What a surface has of an exercise's form media: what the exercise has (a video, photos, both or
+ * neither), still being read, not readable because the device is offline and holds no copy, or not
+ * readable because the read failed.
  */
 export type ExerciseFormMediaState =
-  | { status: "ready"; media: ExerciseFormMedia }
+  | { status: "ready"; media: ExerciseFormMediaSet }
   | { status: "loading" }
   | { status: "offline" }
   | { status: "failed" };

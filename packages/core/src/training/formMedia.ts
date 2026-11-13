@@ -25,17 +25,23 @@ export type ExerciseFormMedia =
   | { kind: "photos"; imagePaths: readonly [start: string, end: string] }
   | { kind: "none" };
 
-/** The two kinds that show something, for a payload that only ever carries a shown one. */
+const imagePathsSchema = z.tuple([freeExerciseDbImagePathSchema, freeExerciseDbImagePathSchema]);
+
+/**
+ * The two kinds that show something, for a payload that only ever carries a shown one. A video may also
+ * carry the two photo paths, for a surface that shows both.
+ */
 export const shownExerciseFormMediaSchema = z.discriminatedUnion("kind", [
   z.strictObject({
     kind: z.literal("video"),
     videoId: youtubeVideoIdSchema,
     title: z.string().min(1).max(MAX_VIDEO_TITLE_LENGTH),
     channel: z.string().min(1).max(MAX_VIDEO_CHANNEL_LENGTH),
+    imagePaths: imagePathsSchema.optional(),
   }),
   z.strictObject({
     kind: z.literal("photos"),
-    imagePaths: z.tuple([freeExerciseDbImagePathSchema, freeExerciseDbImagePathSchema]),
+    imagePaths: imagePathsSchema,
   }),
 ]);
 
@@ -49,31 +55,101 @@ export type ExerciseFormMediaRow = {
 
 const isPresent = (text: string | null): text is string => text !== null && text.trim() !== "";
 
+/** The curated video of an exercise, as ids and text only. */
+export type ExerciseFormVideo = { videoId: string; title: string; channel: string };
+
+/** The start and end photos of an exercise, as paths only. */
+export type ExerciseFormPhotos = { imagePaths: readonly [start: string, end: string] };
+
+/** Everything an exercise has for its form: its video, its photos, both or neither. */
+export type ExerciseFormMediaSet = {
+  video: ExerciseFormVideo | null;
+  photos: ExerciseFormPhotos | null;
+};
+
 /**
- * The form media of an exercise from its row: the video when its id is valid and it has a title and a
- * channel, else the photos when at least two paths are valid (the first is the start and the last the
- * end), else none. A bad value never throws, it drops to the next option.
+ * What an exercise has for its form, from its row: the video when its id is valid and it has a title and a
+ * channel, and the photos when at least two paths are valid (the first is the start and the last the end).
+ * A bad value never throws, it drops out.
  */
-export function exerciseFormMediaOf(row: ExerciseFormMediaRow | null): ExerciseFormMedia {
+export function exerciseFormMediaSetOf(row: ExerciseFormMediaRow | null): ExerciseFormMediaSet {
   if (row === null) {
-    return { kind: "none" };
+    return { video: null, photos: null };
   }
   const { video_id, video_title, video_channel, image_paths } = row;
-  if (
+  const video =
     video_id !== null &&
     youtubeVideoIdSchema.safeParse(video_id).success &&
     isPresent(video_title) &&
     isPresent(video_channel)
-  ) {
-    return { kind: "video", videoId: video_id, title: video_title, channel: video_channel };
-  }
+      ? { videoId: video_id, title: video_title, channel: video_channel }
+      : null;
   const paths = (image_paths ?? []).filter(
     (path) => freeExerciseDbImagePathSchema.safeParse(path).success,
   );
   const [start] = paths;
   const end = paths.at(-1);
-  if (paths.length >= 2 && start !== undefined && end !== undefined) {
-    return { kind: "photos", imagePaths: [start, end] };
+  const photos: ExerciseFormPhotos | null =
+    paths.length >= 2 && start !== undefined && end !== undefined
+      ? { imagePaths: [start, end] }
+      : null;
+  return { video, photos };
+}
+
+/**
+ * The form media of an exercise from its row: the video when it has one, else the photos, else none. Use
+ * `exerciseFormMediaSetOf` with `formMediaToShow` to honour a preference.
+ */
+export function exerciseFormMediaOf(row: ExerciseFormMediaRow | null): ExerciseFormMedia {
+  return formMediaToShow(exerciseFormMediaSetOf(row), "video");
+}
+
+/** What the lifter chose to see of an exercise's form. */
+export const FORM_MEDIA_PREFERENCES = ["video", "photos", "both"] as const;
+
+export type FormMediaPreference = (typeof FORM_MEDIA_PREFERENCES)[number];
+
+/** The preference of someone who never chose: one card, the same as before the choice existed. */
+export const DEFAULT_FORM_MEDIA_PREFERENCE: FormMediaPreference = "video";
+
+/** The preference a stored value names, or null when it names none. */
+export const formMediaPreferenceOf = (stored: string | null): FormMediaPreference | null =>
+  FORM_MEDIA_PREFERENCES.find((preference) => preference === stored) ?? null;
+
+/** What to draw once a preference is applied: one kind, both together, or nothing. */
+export type ExerciseFormMediaToShow =
+  | ExerciseFormMedia
+  | { kind: "both"; video: ExerciseFormVideo; imagePaths: readonly [start: string, end: string] };
+
+/**
+ * What to draw for an exercise's media and a preference. A kind the exercise lacks falls back to the other:
+ * video chosen without a video shows the photos, photos chosen without photos shows the video, and both
+ * chosen with only one shows that one. Nothing at all is none. A video or photos preference never gives
+ * both, so a surface that offers only those can draw the result without a both case.
+ */
+export function formMediaToShow(
+  set: ExerciseFormMediaSet,
+  preference: "video" | "photos",
+): ExerciseFormMedia;
+export function formMediaToShow(
+  set: ExerciseFormMediaSet,
+  preference: FormMediaPreference,
+): ExerciseFormMediaToShow;
+export function formMediaToShow(
+  { video, photos }: ExerciseFormMediaSet,
+  preference: FormMediaPreference,
+): ExerciseFormMediaToShow {
+  if (preference === "both" && video !== null && photos !== null) {
+    return { kind: "both", video, imagePaths: photos.imagePaths };
+  }
+  if (preference === "photos" && photos !== null) {
+    return { kind: "photos", imagePaths: photos.imagePaths };
+  }
+  if (video !== null) {
+    return { kind: "video", ...video };
+  }
+  if (photos !== null) {
+    return { kind: "photos", imagePaths: photos.imagePaths };
   }
   return { kind: "none" };
 }
@@ -99,23 +175,46 @@ export type ExerciseFormMediaDisplay =
   | { kind: "photos"; startUrl: string; endUrl: string }
   | { kind: "none" };
 
+/** The URLs for both the video and the photos together. */
+export type ExerciseFormMediaToShowDisplay =
+  | ExerciseFormMediaDisplay
+  | {
+      kind: "both";
+      title: string;
+      channel: string;
+      thumbnailUrl: string;
+      watchUrl: string;
+      startUrl: string;
+      endUrl: string;
+    };
+
+const videoUrlsOf = ({ videoId, title, channel }: ExerciseFormVideo) => ({
+  title,
+  channel,
+  thumbnailUrl: youtubeThumbnailUrl(videoId),
+  watchUrl: youtubeWatchUrl(videoId),
+});
+
+const photoUrlsOf = ([start, end]: readonly [string, string]) => ({
+  startUrl: freeExerciseDbImageUrl(start),
+  endUrl: freeExerciseDbImageUrl(end),
+});
+
 /** What a surface draws for its media, with every URL made by the builders above. */
-export function exerciseFormMediaDisplayOf(media: ExerciseFormMedia): ExerciseFormMediaDisplay {
+export function exerciseFormMediaDisplayOf(media: ExerciseFormMedia): ExerciseFormMediaDisplay;
+export function exerciseFormMediaDisplayOf(
+  media: ExerciseFormMediaToShow,
+): ExerciseFormMediaToShowDisplay;
+export function exerciseFormMediaDisplayOf(
+  media: ExerciseFormMediaToShow,
+): ExerciseFormMediaToShowDisplay {
   switch (media.kind) {
     case "video":
-      return {
-        kind: "video",
-        title: media.title,
-        channel: media.channel,
-        thumbnailUrl: youtubeThumbnailUrl(media.videoId),
-        watchUrl: youtubeWatchUrl(media.videoId),
-      };
+      return { kind: "video", ...videoUrlsOf(media) };
     case "photos":
-      return {
-        kind: "photos",
-        startUrl: freeExerciseDbImageUrl(media.imagePaths[0]),
-        endUrl: freeExerciseDbImageUrl(media.imagePaths[1]),
-      };
+      return { kind: "photos", ...photoUrlsOf(media.imagePaths) };
+    case "both":
+      return { kind: "both", ...videoUrlsOf(media.video), ...photoUrlsOf(media.imagePaths) };
     case "none":
       return { kind: "none" };
   }

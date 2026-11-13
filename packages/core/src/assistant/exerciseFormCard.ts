@@ -7,6 +7,8 @@ import { shownExerciseFormMediaSchema } from "../training/formMedia";
  * in the thread (`assistant-card · exercise-form`). It is a read, so it is not an action card. Only an id
  * or two image paths travel, each checked by its schema, and never a URL: the app makes every address with
  * `exerciseFormMediaDisplayOf`, so a tool result can never make the app open or load an arbitrary address.
+ * A video may also carry the two photo paths, for a surface that shows both. The app accepts them first and
+ * the tool sends them in a later release.
  * A `none` media is never sent, because the tool answers the model with no card instead. The card holds its
  * media when the turn is stored, so reopening the conversation reads nothing more.
  *

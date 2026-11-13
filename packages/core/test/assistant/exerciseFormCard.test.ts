@@ -58,6 +58,18 @@ describe("the exercise_form_media event", () => {
     expect(assistantStreamEventSchema.parse(event)).toEqual(event);
   });
 
+  it("should parse a video that also carries the two photo paths", () => {
+    const event = {
+      type: "exercise_form_media",
+      exercise: {
+        ...squatVideo,
+        media: { ...squatVideo.media, imagePaths: ["Barbell_Squat/0.jpg", "Barbell_Squat/1.jpg"] },
+      },
+    };
+
+    expect(assistantStreamEventSchema.parse(event)).toEqual(event);
+  });
+
   describe("refuses", () => {
     const withMedia = (media: unknown) => ({ ...squatVideo, media });
     const refused = (value: unknown) => assistantExerciseFormMediaSchema.safeParse(value).success;
@@ -98,6 +110,13 @@ describe("the exercise_form_media event", () => {
       expect(refused(photos(["https://example.com/a.jpg", "Dumbbell_Curl/1.jpg"]))).toBe(false);
       expect(refused(photos(["../secret/0.jpg", "Dumbbell_Curl/1.jpg"]))).toBe(false);
       expect(refused(photos(["Dumbbell_Curl/0.png", "Dumbbell_Curl/1.jpg"]))).toBe(false);
+    });
+
+    it("should refuse a URL or one path in the photo paths of a video", () => {
+      const withPaths = (imagePaths: string[]) => withMedia({ ...squatVideo.media, imagePaths });
+
+      expect(refused(withPaths(["https://example.com/a.jpg", "Barbell_Squat/1.jpg"]))).toBe(false);
+      expect(refused(withPaths(["Barbell_Squat/0.jpg"]))).toBe(false);
     });
 
     it("should refuse an empty exercise name", () => {

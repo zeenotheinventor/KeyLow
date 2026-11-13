@@ -1,4 +1,4 @@
-import { exerciseFormMediaDisplayOf } from "@keylow/core/training";
+import { exerciseFormMediaDisplayOf, formMediaToShow } from "@keylow/core/training";
 import { useState } from "react";
 import { View } from "react-native";
 
@@ -56,7 +56,7 @@ function cardOf(state: ExerciseFormMediaState, exerciseName: string): FormMediaC
     case "failed":
       return { kind: "unavailable" };
     case "ready": {
-      const display = exerciseFormMediaDisplayOf(state.media);
+      const display = exerciseFormMediaDisplayOf(formMediaToShow(state.media, "video"));
       return display.kind === "photos"
         ? { ...display, exerciseName }
         : display.kind === "none"
