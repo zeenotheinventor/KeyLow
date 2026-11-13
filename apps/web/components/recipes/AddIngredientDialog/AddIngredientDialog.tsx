@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  ADD_FOOD_DIALOG,
-  ADD_INGREDIENT,
-  INGREDIENT_BARCODE,
-  RECIPE_EDITOR,
-  SEARCH_LAUNCHER,
-} from "@keylow/core/copy";
+import { ADD_FOOD_DIALOG, ADD_INGREDIENT, RECIPE_EDITOR } from "@keylow/core/copy";
 import { newIngredient } from "@keylow/core/recipes";
 import { useEffect, useRef, useState } from "react";
 
@@ -15,10 +9,9 @@ import type { RecentFood } from "@keylow/api-client";
 
 import { PortionStep, SearchStep, useAmountDraft } from "@/components/diary/AddFoodDialog";
 import { DIARY_DIALOG_CLASSES } from "@/components/diary/diaryDialogClasses";
-import { BarcodeLookup } from "@/components/foods/BarcodeLookup";
+import { useBarcodeSearch } from "@/components/foods/BarcodeLookup";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
-import { useIsOnline } from "@/lib/useIsOnline";
 
 /**
  * The add food dialog in ingredient mode, for the recipe editor: a search of foods whose rows all open the
@@ -33,30 +26,21 @@ export function AddIngredientDialog({ opener, onClose, onAdd }: AddIngredientDia
   const [query, setQuery] = useState("");
   // The food the amount step is for. `recent` is set when it was chosen from Recent: its amount opens at the
   // one last logged.
-  const isOnline = useIsOnline();
-  const [isBarcodePanelOpen, setIsBarcodePanelOpen] = useState(false);
   const [chosen, setChosen] = useState<{ foodId: string; recent?: RecentFood } | undefined>(
     undefined,
   );
   const foodId = chosen?.foodId;
   const searchField = useRef<HTMLInputElement>(null);
-  const barcodePanel = useRef<HTMLDivElement>(null);
   const amountField = useRef<HTMLInputElement>(null);
 
-  function closeBarcodePanel() {
-    setIsBarcodePanelOpen(false);
-    searchField.current?.focus();
-  }
-
+  const { barcodeButton, barcodePanel } = useBarcodeSearch({
+    searchField,
+    onFound: (food) => {
+      setChosen({ foodId: food.id });
+    },
+  });
   const draft = useAmountDraft(foodId, chosen?.recent);
   const isAmountReady = draft.status === "ready";
-
-  // A panel that goes away offline takes the cursor with it, so the cursor goes back to the search.
-  useEffect(() => {
-    if (!isOnline && barcodePanel.current?.contains(document.activeElement) === true) {
-      searchField.current?.focus();
-    }
-  }, [isOnline]);
 
   // The cursor starts where the step's work is: in the search, and in the amount once a food is chosen.
   useEffect(() => {
@@ -117,33 +101,8 @@ export function AddIngredientDialog({ opener, onClose, onAdd }: AddIngredientDia
             query={query}
             onQueryChange={setQuery}
             searchRef={searchField}
-            barcodeButton={{
-              label: SEARCH_LAUNCHER.lookUpLabel,
-              expanded: isOnline && isBarcodePanelOpen,
-              disabled: !isOnline,
-              onClick: () => {
-                setIsBarcodePanelOpen(!isBarcodePanelOpen);
-              },
-            }}
-            barcodePanel={
-              <>
-                {!isOnline && (
-                  <p className="text-caption text-text-muted">{INGREDIENT_BARCODE.offline}</p>
-                )}
-                {isBarcodePanelOpen && (
-                  // Offline the panel is hidden, not removed, so the digits typed in it are still there on return.
-                  <div ref={barcodePanel} hidden={!isOnline}>
-                    <BarcodeLookup
-                      onClose={closeBarcodePanel}
-                      onFound={(food) => {
-                        setIsBarcodePanelOpen(false);
-                        setChosen({ foodId: food.id });
-                      }}
-                    />
-                  </div>
-                )}
-              </>
-            }
+            barcodeButton={barcodeButton}
+            barcodePanel={barcodePanel}
             onOpenFood={(id) => {
               setChosen({ foodId: id });
             }}

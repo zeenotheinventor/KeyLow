@@ -45,6 +45,7 @@ import {
   DIARY_RECIPE_AMOUNT_DIALOG_CLASSES,
 } from "@/components/diary/diaryDialogClasses";
 import { QuickAddDialog } from "@/components/diary/QuickAddDialog";
+import { useBarcodeSearch } from "@/components/foods/BarcodeLookup";
 import { Banner } from "@/components/ui/Banner";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
@@ -141,6 +142,13 @@ function AddFoodDialogContent({
   const editedRecipeRow = editedRow?.kind === "recipe" ? editedRow : undefined;
   const recipeForDraft = recipe ?? (editedRecipeRow && plateRecipeOfRow(editedRecipeRow));
   const editedRecipeStart = editedRecipeRow && plateRecipeRowStart(editedRecipeRow);
+  const { barcodeButton, barcodePanel } = useBarcodeSearch({
+    searchField,
+    keeps: "plate",
+    onFound: (food) => {
+      setChosen({ foodId: food.id });
+    },
+  });
   const draft = useAmountDraft(foodId, recent, editedFoodRow);
   const recipeDraft = useRecipePortionDraft(recipeForDraft, editedRecipeStart);
   const foodHeart = useFavouriteFoodHeart(draft.status === "ready" ? draft.food : undefined);
@@ -493,6 +501,8 @@ function AddFoodDialogContent({
       }}
       isLogging={plate.isLogging}
       searchRef={searchField}
+      barcodeButton={barcodeButton}
+      barcodePanel={barcodePanel}
       onOpenFood={(id) => {
         setChosen({ foodId: id });
       }}

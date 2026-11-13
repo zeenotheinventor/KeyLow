@@ -31,6 +31,11 @@ export const WithAction: Story = {
   args: { action: { label: "Create a food", icon: Plus, onClick: () => undefined } },
 };
 
+// A link to a page that must not take this one away, such as the new food form beside a plate that is held.
+export const NewTabLinkAction: Story = {
+  args: { action: { label: "Create a food", icon: Plus, href: "/foods/new", opensInNewTab: true } },
+};
+
 export const DisabledAction: Story = {
   args: {
     action: { label: "Create a food", icon: Plus, disabled: true, onClick: () => undefined },

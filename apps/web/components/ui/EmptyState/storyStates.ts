@@ -3,6 +3,7 @@ export const storyStates = [
   "WithAction",
   "DisabledAction",
   "WithLinkAction",
+  "NewTabLinkAction",
   "PrimaryAction",
   "Section",
   "Page",

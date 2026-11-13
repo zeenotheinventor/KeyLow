@@ -6,7 +6,13 @@ export type EmptyStateAction = {
   /** Secondary unless the state is the first thing a person does, such as the first recipe, where it is primary. */
   variant?: "primary" | "secondary";
 } & (
-  | { href: string; onClick?: never; disabled?: never }
+  | {
+      href: string;
+      /** Opens the page in a new tab, and says so to a screen reader, for a page that must not take this one away. */
+      opensInNewTab?: boolean;
+      onClick?: never;
+      disabled?: never;
+    }
   | {
       onClick: () => void;
       href?: never;

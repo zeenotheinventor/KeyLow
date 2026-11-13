@@ -79,6 +79,37 @@ describe("EmptyState", () => {
       );
     });
 
+    it("should open a link in a new tab, and say so, when asked", () => {
+      render(
+        <EmptyState
+          icon={SearchX}
+          title="No foods found"
+          action={{ label: "Create a food", href: "/foods/new", opensInNewTab: true }}
+        />,
+      );
+
+      const link = screen.getByRole("link", { name: "Create a food (opens in a new tab)" });
+
+      expect(link.getAttribute("href")).toBe("/foods/new");
+      expect(link.getAttribute("target")).toBe("_blank");
+      expect(link.getAttribute("rel")).toBe("noreferrer");
+    });
+
+    it("should leave a link in this tab unless asked", () => {
+      render(
+        <EmptyState
+          icon={SearchX}
+          title="No foods found"
+          action={{ label: "Create a food", href: "/foods/new" }}
+        />,
+      );
+
+      const link = screen.getByRole("link", { name: "Create a food" });
+
+      expect(link.getAttribute("target")).toBeNull();
+      expect(link.getAttribute("rel")).toBeNull();
+    });
+
     it("should open the page through the router, so the app is not loaded again", () => {
       const { push } = renderWithRouter(
         <EmptyState
