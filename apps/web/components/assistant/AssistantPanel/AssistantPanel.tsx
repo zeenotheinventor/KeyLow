@@ -109,6 +109,9 @@ export function AssistantPanel({
     },
     onNewConversationStarted: () => {
       isFollowingEnd.current = true;
+      // New conversation turns itself off while it works, so focus has fallen to the page by now. Giving
+      // it to the field (or the panel, with no field) keeps Escape and typing inside the panel.
+      (fieldRef.current ?? panelRef.current)?.focus();
     },
   });
   const { access, thread, composer, isOpening, isEmpty, stop, isStreaming } = chat;
