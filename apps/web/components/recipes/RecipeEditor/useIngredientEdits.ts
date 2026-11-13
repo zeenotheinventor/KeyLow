@@ -16,27 +16,32 @@ import { useToast } from "@/components/ui/Toast";
 import { useKeyboardUndo } from "@/lib/keyboardUndo";
 
 /**
- * Which ingredient dialog is open, and the button it came from, which focus goes back to. The edit dialog
+ * Which ingredient dialog is open, and the button it came from, which focus goes back to (none when a link
+ * opened the add dialog, which then also carries the word its search starts with). The edit dialog
  * holds the ingredient itself and not its position, since an Undo can put another ingredient in front of it
  * while the dialog is open.
  */
 export type IngredientDialog =
-  | { kind: "add"; opener: HTMLElement }
+  | { kind: "add"; opener: HTMLElement | null; query?: string }
   | { kind: "edit"; ingredient: RecipeIngredient; opener: HTMLElement };
 
 /**
  * What the Ingredients card can do to the recipe's draft: add an ingredient at the end, replace one in
  * place, remove one with an Undo that puts it back where it was. Nothing here is saved: the draft is the
  * editor's until Save. The lists are core's. A full list has no room for an Undo that follows an add, so
- * that Undo says why instead of failing.
+ * that Undo says why instead of failing. An `initialSearch` opens the add dialog at once, searching for it, and `onLinkedSearchEnded` is called once when that dialog closes or adds, so the owner can take the word out of the address.
  */
 export function useIngredientEdits(
   ingredients: readonly RecipeIngredient[],
   setDraft: Dispatch<SetStateAction<RecipeDraft>>,
+  initialSearch?: string,
+  onLinkedSearchEnded?: () => void,
 ) {
   const toast = useToast();
   const keyboardUndo = useKeyboardUndo();
-  const [dialog, setDialog] = useState<IngredientDialog | null>(null);
+  const [dialog, setDialog] = useState<IngredientDialog | null>(
+    initialSearch === undefined ? null : { kind: "add", opener: null, query: initialSearch },
+  );
   // An Undo is pressed long after the removal, so it reads the list as it is by then.
   const latestIngredients = useRef(ingredients);
 
@@ -60,6 +65,14 @@ export function useIngredientEdits(
     );
   }
 
+  // The add dialog a link opened (it carries a word) tells the owner when it ends, whichever way.
+  function endDialog() {
+    if (dialog?.kind === "add" && dialog.query !== undefined) {
+      onLinkedSearchEnded?.();
+    }
+    setDialog(null);
+  }
+
   return {
     dialog,
     openAdd: (opener: HTMLElement) => {
@@ -72,7 +85,7 @@ export function useIngredientEdits(
       }
     },
     close: () => {
-      setDialog(null);
+      endDialog();
     },
     add: (ingredient: RecipeIngredient) => {
       change((current) =>
@@ -80,7 +93,7 @@ export function useIngredientEdits(
           ? [...current]
           : addIngredient(current, ingredient),
       );
-      setDialog(null);
+      endDialog();
     },
     replace: (position: number, ingredient: RecipeIngredient) => {
       change((current) =>

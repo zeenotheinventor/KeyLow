@@ -45,7 +45,7 @@ import { BackToFoodsLink } from "@/components/foods/FoodDetail";
 import { Banner } from "@/components/ui/Banner";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
-import { recipePath, recipesPath } from "@/lib/recipeRoutes";
+import { editRecipePath, recipePath, recipesPath } from "@/lib/recipeRoutes";
 import { useIsOnline } from "@/lib/useIsOnline";
 import { useSettledValue } from "@/lib/useSettledValue";
 import { cn } from "@/lib/utils";
@@ -64,7 +64,11 @@ type SaveStatus = "idle" | "saving" | "created";
  * first. It holds no sums of its own: the card, the checks, the sentences and what counts as a change are
  * core's.
  */
-export function RecipeEditor({ existing, initialName }: RecipeEditorProps) {
+export function RecipeEditor({
+  existing,
+  initialName,
+  initialIngredientSearch,
+}: RecipeEditorProps) {
   const router = useRouter();
   const toast = useToast();
   const isOnline = useIsOnline();
@@ -103,7 +107,17 @@ export function RecipeEditor({ existing, initialName }: RecipeEditorProps) {
     shownSentences.cookedWeight !== undefined ||
     shownSentences.ingredients.length > 0;
 
-  const ingredientEdits = useIngredientEdits(draft.ingredients, setDraft);
+  const ingredientEdits = useIngredientEdits(
+    draft.ingredients,
+    setDraft,
+    initialIngredientSearch,
+    () => {
+      // The word is taken out of the address, so a reload or a shared link does not open the search again.
+      if (existing !== undefined) {
+        router.replace(editRecipePath(existing.id));
+      }
+    },
+  );
   const { dialog } = ingredientEdits;
   // Where the edited ingredient is now, which an Undo can have moved since the dialog opened.
   const editedPosition =
@@ -304,6 +318,7 @@ export function RecipeEditor({ existing, initialName }: RecipeEditorProps) {
       </form>
       {dialog?.kind === "add" && (
         <AddIngredientDialog
+          initialQuery={dialog.query}
           opener={dialog.opener}
           onClose={ingredientEdits.close}
           onAdd={ingredientEdits.add}
