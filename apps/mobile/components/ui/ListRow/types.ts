@@ -19,9 +19,10 @@ type ListRowBaseProps = {
   title: string;
   /**
    * `danger` draws the title in the danger colour, for a row that throws something away, such as Delete all
-   * conversations. `secondary` mutes it, for a row that is done with, such as an undone change.
+   * conversations. `secondary` mutes it, for a row that is done with, such as an undone change. `accent` draws
+   * it in the accent ink, for a row that opens more or goes on, such as the palate's "Show all 10".
    */
-  titleTone?: "primary" | "danger" | "secondary" | undefined;
+  titleTone?: "primary" | "danger" | "secondary" | "accent" | undefined;
   /**
    * Draws the macro's (or the calories') colour as an 8 point key before the title, as the Targets screen's Protein, Carbohydrate
    * and Fat rows do. It is decoration, so the row's accessible name is unchanged.
@@ -56,6 +57,11 @@ type ListRowBaseProps = {
   chevron?: boolean | undefined;
   /** Dims the row to half and stops it responding. */
   disabled?: boolean | undefined;
+  /**
+   * `snug` is the palate lists' row: a 56 point minimum height where a row with a trailing action is 60, and a
+   * title that wraps to as many lines as it needs where it is usually cut to one. Leave it out for the usual row.
+   */
+  density?: "snug" | undefined;
 };
 
 /** A row that is information, or that goes somewhere when pressed. */
@@ -78,6 +84,8 @@ export type ListRowToPressProps = ListRowBaseProps & {
    * its icon bare and not in a tile, a 52 point row, no subtitle and no chevron. Leave it out for the usual row.
    */
   variant?: "footer" | undefined;
+  /** What a screen reader announces the row as. A row that goes to another screen, such as the palate's Foods to avoid, is a `link`. Defaults to `button`. */
+  role?: "link" | undefined;
   /** The row's button, so a screen can move a screen reader's focus to it. */
   ref?: Ref<View> | undefined;
   toggle?: undefined;
@@ -96,6 +104,7 @@ export type ListRowWithControlProps = ListRowBaseProps & {
   loading?: undefined;
   trailingIcon?: undefined;
   variant?: undefined;
+  role?: undefined;
   ref?: undefined;
   toggle?: undefined;
   trailing?: undefined;
@@ -123,6 +132,7 @@ export type ListRowWithToggleProps = ListRowBaseProps & {
   loading?: undefined;
   trailingIcon?: undefined;
   variant?: undefined;
+  role?: undefined;
   ref?: undefined;
   trailing?: undefined;
   children?: undefined;
@@ -136,7 +146,14 @@ export type ListRowWithToggleProps = ListRowBaseProps & {
  * on the left are named without it.
  */
 export type ListRowTrailing =
-  | { kind: "action"; label: string; onPress: () => void; busy?: boolean | undefined }
+  | {
+      kind: "action";
+      label: string;
+      onPress: () => void;
+      busy?: boolean | undefined;
+      /** The button's accessible name, when "{label}, {title}" is not the one wanted, such as "Not true: Eggs". */
+      accessibleName?: string | undefined;
+    }
   | { kind: "label"; label: string }
   | { kind: "tick"; label: string };
 
@@ -150,6 +167,7 @@ export type ListRowWithTrailingProps = ListRowBaseProps & {
   loading?: undefined;
   trailingIcon?: undefined;
   variant?: undefined;
+  role?: undefined;
   ref?: undefined;
   toggle?: undefined;
   children?: undefined;

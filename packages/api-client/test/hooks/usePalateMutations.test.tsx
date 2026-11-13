@@ -5,11 +5,13 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest
 
 import { useAddPalatePreference } from "../../src/hooks/useAddPalatePreference";
 import { useRemovePalatePreference } from "../../src/hooks/useRemovePalatePreference";
+import { useSetNotUsual } from "../../src/hooks/useSetNotUsual";
 import { keys } from "../../src/queryKeys";
 import { isDuplicatePalatePreference } from "../../src/repos/palatePreferences";
 import { REST_URL, postgrestError, postgrestRows } from "../support/postgrest";
 import { createWrapper } from "../support/wrapper";
 
+const FOOD_ID = "55555555-5555-4555-8555-555555555555";
 const PREFERENCE_ID = "44444444-4444-4444-8444-444444444444";
 
 const storedRow = {
@@ -182,6 +184,59 @@ describe("useRemovePalatePreference", () => {
     const { result } = renderHook(() => useRemovePalatePreference(), { wrapper });
 
     await act(() => result.current.mutateAsync(PREFERENCE_ID));
+
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: keys.palate.all });
+  });
+});
+
+describe("useSetNotUsual", () => {
+  it("should store a not_usual row for the food it is given", async () => {
+    const bodies: unknown[] = [];
+    server.use(
+      http.post(`${REST_URL}/palate_preferences`, async ({ request }) => {
+        bodies.push(await request.clone().json());
+        return postgrestRows(request, [storedRow], 201);
+      }),
+    );
+    const { wrapper } = createWrapper();
+    const { result } = renderHook(() => useSetNotUsual(), { wrapper });
+
+    await act(() => result.current.mutateAsync({ foodId: FOOD_ID }));
+
+    expect(bodies).toEqual([{ kind: "not_usual", food_id: FOOD_ID }]);
+  });
+
+  it("should call onError for every failed write, not only the last", async () => {
+    server.use(
+      http.post(`${REST_URL}/palate_preferences`, () =>
+        postgrestError(500, "XX000", "internal error"),
+      ),
+    );
+    const onError = vi.fn();
+    const { wrapper } = createWrapper();
+    const { result } = renderHook(() => useSetNotUsual({ onError }), { wrapper });
+
+    await act(() =>
+      Promise.allSettled([
+        result.current.mutateAsync({ foodId: FOOD_ID }),
+        result.current.mutateAsync({ recipeId: PREFERENCE_ID }),
+      ]),
+    );
+
+    expect(onError).toHaveBeenCalledTimes(2);
+  });
+
+  it("should refresh the palate queries once the call is settled, also after a failure", async () => {
+    server.use(
+      http.post(`${REST_URL}/palate_preferences`, () =>
+        postgrestError(500, "XX000", "internal error"),
+      ),
+    );
+    const { queryClient, wrapper } = createWrapper();
+    const invalidate = vi.spyOn(queryClient, "invalidateQueries");
+    const { result } = renderHook(() => useSetNotUsual(), { wrapper });
+
+    await act(() => result.current.mutateAsync({ foodId: FOOD_ID }).catch(() => undefined));
 
     expect(invalidate).toHaveBeenCalledWith({ queryKey: keys.palate.all });
   });

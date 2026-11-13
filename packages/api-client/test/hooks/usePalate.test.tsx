@@ -3,6 +3,7 @@ import { http } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
+import { usePalateFoods } from "../../src/hooks/usePalateFoods";
 import { usePalateLoggedDays } from "../../src/hooks/usePalateLoggedDays";
 import { usePalatePreferences } from "../../src/hooks/usePalatePreferences";
 import { usePalateStats } from "../../src/hooks/usePalateStats";
@@ -150,6 +151,73 @@ describe("usePalateLoggedDays", () => {
     const { wrapper } = createWrapper();
 
     const { result } = renderHook(() => usePalateLoggedDays({ enabled: false }), { wrapper });
+
+    expect(result.current.fetchStatus).toBe("idle");
+  });
+});
+
+describe("usePalateFoods", () => {
+  it("should load the names of the foods asked for", async () => {
+    server.use(
+      http.get(`${REST_URL}/foods`, ({ request }) =>
+        postgrestRows(request, [
+          { id: FOOD_ID, name: "stub food", source: "cofid", food_group: "A" },
+        ]),
+      ),
+    );
+    const { wrapper } = createWrapper();
+
+    const { result } = renderHook(() => usePalateFoods([FOOD_ID]), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+    expect(result.current.data).toEqual([
+      { id: FOOD_ID, name: "stub food", source: "cofid", food_group: "A" },
+    ]);
+  });
+
+  it("should ask once for the same ids in another order, and keep the last foods while new ids load", async () => {
+    const SECOND_ID = "66666666-6666-4666-8666-666666666666";
+    let requests = 0;
+    server.use(
+      http.get(`${REST_URL}/foods`, async ({ request }) => {
+        requests += 1;
+        const ids = new URL(request.url).searchParams.get("id") ?? "";
+        if (ids.includes(SECOND_ID)) {
+          await new Promise((resolve) => setTimeout(resolve, 30));
+        }
+        return postgrestRows(request, [
+          { id: FOOD_ID, name: "stub food", source: "cofid", food_group: "A" },
+        ]);
+      }),
+    );
+    const { wrapper } = createWrapper();
+    const { result, rerender } = renderHook(({ ids }) => usePalateFoods(ids), {
+      wrapper,
+      initialProps: { ids: [FOOD_ID, SECOND_ID] },
+    });
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+
+    rerender({ ids: [SECOND_ID, FOOD_ID] });
+    expect(result.current.data).toHaveLength(1);
+    expect(requests).toBe(1);
+
+    rerender({ ids: [FOOD_ID, SECOND_ID, "77777777-7777-4777-8777-777777777777"] });
+    expect(result.current.isPlaceholderData).toBe(true);
+    expect(result.current.data).toHaveLength(1);
+    await waitFor(() => {
+      expect(result.current.isPlaceholderData).toBe(false);
+    });
+    expect(requests).toBe(2);
+  });
+
+  it("should make no request while there are no ids to ask for", () => {
+    const { wrapper } = createWrapper();
+
+    const { result } = renderHook(() => usePalateFoods([]), { wrapper });
 
     expect(result.current.fetchStatus).toBe("idle");
   });

@@ -87,6 +87,8 @@ export const keys = {
     stats: ["palate", "stats"] as const,
     /** How many of the last 90 days have anything logged. */
     loggedDays: ["palate", "logged-days"] as const,
+    /** The foods the stats are about, by their ids in sorted order, so the same foods are the same key. */
+    foods: (foodIds: readonly string[]) => ["palate", "foods", ...[...foodIds].sort()] as const,
   },
   /**
    * The meal plan reads (ADR 0003, Amendment 22): the person's plans with their days and items, and the
