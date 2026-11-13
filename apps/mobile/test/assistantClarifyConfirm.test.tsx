@@ -44,21 +44,28 @@ const mockAssistant: {
   send: jest.Mock;
 } = { items: [], live: null, isStreaming: false, isFetching: false, send: jest.fn() };
 
-jest.mock("@keylow/api-client", () => ({
-  ...jest.requireActual<object>("@keylow/api-client"),
+// The hooks the chat reads are mocked at their own modules, because `useAssistantChat` calls them inside
+// `@keylow/api-client`, where a mock of the package index does not reach. The index re-exports the same mocks.
+jest.mock("../../../packages/api-client/src/hooks/useAssistantConversation", () => ({
   useAssistantConversation: () => ({
     data: { conversationId: "00000000-0000-4000-8000-0000000000c1", items: mockAssistant.items },
     isSuccess: true,
     isError: false,
     isFetching: mockAssistant.isFetching,
   }),
+}));
+jest.mock("../../../packages/api-client/src/hooks/useAssistantTurn", () => ({
   useAssistantTurn: () => ({
     send: mockAssistant.send,
     stop: jest.fn(),
     live: mockAssistant.live,
     isStreaming: mockAssistant.isStreaming,
   }),
+}));
+jest.mock("../../../packages/api-client/src/hooks/useNewAssistantConversation", () => ({
   useNewAssistantConversation: () => ({ mutateAsync: jest.fn(), isPending: false }),
+}));
+jest.mock("../../../packages/api-client/src/hooks/useAssistantStatus", () => ({
   useAssistantStatus: () => ({
     data: { notice: null },
     isSuccess: true,
@@ -66,8 +73,16 @@ jest.mock("@keylow/api-client", () => ({
     failureCount: 0,
     refetch: () => Promise.resolve({ isSuccess: true }),
   }),
+}));
+jest.mock("../../../packages/api-client/src/hooks/useSetAssistantConsent", () => ({
   useSetAssistantConsent: () => ({ mutate: jest.fn(), isPending: false }),
+}));
+jest.mock("../../../packages/api-client/src/hooks/useProfileTimeZone", () => ({
   useProfileTimeZone: () => ({ data: "Europe/London" }),
+}));
+
+jest.mock("@keylow/api-client", () => ({
+  ...jest.requireActual<object>("@keylow/api-client"),
   useAssistantCardUndo: jest.requireActual<{ mockAssistantCardUndo: unknown }>(
     "./support/assistantCardUndoMock",
   ).mockAssistantCardUndo,
