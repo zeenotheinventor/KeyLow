@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted, 2026-09-22. Amendment 1 appended 2026-10-07. Amendment 2 appended 2026-10-15. Amendment 3 appended 2026-10-15. Amendment 4 appended 2026-10-15. Amendment 5 appended 2026-10-15. Amendment 6 appended 2026-10-15. Amendment 7 appended 2026-10-15. Amendment 8 appended 2026-10-16. Amendment 9 appended 2026-10-18. Amendment 10 appended 2026-10-23. Amendment 11 appended 2026-10-23. Amendment 12 appended 2026-10-23. Amendment 13 appended 2026-10-23. Amendment 14 appended 2026-10-26, with addenda of 2026-11-03 and 2026-11-07. Amendment 15 appended 2026-10-29. Amendment 16 appended 2026-11-10. Amendment 17 appended 2026-11-10. Amendment 18 appended 2026-11-10. Amendment 19 appended 2026-11-11. Amendment 20 appended 2026-11-11. Amendment 21 appended 2026-11-11. Amendment 22 appended 2026-11-13.
+Accepted, 2026-09-22. Amendment 1 appended 2026-10-07. Amendment 2 appended 2026-10-15. Amendment 3 appended 2026-10-15. Amendment 4 appended 2026-10-15. Amendment 5 appended 2026-10-15. Amendment 6 appended 2026-10-15. Amendment 7 appended 2026-10-15. Amendment 8 appended 2026-10-16. Amendment 9 appended 2026-10-18. Amendment 10 appended 2026-10-23. Amendment 11 appended 2026-10-23. Amendment 12 appended 2026-10-23. Amendment 13 appended 2026-10-23. Amendment 14 appended 2026-10-26, with addenda of 2026-11-03 and 2026-11-07. Amendment 15 appended 2026-10-29. Amendment 16 appended 2026-11-10. Amendment 17 appended 2026-11-10. Amendment 18 appended 2026-11-10. Amendment 19 appended 2026-11-11. Amendment 20 appended 2026-11-11. Amendment 21 appended 2026-11-11. Amendment 22 appended 2026-11-13. Amendment 23 appended 2026-11-13.
 
 ## Context
 
@@ -2712,3 +2712,15 @@ Amendment 2 says nothing in v1 reads `foods.food_group`, and Amendment 15 alread
 ### Consequences of Amendment 22
 
 `packages/db/src/types.gen.ts` does not change for the two check widenings, because a check on a `text` column does not appear in the generated types. It gains the tables, the view, the functions and the profile column when KEY-1023 and KEY-1027 land. This migration inserts no row, so it copes with any database. Any further deviation from the frozen Decision, from Amendments 1 to 21 or from this amendment needs an Amendment 23 before the migration or code that implements it lands.
+
+### Amendment 23 (`palate_logged_days`, 2026-11-13)
+
+Recorded under KEY-1023 by the orchestrator while Zee was away. It is reversible. The core palate profile (KEY-1024) needs the number of days the person logged anything in the window. "Most days" is a share of those days, and the profile shows its empty state below 4. `palate_food_stats` holds one row per food or recipe, so it cannot give that count.
+
+- `palate_logged_days` is a security-invoker view with two columns, `owner_id` and `logged_days`.
+  - `logged_days` counts the distinct `local_date` values of the owner's `food_log_entries` that are not soft deleted. The window and the zone are the same as `palate_food_stats`: the last 90 days counted back from the owner's local today in `profiles.timezone`, today included.
+  - Quick entries count as logged days, because the person did log something that day.
+- Only `authenticated` may select from it, and it reads only the caller's own rows through the invoker's row-level security.
+- It is health data like the stats view. It is derived and holds no rows of its own, so it is not exported, and it goes when the entries go.
+- The repository reads it as `getPalateLoggedDays`, and a person with no entries reads as 0.
+- Implemented by KEY-1023, migration `20261113020100_palate_logged_days.sql`.

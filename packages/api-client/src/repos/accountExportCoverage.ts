@@ -45,6 +45,7 @@ export const ACCOUNT_EXPORT_COVERAGE: Record<
   assistant_usage: "exported",
   entitlements: "exported",
   feature_requests: "exported",
+  palate_preferences: "exported",
   muscles: {
     notExported: "Shared reference data, the same for everyone. No row belongs to the account.",
   },
@@ -65,5 +66,11 @@ export const ACCOUNT_EXPORT_COVERAGE: Record<
   day_totals: { notExported: "A view derived from the food log rows, which the export holds." },
   assistant_usage_daily: {
     notExported: "A view derived from the assistant usage rows, which the export holds.",
+  },
+  palate_logged_days: {
+    notExported: "A view derived from the food log rows, which the export holds.",
+  },
+  palate_food_stats: {
+    notExported: "A view derived from the food log rows, which the export holds.",
   },
 };

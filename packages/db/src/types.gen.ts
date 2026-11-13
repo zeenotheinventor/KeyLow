@@ -1019,6 +1019,51 @@ export type Database = {
         };
         Relationships: [];
       };
+      palate_preferences: {
+        Row: {
+          created_at: string;
+          food_id: string | null;
+          id: string;
+          kind: string;
+          label: string | null;
+          owner_id: string;
+          recipe_id: string | null;
+        };
+        Insert: {
+          created_at?: string;
+          food_id?: string | null;
+          id?: string;
+          kind: string;
+          label?: string | null;
+          owner_id?: string;
+          recipe_id?: string | null;
+        };
+        Update: {
+          created_at?: string;
+          food_id?: string | null;
+          id?: string;
+          kind?: string;
+          label?: string | null;
+          owner_id?: string;
+          recipe_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "palate_preferences_food_id_fkey";
+            columns: ["food_id"];
+            isOneToOne: false;
+            referencedRelation: "foods";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "palate_preferences_recipe_id_fkey";
+            columns: ["recipe_id"];
+            isOneToOne: false;
+            referencedRelation: "recipes";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       profiles: {
         Row: {
           activity: Database["public"]["Enums"]["activity_level"] | null;
@@ -1761,6 +1806,44 @@ export type Database = {
           sat_fat_g: number | null;
           sugars_g: number | null;
           user_id: string | null;
+        };
+        Relationships: [];
+      };
+      palate_food_stats: {
+        Row: {
+          before_eleven_count: number | null;
+          distinct_days: number | null;
+          eleven_to_sixteen_count: number | null;
+          entry_count: number | null;
+          first_local_date: string | null;
+          food_id: string | null;
+          last_local_date: string | null;
+          median_resolved_grams: number | null;
+          owner_id: string | null;
+          recipe_id: string | null;
+          sixteen_or_later_count: number | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "food_log_entries_food_id_fkey";
+            columns: ["food_id"];
+            isOneToOne: false;
+            referencedRelation: "foods";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "food_log_entries_recipe_id_fkey";
+            columns: ["recipe_id"];
+            isOneToOne: false;
+            referencedRelation: "recipes";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      palate_logged_days: {
+        Row: {
+          logged_days: number | null;
+          owner_id: string | null;
         };
         Relationships: [];
       };
