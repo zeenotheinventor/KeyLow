@@ -1,14 +1,13 @@
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { pagePaddingOf } from "./pagePadding";
 
 import MorePage from "@/app/(dashboard)/more/page";
 
-const { getUser, signOut, themeCookie, useTargets, useProgramSummary, useAssistantConsent } =
-  vi.hoisted(() => ({
+const { getUser, themeCookie, useTargets, useProgramSummary, useAssistantConsent } = vi.hoisted(
+  () => ({
     getUser: vi.fn(),
-    signOut: vi.fn(),
     themeCookie: vi.fn<() => string | undefined>(),
     useTargets: vi.fn<() => { data: { kcal: number | null } | undefined }>(),
     useProgramSummary: vi.fn<
@@ -21,7 +20,8 @@ const { getUser, signOut, themeCookie, useTargets, useProgramSummary, useAssista
       vi.fn<
         () => { data: { isOn: boolean } | undefined; isPending?: boolean; fetchStatus?: string }
       >(),
-  }));
+  }),
+);
 
 // The Goal row reads the goal and the time zone. Its own tests are in goals/goal-row.test.tsx, so here both
 // reads are paused, as they are offline, which leaves the row with no sub line.
@@ -38,7 +38,7 @@ vi.mock("@/lib/supabase/server", () => ({
   createClient: () => Promise.resolve({ auth: { getUser } }),
 }));
 
-vi.mock("@/app/(dashboard)/actions", () => ({ signOut }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ prefetch: vi.fn(), replace: vi.fn() }) }));
 
 vi.mock("@/lib/theme/setTheme", () => ({ setTheme: vi.fn(() => Promise.resolve()) }));
 
@@ -326,16 +326,6 @@ describe("More page", () => {
     expect(screen.getByRole("button", { name: /Sign out/ }).textContent).toContain(
       "ada@example.com",
     );
-  });
-
-  it("should run the sign out action when Sign out is pressed", async () => {
-    await renderPage();
-
-    screen.getByRole("button", { name: /Sign out/ }).click();
-
-    await waitFor(() => {
-      expect(signOut).toHaveBeenCalledOnce();
-    });
   });
 
   it("should pad top and bottom as the shell boards draw it", async () => {

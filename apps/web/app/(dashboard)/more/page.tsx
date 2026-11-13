@@ -1,7 +1,6 @@
 import { ACCOUNT_EXPORT_COPY, MORE_SCREEN, TAB_TITLES } from "@keylow/core/copy";
 import { cookies } from "next/headers";
 
-import { signOut } from "../actions";
 import { PageFrame } from "../PageFrame";
 import { AppearanceSetting } from "./AppearanceSetting";
 import { AssistantRow } from "./AssistantRow";
@@ -11,6 +10,7 @@ import { GoalRow } from "./GoalRow";
 import { ProgramRow } from "./ProgramRow";
 import { TargetsRow } from "./TargetsRow";
 
+import { SignOutRow } from "@/components/account";
 import { GroupedList } from "@/components/ui/GroupedList";
 import { ListRow } from "@/components/ui/ListRow";
 import { recipesPath } from "@/lib/recipeRoutes";
@@ -52,21 +52,14 @@ export default async function MorePage() {
           <DashboardBodyChartSetting />
           <ListRow title={MORE_SCREEN.settings.about.title} href="/about" />
         </GroupedList>
-        <form action={signOut}>
-          <GroupedList title={MORE_SCREEN.account.title} headerSize="compact">
-            <ListRow
-              title={ACCOUNT_EXPORT_COPY.moreRow.title}
-              subtitle={ACCOUNT_EXPORT_COPY.moreRow.subtitle}
-              href="/more/export"
-            />
-            <ListRow
-              title={MORE_SCREEN.account.signOut}
-              subtitle={user?.email}
-              submit
-              chevron={false}
-            />
-          </GroupedList>
-        </form>
+        <GroupedList title={MORE_SCREEN.account.title} headerSize="compact">
+          <ListRow
+            title={ACCOUNT_EXPORT_COPY.moreRow.title}
+            subtitle={ACCOUNT_EXPORT_COPY.moreRow.subtitle}
+            href="/more/export"
+          />
+          <SignOutRow email={user?.email} />
+        </GroupedList>
       </div>
     </PageFrame>
   );
