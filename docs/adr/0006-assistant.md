@@ -480,7 +480,7 @@ The prefix of a chat turn (the system prompt and the tools, `promptPrefix.test.t
 - **The allowlist rule.** A tool of the kitchen group is in no set on a turn where the group is not surfaced, a pending confirmation of that tool included. On a turn where it is surfaced the tool is placed by the usual rules: a read is in the read set, a write is in the general set, and it is never in the recipe import set. The model never picks its own set, and the executor still checks the header.
 - **The prefix test counts visible tools only.** `promptPrefix.test.ts` leaves the deferred tools out of the prefix figure and has a second test that caps what a kitchen turn adds, the deferred tool definitions as sent plus the stored system message, at 2,500 tokens.
 - **One test-only tool proves it.** `kitchen_probe` is a read of the kitchen group that answers `ok`. It is last in the registry and is listed only when the function secret `ASSISTANT_KITCHEN_PROBE` is `1`, so no deployment lists it by default. The kitchen tools of M9 replace it.
-- **If the API refuses.** If the API refuses the beta, `defer_loading` or a `tool_addition` on Haiku 5.5, the work stops and is reported, and the fallback is Zee's: raise `DEFAULT_COMPACT_AT_TOKENS` to 50,000 and record it as an amendment. `assistant/kitchenCacheProbe.ts` is a script that sends a two-turn kitchen conversation to the Messages API with the loop's own request builder and prints the usage of every call, so the live check needs no stack.
+- **If the API refuses.** If the API refuses the beta, `defer_loading` or a `tool_addition` on Haiku 5.5, the work stops and is reported, and the fallback is Zee's: raise `DEFAULT_COMPACT_AT_TOKENS` to 50,000 and record it as an amendment. The live check is the opt-in eval set `kitchenProbe` (`tools/assistant-evals/cases/kitchenProbe.ts`), dispatched with the workflow's `kitchen` input. It runs a two-turn kitchen conversation through the real stack and prints the cache counts of the first call of each turn.
 
 ### Measured
 
@@ -497,4 +497,4 @@ With the formula of `promptPrefix.test.ts` (system prompt length plus the tools 
 
 ### Implemented by
 
-- KEY-1022, the group, the adapter field, the beta header, the trigger, the stored addition, the replay rules, the allowlist rule, the switch, the prefix tests, the probe tool, `kitchenCacheProbe.ts` and this amendment.
+- KEY-1022, the group, the adapter field, the beta header, the trigger, the stored addition, the replay rules, the allowlist rule, the switch, the prefix tests, the probe tool, the `kitchenProbe` eval set and this amendment.
