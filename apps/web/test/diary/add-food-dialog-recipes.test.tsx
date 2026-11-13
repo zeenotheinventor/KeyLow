@@ -20,6 +20,13 @@ import { AddFoodDialog, SearchStep } from "@/components/diary/AddFoodDialog";
 import { archivedSampleRecipes, sampleRecipes } from "@/components/recipes/sampleRecipes";
 import { ToastProvider } from "@/components/ui/Toast";
 
+// The Diary is the page, so a logged plate has nowhere to go.
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn() }),
+  usePathname: () => "/diary",
+  useSearchParams: () => new URLSearchParams(),
+}));
+
 const api = vi.hoisted(() => ({ hits: [] as FoodSearchHit[] }));
 
 // The foods are the existing tests' business. The recipe search, the log and the Undo are the real hooks.

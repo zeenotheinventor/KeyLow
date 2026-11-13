@@ -62,6 +62,7 @@ vi.mock("@keylow/api-client", async (importOriginal) => ({
 vi.mock("next/navigation", () => ({
   useRouter: () => router,
   usePathname: () => "/foods",
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 const VALID_EAN_13 = "5000159484695";

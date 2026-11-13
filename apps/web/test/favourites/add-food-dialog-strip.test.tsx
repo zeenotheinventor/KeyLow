@@ -18,6 +18,13 @@ import type { FoodWithPortionsState, RecentFood, RecipeSummary } from "@keylow/a
 import { AddFoodDialog } from "@/components/diary/AddFoodDialog";
 import { AddIngredientDialog } from "@/components/recipes/AddIngredientDialog";
 
+// The Diary is the page, so a logged plate has nowhere to go.
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn() }),
+  usePathname: () => "/diary",
+  useSearchParams: () => new URLSearchParams(),
+}));
+
 const porridge = makeFood({ id: "11111111-1111-4111-8111-111111111111", name: "Porridge" });
 const porridgePortion = makePortion({
   food_id: porridge.id,

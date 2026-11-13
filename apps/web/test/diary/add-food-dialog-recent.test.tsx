@@ -15,6 +15,13 @@ import { AddFoodDialog } from "@/components/diary/AddFoodDialog";
 import { AddIngredientDialog } from "@/components/recipes/AddIngredientDialog";
 import { ToastProvider } from "@/components/ui/Toast";
 
+// The Diary is the page, so a logged plate has nowhere to go.
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn() }),
+  usePathname: () => "/diary",
+  useSearchParams: () => new URLSearchParams(),
+}));
+
 const EGGS_ID = "11111111-1111-4111-8111-111111111111";
 const OATS_ID = "11111111-1111-4111-8111-222222222222";
 const eggs = makeFood({

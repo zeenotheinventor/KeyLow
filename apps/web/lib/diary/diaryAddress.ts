@@ -39,3 +39,8 @@ export function diaryHref({
 
   return query === "" ? "/diary" : `/diary?${query}`;
 }
+
+/** The day the Diary shows for a `date` parameter: that day, or today when there is none or it is after today. */
+export function viewedDiaryDate(date: string | undefined, today: string): string {
+  return date !== undefined && date <= today ? date : today;
+}

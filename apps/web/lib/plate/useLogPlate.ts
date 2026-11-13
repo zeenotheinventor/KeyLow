@@ -5,12 +5,15 @@ import {
   useProfileTimeZone,
 } from "@keylow/api-client";
 import { FOOD_NOT_FOUND, FOOD_REVIEW_BANNER, PLATE, describeLoggedPlate } from "@keylow/core/copy";
+import { toLocalDate } from "@keylow/core/dates";
 import { canLogPlate, plateItemName, plateLoggedAt } from "@keylow/core/plate";
 import { Check, CircleAlert } from "lucide-react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { usePlate } from "./usePlate";
 
 import { useToast } from "@/components/ui/Toast";
+import { diaryHref, parseDiaryDate, parseDiaryView, viewedDiaryDate } from "@/lib/diary";
 import { useIsOnline } from "@/lib/useIsOnline";
 
 /**
@@ -39,10 +42,31 @@ function refusalOf(error: unknown): string {
   return PLATE.notLogged;
 }
 
+// Whether the page is the Diary's day view of that day, where the new entries show up as they are.
+function isDiaryDayView(
+  pathname: string | null,
+  searchParameters: URLSearchParams | null,
+  localDate: string,
+  today: string,
+): boolean {
+  if (pathname !== "/diary" || searchParameters === null) {
+    return false;
+  }
+  const viewedDate = viewedDiaryDate(
+    parseDiaryDate(searchParameters.get("date") ?? undefined),
+    today,
+  );
+
+  return (
+    parseDiaryView(searchParameters.get("view") ?? undefined) === "day" && viewedDate === localDate
+  );
+}
+
 /**
  * The one action that logs the plate. `logPlate` reads the foods on the plate, logs every row in one
- * all-or-nothing write at the plate's time on the dialog's day, and on success shows the logged toast and calls
- * `onLogged`, which closes the dialog. A failed log writes nothing, keeps the plate and says so in a toast: a
+ * all-or-nothing write at the plate's time on the dialog's day, and on success shows the logged toast, calls
+ * `onLogged`, which closes the dialog, and takes the person to the Diary on that day (as the phone does) unless
+ * the page already is the Diary's day view of it. A failed log writes nothing, keeps the plate and says so in a toast: a
  * food that is gone says so, and one that needs review says that, and any other failure says it was not logged.
  * Where the caller draws the sentence itself (`showsFailureToast: false`) the toast is left out and `refusal` has the words.
  * It never throws, and a call that did nothing because a log was running, or the plate could not be logged,
@@ -54,6 +78,9 @@ export function useLogPlate(
 ): { logPlate: (options?: LogPlateOptions) => Promise<LogPlateResult>; canLog: boolean } {
   const { items, time, isLogging, startLogging, finishLogging } = usePlate();
   const toast = useToast();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParameters = useSearchParams();
   const isOnline = useIsOnline();
   const { mutateAsync } = useLogPlateEntries();
   const profileTimeZone = useProfileTimeZone();
@@ -67,10 +94,15 @@ export function useLogPlate(
     if (!canLog || !startLogging()) {
       return { ok: false, wasIgnored: true };
     }
+    let writtenDate: string;
+    let today: string;
     try {
       // "Now" is the moment Log is pressed.
-      const { loggedAt, localDate } = plateLoggedAt({ now: new Date(), day, time, timeZone });
+      const now = new Date();
+      const { loggedAt, localDate } = plateLoggedAt({ now, day, time, timeZone });
       await mutateAsync({ items, loggedAt: loggedAt.toISOString(), localDate });
+      writtenDate = localDate;
+      today = toLocalDate(now, timeZone);
     } catch (error) {
       // The failure is not kept: it can quote a food or an amount, which is health data. A food that is gone, or
       // that needs review, is not a connection problem, so it does not say to check the connection.
@@ -90,6 +122,9 @@ export function useLogPlate(
       icon: Check,
     });
     onLogged();
+    if (!isDiaryDayView(pathname, searchParameters, writtenDate, today)) {
+      router.push(diaryHref({ date: writtenDate === today ? undefined : writtenDate }));
+    }
 
     return { ok: true };
   }

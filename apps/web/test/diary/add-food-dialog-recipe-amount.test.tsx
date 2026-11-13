@@ -19,6 +19,13 @@ import { AddFoodDialog } from "@/components/diary/AddFoodDialog";
 import { sampleRecipes } from "@/components/recipes/sampleRecipes";
 import { ToastProvider } from "@/components/ui/Toast";
 
+// The Diary is the page, so a logged plate has nowhere to go.
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn() }),
+  usePathname: () => "/diary",
+  useSearchParams: () => new URLSearchParams(),
+}));
+
 // The foods are the existing tests' business. The recipe search, the amount step and the log are real.
 vi.mock("@keylow/api-client", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@keylow/api-client")>()),

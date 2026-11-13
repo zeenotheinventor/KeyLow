@@ -125,7 +125,11 @@ vi.mock("@keylow/api-client", async (importOriginal) => ({
 }));
 
 // The list pushes a food's page when nothing says where to open it, so the router has to be there.
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn() }),
+  usePathname: () => "/diary",
+  useSearchParams: () => new URLSearchParams(),
+}));
 
 function renderDialog() {
   render(

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { diaryHref, parseDiaryDate, parseDiaryView } from "@/lib/diary";
+import { diaryHref, parseDiaryDate, parseDiaryView, viewedDiaryDate } from "@/lib/diary";
 
 describe("parseDiaryDate", () => {
   it("should keep a real calendar day", () => {
@@ -46,5 +46,20 @@ describe("diaryHref", () => {
 
   it("should leave the day view out of the address", () => {
     expect(diaryHref({ date: "2026-10-14", view: "day" })).toBe("/diary?date=2026-10-14");
+  });
+});
+
+describe("viewedDiaryDate", () => {
+  it("should show the day asked for when it is not after today", () => {
+    expect(viewedDiaryDate("2026-10-14", "2026-10-15")).toBe("2026-10-14");
+    expect(viewedDiaryDate("2026-10-15", "2026-10-15")).toBe("2026-10-15");
+  });
+
+  it("should show today when no day is asked for", () => {
+    expect(viewedDiaryDate(undefined, "2026-10-15")).toBe("2026-10-15");
+  });
+
+  it("should show today when the day asked for is after today", () => {
+    expect(viewedDiaryDate("2099-01-01", "2026-10-15")).toBe("2026-10-15");
   });
 });

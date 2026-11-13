@@ -27,7 +27,7 @@ import type { DiaryView } from "@/lib/diary";
 import { Button } from "@/components/ui/Button";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { WeekStrip } from "@/components/ui/WeekStrip";
-import { diaryHref } from "@/lib/diary";
+import { diaryHref, viewedDiaryDate } from "@/lib/diary";
 import { useFoodLogActions } from "@/lib/foodLogActions";
 import { useIsOnline } from "@/lib/useIsOnline";
 import { useNow } from "@/lib/useNow";
@@ -54,7 +54,7 @@ export function DiaryDay({ date, view, timeZone }: DiaryDayProps) {
   const [hasLoadedADay, setHasLoadedADay] = useState(false);
 
   const today = toLocalDate(now, timeZone);
-  const viewedDate = date !== undefined && date <= today ? date : today;
+  const viewedDate = viewedDiaryDate(date, today);
   const weekDays = weekOf(shownWeekDate ?? viewedDate);
 
   // The top bar's search adds food to the day on view, so it is told which, and told when the diary goes.
