@@ -33,6 +33,33 @@ function isPersistedClient(value: unknown): value is PersistedClient {
   );
 }
 
+/**
+ * Reads the stored text, and discards it when there is none to use. A null answer from the encrypted
+ * storage means the ciphertext has no key (a restore from a backup, a reinstall, a cleared keychain) or
+ * that nothing is stored, and a throw means the keychain could not be read (on Android, a keystore key
+ * that is gone). Either way the leftover ciphertext and key are removed and the app starts from the
+ * network. Nothing is logged: neither the stored text nor an error from the keychain may reach a log.
+ */
+async function readOrDiscard(storage: AsyncStorage, key: string): Promise<string | null> {
+  let storedText: string | null | undefined = null;
+  try {
+    storedText = await storage.getItem(key);
+  } catch {
+    storedText = null;
+  }
+  if (storedText === null || storedText === undefined) {
+    try {
+      await storage.removeItem(key);
+    } catch {
+      // Nothing more can be done, and nothing may be logged.
+    }
+
+    return null;
+  }
+
+  return storedText;
+}
+
 /** Reads a stored cache, or fails with a message that holds none of it. */
 export function parseStoredCache(stored: string): PersistedClient {
   let parsed: unknown;
@@ -130,7 +157,7 @@ export function createDiaryCachePersister(
   const readStoredUserId = () => readStoredUserIdFromStorage().catch(() => null);
   const stored = createAsyncStoragePersister({
     storage: {
-      getItem: (key) => storage.getItem(key),
+      getItem: (key) => readOrDiscard(storage, key),
       setItem: (key, value) =>
         value === EMPTY_CACHE ? storage.removeItem(key) : storage.setItem(key, value),
       removeItem: (key) => storage.removeItem(key),
@@ -154,7 +181,15 @@ export function createDiaryCachePersister(
   return {
     persistClient: stored.persistClient,
     restoreClient: async () => {
-      const client = await stored.restoreClient();
+      // Text that does not read as a cache (a plaintext blob of an earlier build, a damaged one) is removed
+      // here as well as by the caller, so it never stays on the phone.
+      let client: PersistedClient | undefined;
+      try {
+        client = await stored.restoreClient();
+      } catch (error) {
+        await stored.removeClient();
+        throw error;
+      }
       if (client === undefined) {
         return undefined;
       }
