@@ -13,7 +13,9 @@ import {
 const kitchenRequests = [
   "Can you make me a meal plan for the week?",
   "meal planning for next week please",
-  "Plan my week",
+  "what should I eat today",
+  "Can you plan dinners for me",
+  "plan my meals for the week",
   "plan our dinners for this week",
   "Replan Thursday",
   "Suggest a recipe with chicken",
@@ -46,6 +48,15 @@ const notKitchenRequests = [
   "What is my squat progress?",
   "plan",
   "",
+  "I had lunch around 13:00, a chicken wrap",
+  "Log breakfast at about 08:30",
+  "log dinner around 19:00: pasta",
+  "What's higher in protein, chicken or beef?",
+  "Is my diary lower in carbs than last week?",
+  "give me the macros for my chicken recipe",
+  "any recipe I saved with beans?",
+  "Plan my week of training",
+  "I'm on a meal plan from my dietitian",
 ];
 
 Deno.test("these words make a kitchen turn", () => {
@@ -135,7 +146,7 @@ const turn = { text: "log an apple", held: false, everStored: false };
 Deno.test("with the switch off the kitchen is never surfaced or appended", () => {
   const off = { enabled: false, ...turn };
 
-  assertEquals(planKitchen({ ...off, text: "meal plan please" }), {
+  assertEquals(planKitchen({ ...off, text: "make me a meal plan" }), {
     surfaced: false,
     append: false,
   });
@@ -146,7 +157,10 @@ Deno.test("with the switch off the kitchen is never surfaced or appended", () =>
 Deno.test("a kitchen request or an entry surfaces the group and appends the addition once", () => {
   const on = { enabled: true, ...turn };
 
-  assertEquals(planKitchen({ ...on, text: "meal plan please" }), { surfaced: true, append: true });
+  assertEquals(planKitchen({ ...on, text: "make me a meal plan" }), {
+    surfaced: true,
+    append: true,
+  });
   assertEquals(planKitchen({ ...on, entry: "recipe" }), { surfaced: true, append: true });
   assertEquals(planKitchen(on), { surfaced: false, append: false });
 });
@@ -155,7 +169,10 @@ Deno.test("a replay that holds the addition keeps the group surfaced and appends
   const on = { enabled: true, ...turn, held: true, everStored: true };
 
   assertEquals(planKitchen(on), { surfaced: true, append: false });
-  assertEquals(planKitchen({ ...on, text: "meal plan please" }), { surfaced: true, append: false });
+  assertEquals(planKitchen({ ...on, text: "make me a meal plan" }), {
+    surfaced: true,
+    append: false,
+  });
 });
 
 Deno.test("a conversation that had the addition but whose replay lost it appends it again", () => {

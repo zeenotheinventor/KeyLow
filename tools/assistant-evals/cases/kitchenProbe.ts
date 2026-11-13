@@ -3,8 +3,10 @@
 //
 // - the beta, a deferred tool and a `tool_addition` are accepted (no turn fails, each has a model call),
 // - the stored `system` row exists after the first turn and is not stored a second time on the second,
-// - the model can call `kitchen_probe` on the kitchen turn, and
-// - the first model call of the second turn reads the prompt cache from the first.
+// - the model can call `kitchen_probe` on the kitchen turn,
+// - the first model call of the second turn reads the prompt cache from the first, and
+// - a plain first turn of another conversation stores no system row and cannot call the probe, which shows that
+//   `defer_loading` is honoured.
 //
 // It is opt in (`--set kitchenProbe`) and needs the switches above, so the workflow's `kitchen` input turns them on.
 // Every reason is a count of tokens or rows, never a message.
@@ -16,6 +18,8 @@ const pass = (reason: string): GradeOutcome => ({ passed: true, reason });
 const fail = (reason: string): GradeOutcome => ({ passed: false, reason });
 
 const KITCHEN_TURN = "Make me a meal plan for next week";
+// A read with no kitchen word, so it neither logs to the diary nor surfaces the group.
+const PLAIN_TURN = "How many calories are in an apple?";
 const FOLLOW_UP = "Thanks, and what is a good source of fibre?";
 
 // The user message and the addition sit after the visible prefix in the first call's prompt, and they are well
@@ -84,6 +88,28 @@ export function secondTurnReadsThePrefix(): Grader {
   };
 }
 
+/**
+ * Passes when the first turn stored no system row and called no kitchen tool, so the deferred tool stayed hidden
+ * on a turn that had no kitchen words. This catches `defer_loading` being ignored, which would show the probe to
+ * every conversation.
+ */
+export function kitchenStaysHidden(): Grader {
+  return async ({ turns, database }) => {
+    const [turn] = turns;
+    if (turn === undefined) {
+      return fail("the case has no turn");
+    }
+    const rows = await database.countRows({
+      table: "assistant_messages",
+      where: { turn_id: turn.turnId, role: "system" },
+    });
+    const called = turn.toolCalls.filter((call) => call.name === "kitchen_probe").length;
+    return rows === 0 && called === 0
+      ? pass("no system row and no kitchen_probe call on a plain turn")
+      : fail(`a plain turn stored ${rows} system rows and called kitchen_probe ${called} times`);
+  };
+}
+
 export const kitchenProbeCases: readonly EvalCase[] = [
   {
     id: "kitchen-probe-two-turns",
@@ -96,5 +122,12 @@ export const kitchenProbeCases: readonly EvalCase[] = [
       toolCalled("kitchen_probe"),
       secondTurnReadsThePrefix(),
     ],
+  },
+  {
+    id: "kitchen-probe-plain-turn-stays-hidden",
+    set: "kitchenProbe",
+    messages: [PLAIN_TURN],
+    mustPass: true,
+    expect: [kitchenStaysHidden()],
   },
 ];

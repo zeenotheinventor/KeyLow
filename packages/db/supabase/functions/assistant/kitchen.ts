@@ -16,19 +16,23 @@ export type KitchenEntry = "plan" | "recipe";
 // is kept narrow: a diary or recipe-saving sentence ("create a recipe called ...", "I need more protein today")
 // must not surface the kitchen rules, because the rules push a model towards the kitchen tools.
 const kitchenPhrases: readonly RegExp[] = [
-  // Plans.
-  /\bmeal[ -]?plan/i,
-  /\bplan\s+(?:my|our|the|this|next)\s+(?:week|month|days?|meals?|dinners?|lunch(?:es)?|breakfasts?|menu)\b/i,
+  // Plans. "a meal plan from my dietitian" and "plan my week of training" are not asks for one.
+  /\b(?:make|create|build|write|give|need|want|get|generate|plan|put together)\b[^.?!]{0,25}\bmeal[ -]?plans?\b/i,
+  /\bmeal[ -]?plan(?:ning)?\s+for\b/i,
+  /\bplan\s+(?:(?:my|our|the|this|next|some)\s+)?(?:(?:week'?s?|day'?s?)\s+)?(?:meals?|dinners?|lunch(?:es)?|breakfasts?|menu|food|eating)\b/i,
   /\bre-?plan\b/i,
   /\bweekly\s+(?:menu|plan)\b/i,
-  // A new recipe.
-  /\b(?:suggest|recommend|invent|come up with|think of|give me|any)\b[^.?!]{0,30}\b(?:recipes?|(?:dinner|lunch|breakfast|snack|meal) ideas?)\b/i,
+  // A new recipe. "give me the macros for my chicken recipe" and "any recipe I saved" are not.
+  /\b(?:suggest|recommend|invent|come up with|think of)\b(?:\s+me)?\s+(?:a|an|some|another|any|new)\b[^.?!]{0,25}\b(?:recipes?|(?:dinner|lunch|breakfast|snack|meal)\s+ideas?)\b/i,
   /\b(?:recipe|dinner|lunch|breakfast|snack|meal)\s+(?:ideas?|suggestions?)\b/i,
-  /\b(?:dinner|lunch|breakfast|snack|meal)s?\s+(?:of\s+)?(?:around|about|under|at about|at around|for about)\s+\d{2,4}\b/i,
-  /\bwhat\s+(?:should|can|could|shall)\s+i\s+(?:cook|make for|have for|eat for)\b/i,
-  /\bwhat\s+(?:should|can|could|shall)\s+i\s+(?:cook|eat|have)\s+(?:tonight|tomorrow|this week)\b/i,
-  // An adjustment of a recipe.
-  /\b(?:higher|lower)\s+in\s+(?:protein|carbs?|fats?|calories|fibre|fiber|sugar)\b/i,
+  // "dinner around 650" and "lunch of about 500 kcal", never a clock time such as "lunch around 13:00".
+  /\b(?:dinner|lunch|breakfast|snack|meal)s?\s+(?:of\s+)?(?:around|about|under|at about|at around|for about)\s+(?:\d{2,4}\s*(?:k?cals?|calories)\b|\d{3,4}\b(?!\s*:\s*\d)(?!\s*[ap]\.?m))/i,
+  /\bwhat\s+should\s+i\s+cook\b/i,
+  /\bwhat\s+(?:should|shall|can|could)\s+i\s+(?:cook|eat|have|make)\s+(?:for\s+(?:dinner|lunch|breakfast|tea|supper)|today|tonight|tomorrow|this week)\b/i,
+  // An adjustment of a recipe. "What's higher in protein, chicken or beef?" is a question about foods.
+  /\b(?:make|get)\s+(?:it|this|that|the recipe|this recipe|that recipe|my recipe)\b[^.?!]{0,30}\b(?:higher|lower)\s+in\b/i,
+  /\b(?:can|could)\s+(?:it|this|that)\s+(?:be|get)\s+(?:higher|lower)\s+in\b/i,
+  /\b(?:recipe|dish)\b[^.?!]{0,30}\b(?:higher|lower)\s+in\s+(?:protein|carbs?|fats?|calories|fibre|fiber|sugar)\b/i,
   /\bcut\s+(?:down\s+)?(?:on\s+)?(?:the\s+)?(?:carbs?|fat|sugar|calories)\b/i,
   // What the person usually eats and what they avoid.
   /\bwhat\s+do\s+i\s+(?:usually|normally|typically|often|mostly)\s+eat\b/i,

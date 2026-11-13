@@ -250,3 +250,80 @@ Deno.test(
     );
   },
 );
+
+Deno.test("a conversation that already had an answer survives a failed kitchen turn", async () => {
+  await withHarness(
+    {
+      responses: [
+        reply("Hello."),
+        { blocks: [], stopReason: "end_turn", httpStatus: 400 },
+        reply("Logged."),
+      ],
+    },
+    async (harness) => {
+      await harness.take("hello");
+      const failed = await harness.take("Make me a meal plan for the week");
+      const next = await harness.take("log an apple");
+
+      assertEquals(
+        failed.events.some((event) => event.type === "done" && event.outcome === "failed"),
+        true,
+      );
+      assertEquals(
+        next.events.some((event) => event.type === "done" && event.outcome === "complete"),
+        true,
+      );
+      assertEquals(harness.reports.length, 1);
+      const last = requestsOf(harness).at(-1);
+      assertEquals(rolesOf(last), ["user", "assistant", "user", "system"]);
+    },
+  );
+});
+
+Deno.test("a turn whose answer was only thinking does not break the next turn", async () => {
+  await withHarness(
+    {
+      responses: [
+        {
+          blocks: [{ type: "thinking", thinking: "hm", signature: "sig" }],
+          stopReason: "max_tokens",
+        },
+        reply("Here is a plan."),
+      ],
+    },
+    async (harness) => {
+      await harness.take("Make me a meal plan for the week");
+      const next = await harness.take("Make me a meal plan for the week please");
+
+      assertEquals(
+        next.events.some((event) => event.type === "done" && event.outcome === "complete"),
+        true,
+      );
+      assertEquals(rolesOf(requestsOf(harness).at(-1)), ["user", "system"]);
+    },
+  );
+});
+
+Deno.test(
+  "the beta header still goes with a replay that holds the addition after the kitchen tools are gone",
+  async () => {
+    // A later deploy with the probe unset lists no kitchen tool, and an old kitchen conversation still holds its
+    // tool_addition blocks. The list is read once and kept, so removing the tools from the array is that deploy.
+    const listed = [...tools];
+    await withHarness(
+      { responses: [reply("Here is a plan."), reply("Logged.")], tools: listed },
+      async (harness) => {
+        await harness.take("Make me a meal plan for the week");
+        listed.splice(0, listed.length, ...fakeTools);
+
+        await harness.take("log an apple");
+
+        assertEquals(harness.mock.betaHeaders, [KITCHEN_BETA, KITCHEN_BETA]);
+        assertEquals(
+          requestsOf(harness)[1]?.tools.some((tool) => tool.defer_loading === true),
+          false,
+        );
+      },
+    );
+  },
+);

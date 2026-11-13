@@ -5,6 +5,7 @@ import { rowDatabase } from "./rowDatabase.ts";
 import {
   additionStoredOnce,
   betaAccepted,
+  kitchenStaysHidden,
   kitchenProbeCases,
   secondTurnReadsThePrefix,
 } from "../cases/kitchenProbe.ts";
@@ -19,9 +20,9 @@ const turns = [first, second];
 const systemRow = (turnId: string) => ({ turn_id: turnId, role: "system" });
 
 describe("the kitchenProbe set", () => {
-  it("should be one opt-in case that must pass, at 100 %", () => {
-    expect(kitchenProbeCases).toHaveLength(1);
-    expect(kitchenProbeCases[0]?.mustPass).toBe(true);
+  it("should be two opt-in cases that must pass, at 100 %", () => {
+    expect(kitchenProbeCases).toHaveLength(2);
+    expect(kitchenProbeCases.every((candidate) => candidate.mustPass === true)).toBe(true);
     expect(THRESHOLD_PERCENT.kitchenProbe).toBe(100);
     expect(OPT_IN_SET_NAMES).toContain("kitchenProbe");
   });
@@ -124,5 +125,33 @@ describe("secondTurnReadsThePrefix", () => {
     const outcome = await secondTurnReadsThePrefix()({ turns, database: fakeDatabase() });
 
     expect(outcome.passed).toBe(false);
+  });
+});
+
+describe("kitchenStaysHidden", () => {
+  const plain = turnResult();
+
+  it("should pass when a plain turn stored no system row and called no kitchen tool", async () => {
+    const outcome = await kitchenStaysHidden()({ turns: [plain], database: rowDatabase({}) });
+
+    expect(outcome.passed).toBe(true);
+  });
+
+  it("should fail when a plain turn stored a system row", async () => {
+    const outcome = await kitchenStaysHidden()({
+      turns: [plain],
+      database: rowDatabase({ assistant_messages: [systemRow(plain.turnId)] }),
+    });
+
+    expect(outcome.passed).toBe(false);
+  });
+
+  it("should fail when a plain turn called kitchen_probe, so defer_loading was ignored", async () => {
+    const called = turnResult({ toolCalls: [readTool("kitchen_probe")] });
+
+    const outcome = await kitchenStaysHidden()({ turns: [called], database: rowDatabase({}) });
+
+    expect(outcome.passed).toBe(false);
+    expect(outcome.reason).toContain("1 times");
   });
 });

@@ -208,6 +208,8 @@ export function openToolUses(history: readonly StoredHistoryMessage[]): OpenTool
   const answeredIds = new Set(
     history
       .slice(lastAssistantIndex + 1)
+      // A system row is the stored kitchen addition. It holds no result, and its blocks are not message blocks.
+      .filter((message) => message.role !== "system")
       .flatMap(blocksOf)
       .flatMap((block) => (block.type === "tool_result" ? [block.tool_use_id] : [])),
   );
@@ -337,18 +339,30 @@ function joinedMessages(
 ): JoinedMessage[] {
   const messages: JoinedMessage[] = [];
   const keeping = messageKeepingThinking(history, currentTurnId);
+  // What each row sends: nothing for a row whose blocks are all dropped, and no blocks for a system row, which is
+  // decided below on what is actually sent.
+  const sent = history.map((message) =>
+    message.role === "system" ? [] : replayBlocks(message, currentTurnId, message === keeping),
+  );
+  // The role of the next message that is sent after a row, or null when there is none.
+  const nextSentRole = (index: number): StoredHistoryMessage["role"] | null =>
+    history
+      .slice(index + 1)
+      .find((row, offset) => row.role !== "system" && (sent[index + 1 + offset]?.length ?? 0) > 0)
+      ?.role ?? null;
   for (const [index, message] of history.entries()) {
     if (message.role === "system") {
-      // The API takes a system message only as the last one or before an assistant message. A turn that failed
-      // after its addition was stored leaves one that the next turn's user row follows, and that one is not
-      // sent. The loop then sees the conversation without the addition and appends it again.
-      const next = history[index + 1];
-      if (next === undefined || next.role === "assistant") {
+      // The API takes a system message only after a user message, and only as the last message or before an
+      // assistant message. A turn that failed after its addition was stored leaves one that the next turn's user
+      // row follows, and one whose assistant row sends nothing (thinking only) is the same. Neither is sent. The
+      // loop then sees the conversation without the addition and appends it again.
+      const next = nextSentRole(index);
+      if (messages.at(-1)?.role === "user" && (next === null || next === "assistant")) {
         messages.push({ role: "system", content: systemBlocksOf(message) });
       }
       continue;
     }
-    const blocks = replayBlocks(message, currentTurnId, message === keeping);
+    const blocks = sent[index] ?? [];
     if (blocks.length === 0) {
       continue;
     }

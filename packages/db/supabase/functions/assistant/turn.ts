@@ -420,8 +420,10 @@ async function callModel(
   const modelStream = session.client.messages.stream(request, {
     signal: AbortSignal.any([run.signal, run.limitSignal.signal]),
     // A deferred tool and a `tool_addition` need the beta, so it goes with every request that has a deferred
-    // tool, kitchen turn or not. A header is not part of the cache's prefix.
-    ...(session.tools.some((tool) => tool.defer_loading === true)
+    // tool, kitchen turn or not, and with every request that replays an addition, so a conversation that has one
+    // still works after a deploy that lists no kitchen tool. A header is not part of the cache's prefix.
+    ...(session.tools.some((tool) => tool.defer_loading === true) ||
+    holdsKitchenAddition(request.messages)
       ? { headers: { "anthropic-beta": KITCHEN_BETA } }
       : {}),
   });

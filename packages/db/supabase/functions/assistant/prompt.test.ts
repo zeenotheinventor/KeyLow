@@ -1750,3 +1750,64 @@ Deno.test(
     assertEquals(JSON.stringify(request.tools?.slice(0, tools.length)), JSON.stringify(tools));
   },
 );
+
+Deno.test("open tool uses skip a system row left after the last assistant message", () => {
+  const history = [
+    userText("hi", "turn-1"),
+    stored("assistant", [toolUse("call-1", "ask_user")], "turn-1"),
+    userText("plan my week", "turn-2"),
+    stored("system", additionContent, "turn-2"),
+  ];
+
+  assertEquals(openToolUses(history), [{ id: "call-1", name: "ask_user" }]);
+});
+
+Deno.test(
+  "open tool uses are empty after a failed kitchen turn that follows an answered one",
+  () => {
+    const history = [
+      userText("hi", "turn-1"),
+      stored("assistant", [{ type: "text", text: "Hello." }], "turn-1"),
+      userText("plan my week", "turn-2"),
+      stored("system", additionContent, "turn-2"),
+    ];
+
+    assertEquals(openToolUses(history), []);
+  },
+);
+
+Deno.test(
+  "a system row is not sent when the assistant row after it holds nothing that is sent",
+  () => {
+    // The model hit max_tokens while thinking, so the only block of its message is thinking, which a later turn does
+    // not replay. The API would get user, system, user, and refuses that.
+    const messages = toApiMessages(
+      [
+        userText("plan my week", "turn-1"),
+        stored("system", additionContent, "turn-1"),
+        stored("assistant", [{ type: "thinking", thinking: "hm", signature: "sig" }], "turn-1"),
+        userText("hello again", "turn-2"),
+      ],
+      "turn-2",
+    );
+
+    assertEquals(
+      messages.map((message) => message.role),
+      ["user"],
+    );
+    assertEquals(holdsKitchenAddition(messages), false);
+  },
+);
+
+Deno.test("a system row is not sent when it would be the first message", () => {
+  const messages = toApiMessages(
+    [
+      stored("system", additionContent, "turn-1"),
+      stored("assistant", [{ type: "text", text: "Hello." }], "turn-1"),
+      userText("hi", "turn-2"),
+    ],
+    "turn-2",
+  );
+
+  assertEquals(holdsKitchenAddition(messages), false);
+});
