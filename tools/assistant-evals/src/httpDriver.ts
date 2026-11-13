@@ -7,6 +7,7 @@ import type {
   AssistantCard,
   AssistantExerciseFormMedia,
   AssistantExerciseMuscles,
+  AssistantRecipeDraft,
   AssistantStreamEvent,
 } from "@keylow/core";
 
@@ -103,6 +104,7 @@ export function createHttpDriver(options: HttpDriverOptions): TurnDriver {
     const cards: AssistantCard[] = [];
     const exerciseMuscles: AssistantExerciseMuscles[] = [];
     const exerciseFormMedia: AssistantExerciseFormMedia[] = [];
+    const recipeDrafts: AssistantRecipeDraft[] = [];
     let buffer = "";
     const decoder = new TextDecoder();
     const reader = response.body.getReader();
@@ -125,6 +127,8 @@ export function createHttpDriver(options: HttpDriverOptions): TurnDriver {
             exerciseMuscles.push(event.exercise);
           } else if (event.type === "exercise_form_media") {
             exerciseFormMedia.push(event.exercise);
+          } else if (event.type === "recipe_draft") {
+            recipeDrafts.push(event.draft);
           } else if (event.type === "confirm") {
             const { question, confirmLabel, cancelLabel } = event;
             confirmation = { question, confirmLabel, cancelLabel };
@@ -145,6 +149,7 @@ export function createHttpDriver(options: HttpDriverOptions): TurnDriver {
               ...(cards.length === 0 ? {} : { cards }),
               ...(exerciseMuscles.length === 0 ? {} : { exerciseMuscles }),
               ...(exerciseFormMedia.length === 0 ? {} : { exerciseFormMedia }),
+              ...(recipeDrafts.length === 0 ? {} : { recipeDrafts }),
               ...(lastNoticeCode === null ? {} : { noticeCode: lastNoticeCode }),
             };
           }

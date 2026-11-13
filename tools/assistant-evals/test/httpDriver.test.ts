@@ -420,3 +420,36 @@ describe("createHttpDriver, the shape of the stream on the wire", () => {
     ).rejects.toThrow(/timed out|aborted|timeout/i);
   });
 });
+
+describe("createHttpDriver, recipe drafts", () => {
+  const draft = {
+    variant: "suggestion",
+    name: "Chicken and rice",
+    servings: 1,
+    ingredients: [],
+    dropped: [],
+    perServing: { kcal: 650, protein_g: 45, carbs_g: 60, fat_g: 20 },
+    fit: null,
+    steps: ["Cook."],
+  };
+
+  it("should keep the recipe drafts a turn showed, in order", async () => {
+    streamOf(
+      turnEvent,
+      sse({ type: "recipe_draft", draft }),
+      sse({ type: "done", outcome: "complete" }),
+    );
+
+    const result = await driver().sendMessage({ conversationId: null, text: "suggest one" });
+
+    expect(result.recipeDrafts).toEqual([draft]);
+  });
+
+  it("should leave the drafts out when the turn showed none", async () => {
+    streamOf(turnEvent, sse({ type: "done", outcome: "complete" }));
+
+    const result = await driver().sendMessage({ conversationId: null, text: "hello" });
+
+    expect(result).not.toHaveProperty("recipeDrafts");
+  });
+});

@@ -153,3 +153,48 @@ describe("the kitchen world", () => {
     expect(await listPalatePreferences(user.client)).toHaveLength(3);
   });
 });
+
+describe("the kitchen world's helpers for the recipe and palate sets (KEY-1037)", () => {
+  const world = () => createKitchenWorld(user, serviceClient);
+
+  it("should find the id of a recipe by its name, and reject for a name the user has not got", async () => {
+    const id = await world().recipeIdOf("Eval chicken and rice");
+
+    expect((await listRecipes(user.client)).find((recipe) => recipe.id === id)?.name).toBe(
+      "Eval chicken and rice",
+    );
+    await expect(world().recipeIdOf("Eval risotto")).rejects.toThrow("no recipe");
+  });
+
+  it("should give the same fingerprint twice, and another when a recipe changed", async () => {
+    const before = await world().recipesFingerprint();
+    expect(await world().recipesFingerprint()).toBe(before);
+    const id = await world().recipeIdOf("Eval egg on toast");
+
+    const renamed = await user.client
+      .from("recipes")
+      .update({ name: "key1037 renamed" })
+      .eq("id", id);
+    expect(renamed.error).toBeNull();
+    const after = await world().recipesFingerprint();
+    const restored = await user.client
+      .from("recipes")
+      .update({ name: "Eval egg on toast" })
+      .eq("id", id);
+    expect(restored.error).toBeNull();
+
+    expect(after).not.toBe(before);
+    expect(await world().recipesFingerprint()).toBe(before);
+  });
+
+  it("should press not true on apples so the next profile drops them, and take it back", async () => {
+    await world().markNotUsual("apple");
+    const corrected = await profileFromDatabase();
+    await world().clearCorrections();
+    const restored = await profileFromDatabase();
+
+    expect(corrected.usualFoods.some(({ shortName }) => shortName === "apples")).toBe(false);
+    expect(shapeOf(restored)).toEqual(shapeOf(expectedPalateProfile(user.anchorDate)));
+    expect(await listPalatePreferences(user.client)).toHaveLength(3);
+  });
+});

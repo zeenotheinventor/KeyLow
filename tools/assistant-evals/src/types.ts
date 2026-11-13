@@ -3,6 +3,7 @@ import type {
   AssistantCard,
   AssistantExerciseFormMedia,
   AssistantExerciseMuscles,
+  AssistantRecipeDraft,
 } from "@keylow/core";
 
 // What the harness knows about a finished turn and about the database. Both are plain data, so a grader is
@@ -36,6 +37,12 @@ export type ToolCall = Readonly<{
    * every other tool, and when the call was refused.
    */
   estimatedAmounts?: readonly EstimatedAmount[] | undefined;
+  /**
+   * The parsed answer of a kitchen tool (`get_palate_profile`, `suggest_recipe` and `adjust_recipe`), so a grader can
+   * compare its figures with core's. Kept for those three tools only, on a refusal too (its `error` and `misses`),
+   * and read by graders, never printed. Absent for every other tool and when the text was not JSON.
+   */
+  result?: Readonly<Record<string, unknown>> | undefined;
 }>;
 
 /** One food an `estimate_portions` call sized: grams, or millilitres for a food per 100 ml. */
@@ -70,6 +77,8 @@ export type TurnResult = Readonly<{
   exerciseMuscles?: readonly AssistantExerciseMuscles[] | undefined;
   /** The form card (a video or two photos) of each exercise the turn showed (`exercise_form_media` events), in call order. Absent when it showed none. */
   exerciseFormMedia?: readonly AssistantExerciseFormMedia[] | undefined;
+  /** The recipes the turn drafted (`recipe_draft` events), in call order. Absent when it drafted none. */
+  recipeDrafts?: readonly AssistantRecipeDraft[] | undefined;
   /** The code of the last `notice` event, such as `turn_failed`. Absent when the turn sent none. */
   noticeCode?: string | undefined;
 }>;

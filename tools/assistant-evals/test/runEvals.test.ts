@@ -213,6 +213,39 @@ describe("runEvals", () => {
       expect(report.stopReason).toBeNull();
     });
 
+    it("should count the tokens spent outside assistant_usage, such as the judge's, in the budget and the report", async () => {
+      const stack = scriptedStack(threeCasesCosting100());
+      let judgeTokens = 0;
+      const judged = (id: string) =>
+        simpleCase(id, {
+          expect: [
+            () => {
+              judgeTokens += 60;
+              return Promise.resolve({ passed: true, reason: "judged" });
+            },
+          ],
+        });
+
+      const report = await runEvals({
+        cases: [judged("one"), judged("two"), judged("three")],
+        ...stack,
+        budgetTokens: 400,
+        judgeTokens: () => judgeTokens,
+      });
+
+      // Each case costs 100 and 60, so 320 are used after two cases and a third could reach 480.
+      expect(report.cases.map(({ status }) => status)).toEqual(["passed", "passed", "not_run"]);
+      expect(report.cases[0]?.tokens).toBe(160);
+      expect(report.tokensUsed).toBe(320);
+      expect(report.judgeTokens).toBe(120);
+    });
+
+    it("should leave judgeTokens out of the report when no judge was given", async () => {
+      const { report } = await run(threeCases(), threeCasesCosting100(), 300);
+
+      expect(report).not.toHaveProperty("judgeTokens");
+    });
+
     it("should expect the next case to cost as much as the largest case so far, not the last", async () => {
       const { report } = await run(
         [simpleCase("large"), simpleCase("small"), simpleCase("next")],

@@ -76,7 +76,7 @@ describe("runCli arguments", () => {
     [["--budget", "1.5"], "--budget must be a whole number of tokens above 0"],
     [
       ["--set", "nonsense"],
-      'Unknown set "nonsense". The sets are ask, describe, redTeam, compaction, writes, recipes, trainingAdvice, trainingEdits, trainingKnowledge, mealEstimate, featureRequest, kitchenProbe.',
+      'Unknown set "nonsense". The sets are ask, describe, redTeam, compaction, writes, recipes, trainingAdvice, trainingEdits, trainingKnowledge, mealEstimate, featureRequest, kitchenProbe, palate, recipeSuggest, recipeAdjust, palateJudge.',
     ],
     [["--surprise"], "Unknown or incomplete option."],
   ])("should refuse %j with a clear message", async (argv, message) => {
@@ -299,5 +299,46 @@ describe("runCli and the opt-in training edits set", () => {
 
     expect(driver.sent).toHaveLength(1);
     expect(output.stdout).toContain("trainingEdits: 1 of 1 passed");
+  });
+});
+
+describe("runCli and the opt-in kitchen sets of KEY-1037", () => {
+  const kitchenSets = ["palate", "recipeSuggest", "recipeAdjust", "palateJudge"] as const;
+
+  it.each(kitchenSets)("should leave %s out of a run with no --set", async (set) => {
+    const { session, driver } = sessionCosting([1]);
+
+    const output = await runCli([], withKey, {
+      cases: [caseOf("a", "ask"), caseOf("b", set)],
+      openSession: () => Promise.resolve(session),
+    });
+
+    expect(driver.sent).toHaveLength(1);
+    expect(output.stdout).not.toContain(set);
+  });
+
+  it.each(kitchenSets)("should run %s when it is named", async (set) => {
+    const { session, driver } = sessionCosting([1]);
+
+    const output = await runCli(["--set", set], withKey, {
+      cases: [caseOf("a", "ask"), caseOf("b", set)],
+      openSession: () => Promise.resolve(session),
+    });
+
+    expect(driver.sent).toHaveLength(1);
+    expect(output.stdout).toContain(`${set}: 1 of 1 passed`);
+  });
+
+  it("should count the judge's tokens in the run and print them", async () => {
+    const { session } = sessionCosting([100]);
+
+    const output = await runCli(["--set", "palateJudge"], withKey, {
+      cases: [caseOf("b", "palateJudge")],
+      openSession: () => Promise.resolve(session),
+      judgeTokens: () => 40,
+    });
+
+    expect(output.stdout).toContain("Tokens used: 140 of 300000");
+    expect(output.stdout).toContain("Judge tokens: 40");
   });
 });

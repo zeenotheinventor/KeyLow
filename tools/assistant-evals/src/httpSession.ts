@@ -69,6 +69,23 @@ export function estimatedAmountsOf(result: string): EstimatedAmount[] {
   }
 }
 
+// The kitchen tools whose answers graders compare with core's figures (KEY-1037). Every other tool keeps only its code.
+const KITCHEN_RESULT_TOOLS: ReadonlySet<string> = new Set([
+  "get_palate_profile",
+  "suggest_recipe",
+  "adjust_recipe",
+]);
+
+/** The JSON a tool answered, from inside its untrusted wrapper. Nothing when the text is not a JSON object. */
+export function parsedResultOf(result: string): Record<string, unknown> | undefined {
+  try {
+    const parsed: unknown = JSON.parse(UNTRUSTED_PAYLOAD.exec(result)?.[1] ?? result);
+    return isRecord(parsed) ? parsed : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 /**
  * The calls of a whole turn, in order, from every stored message of it: each `tool_use` block, with the error
  * code its `tool_result` block carried when the tool refused it. The code says why a write did not land, such as
@@ -122,11 +139,16 @@ export function toolCallsOfTurn(contents: readonly unknown[]): ToolCall[] {
       block["name"] === "estimate_portions" && code === undefined && result !== undefined
         ? estimatedAmountsOf(result)
         : [];
+    const kitchenResult =
+      KITCHEN_RESULT_TOOLS.has(block["name"]) && result !== undefined
+        ? parsedResultOf(result)
+        : undefined;
     return [
       {
         name: block["name"],
         input: block["input"],
         ...(code === undefined ? {} : { errorCode: code }),
+        ...(kitchenResult === undefined ? {} : { result: kitchenResult }),
         ...(outcome === undefined ? {} : { outcome }),
         ...(estimatedAmounts.length === 0 ? {} : { estimatedAmounts }),
       },
