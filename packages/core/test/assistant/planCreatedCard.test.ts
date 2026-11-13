@@ -86,10 +86,16 @@ describe("buildPlanCreatedCard", () => {
     expect(card.note).toBe("Recipes repeat up to twice a week. Change it in plan settings.");
   });
 
-  it("should undo to a line that names the dates, and have no link yet", () => {
+  it("should undo to a line that names the dates", () => {
     expect(card.undoneSub).toBe("Removed the plan for Mon 16 to Sun 22 Nov");
     expect(card.undo).toBe("available");
-    expect(card.link).toBeNull();
+  });
+
+  it("should link to the Plan screen on the week the plan starts", () => {
+    expect(card.link).toEqual({
+      label: "Open meal plan",
+      target: { screen: "meal_plan", localDate: plan.days[0]?.localDate },
+    });
   });
 
   it("should say a short day's miss first, from core's figures", () => {

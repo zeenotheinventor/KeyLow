@@ -386,3 +386,60 @@ describe("WeekStrip", () => {
     });
   });
 });
+
+describe("the strip on a screen about days to come, as plan · week draws it", () => {
+  const planDays = daysOf(today, new Set()).map((day) => ({
+    ...day,
+    mark:
+      day.localDate === "2026-10-12"
+        ? ({ tone: "success", label: "confirmed" } as const)
+        : day.localDate === "2026-10-16"
+          ? ({ tone: "warning", label: "short" } as const)
+          : undefined,
+    isUnavailable: day.localDate === "2026-10-18",
+  }));
+
+  it("should name a marked day for its mark, and draw a tick for success and a dot for a warning", async () => {
+    await renderStrip({ days: planDays, canSelectFutureDays: true });
+
+    expect(screen.getByRole("button", { name: "Monday 12 October, confirmed" })).toBeOnTheScreen();
+    expect(screen.getByRole("button", { name: "Friday 16 October, short" })).toBeOnTheScreen();
+    expect(screen.getAllByTestId("complete-tick", hidden)).toHaveLength(1);
+    expect(screen.getAllByTestId("warning-dot", hidden)).toHaveLength(1);
+  });
+
+  it("should let a day after today be pressed when the screen says so", async () => {
+    const { onSelectDay } = await renderStrip({ days: planDays, canSelectFutureDays: true });
+
+    await fireEvent.press(screen.getByRole("button", { name: "Friday 16 October, short" }));
+
+    expect(onSelectDay).toHaveBeenCalledWith("2026-10-16");
+  });
+
+  it("should still dim a future day by default", async () => {
+    await renderStrip({ days: planDays });
+
+    expect(screen.getByRole("button", { name: "Friday 16 October, short" })).toBeDisabled();
+  });
+
+  it("should dim a day the screen has nothing for, even in the past", async () => {
+    await renderStrip({
+      days: planDays.map((day) => ({ ...day, isUnavailable: day.localDate === "2026-10-13" })),
+    });
+
+    expect(screen.getByRole("button", { name: "Tuesday 13 October" })).toBeDisabled();
+  });
+
+  it("should do nothing on a swipe when no week change is given", async () => {
+    await renderStrip({ days: planDays, onWeekChange: undefined });
+
+    await fireEvent(screen.getByLabelText("This week"), "touchStart", {
+      nativeEvent: { pageX: 10, pageY: 0 },
+    });
+    await fireEvent(screen.getByLabelText("This week"), "touchEnd", {
+      nativeEvent: { pageX: 200, pageY: 0 },
+    });
+
+    expect(screen.getByLabelText("This week")).toBeOnTheScreen();
+  });
+});

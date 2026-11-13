@@ -59,4 +59,11 @@ describe("assistantCardHref", () => {
     );
     expect(routeFileExists("(tabs)", "train", "history", "[id]")).toBe(true);
   });
+
+  it("should open the Plan screen on the week of the day", () => {
+    expect(assistantCardHref({ screen: "meal_plan", localDate: "2026-11-16" })).toBe(
+      "/plan?day=2026-11-16",
+    );
+    expect(routeFileExists("plan")).toBe(true);
+  });
 });

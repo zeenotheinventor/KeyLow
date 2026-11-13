@@ -32,7 +32,8 @@ export type AssistantCardIconName =
   | "Target"
   | "RotateCcw"
   | "Archive"
-  | "MessageSquareText";
+  | "MessageSquareText"
+  | "CalendarDays";
 
 export type AssistantCardIconTone = "success" | "secondary" | "muted";
 
@@ -61,9 +62,8 @@ const kindLooks: Record<
   set_updated: { icon: "Check", tone: "success" },
   workout_deleted: { icon: "Trash2", tone: "secondary" },
   feature_requested: { icon: "MessageSquareText", tone: "secondary" },
-  // NOT ON THE CANVAS. The plan boards do not exist yet, so these reuse the plain tick until they do.
-  plan_created: { icon: "Check", tone: "success" },
-  plan_day_replanned: { icon: "Check", tone: "success" },
+  plan_created: { icon: "CalendarDays", tone: "success" },
+  plan_day_replanned: { icon: "CalendarDays", tone: "success" },
 };
 
 const TRAINING_CARD_KINDS: ReadonlySet<AssistantCardKind> = new Set([

@@ -14,6 +14,8 @@ jest.mock("@react-native-async-storage/async-storage", () => ({
 // rotate-left glyph the map already has, so there is no Undo2.
 const assistantIcons: IconName[] = [
   "ArrowUp",
+  "CalendarDays",
+  "SlidersHorizontal",
   "Database",
   "Moon",
   "PowerOff",

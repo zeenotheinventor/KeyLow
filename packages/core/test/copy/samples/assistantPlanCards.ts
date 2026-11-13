@@ -10,6 +10,11 @@ const miss = {
 } as const;
 
 export const samples: Record<string, () => string[]> = {
+  describePlanMiss: () => [
+    copy.describePlanMiss(miss),
+    copy.describePlanMiss({ nutrient: "kcal", target: 1300, achieved: 1120 }),
+    copy.describePlanMiss({ nutrient: "protein_g", target: 90, achieved: null }),
+  ],
   describePlanCreatedTitle: () => [
     copy.describePlanCreatedTitle("2026-11-16", "2026-11-22", 7),
     copy.describePlanCreatedTitle("2026-11-18", "2026-11-18", 1),

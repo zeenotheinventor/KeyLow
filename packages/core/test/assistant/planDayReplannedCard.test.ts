@@ -58,10 +58,16 @@ describe("buildPlanDayReplannedCard", () => {
     expect(card.note).toBe("Kept Eval stew on this day because other days eat its leftovers.");
   });
 
-  it("should put the day back on Undo, and have no link yet", () => {
+  it("should put the day back on Undo", () => {
     expect(card.undo).toBe("available");
     expect(card.undoneSub).toBe("Put Mon 16 Nov back as it was");
-    expect(card.link).toBeNull();
+  });
+
+  it("should link to the Plan screen on the replanned day", () => {
+    expect(card.link).toEqual({
+      label: "Open meal plan",
+      target: { screen: "meal_plan", localDate: cookDate },
+    });
   });
 
   it("should have no note for a day within tolerance that kept nothing", () => {

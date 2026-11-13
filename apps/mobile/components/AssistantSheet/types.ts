@@ -20,4 +20,9 @@ export type AssistantSheetProps = {
    * training in its empty words and its field (`assistant · empty-train`).
    */
   from?: AssistantOpenedFrom | undefined;
+  /**
+   * Words the composer holds each time the sheet opens, which are never sent: the meal plan's Regenerate day opens
+   * it with "Replan Wed 18 Nov: " for the person to finish. The field is focused so the keyboard is up.
+   */
+  draft?: string | undefined;
 };

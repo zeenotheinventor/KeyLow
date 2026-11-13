@@ -1,4 +1,5 @@
 import {
+  PLAN_CARD_LINK_LABEL,
   describeKeptCooksNote,
   describePlanBandKcal,
   describePlanBandName,
@@ -81,8 +82,10 @@ export function buildPlanDayReplannedCard(input: PlanDayReplannedCardInput): Ass
     changeDetail: describePlanChange(1),
     totalText: null,
     note: notes.length === 0 ? null : notes.join(" "),
-    // The Plan screen has no link target in the card contract yet, so the card has no link (KEY-1018).
-    link: null,
+    link: {
+      label: PLAN_CARD_LINK_LABEL,
+      target: { screen: "meal_plan", localDate: day.localDate },
+    },
     undo: "available",
     undoneSub: describePlanDayUndone(day.localDate),
   };

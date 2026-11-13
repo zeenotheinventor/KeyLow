@@ -59,4 +59,8 @@ describe("assistantCardHref", () => {
     );
     expect(pageExists("train", "history", "[id]")).toBe(true);
   });
+
+  it("should have no address for the meal plan, which the web has no page for", () => {
+    expect(assistantCardHref({ screen: "meal_plan", localDate: "2026-11-16" })).toBeNull();
+  });
 });

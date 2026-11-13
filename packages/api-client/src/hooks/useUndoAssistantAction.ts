@@ -18,7 +18,7 @@ export type UndoAssistantActionInput = {
  * Undo from a card or from "What the assistant changed". Sends the ids to the `assistant` function and
  * resolves to one code per id: `undone`, `already_undone`, `undo_unavailable` or `not_found`, with the
  * `reason` of a refusal when the route gives one. Whatever the answer, the thread, the changes list and
- * everything an Undo can change (the diary, the recipes, the foods, the targets and all of training) are refreshed after the request, because some of the ids may have been undone.
+ * everything an Undo can change (the diary, the recipes, the foods, the targets, all of training and the meal plans) are refreshed after the request, because some of the ids may have been undone.
  */
 export function useUndoAssistantAction() {
   const client = useSupabase();
@@ -49,6 +49,7 @@ export function useUndoAssistantAction() {
         queryClient.invalidateQueries({ queryKey: keys.profiles.targets }),
         queryClient.invalidateQueries({ queryKey: keys.program.all }),
         queryClient.invalidateQueries({ queryKey: keys.training.all }),
+        queryClient.invalidateQueries({ queryKey: keys.mealPlans.all }),
       ]),
   });
 }

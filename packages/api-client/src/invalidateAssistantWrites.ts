@@ -5,7 +5,7 @@ import type { QueryClient } from "@tanstack/react-query";
 
 /**
  * Marks stale everything an assistant write can change: the diary, the recipes, the foods (not the Open
- * Food Facts searches, see `invalidateFoodQueries`), and the targets with the program that hangs on them, and all of training: the routines, goals, exercises, sets
+ * Food Facts searches, see `invalidateFoodQueries`), and the targets with the program that hangs on them, all of training, and the meal plans (a new plan, a replanned day): the routines, goals, exercises, sets
  * and sessions the training tools write, which the exercise searches and suggestion library sit under. The ones on screen read again.
  */
 export function invalidateAssistantWrites(queryClient: QueryClient) {
@@ -16,5 +16,6 @@ export function invalidateAssistantWrites(queryClient: QueryClient) {
     queryClient.invalidateQueries({ queryKey: keys.profiles.targets }),
     queryClient.invalidateQueries({ queryKey: keys.program.all }),
     queryClient.invalidateQueries({ queryKey: keys.training.all }),
+    queryClient.invalidateQueries({ queryKey: keys.mealPlans.all }),
   ]);
 }

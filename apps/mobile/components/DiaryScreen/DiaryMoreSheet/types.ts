@@ -10,4 +10,6 @@ export type DiaryMoreSheetProps = {
   isCopyDisabled: boolean;
   /** Copies yesterday's whole day. The sheet does not close itself. */
   onCopyYesterday: () => void;
+  /** Opens the Plan screen. The sheet does not close itself. */
+  onOpenPlan: () => void;
 };

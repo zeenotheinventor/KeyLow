@@ -1,4 +1,5 @@
 import type { DiaryDay, LogEntry, Targets } from "@keylow/api-client";
+import type { PlannedDayRow } from "@keylow/core/plans";
 
 export type DiaryDayContentProps = {
   day: DiaryDay;
@@ -19,6 +20,10 @@ export type DiaryDayContentProps = {
   showHour?: number | undefined;
   /** Called once the log has scrolled to `showHour`. */
   onHourShown?: (() => void) | undefined;
+  /** The day's row from a plan that is not confirmed, or null for none. */
+  plannedRow: PlannedDayRow | null;
+  /** Opens the planned day. */
+  onOpenPlannedDay: () => void;
   /** The bars and the no-target banner open Targets. */
   onOpenTargets: () => void;
   /** Called with the hour of the plus that was pressed. */

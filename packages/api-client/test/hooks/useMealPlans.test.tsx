@@ -6,6 +6,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from
 
 import { useArchiveMealPlan } from "../../src/hooks/useArchiveMealPlan";
 import { useConfirmMealPlanDay } from "../../src/hooks/useConfirmMealPlanDay";
+import { useConfirmPlanDay } from "../../src/hooks/useConfirmPlanDay";
 import { useMealPlanRepeatLimit } from "../../src/hooks/useMealPlanRepeatLimit";
 import { useMealPlans } from "../../src/hooks/useMealPlans";
 import { useReplaceMealPlanDay } from "../../src/hooks/useReplaceMealPlanDay";
@@ -70,6 +71,32 @@ const foodItem = {
 } as const;
 
 describe("useMealPlans", () => {
+  it("should not read again on a second mount while a given staleTime has not passed, and should without one", async () => {
+    let plansRead = 0;
+    server.use(
+      http.get(`${REST_URL}/meal_plans`, ({ request }) => {
+        plansRead += 1;
+        return postgrestRows(request, [planRow]);
+      }),
+    );
+    const { wrapper } = createWrapper();
+    const first = renderHook(() => useMealPlans({ staleTime: 300_000 }), { wrapper });
+    await waitFor(() => {
+      expect(first.result.current.isSuccess).toBe(true);
+    });
+
+    const second = renderHook(() => useMealPlans({ staleTime: 300_000 }), { wrapper });
+    await waitFor(() => {
+      expect(second.result.current.isSuccess).toBe(true);
+    });
+    expect(plansRead).toBe(1);
+
+    renderHook(() => useMealPlans(), { wrapper });
+    await waitFor(() => {
+      expect(plansRead).toBe(2);
+    });
+  });
+
   it("should load the person's live plans", async () => {
     server.use(
       http.get(`${REST_URL}/meal_plans`, ({ request }) => postgrestRows(request, [planRow])),
@@ -206,6 +233,44 @@ describe("the plan writes", () => {
     });
 
     expect(ids).toStrictEqual([ENTRY_ID]);
+    await waitFor(() => {
+      expect(plansRead).toBe(2);
+    });
+    expect(queryClient.getQueryState(diaryDay)?.isInvalidated).toBe(true);
+  });
+
+  it("should refuse a confirmed day without a request, and read the plans and the diary again", async () => {
+    let plansRead = 0;
+    server.use(
+      http.get(`${REST_URL}/meal_plans`, ({ request }) => {
+        plansRead += 1;
+        return postgrestRows(request, [planRow]);
+      }),
+    );
+    const { wrapper, queryClient } = createWrapper();
+    renderHook(() => useMealPlans(), { wrapper });
+    await waitFor(() => {
+      expect(plansRead).toBe(1);
+    });
+    const diaryDay = [...keys.diary.days, "2026-12-14"];
+    queryClient.setQueryData(diaryDay, ["stale"]);
+    const { result } = renderHook(() => useConfirmPlanDay(), { wrapper });
+
+    await act(async () => {
+      await result.current
+        .mutateAsync({
+          day: {
+            id: DAY_ID,
+            localDate: "2026-12-14",
+            confirmedAt: "2026-12-14T09:00:00+00:00",
+            items: [],
+          },
+          timeZone: "Europe/London",
+        })
+        .catch(() => undefined);
+    });
+
+    expect(result.current.error?.message).toBe("Could not confirm this day (22023)");
     await waitFor(() => {
       expect(plansRead).toBe(2);
     });

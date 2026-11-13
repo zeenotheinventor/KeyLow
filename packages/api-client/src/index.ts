@@ -519,6 +519,7 @@ export type { NotUsualTarget, PalateFoodStat, PalatePreference, PalateStatement 
 export {
   useArchiveMealPlan,
   useConfirmMealPlanDay,
+  useConfirmPlanDay,
   useMealPlanRepeatLimit,
   useMealPlans,
   useReplaceMealPlanDay,
@@ -529,6 +530,7 @@ export {
   MEAL_PLAN_REPEAT_LIMIT_MAX,
   archiveMealPlan,
   confirmMealPlanDay,
+  confirmPlannedDay,
   getMealPlanRepeatLimit,
   listMealPlans,
   replaceMealPlanDay,

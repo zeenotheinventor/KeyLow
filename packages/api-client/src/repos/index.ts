@@ -228,6 +228,7 @@ export {
   getMealPlanRepeatLimit,
   setMealPlanRepeatLimit,
 } from "./mealPlanRepeatLimit";
+export { confirmPlannedDay } from "./plannedDay";
 export { getAssistantConsent, getAssistantStatus, setAssistantConsent } from "./assistant";
 export type { AssistantConsent, AssistantStatus } from "./assistant";
 export {

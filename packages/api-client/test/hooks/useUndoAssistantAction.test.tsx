@@ -35,6 +35,8 @@ const refreshedKeys = [
   ["the targets", keys.profiles.targets],
   ["the Train tab's routine", keys.training.activeRoutine],
   ["an exercise search", keys.training.exerciseSearchAll],
+  ["the meal plans", keys.mealPlans.list],
+  ["the repeat limit", keys.mealPlans.repeatLimit],
 ] as const;
 
 describe("useUndoAssistantAction", () => {

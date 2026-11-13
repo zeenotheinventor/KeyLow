@@ -166,14 +166,26 @@ describe("parseAssistantEvent", () => {
       JSON.stringify({ type: "card", card: { ...loggedCard, link } });
     const planLink = {
       label: "Open the plan",
-      target: { screen: "meal_plan", planId: "00000000-0000-4000-8000-0000000000e1" },
+      target: { screen: "shopping_list", planId: "00000000-0000-4000-8000-0000000000e1" },
     };
 
     it("should keep the card with no link and say which screen was skipped", () => {
       expect(parseAssistantEvent(withLink(planLink))).toEqual({
         ok: true,
         event: { type: "card", card: { ...loggedCard, link: null } },
-        skipped: { subject: "link", kind: "meal_plan" },
+        skipped: { subject: "link", kind: "shopping_list" },
+      });
+    });
+
+    it("should read a link to the meal plan, which this app knows", () => {
+      const link = {
+        label: "Open meal plan",
+        target: { screen: "meal_plan", localDate: "2026-11-16" },
+      };
+
+      expect(parseAssistantEvent(withLink(link))).toEqual({
+        ok: true,
+        event: { type: "card", card: { ...loggedCard, link } },
       });
     });
 

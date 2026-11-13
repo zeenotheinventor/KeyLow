@@ -31,6 +31,7 @@ export function AssistantSheetHost({ children }: AssistantSheetHostProps) {
       {opening === null ? null : (
         <AssistantSheet
           describeAt={opening.describeAt}
+          draft={opening.draft}
           from={opening.from}
           localDate={opening.localDate}
           open={isOpen}

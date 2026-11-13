@@ -24,6 +24,13 @@ describe("describeAssistantCard, the icon of each kind", () => {
     ["the food created card", foodCreatedCard, "Apple", "success"],
     ["the targets changed card", targetsChangedCard, "Target", "secondary"],
     ["the deleted card", deletedCard, "Trash2", "secondary"],
+    ["the plan created card", { ...loggedCard, kind: "plan_created" }, "CalendarDays", "success"],
+    [
+      "the day replanned card",
+      { ...loggedCard, kind: "plan_day_replanned" },
+      "CalendarDays",
+      "success",
+    ],
     [
       "the feature requested card",
       { ...deletedCard, kind: "feature_requested" },

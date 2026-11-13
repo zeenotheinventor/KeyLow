@@ -22,6 +22,7 @@ export function WeekStrip({
   days,
   selectedDate,
   today,
+  canSelectFutureDays = false,
   onSelectDay,
   onWeekChange,
 }: WeekStripProps) {
@@ -47,9 +48,9 @@ export function WeekStrip({
       return;
     }
     if (across > 0) {
-      onWeekChange("previous");
-    } else if (!isThisWeek && !isAfterThisWeek) {
-      onWeekChange("next");
+      onWeekChange?.("previous");
+    } else if (canSelectFutureDays || (!isThisWeek && !isAfterThisWeek)) {
+      onWeekChange?.("next");
     }
   };
 
@@ -69,12 +70,15 @@ export function WeekStrip({
           key={day.localDate}
           dateNumber={String(Number(day.localDate.slice(-2)))}
           dayName={WEEK_STRIP_DAY_NAMES[index] ?? ""}
-          isFuture={day.localDate > today}
+          isUnavailable={
+            (day.localDate > today && !canSelectFutureDays) || day.isUnavailable === true
+          }
           state={{
             localDate: day.localDate,
             isToday: day.localDate === today,
             isSelected: day.localDate === selectedDate,
             isComplete: day.isComplete,
+            mark: day.mark,
           }}
           onPress={() => {
             onSelectDay(day.localDate);

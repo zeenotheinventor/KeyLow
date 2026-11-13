@@ -4,6 +4,7 @@ import { useAssistantCardUndo } from "@keylow/api-client";
 import {
   Apple,
   Archive,
+  CalendarDays,
   Check,
   ChefHat,
   Copy,
@@ -20,6 +21,7 @@ import type { AssistantCardIconName } from "@keylow/core";
 import type { LucideIcon } from "lucide-react";
 
 import { AssistantActionCard } from "@/components/ui/AssistantActionCard";
+import { assistantCardHref } from "@/lib/assistantCardHref";
 
 const icons = {
   Check,
@@ -31,6 +33,7 @@ const icons = {
   RotateCcw,
   Archive,
   MessageSquareText,
+  CalendarDays,
 } as const satisfies Record<AssistantCardIconName, LucideIcon>;
 
 /**
@@ -41,7 +44,9 @@ const icons = {
 export function CardEntry({ entry }: CardEntryProps) {
   const { look, undoState, undo } = useAssistantCardUndo(entry.card);
   const openLink = useOpenCardLink();
-  const link = look.link;
+  // The meal plan has no page on the web, so a link to it is not drawn.
+  const link =
+    look.link !== null && assistantCardHref(look.link.target) !== null ? look.link : null;
 
   return (
     <AssistantActionCard

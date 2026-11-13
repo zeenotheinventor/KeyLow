@@ -331,6 +331,17 @@ describe("the assistant card entry", () => {
       expect(screen.getByRole("status").textContent).toBe("Panel closed");
     });
 
+    it("should draw a plan card with its calendar icon and no link, since the web has no meal plan page", async () => {
+      await showCard({
+        ...recipeCreatedCard,
+        kind: "plan_created",
+        link: { label: "Open meal plan", target: { screen: "meal_plan", localDate: "2026-11-16" } },
+      });
+
+      expect(screen.getByRole("button", { name: "Undo" })).toBeTruthy();
+      expect(screen.queryByRole("button", { name: "Open meal plan" })).toBeNull();
+    });
+
     it("should keep its link after an Undo when it opens the diary", async () => {
       const user = await showCard({
         ...dayCopiedCard,

@@ -46,6 +46,10 @@ const personsOwnStatements = [
   copy.PROGRAM_TARGETS_SCREEN.dialog.body,
   copy.PROGRAM_TARGETS_SCREEN.dialog.confirmLabel,
   copy.PROGRAM_TARGETS_SCREEN.dialog.cancelLabel,
+  // Plan my week is the button the person presses, in the first person as the board draws it, and it puts the
+  // person's own request in the assistant's composer.
+  copy.MEAL_PLAN_WORDS.emptyAction,
+  copy.describePlanPrefill("2026-11-18", "2026-11-22"),
 ];
 
 // Zee asked for this toast in these words, with the exclamation mark, so it is the one sentence that has one.

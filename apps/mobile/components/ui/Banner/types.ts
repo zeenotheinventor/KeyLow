@@ -4,9 +4,10 @@ import type { ReactNode } from "react";
 /**
  * `review` is the warning-toned "Needs review" notice. `error` is the danger-toned notice of a failed
  * action, such as a product that could not be added: a design-system addition, never for "over target".
- * `offline` and `info` are quiet and neutral.
+ * `offline` and `info` are quiet and neutral. `success` is the quiet notice of something that is done, in the
+ * success tones, as `plan · day-confirmed` draws a confirmed day.
  */
-export type BannerVariant = "review" | "offline" | "info" | "error";
+export type BannerVariant = "review" | "offline" | "info" | "error" | "success";
 
 /**
  * `default` is the design system card's notice. `compact` is the trend explainer's: no border, 12 points of

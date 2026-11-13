@@ -69,6 +69,16 @@ const variants: Record<
     actionClassName: quietActionClassName,
     role: "status",
   },
+  success: {
+    fillClassName: "bg-success-muted",
+    borderClassName: "border-success",
+    icon: "CircleCheck",
+    iconTone: "success",
+    titleTone: "success-ink",
+    isQuiet: true,
+    actionClassName: quietActionClassName,
+    role: "status",
+  },
   info: {
     fillClassName: "bg-surface-raised",
     borderClassName: "border-border",

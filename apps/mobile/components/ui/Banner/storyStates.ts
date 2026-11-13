@@ -2,6 +2,7 @@ export const storyStates = [
   "Review",
   "Offline",
   "Info",
+  "Success",
   "InfoBusy",
   "InfoWithAction",
   "AddFailed",
