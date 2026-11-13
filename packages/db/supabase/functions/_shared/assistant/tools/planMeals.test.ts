@@ -571,6 +571,68 @@ Deno.test("Undo of a partly overlapping plan puts back only the days it cleared"
 });
 
 Deno.test(
+  "Undo does not recreate an overlap: a day a later plan took over stays with it",
+  async () => {
+    const { generation } = scriptedGeneration([ranking]);
+    const { ctx, stub, store, reported } = planContext(planMealsTool, { generation });
+    await executeTool(ctx, "plan_meals", input);
+    const second = await executeTool(ctx, "plan_meals", {
+      ...input,
+      start_date: "2026-11-18",
+      days: 3,
+    });
+    keepUndo(store, second);
+    await executeTool(ctx, "plan_meals", { ...input, start_date: "2026-11-19", days: 2 });
+    const [planA, planB, planC] = (stub.tables["meal_plans"] ?? []).map((plan) =>
+      String(plan["id"]),
+    );
+    assert(second.status === "ok" && second.actionId !== null);
+
+    const undone = await undoAction(ctx, second.actionId);
+
+    assertEquals(undone, { status: "undone", actionId: second.actionId });
+    const owners = ownersByDate(stub.tables);
+    for (const date of dates(16, 22)) {
+      assertEquals(owners[date]?.length, 1, date);
+    }
+    assertEquals(
+      dates(16, 22).map((date) => owners[date]?.[0]),
+      [planA, planA, planA, planC, planC, planA, planA],
+    );
+    assert(planB !== undefined);
+    assert(typeof stub.tables["meal_plans"]?.[1]?.["archived_at"] === "string");
+    assertEquals(reported.length, 2);
+  },
+);
+
+Deno.test(
+  "Undo leaves a cleared day that was confirmed alone, reports it, and restores the others",
+  async () => {
+    const { generation } = scriptedGeneration([ranking]);
+    const { ctx, stub, store, reported } = planContext(planMealsTool, { generation });
+    await executeTool(ctx, "plan_meals", input);
+    const before = itemCounts(stub.tables, 0);
+    const second = await executeTool(ctx, "plan_meals", input);
+    keepUndo(store, second);
+    assert(second.status === "ok" && second.actionId !== null);
+    const confirmedDay = (stub.tables["meal_plans"]?.[0]?.["meal_plan_days"] as Row[])[1];
+    Object.assign(confirmedDay ?? {}, {
+      confirmed_at: "2026-11-17T12:00:00+00:00",
+      confirmed_entry_ids: ["00000000-0000-4000-8000-0000000000e1"],
+    });
+
+    const undone = await undoAction(ctx, second.actionId);
+
+    assertEquals(undone, { status: "undone", actionId: second.actionId });
+    assertEquals(confirmedDay?.["confirmed_entry_ids"], ["00000000-0000-4000-8000-0000000000e1"]);
+    assertEquals((confirmedDay?.["meal_plan_items"] as Row[]).length, 0);
+    assertEquals(reported.length, 1);
+    assertEquals(itemCounts(stub.tables, 0), { ...before, "2026-11-17": 0 });
+    assertEquals(stub.tables["meal_plans"]?.[0]?.["archived_at"], null);
+  },
+);
+
+Deno.test(
   "a clean-up that fails is reported in the result, and the new plan still stands",
   async () => {
     const { generation } = scriptedGeneration([ranking]);

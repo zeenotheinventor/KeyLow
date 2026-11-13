@@ -88,6 +88,7 @@ export {
   PLAN_NOT_SAVED_WORDS,
   PLAN_RESULT_NOTES,
   daysToClear,
+  daysToRestore,
   isPlanUndoable,
   planDatesAround,
   planDaysOf,

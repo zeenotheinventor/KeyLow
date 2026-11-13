@@ -543,7 +543,14 @@ const allowedForPlan = (text: string, kitchenSurfaced: boolean) =>
   });
 
 Deno.test("plan_meals is allowed on a read-shaped message that matches the meal plan words", () => {
-  for (const text of ["What should I eat this week?", "What can I cook for the week?"]) {
+  for (const text of [
+    "What should I eat this week?",
+    "What can I cook for the week?",
+    // Recorded and accepted (KEY-1031 review): these read-shaped questions also match the plan words, and
+    // reaching `plan_meals` costs one turn and Undo at most.
+    "Should I plan my meals for next week?",
+    "How should I plan my meals?",
+  ]) {
     const names = allowedForPlan(text, true);
     assertEquals(names.includes("plan_meals"), true, text);
     assertEquals(names.includes("kitchen_read"), true, text);

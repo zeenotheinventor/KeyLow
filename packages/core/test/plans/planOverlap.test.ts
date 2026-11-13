@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   daysToClear,
+  daysToRestore,
   isPlanUndoable,
   planDatesAround,
   plansToArchive,
@@ -90,10 +91,63 @@ describe("plansToArchive", () => {
     expect(plansToArchive(plans, new Set(["d1", "d3"]))).toEqual([]);
   });
 
+  it("should keep a plan whose confirmed day has no items", () => {
+    const plans: LivePlan[] = [
+      { id: "confirmed", days: [day("d1", "2026-11-16"), day("d2", "2026-11-17", 0, true)] },
+    ];
+
+    expect(plansToArchive(plans, new Set(["d1"]))).toEqual([]);
+  });
+
   it("should not touch a plan nothing was cleared from", () => {
     expect(plansToArchive([{ id: "x", days: [day("d1", "2026-11-16", 0)] }], new Set())).toEqual(
       [],
     );
+  });
+});
+
+describe("daysToRestore", () => {
+  const cleared = [
+    { dayId: "a18", localDate: "2026-11-18" },
+    { dayId: "a19", localDate: "2026-11-19" },
+  ];
+
+  it("should restore every day when nothing else holds the dates", () => {
+    const live: LivePlan[] = [
+      { id: "b", days: [day("b18", "2026-11-18"), day("b19", "2026-11-19")] },
+      { id: "a", days: [day("a18", "2026-11-18", 0), day("a19", "2026-11-19", 0)] },
+    ];
+
+    expect(daysToRestore(cleared, live, "b")).toEqual({ restore: cleared, skipped: [] });
+  });
+
+  it("should skip a day whose date a later plan now owns, and restore the rest", () => {
+    const live: LivePlan[] = [
+      { id: "b", days: [day("b18", "2026-11-18"), day("b19", "2026-11-19", 0)] },
+      { id: "c", days: [day("c19", "2026-11-19")] },
+    ];
+
+    expect(daysToRestore(cleared, live, "b")).toEqual({
+      restore: [cleared[0]],
+      skipped: [{ ...cleared[1], reason: "date_taken" }],
+    });
+  });
+
+  it("should skip a day that has items again, because it was edited after it was cleared", () => {
+    const live: LivePlan[] = [
+      { id: "a", days: [day("a18", "2026-11-18", 2), day("a19", "2026-11-19", 0)] },
+    ];
+
+    expect(daysToRestore(cleared, live, "b")).toEqual({
+      restore: [cleared[1]],
+      skipped: [{ ...cleared[0], reason: "day_edited" }],
+    });
+  });
+
+  it("should not count the plan being undone as an owner", () => {
+    const live: LivePlan[] = [{ id: "b", days: [day("b18", "2026-11-18")] }];
+
+    expect(daysToRestore([cleared[0] as (typeof cleared)[number]], live, "b").skipped).toEqual([]);
   });
 });
 

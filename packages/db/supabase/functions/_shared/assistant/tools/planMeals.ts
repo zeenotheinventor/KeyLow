@@ -14,6 +14,7 @@ import {
   buildPlanCreatedCard,
   buildPlanPool,
   daysToClear,
+  daysToRestore,
   isPlanUndoable,
   planDatesAround,
   planDatesOf,
@@ -352,20 +353,32 @@ export const planMealsTool: WriteToolDefinition<PlanMealsInput> = {
     if (targetId === null) {
       return "unavailable";
     }
-    const found = (await listMealPlans(ctx.caller)).find(({ id }) => id === targetId);
-    const [live] = livePlansOf(found === undefined ? [] : [found]);
-    if (!isPlanUndoable(live)) {
+    const stored = await listMealPlans(ctx.caller);
+    const found = stored.find(({ id }) => id === targetId);
+    const live = livePlansOf(stored);
+    if (!isPlanUndoable(live.find(({ id }) => id === targetId))) {
       return "unavailable";
     }
     await archiveMealPlan(ctx.caller, targetId);
 
     const previous = previousPlansSchema.safeParse((await ctx.previousValueOf(action))?.previous);
-    if (!previous.success) {
+    if (!previous.success || found === undefined) {
       return "undone";
     }
-    for (const day of [...previous.data.days].sort((a, b) =>
-      a.localDate.localeCompare(b.localDate),
-    )) {
+    // A day is not put back when a later plan owns its date or it has items again. Undo has no channel for notes,
+    // so each skipped day and each failed day is reported with fixed words and no data, and the rest carries on.
+    const { restore, skipped } = daysToRestore(previous.data.days, live, targetId);
+    skipped.forEach(() =>
+      ctx.reportError(
+        "assistant tool plan_meals",
+        "internal_error",
+        new Error("a cleared day was not put back"),
+      ),
+    );
+    const restoring = new Set(restore.map(({ dayId }) => dayId));
+    for (const day of previous.data.days
+      .filter(({ dayId }) => restoring.has(dayId))
+      .sort((a, b) => a.localDate.localeCompare(b.localDate))) {
       try {
         await replaceMealPlanDay(ctx.caller, day.dayId, day.items);
       } catch (caught) {

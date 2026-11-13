@@ -6,7 +6,8 @@
  *
  * Clearing a cook day also nulls `leftover_of` on later leftovers of the older plan that lie outside the new
  * plan's days, because the database sets it null when the cooking item is deleted. That is accepted: such a
- * leftover stays a planned item, it only stops saying where it was cooked.
+ * leftover stays a planned item, it only stops saying where it was cooked. Undo does not restore those leftover
+ * links either: it puts back the cleared days and the links within them, and a link nulled outside them stays null.
  */
 
 export type LivePlanDay = {
@@ -71,6 +72,37 @@ export const plansToArchive = (
         ),
     )
     .map(({ id }) => id);
+
+export type ClearedDay = { dayId: string; localDate: string };
+
+export type SkippedDay = ClearedDay & { reason: "date_taken" | "day_edited" };
+
+/**
+ * Which of the days a plan cleared Undo may put back. `livePlans` is read before the undone plan is archived,
+ * and the undone plan itself does not count. A day is skipped when its date is planned in another live plan now
+ * (a later plan took it over), or when the old day itself has items again (it was edited after it was cleared),
+ * because putting it back would give a date two owners or overwrite the person's change.
+ */
+export const daysToRestore = (
+  cleared: readonly ClearedDay[],
+  livePlans: readonly LivePlan[],
+  undonePlanId: string,
+): { restore: ClearedDay[]; skipped: SkippedDay[] } => {
+  const others = livePlans.filter(({ id }) => id !== undonePlanId).flatMap(({ days }) => days);
+  const restore: ClearedDay[] = [];
+  const skipped: SkippedDay[] = [];
+  for (const day of cleared) {
+    const held = others.filter(({ itemCount }) => itemCount > 0);
+    if (held.some(({ id }) => id === day.dayId)) {
+      skipped.push({ ...day, reason: "day_edited" });
+    } else if (held.some(({ localDate }) => localDate === day.localDate)) {
+      skipped.push({ ...day, reason: "date_taken" });
+    } else {
+      restore.push(day);
+    }
+  }
+  return { restore, skipped };
+};
 
 /** Whether Undo may archive a plan: it is live and none of its days was confirmed into the diary. */
 export const isPlanUndoable = (

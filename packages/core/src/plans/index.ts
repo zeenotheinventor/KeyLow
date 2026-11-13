@@ -21,16 +21,19 @@ export { planDatesOf, planTargetOf, resolveRepeatLimit } from "./planRequest";
 export type { DayTargetFigures } from "./planRequest";
 export {
   daysToClear,
+  daysToRestore,
   isPlanUndoable,
   planDatesAround,
   plansToArchive,
   restorableItemsOfDay,
 } from "./planOverlap";
 export type {
+  ClearedDay,
   DayToClear,
   LivePlan,
   LivePlanDay,
   RestoredItem,
+  SkippedDay,
   StoredPlan,
   StoredPlanItem,
 } from "./planOverlap";

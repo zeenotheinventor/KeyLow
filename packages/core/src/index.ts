@@ -14,6 +14,7 @@ export {
   PLAN_FIT_BUDGET,
   buildPlanPool,
   daysToClear,
+  daysToRestore,
   isPlanUndoable,
   planDatesAround,
   planDatesOf,
