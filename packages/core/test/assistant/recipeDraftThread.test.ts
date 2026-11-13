@@ -84,6 +84,18 @@ describe("threadFromMessages, a recipe the assistant drafted", () => {
     expect(thread[2]).toEqual({ kind: "recipe_draft", id: "m3:0:recipeDraft", draft: suggestion });
   });
 
+  it("should read an adjustment back from its stored shape, so a reopened thread shows the compare card", () => {
+    const stored: unknown = JSON.parse(
+      JSON.stringify(assistantRecipeDraftSchema.parse(adjustment)),
+    );
+    const thread = threadFromMessages(
+      storedTurn([{ toolUseId: "call-1", outcome: { recipeDraft: stored } }], "Here it is."),
+      [],
+    );
+
+    expect(thread.at(-1)).toMatchObject({ kind: "recipe_draft", draft: adjustment });
+  });
+
   it("should drop a draft this app cannot read and keep the rest of the entry", () => {
     const thread = threadFromMessages(
       storedTurn(
@@ -154,14 +166,31 @@ describe("buildAssistantSheetThread, a recipe the assistant drafted", () => {
     ]);
   });
 
-  it("should draw nothing for an adjustment, whose card is the compare view and not this one", () => {
-    expect(build({ items: [storedItem("d1", adjustment)] }).entries).toEqual([]);
-    expect(
-      build({
-        sent,
-        live: liveTurn({ recipeDrafts: [adjustment], outcome: "complete" }),
-      }).entries.map((entry) => entry.kind),
-    ).toEqual(["you"]);
+  it("should draw a stored adjustment as the compare entry, with the draft it was given", () => {
+    const entries = build({ items: [storedItem("d1", adjustment)] }).entries;
+
+    expect(entries).toEqual([{ kind: "recipeCompare", key: "d1", draft: adjustment }]);
+    expect(entries[0]?.kind === "recipeCompare" && entries[0].draft).toBe(adjustment);
+  });
+
+  it("should draw a live adjustment as the compare entry, after the reply", () => {
+    const live = liveTurn({ text: "Here it is.", recipeDrafts: [adjustment], outcome: "complete" });
+
+    expect(build({ sent, live }).entries.map((entry) => [entry.kind, entry.key])).toEqual([
+      ["you", "sent:you"],
+      ["assistant", "sent:reply"],
+      ["recipeCompare", "sent:recipeDraft:0"],
+    ]);
+  });
+
+  it("should offer Ask again under a stopped reply with a compare card under it", () => {
+    const items: AssistantThreadItem[] = [
+      { kind: "user", id: "u1", text: "Hello" },
+      { kind: "reply", id: "r1", text: "Partly", answerMeta: null, stopped: true },
+      storedItem("d1", adjustment),
+    ];
+
+    expect(build({ items }).canAskAgain).toBe(true);
   });
 
   it("should draw the reply of the turn on screen, then its draft", () => {
@@ -203,7 +232,7 @@ describe("buildAssistantSheetThread, a recipe the assistant drafted", () => {
     expect(build({ sent, live: liveTurn({ recipeDrafts: [suggestion] }) }).needsFullHeight).toBe(
       true,
     );
-    expect(build({ items: [storedItem("d1", adjustment)] }).needsFullHeight).toBe(false);
+    expect(build({ items: [storedItem("d1", adjustment)] }).needsFullHeight).toBe(true);
   });
 
   it("should count a stored draft as the end of a turn that made no words", () => {

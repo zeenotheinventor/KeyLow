@@ -70,6 +70,7 @@ export * from "./assistantSheet";
 export * from "./assistantDayCards";
 export * from "./assistantPlanCards";
 export * from "./assistantRecipeCards";
+export * from "./assistantRecipeCompareCard";
 export * from "./assistantRecipeDraftCard";
 export * from "./assistantFoodCards";
 export * from "./assistantTargetCards";

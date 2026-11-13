@@ -2,6 +2,7 @@ export * from "./card";
 export * from "./events";
 export * from "./exerciseFormCard";
 export * from "./exerciseMusclesCard";
+export * from "./recipeCompareCard";
 export * from "./recipeDraft";
 export * from "./recipeDraftCard";
 export * from "./recipeDraftOf";

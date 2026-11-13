@@ -300,6 +300,22 @@ describe("AssistantActionCard", () => {
       expect(screen.queryByText("Not matched")).not.toBeOnTheScreen();
     });
 
+    it("should draw the change badge of a row with the words it is given, and no tick", async () => {
+      await renderCard({
+        rows: [{ name: "Oil, olive", detail: "15 g → 10 g", changeLabel: "Changed" }],
+      });
+
+      expect(screen.getByText("Changed")).toBeOnTheScreen();
+      expect(screen.getByText("15 g → 10 g")).toBeOnTheScreen();
+      expect(screen.queryByRole("img", { name: "Matched" })).not.toBeOnTheScreen();
+    });
+
+    it("should draw no badge on a row that gives no change", async () => {
+      await renderCard({ rows: [{ name: "Broccoli", detail: "160 g, unchanged" }] });
+
+      expect(badgesDrawn()).toHaveLength(0);
+    });
+
     it("should draw the unresolved badge in the warning tone in dark", async () => {
       await renderCard(
         {

@@ -58,6 +58,9 @@ function renderEntry(entry: AssistantSheetEntry) {
     // The suggested recipe card is mobile only for now (the web twin is not designed), so the web draws nothing for it.
     case "recipeDraft":
       return null;
+    // The compare card is mobile only too (KEY-1039).
+    case "recipeCompare":
+      return null;
     // Ask again is the quick reply at the end of the thread, drawn once below.
     case "askAgain":
       return null;

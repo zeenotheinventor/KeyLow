@@ -570,29 +570,6 @@ describe("the suggested recipe card", () => {
       expect(screen.getByText("Salmon, potatoes and broccoli")).toBeOnTheScreen();
     });
 
-    it("should draw nothing for an adjustment, whose compare view is another screen", async () => {
-      mockAssistant.items = [
-        { kind: "user", id: "u1", text: "More protein" },
-        { kind: "reply", id: "r1", text: "Done.", answerMeta: null, stopped: false },
-        {
-          kind: "recipe_draft",
-          id: "d1",
-          draft: {
-            ...fittingDraft,
-            variant: "adjustment",
-            recipeId: "00000000-0000-4000-8000-0000000000e1",
-            before: { kcal: 500, protein_g: 30, carbs_g: 60, fat_g: 15 },
-          },
-        },
-      ];
-
-      await render(sheetTree());
-
-      expect(screen.getByText("Done.")).toBeOnTheScreen();
-      expect(screen.queryByRole("button", { name: "Save to recipes" })).not.toBeOnTheScreen();
-      expect(screen.queryByText("Chicken and rice with yogurt sauce")).not.toBeOnTheScreen();
-    });
-
     it("should close the sheet and push the editor on Save to recipes", async () => {
       mockAssistant.items = stored(fittingDraft);
       mockLoadFoods.mockResolvedValue(foodsOf(fittingDraft));
