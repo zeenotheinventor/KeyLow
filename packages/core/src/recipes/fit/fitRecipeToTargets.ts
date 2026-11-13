@@ -80,9 +80,11 @@ const validate = (input: FitInput): void => {
     if (!Number.isFinite(grams) || grams <= 0) {
       throw new RangeError("Every ingredient needs a finite amount above 0 g");
     }
-    const edges = [minGrams, maxGrams].filter((edge) => edge !== undefined);
-    if (edges.some((edge) => !Number.isFinite(edge) || edge <= 0)) {
-      throw new RangeError("A minimum or maximum must be a finite amount above 0 g");
+    if (minGrams !== undefined && (!Number.isFinite(minGrams) || minGrams < 0)) {
+      throw new RangeError("A minimum must be a finite amount of at least 0 g");
+    }
+    if (maxGrams !== undefined && (!Number.isFinite(maxGrams) || maxGrams <= 0)) {
+      throw new RangeError("A maximum must be a finite amount above 0 g");
     }
     if (minGrams !== undefined && maxGrams !== undefined && minGrams > maxGrams) {
       throw new RangeError("A minimum cannot be above its maximum");
@@ -378,9 +380,12 @@ const resultOf = (problem: Problem, grams: readonly number[]): FitResult => {
  * - A `minGrams` or `maxGrams` outside the proposed amount moves the start inside it, so an input that
  *   already fits can change when its own bound excludes its proposed amount.
  *
- * Throws a `RangeError` for servings that are not above 0, no ingredients or more than 100, an amount,
- * minimum or maximum that is not above 0, a minimum above its maximum, a target below 0, and a tolerance field
- * that is not a finite number of at least 0. The messages state the rule and never the figures.
+ * A `minGrams` of 0 lets an ingredient drop to 0 g. That is for the planner, which uses it to leave a food out
+ * of a day. A recipe caller must not forward a person's 0.
+ *
+ * Throws a `RangeError` for servings that are not above 0, no ingredients or more than 100, an amount or a
+ * maximum that is not above 0, a minimum below 0, a minimum above its maximum, a target below 0, and a
+ * tolerance field that is not a finite number of at least 0. The messages state the rule and never the figures.
  */
 export const fitRecipeToTargets = (input: FitInput): FitResult => {
   validate(input);

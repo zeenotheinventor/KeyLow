@@ -16,6 +16,7 @@
     "./chart": "./src/chart/index.ts",
     "./copy": "./src/copy/index.ts",
     "./format": "./src/format/index.ts",
+    "./plans": "./src/plans/index.ts",
     "./program": "./src/program/index.ts",
     "./recipes": "./src/recipes/index.ts",
     "./search": "./src/search/index.ts",

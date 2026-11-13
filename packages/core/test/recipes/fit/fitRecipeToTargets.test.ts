@@ -251,3 +251,45 @@ describe("fitRecipeToTargets with no data", () => {
     expect(result.misses.map((miss) => miss.nutrient)).toEqual(["fat_g"]);
   });
 });
+
+describe("fitRecipeToTargets minimum of 0 g", () => {
+  const helpful = { ...unlockedOne({ kcal: 100, protein_g: 10 }, 100), foodId: "helpful" };
+  const unhelpful = {
+    ...unlockedOne({ kcal: 500, protein_g: 0 }, 100),
+    foodId: "unhelpful",
+    minGrams: 0,
+  };
+
+  it("lets an ingredient be dropped to 0 g when the target is better met without it", () => {
+    const result = fitRecipeToTargets({
+      servings: 1,
+      ingredients: [helpful, unhelpful],
+      target: { kcal: 150, protein_g: 15 },
+    });
+
+    expect(result.status).toBe("within");
+    expect(result.ingredients.find(({ foodId }) => foodId === "unhelpful")?.grams).toBe(0);
+  });
+
+  it("keeps the default floor of 5 g for an ingredient with no minimum", () => {
+    const result = fitRecipeToTargets({
+      servings: 1,
+      ingredients: [
+        helpful,
+        { ...unlockedOne({ kcal: 500, protein_g: 0 }, 100), foodId: "unhelpful" },
+      ],
+      target: { kcal: 150, protein_g: 15 },
+    });
+
+    expect(result.ingredients.find(({ foodId }) => foodId === "unhelpful")?.grams).toBe(50);
+  });
+
+  it("refuses a negative minimum, and still refuses a maximum of 0", () => {
+    expect(() =>
+      fitRecipeToTargets({ servings: 1, ingredients: [{ ...helpful, minGrams: -1 }], target: {} }),
+    ).toThrow(RangeError);
+    expect(() =>
+      fitRecipeToTargets({ servings: 1, ingredients: [{ ...helpful, maxGrams: 0 }], target: {} }),
+    ).toThrow(RangeError);
+  });
+});
