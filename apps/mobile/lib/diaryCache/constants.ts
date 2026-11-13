@@ -19,3 +19,4 @@ export const DIARY_CACHE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
 /** Where the cache lives in the app's AsyncStorage, which is private to the app. */
 export const DIARY_CACHE_STORAGE_KEY = "keylow.diary-cache";
+// Proof only, do not merge.
