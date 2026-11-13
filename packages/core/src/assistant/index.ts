@@ -3,6 +3,7 @@ export * from "./events";
 export * from "./exerciseFormCard";
 export * from "./exerciseMusclesCard";
 export * from "./recipeDraft";
+export * from "./recipeDraftOf";
 export * from "./notice";
 export * from "./consentVersion";
 export * from "./citations";

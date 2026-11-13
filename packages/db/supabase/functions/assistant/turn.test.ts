@@ -36,6 +36,7 @@ import type { ListedTool } from "../_shared/assistant/mcpClient.ts";
 import type {
   AssistantExerciseFormMedia,
   AssistantExerciseMuscles,
+  AssistantRecipeDraft,
   AssistantStreamEvent,
 } from "../_shared/core.ts";
 import type { Harness, HarnessOptions, ScriptedResponse, ToolAnswer } from "./turnTesting.ts";
@@ -5186,5 +5187,112 @@ Deno.test(
         assertEquals(turnStatuses(harness), ["complete"]);
       },
     );
+  },
+);
+
+// A drafted recipe (KEY-1030)
+
+const suggestRecipeTools = [
+  ...fakeTools,
+  listed("suggest_recipe", true, { kcal: { type: "number" } }, false),
+];
+
+const draftedRecipe: AssistantRecipeDraft = {
+  variant: "suggestion",
+  name: "Lemon chicken traybake",
+  servings: 2,
+  ingredients: [
+    {
+      name: "chicken thigh",
+      foodId: "00000000-0000-4000-8000-0000000a0001",
+      foodName: "Chicken, thigh, skinless, raw",
+      grams: 450,
+      beforeGrams: null,
+      kcal: 778.5,
+      change: "same",
+    },
+  ],
+  dropped: [],
+  perServing: { kcal: 389.25, protein_g: 43.425, carbs_g: 0, fat_g: 24.3 },
+  fit: { status: "unreachable", target: { kcal: 600 }, misses: [] },
+  steps: ["Roast it."],
+};
+
+const suggestRecipeCall = (id: string) => ({
+  id,
+  name: "suggest_recipe",
+  input: { kcal: 600, protein_g: 45 },
+});
+
+const draftOf = (draft: AssistantRecipeDraft) =>
+  okResult({
+    name: "suggest_recipe",
+    payload: { recipe: { name: draft.name } },
+    structured: { recipeDraft: draft },
+  });
+
+Deno.test(
+  "a drafted recipe sends its event after the reply and before done, and stores it under the call's id",
+  async () => {
+    await withHarness(
+      {
+        responses: [
+          callTools([suggestRecipeCall("r1")], "Writing it."),
+          reply("Here is a traybake for two."),
+        ],
+        tools: suggestRecipeTools,
+        answers: { suggest_recipe: draftOf(draftedRecipe) },
+      },
+      async (harness) => {
+        const result = await harness.take("Suggest a dinner around 600 kcal with 45 g protein");
+
+        const types = typesOf(withoutStatus(result.events));
+        assertEquals(types.filter((type) => type !== "text").slice(-2), ["recipe_draft", "done"]);
+        assertEquals(types.lastIndexOf("text") < types.indexOf("recipe_draft"), true);
+        assertEquals(eventsOfType(result.events, "recipe_draft"), [
+          { type: "recipe_draft", draft: draftedRecipe },
+        ]);
+        const [toolRow] = toolResultRows(harness);
+        assertEquals(toolRow?.display, { r1: { recipeDraft: draftedRecipe } });
+        assertEquals(await harness.turns.turnHasAction(result.turnId), false);
+        assertEquals(typesOf(result.events).includes("answer_meta"), false);
+      },
+    );
+  },
+);
+
+Deno.test(
+  "a draft that does not parse is reported with fixed words and is neither sent nor stored",
+  async () => {
+    const spy = spyOnConsole();
+    try {
+      await withHarness(
+        {
+          responses: [callTools([suggestRecipeCall("r1")]), reply("Here you go.")],
+          tools: suggestRecipeTools,
+          answers: {
+            suggest_recipe: okResult({
+              name: "suggest_recipe",
+              structured: { recipeDraft: { ...draftedRecipe, name: "Sentinel Stew", servings: 0 } },
+            }),
+          },
+        },
+        async (harness) => {
+          const result = await harness.take("Suggest a dinner");
+
+          assertEquals(typesOf(result.events).includes("recipe_draft"), false);
+          assertEquals(result.events.at(-1), { type: "done", outcome: "complete" });
+          assertEquals(toolResultRows(harness)[0]?.display, null);
+          assertEquals(harness.reports.length, 1);
+          assertEquals(String(harness.reports[0]?.caught).includes("Sentinel"), false);
+          assertEquals(
+            spy.lines.some((line) => line.includes("Sentinel")),
+            false,
+          );
+        },
+      );
+    } finally {
+      spy.restore();
+    }
   },
 );

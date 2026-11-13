@@ -137,6 +137,28 @@ Deno.test(
   },
 );
 
+Deno.test(
+  "the kitchen rules send a new recipe to suggest_recipe with the person's own figures and leave the lines to the card",
+  () => {
+    assertStringIncludes(KITCHEN_RULES, "suggest_recipe");
+    assertStringIncludes(KITCHEN_RULES, "ask_user");
+    assertStringIncludes(KITCHEN_RULES, "never choose figures");
+    assertStringIncludes(KITCHEN_RULES, "card shows the recipe");
+  },
+);
+
+Deno.test(
+  "the kitchen rules say to report a recipe that could not be written, as the tool says",
+  () => {
+    assertStringIncludes(KITCHEN_RULES, "could not be written");
+    assertStringIncludes(KITCHEN_RULES, "without a food they avoid");
+  },
+);
+
+Deno.test("the kitchen rules are no longer than 1,400 characters", () => {
+  assert(KITCHEN_RULES.length <= 1_400);
+});
+
 Deno.test("the kitchen rules say that allergies are matched by name only", () => {
   assertStringIncludes(KITCHEN_RULES, "matched by name only");
 });

@@ -6,6 +6,7 @@ import { assert, assertEquals } from "@std/assert";
 import { GENERATION_CALL_TIMEOUT_MILLISECONDS } from "../_shared/assistant/mcpClient.ts";
 import {
   GENERATION_START_MINIMUM_REMAINING_MILLISECONDS,
+  MAX_GENERATION_CALLS_PER_TURN,
   MCP_REQUEST_TIMEOUT_MILLISECONDS,
   MODEL_STREAM_IDLE_MILLISECONDS,
   TURN_DEADLINE_MILLISECONDS,
@@ -131,6 +132,54 @@ Deno.test("with the real wall clock of 150 s a fresh turn starts a generation to
     assertEquals(
       harness.connections[0]?.calls.map((call) => call.name),
       ["generate_one"],
+    );
+  });
+});
+
+Deno.test(
+  "a turn makes one generation call, and the second is answered before it runs",
+  async () => {
+    const twoCalls: ScriptedResponse = {
+      blocks: [
+        { type: "tool_use", id: "call-1", name: "generate_one", input: { note: "x" } },
+        { type: "tool_use", id: "call-2", name: "generate_one", input: { note: "y" } },
+      ],
+      stopReason: "tool_use",
+    };
+    await withHarness({ responses: [twoCalls, answer] }, async (harness) => {
+      await harness.take("hello");
+
+      assertEquals(
+        harness.connections[0]?.calls.map((call) => call.name),
+        ["generate_one"],
+      );
+      const result = lastUserContentOf(harness);
+      assert(result.includes("one_generation_per_turn"), result);
+      assert(result.includes("is_error"), result);
+    });
+  },
+);
+
+Deno.test("the generation calls a turn may make are a literal 1", () => {
+  assertEquals(MAX_GENERATION_CALLS_PER_TURN, 1);
+});
+
+Deno.test("a generation call is capped by the flag and not by the tool's name", async () => {
+  const other = listedGeneration("generate_two", { note: { type: "string" } });
+  const mixed: ScriptedResponse = {
+    blocks: [
+      { type: "tool_use", id: "call-1", name: "generate_one", input: { note: "x" } },
+      { type: "tool_use", id: "call-2", name: "generate_two", input: { note: "y" } },
+      { type: "tool_use", id: "call-3", name: "read_two", input: { note: "z" } },
+    ],
+    stopReason: "tool_use",
+  };
+  await withHarness({ responses: [mixed, answer], tools: [...tools, other] }, async (harness) => {
+    await harness.take("hello");
+
+    assertEquals(
+      harness.connections[0]?.calls.map((call) => call.name),
+      ["generate_one", "read_two"],
     );
   });
 });

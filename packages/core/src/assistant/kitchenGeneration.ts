@@ -42,7 +42,7 @@ export const recipeSuggestionSchema = z.strictObject({
           .number()
           .positive()
           .max(limits.gramsMaximum)
-          .describe("The amount in grams, or in millilitres for a liquid."),
+          .describe("The amount in grams. A liquid is given by its weight in grams."),
       }),
     )
     .min(1)
