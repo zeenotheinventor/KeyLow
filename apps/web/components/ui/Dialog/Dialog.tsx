@@ -1,45 +1,15 @@
 "use client";
 
 import { X } from "lucide-react";
-import { useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 
 import { Button } from "../Button";
 
 import type { DialogProps } from "./types";
 import type * as React from "react";
 
+import { focusableElementsIn, useModalLayer } from "@/lib/modalLayer";
 import { cn } from "@/lib/utils";
-
-const focusableSelector = [
-  "button:not([disabled])",
-  "[href]",
-  'input:not([disabled]):not([type="hidden"])',
-  "select:not([disabled])",
-  "textarea:not([disabled])",
-  '[tabindex]:not([tabindex="-1"])',
-  '[contenteditable="true"]',
-].join(",");
-
-function focusableElementsIn(panel: HTMLElement): HTMLElement[] {
-  return Array.from(panel.querySelectorAll<HTMLElement>(focusableSelector));
-}
-
-// Dialogs can overlap. The page stays locked until the last one closes, and only the topmost one
-// answers Escape and Tab.
-const openPanels: HTMLElement[] = [];
-let scrollLockCount = 0;
-let overflowBeforeScrollLock = "";
-
-function lockPageScroll() {
-  if (scrollLockCount === 0) overflowBeforeScrollLock = document.body.style.overflow;
-  scrollLockCount += 1;
-  document.body.style.overflow = "hidden";
-}
-
-function unlockPageScroll() {
-  scrollLockCount -= 1;
-  if (scrollLockCount === 0) document.body.style.overflow = overflowBeforeScrollLock;
-}
 
 function isShown(node: React.ReactNode): boolean {
   return node !== null && node !== undefined && node !== false;
@@ -106,13 +76,9 @@ export function Dialog({
     const panel = panelRef.current;
     if (!open || panel === null) return;
 
-    lockPageScroll();
-    openPanels.push(panel);
     if (!panel.contains(document.activeElement)) (focusableElementsIn(panel)[0] ?? panel).focus();
 
     return () => {
-      unlockPageScroll();
-      openPanels.splice(openPanels.indexOf(panel), 1);
       // A drawn control, such as a muscle of the body map, is an SVG element and has focus too.
       if (focusTarget instanceof HTMLElement || focusTarget instanceof SVGElement) {
         focusTarget.focus();
@@ -120,41 +86,11 @@ export function Dialog({
     };
   }, [open, focusTarget]);
 
-  useEffect(() => {
-    const panel = panelRef.current;
-    if (!open || panel === null) return;
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (openPanels[openPanels.length - 1] !== panel) return;
-      if (event.key === "Escape") {
-        if (!closeDisabled) onClose();
-        return;
-      }
-      if (event.key !== "Tab") return;
-
-      const focusable = focusableElementsIn(panel);
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (first === undefined || last === undefined) {
-        event.preventDefault();
-        panel.focus();
-      } else if (!panel.contains(document.activeElement)) {
-        event.preventDefault();
-        first.focus();
-      } else if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [open, onClose, closeDisabled]);
+  // The page behind stops scrolling, Tab stays inside, and Escape closes, for the topmost dialog only.
+  const closeOnEscape = useCallback(() => {
+    if (!closeDisabled) onClose();
+  }, [closeDisabled, onClose]);
+  useModalLayer({ panelRef, isActive: open, onEscape: closeOnEscape });
 
   if (!open) return null;
 

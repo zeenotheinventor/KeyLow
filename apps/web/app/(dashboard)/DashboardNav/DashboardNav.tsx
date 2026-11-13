@@ -9,6 +9,7 @@ import { useEffect, useId, useRef, useState } from "react";
 
 import type { DashboardSection } from "./types";
 
+import { AssistantButton } from "@/components/assistant/AssistantButton";
 import { Button } from "@/components/ui/Button";
 import { KiLoMark } from "@/components/ui/KiLoMark";
 import { SearchLauncher } from "@/components/ui/SearchField";
@@ -190,6 +191,13 @@ export function DashboardNav() {
             className={cn("lg:ml-auto lg:w-[320px]", isFoodPage && "max-lg:hidden")}
           />
         )}
+        {/* One button for every width. Below the large breakpoint it sits in the first row beside Menu. */}
+        <AssistantButton
+          className={cn(
+            "max-lg:absolute max-lg:right-[68px] max-lg:top-5",
+            isFoodsPage && "lg:ml-auto",
+          )}
+        />
       </div>
     </header>
   );

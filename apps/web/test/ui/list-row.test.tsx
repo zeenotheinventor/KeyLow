@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { Shield } from "lucide-react";
+import { ArrowUp, Shield } from "lucide-react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { renderWithRouter } from "./appRouter";
@@ -169,6 +169,50 @@ describe("ListRow", () => {
 
       expect(button.getAttribute("aria-busy")).toBeNull();
       expect(button.querySelector("svg")).not.toBeNull();
+    });
+  });
+
+  describe("trailing icon and regular title", () => {
+    it("should draw a muted 16 px icon at the end in place of the chevron", () => {
+      const { container } = renderInList(
+        <ListRow
+          title="Copy yesterday to today"
+          chevron={false}
+          trailingIcon={ArrowUp}
+          onClick={vi.fn()}
+        />,
+      );
+
+      const icon = container.querySelector("button svg");
+
+      expect(icon?.getAttribute("aria-hidden")).toBe("true");
+      expect(icon?.getAttribute("class")).toContain("size-4");
+      expect(icon?.getAttribute("class")).toContain("text-text-muted");
+      expect(screen.getByRole("button", { name: "Copy yesterday to today" })).toBeTruthy();
+    });
+
+    it("should draw the trailing icon even where the chevron is on, and not both", () => {
+      const { container } = renderInList(
+        <ListRow title="Starter" trailingIcon={ArrowUp} onClick={vi.fn()} />,
+      );
+
+      expect(container.querySelectorAll("button svg")).toHaveLength(1);
+      expect(container.querySelector("button svg")?.getAttribute("class")).not.toContain(
+        "lucide-chevron-right",
+      );
+    });
+
+    it("should set the title in the body weight when asked, and strong otherwise", () => {
+      renderInList(
+        <>
+          <ListRow title="Regular title" titleWeight="regular" />
+          <ListRow title="Default title" />
+        </>,
+      );
+
+      expect(screen.getByText("Regular title").className).toContain("text-body");
+      expect(screen.getByText("Regular title").className).not.toContain("text-body-strong");
+      expect(screen.getByText("Default title").className).toContain("text-body-strong");
     });
   });
 

@@ -22,6 +22,7 @@ describe("ASSISTANT_SHEET", () => {
         "Add a recipe from a link",
       ],
       composerPlaceholder: "Log food or ask about your diary",
+      composerKeyboardHint: "Enter sends. Shift and Enter add a line.",
       speakerYou: "You",
       speakerAssistant: "Assistant",
       openingLabel: "Loading your conversation",

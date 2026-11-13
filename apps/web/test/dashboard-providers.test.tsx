@@ -1,3 +1,4 @@
+import { useFunctionsUrl } from "@keylow/api-client";
 import { TERMS_VERSION } from "@keylow/core/copy";
 import { act, cleanup, render, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -32,6 +33,8 @@ function changeVisibility(next: DocumentVisibilityState) {
 
 describe("the dashboard providers", () => {
   beforeEach(async () => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "http://localhost:54321");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "anon-key");
     resetProfileBackend();
     await signInProfileClient();
     visibility = "visible";
@@ -46,7 +49,22 @@ describe("the dashboard providers", () => {
 
   afterEach(() => {
     cleanup();
+    vi.unstubAllEnvs();
     vi.restoreAllMocks();
+  });
+
+  it("should give the pages the Edge Functions' address, which the assistant's routes are under", () => {
+    function FunctionsUrl() {
+      return <p>{useFunctionsUrl()}</p>;
+    }
+
+    const { getByText } = render(
+      <Providers>
+        <FunctionsUrl />
+      </Providers>,
+    );
+
+    expect(getByText("http://localhost:54321/functions/v1")).toBeTruthy();
   });
 
   it("should save the browser's time zone on the profile when the terms are accepted and it differs", async () => {

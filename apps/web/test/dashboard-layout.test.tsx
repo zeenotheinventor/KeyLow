@@ -35,6 +35,11 @@ vi.mock("@/app/(dashboard)/SessionBar", () => ({
   SessionBarFrame: ({ children }: { children: React.ReactNode }) => children,
 }));
 
+vi.mock("@/components/assistant", () => ({
+  AssistantProvider: ({ children }: { children: React.ReactNode }) => children,
+  AssistantDock: ({ children }: { children: React.ReactNode }) => children,
+}));
+
 vi.mock("@/app/(dashboard)/Providers", () => ({
   Providers: ({ children }: { children: React.ReactNode }) => children,
 }));

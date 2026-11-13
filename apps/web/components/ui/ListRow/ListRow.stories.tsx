@@ -1,4 +1,4 @@
-import { FileJson, FileText, Heart, Pencil, Shield } from "lucide-react";
+import { ArrowUp, FileJson, FileText, Heart, Pencil, Shield } from "lucide-react";
 import { useState } from "react";
 import { userEvent } from "storybook/test";
 
@@ -152,6 +152,30 @@ export const WithMacro: Story = {
 
 // The Assistant settings page's switch row. The toggle is the row's one control, named by its label. The first
 // row is off, the second on, the third busy (a change is being saved) and so dimmed, keeping focus.
+// The assistant's starters: body weight titles and a muted up arrow at the end, 52 high, in place of the chevron.
+export const WithTrailingIcon: Story = {
+  render: () => (
+    <>
+      <ListRow
+        chevron={false}
+        className="min-h-[52px]"
+        title="What's left for today?"
+        titleWeight="regular"
+        trailingIcon={ArrowUp}
+        onClick={() => undefined}
+      />
+      <ListRow
+        chevron={false}
+        className="min-h-[52px]"
+        title="Copy yesterday to today"
+        titleWeight="regular"
+        trailingIcon={ArrowUp}
+        onClick={() => undefined}
+      />
+    </>
+  ),
+};
+
 export const WithToggle: Story = {
   render: () => (
     <>

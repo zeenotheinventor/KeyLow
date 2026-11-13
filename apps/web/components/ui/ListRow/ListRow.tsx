@@ -51,6 +51,8 @@ export function ListRow({
   title,
   macro,
   titleTone,
+  titleWeight,
+  trailingIcon: TrailingIcon,
   subtitle,
   badge,
   value,
@@ -78,7 +80,7 @@ export function ListRow({
     <>
       <span
         className={cn(
-          macro === undefined ? "text-body-strong" : "text-body",
+          macro === undefined && titleWeight !== "regular" ? "text-body-strong" : "text-body",
           titleTone === "danger" && "text-danger",
           titleTone === "secondary" && "text-text-secondary",
           "[overflow-wrap:anywhere]",
@@ -135,7 +137,14 @@ export function ListRow({
           <Check aria-hidden className="size-5 stroke-success" strokeWidth={iconStroke} />
         </span>
       )}
-      {!loading && interactive && chevron && (
+      {!loading && interactive && TrailingIcon !== undefined && (
+        <TrailingIcon
+          aria-hidden
+          className="size-4 shrink-0 text-text-muted"
+          strokeWidth={iconStroke}
+        />
+      )}
+      {!loading && interactive && TrailingIcon === undefined && chevron && (
         <ChevronRight
           aria-hidden
           className="size-4 shrink-0 text-text-muted"

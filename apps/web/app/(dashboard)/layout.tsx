@@ -8,6 +8,7 @@ import { SetupGate } from "./SetupGate";
 
 import type { ReactNode } from "react";
 
+import { AssistantDock, AssistantProvider } from "@/components/assistant";
 import { SentryUser } from "@/components/monitoring/SentryUser";
 import { createClient } from "@/lib/supabase/server";
 import { hasCurrentTermsAcceptance } from "@/lib/terms";
@@ -33,10 +34,14 @@ export default async function DashboardLayout({ children }: { children: ReactNod
       <SentryUser userId={user.id} />
       <CheckinRunner />
       <SetupGate />
-      <DashboardNav />
-      <SessionBarFrame>
-        <main className="px-4 lg:px-8">{children}</main>
-      </SessionBarFrame>
+      <AssistantProvider>
+        <DashboardNav />
+        <AssistantDock>
+          <SessionBarFrame>
+            <main className="px-4 lg:px-8">{children}</main>
+          </SessionBarFrame>
+        </AssistantDock>
+      </AssistantProvider>
     </Providers>
   );
 }
