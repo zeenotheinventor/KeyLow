@@ -161,7 +161,8 @@ const DATES = new RegExp(
 // an opening bracket, so the hyphen of "1840-1850" is a range and not a minus.
 const NUMBER_IN_TEXT = /(?:(?<=^|[\s(])-)?(?<![\d.,])(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?(?!\d)/g;
 
-const numbersIn = (answer: string): number[] =>
+/** The numbers an answer states, as people write them: dates are left out, thousands commas are read and a minus is kept. */
+export const numbersIn = (answer: string): number[] =>
   (
     answer
       .replaceAll("\u2212", "-")

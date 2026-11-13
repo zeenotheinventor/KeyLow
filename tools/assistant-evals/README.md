@@ -370,3 +370,32 @@ Every case is graded by state and never by the reply's words, except that the wo
 ## The kitchen probe set (KEY-1022)
 
 `cases/kitchenProbe.ts` has two cases, at 100 %, that prove the hidden kitchen tool group on the live API (ADR 0006, Amendment 5). It is **opt in** (`OPT_IN_SET_NAMES`) and needs the functions served with `ASSISTANT_KITCHEN=1` and `ASSISTANT_KITCHEN_PROBE=1`, which the workflow's `kitchen` input sets: `gh workflow run assistant-evals.yml --ref <branch> -f sets="kitchenProbe" -f kitchen=true`. The conversation is "Make me a meal plan for next week" and then a plain follow-up. It passes when both turns end complete with a model call (the API took the beta, the deferred tools and the `tool_addition`), the conversation holds one stored `system` row made on turn 1 and not repeated on turn 2, the model called `kitchen_probe` on the kitchen turn, and the first model call of turn 2 read from the cache at least the first call's prompt less 800 tokens for the user message and the addition, which is the visible prefix. The second case is a plain first turn in its own conversation ("How many calories are in an apple?"), which must store no `system` row and call no kitchen tool, so the set catches `defer_loading` being ignored. The reasons print the token counts of both first calls and nothing else. Each grader has a right and a wrong play in `test/kitchenProbeCases.test.ts`.
+
+## The kitchen sets (KEY-1037)
+
+Four **opt in** sets (`OPT_IN_SET_NAMES`) for the kitchen tools, with thresholds from section 8 of the M9 plan. A default run leaves them out. Each needs the functions served with `ASSISTANT_KITCHEN=1`, which the workflow's `kitchen` input sets (it also sets `ASSISTANT_KITCHEN_PROBE=1`, which only adds the probe tool). Their Opus calls write `assistant_usage` rows for the eval user, so they count in the 300,000 token budget with no change. They need the kitchen world of KEY-1028 (`src/kitchenWorld.ts`), which each case writes once from its `prepare`.
+
+| Set             | Cases | Threshold | Command                                                                        |
+| --------------- | ----- | --------- | ------------------------------------------------------------------------------ |
+| `palate`        | 10    | 90 %      | `pnpm --filter @keylow/assistant-evals check:assistant -- --set palate`        |
+| `recipeSuggest` | 10    | 90 %      | `pnpm --filter @keylow/assistant-evals check:assistant -- --set recipeSuggest` |
+| `recipeAdjust`  | 6     | 90 %      | `pnpm --filter @keylow/assistant-evals check:assistant -- --set recipeAdjust`  |
+| `palateJudge`   | 6     | 80 %      | `pnpm --filter @keylow/assistant-evals check:assistant -- --set palateJudge`   |
+
+On a branch: `gh workflow run assistant-evals.yml --ref <branch> -f sets="palate" -f kitchen=true`.
+
+Every grader reads tool calls, the `recipe_draft` events of the stream and rows, and none asks a model. Expected figures come from core (`computeRecipe`, `isWithinTolerance`, `adjustmentTarget`, `buildPalateProfile`) over the fixture, never typed by hand. The harness keeps the parsed answer of `get_palate_profile`, `suggest_recipe` and `adjust_recipe` on the tool call (`ToolCall.result`), and the drafts on the turn (`TurnResult.recipeDrafts`).
+
+- **palate** (`cases/palate.ts`, `cases/palateGraders.ts`): the profile the tool answered is core's profile of the fixture field by field, the answer names the planted habits and the avoid list and states no number the profile lacks, and after the harness presses "not true" on apples (as the Palate screen does, between two turns) the profile is read again and the apples are gone. The 10 cases are: usual foods, time of day, rarely or never, the avoid list, no invented numbers, bread leading the morning, the typical portions, a never-logged food being rare, the 90 day window and the correction.
+- **recipeSuggest** (`cases/recipeSuggest.ts`, `cases/recipeSuggestGraders.ts`): the shown numbers equal `computeRecipe` over the real foods and grams shown, every matched line is a readable food under its own name, a line with no food is shown unmatched and left out of the figures, the fit flag agrees with `isWithinTolerance`, no avoided food appears, there is one Opus `recipe_generate` row, and no recipe was saved. The 650 kcal and 45 g protein case also lands within `FIT_TOLERANCE` and has no unmatched line. The unreachable ask must be an honest miss.
+- **recipeAdjust** (`cases/recipeAdjust.ts`, `cases/recipeAdjustGraders.ts`): the figures equal core's over the frozen lines, the target is core's `adjustmentTarget` for what the call asked and the draft lands within the tolerance of it, the lines are the saved recipe's frozen lines, and every recipe is read before and after and must not differ. "+30 g protein" on Eval chicken and rice reaches it by scaling and writes no Opus row. Porridge and the yogurt bowl cannot, so they accept a verified draft or an honest refusal. `adjust_recipe` has no input to lock an ingredient, so the plan's "locked ingredient" case is not in the set.
+- **palateJudge** (`cases/palateJudge.ts`, `cases/palateJudgeRubric.ts`, `src/judge.ts`): "would this person like it" is scored by Haiku 5.5 against a rubric (fit 0 to 2, avoided food gate, variety 0 to 1, plausible 0 to 2), and a case passes at 4 or 5 of 5. The judge sees the profile and the draft and never diary rows. It is given a client, so no test calls a model. Its tokens are counted in the run (`judgeTokens`) and printed as `Judge tokens` when above 0. The `Cost` line is the rows of `assistant_usage` only and excludes the judge's Haiku spend, which is a fraction of a cent for a run. A reply that cannot be read makes the case an error, never a low score.
+
+### What the plan listed and the sets leave out
+
+- **Palate cross-user read:** covered by the red-team additions of the plan, which have user B.
+- **Palate empty-history user:** needs a second eval user with no diary. The empty answer itself is unit tested in core (`buildPalateProfile with no history at all`).
+- **Palate recency:** the profile holds no recency, so there is nothing to grade.
+- **recipeAdjust locked ingredient:** `adjust_recipe` has no lock input.
+- **recipeSuggest "substitution offered":** the tool refuses or drafts the closest figures and offers no substitution, so the unreachable case grades the honest miss only.
+- **palateJudge scoring the 7-day plan:** needs the `mealPlan` set, which is not part of this ticket, so the judge scores recipe drafts only.

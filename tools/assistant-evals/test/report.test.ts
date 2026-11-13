@@ -272,6 +272,16 @@ describe("formatReport", () => {
     );
   });
 
+  it("should print the judge's tokens when the run had a judge, and nothing when it had none", () => {
+    const judged = runOf(many(1, "palateJudge", "passed"), { tokensUsed: 900, judgeTokens: 250 });
+
+    expect(textOf(judged)).toContain("Judge tokens: 250 (counted in the tokens used)");
+    expect(textOf(runOf(many(1, "ask", "passed")))).not.toContain("Judge tokens");
+    expect(textOf(runOf(many(1, "ask", "passed"), { judgeTokens: 0 }))).not.toContain(
+      "Judge tokens",
+    );
+  });
+
   it("should print the cost in dollars", () => {
     expect(textOf(runOf(many(1, "ask", "passed"), { costUsdMicros: 123_456 }))).toContain(
       "Cost: USD 0.1235",

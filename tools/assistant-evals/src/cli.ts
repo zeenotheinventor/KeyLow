@@ -14,12 +14,12 @@ import type { EvalDatabase } from "./types.ts";
 export const DEFAULT_BUDGET_TOKENS = 300_000;
 
 const USAGE =
-  "Usage: check:assistant [--set ask|describe|redTeam|compaction|writes|recipes|trainingAdvice|trainingEdits|trainingKnowledge|mealEstimate|featureRequest|kitchenProbe]... [--budget <tokens>] [--help]";
+  "Usage: check:assistant [--set ask|describe|redTeam|compaction|writes|recipes|trainingAdvice|trainingEdits|trainingKnowledge|mealEstimate|featureRequest|kitchenProbe|palate|recipeSuggest|recipeAdjust|palateJudge]... [--budget <tokens>] [--help]";
 
 const HELP = [
   USAGE,
   "",
-  "  --set <name>        Run only this set. Repeat it for more. The default is every set but trainingEdits, trainingKnowledge, mealEstimate, featureRequest and kitchenProbe, which are named to run.",
+  "  --set <name>        Run only this set. Repeat it for more. The default is every set but trainingEdits, trainingKnowledge, mealEstimate, featureRequest, kitchenProbe, palate, recipeSuggest, recipeAdjust and palateJudge, which are named to run.",
   `  --budget <tokens>   Stop before the case that would pass this many tokens. The default is ${DEFAULT_BUDGET_TOKENS}.`,
   "",
   "The budget counts input, output and cache creation tokens. Cache read tokens are reported but not counted.",
@@ -38,6 +38,8 @@ export type EvalSession = Readonly<{
 export type CliDependencies = Readonly<{
   cases: readonly EvalCase[];
   openSession: () => Promise<EvalSession>;
+  /** The tokens the judge has used so far. They count in the budget and the report (`src/judge.ts`). */
+  judgeTokens?: () => number;
 }>;
 
 export type CliOutput = Readonly<{ exitCode: number; stdout: string; stderr: string }>;
@@ -97,7 +99,7 @@ function parseOptions(args: readonly string[]): Options | string {
 export async function runCli(
   argv: readonly string[],
   environment: Readonly<Record<string, string | undefined>>,
-  { cases, openSession }: CliDependencies,
+  { cases, openSession, judgeTokens }: CliDependencies,
 ): Promise<CliOutput> {
   const options = parseOptions(argv);
   if (typeof options === "string") {
@@ -140,6 +142,7 @@ export async function runCli(
       database: session.database,
       ...(session.environment === undefined ? {} : { environment: session.environment }),
       budgetTokens: options.budgetTokens,
+      ...(judgeTokens === undefined ? {} : { judgeTokens }),
     });
   } finally {
     // A failure to clean up must not hide the report, so it is a warning and the report goes out.

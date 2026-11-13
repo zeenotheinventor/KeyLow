@@ -115,6 +115,9 @@ export function formatReport(
     ...stopLines,
     ...overBudgetLines,
     `Tokens used: ${report.tokensUsed} of ${report.budgetTokens} (input, output and cache creation tokens, not the ${report.cacheReadTokens} cache read tokens)`,
+    ...(report.judgeTokens === undefined || report.judgeTokens === 0
+      ? []
+      : [`Judge tokens: ${report.judgeTokens} (counted in the tokens used)`]),
     `Cost: USD ${(report.costUsdMicros / 1_000_000).toFixed(4)}`,
     promptLine,
   ].join("\n");

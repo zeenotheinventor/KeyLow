@@ -159,3 +159,51 @@ describe("toolCallsOfTurn, the amounts estimate_portions returned", () => {
     expect(broken).not.toHaveProperty("estimatedAmounts");
   });
 });
+
+describe("toolCallsOfTurn, the answer of a kitchen tool", () => {
+  const call = (id: string, name: string) => ({ type: "tool_use", id, name, input: {} });
+  const result = (id: string, content: string) => ({
+    type: "tool_result",
+    tool_use_id: id,
+    content,
+  });
+
+  it("should keep the parsed answer of get_palate_profile, suggest_recipe and adjust_recipe", () => {
+    const contents = [
+      [call("t1", "get_palate_profile"), call("t2", "suggest_recipe"), call("t3", "adjust_recipe")],
+      [
+        result(
+          "t1",
+          '<untrusted_data tool="get_palate_profile">{"logged_days":89}</untrusted_data>',
+        ),
+        result("t2", '<untrusted_data>{"recipe":{"servings":1}}</untrusted_data>'),
+        result("t3", '{"error":"could_not_reach_target","misses":[{"nutrient":"protein_g"}]}'),
+      ],
+    ];
+
+    const [profile, suggestion, adjustment] = toolCallsOfTurn(contents);
+
+    expect(profile?.result).toEqual({ logged_days: 89 });
+    expect(suggestion?.result).toEqual({ recipe: { servings: 1 } });
+    expect(adjustment?.result).toEqual({
+      error: "could_not_reach_target",
+      misses: [{ nutrient: "protein_g" }],
+    });
+    expect(adjustment?.errorCode).toBe("could_not_reach_target");
+  });
+
+  it("should keep no answer for any other tool", () => {
+    const contents = [
+      [call("t1", "get_recipes")],
+      [result("t1", '<untrusted_data>{"recipes":[{"name":"A secret meal"}]}</untrusted_data>')],
+    ];
+
+    expect(toolCallsOfTurn(contents)).toEqual([{ name: "get_recipes", input: {} }]);
+  });
+
+  it("should keep no answer when the text is not JSON", () => {
+    const contents = [[call("t1", "get_palate_profile")], [result("t1", "not json")]];
+
+    expect(toolCallsOfTurn(contents)[0]).not.toHaveProperty("result");
+  });
+});

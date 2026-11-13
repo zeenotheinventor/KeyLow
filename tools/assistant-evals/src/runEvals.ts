@@ -48,6 +48,8 @@ export type RunReport = Readonly<{
    * earlier run just wrote it), so it shows how large the cached prompt is. Null when that call was not read.
    */
   firstModelCall: PromptUsage | null;
+  /** The judge's tokens, which `tokensUsed` already holds. Present only for a run that was given a judge. */
+  judgeTokens?: number;
 }>;
 
 export const DEFAULT_CASE_TIMEOUT_MS = 120_000;
@@ -73,6 +75,11 @@ type RunInput = Readonly<{
   cleanUpGraceMs?: number;
   /** The ceiling of a case's `prepare`. A case whose prepare took longer is reported as not prepared. */
   prepareTimeoutMs?: number;
+  /**
+   * The tokens spent outside `assistant_usage` so far, which is the judge's (`src/judge.ts`). They count in the budget and
+   * in each case's tokens, as the rows of `assistant_usage` do. Left out, nothing is added.
+   */
+  judgeTokens?: () => number;
 }>;
 
 /**
@@ -189,6 +196,7 @@ export async function runEvals(input: RunInput): Promise<RunReport> {
     caseTimeoutMs = DEFAULT_CASE_TIMEOUT_MS,
     cleanUpGraceMs = DEFAULT_CLEAN_UP_GRACE_MS,
     prepareTimeoutMs = DEFAULT_PREPARE_TIMEOUT_MS,
+    judgeTokens,
   } = input;
   // The prepares that hung. Cases that share one are not tried again, so a hung request is waited for once.
   const hungPrepares = new Set<() => Promise<void>>();
@@ -199,7 +207,8 @@ export async function runEvals(input: RunInput): Promise<RunReport> {
   let largestCaseTokens = 0;
   let firstModelCall: PromptUsage | null = null;
 
-  const countedSoFar = () => (spend.latest === null ? 0 : countedTokensOf(spend.latest));
+  const countedSoFar = () =>
+    (spend.latest === null ? 0 : countedTokensOf(spend.latest)) + (judgeTokens?.() ?? 0);
 
   async function readSpend() {
     spend.latest = await database.usageOfUser();
@@ -423,5 +432,6 @@ export async function runEvals(input: RunInput): Promise<RunReport> {
     stopReason,
     overBudget: countedSoFar() > budgetTokens,
     firstModelCall,
+    ...(judgeTokens === undefined ? {} : { judgeTokens: judgeTokens() }),
   };
 }

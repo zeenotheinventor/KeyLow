@@ -543,3 +543,20 @@ describe("a diary of mostly recipes", () => {
     expect(profile.rarelyOrNever).not.toEqual([]);
   });
 });
+
+describe("buildPalateProfile with no history at all", () => {
+  it("should answer an empty profile with nothing logged and no stated taste", () => {
+    const profile = buildPalateProfile([], [], { ...boardOptions, loggedDays: 0 });
+
+    expect(profile).toEqual({
+      loggedDays: 0,
+      hasEnoughToGoOn: false,
+      usualFoods: [],
+      usualRecipes: [],
+      byTimeOfDay: { morning: [], midday: [], evening: [] },
+      rarelyOrNever: [],
+      avoid: [],
+      corrected: [],
+    });
+  });
+});
