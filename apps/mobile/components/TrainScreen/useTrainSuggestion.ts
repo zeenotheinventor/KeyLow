@@ -1,6 +1,7 @@
 import { useSuggestionCard } from "@keylow/api-client";
 
 import { useSuggestionDismissed } from "../../lib/suggestionDismissed";
+import { useSuggestionsEnabled } from "../../lib/suggestionsPreference";
 
 import type { SuggestionCardState, SuggestionNotices, TrainHome } from "@keylow/api-client";
 
@@ -22,7 +23,7 @@ type TrainSuggestion = {
 /**
  * The suggestion of the Train home: the shared `useSuggestionCard` with the screen's clock, connection and
  * Terms gate and this phone's Not now store. The card and the detail sheet both draw this one state, so the sheet shows
- * the suggestion the card holds. It is hidden while the suggestion is not known, offline, for a day that was
+ * the suggestion the card holds. It is hidden while the suggestion is not known, while the device has not said whether suggestions are wanted, when the person turned workout suggestions off in More, offline, for a day that was
  * put off on this device, and when the screen has no notices to show the toast with, since Add could then
  * not tell anyone.
  */
@@ -41,15 +42,16 @@ export function useTrainSuggestion({
   notices: SuggestionNotices | undefined;
 }): TrainSuggestion {
   const { dismissedDays, dismiss } = useSuggestionDismissed();
+  const { isEnabled: isSuggestionsEnabled } = useSuggestionsEnabled();
   const hasNotices = notices !== undefined;
   const state = useSuggestionCard({
     home,
     now,
-    enabled: enabled && hasNotices,
+    enabled: enabled && hasNotices && isSuggestionsEnabled === true,
     isOnline,
     dismissedDays,
     notices: notices ?? NO_NOTICES,
   });
 
-  return { state: hasNotices ? state : HIDDEN, dismiss };
+  return { state: hasNotices && isSuggestionsEnabled === true ? state : HIDDEN, dismiss };
 }
