@@ -61,3 +61,5 @@ export {
   confirmFeatureRequestNote,
   confirmFeatureRequestQuestion,
 } from "./confirmFeatureRequest";
+export { buildPlanCreatedCard } from "./planCreated";
+export type { PlanCreatedCardInput } from "./planCreated";

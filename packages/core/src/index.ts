@@ -9,6 +9,19 @@ export * from "./format";
 export * from "./nutrition";
 export * from "./palate";
 export * from "./plate";
+// Only what the assistant's plan tool needs. The rest of the planner is read through `@keylow/core/plans`.
+export {
+  PLAN_FIT_BUDGET,
+  buildPlanPool,
+  planDatesOf,
+  planMeals,
+  planTargetOf,
+  resolveRepeatLimit,
+  planSaveInput,
+  rankedIdsOfReply,
+  repeatLimitOfProfile,
+} from "./plans";
+export type { Plan, PlanOffer, PlanPoolResult, PlannedWeek } from "./plans";
 // Only what the assistant's recipe tools need. The rest of recipes is read through `@keylow/core/recipes`.
 export { buildRecipeIngredient, validateRecipeDraft } from "./recipes";
 export type { RecipeDraftProblem, RecipeIngredient } from "./recipes";

@@ -24,6 +24,10 @@ const importToolName = "import_recipe_from_url";
 // writes only after the person presses its confirm button and touches no diary or training row.
 const featureRequestToolName = "request_feature";
 
+// A question about what to eat this week ("What should I eat this week?") is read-shaped, and the plan is what
+// answers it. It is in the kitchen group, so it is in no set until the group is surfaced.
+const planMealsToolName = "plan_meals";
+
 // The tools a recipe link needs, each only if it is listed.
 const recipeImportTools: ReadonlySet<string> = new Set([
   importToolName,
@@ -145,7 +149,9 @@ export function allowedToolsFor({
       return recipeImportTools.has(tool.name);
     }
     if (looksLikeRead(text)) {
-      return tool.readOnlyHint || tool.name === featureRequestToolName;
+      return (
+        tool.readOnlyHint || tool.name === featureRequestToolName || tool.name === planMealsToolName
+      );
     }
     return tool.name !== importToolName;
   };
