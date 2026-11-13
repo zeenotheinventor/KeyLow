@@ -22,8 +22,8 @@ import type { AssistantRecipeDraft } from "@keylow/core";
  * What a recipe card does when its save is pressed, for the suggested recipe and the compare card alike. It
  * loads the foods of the draft and opens the new recipe editor filled in with it: nothing is written until the
  * person saves there. When the foods cannot be loaded (the connection, or a food that is gone) `status` is
- * `failed` and the card stays as it was. When the draft has a line that cannot be made again in grams it is
- * `cannot_rebuild`, which no retry will change. Once the editor has saved the draft, `savedRecipeId` is the recipe it
+ * `failed` and the card stays as it was. When the draft has a line that cannot be made again (only a draft stored
+ * before its lines carried their frozen ingredient) it is `cannot_rebuild`, which no retry will change. Once the editor has saved the draft, `savedRecipeId` is the recipe it
  * made, for as long as the app runs. Nothing about the recipe is logged: a failure is a state, never a message.
  * A save that finishes after the card has gone opens nothing.
  */

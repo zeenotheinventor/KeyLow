@@ -8,14 +8,16 @@ import {
   yogurtLine,
 } from "./recipeCompareFixtures";
 import {
+  buildAdjustmentDraft,
   firstUnmatchedLineNameOf,
   matchedFoodIdsOf,
   recipeDraftPrefillOf,
 } from "../../src/assistant";
-import { validateRecipeDraft } from "../../src/recipes";
+import { buildRecipeIngredient, computeRecipe, validateRecipeDraft } from "../../src/recipes";
 import { buildFood, buildFoodPortion } from "../../src/testing";
 
 import type { AdjustmentDraft, AssistantRecipeDraft, PrefillFood } from "../../src/assistant";
+import type { RecipeIngredient } from "../../src/recipes";
 
 type Suggestion = Extract<AssistantRecipeDraft, { variant: "suggestion" }>;
 
@@ -245,5 +247,172 @@ describe("firstUnmatchedLineNameOf", () => {
 
   it("should be null when every line matched", () => {
     expect(firstUnmatchedLineNameOf(draft)).toBeNull();
+  });
+});
+
+describe("recipeDraftPrefillOf, an adjustment rebuilt from the frozen lines", () => {
+  const chickenFood = buildFood({
+    id: idOf(1),
+    name: "Chicken, breast",
+    kcal: 148,
+    protein_g: 32,
+    carbs_g: 0,
+    fat_g: 2.2,
+  });
+  const riceFood = buildFood({
+    id: idOf(2),
+    name: "Rice, white",
+    kcal: 131,
+    protein_g: 2.8,
+    carbs_g: 31.1,
+    fat_g: 0.4,
+  });
+  const bucketFood = buildFood({
+    id: idOf(3),
+    name: "Restaurant bucket",
+    basis: "per_portion",
+    kcal: 500,
+    protein_g: 20,
+    carbs_g: 40,
+    fat_g: 30,
+  });
+  const spoon = { id: "spoon-tbsp", label: "1 tbsp", grams: null, ml: 15 };
+  const oilFood = buildFood({ id: idOf(4), name: "Oil, olive", kcal: 899, fat_g: 99.9 });
+  const oilLineOfTwoSpoons = buildRecipeIngredient(oilFood, {
+    quantity: 2,
+    unit: "portion",
+    portion: spoon,
+  });
+  const bucketLine = buildRecipeIngredient(bucketFood, {
+    quantity: 2,
+    unit: "portion",
+    portion: { id: idOf(300), label: "1 bucket", grams: null, ml: null },
+  });
+  const original = {
+    id: idOf(100),
+    name: "Eval chicken and rice",
+    servings: 2,
+    steps: ["Grill the chicken."],
+    ingredients: [
+      buildRecipeIngredient(chickenFood, { quantity: 260, unit: "g" }),
+      buildRecipeIngredient(riceFood, { quantity: 360, unit: "g" }),
+      bucketLine,
+    ],
+  };
+  const adjustment = (): AdjustmentDraft => {
+    const outcome = buildAdjustmentDraft({
+      recipe: original,
+      target: { protein_g: 85 },
+      additions: [],
+      preferences: [],
+    });
+    if (outcome.status !== "drafted") {
+      throw new Error(`Expected a draft, got ${outcome.status}`);
+    }
+    return outcome.draft;
+  };
+  // The foods as they are today, after the person edited the chicken and the rice since the recipe was written.
+  const editedFoods = new Map<string, PrefillFood>([
+    [idOf(1), { food: { ...chickenFood, kcal: 190, protein_g: 20 }, portions: [] }],
+    [idOf(2), { food: { ...riceFood, kcal: 99, carbs_g: 20 }, portions: [] }],
+    [idOf(3), { food: { ...bucketFood, kcal: 900 }, portions: [] }],
+  ]);
+  const perServingOf = (ingredients: readonly RecipeIngredient[], servings: number) =>
+    computeRecipe({ servings, yieldGrams: null, ingredients }).perServing;
+
+  it("should save figures equal to the card's After exactly, after the foods were edited", () => {
+    const draft = adjustment();
+    const prefill = draftOf(draft, editedFoods);
+
+    expect(draft.ingredients.some(({ change }) => change === "changed")).toBe(true);
+    const saved = perServingOf(prefill?.ingredients ?? [], draft.servings);
+    expect({
+      kcal: saved.kcal,
+      protein_g: saved.protein_g,
+      carbs_g: saved.carbs_g,
+      fat_g: saved.fat_g,
+    }).toEqual(draft.perServing);
+  });
+
+  it("should keep a line counted by portion as a portion with the same count", () => {
+    const prefill = draftOf(adjustment(), editedFoods);
+    const bucket = prefill?.ingredients.find(({ food_id }) => food_id === idOf(3));
+
+    expect(bucket).toEqual(bucketLine);
+    expect(prefill === null ? null : validateRecipeDraft(prefill).ok).toBe(true);
+  });
+
+  it("should keep an unchanged line in its own amount and unit, not in grams", () => {
+    const sameOil: AdjustmentDraft = {
+      ...compareDraft,
+      ingredients: [
+        {
+          ...oilLine,
+          foodId: idOf(4),
+          grams: oilLineOfTwoSpoons.resolved_grams,
+          beforeGrams: oilLineOfTwoSpoons.resolved_grams,
+          change: "same",
+          frozen: oilLineOfTwoSpoons,
+        },
+      ],
+    };
+
+    expect(draftOf(sameOil, new Map())?.ingredients).toEqual([oilLineOfTwoSpoons]);
+  });
+
+  it("should not need the live food of a line that carries its frozen ingredient", () => {
+    const prefill = recipeDraftPrefillOf(adjustment(), new Map());
+
+    expect(prefill.ok).toBe(true);
+  });
+
+  it("should ask for no food of a line that carries its frozen ingredient", () => {
+    expect(matchedFoodIdsOf(adjustment())).toEqual([]);
+  });
+
+  it("should leave a removed line out even when it carries a frozen ingredient", () => {
+    const draft = adjustment();
+    const removed: AdjustmentDraft = {
+      ...draft,
+      ingredients: draft.ingredients.map((line, index) =>
+        index === 0 ? { ...line, grams: 0, change: "removed" } : line,
+      ),
+    };
+
+    expect(draftOf(removed, editedFoods)?.ingredients).toHaveLength(2);
+  });
+
+  describe("a draft stored before the frozen line existed", () => {
+    const older = (): AdjustmentDraft => {
+      const draft = adjustment();
+      return {
+        ...draft,
+        ingredients: draft.ingredients.map((line) => ({ ...line, frozen: null })),
+      };
+    };
+
+    it("should fall back to the live food in grams for a line that has a weight", () => {
+      const draft = older();
+      const weighed: AdjustmentDraft = {
+        ...draft,
+        ingredients: draft.ingredients.filter(({ grams }) => grams > 0),
+      };
+
+      expect(draftOf(weighed, editedFoods)?.ingredients.map(({ unit }) => unit)).toEqual([
+        "g",
+        "g",
+      ]);
+    });
+
+    it("should refuse a line counted by portion as not rebuildable, as it always did", () => {
+      expect(recipeDraftPrefillOf(older(), editedFoods)).toEqual({
+        ok: false,
+        reason: "not_rebuildable",
+      });
+    });
+
+    it("should still ask for the food of each line", () => {
+      expect(matchedFoodIdsOf(older())).toEqual([idOf(1), idOf(2), idOf(3)]);
+    });
   });
 });

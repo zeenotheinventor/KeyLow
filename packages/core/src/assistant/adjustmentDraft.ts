@@ -77,7 +77,15 @@ const fitIngredientOf = (ingredient: RecipeIngredient, key: string): FitIngredie
   return { foodId: key, per100, grams: ingredient.resolved_grams, locked: false };
 };
 
-const rescaled = (ingredient: RecipeIngredient, grams: number): RecipeIngredient => {
+/**
+ * An ingredient in `grams`, from its own frozen snapshot and never from the live food. It is the ingredient itself
+ * when the grams are what it already has, so a line left as it was keeps its own amount and unit, and a line
+ * counted by portion, which has no grams to change, is never rescaled.
+ */
+export const rescaledIngredient = (
+  ingredient: RecipeIngredient,
+  grams: number,
+): RecipeIngredient => {
   if (ingredient.resolved_grams === 0 || grams === ingredient.resolved_grams) {
     return ingredient;
   }
@@ -198,7 +206,7 @@ export function buildAdjustmentDraft(input: AdjustmentInput): AdjustmentOutcome 
     fit.ingredients.find(({ foodId }) => foodId === key)?.grams ?? fallback;
 
   const scaled = kept.map((ingredient, index) =>
-    rescaled(ingredient, gramsOf(`kept-${index}`, ingredient.resolved_grams)),
+    rescaledIngredient(ingredient, gramsOf(`kept-${index}`, ingredient.resolved_grams)),
   );
   const added = additions.map(({ food, portions }, index) =>
     buildRecipeIngredient(food, {
@@ -249,6 +257,7 @@ export function buildAdjustmentDraft(input: AdjustmentInput): AdjustmentOutcome 
           grams: ingredient.resolved_grams,
           beforeGrams: kept[index]?.resolved_grams ?? null,
           kcal: lineKcalOf(ingredient),
+          frozen: kept[index] ?? null,
           change:
             ingredient.resolved_grams === kept[index]?.resolved_grams
               ? ("same" as const)
@@ -261,6 +270,7 @@ export function buildAdjustmentDraft(input: AdjustmentInput): AdjustmentOutcome 
           grams: ingredient.resolved_grams,
           beforeGrams: null,
           kcal: lineKcalOf(ingredient),
+          frozen: ingredient,
           change: "added" as const,
         })),
       ],

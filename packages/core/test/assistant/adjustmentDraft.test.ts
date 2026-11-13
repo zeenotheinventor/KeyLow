@@ -251,6 +251,76 @@ describe("buildAdjustmentDraft, by scaling", () => {
   });
 });
 
+describe("buildAdjustmentDraft, the frozen line each ingredient carries", () => {
+  it("should carry the original ingredient of a changed line, not the rescaled one", () => {
+    const recipe = chickenAndRice();
+    const draft = drafted({ recipe });
+    const changed = draft.ingredients.findIndex(({ change }) => change === "changed");
+
+    expect(changed).toBeGreaterThanOrEqual(0);
+    expect(draft.ingredients[changed]?.frozen).toEqual(recipe.ingredients[changed]);
+  });
+
+  it("should carry a line counted by portion with its quantity, unit and portion", () => {
+    const bucketLine = buildRecipeIngredient(bucket, {
+      quantity: 2,
+      unit: "portion",
+      portion: { id: idOf(300), label: "1 bucket", grams: null, ml: null },
+    });
+    const recipe = withIngredient(chickenAndRice(), bucketLine);
+    const draft = drafted({ recipe, target: { kcal: perServingOf(recipe).kcal ?? 0 } });
+
+    expect(draft.ingredients.at(-1)?.frozen).toEqual(bucketLine);
+    expect(draft.ingredients.at(-1)?.frozen).toMatchObject({
+      quantity: 2,
+      unit: "portion",
+      portion_id: idOf(300),
+      resolved_grams: 0,
+    });
+  });
+
+  it("should carry the ingredient it made for an added food, in the grams drawn", () => {
+    const recipe = porridge();
+    const draft = drafted({
+      recipe,
+      target: proteinPlus30(recipe),
+      additions: [candidateOf(chicken)],
+    });
+    const added = draft.ingredients.find(({ change }) => change === "added");
+
+    expect(added?.frozen).toEqual(
+      buildRecipeIngredient(chicken, { quantity: added?.grams ?? 0, unit: "g" }),
+    );
+  });
+});
+
+describe("assistantRecipeDraftSchema, the frozen line", () => {
+  const withoutFrozen = () => {
+    const [first] = drafted({ recipe: chickenAndRice() }).ingredients;
+    return { ...first, frozen: undefined };
+  };
+  const parsedLine = (line: unknown) => {
+    const draft = drafted({ recipe: chickenAndRice() });
+    const parsed = assistantRecipeDraftSchema.parse({ ...draft, ingredients: [line] });
+    return parsed.ingredients[0];
+  };
+
+  it("should read a draft stored before the frozen line existed, with none", () => {
+    expect(parsedLine(withoutFrozen())?.frozen ?? null).toBeNull();
+  });
+
+  it("should read a frozen line it cannot parse as none, never a failed turn", () => {
+    expect(parsedLine({ ...withoutFrozen(), frozen: { food_id: "x" } })?.frozen).toBeNull();
+  });
+
+  it("should keep a frozen line it can parse", () => {
+    const draft = drafted({ recipe: chickenAndRice() });
+    const first = draft.ingredients[0];
+
+    expect(parsedLine(first)?.frozen).toEqual(first?.frozen);
+  });
+});
+
 describe("buildAdjustmentDraft, when scaling is not enough", () => {
   it("should be unreachable for porridge by scaling alone, saying what limits it", () => {
     const recipe = porridge();

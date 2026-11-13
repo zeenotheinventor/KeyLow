@@ -9,6 +9,7 @@ import {
   MAX_RECIPE_STEPS,
   MAX_RECIPE_STEP_LENGTH,
 } from "../recipes/bounds";
+import { recipeIngredientSchema } from "../recipes/schemas";
 import { foodSourceSchema } from "../schemas/food";
 
 import type { FitMiss, FitMissReason, FitNutrient, FitResult, FitTarget } from "../recipes/fit";
@@ -79,6 +80,14 @@ const ingredientSchema = z.object({
    * it existed and from an unmatched line. A source a later version adds reads as null on an app that is behind.
    */
   foodSource: foodSourceSchema.nullish().catch(null),
+  /**
+   * An adjustment's line as the recipe stores it, frozen as it was when the original recipe was written (its
+   * snapshot, quantity, unit and portion), or as made for a food the fit added. Saving rebuilds the line from it
+   * and never from the live food, so a later edit of the food or a line counted by portion changes nothing.
+   * Absent from a draft stored before it existed and from a line of a suggestion. A value an app that is behind
+   * cannot read is none, and the save then falls back to the live food.
+   */
+  frozen: recipeIngredientSchema.nullish().catch(null),
   grams: gramsSchema,
   beforeGrams: gramsSchema.nullable(),
   /** This line's kcal for the whole recipe, null when the food has no figure or the line is unmatched. */
