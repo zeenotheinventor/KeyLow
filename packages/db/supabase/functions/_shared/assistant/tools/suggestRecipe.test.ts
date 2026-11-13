@@ -475,10 +475,23 @@ Deno.test(
 
       assertEquals(result.status, "ok");
       assertEquals(payloadOf(result), { error: code });
-      assertEquals(structured, {});
+      assertEquals("recipeDraft" in structured, false);
       assertEquals(queries, []);
       assertEquals(picks, []);
     }
+  },
+);
+
+Deno.test(
+  "a timed out or refused generation sends the app a notice the model never sees, and a failure sends none",
+  async () => {
+    const noticeOf = async (
+      code: "generation_refused" | "generation_timeout" | "generation_failed",
+    ) => (await suggest({ answer: failedGeneration(code) })).structured;
+
+    assertEquals(await noticeOf("generation_timeout"), { recipeNotice: { code: "timed_out" } });
+    assertEquals(await noticeOf("generation_refused"), { recipeNotice: { code: "refused" } });
+    assertEquals(await noticeOf("generation_failed"), {});
   },
 );
 
@@ -525,7 +538,9 @@ Deno.test("a pick that runs past the deadline ends the tool as timed_out", async
   const result = await executeTool(made.ctx, "suggest_recipe", ask);
 
   assertEquals(payloadOf(result), { error: "timed_out" });
-  assertEquals(result.status === "ok" ? result.structured : "x", null);
+  assertEquals(result.status === "ok" ? result.structured : "x", {
+    recipeNotice: { code: "timed_out" },
+  });
 });
 
 // The deadline runs from the start of the tool, so a slow palate read is `timed_out` and not the host's abort. The

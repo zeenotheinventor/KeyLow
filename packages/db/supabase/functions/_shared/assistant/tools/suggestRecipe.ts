@@ -37,7 +37,7 @@ import {
 } from "./foodMatching.ts";
 import { BudgetExceeded, deadlineOf } from "./deadline.ts";
 import { readPalate } from "./readPalate.ts";
-import { dataNotice } from "./shared.ts";
+import { dataNotice, recipeToolRefusal as refuse } from "./shared.ts";
 
 import type { PalatePreference, SuggestionLine } from "../../core.ts";
 import type { FoodPickLine, RecipeImportServices } from "../recipeParse.ts";
@@ -88,10 +88,6 @@ export const defaultSuggestLimits: SuggestLimits = {
 
 // The ingredient's own words, cut for the pick call.
 const PICK_LINE_MAX_CHARACTERS = 300;
-
-const refuse = (error: string, extra: Record<string, string[]> = {}) => ({
-  data: { error, ...extra },
-});
 
 // The food chosen for each ingredient, or null for one with no food. Only a line with candidates is offered to the
 // model, so with none there is no call. A reply the pick call did not keep to the offered lists is not trusted.
@@ -159,7 +155,8 @@ export function createSuggestRecipeTool(
       "the recipe, so do not list it. The answer holds name, servings, per_serving, fit (within, or " +
       "unreachable with misses), not_matched and left_out_avoided. If it is generation_refused, " +
       "generation_failed, say the recipe could not be written. If it is recipe_mentions_avoided, say it " +
-      "could not be written without a food they avoid. If it is generation_timeout, timed_out or could_not_match_foods, say it took too long. If it is " +
+      "could not be written without a food they avoid. If it is generation_timeout, timed_out or could_not_match_foods, say it took too long. " +
+      "For generation_timeout, timed_out and generation_refused the app also shows a notice, so say it in one short sentence. If it is " +
       "nothing_matched, say no foods matched, and why from left_out_avoided. Nothing is saved. " +
       dataNotice,
     kind: "read",

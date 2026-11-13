@@ -22,6 +22,8 @@ import type { AssistantExerciseMuscles } from "./exerciseMusclesCard";
 import type { AssistantNotice } from "./notice";
 import type { AssistantRecipeDraft } from "./recipeDraft";
 import type { SuggestionDraft } from "./recipeDraftOf";
+import type { AssistantRecipeNotice } from "./recipeNotice";
+import type { AssistantRecipeRefusal } from "./recipeRefusal";
 import type { AssistantThreadItem } from "./thread";
 import type { DescribableAssistantNotice } from "../copy/assistantNotices";
 
@@ -65,6 +67,10 @@ export type AssistantSheetLiveTurn = {
   exerciseFormMedia?: readonly AssistantExerciseFormMedia[] | undefined;
   /** The recipes the turn drafted, in call order, drawn under its words. */
   recipeDrafts?: readonly AssistantRecipeDraft[] | undefined;
+  /** The notices for a recipe that did not come, in call order, drawn under its words. */
+  recipeNotices?: readonly AssistantRecipeNotice[] | undefined;
+  /** The adjustments that were refused, in call order, drawn under its words. */
+  recipeRefusals?: readonly AssistantRecipeRefusal[] | undefined;
   /** A link on its own that the turn sent, drawn under its words. */
   link?: AssistantCardLink | null | undefined;
   /** Whether the turn sent the Ask again quick reply. It is offered once the turn has ended. */
@@ -121,6 +127,21 @@ export type AssistantSheetEntry =
       kind: "recipeCompare";
       key: string;
       draft: AdjustmentDraft;
+    }
+  | {
+      /** Why a recipe did not come, the notice of `assistant-card · recipe-draft-failed`. */
+      kind: "recipeNotice";
+      key: string;
+      notice: AssistantRecipeNotice;
+      /** Only the notice at the end of the thread offers its button, and not when the turn wrote something, which sending again would repeat. */
+      isLatest: boolean;
+      canRetry: boolean;
+    }
+  | {
+      /** A saved recipe that could not be changed as asked, the refused card (`assistant-card · recipe-compare`, refused). */
+      kind: "recipeRefusal";
+      key: string;
+      refusal: AssistantRecipeRefusal;
     }
   | {
       /** A link on its own, a line that opens what the answer is about (`assistant-card · routine-updated`, Removing a day). */
@@ -194,8 +215,9 @@ type BuildInput = {
 
 // An entry before it knows whether it ends the thread.
 type DraftEntry =
-  | Exclude<AssistantSheetEntry, { kind: "notice" }>
-  | { kind: "notice"; key: string; notice: DescribableAssistantNotice };
+  | Exclude<AssistantSheetEntry, { kind: "notice" | "recipeNotice" }>
+  | { kind: "notice"; key: string; notice: DescribableAssistantNotice }
+  | { kind: "recipeNotice"; key: string; notice: AssistantRecipeNotice; canRetry: boolean };
 
 const isDescribable = (notice: AssistantNotice): notice is DescribableAssistantNotice =>
   notice.code !== "consent_needed";
@@ -367,6 +389,17 @@ function storedEntries(items: readonly AssistantThreadItem[], isAllAnswered = fa
       case "recipe_draft":
         entries.push(recipeEntryOf(item.id, item.draft));
         break;
+      case "recipe_refusal":
+        entries.push({ kind: "recipeRefusal", key: item.id, refusal: item.refusal });
+        break;
+      case "recipe_notice":
+        entries.push({
+          kind: "recipeNotice",
+          key: item.id,
+          notice: item.notice,
+          canRetry: item.canRetry,
+        });
+        break;
       case "link":
         entries.push({ kind: "link", key: item.id, link: item.link });
         break;
@@ -465,6 +498,18 @@ function sentEntries(
   for (const [position, draft] of (live.recipeDrafts ?? []).entries()) {
     entries.push(recipeEntryOf(`sent:recipeDraft:${position}`, draft));
   }
+  for (const [position, refusal] of (live.recipeRefusals ?? []).entries()) {
+    entries.push({ kind: "recipeRefusal", key: `sent:recipeRefusal:${position}`, refusal });
+  }
+  for (const [position, notice] of (live.recipeNotices ?? []).entries()) {
+    // A turn that drew a card wrote something, and sending its message again would repeat the write.
+    entries.push({
+      kind: "recipeNotice",
+      key: `sent:recipeNotice:${position}`,
+      notice,
+      canRetry: live.cards.length === 0,
+    });
+  }
   if (live.link !== undefined && live.link !== null) {
     entries.push({ kind: "link", key: "sent:link", link: live.link });
   }
@@ -506,7 +551,9 @@ function lastEntryBeforeCards(
       entry?.kind !== "exerciseMuscles" &&
       entry?.kind !== "exerciseFormMedia" &&
       entry?.kind !== "recipeDraft" &&
-      entry?.kind !== "recipeCompare"
+      entry?.kind !== "recipeCompare" &&
+      entry?.kind !== "recipeRefusal" &&
+      entry?.kind !== "recipeNotice"
     ) {
       return entry;
     }
@@ -569,7 +616,9 @@ export function isSentTurnStored(
           item.kind === "link" ||
           item.kind === "exercise_muscles" ||
           item.kind === "exercise_form_media" ||
-          item.kind === "recipe_draft") &&
+          item.kind === "recipe_draft" ||
+          item.kind === "recipe_refusal" ||
+          item.kind === "recipe_notice") &&
           !hasWords),
     );
 }
@@ -612,7 +661,9 @@ export function buildAssistantSheetThread({
     ? drafts
     : [...drafts, { kind: "notice", key: "access:notice", notice: accessNotice }];
   const entries = allDrafts.map((entry, position): AssistantSheetEntry =>
-    entry.kind === "notice" ? { ...entry, isLatest: position === allDrafts.length - 1 } : entry,
+    entry.kind === "notice" || entry.kind === "recipeNotice"
+      ? { ...entry, isLatest: position === allDrafts.length - 1 }
+      : entry,
   );
   const last = lastEntryBeforeCards(entries);
 

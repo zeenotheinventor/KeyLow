@@ -3,6 +3,7 @@ import { describeRecipeServings } from "./assistantRecipeCards";
 import { formatCalories, formatGrams } from "../format/numbers";
 import { FIT_TOLERANCE } from "../recipes/fit";
 
+import type { AssistantRecipeNotice } from "../assistant/recipeNotice";
 import type { FitMiss, FitNutrient } from "../recipes/fit";
 
 /** The figures the person named, which a draft stores with a missing key or an undefined one alike. */
@@ -131,3 +132,29 @@ export const describeRecipeDraftMiss = ({
     ? `${opening} The figures you asked for pull against each other, so this is the closest fit.`
     : `${opening} This is the closest fit these ingredients allow.`;
 };
+
+/**
+ * The words of the notice for a recipe that did not come (`assistant-card · recipe-draft-failed`). A timeout
+ * offers Try again, which sends the message again, and a refusal has no button because the same words would be
+ * turned down again.
+ */
+export function describeRecipeNotice({ code }: AssistantRecipeNotice): {
+  title: string;
+  body: string;
+  button: string | null;
+} {
+  switch (code) {
+    case "timed_out":
+      return {
+        title: "That recipe did not come through",
+        body: "It took too long to write, and nothing was saved. Try again, or ask for something simpler.",
+        button: "Try again",
+      };
+    case "refused":
+      return {
+        title: "That recipe can't be written",
+        body: "The request was turned down, so nothing was made or saved. Try asking for it in other words.",
+        button: null,
+      };
+  }
+}

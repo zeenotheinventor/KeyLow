@@ -47,4 +47,9 @@ export const samples: Record<string, () => string[]> = {
       limitedBy: [],
     }),
   ],
+  describeRecipeNotice: () =>
+    (["timed_out", "refused"] as const).flatMap((code) => {
+      const { title, body, button } = copy.describeRecipeNotice({ code });
+      return button === null ? [title, body] : [title, body, button];
+    }),
 };

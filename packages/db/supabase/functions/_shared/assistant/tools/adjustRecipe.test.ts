@@ -2,6 +2,7 @@ import { assert, assertEquals, assertFalse, assertStringIncludes } from "@std/as
 
 import {
   assistantRecipeDraftSchema,
+  assistantRecipeRefusalSchema,
   buildRecipeIngredient,
   computeRecipe,
   substitutionSchema,
@@ -398,6 +399,36 @@ Deno.test(
   },
 );
 
+Deno.test(
+  "a refusal sends the app the figures for the refused card, which the model never sees",
+  async () => {
+    const { result, structured } = await adjust(protein30(porridgeId), {
+      answer: { reply: { positions: [] } },
+    });
+    const refusal = assistantRecipeRefusalSchema.parse(structured["recipeRefusal"]);
+
+    assertEquals(refusal.recipeName, "Eval porridge bowl");
+    assertEquals(refusal.nutrient, "protein_g");
+    assert(refusal.reached < refusal.target);
+    // The closest fit drifted past the calories held, so the card has no "near its" clause to say.
+    assertEquals(refusal.reachedKcal, null);
+    assertEquals(Object.keys(structured), ["recipeRefusal"]);
+    assertFalse(JSON.stringify(payloadOf(result)).includes("recipeRefusal"));
+  },
+);
+
+Deno.test(
+  "a refusal after the chooser tried a food draws the card too, because the foods really were tried",
+  async () => {
+    const { structured } = await adjust(protein30(porridgeId), {
+      usualFoods: [adjustFoodIds.rice],
+      answer: { reply: { positions: [0] } },
+    });
+
+    assert("recipeRefusal" in structured);
+  },
+);
+
 Deno.test("a food that does not close the gap is refused too, naming what it tried", async () => {
   const { result, structured } = await adjust(protein30(porridgeId), {
     usualFoods: [adjustFoodIds.rice],
@@ -411,17 +442,22 @@ Deno.test("a food that does not close the gap is refused too, naming what it tri
   assertEquals(structured["recipeDraft"], undefined);
 });
 
-Deno.test("with no usual food to offer there is no Opus call, only the refusal", async () => {
-  const { result, generation } = await adjust(protein30(porridgeId), {
-    usualFoods: [],
-  });
+Deno.test(
+  "with no usual food to offer there is no Opus call, only the refusal and no card",
+  async () => {
+    const { result, generation, structured } = await adjust(protein30(porridgeId), {
+      usualFoods: [],
+    });
 
-  const payload = payloadOf(result);
+    const payload = payloadOf(result);
 
-  assertEquals(generation.calls.length, 0);
-  assert(isRecord(payload));
-  assertEquals(payload["error"], "could_not_reach_target");
-});
+    assertEquals(generation.calls.length, 0);
+    assert(isRecord(payload));
+    assertEquals(payload["error"], "could_not_reach_target");
+    // No food was offered, so the card, which speaks for the person's foods, is not drawn.
+    assertEquals(structured, {});
+  },
+);
 
 Deno.test(
   "a position outside the candidates leaves no draft and says the chooser failed",
@@ -435,6 +471,8 @@ Deno.test(
     assertEquals(payload["error"], "could_not_reach_target");
     assertEquals(payload["chooser"], "unavailable");
     assertEquals("recipeDraft" in structured, false);
+    // The foods were not really judged, so the card, which says none of them makes a sensible addition, is not drawn.
+    assertEquals(structured, {});
   },
 );
 
@@ -453,17 +491,22 @@ Deno.test(
       assertEquals(payload["tried_foods"], []);
       assert(Array.isArray(payload["misses"]) && payload["misses"].length > 0);
       assertEquals("recipeDraft" in structured, false);
+      assertEquals(structured, {});
     }
   },
 );
 
-Deno.test("an Opus call that times out is generation_timeout", async () => {
-  const { result } = await adjust(protein30(porridgeId), {
-    answer: failedGeneration("generation_timeout"),
-  });
+Deno.test(
+  "an Opus call that times out is generation_timeout, with a notice for the app",
+  async () => {
+    const { result, structured } = await adjust(protein30(porridgeId), {
+      answer: failedGeneration("generation_timeout"),
+    });
 
-  assertEquals(payloadOf(result), { error: "generation_timeout" });
-});
+    assertEquals(payloadOf(result), { error: "generation_timeout" });
+    assertEquals(structured, { recipeNotice: { code: "timed_out" } });
+  },
+);
 
 Deno.test("a recipe that is not found, or not the caller's, is recipe_not_found", async () => {
   const { result } = await adjust(protein30("00000000-0000-4000-8000-0000000d9999"));
@@ -506,6 +549,9 @@ Deno.test("a slow read ends the tool as timed_out before any Opus call", async (
   );
 
   assertEquals(payloadOf(result), { error: "timed_out" });
+  assertEquals(result.status === "ok" ? result.structured : "x", {
+    recipeNotice: { code: "timed_out" },
+  });
   assertEquals(generation.calls.length, 0);
 });
 

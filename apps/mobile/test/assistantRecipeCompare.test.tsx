@@ -489,6 +489,8 @@ describe("the compare card", () => {
         exerciseMuscles: [],
         exerciseFormMedia: [],
         recipeDrafts: [compareDraft],
+        recipeRefusals: [],
+        recipeNotices: [],
         askAgain: false,
         status: null,
         notice: null,

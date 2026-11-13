@@ -102,6 +102,8 @@ describe("parseAssistantEvent", () => {
       "exercise_muscles",
       "exercise_form_media",
       "recipe_draft",
+      "recipe_notice",
+      "recipe_refusal",
       "ask_again",
       "clarify",
       "confirm",
@@ -282,6 +284,36 @@ describe("parseAssistantEvent", () => {
       ok: true,
       event: { type: "recipe_draft", draft },
     });
+  });
+
+  it("should parse a recipe_notice event, and strip a field a later version adds", () => {
+    expect(
+      parseAssistantEvent(
+        JSON.stringify({ type: "recipe_notice", notice: { code: "timed_out", later: 1 }, more: 2 }),
+      ),
+    ).toEqual({ ok: true, event: { type: "recipe_notice", notice: { code: "timed_out" } } });
+  });
+
+  it("should not read a recipe_notice with a code it does not know", () => {
+    expect(
+      parseAssistantEvent(JSON.stringify({ type: "recipe_notice", notice: { code: "later" } })),
+    ).toMatchObject({ ok: false, reason: "invalid_event" });
+  });
+
+  it("should parse a recipe_refusal event, and strip a field a later version adds", () => {
+    const refusal = {
+      recipeName: "Eval porridge bowl",
+      nutrient: "protein_g",
+      target: 53,
+      reached: 17,
+      reachedKcal: 389,
+    };
+
+    expect(
+      parseAssistantEvent(
+        JSON.stringify({ type: "recipe_refusal", refusal: { ...refusal, later: 1 }, more: 2 }),
+      ),
+    ).toEqual({ ok: true, event: { type: "recipe_refusal", refusal } });
   });
 
   it("should name an extra key on the event, because a name is not a value", () => {

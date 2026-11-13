@@ -3,6 +3,7 @@ import { formatCalories, formatGrams } from "../format/numbers";
 import { MAX_RECIPE_NAME_LENGTH } from "../recipes/bounds";
 import { FIT_TOLERANCE } from "../recipes/fit";
 
+import type { AssistantRecipeRefusal } from "../assistant/recipeRefusal";
 import type { FitNutrient } from "../recipes/fit";
 
 /** The figures the person named, which a draft stores with a missing key or an undefined one alike. */
@@ -119,3 +120,30 @@ export const describeRecipeCompareAmounts = (
 
 /** "Eval chicken and rice stays as it is.", under Save as new recipe. */
 export const describeRecipeCompareStays = (name: string): string => `${name} stays as it is.`;
+
+/**
+ * The refused card (`assistant-card · recipe-compare`, refused): what a serving reaches against what was asked,
+ * and that no new recipe was made. NOT ON THE CANVAS: the board's last sentence says "swap", but the tool scales
+ * the recipe's own ingredients and adds foods and never replaces one, so it says "addition" (orchestrator
+ * decision, 2026-11-13). The board draws only a protein request, so the calorie, carbs and fat wordings, and the
+ * case with no calorie figure, are in its style and wait for Zee's approval.
+ */
+export function describeRecipeRefusal({
+  recipeName,
+  nutrient,
+  target,
+  reached,
+  reachedKcal,
+}: AssistantRecipeRefusal): { title: string; subtitle: string; body: string } {
+  const figure = (amount: number) =>
+    nutrient === "kcal" ? `${formatCalories(amount)} kcal` : `${formatGrams(amount)} g`;
+  const noun = nutrient === "kcal" ? "" : ` ${CHANGE_NOUNS[nutrient]}`;
+  const nearCalories = reachedKcal === null ? "" : ` near its ${formatCalories(reachedKcal)} kcal`;
+  return {
+    title: `Can't adjust ${recipeName}`,
+    subtitle: "No new recipe made",
+    body:
+      `Its ingredients reach ${figure(reached)}${noun} a serving${nearCalories}, not the ${figure(target)} you asked for. ` +
+      "None of your foods makes a sensible addition.",
+  };
+}
