@@ -130,8 +130,8 @@ export type LogEntriesItem =
 const LOG_ENTRIES_ACTION = "log the entries";
 
 /** Builds the row of one item and checks it, naming the action and the field paths, never a value. */
-function checkedItemEntry(item: LogEntriesItem): DiaryInsert {
-  const entry = build(LOG_ENTRIES_ACTION, () =>
+function checkedItemEntry(item: LogEntriesItem, action: string): DiaryInsert {
+  const entry = build(action, () =>
     item.kind === "food" ? buildLogEntry(item.input) : buildRecipeLogEntry(item.input),
   );
   // The builders store the time and the day as given, so a malformed one is caught here, before any request.
@@ -139,10 +139,25 @@ function checkedItemEntry(item: LogEntriesItem): DiaryInsert {
   if (!checked.success) {
     const paths = checked.error.issues.map(({ path }) => path.join(".") || "(entry)");
     throw new RangeError(
-      `Could not ${LOG_ENTRIES_ACTION}: the entry is not valid at ${[...new Set(paths)].join(", ")}`,
+      `Could not ${action}: the entry is not valid at ${[...new Set(paths)].join(", ")}`,
     );
   }
   return checked.data;
+}
+
+/**
+ * The rows of a plate, built and checked, in the order given. The diary sorts by `logged_at`, then
+ * `created_at`, then `id`, and one statement (or one transaction) gives every row the same `created_at`.
+ * So the i-th row is logged i milliseconds after the time it was given: the clock time shown is the
+ * same, and the order of the plate is the order of the diary.
+ */
+export function entriesOfItems(items: readonly LogEntriesItem[], action: string): DiaryInsert[] {
+  return items.map((item, index) => {
+    const entry = checkedItemEntry(item, action);
+    return index === 0
+      ? entry
+      : { ...entry, logged_at: new Date(Date.parse(entry.logged_at) + index).toISOString() };
+  });
 }
 
 /** The entries with no portion on the food rows whose portion is in `deadPortionIds`. */
@@ -201,12 +216,7 @@ export async function logEntries(
     throw new RangeError(`Could not ${LOG_ENTRIES_ACTION}: there is nothing to log`);
   }
 
-  const entries = items.map((item, index) => {
-    const entry = checkedItemEntry(item);
-    return index === 0
-      ? entry
-      : { ...entry, logged_at: new Date(Date.parse(entry.logged_at) + index).toISOString() };
-  });
+  const entries = entriesOfItems(items, LOG_ENTRIES_ACTION);
 
   const insertAll = (rows: readonly DiaryInsert[]) =>
     client

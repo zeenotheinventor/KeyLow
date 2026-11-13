@@ -41,6 +41,9 @@ export const ACCOUNT_EXPORT_TABLES = [
   "entitlements",
   "feature_requests",
   "palate_preferences",
+  "meal_plans",
+  "meal_plan_days",
+  "meal_plan_items",
 ] as const;
 
 export type AccountExportTable = (typeof ACCOUNT_EXPORT_TABLES)[number];
@@ -94,6 +97,9 @@ export const accountExportSchema = z.strictObject({
     entitlements: rowsSchema,
     feature_requests: rowsSchema,
     palate_preferences: rowsSchema,
+    meal_plans: rowsSchema,
+    meal_plan_days: rowsSchema,
+    meal_plan_items: rowsSchema,
   }),
 });
 

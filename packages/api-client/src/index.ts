@@ -506,6 +506,32 @@ export {
   setNotUsual,
 } from "./repos";
 export type { NotUsualTarget, PalateFoodStat, PalatePreference, PalateStatement } from "./repos";
+export {
+  useArchiveMealPlan,
+  useConfirmMealPlanDay,
+  useMealPlanRepeatLimit,
+  useMealPlans,
+  useReplaceMealPlanDay,
+  useSaveMealPlan,
+  useSetMealPlanRepeatLimit,
+} from "./hooks";
+export {
+  MEAL_PLAN_REPEAT_LIMIT_MAX,
+  archiveMealPlan,
+  confirmMealPlanDay,
+  getMealPlanRepeatLimit,
+  listMealPlans,
+  replaceMealPlanDay,
+  saveMealPlan,
+  setMealPlanRepeatLimit,
+} from "./repos";
+export type {
+  MealPlan,
+  MealPlanDay,
+  MealPlanItem,
+  MealPlanItemInput,
+  SaveMealPlanInput,
+} from "./repos";
 export type { FavouriteFood, FavouriteRecipe } from "./repos";
 export {
   useAssistantChat,

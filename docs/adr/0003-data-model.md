@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted, 2026-09-22. Amendment 1 appended 2026-10-07. Amendment 2 appended 2026-10-15. Amendment 3 appended 2026-10-15. Amendment 4 appended 2026-10-15. Amendment 5 appended 2026-10-15. Amendment 6 appended 2026-10-15. Amendment 7 appended 2026-10-15. Amendment 8 appended 2026-10-16. Amendment 9 appended 2026-10-18. Amendment 10 appended 2026-10-23. Amendment 11 appended 2026-10-23. Amendment 12 appended 2026-10-23. Amendment 13 appended 2026-10-23. Amendment 14 appended 2026-10-26, with addenda of 2026-11-03 and 2026-11-07. Amendment 15 appended 2026-10-29. Amendment 16 appended 2026-11-10. Amendment 17 appended 2026-11-10. Amendment 18 appended 2026-11-10. Amendment 19 appended 2026-11-11. Amendment 20 appended 2026-11-11. Amendment 21 appended 2026-11-11. Amendment 22 appended 2026-11-13. Amendment 23 appended 2026-11-13.
+Accepted, 2026-09-22. Amendment 1 appended 2026-10-07. Amendment 2 appended 2026-10-15. Amendment 3 appended 2026-10-15. Amendment 4 appended 2026-10-15. Amendment 5 appended 2026-10-15. Amendment 6 appended 2026-10-15. Amendment 7 appended 2026-10-15. Amendment 8 appended 2026-10-16. Amendment 9 appended 2026-10-18. Amendment 10 appended 2026-10-23. Amendment 11 appended 2026-10-23. Amendment 12 appended 2026-10-23. Amendment 13 appended 2026-10-23. Amendment 14 appended 2026-10-26, with addenda of 2026-11-03 and 2026-11-07. Amendment 15 appended 2026-10-29. Amendment 16 appended 2026-11-10. Amendment 17 appended 2026-11-10. Amendment 18 appended 2026-11-10. Amendment 19 appended 2026-11-11. Amendment 20 appended 2026-11-11. Amendment 21 appended 2026-11-11. Amendment 22 appended 2026-11-13. Amendment 23 appended 2026-11-13. Amendment 24 appended 2026-11-13.
 
 ## Context
 
@@ -2724,3 +2724,26 @@ Recorded under KEY-1023 by the orchestrator while Zee was away. It is reversible
 - It is health data like the stats view. It is derived and holds no rows of its own, so it is not exported, and it goes when the entries go.
 - The repository reads it as `getPalateLoggedDays`, and a person with no entries reads as 0.
 - Implemented by KEY-1023, migration `20261113020100_palate_logged_days.sql`.
+
+### Amendment 24 (meal plan details settled in the build, 2026-11-13)
+
+Recorded under KEY-1027 by the orchestrator while Zee was away. Each change is reversible. They are what building Amendment 22's meal plan tables settled.
+
+- **`leftover_of` is a composite foreign key, not an insert-policy check.** Amendment 22 asked the `meal_plan_items` insert policy to require that `leftover_of` names an item of the same owner. Postgres refuses that policy (`infinite recursion detected in policy`), because it reads its own table. The table instead has `unique (id, owner_id)` and `foreign key (leftover_of, owner_id) references meal_plan_items (id, owner_id) on delete set null (leftover_of)`. This holds the same rule without RLS. A missing id and another person's id both fail with `23503`, so nothing leaks.
+- **A leftover names its cooking item by day and position.** The database gives items their ids, and the client has no `id` insert grant. So an item in `save_meal_plan` or `replace_meal_plan_day` may carry `leftover_of_position`, plus `leftover_of_day` when the cook is on another day.
+  - The function inserts the items without links first, then the leftovers, resolving each cook.
+  - `save_meal_plan` writes the days in date order, so a leftover may name an item on its own day or an earlier one.
+  - A leftover whose cook is not in the plan is refused with `22023`.
+  - A leftover must name its cook, not another leftover.
+  - `replace_meal_plan_day` on a cook's day deletes the cook, so the foreign key sets `leftover_of` to null on the leftovers of later days. The replan tool (KEY-1033) must handle those dependants.
+  - `meal_plan_items (day_id, position)` is a unique index, so a position names one item of a day and the cook lookup is never arbitrary.
+- **Further input checks**, all refused with `22023` and no quoted value:
+  - Every item names one of the plan's days.
+  - A day holds at most 200 items and a plan at most 500.
+  - A confirm carries 1 to 200 entries, each with the day's own `local_date`.
+  - `rules`, `target`, `nutrients` and `snapshot` must be JSON objects.
+  - A cast error (`22P02`) can quote an input value in the server log, as a check failure can quote a row. The repo keeps the code only.
+- **The item insert policy also checks the portion, as `food_log_entries` does.** Amendment 22 listed the day, the food and the recipe. Review found that without a portion clause a person could name another person's private portion with a global food and, through the `23503` of a missing id, learn whether a portion id exists. The policy now requires `portion_id is null or exists (select 1 from food_portions p where p.id = meal_plan_items.portion_id)`, under the `food_portions` policy.
+- **Confirming a day takes entries built in core.** `confirm_meal_plan_day(p_day_id, p_entries)` inserts rows that core built with `buildLogEntry` and `buildRecipeLogEntry`, in input order, under the same row-level security and column grants as any diary write. It locks the day row first, and stamps `confirmed_at` and `confirmed_entry_ids` in the same transaction. The function computes no snapshot.
+- **Not in the database, by design.** A new plan for an overlapping week replaces only the unconfirmed days of the old one, and Undo of a plan archives it. Both rules belong to the tools (KEY-1031, KEY-1033).
+- Implemented by KEY-1027, migration `20261113030000_meal_plans.sql`.

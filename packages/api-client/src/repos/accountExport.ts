@@ -73,6 +73,9 @@ const READ_PLANS: { [Table in AccountExportTable]: ReadPlan<Table> } = {
   entitlements: { ownerColumn: "user_id", orderColumns: ["user_id", "feature"] },
   feature_requests: { ownerColumn: "user_id", orderColumns: ["created_at", "id"] },
   palate_preferences: { ownerColumn: "owner_id", orderColumns: ["id"] },
+  meal_plans: { ownerColumn: "owner_id", orderColumns: ["id"] },
+  meal_plan_days: { ownerColumn: "owner_id", orderColumns: ["id"] },
+  meal_plan_items: { ownerColumn: "owner_id", orderColumns: ["id"] },
 };
 
 /**

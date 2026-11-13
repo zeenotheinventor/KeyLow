@@ -46,6 +46,9 @@ export const ACCOUNT_EXPORT_COVERAGE: Record<
   entitlements: "exported",
   feature_requests: "exported",
   palate_preferences: "exported",
+  meal_plans: "exported",
+  meal_plan_days: "exported",
+  meal_plan_items: "exported",
   muscles: {
     notExported: "Shared reference data, the same for everyone. No row belongs to the account.",
   },
