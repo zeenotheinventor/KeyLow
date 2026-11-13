@@ -39,7 +39,7 @@ export default async function MorePage() {
         <GroupedList title={MORE_SCREEN.nutrition.title} headerSize="compact">
           <TargetsRow />
           <ProgramRow />
-          <ListRow title={MORE_SCREEN.nutrition.recipes.title} href={recipesPath()} />
+          <ListRow title="Recipe book" href={recipesPath()} />
         </GroupedList>
         <GroupedList title={MORE_SCREEN.body.title} headerSize="compact">
           <ListRow title={MORE_SCREEN.body.weight.title} href="/weight" />
