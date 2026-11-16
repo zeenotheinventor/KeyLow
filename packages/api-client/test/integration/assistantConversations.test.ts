@@ -527,6 +527,7 @@ describe("the assistant conversation and its changes against the local stack wit
         messages: [],
         actions: [],
         olderCursor: null,
+        openTurn: null,
       });
     });
   });

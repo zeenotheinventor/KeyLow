@@ -72,6 +72,7 @@ beforeEach(() => {
 });
 afterEach(() => {
   server.resetHandlers();
+  vi.restoreAllMocks();
 });
 afterAll(() => {
   server.close();
@@ -91,14 +92,14 @@ const answerWith = (events: AssistantStreamEvent[]) => {
 };
 
 /** The turn the function stores for a message: the question, and the reply when it has one. */
-function storeTurn(question: string, reply: string | null) {
+function storeTurn(question: string, reply: string | null, createdAt = "2026-10-27T10:00:00Z") {
   const seq = state.messages.length;
   state.turns = [
     ...state.turns,
     {
       id: NEW_TURN_ID,
       status: reply === null ? "open" : "complete",
-      created_at: "2026-10-27T10:00:00Z",
+      created_at: createdAt,
     },
   ];
   state.messages = [
@@ -133,7 +134,8 @@ type ChatProps = { open: boolean };
 async function renderChat({
   expectedAccess = "open",
   isStrict = false,
-}: { expectedAccess?: string; isStrict?: boolean } = {}) {
+  resumeDetachedTurns,
+}: { expectedAccess?: string; isStrict?: boolean; resumeDetachedTurns?: boolean } = {}) {
   const client = createTestClient();
   await signInAs(client, SIGNED_IN_USER_ID);
   const { queryClient, wrapper: providers } = createWrapper(client, {
@@ -153,6 +155,7 @@ async function renderChat({
         deviceTimeZone: "Europe/London",
         onAnswerFinished,
         onTurnOnFailed,
+        resumeDetachedTurns,
       }),
     { wrapper, initialProps: { open: true } },
   );
@@ -587,6 +590,317 @@ describe("useAssistantChat", () => {
 
       expect(chat.result.current.composer).toMatchObject({ isShown: true, isFieldDisabled: true });
       expect(chat.result.current.canSendDraft).toBe(false);
+    });
+  });
+});
+
+// The 2 s reading of the stored conversation, seen from the timers it sets and clears.
+function watchPolling() {
+  const set = vi.spyOn(globalThis, "setInterval");
+  const cleared = vi.spyOn(globalThis, "clearInterval");
+  const startedIds = () => {
+    const ids: unknown[] = [];
+    set.mock.calls.forEach(([, delay], position) => {
+      if (delay === 2000) {
+        ids.push(set.mock.results[position]?.value);
+      }
+    });
+    return ids;
+  };
+  return {
+    started: () => startedIds().length,
+    isRunning: () =>
+      startedIds().some((id) => !cleared.mock.calls.some(([clearedId]) => clearedId === id)),
+  };
+}
+
+describe("useAssistantChat, resuming a detached turn", () => {
+  const turnThenWords = (words: string): AssistantStreamEvent[] => [
+    { type: "turn", turnId: NEW_TURN_ID, conversationId: STORED_CONVERSATION_ID },
+    { type: "text", delta: words },
+  ];
+  const turnThenNothing: AssistantStreamEvent[] = [];
+
+  /** The function finishing the turn it stored as open. */
+  function finishStoredTurn(reply: string) {
+    state.turns = state.turns.map((turn) =>
+      turn.id === NEW_TURN_ID ? { ...turn, status: "complete" } : turn,
+    );
+    state.messages = [
+      ...state.messages,
+      {
+        id: "n2",
+        turn_id: NEW_TURN_ID,
+        role: "assistant",
+        content: [{ type: "text", text: reply }],
+        display: null,
+        conversation_id: STORED_CONVERSATION_ID,
+        seq: state.messages.length + 1,
+      },
+    ];
+  }
+
+  const kinds = (chat: Awaited<ReturnType<typeof renderChat>>) =>
+    chat.result.current.thread.entries.map((entry) => entry.kind);
+
+  // The function stores the turn as open when it gets the request, and the stream then ends early.
+  async function sendAndDetach(
+    events: AssistantStreamEvent[],
+    createdAt = new Date().toISOString(),
+  ) {
+    answerTurnsWith(() => {
+      storeTurn("Hi", null, createdAt);
+      return turnResponse(events);
+    });
+    const chat = await renderChat({ resumeDetachedTurns: true });
+    act(() => {
+      chat.result.current.sendMessage("Hi");
+    });
+    await waitFor(() => {
+      expect(turnBodies).toHaveLength(1);
+      expect(chat.result.current.isStreaming).toBe(false);
+    });
+    return chat;
+  }
+
+  it("should show the turn as working, read again every 2 s, and then draw the stored reply and announce it once", async () => {
+    const chat = await sendAndDetach(turnThenWords("Let me"));
+
+    expect(kinds(chat).slice(-2)).toEqual(["you", "assistant"]);
+    expect(chat.result.current.thread.entries.at(-1)).toMatchObject({ isStreaming: true });
+    expect(chat.onAnswerFinished).not.toHaveBeenCalled();
+    const readsBefore = state.turnReads.length;
+
+    finishStoredTurn("You have 1,400 kcal left.");
+
+    await waitFor(
+      () => {
+        expect(texts(chat.result.current.thread.entries)).toContain("You have 1,400 kcal left.");
+      },
+      { timeout: 4000 },
+    );
+    expect(state.turnReads.length).toBeGreaterThan(readsBefore);
+    expect(chat.result.current.thread.entries.some((entry) => entry.kind === "notice")).toBe(false);
+    expect(chat.onAnswerFinished).toHaveBeenCalledTimes(1);
+    expect(chat.onAnswerFinished).toHaveBeenCalledWith("You have 1,400 kcal left.");
+    await waitFor(() => {
+      expect(chat.result.current.canSendDraft || chat.result.current.composer.isShown).toBe(true);
+    });
+  });
+
+  it("should show the working line while the turn is open and no words arrived", async () => {
+    const chat = await sendAndDetach([
+      { type: "turn", turnId: NEW_TURN_ID, conversationId: STORED_CONVERSATION_ID },
+    ]);
+
+    expect(chat.result.current.thread.entries.at(-1)).toMatchObject({
+      kind: "status",
+      text: "Thinking",
+    });
+  });
+
+  it("should keep Send off while the newest turn is open and on once it has ended", async () => {
+    const chat = await sendAndDetach(turnThenWords("Let me"));
+    act(() => {
+      chat.result.current.setDraft("Another");
+    });
+    expect(chat.result.current.canSendDraft).toBe(false);
+
+    finishStoredTurn("Done.");
+
+    await waitFor(
+      () => {
+        expect(chat.result.current.canSendDraft).toBe(true);
+      },
+      { timeout: 4000 },
+    );
+  });
+
+  it("should show the failed notice when the stored turn is still open 150 s after the phone first saw it", async () => {
+    const chat = await sendAndDetach(turnThenWords("Let me"));
+    expect(chat.result.current.thread.entries.some((entry) => entry.kind === "notice")).toBe(false);
+
+    // The phone's clock moves on 151 s, and the next read of the conversation notices.
+    const realNow = Date.now.bind(Date);
+    vi.spyOn(Date, "now").mockImplementation(() => realNow() + 151_000);
+
+    await waitFor(
+      () => {
+        expect(chat.result.current.thread.entries.at(-1)).toMatchObject({
+          kind: "notice",
+          notice: { code: "turn_failed" },
+        });
+      },
+      { timeout: 4000 },
+    );
+    expect(chat.onAnswerFinished).not.toHaveBeenCalled();
+  });
+
+  it("should not call a turn lost because the stored row looks old to a phone whose clock is ahead", async () => {
+    // The row's own created_at is far in the past by the phone's clock, as when the phone runs ahead.
+    const chat = await sendAndDetach(
+      turnThenWords("Let me"),
+      new Date(Date.now() - 600_000).toISOString(),
+    );
+
+    await new Promise((resolve) => {
+      setTimeout(resolve, 2500);
+    });
+
+    expect(chat.result.current.thread.entries.some((entry) => entry.kind === "notice")).toBe(false);
+    expect(chat.result.current.thread.entries.at(-1)).toMatchObject({ kind: "assistant" });
+  });
+
+  it("should show the failed notice for a turn the server marked failed", async () => {
+    const chat = await sendAndDetach(turnThenWords("Let me"));
+
+    state.turns = state.turns.map((turn) =>
+      turn.id === NEW_TURN_ID ? { ...turn, status: "failed" } : turn,
+    );
+
+    await waitFor(
+      () => {
+        expect(chat.result.current.thread.entries.at(-1)).toMatchObject({
+          kind: "notice",
+          notice: { code: "turn_failed" },
+        });
+      },
+      { timeout: 4000 },
+    );
+    expect(chat.onAnswerFinished).not.toHaveBeenCalled();
+  });
+
+  it("should show the failed notice, but not at once, for a turn that never reached the server", async () => {
+    // Nothing is stored, and no `turn` event came.
+    answerWith(turnThenNothing);
+    const chat = await renderChat({ resumeDetachedTurns: true });
+
+    act(() => {
+      chat.result.current.sendMessage("Hi");
+    });
+
+    // A sheet closed right after Send must not flash the failure: the read just after the detach is too soon.
+    await waitFor(() => {
+      expect(chat.result.current.isStreaming).toBe(false);
+    });
+    expect(chat.result.current.thread.entries.some((entry) => entry.kind === "notice")).toBe(false);
+    await waitFor(
+      () => {
+        expect(chat.result.current.thread.entries.at(-1)).toMatchObject({
+          kind: "notice",
+          notice: { code: "turn_failed" },
+        });
+      },
+      { timeout: 8000 },
+    );
+  }, 12_000);
+
+  it("should stop reading when the chat is closed", async () => {
+    const polling = watchPolling();
+    const chat = await sendAndDetach(turnThenWords("Let me"));
+    expect(polling.isRunning()).toBe(true);
+
+    chat.rerender({ open: false });
+
+    expect(polling.isRunning()).toBe(false);
+  });
+
+  it("should read the changes and the diary again when a detached turn ends", async () => {
+    const chat = await sendAndDetach(turnThenWords("Let me"));
+    chat.queryClient.setQueryData(keys.assistant.changes, "cached");
+    chat.queryClient.setQueryData(keys.diary.all, "cached");
+
+    finishStoredTurn("Done.");
+
+    await waitFor(
+      () => {
+        expect(texts(chat.result.current.thread.entries)).toContain("Done.");
+      },
+      { timeout: 4000 },
+    );
+    expect(chat.queryClient.getQueryState(keys.assistant.changes)?.isInvalidated).toBe(true);
+    expect(chat.queryClient.getQueryState(keys.diary.all)?.isInvalidated).toBe(true);
+  });
+
+  it("should draw the stored reply when the chat is opened again after the turn finished", async () => {
+    const chat = await sendAndDetach(turnThenWords("Let me"));
+    chat.rerender({ open: false });
+    finishStoredTurn("You have 1,400 kcal left.");
+
+    chat.rerender({ open: true });
+
+    await waitFor(() => {
+      expect(texts(chat.result.current.thread.entries)).toContain("You have 1,400 kcal left.");
+    });
+    expect(chat.result.current.thread.entries.some((entry) => entry.kind === "notice")).toBe(false);
+    expect(chat.onAnswerFinished).toHaveBeenCalledTimes(1);
+  });
+
+  it("should show the working line for a stored open turn with no live turn, as after a restart", async () => {
+    storeTurn("Hi", null, new Date().toISOString());
+    const chat = await renderChat({ resumeDetachedTurns: true });
+
+    expect(chat.result.current.thread.entries.at(-1)).toMatchObject({
+      kind: "status",
+      text: "Thinking",
+    });
+    act(() => {
+      chat.result.current.setDraft("Another");
+    });
+    expect(chat.result.current.canSendDraft).toBe(false);
+
+    chat.queryClient.setQueryData(keys.assistant.changes, "cached");
+    chat.queryClient.setQueryData(keys.diary.all, "cached");
+
+    finishStoredTurn("Done.");
+
+    await waitFor(
+      () => {
+        expect(texts(chat.result.current.thread.entries)).toContain("Done.");
+      },
+      { timeout: 4000 },
+    );
+    expect(chat.result.current.thread.entries.some((entry) => entry.kind === "status")).toBe(false);
+    expect(chat.onAnswerFinished).toHaveBeenCalledTimes(1);
+    expect(chat.onAnswerFinished).toHaveBeenCalledWith("Done.");
+    expect(chat.queryClient.getQueryState(keys.assistant.changes)?.isInvalidated).toBe(true);
+    expect(chat.queryClient.getQueryState(keys.diary.all)?.isInvalidated).toBe(true);
+  });
+
+  it("should draw no working line for a stored open turn when resume is off", async () => {
+    storeTurn("Hi", null, new Date().toISOString());
+    const chat = await renderChat();
+
+    expect(chat.result.current.thread.entries.some((entry) => entry.kind === "status")).toBe(false);
+  });
+
+  it("should start no reading when no turn is open", async () => {
+    const polling = watchPolling();
+    answerWith(replyEvents("Hello"));
+    const chat = await renderChat({ resumeDetachedTurns: true });
+    act(() => {
+      chat.result.current.sendMessage("Hi");
+    });
+    await waitFor(() => {
+      expect(texts(chat.result.current.thread.entries)).toContain("Hello");
+    });
+
+    expect(polling.started()).toBe(0);
+  });
+
+  it("should fail the turn as before when resume is off", async () => {
+    answerWith(turnThenWords("Let me"));
+    const chat = await renderChat();
+
+    act(() => {
+      chat.result.current.sendMessage("Hi");
+    });
+
+    await waitFor(() => {
+      expect(chat.result.current.thread.entries.at(-1)).toMatchObject({
+        kind: "notice",
+        notice: { code: "turn_failed" },
+      });
     });
   });
 });

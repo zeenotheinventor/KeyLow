@@ -2,6 +2,7 @@ import { parseAssistantEvent } from "@keylow/core";
 
 import {
   applyAssistantEvent,
+  detachedTurn,
   failedTurn,
   newLiveTurn,
   stoppedTurn,
@@ -38,17 +39,37 @@ type RunAssistantTurnOptions = {
   signal: AbortSignal;
   /** Called with the name of each event type or card kind that was skipped, and nothing else of it. */
   onKindSkipped?: ((skipped: SkippedKind) => void) | undefined;
+  /**
+   * A turn whose connection broke after the request went out is detached, not failed, because the server
+   * goes on with it and stores the reply. Off, as the web has it, such a turn is stopped or failed.
+   */
+  resumeDetachedTurns?: boolean | undefined;
 };
 
 const isEventStream = (response: StreamingResponse) =>
   response.headers.get("Content-Type")?.startsWith("text/event-stream") === true;
 
-// A turn that broke off with no `done` event: stopped when the person aborted it, failed otherwise.
-function endedWithoutDone(live: AssistantLiveTurn, signal: AbortSignal) {
+type EndState = {
+  signal: AbortSignal;
+  resumeDetachedTurns: boolean;
+  /** Whether the request went out and was answered as an event stream, so the server has the turn. */
+  streamed: boolean;
+  /** Whether a line was not an event the contract knows, which is a failure whatever the server does next. */
+  isUnreadable: boolean;
+};
+
+// A turn that broke off with no `done` event. With resume on it is detached when the server has it (the
+// stream broke, or the sheet closed after the request went out), and failed when the connection never gave
+// an answer or the answer could not be read. With resume off it is stopped when the person aborted it, and
+// failed otherwise.
+function endedWithoutDone(live: AssistantLiveTurn, end: EndState) {
   if (live.outcome !== null) {
     return live;
   }
-  return signal.aborted ? stoppedTurn(live) : failedTurn(live);
+  if (end.resumeDetachedTurns && !end.isUnreadable && (end.streamed || end.signal.aborted)) {
+    return detachedTurn(live, Date.now());
+  }
+  return end.signal.aborted ? stoppedTurn(live) : failedTurn(live);
 }
 
 /** `streamed` is whether the answer was an event stream, which is when the function may have written. */
@@ -67,13 +88,24 @@ export type AssistantTurnEnd = { live: AssistantLiveTurn; streamed: boolean };
  *   `onKindSkipped` the same way,
  * - a line that is not an event the contract knows otherwise stops the reading with the failed turn notice, and
  * - an abort through `signal` keeps what arrived and marks the turn stopped, and a signal that is already
- *   aborted sends nothing.
+ *   aborted sends nothing, and
+ * - with `resumeDetachedTurns` on, a stream that breaks or is aborted after the request went out leaves the
+ *   turn detached instead (the server goes on with it), while a connection that fails before any answer, or an
+ *   answer that cannot be read, is still the failed turn notice.
  * It also says whether the answer was an event stream, because from then on the function may have written,
  * whatever way the turn ended. A refused or non-stream answer has its body released and wrote nothing.
  * The message and the events are never logged, because they hold what the person said and ate.
  */
 export async function runAssistantTurn(
-  { fetch, turnUrl, accessToken, request, signal, onKindSkipped }: RunAssistantTurnOptions,
+  {
+    fetch,
+    turnUrl,
+    accessToken,
+    request,
+    signal,
+    onKindSkipped,
+    resumeDetachedTurns = false,
+  }: RunAssistantTurnOptions,
   onChange: (live: AssistantLiveTurn) => void,
 ): Promise<AssistantTurnEnd> {
   let live = newLiveTurn();
@@ -88,6 +120,9 @@ export async function runAssistantTurn(
   }
 
   let streamed = false;
+  let isUnreadable = false;
+  const ended = () =>
+    endedWithoutDone(live, { signal, resumeDetachedTurns, streamed, isUnreadable });
   try {
     const response = await fetch(turnUrl, {
       method: "POST",
@@ -111,6 +146,7 @@ export async function runAssistantTurn(
       const parsed = parseAssistantEvent(data);
       if (!parsed.ok) {
         if (parsed.reason !== "unknown_kind") {
+          isUnreadable = true;
           return false;
         }
         onKindSkipped?.({ subject: parsed.subject, kind: parsed.kind });
@@ -123,9 +159,9 @@ export async function runAssistantTurn(
       // Nothing follows `done`, so a connection a proxy holds open is not waited on.
       return parsed.event.type !== "done";
     });
-    show(endedWithoutDone(live, signal));
+    show(ended());
   } catch {
-    show(endedWithoutDone(live, signal));
+    show(ended());
   }
 
   return { live, streamed };

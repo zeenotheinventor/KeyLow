@@ -55,6 +55,7 @@ describe("useNewAssistantConversation", () => {
       expect(result.current.conversation.data).toEqual({
         conversationId: NEW_CONVERSATION_ID,
         items: [],
+        openTurn: null,
       });
     });
   });
@@ -81,7 +82,9 @@ describe("useDeleteAllAssistantConversations", () => {
     const { queryClient, wrapper } = createWrapper();
     // The sheet is closed, so its read is disabled and only the thread from its last open is cached.
     queryClient.setQueryData(keys.assistant.conversation, {
-      pages: [{ conversationId: "old", messages: [], actions: [], olderCursor: null }],
+      pages: [
+        { conversationId: "old", messages: [], actions: [], olderCursor: null, openTurn: null },
+      ],
       pageParams: [null],
     });
     renderHook(() => useAssistantConversation({ enabled: false }), { wrapper });
@@ -92,7 +95,7 @@ describe("useDeleteAllAssistantConversations", () => {
     await act(() => deleteAll.current.mutateAsync());
     const { result: opened } = renderHook(() => useAssistantConversation(), { wrapper });
 
-    expect(opened.current.data).toEqual({ conversationId: null, items: [] });
+    expect(opened.current.data).toEqual({ conversationId: null, items: [], openTurn: null });
   });
 
   it("should delete the conversations and leave the sheet with no thread", async () => {
@@ -115,7 +118,11 @@ describe("useDeleteAllAssistantConversations", () => {
     expect(state.deletedAllConversations).toBe(1);
     expect(state.deleteQuery).not.toBe("");
     await waitFor(() => {
-      expect(result.current.conversation.data).toEqual({ conversationId: null, items: [] });
+      expect(result.current.conversation.data).toEqual({
+        conversationId: null,
+        items: [],
+        openTurn: null,
+      });
     });
   });
 });

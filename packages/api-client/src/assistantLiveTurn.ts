@@ -26,6 +26,9 @@ type EventOfType<Type extends AssistantStreamEvent["type"]> = Omit<
  * before the end. `exerciseMuscles` are the muscles of each exercise the turn showed, and `exerciseFormMedia` the form video or photos of each, both in call order. `recipeDrafts` are the recipes the turn drafted, in call order, `recipeRefusals` the adjustments it refused and `recipeNotices` the notices for a recipe that did not come, both in call order and neither a gate `notice`. `link` is a
  * link that arrived on its own, and `askAgain` whether the turn offered the Ask
  * again quick reply. `outcome` is how the turn ended, null while it is still going or when it was stopped.
+ * `detached` is set when the connection broke (or the sheet closed) while the server may still be writing the
+ * turn: what arrived stays, and the stored conversation is read until the turn has a final status. It holds
+ * the time it happened, in milliseconds, which dates a turn that left no row.
  */
 export type AssistantLiveTurn = {
   turnId: string | null;
@@ -46,6 +49,7 @@ export type AssistantLiveTurn = {
   notice: AssistantNotice | null;
   stopped: boolean;
   outcome: EventOfType<"done">["outcome"] | null;
+  detached?: { atMs: number } | undefined;
 };
 
 export function newLiveTurn(): AssistantLiveTurn {
@@ -187,4 +191,13 @@ export function failedTurn(live: AssistantLiveTurn): AssistantLiveTurn {
   return saved === null
     ? { ...live, status: null, notice: live.notice ?? { code: "turn_failed" }, outcome: "failed" }
     : { ...saved, outcome: "failed" };
+}
+
+/**
+ * The turn after its connection broke while the server may still be running it, which is how the phone sees
+ * an app sent to the background, a connection the system dropped, or a closed sheet. What arrived stays and
+ * nothing is marked failed, because the stored conversation is the authority on how the turn ended.
+ */
+export function detachedTurn(live: AssistantLiveTurn, atMs: number): AssistantLiveTurn {
+  return { ...live, detached: { atMs } };
 }

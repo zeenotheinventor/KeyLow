@@ -211,6 +211,12 @@ type BuildInput = {
    * thread unless the thread already ends in that very notice. Null when nothing limits it.
    */
   accessNotice?: DescribableAssistantNotice | null;
+  /**
+   * Whether the newest stored turn is still open (the server is writing it) while no message sent from this
+   * sheet is drawn, which is how an app that was restarted finds a turn it lost the stream of. The working
+   * line is then drawn under the stored items. Off by default.
+   */
+  isStoredTurnOpen?: boolean;
 };
 
 // An entry before it knows whether it ends the thread.
@@ -644,6 +650,7 @@ export function buildAssistantSheetThread({
   live,
   isStreaming,
   accessNotice = null,
+  isStoredTurnOpen = false,
 }: BuildInput): AssistantSheetThread {
   const isSentShown =
     sent !== null && (isStreaming || !isSentTurnStored(items, sent.afterItemId, live));
@@ -653,6 +660,13 @@ export function buildAssistantSheetThread({
         ...sentEntries(sent, live, isStreaming),
       ]
     : storedEntries(items);
+  if (!isSentShown && isStoredTurnOpen) {
+    drafts.push({
+      kind: "status",
+      key: "stored:status",
+      text: describeAssistantStatus({ code: "thinking" }),
+    });
+  }
   const lastDraft = drafts.at(-1);
   const isAccessNoticeDrawn =
     accessNotice === null ||

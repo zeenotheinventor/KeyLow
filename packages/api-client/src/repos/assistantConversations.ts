@@ -336,6 +336,9 @@ export async function readAssistantActions(
   return { actions, targets, cards };
 }
 
+const openTurnOf = (turn: { id: string; status: string } | undefined): AssistantOpenTurn | null =>
+  turn?.status === "open" ? { turnId: turn.id, firstSeenAtMs: Date.now() } : null;
+
 export type AssistantConversationPage = {
   /** Null while the person has no conversation. */
   conversationId: string | null;
@@ -345,13 +348,27 @@ export type AssistantConversationPage = {
   actions: AssistantChangeAction[];
   /** Where the next older page starts, or null when no turn is older than this page. */
   olderCursor: AssistantThreadCursor | null;
+  /**
+   * The conversation's newest turn while it is still `open` (the server is writing it), with the time its row
+   * was created. Null for an older page, for a newest turn that has ended, and for no conversation.
+   */
+  openTurn: AssistantOpenTurn | null;
 };
+
+/**
+ * A turn the server has not finished: the `turn` event's id, and when this phone first read it as open, by
+ * the phone's own clock. The 150 s a turn may stay open is counted from that moment and not from the row's
+ * `created_at`, because a phone whose clock runs ahead of the server's would otherwise call a turn lost at once.
+ * This read stamps it with the time of the read, and `useAssistantConversation` keeps the earliest.
+ */
+export type AssistantOpenTurn = { turnId: string; firstSeenAtMs: number };
 
 const noConversation: AssistantConversationPage = {
   conversationId: null,
   messages: [],
   actions: [],
   olderCursor: null,
+  openTurn: null,
 };
 
 /**
@@ -434,6 +451,7 @@ export async function getAssistantConversationPage(
     ),
     actions: actions.actions,
     olderCursor: page.olderCursor,
+    openTurn: cursor === null ? openTurnOf(page.turns.at(-1)) : null,
   };
 }
 

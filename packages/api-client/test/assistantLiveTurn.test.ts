@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   applyAssistantEvent,
+  detachedTurn,
   failedTurn,
   newLiveTurn,
   stoppedTurn,
@@ -537,5 +538,27 @@ describe("stoppedTurn and failedTurn", () => {
 
       expect(stoppedTurn(once).text).toBe(once.text);
     });
+  });
+});
+
+describe("detachedTurn", () => {
+  it("should keep the ids and the words that arrived, with no notice and no outcome, and date the detach", () => {
+    const live = applyAll([
+      { type: "turn", turnId: TURN_ID, conversationId: CONVERSATION_ID },
+      { type: "text", delta: "Half an" },
+    ]);
+
+    expect(detachedTurn(live, 1234)).toEqual({ ...live, detached: { atMs: 1234 } });
+    expect(detachedTurn(live, 1234)).toMatchObject({
+      turnId: TURN_ID,
+      text: "Half an",
+      notice: null,
+      outcome: null,
+      stopped: false,
+    });
+  });
+
+  it("should leave a new turn with no detached state, so the old path is unchanged", () => {
+    expect(newLiveTurn().detached).toBeUndefined();
   });
 });
