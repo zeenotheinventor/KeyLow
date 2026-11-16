@@ -10,6 +10,7 @@ import { undoClient } from "./support/assistantUndoBackend";
 import { installVirtualClock } from "./support/virtualClock";
 
 import type { AssistantThreadItem } from "@keylow/core";
+import type { ScrollViewProps } from "react-native";
 
 jest.mock("@react-native-async-storage/async-storage", () => ({
   __esModule: true,
@@ -25,14 +26,23 @@ jest.mock(
     jest.requireActual<{ default: unknown }>("react-native-safe-area-context/jest/mock").default,
 );
 const mockScrollToEnd = jest.fn();
+let lastScrollViewProps: ScrollViewProps = {};
 jest.mock("@gorhom/bottom-sheet", () =>
   jest
-    .requireActual<{ mockBottomSheet: (onScrollToEnd: () => void) => unknown }>(
-      "./support/sheetScrollViewMock",
-    )
-    .mockBottomSheet(() => {
-      mockScrollToEnd();
-    }),
+    .requireActual<{
+      mockBottomSheet: (
+        onScrollToEnd: () => void,
+        onScrollViewProps: (props: ScrollViewProps) => void,
+      ) => unknown;
+    }>("./support/sheetScrollViewMock")
+    .mockBottomSheet(
+      () => {
+        mockScrollToEnd();
+      },
+      (props) => {
+        lastScrollViewProps = props;
+      },
+    ),
 );
 jest.mock("expo/fetch", () => ({ fetch: jest.fn() }));
 
@@ -186,6 +196,43 @@ describe("paging the assistant thread", () => {
       await layOut();
 
       expect(mockScrollToEnd).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("holding the view in place", () => {
+    const keptPosition = () => lastScrollViewProps.maintainVisibleContentPosition;
+
+    it("should not hold the visible position while the thread is followed to its end", async () => {
+      await render(sheetTree());
+      await grow();
+
+      expect(keptPosition()).toBeUndefined();
+    });
+
+    it("should hold the visible position once the person reads up the thread", async () => {
+      await render(sheetTree());
+      await dragTo(MID_THREAD);
+
+      expect(keptPosition()).toEqual({ minIndexForVisible: 0 });
+    });
+
+    it("should follow the end again, with no held position, when the person comes back to the end", async () => {
+      await render(sheetTree());
+      await dragTo(MID_THREAD);
+      await dragTo(AT_THE_END);
+
+      expect(keptPosition()).toBeUndefined();
+    });
+
+    it("should scroll to the newest message and hold no position when the thread grows at the end", async () => {
+      await render(sheetTree());
+      await grow();
+      mockScrollToEnd.mockClear();
+
+      await grow();
+
+      expect(mockScrollToEnd).toHaveBeenCalledTimes(1);
+      expect(keptPosition()).toBeUndefined();
     });
   });
 
