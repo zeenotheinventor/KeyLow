@@ -79,6 +79,8 @@ describe("the CoFID per-food density overrides against the real CSV", () => {
     ["17-367", "Salt"],
     ["17-356", "Bicarbonate of soda"],
     ["17-355", "Baking powder"],
+    ["17-709", "Tomato ketchup"],
+    ["17-723", "Worcestershire sauce"],
   ])("should give %s (%s) a cited density, so tsp and tbsp appear", (code, name) => {
     const row = rows.find((candidate) => candidate[codeColumn] === code);
 
@@ -89,6 +91,11 @@ describe("the CoFID per-food density overrides against the real CSV", () => {
   it.each([
     ["13-884", "mixed herbs, dried, a recipe of four herbs with no USDA twin"],
     ["13-891", "oregano, fresh, which USDA does not weigh by the spoon"],
+    ["17-707", "mint sauce, which USDA has no row for"],
+    ["17-811", "mint sauce, homemade, which USDA has no row for"],
+    ["17-719", "chilli sauce, whose water and sugar match neither USDA hot sauce row"],
+    ["17-703", "salad cream, which USDA has no comparable dressing for"],
+    ["17-704", "salad cream, reduced fat, which USDA has no comparable dressing for"],
   ])("should leave %s (%s) without a density", (code) => {
     expect(estimateDensity(cofidFoodByCode(code))).toBeNull();
   });
