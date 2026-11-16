@@ -84,6 +84,26 @@ const usdaPortionDensity = (
   };
 };
 
+/**
+ * Like `usdaPortionDensity`, for a USDA row that weighs several measures together, such as "2 Tbsp" of
+ * tartar sauce at 30 g. The grams are divided by the whole volume of the count, never halved by hand, so
+ * the source reads as USDA gives it.
+ */
+const usdaMultiPortionDensity = (
+  foods: string,
+  count: number,
+  measure: UsMeasure,
+  grams: number,
+  detail = "",
+): DensityEntry => {
+  const { name, ml } = US_MEASURES[measure];
+  const totalMl = Number((count * ml).toPrecision(6));
+  return {
+    gPerMl: Number((grams / totalMl).toPrecision(3)),
+    source: `${USDA_FDC_SR_LEGACY}, ${foods}: ${count} ${measure} weigh ${grams} g, over ${count} US ${name}s of ${ml} ml each (${totalMl} ml)${detail}`,
+  };
+};
+
 const milkDensity: DensityEntry = {
   gPerMl: 1.03,
   source: `${COFID_SPECIFIC_GRAVITY}: 1.03 for 12-313, 12-314, 12-418 and 12-419 (semi-skimmed), 12-320 (whole UHT) and 12-554 (skimmed UHT)`,
@@ -322,7 +342,7 @@ export const COFID_DENSITY_OVERRIDES: Readonly<Record<string, DensityEntry>> = {
   },
   // Every entry below is a USDA FoodData Central SR Legacy household portion (a "1 tbsp", "1 tsp" or "1 cup"
   // row of the food), read through the public API. Where a CoFID food has no USDA twin of its own the detail
-  // says which USDA food stands in for it. Foods with no row, or rows that disagree, have no entry.
+  // says which USDA food stands in for it. Foods with no row have no entry. Where a food's rows disagree, the detail says which row was used and why.
   // Porridge oats, unfortified
   "11-788": usdaPortionDensity(
     "FDC 173904 (Cereals, oats, regular and quick, not fortified, dry)",
@@ -1080,6 +1100,126 @@ export const COFID_DENSITY_OVERRIDES: Readonly<Record<string, DensityEntry>> = {
     220,
     "",
     "; its 1 tbsp row of 13.8 g gives 0.93",
+  ),
+  // Tomato ketchup. The cup row of 240 g gives 1.01, which disagrees with the tablespoon row.
+  "17-709": usdaPortionDensity(
+    "FDC 168556 (Catsup)",
+    "tbsp",
+    17,
+    "",
+    "; its cup row of 240 g gives 1.01, but the tablespoon row is the one with 36 data points and the cup row has none",
+  ),
+  // Worcestershire sauce
+  "17-723": usdaPortionDensity(
+    "FDC 171610 (Sauce, worcestershire)",
+    "cup",
+    275,
+    "",
+    "; its 1 tbsp row of 17 g gives 1.15",
+  ),
+  // Barbecue sauce
+  "17-705": usdaPortionDensity(
+    "FDC 174523 (Sauce, barbecue)",
+    "cup",
+    279,
+    "",
+    "; its 1 tbsp row of 17 g gives 1.15, and both rows have 54 data points",
+  ),
+  // Sweet and sour sauce, take-away
+  "17-336": usdaMultiPortionDensity(
+    "FDC 174066 (Sauce, sweet and sour, ready-to-serve)",
+    2,
+    "tbsp",
+    35,
+  ),
+  // Tartare sauce
+  "17-722": usdaMultiPortionDensity("FDC 171826 (Sauce, tartar, ready-to-serve)", 2, "tbsp", 30),
+  // Brown sauce, reduced salt and sugar, and brown fruity sauce. USDA has no brown sauce, so tomato based steak
+  // sauce stands in: it has comparable water (71 g per 100 g against CoFID's 79.2 and 68.2) and carbohydrate
+  // (22 g against 20 and 22.2).
+  "17-678": usdaMultiPortionDensity(
+    "FDC 171825 (Sauce, steak, tomato based), a stand-in for brown sauce",
+    2,
+    "tbsp",
+    34,
+  ),
+  "17-706": usdaMultiPortionDensity(
+    "FDC 171825 (Sauce, steak, tomato based), a stand-in for brown fruity sauce",
+    2,
+    "tbsp",
+    34,
+  ),
+  // French dressing
+  "17-701": usdaPortionDensity(
+    "FDC 171414 (Salad dressing, french dressing, commercial, regular)",
+    "cup",
+    250,
+    "",
+    "; its 1 tbsp row of 16 g gives 1.08",
+  ),
+  // French dressing, fat free
+  "17-716": usdaPortionDensity(
+    "FDC 171420 (Salad dressing, french dressing, fat-free)",
+    "cup",
+    256,
+    "",
+    "; its 1 tbsp row of 16 g gives 1.08",
+  ),
+  // Thousand island dressing
+  "17-717": usdaPortionDensity(
+    "FDC 171008 (Salad dressing, thousand island dressing, reduced fat), a stand-in for CoFID's thousand island dressing",
+    "cup",
+    245,
+    "",
+    "; its 1 tbsp row of 15 g gives 1.01",
+  ),
+  // Blue cheese dressing
+  "17-715": usdaPortionDensity(
+    "FDC 173562 (Salad dressing, blue or roquefort cheese dressing, commercial, regular)",
+    "cup",
+    245,
+    "",
+    "; its 1 tbsp row of 15 g gives 1.01",
+  ),
+  // French dressing, homemade, and oil and lemon dressing, homemade
+  "17-787": usdaPortionDensity(
+    "FDC 171416 (Salad dressing, french, home recipe)",
+    "cup",
+    220,
+    "",
+    "; its 1 tbsp row of 14 g gives 0.95",
+  ),
+  "17-788": usdaPortionDensity(
+    "FDC 171416 (Salad dressing, french, home recipe), a stand-in for an oil and lemon dressing, as both are oil with an acid",
+    "cup",
+    220,
+    "",
+    "; its 1 tbsp row of 14 g gives 0.95",
+  ),
+  // Mayonnaise, homemade, which takes the figure of the retail mayonnaise above
+  "17-809": usdaPortionDensity(
+    "FDC 171009 (Salad dressing, mayonnaise, regular), a stand-in for homemade mayonnaise",
+    "cup",
+    220,
+    "",
+    "; its 1 tbsp row of 13.8 g gives 0.93",
+  ),
+  // Mayonnaise, reduced fat. CoFID's holds 59.5 g water and 288 kcal per 100 g, between USDA's mayonnaise-type
+  // dressing (61.2 and 250) and its regular mayonnaise.
+  "17-679": usdaPortionDensity(
+    "FDC 171403 (Salad dressing, mayonnaise type, regular, with salt), a stand-in for reduced fat mayonnaise",
+    "cup",
+    235,
+    "",
+    "; its 1 tbsp row of 14.7 g gives 0.99, and FDC 173594 (mayonnaise, light) weighs 15 g a tablespoon",
+  ),
+  // Relish, corn, cucumber and onion
+  "17-708": usdaPortionDensity(
+    "FDC 168561 (Pickle relish, sweet), a stand-in for corn, cucumber and onion relish",
+    "cup",
+    245,
+    "",
+    "; its 1 tbsp row of 15 g gives 1.01",
   ),
   // Soy sauce, light and dark varieties
   "17-721": usdaPortionDensity(
