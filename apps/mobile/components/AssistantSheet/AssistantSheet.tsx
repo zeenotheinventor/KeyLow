@@ -42,6 +42,7 @@ const FULL_HEIGHT_SNAP_INDEX = 1;
 const NEAR_THE_END_DISTANCE = 40;
 // How far from the top of the thread, in points, a scroll of the person's own starts loading older turns.
 const NEAR_THE_TOP_DISTANCE = 300;
+const HOLD_VISIBLE_POSITION = { minIndexForVisible: 0 };
 // Scroll events carry on after a finger is lifted, while the flick settles. The library's scroll view does not
 // pass on the end of that, so the scroll counts as the person's until no event has arrived for this long.
 const SCROLL_SETTLED_MS = 150;
@@ -85,6 +86,13 @@ export function AssistantSheet({
   // they are. Only the person's own scroll changes it, never a scroll event the sheet's own scrollToEnd causes,
   // which can report an offset behind the end while the content grows under it.
   const isFollowingEnd = useRef(true);
+  // The visible position is only held while the person is away from the end. At the end it would hold the first
+  // visible turn on Android, which can move the view back after a reply lands and the sheet has scrolled to it.
+  const [isHoldingPosition, setIsHoldingPosition] = useState(false);
+  function setFollowingEnd(isFollowing: boolean) {
+    isFollowingEnd.current = isFollowing;
+    setIsHoldingPosition(!isFollowing);
+  }
   const chat = useAssistantChat({
     open,
     localDate,
@@ -105,10 +113,10 @@ export function AssistantSheet({
     // A kind the server sent and this app does not know is skipped, and the trail says which, by name only.
     onKindSkipped: recordSkippedKind,
     onMessageSent: () => {
-      isFollowingEnd.current = true;
+      setFollowingEnd(true);
     },
     onNewConversationStarted: () => {
-      isFollowingEnd.current = true;
+      setFollowingEnd(true);
     },
   });
   const { access, thread, composer, isOpening, isEmpty, setDraft } = chat;
@@ -118,6 +126,14 @@ export function AssistantSheet({
   const isUserScrolling = useRef(false);
   const scrollSettledTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
+  // Opening the sheet follows the end again. The held position is let go while rendering, as state follows a prop.
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) {
+      setIsHoldingPosition(false);
+    }
+  }
   useEffect(() => {
     if (open) {
       isFollowingEnd.current = true;
@@ -162,11 +178,11 @@ export function AssistantSheet({
   );
 
   function readUserScroll(event: NativeSyntheticEvent<NativeScrollEvent>) {
-    isFollowingEnd.current = distanceFromEnd(event.nativeEvent) <= NEAR_THE_END_DISTANCE;
+    setFollowingEnd(distanceFromEnd(event.nativeEvent) <= NEAR_THE_END_DISTANCE);
     // Reading up towards older turns is never followed back to the end, even in a thread short enough for
     // the top and the end to be within reach of each other, and the turns that load must not pull the view.
     if (chat.hasOlder && event.nativeEvent.contentOffset.y <= NEAR_THE_TOP_DISTANCE) {
-      isFollowingEnd.current = false;
+      setFollowingEnd(false);
       if (!chat.isLoadingOlder) {
         chat.loadOlder();
       }
@@ -309,7 +325,7 @@ export function AssistantSheet({
           }
           keyboardDismissMode="on-drag"
           keyboardShouldPersistTaps="handled"
-          maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
+          maintainVisibleContentPosition={isHoldingPosition ? HOLD_VISIBLE_POSITION : undefined}
           ref={scrollRef}
           onLayout={() => {
             // The scroll view gets its height after a cached thread has already settled its size, and again
