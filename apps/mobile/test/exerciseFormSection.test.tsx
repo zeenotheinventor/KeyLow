@@ -20,8 +20,6 @@ import { AccessibilityInfo } from "react-native";
 import { setUpTests } from "react-native-reanimated";
 
 import { ExerciseFormSection } from "../components/ExerciseFormSection";
-import { resetFormMediaPreferenceForTests } from "../lib/formMediaPreference/testing";
-import { ThemeProvider } from "../lib/theme";
 import { createDiaryQueryClient, diaryBackend, resetDiaryBackend } from "./support/diaryBackend";
 import {
   formMediaBackend,
@@ -30,6 +28,8 @@ import {
 } from "./support/formMediaBackend";
 import { compileKitStyles } from "./support/kitStyles";
 import { registerAppStyles } from "./support/nativeWindStyles";
+import { resetFormMediaPreferenceForTests } from "../lib/formMediaPreference/testing";
+import { ThemeProvider } from "../lib/theme";
 
 import type { QueryClient } from "@tanstack/react-query";
 

@@ -1,5 +1,6 @@
 import { SIGNED_OUT_SOURCE } from "@keylow/core/widgets";
 
+import { MessageWidget } from "./MessageWidget";
 import {
   messageModel,
   populatedSnapshot,
@@ -17,7 +18,6 @@ import {
   treeOf,
 } from "../test/widgetTree";
 import { widgetThemeFor } from "../theme";
-import { MessageWidget } from "./MessageWidget";
 
 describe.each(["dark", "light"] as const)(
   "a widget with nothing normal to show, in %s",

@@ -2,6 +2,7 @@ import { act, renderHook } from "@testing-library/react-native";
 import { AppState } from "react-native";
 
 import { replaceReminders } from "../lib/notifications";
+import { notificationsState, resetNotificationsMock } from "./support/expoNotificationsMock";
 import {
   REMINDER_DEBOUNCE_MILLISECONDS,
   useReminderScheduler,
@@ -11,7 +12,6 @@ import {
   reminderSettingsStorageKey,
   useReminderSettings,
 } from "../lib/reminderSettings";
-import { notificationsState, resetNotificationsMock } from "./support/expoNotificationsMock";
 
 import type { FoodReminderPlanInputs, ReminderPlanInputs } from "../lib/reminderScheduler";
 import type { AppStateStatus } from "react-native";

@@ -2,9 +2,9 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { useSupabase } from "../KeyLowProvider";
 import { keys } from "../queryKeys";
-import { clearActiveSessionInCache, refreshSessions } from "../sessionCache";
 import { useSingleFlight } from "./useSingleFlight";
 import { deleteSession } from "../repos/sessionWrites";
+import { clearActiveSessionInCache, refreshSessions } from "../sessionCache";
 
 /**
  * Deletes a session and its sets with one call to the database, so the heat read no longer counts

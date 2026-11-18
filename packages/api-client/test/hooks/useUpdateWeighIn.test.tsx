@@ -62,7 +62,9 @@ describe("useUpdateWeighIn", () => {
         .catch(() => undefined);
     });
 
-    expect(result.current.update.error).toBeInstanceOf(WeighInNotEditableError);
+    await waitFor(() => {
+      expect(result.current.update.error).toBeInstanceOf(WeighInNotEditableError);
+    });
     expect(JSON.stringify(result.current.update.error)).not.toContain(RECOGNISABLE_NOTE);
     expect(result.current.update.error?.message).not.toContain("81.234");
     expect(result.current.list.data?.[0]?.weight_kg).toBe(RECOGNISABLE_WEIGHT);

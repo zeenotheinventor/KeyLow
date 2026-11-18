@@ -1,10 +1,10 @@
 import { useRoutines } from "@keylow/api-client";
 import { useRouter } from "expo-router";
 
+import { useRestoreRoutine } from "./useRestoreRoutine";
 import { routinesPath } from "../../lib/routineRoutes";
 import { useReadsEnabled } from "../../lib/useReadsEnabled";
 import { ArchivedRoutinesView } from "../ArchivedRoutinesView";
-import { useRestoreRoutine } from "./useRestoreRoutine";
 
 /**
  * The archived routines, read from the list's one request, which brings them with the live routines. It is

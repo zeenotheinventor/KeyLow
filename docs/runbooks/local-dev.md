@@ -4,30 +4,31 @@ This runbook takes a new engineer from `git clone` to both apps running against 
 
 The commands were written for macOS. The steps that need a physical phone or an EAS account are marked **Device step** and are the only ones that cannot be checked from a laptop alone.
 
-If Node 22 is not your default, run `source ~/.nvm/nvm.sh && nvm use 22` in each new terminal before anything else.
+If Node 26 is not your default, run `source ~/.nvm/nvm.sh && nvm use 26` in each new terminal before anything else.
 
 ## 1. Prerequisites
 
 | Tool                                                 | Version             | Why                                                                                                          |
 | ---------------------------------------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------ |
 | git                                                  | any current version | Clone the repo. On a fresh Mac, `git clone` prompts you to install the Command Line Tools. That is not Xcode |
-| [nvm](https://github.com/nvm-sh/nvm) with Node       | 22 (see note below) | The db scripts run TypeScript through Node's built-in type stripping                                         |
-| pnpm, through Corepack                               | 10.34.5 (pinned)    | `package.json` pins it with `packageManager`, Corepack resolves it                                           |
+| [nvm](https://github.com/nvm-sh/nvm) with Node       | 26 (see note below) | The db scripts run TypeScript through Node's built-in type stripping                                         |
+| pnpm, through the corepack package                   | 10.34.5 (pinned)    | `package.json` pins it with `packageManager`, Corepack resolves it. Node 26 does not bundle Corepack         |
 | Docker Desktop, running                              | any current version | `supabase start` runs the whole local backend in containers                                                  |
 | [Supabase CLI](https://supabase.com/docs/guides/cli) | 2.106 or later      | Starts the stack, applies migrations, generates types, runs the pgTAP tests                                  |
 
-The repo pins Node 22 in `.nvmrc`, and `package.json` requires `>=22`. Use 22.18 or later, because the db scripts run TypeScript through Node's built-in type stripping, which is on by default from that release.
+The repo pins Node 26 in `.nvmrc`, and `package.json` requires `26.x`. The db scripts run TypeScript through Node's built-in type stripping, which is on by default.
 
-Install Node and turn Corepack on:
+Node 25 and later do not bundle Corepack, so install the `corepack` package from npm, then turn it on:
 
 ```sh
 nvm install
 nvm use
 node -v
-corepack enable
+npm install --global corepack
+corepack enable pnpm
 ```
 
-`nvm install` reads `.nvmrc`, so run it from inside the clone. Corepack only picks the pinned pnpm inside the repo. Outside it, `pnpm -v` reports a different default version, so check the version from the repo root:
+`nvm install` reads `.nvmrc`, so run it from inside the clone. The global install lands in the prefix of the Node you are on, so repeat the last two commands after you install a new Node. Corepack only picks the pinned pnpm inside the repo. Outside it, `pnpm -v` reports a different default version, so check the version from the repo root:
 
 ```sh
 pnpm -v
@@ -466,7 +467,7 @@ To update and start in one go, run this from the repo root:
 pnpm mobile:dev
 ```
 
-It pulls the current branch, runs `pnpm install`, and starts Metro with a clean cache. It stops before starting Metro if the pull cannot fast-forward (your branch has diverged) or would overwrite a file you have edited and not committed. pnpm runs under whichever Node your shell found, so run `source ~/.nvm/nvm.sh && nvm alias default 22` once if new terminals do not start on Node 22.
+It pulls the current branch, runs `pnpm install`, and starts Metro with a clean cache. It stops before starting Metro if the pull cannot fast-forward (your branch has diverged) or would overwrite a file you have edited and not committed. pnpm runs under whichever Node your shell found, so run `source ~/.nvm/nvm.sh && nvm alias default 26` once if new terminals do not start on Node 26.
 
 ### Two Ki-Lo apps on one phone
 

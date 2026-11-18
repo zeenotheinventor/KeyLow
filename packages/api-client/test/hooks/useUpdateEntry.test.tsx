@@ -160,7 +160,9 @@ describe("useUpdateEntry", () => {
         .catch(() => undefined);
     });
 
-    expect(result.current.update.isError).toBe(true);
+    await waitFor(() => {
+      expect(result.current.update.isError).toBe(true);
+    });
     expect(queryClient.getQueryData(keys.diary.day(DAY))).toMatchObject({
       entries: [{ id: lateSnack.id, quantity: 50 }],
     });

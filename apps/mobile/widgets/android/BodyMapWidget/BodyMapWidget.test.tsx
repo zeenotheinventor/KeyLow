@@ -1,7 +1,7 @@
+import { BodyMapWidget } from "./BodyMapWidget";
 import { populatedSnapshot, readyModel, readySource } from "../test/viewModels";
 import { svgsOf, taps, textsOf, treeOf } from "../test/widgetTree";
 import { widgetThemeFor } from "../theme";
-import { BodyMapWidget } from "./BodyMapWidget";
 
 describe.each(["dark", "light"] as const)("the Body map widget in %s", (scheme) => {
   const theme = widgetThemeFor(scheme);

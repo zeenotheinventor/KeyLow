@@ -4,10 +4,10 @@ import { AccessibilityInfo } from "react-native";
 import { setUpTests } from "react-native-reanimated";
 
 import { RecipeLibraryView } from "../components/RecipeLibraryView";
-import { sampleRecipes } from "../components/RecipeLibraryView/sampleRecipes";
-import { ThemeProvider } from "../lib/theme";
 import { compileKitStyles } from "./support/kitStyles";
 import { registerAppStyles } from "./support/nativeWindStyles";
+import { sampleRecipes } from "../components/RecipeLibraryView/sampleRecipes";
+import { ThemeProvider } from "../lib/theme";
 
 import type { RecipeLibraryViewProps } from "../components/RecipeLibraryView";
 import type { RecipeSummary } from "@keylow/api-client";

@@ -4,10 +4,10 @@ import { useRef } from "react";
 import { AppState, Dimensions, Keyboard, Platform, Text, View } from "react-native";
 import { SafeAreaInsetsContext } from "react-native-safe-area-context";
 
+import { stubKeyboard, subscription } from "./support/keyboardStub";
 import { resetKeyboardLiftReportForTests } from "../lib/sentry/reportKeyboardLiftOutOfRange";
 import { recordRoute } from "../lib/sentry/trail";
 import { useKeyboardLift } from "../lib/useKeyboardLift";
-import { stubKeyboard, subscription } from "./support/keyboardStub";
 
 import type { AppStateStatus } from "react-native";
 

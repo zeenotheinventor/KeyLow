@@ -1,10 +1,10 @@
 import { bodyMapRendererFor } from "@keylow/core/training";
 
+import { BodyViewIn3D } from "./BodyViewIn3D";
+import { useBody3DSupport } from "./useBody3DSupport";
 import { defaultBodyFigure } from "../../lib/bodyFigure";
 import { useBodyMapRenderer } from "../../lib/bodyMapRenderer";
 import { BodyFigure } from "../ui";
-import { BodyViewIn3D } from "./BodyViewIn3D";
-import { useBody3DSupport } from "./useBody3DSupport";
 
 import type { BodyViewProps } from "./types";
 

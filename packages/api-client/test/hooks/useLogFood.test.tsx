@@ -90,10 +90,11 @@ describe("useLogFood", () => {
 
     await act(() => result.current.log.mutateAsync({ ...noon, loggedAt: `${DAY}T06:15:00.000Z` }));
 
-    expect(result.current.day.data?.entries.map((entry) => entry.logged_at.slice(11, 16))).toEqual([
-      "06:15",
-      "08:00",
-    ]);
+    await waitFor(() => {
+      expect(
+        result.current.day.data?.entries.map((entry) => entry.logged_at.slice(11, 16)),
+      ).toEqual(["06:15", "08:00"]);
+    });
   });
 
   it("should refresh the day, the week and the recent foods", async () => {
@@ -124,8 +125,8 @@ describe("useLogFood", () => {
       // The day and the week both read the day logs.
       expect(fake.requests.dayLogReads).toBe(before.dayLogReads + 2);
       expect(fake.requests.recentReads).toBe(before.recentReads + 1);
+      expect(result.current.recent.data?.map((food) => food.foodId)).toEqual([FOOD_ID]);
     });
-    expect(result.current.recent.data?.map((food) => food.foodId)).toEqual([FOOD_ID]);
   });
 
   it("should mark the cached days stale, so a day not on screen is read again when it is opened", async () => {
@@ -230,7 +231,9 @@ describe("useLogFood", () => {
       await result.current.log.mutateAsync(noon).catch(() => undefined);
     });
 
-    expect(result.current.log.error).toHaveProperty("cause", { code: "XX000" });
+    await waitFor(() => {
+      expect(result.current.log.error).toHaveProperty("cause", { code: "XX000" });
+    });
     expect(queryClient.getQueryData(keys.diary.day(DAY))).toMatchObject({ entries: [] });
   });
 

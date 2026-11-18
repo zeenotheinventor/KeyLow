@@ -1,7 +1,7 @@
+import { TodayLoggingWidget } from "./TodayLoggingWidget";
 import { readyModel } from "../test/viewModels";
 import { backgroundColours, colourOfText, svgsOf, taps, textsOf, treeOf } from "../test/widgetTree";
 import { widgetThemeFor } from "../theme";
-import { TodayLoggingWidget } from "./TodayLoggingWidget";
 
 describe.each(["dark", "light"] as const)("the Today plus logging widget in %s", (scheme) => {
   const theme = widgetThemeFor(scheme);

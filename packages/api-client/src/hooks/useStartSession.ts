@@ -1,9 +1,9 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { useSupabase } from "../KeyLowProvider";
-import { putActiveSessionInCache, putSessionInCache, refreshSessions } from "../sessionCache";
 import { useSingleFlight } from "./useSingleFlight";
 import { startSession } from "../repos/sessionWrites";
+import { putActiveSessionInCache, putSessionInCache, refreshSessions } from "../sessionCache";
 
 import type { SessionStart } from "../repos/sessionWrites";
 

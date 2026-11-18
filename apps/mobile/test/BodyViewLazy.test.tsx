@@ -1,12 +1,12 @@
 import { act, render, screen } from "@testing-library/react-native";
 
 import { BodyView } from "../components/BodyView";
-import { resetBody3DSupportForTests } from "../components/BodyView/testing";
-import { resetBodyMapRendererForTests } from "../lib/bodyMapRenderer/testing";
-import { ThemeProvider } from "../lib/theme";
 import { body3DCanvasReads } from "./support/body3DCanvasReads";
 import { compileKitStyles } from "./support/kitStyles";
 import { registerAppStyles } from "./support/nativeWindStyles";
+import { resetBody3DSupportForTests } from "../components/BodyView/testing";
+import { resetBodyMapRendererForTests } from "../lib/bodyMapRenderer/testing";
+import { ThemeProvider } from "../lib/theme";
 
 import type { BodyViewProps } from "../components/BodyView";
 

@@ -552,7 +552,7 @@ describe("useAssistantConversation, older turns", () => {
   });
 
   it("should load the older page again on the next ask after a failure", async () => {
-    const { result } = await openLongConversation();
+    const { result, queryClient } = await openLongConversation();
     server.use(
       http.get(
         `${REST_URL}/assistant_turns`,
@@ -566,7 +566,10 @@ describe("useAssistantConversation, older turns", () => {
     act(() => {
       result.current.loadOlder();
     });
+    // isLoadingOlder is still false until React has drawn the read that just started, so it cannot
+    // tell the failure from the start. The query itself says when the read has failed.
     await waitFor(() => {
+      expect(queryClient.getQueryState(keys.assistant.conversation)?.status).toBe("error");
       expect(result.current.isLoadingOlder).toBe(false);
     });
 

@@ -10,6 +10,7 @@ import { WEIGH_IN_NOTE_MAX_CHARS } from "@keylow/core/weight";
 import { useState } from "react";
 import { View } from "react-native";
 
+import { SheetValueRow } from "./SheetValueRow";
 import { useNow } from "../../lib/useNow";
 import { useReadsEnabled } from "../../lib/useReadsEnabled";
 import {
@@ -23,7 +24,6 @@ import {
   Text,
   TimePicker,
 } from "../ui";
-import { SheetValueRow } from "./SheetValueRow";
 
 import type { WeighInSheetProps } from "./types";
 

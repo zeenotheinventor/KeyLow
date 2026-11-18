@@ -1,7 +1,7 @@
+import { TodayGlanceWidget } from "./TodayGlanceWidget";
 import { readyModel } from "../test/viewModels";
 import { colourOfText, svgsOf, taps, textsOf, treeOf } from "../test/widgetTree";
 import { widgetThemeFor } from "../theme";
-import { TodayGlanceWidget } from "./TodayGlanceWidget";
 
 describe.each(["dark", "light"] as const)("the Today at a glance widget in %s", (scheme) => {
   const theme = widgetThemeFor(scheme);

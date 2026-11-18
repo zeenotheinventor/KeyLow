@@ -1,9 +1,9 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { useSupabase } from "../KeyLowProvider";
+import { useSingleFlight } from "./useSingleFlight";
 import { setActiveRoutine } from "../repos/routineWrites";
 import { refreshTraining } from "../routineCache";
-import { useSingleFlight } from "./useSingleFlight";
 
 /**
  * Makes a routine the active one, which clears whichever was active, and resolves to it as stored with

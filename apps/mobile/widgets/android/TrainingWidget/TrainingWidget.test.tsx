@@ -1,3 +1,4 @@
+import { TrainingWidget } from "./TrainingWidget";
 import { NONCE, SESSION_ID, EXERCISE_ID } from "../../../test/support/widgetFixtures";
 import {
   pendingUndoOf,
@@ -16,7 +17,6 @@ import {
   treeOf,
 } from "../test/widgetTree";
 import { widgetThemeFor } from "../theme";
-import { TrainingWidget } from "./TrainingWidget";
 
 describe.each(["dark", "light"] as const)("the Training widget in %s", (scheme) => {
   const theme = widgetThemeFor(scheme);

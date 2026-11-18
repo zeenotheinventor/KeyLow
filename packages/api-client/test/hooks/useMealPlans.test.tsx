@@ -270,7 +270,9 @@ describe("the plan writes", () => {
         .catch(() => undefined);
     });
 
-    expect(result.current.error?.message).toBe("Could not confirm this day (22023)");
+    await waitFor(() => {
+      expect(result.current.error?.message).toBe("Could not confirm this day (22023)");
+    });
     await waitFor(() => {
       expect(plansRead).toBe(2);
     });

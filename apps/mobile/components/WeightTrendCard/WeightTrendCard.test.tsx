@@ -12,6 +12,7 @@ import { computeTrend } from "@keylow/core/engine";
 import { WEIGHT_RANGES, rangeWindow, weeklyRateKg } from "@keylow/core/weight";
 import { render, screen, userEvent, waitFor } from "@testing-library/react-native";
 
+import { WeightTrendCard } from "./WeightTrendCard";
 import { ThemeProvider } from "../../lib/theme";
 import { compileKitStyles } from "../../test/support/kitStyles";
 import { registerAppStyles } from "../../test/support/nativeWindStyles";
@@ -24,7 +25,6 @@ import {
   weighInRow,
 } from "../../test/support/weightBackend";
 import { WeightChart } from "../WeightChart";
-import { WeightTrendCard } from "./WeightTrendCard";
 
 import type { WeightChartData } from "@keylow/core/weight";
 

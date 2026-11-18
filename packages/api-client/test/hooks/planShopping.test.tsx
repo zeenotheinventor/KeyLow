@@ -183,9 +183,11 @@ describe("useAddPlanToList", () => {
       await result.current.mutateAsync({ shopping: shoppingOf() }).catch(() => undefined);
     });
 
-    expect(result.current.error?.message).toBe(
-      "Could not load the recipes for your shopping list (XX000)",
-    );
+    await waitFor(() => {
+      expect(result.current.error?.message).toBe(
+        "Could not load the recipes for your shopping list (XX000)",
+      );
+    });
     expect(fake.requests.filter(({ method }) => method !== "GET")).toEqual([]);
   });
 });

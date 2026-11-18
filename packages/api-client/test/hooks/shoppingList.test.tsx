@@ -231,7 +231,9 @@ describe("useToggleShoppingItem", () => {
         .catch(() => undefined);
     });
 
-    expect(result.current.toggle.error?.message).toBe("Could not tick the item (XX000)");
+    await waitFor(() => {
+      expect(result.current.toggle.error?.message).toBe("Could not tick the item (XX000)");
+    });
     fake.failWith(null);
     await waitFor(() => {
       expect(queryClient.getQueryData(keys.shoppingList.items)).toEqual([item]);
@@ -250,7 +252,9 @@ describe("useRemoveShoppingItem", () => {
       await result.current.remove.mutateAsync(item.id).catch(() => undefined);
     });
 
-    expect(result.current.remove.error?.message).toBe("Could not remove the item (XX000)");
+    await waitFor(() => {
+      expect(result.current.remove.error?.message).toBe("Could not remove the item (XX000)");
+    });
     fake.failWith(null);
     await waitFor(() => {
       expect(queryClient.getQueryData(keys.shoppingList.items)).toEqual([item]);

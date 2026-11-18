@@ -1,7 +1,7 @@
+import { ThisWeekWidget } from "./ThisWeekWidget";
 import { populatedSnapshot, readyModel, readySource } from "../test/viewModels";
 import { colourOfText, taps, textsOf, treeOf } from "../test/widgetTree";
 import { widgetThemeFor } from "../theme";
-import { ThisWeekWidget } from "./ThisWeekWidget";
 
 describe.each(["dark", "light"] as const)("the This week widget in %s", (scheme) => {
   const theme = widgetThemeFor(scheme);

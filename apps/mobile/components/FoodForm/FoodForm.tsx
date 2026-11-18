@@ -6,13 +6,13 @@ import { useRef, useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { useKeyboardLift } from "../../lib/useKeyboardLift";
 import { useScrollFocusedInputIntoView } from "../../lib/useScrollFocusedInputIntoView";
 import { Banner, Button, FieldError, Input, NumericInput, SegmentedControl, Text } from "../ui";
 import { describeSaveError } from "./describeSaveError";
 import { emptyFoodFormValues } from "./foodFormValues";
 import { mapIssuesToErrors, portionErrorKey } from "./mapIssuesToErrors";
 import { PortionCard } from "./PortionCard";
+import { useKeyboardLift } from "../../lib/useKeyboardLift";
 
 import type { FoodFormErrors, KeyedFoodFormValues } from "./mapIssuesToErrors";
 import type { NutrientFieldName, TextFieldName } from "./nutrientFields";

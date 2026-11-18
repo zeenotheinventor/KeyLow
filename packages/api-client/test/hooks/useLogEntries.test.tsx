@@ -157,10 +157,12 @@ describe("useLogEntries", () => {
         await result.current.log.mutateAsync(plate).catch(() => undefined);
       });
 
-      expect(result.current.log.error).toHaveProperty(
-        "message",
-        "Could not log the entries (XX000)",
-      );
+      await waitFor(() => {
+        expect(result.current.log.error).toHaveProperty(
+          "message",
+          "Could not log the entries (XX000)",
+        );
+      });
       expect(fake.rows).toEqual([]);
       expect(queryClient.getQueryData(keys.diary.day(DAY))).toMatchObject({ entries: [] });
     });
@@ -199,8 +201,10 @@ describe("useLogEntries", () => {
       await result.current.mutateAsync(plate).catch(() => undefined);
     });
 
+    await waitFor(() => {
+      expect(result.current.isError).toBe(true);
+    });
     expect(fake.requests.writes).toBe(1);
-    expect(result.current.isError).toBe(true);
     expect(result.current.isPaused).toBe(false);
   });
 

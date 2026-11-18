@@ -5,6 +5,7 @@
   },
   "build": {
     "base": {
+      "node": "26.13.1",
       "env": {
         "EXPO_PUBLIC_SUPABASE_URL": "https://kixqmrugtcwqdmvzazik.supabase.co",
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_VLA-EzM1x57JvajL11pqkg_jn7hPgMB",

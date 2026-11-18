@@ -222,8 +222,8 @@ describe("useAssistantChat", () => {
 
       await waitFor(() => {
         expect(chat.result.current.draft).toBe("");
+        expect(turnBodies).toMatchObject([{ text: "Hi there" }]);
       });
-      expect(turnBodies).toMatchObject([{ text: "Hi there" }]);
     });
   });
 

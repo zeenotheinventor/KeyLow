@@ -1,7 +1,7 @@
+import { WeighInWidget } from "./WeighInWidget";
 import { quickLogSnapshot, readyModel, readySource } from "../test/viewModels";
 import { backgroundColours, colourOfText, taps, textsOf, treeOf } from "../test/widgetTree";
 import { widgetThemeFor } from "../theme";
-import { WeighInWidget } from "./WeighInWidget";
 
 describe.each(["dark", "light"] as const)("the Weigh in widget in %s", (scheme) => {
   const theme = widgetThemeFor(scheme);
