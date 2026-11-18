@@ -6,10 +6,10 @@ import { vars } from "nativewind";
 import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { WeekAverages } from "./WeekAverages";
 import { useNow } from "../../lib/useNow";
 import { useReadsEnabled } from "../../lib/useReadsEnabled";
 import { ErrorState, SheetHeader, Skeleton } from "../ui";
-import { WeekAverages } from "./WeekAverages";
 
 function WeekAveragesForZone({ timeZone }: { timeZone: string }) {
   return <WeekAverages isReadEnabled today={toLocalDate(useNow(), timeZone)} />;

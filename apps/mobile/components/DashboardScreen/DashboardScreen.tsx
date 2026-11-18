@@ -1,12 +1,12 @@
 import { useProfileTimeZone } from "@keylow/api-client";
 import { DASHBOARD_LOAD_FAILED } from "@keylow/core/copy";
 
-import { useIsOnline } from "../../lib/connectivity";
-import { useReadsEnabled } from "../../lib/useReadsEnabled";
-import { ErrorState } from "../ui";
 import { DashboardFrame } from "./DashboardFrame";
 import { DashboardLoading } from "./DashboardLoading";
 import { DashboardToday } from "./DashboardToday";
+import { useIsOnline } from "../../lib/connectivity";
+import { useReadsEnabled } from "../../lib/useReadsEnabled";
+import { ErrorState } from "../ui";
 
 /**
  * The dashboard tab: today's nutrition. It stays mounted under the terms gate's cover, so every read waits

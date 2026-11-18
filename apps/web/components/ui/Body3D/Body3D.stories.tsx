@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 
 import { BodyFigure } from "../BodyFigure";
+import { Body3D } from "./Body3D";
 import { heatSteps, inTurn } from "../BodyFigure/storyValues";
 import { Button } from "../Button";
-import { Body3D } from "./Body3D";
 
 import type { Body3DProps } from "./types";
 import type { Meta, StoryObj } from "@storybook/nextjs";

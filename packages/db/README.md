@@ -8,7 +8,7 @@ import type { Database } from "@keylow/db";
 
 ## Prerequisites
 
-Docker running, the Supabase CLI installed, and Node 22.18 or later (the scripts run TypeScript with Node's built-in type stripping).
+Docker running, the Supabase CLI installed, and Node 26 (the scripts run TypeScript with Node's built-in type stripping).
 
 Everything below except `dev:db`, `stop:db`, `bundle-core-for-deno` and `check:functions` needs the local stack to be running, so start it first.
 

@@ -9,10 +9,10 @@ import { cleanup, render, screen, userEvent } from "@testing-library/react-nativ
 import { setUpTests } from "react-native-reanimated";
 
 import { TodayCard } from "../components/TodayCard";
-import { SetsProgressBar } from "../components/TodayCard/SetsProgressBar";
-import { ThemeProvider } from "../lib/theme";
 import { compileKitStyles } from "./support/kitStyles";
 import { registerAppStyles } from "./support/nativeWindStyles";
+import { SetsProgressBar } from "../components/TodayCard/SetsProgressBar";
+import { ThemeProvider } from "../lib/theme";
 
 import type { TodayCardProps } from "../components/TodayCard";
 import type { TodayCardContext, TodayCardWithSession } from "@keylow/core/copy";

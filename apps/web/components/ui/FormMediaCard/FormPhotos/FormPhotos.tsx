@@ -1,10 +1,10 @@
 import { EXERCISE_FORM, describeFormPhoto } from "@keylow/core/copy";
 import { useEffect, useState } from "react";
 
+import { usePrefersReducedMotion } from "./usePrefersReducedMotion";
 import { Badge } from "../../Badge";
 import { Card } from "../../Card";
 import { FormImage } from "../FormImage";
-import { usePrefersReducedMotion } from "./usePrefersReducedMotion";
 
 import type { FormPhotosProps } from "./types";
 

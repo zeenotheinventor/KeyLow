@@ -11,13 +11,13 @@ import { setUpTests } from "react-native-reanimated";
 
 import { ArchivedRoutinesView } from "../components/ArchivedRoutinesView";
 import { RoutinesView } from "../components/RoutinesView";
+import { compileKitStyles } from "./support/kitStyles";
 import {
   sampleActiveRoutine,
   sampleArchivedRoutines,
   sampleOtherRoutines,
 } from "../components/RoutinesView/sampleRoutines";
 import { ThemeProvider } from "../lib/theme";
-import { compileKitStyles } from "./support/kitStyles";
 import { registerAppStyles } from "./support/nativeWindStyles";
 
 import type { ArchivedRoutinesViewProps } from "../components/ArchivedRoutinesView";

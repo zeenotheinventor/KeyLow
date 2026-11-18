@@ -2,9 +2,9 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { useSupabase } from "../KeyLowProvider";
 import { keys } from "../queryKeys";
+import { useSingleFlight } from "./useSingleFlight";
 import { saveTrainingGoals } from "../repos/trainingGoals";
 import { refreshTraining } from "../routineCache";
-import { useSingleFlight } from "./useSingleFlight";
 
 import type { GoalAnswers } from "@keylow/core/training";
 

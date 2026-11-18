@@ -1,3 +1,4 @@
+import { LogAgainWidget } from "./LogAgainWidget";
 import { ENTRY_ID } from "../../../test/support/widgetFixtures";
 import {
   RECENT_FOODS,
@@ -17,7 +18,6 @@ import {
   treeOf,
 } from "../test/widgetTree";
 import { widgetThemeFor } from "../theme";
-import { LogAgainWidget } from "./LogAgainWidget";
 
 describe.each(["dark", "light"] as const)("the Log again widget in %s", (scheme) => {
   const theme = widgetThemeFor(scheme);

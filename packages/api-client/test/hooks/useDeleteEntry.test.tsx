@@ -250,7 +250,9 @@ describe("useDeleteEntry", () => {
       await result.current.remove.mutateAsync(breakfast).catch(() => undefined);
     });
 
-    expect(result.current.remove.error).toBeInstanceOf(EntryNotFoundError);
+    await waitFor(() => {
+      expect(result.current.remove.error).toBeInstanceOf(EntryNotFoundError);
+    });
     expect(result.current.remove.error?.message).not.toContain(breakfast.id);
   });
 });

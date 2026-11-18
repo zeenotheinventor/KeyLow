@@ -1,12 +1,12 @@
 import { memo } from "react";
 import { View } from "react-native";
 
+import { CompareFigures } from "./CompareFigures";
 import { Button } from "../../Button";
 import { Icon } from "../../Icon";
 import { Text } from "../../Text";
 import { AssistantActionCard } from "../AssistantActionCard";
 import { FitLine } from "../FitLine";
-import { CompareFigures } from "./CompareFigures";
 
 import type { AssistantRecipeCompareCardProps } from "./types";
 

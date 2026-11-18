@@ -1,10 +1,10 @@
+import { deriveFood } from "./deriveFood";
+import { RESTAURANT_ID_NAMESPACE, restaurantFoodId } from "./restaurantFoodId";
+import { parseRestaurantCsv, type RestaurantFoodRow } from "./restaurantFoodsCsv";
 import { sha256Hex } from "../cofid/checksum";
 import { sqlLiteral } from "../cofid/sqlLiteral";
 import { portionId } from "../portions/portionId";
 import { uuidV5 } from "../uuidV5";
-import { deriveFood } from "./deriveFood";
-import { RESTAURANT_ID_NAMESPACE, restaurantFoodId } from "./restaurantFoodId";
-import { parseRestaurantCsv, type RestaurantFoodRow } from "./restaurantFoodsCsv";
 
 /** The `foods` columns the migration inserts. barcode, density, micros, food_group and fetched_at keep their defaults, quality is added for a food whose macros are estimated, and deleted_at is never written. */
 const FOOD_COLUMNS = [

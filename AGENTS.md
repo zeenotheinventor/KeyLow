@@ -16,7 +16,9 @@ file only points at them. Keep it under 80 lines: a rule that needs more than a 
 
 ## Toolchain
 
-- Node 22 (`.nvmrc`). Node 20 breaks the build. Use `corepack pnpm`, never npm or yarn.
+- Node 26 (`.nvmrc`). Node 20 breaks the build. Node 25 and later do not bundle Corepack, so run
+  `npm install --global corepack` and `corepack enable pnpm` once per Node install. Use `pnpm`, never
+  npm or yarn for the repo.
 - Packages are consumed as TypeScript source. There is no `dist/` and no build step between them.
 - Four files are generated and ignored by git, never edit or commit them: the mobile kit barrel
   `components/ui/index.ts`, `Icon/iconMap.ts`, `Icon/iconColorTones.ts` and

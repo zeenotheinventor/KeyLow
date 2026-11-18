@@ -11,12 +11,12 @@ import { openURL } from "expo-linking";
 import { AccessibilityInfo } from "react-native";
 import { setUpTests } from "react-native-reanimated";
 
+import { compileKitStyles } from "./support/kitStyles";
+import { registerAppStyles } from "./support/nativeWindStyles";
 import { AssistantThread } from "../components/AssistantSheet/AssistantThread";
 import { ExerciseFormEntry } from "../components/AssistantSheet/ExerciseFormEntry";
 import { resetFormMediaPreferenceForTests } from "../lib/formMediaPreference/testing";
 import { ThemeProvider } from "../lib/theme";
-import { compileKitStyles } from "./support/kitStyles";
-import { registerAppStyles } from "./support/nativeWindStyles";
 
 import type { AssistantExerciseFormMedia, AssistantStoredMessage } from "@keylow/core";
 

@@ -58,8 +58,10 @@ function addBox(
 ) {
   const buffer = document.getRoot().listBuffers()[0] ?? document.createBuffer();
   const { positions, normals, indices } = boxArrays(centre, half);
-  const accessor = (array: Float32Array | Uint16Array, type: "VEC3" | "SCALAR") =>
-    document.createAccessor().setType(type).setArray(array).setBuffer(buffer);
+  const accessor = (
+    array: Float32Array<ArrayBuffer> | Uint16Array<ArrayBuffer>,
+    type: "VEC3" | "SCALAR",
+  ) => document.createAccessor().setType(type).setArray(array).setBuffer(buffer);
   const primitive: Primitive = document
     .createPrimitive()
     .setAttribute("POSITION", accessor(new Float32Array(positions), "VEC3"))

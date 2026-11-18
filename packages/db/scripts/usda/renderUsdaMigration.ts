@@ -1,10 +1,10 @@
+import { NORMALISED_COLUMNS } from "./normalise";
+import { USDA_ID_NAMESPACE, usdaFoodId } from "./usdaFoodId";
 import { sha256Hex } from "../cofid/checksum";
 import { parseCsv } from "../cofid/csv";
 import { sqlLiteral } from "../cofid/sqlLiteral";
 import { portionId } from "../portions/portionId";
 import { uuidV5 } from "../uuidV5";
-import { NORMALISED_COLUMNS } from "./normalise";
-import { USDA_ID_NAMESPACE, usdaFoodId } from "./usdaFoodId";
 
 type Column = (typeof NORMALISED_COLUMNS)[number];
 type CellValue = string | number | null | Record<string, unknown>;

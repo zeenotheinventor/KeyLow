@@ -82,7 +82,9 @@ describe("useDeleteWeighIn", () => {
       await result.current.remove.mutateAsync(newer).catch(() => undefined);
     });
 
-    expect(result.current.remove.error?.message).toBe("Could not delete the weigh-in (XX000)");
+    await waitFor(() => {
+      expect(result.current.remove.error?.message).toBe("Could not delete the weigh-in (XX000)");
+    });
     fake.failWith(null);
     await waitFor(() => {
       expect(queryClient.getQueryData(keys.weighIns.list)).toEqual([newer, older]);

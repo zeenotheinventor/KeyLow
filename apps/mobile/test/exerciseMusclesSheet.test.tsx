@@ -7,12 +7,12 @@ import { act, cleanup, render, screen, waitFor } from "@testing-library/react-na
 import { setUpTests } from "react-native-reanimated";
 
 import { ExerciseMusclesSheet } from "../components/ExerciseMusclesSheet";
-import { resetBodyFigureForTests } from "../lib/bodyFigure/testing";
-import { ThemeProvider } from "../lib/theme";
 import { createDiaryQueryClient } from "./support/diaryBackend";
 import { compileKitStyles } from "./support/kitStyles";
 import { registerAppStyles } from "./support/nativeWindStyles";
 import { resetTrainBackend, trainBackend, trainFetch } from "./support/trainBackend";
+import { resetBodyFigureForTests } from "../lib/bodyFigure/testing";
+import { ThemeProvider } from "../lib/theme";
 
 import type { ExerciseMusclesSheetProps } from "../components/ExerciseMusclesSheet";
 import type { Database } from "@keylow/api-client";

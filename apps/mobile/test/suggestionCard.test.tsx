@@ -3,9 +3,9 @@ import { cleanup, render, screen, userEvent } from "@testing-library/react-nativ
 import { setUpTests } from "react-native-reanimated";
 
 import { SuggestionCard } from "../components/SuggestionCard";
+import { installVirtualClock } from "./support/virtualClock";
 import { thursdayDetail, thursdayOffer } from "../components/SuggestionCard/storyStates";
 import { ThemeProvider } from "../lib/theme";
-import { installVirtualClock } from "./support/virtualClock";
 
 import type { SuggestionCardProps, SuggestionOfferState } from "../components/SuggestionCard";
 

@@ -1,9 +1,11 @@
 // pnpm --filter @keylow/body-model verify <file.glb>...
 //
 // Checks each glb against the asset contract and prints the problems. Exits 1 when any file has one.
-import { register } from "node:module";
+import { registerHooks } from "node:module";
 
-register("./resolveExtensionlessTypeScript.ts", import.meta.url);
+import { resolve } from "./resolveExtensionlessTypeScript.ts";
+
+registerHooks({ resolve });
 // Imported after the hook is registered, because the contract reads the muscle ids from @keylow/core.
 const { verifyGlbFile } = await import("./verifyGlb.ts");
 

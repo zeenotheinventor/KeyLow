@@ -4,11 +4,11 @@ import { AccessibilityInfo } from "react-native";
 import { getAnimatedStyle, setUpTests } from "react-native-reanimated";
 
 import { BodyView } from "../components/BodyView";
+import { compileKitStyles } from "./support/kitStyles";
+import { registerAppStyles } from "./support/nativeWindStyles";
 import { resetBody3DSupportForTests } from "../components/BodyView/testing";
 import { resetBodyMapRendererForTests } from "../lib/bodyMapRenderer/testing";
 import { ThemeProvider } from "../lib/theme";
-import { compileKitStyles } from "./support/kitStyles";
-import { registerAppStyles } from "./support/nativeWindStyles";
 
 import type { BodyViewProps } from "../components/BodyView";
 import type { BodyMapRenderer } from "@keylow/core/training";

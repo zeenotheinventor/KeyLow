@@ -1,9 +1,9 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { useSupabase } from "../KeyLowProvider";
+import { useSingleFlight } from "./useSingleFlight";
 import { setRoutineArchived } from "../repos/routineWrites";
 import { refreshRoutines } from "../routineCache";
-import { useSingleFlight } from "./useSingleFlight";
 
 type ArchiveInput = { id: string; archived: boolean };
 

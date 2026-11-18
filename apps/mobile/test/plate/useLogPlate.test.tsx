@@ -1,6 +1,9 @@
 import { onlineManager } from "@tanstack/react-query";
 import { act, renderHook, screen } from "@testing-library/react-native";
 
+import { mockLogEntries, resetPlateApiClientMock } from "./support/plateApiClientMock";
+import { chickenAndRice, oatBarInBars, oatBarInGrams } from "./support/plateItems";
+import { sheetProviders, usePlateAndLogging } from "./support/plateSheet";
 import {
   foodFixture,
   mockGetFood,
@@ -12,9 +15,6 @@ import {
 } from "../foods/support/apiClientMock";
 import { goldenRecipe } from "../foods/support/recipeFixtures";
 import { resetRouterMock, routerMock } from "../support/expoRouterMock";
-import { mockLogEntries, resetPlateApiClientMock } from "./support/plateApiClientMock";
-import { chickenAndRice, oatBarInBars, oatBarInGrams } from "./support/plateItems";
-import { sheetProviders, usePlateAndLogging } from "./support/plateSheet";
 
 import type { LogEntriesItem } from "@keylow/api-client";
 import type { LogContext } from "@keylow/core/diary";

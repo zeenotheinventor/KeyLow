@@ -1,7 +1,7 @@
+import { LogGridWidget } from "./LogGridWidget";
 import { readyModel } from "../test/viewModels";
 import { backgroundColours, colourOfText, svgsOf, taps, textsOf, treeOf } from "../test/widgetTree";
 import { widgetThemeFor } from "../theme";
-import { LogGridWidget } from "./LogGridWidget";
 
 describe.each(["dark", "light"] as const)("the Log grid widget in %s", (scheme) => {
   const theme = widgetThemeFor(scheme);

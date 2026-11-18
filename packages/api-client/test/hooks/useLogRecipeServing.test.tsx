@@ -152,7 +152,12 @@ describe("useLogRecipeServing", () => {
       await result.current.log.mutateAsync(servingInput).catch(() => undefined);
     });
 
-    expect(result.current.log.error).toHaveProperty("message", "Could not log the recipe (XX000)");
+    await waitFor(() => {
+      expect(result.current.log.error).toHaveProperty(
+        "message",
+        "Could not log the recipe (XX000)",
+      );
+    });
     // A lost response may still have stored the row, so the day is read again even after a failure.
     await waitFor(() => {
       expect(fake.requests.dayReads).toBe(readsBefore + 1);

@@ -1,7 +1,7 @@
+import { TodayRingWidget } from "./TodayRingWidget";
 import { readyModel, readySource } from "../test/viewModels";
 import { backgroundColours, colourOfText, svgsOf, taps, textsOf, treeOf } from "../test/widgetTree";
 import { widgetThemeFor } from "../theme";
-import { TodayRingWidget } from "./TodayRingWidget";
 
 describe.each(["dark", "light"] as const)("the Today ring widget in %s", (scheme) => {
   const theme = widgetThemeFor(scheme);

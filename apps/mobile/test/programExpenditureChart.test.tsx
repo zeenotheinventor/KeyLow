@@ -4,10 +4,10 @@ import { KeyLowProvider } from "@keylow/api-client";
 import { act, render, screen, userEvent } from "@testing-library/react-native";
 
 import { ProgramScreen } from "../components/ProgramScreen";
-import { ExpenditureChartCard } from "../components/ProgramScreen/ExpenditureChartCard";
-import { ThemeProvider } from "../lib/theme";
 import { createDiaryQueryClient, diaryBackend, resetDiaryBackend } from "./support/diaryBackend";
 import { resetRouterMock } from "./support/expoRouterMock";
+import { ExpenditureChartCard } from "../components/ProgramScreen/ExpenditureChartCard";
+import { ThemeProvider } from "../lib/theme";
 import {
   PROGRAM_ID,
   programBackend,

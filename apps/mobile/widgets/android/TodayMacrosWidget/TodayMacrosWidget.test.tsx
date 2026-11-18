@@ -1,7 +1,7 @@
+import { TodayMacrosWidget } from "./TodayMacrosWidget";
 import { readyModel } from "../test/viewModels";
 import { colourOfText, svgsOf, taps, textsOf, treeOf } from "../test/widgetTree";
 import { widgetThemeFor } from "../theme";
-import { TodayMacrosWidget } from "./TodayMacrosWidget";
 
 describe.each(["dark", "light"] as const)("the Today with macros widget in %s", (scheme) => {
   const theme = widgetThemeFor(scheme);

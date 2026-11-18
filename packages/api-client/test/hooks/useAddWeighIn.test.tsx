@@ -65,7 +65,9 @@ describe("useAddWeighIn", () => {
       await result.current.mutateAsync(input).catch(() => undefined);
     });
 
-    expect(result.current.error?.message).toBe("Could not add the weigh-in (23514)");
+    await waitFor(() => {
+      expect(result.current.error?.message).toBe("Could not add the weigh-in (23514)");
+    });
     expect(JSON.stringify(result.current.error)).not.toContain("81.234");
     expect(result.current.error?.message).not.toContain(RECOGNISABLE_NOTE);
   });
