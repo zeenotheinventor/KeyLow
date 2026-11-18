@@ -466,6 +466,13 @@ jobs:
     if: needs.scope.outputs.mobile == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # The runner has 7 GB, and Node sizes its default heap from that to about 2 GB, on Node 22 and 26
+    # alike. The app's ESLint run needs about 2.1 GB (it fails at a 2048 MB limit on both), and a Jest
+    # shard, run in one process on the 2 cores, holds 1.8 GB by its last test file. That left no
+    # headroom, and the first run on Node 26 crashed with a V8 out of memory (exit 134). 4 GB still
+    # leaves the runner room for lint and type-check to run side by side.
+    env:
+      NODE_OPTIONS: --max-old-space-size=4096
     strategy:
       fail-fast: false
       matrix:

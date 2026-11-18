@@ -33,6 +33,11 @@ runs:
     - uses: actions/setup-node@v7
       with:
         node-version-file: .nvmrc
+    # Node picks its default heap limit from the memory of the machine, so the limit is in the log of
+    # every job, next to the runner size above.
+    - name: Show the Node version and heap limit
+      shell: bash
+      run: node -p "process.version + ', heap limit ' + Math.round(require('v8').getHeapStatistics().heap_size_limit / 1048576) + ' MB'"
     # Node 26 does not bundle Corepack, so a pinned corepack is installed from npm. It then fetches
     # the pnpm that "packageManager" names, the first time `pnpm` runs. pnpm/action-setup ran pnpm's
     # self-installer instead, which took 3 to 13 s. The version is printed so that every job's log
