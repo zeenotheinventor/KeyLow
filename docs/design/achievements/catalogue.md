@@ -1,7 +1,7 @@
 # Ki-Lo achievements and streaks: spec
 
-Status: approved by Zee, revised with Zee's answers (2026-11-19): Day complete drives the streak, unlimited freezes, no weight-goal badges, points and levels in. This file is the
-spec the Linear tickets point at.
+Status: approved by Zee on 2026-11-19, including the KEY-1081 rulings. This file is the spec the
+Linear tickets under KEY-1079 point at.
 
 ## Principles
 
@@ -14,20 +14,23 @@ spec the Linear tickets point at.
   shared by mobile and web.
 - Existing users are backfilled on first launch: everything they already earned unlocks quietly,
   with one summary card ("You have already earned 23 achievements") instead of 23 celebrations.
-- Each achievement has a tier: Bronze, Silver, Gold or Platinum. Hidden ones show as "???" until
-  earned.
+- Each achievement has a tier: Bronze, Silver, Gold or Platinum. The section "Hidden and seasonal"
+  (123 to 128) shows as "???" until earned. Everything else, including Collector and
+  Completionist, is visible with its progress.
 
 ## Streaks
 
 | Streak | Unit | A period counts when | Shown on |
 | --- | --- | --- | --- |
 | Daily streak (the main one) | day | you tap "Day complete" in the Diary for that local day | Dashboard chip, Diary header |
-| Training streak | week (Mon to Sun) | you completed the number of sessions your routine plans for that week, or 3 if you have no routine | Train tab |
+| Training streak | week (Mon to Sun) | you finished as many sessions as your training goal's days per week in force that week, else your active routine's day count, else 3 | Train tab |
 | Weigh-in streak | week | at least one weigh-in that week | Weight screen |
 
 - Days follow the user's local date, the same `local_date` the diary already uses, so travelling
   never breaks a streak.
-- Today is "at risk", not broken, until local midnight. The streak only resets the next morning.
+- Today is "at risk", not broken, until local midnight. Because yesterday can still be completed
+  until 12:00, a missed day is only settled (a freeze used, or the streak reset) at 12:00 the next
+  day.
 - "Day complete" sits at the bottom of the Diary. It needs at least one entry that day and can be
   undone until midnight. Yesterday can still be completed until 12:00 today, for late eaters who
   forget before bed.
@@ -95,7 +98,7 @@ Points never go down.
 | 8 | Planner | planning your first day of meals | Bronze |
 | 9 | Hello, Ki-Lo | asking the assistant your first question | Bronze |
 | 10 | Nudge Me | turning on a reminder | Bronze |
-| 11 | Measured Up | recording your first body measurement | Bronze |
+| 11 | Measured Up | your first body composition reading from Health | Bronze |
 | 12 | Closing Time | completing your first day | Bronze |
 
 ### 2. Logging volume (11)
@@ -135,7 +138,10 @@ Points never go down.
 
 ### 4. Targets (12)
 
-"In range" means the window the targets screen already shows, never simply under.
+"In range" means within the meal-plan fit tolerance (`toleranceOf` in
+`packages/core/src/recipes/fit/judgeTargets.ts`) of that day's target: the engine target in force,
+else your own targets. The day must be complete. Protein counts when you reach at least the target,
+so going over is fine. Being under range never counts.
 
 | # | Name | Earn it by | Tier |
 | --- | --- | --- | --- |
@@ -216,13 +222,18 @@ Points never go down.
 
 ### 9. Strength and range (8)
 
+A personal record is a session whose best counted set for an exercise beats every earlier
+session's best by the existing `isBetter` rule (`packages/core/src/training/exerciseTrend.ts`):
+heavier load, then more reps at that load, warm-ups excluded. An exercise's first session is never
+a record.
+
 | # | Name | Earn it by | Tier |
 | --- | --- | --- | --- |
-| 92 | Personal Best | your first personal record | Bronze |
+| 92 | Personal Best | your first personal record (see the note above this table) | Bronze |
 | 93 | On a Roll | 10 personal records | Silver |
 | 94 | Record Breaker | 50 personal records | Gold |
 | 95 | Hall of Fame | 100 personal records | Platinum |
-| 96 | Full Body | every muscle group trained in one week | Silver |
+| 96 | Full Body | all six main muscle groups (not neck) trained as a primary muscle in one week | Silver |
 | 97 | Leg Day Legend | 25 workouts that train legs | Silver |
 | 98 | Well Rounded | 50 different exercises | Gold |
 | 99 | Form Check | watching an exercise demo | Bronze |
@@ -240,20 +251,20 @@ Consistency only. No badge is tied to how much weight changed or to a weight goa
 | 104 | Four Weeks Weighed | 4-week weigh-in streak | Bronze |
 | 105 | Quarter Weighed | 12-week weigh-in streak | Silver |
 | 106 | Year Weighed | 52-week weigh-in streak | Gold |
-| 107 | Tape Measure | 10 body measurements | Silver |
+| 107 | Body Reader | 10 body composition readings | Silver |
 | 108 | Morning Routine | 30 weigh-ins before 09:00 | Silver |
-| 109 | Tape Collection | 50 body measurements | Gold |
+| 109 | Composition Collector | 50 body composition readings | Gold |
 
 ### 11. Programme and check-ins (6)
 
 | # | Name | Earn it by | Tier |
 | --- | --- | --- | --- |
-| 110 | Signed Up | starting a programme | Bronze |
+| 110 | Signed Up | 4 weeks on a programme | Bronze |
 | 111 | Checking In | your first check-in | Bronze |
 | 112 | Monthly Review | 4 check-ins | Silver |
 | 113 | Quarterly Review | 12 check-ins | Gold |
-| 114 | Graduate | finishing a programme | Gold |
-| 115 | Course Correct | updating your targets after a check-in | Bronze |
+| 114 | Graduate | 12 check-ins on one programme | Gold |
+| 115 | Course Correct | editing your targets | Bronze |
 
 ### 12. Ki-Lo explorer (7)
 
@@ -284,8 +295,8 @@ Consistency only. No badge is tied to how much weight changed or to a weight goa
 
 1. Core: catalogue as data, a stats snapshot type, pure evaluators, streak maths with freezes,
    points and levels. Logic only, so exempt from the design gate.
-2. Database: `user_achievements` (unlocked at, seen at) and a freeze ledger. an RPC that returns
-   the stats snapshot, pgTAP tests. Day complete already exists (`day_logs.is_complete`).
+2. Database: `user_achievements` (unlocked at, seen at), a freeze ledger and an RPC that returns
+   the stats snapshot, with pgTAP tests. Day complete already exists (`day_logs.is_complete`).
 3. Design: frames for the Achievements screen, unlock toast, Gold and Platinum moment, Dashboard
    streak chip and streak calendar.
 4. Mobile: evaluate after each write (log, weigh-in, workout, recipe), backfill on first launch,
@@ -297,5 +308,5 @@ Consistency only. No badge is tied to how much weight changed or to a weight goa
 7. A few achievements need tracking that does not exist yet (barcode scans, demo views, week view
    opens). Those ship in a follow-up ticket with their counters.
 
-
-Tickets: Linear brief KEY-1079, children KEY-1080 to KEY-1096. Items that name a concept Ki-Lo does not have yet (targets "in range", personal records, programme badges, tape measurements) wait on Zee's rulings in KEY-1081 and are corrected here by KEY-1093.
+Tickets: Linear brief KEY-1079, children KEY-1080 to KEY-1096. Zee's rulings on the items that
+needed a concept Ki-Lo did not have (KEY-1081) are already folded in above.
