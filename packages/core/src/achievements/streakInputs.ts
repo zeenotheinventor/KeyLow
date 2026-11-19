@@ -59,3 +59,22 @@ export const weighInWeeksOf = (weighInDates: readonly string[]): WeekRecord[] =>
     .map(([weekStart, days]) => ({ weekStart, achieved: days.size, required: 1 }))
     .sort((first, second) => first.weekStart.localeCompare(second.weekStart));
 };
+
+/**
+ * The training weeks with this week always among them. A week with no finished session has no row, so
+ * without this the week in progress would not say how many sessions it plans.
+ */
+export const trainingWeeksThroughOf = (
+  stats: StoredAchievementStats,
+  today: string,
+): WeekRecord[] => {
+  const weeks = trainingWeeksOf(stats);
+  const thisWeekStart = addCalendarDays(today, -daysSinceMonday(today));
+  if (weeks.some((record) => record.weekStart === thisWeekStart)) {
+    return weeks;
+  }
+  return [
+    ...weeks,
+    { weekStart: thisWeekStart, achieved: 0, required: plannedSessionsFor(stats, thisWeekStart) },
+  ];
+};

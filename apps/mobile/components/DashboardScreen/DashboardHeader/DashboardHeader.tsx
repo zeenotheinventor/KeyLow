@@ -9,9 +9,9 @@ import type { DashboardHeaderProps } from "./types";
 /**
  * The top of the dashboard, as the board draws it: today's date in the muted caption over the screen's
  * title. The date's line keeps its 16 points while the date is not known yet, so the title does not move
- * when it arrives.
+ * when it arrives. The streak chip, when there is one, sits at the end of the title's line.
  */
-export function DashboardHeader({ eyebrow, title }: DashboardHeaderProps) {
+export function DashboardHeader({ eyebrow, title, trailing }: DashboardHeaderProps) {
   const insets = useSafeAreaInsets();
 
   return (
@@ -25,9 +25,12 @@ export function DashboardHeader({ eyebrow, title }: DashboardHeaderProps) {
             </Text>
           )}
         </View>
-        <Text role="heading" variant="h1">
-          {title}
-        </Text>
+        <View className="flex-row items-center justify-between gap-2">
+          <Text className="shrink" role="heading" variant="h1">
+            {title}
+          </Text>
+          {trailing}
+        </View>
       </View>
     </View>
   );

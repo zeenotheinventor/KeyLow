@@ -57,3 +57,4 @@ export type {
   BadgeState,
   TierColourToken,
 } from "./art";
+export { trainingWeeksThroughOf, weighInWeeksOf } from "./streakInputs";

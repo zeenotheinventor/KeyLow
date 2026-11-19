@@ -13,7 +13,7 @@ export type WeeklyWalk = {
 const DAYS_PER_WEEK = 7;
 
 /** A week counts when it reaches its required count, and never when nothing was done in it. */
-function weekCounts(record: WeekRecord | undefined): boolean {
+export function weekCounts(record: WeekRecord | undefined): boolean {
   return record !== undefined && record.achieved >= Math.max(record.required, 1);
 }
 

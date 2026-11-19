@@ -27,10 +27,11 @@ color-scheme:dark;
 --success-muted:rgba(92,214,122,0.14);
 --warning-muted:rgba(255,159,67,0.14);
 --danger-muted:rgba(255,92,92,0.14);
-/* ink: coloured text. Accent and warning turn to primary text in light; success turns to a darker green, #126D31, 4.5:1 or more on the success tint */
+/* ink: coloured text. Accent and warning turn to primary text in light; success turns to a darker green, #126D31, 4.5:1 or more on the success tint; protein turns to a deeper blue, #1F54C9, 5:1 or more on the protein tint */
 --accent-ink:#CCF249;
 --warning-ink:#FF9F43;
 --success-ink:#5CD67A;
+--protein-ink:#6E9BFF;
 /* macros — tuned to read on dark, always paired with a label */
 --protein:#6E9BFF;
 --carbs:#F2C14E;
@@ -86,6 +87,7 @@ color-scheme:light;
 --accent-ink:#0F131A;
 --warning-ink:#0F131A;
 --success-ink:#126D31;
+--protein-ink:#1F54C9;
 --protein:#2F6BEA;
 --carbs:#B9800E;
 --fat:#C2399A;

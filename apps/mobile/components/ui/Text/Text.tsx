@@ -29,6 +29,7 @@ const textToneClassName: Record<TextTone, string> = {
   "success-ink": "text-success-ink",
   danger: "text-danger",
   "accent-ink": "text-accent-ink",
+  "protein-ink": "text-protein-ink",
 };
 
 export function Text({

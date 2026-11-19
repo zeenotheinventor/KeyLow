@@ -24,6 +24,7 @@ import { Banner, ErrorState, IconButton, Skeleton } from "../ui";
 import { TrainBodyMap } from "./TrainBodyMap";
 import { TrainFirstTime } from "./TrainFirstTime";
 import { TrainNoRoutine } from "./TrainNoRoutine";
+import { TrainStreakCard } from "./TrainStreakCard";
 import { useTrainSuggestion } from "./useTrainSuggestion";
 
 import type { TrainScreenProps, TrainSessionStart } from "./types";
@@ -169,6 +170,7 @@ export function TrainScreen({
         }
       />
       <ScrollView className="flex-1" contentContainerClassName="gap-3 px-4 pb-4 pt-1">
+        <TrainStreakCard />
         {isOnline ? null : (
           <Banner
             body={

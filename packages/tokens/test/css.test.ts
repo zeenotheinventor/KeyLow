@@ -143,6 +143,7 @@ describe("kilo-tokens.css", () => {
       "--accent-ink": "#CCF249",
       "--warning-ink": "#FF9F43",
       "--success-ink": "#5CD67A",
+      "--protein-ink": "#6E9BFF",
       "--camera": "#07090D",
       "--viewfinder-dim": "rgba(0,0,0,0.35)",
       "--type-label-small-size": "14px",
@@ -159,6 +160,7 @@ describe("kilo-tokens.css", () => {
       "--accent-ink": "#0F131A",
       "--warning-ink": "#0F131A",
       "--success-ink": "#126D31",
+      "--protein-ink": "#1F54C9",
       "--camera": "#07090D",
       "--viewfinder-dim": "rgba(0,0,0,0.35)",
     });

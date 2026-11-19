@@ -64,11 +64,12 @@ describe("preset as consumed by Tailwind", () => {
     });
   });
 
-  it("should resolve the ink colours as nested shades, so the classes read text-accent-ink, text-warning-ink and text-success-ink", () => {
+  it("should resolve the ink colours as nested shades, so the classes read text-accent-ink, text-warning-ink, text-success-ink and text-protein-ink", () => {
     expect(resolvedTheme.colors).toMatchObject({
       accent: { ink: "rgb(var(--kl-accent-ink) / <alpha-value>)" },
       warning: { ink: "rgb(var(--kl-warning-ink) / <alpha-value>)" },
       success: { ink: "rgb(var(--kl-success-ink) / <alpha-value>)" },
+      protein: { ink: "rgb(var(--kl-protein-ink) / <alpha-value>)" },
       camera: "rgb(var(--kl-camera) / <alpha-value>)",
       "viewfinder-dim": "var(--kl-viewfinder-dim)",
     });
@@ -132,6 +133,7 @@ describe("the classes the design's screens are written with", () => {
     "text-accent-ink",
     "text-warning-ink",
     "text-success-ink",
+    "text-protein-ink",
     "bg-camera",
     "bg-viewfinder-dim",
     "bg-body-silhouette",
