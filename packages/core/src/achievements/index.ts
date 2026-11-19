@@ -38,3 +38,22 @@ export type { LevelUp, NotificationInput, UnlockNotificationPayload } from "./no
 export { runAchievements } from "./run";
 export type { RunInput, RunResult } from "./run";
 export * from "./streaks";
+export {
+  BADGE_ART,
+  BADGE_GRADIENTS,
+  BADGE_MOTIFS,
+  BADGE_VIEW_BOX_SIZE,
+  achievementTierOf,
+  badgeDrawing,
+} from "./art";
+export type {
+  BadgeArt,
+  BadgeDrawing,
+  BadgeGradient,
+  BadgeGradientName,
+  BadgeMotifName,
+  BadgePaint,
+  BadgeShape,
+  BadgeState,
+  TierColourToken,
+} from "./art";
