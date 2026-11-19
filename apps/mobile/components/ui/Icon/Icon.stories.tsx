@@ -72,9 +72,11 @@ const names: IconName[] = [
   "SearchX",
   "Shield",
   "ShieldAlert",
+  "Snowflake",
   "SunMoon",
   "Target",
   "Trash2",
+  "Trophy",
   "TriangleAlert",
   "Utensils",
   "Weight",
@@ -113,6 +115,8 @@ export const Tones: Story = {
       </View>
       {/* The warning ink is the warning colour in dark and the primary text colour in light, beside warning words. */}
       <Icon {...args} tone="warning-ink" />
+      {/* The protein blue, for the snowflake of a freeze. */}
+      <Icon {...args} tone="protein" />
       <View className="rounded-small bg-danger-muted p-2">
         <Icon {...args} tone="danger" />
       </View>

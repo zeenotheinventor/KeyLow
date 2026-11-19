@@ -843,6 +843,31 @@ describe("the More screen", () => {
     });
   });
 
+  describe("Achievements", () => {
+    it("should be an enabled row in Settings, after Reminders, with its icon and a chevron", async () => {
+      await renderMore();
+
+      const settings = within(screen.getByLabelText("Settings"));
+      const row = settings.getByRole("button", { name: "Achievements" });
+
+      expect(row).toBeEnabled();
+      expect(drawingsIn(row)).toHaveLength(2);
+      const rows = settings.getAllByRole("button");
+      expect(rows.indexOf(row)).toBe(
+        rows.indexOf(settings.getByRole("button", { name: "Reminders" })) + 1,
+      );
+    });
+
+    it("should open the Achievements screen inside the More tab when pressed", async () => {
+      const user = userEvent.setup();
+      await renderMore();
+
+      await user.press(screen.getByRole("button", { name: "Achievements" }));
+
+      expect(routerMock.push).toHaveBeenCalledWith("/more/achievements");
+    });
+  });
+
   describe("Workout suggestions", () => {
     it("should be a switch in Settings, on by default, after Reminders", async () => {
       await renderMore();

@@ -1,6 +1,12 @@
 import { ACHIEVEMENT_TIER_NAMES, HIDDEN_BADGE_LABEL } from "./achievementBadge";
 import { ACHIEVEMENT_CATEGORY_NAMES, ACHIEVEMENT_COPY } from "./achievements";
-import { ACHIEVEMENT_CATEGORIES, ACHIEVEMENTS, TIER_POINTS } from "../achievements";
+import { describeFreezeBonus } from "./achievementsScreen";
+import {
+  ACHIEVEMENT_CATEGORIES,
+  ACHIEVEMENTS,
+  TIER_POINTS,
+  freezesForBadge,
+} from "../achievements";
 
 import type {
   AchievementCategory,
@@ -254,13 +260,6 @@ const formatEarnedDate = (unlockedAt: string): string =>
     year: "numeric",
   });
 
-const freezeBonusOf = (tier: string): string | undefined => {
-  if (tier === "gold") {
-    return "+1 freeze";
-  }
-  return tier === "platinum" ? "+3 freezes" : undefined;
-};
-
 /** What the badge dialog shows: earned with its date and points, locked with its progress, hidden keeping its secret. */
 export const webBadgeDetail = ({ id, result, unlockedAt }: WebBadgeDetailInput): WebBadgeDetail => {
   const definition = definitionOf(id);
@@ -296,7 +295,7 @@ export const webBadgeDetail = ({ id, result, unlockedAt }: WebBadgeDetailInput):
     };
   }
 
-  const freezeBonus = freezeBonusOf(definition.tier);
+  const freezes = freezesForBadge(definition);
   const { current, target } = result.progress;
   return {
     ...common,
@@ -312,7 +311,7 @@ export const webBadgeDetail = ({ id, result, unlockedAt }: WebBadgeDetailInput):
       : {}),
     facts: [
       { label: "Worth", value: `+${points} points` },
-      ...(freezeBonus === undefined ? [] : [{ label: "Bonus", value: freezeBonus }]),
+      ...(freezes === 0 ? [] : [{ label: "Bonus", value: describeFreezeBonus(freezes) }]),
     ],
   };
 };

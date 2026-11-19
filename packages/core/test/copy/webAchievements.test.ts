@@ -204,6 +204,16 @@ describe("webBadgeDetail", () => {
     expect(bronze.facts.map(({ label }) => label)).toEqual(["Worth"]);
   });
 
+  it("gives a locked Getting started badge its one freeze, as the phone does", () => {
+    const detail = webBadgeDetail({
+      id: "first-bite",
+      result: { id: "first-bite", earned: false, progress: { current: 0, target: 1 } },
+      unlockedAt: undefined,
+    });
+
+    expect(detail.facts).toContainEqual({ label: "Bonus", value: "+1 freeze" });
+  });
+
   it("shows no progress bar for a one-off badge", () => {
     const detail = webBadgeDetail({
       id: "first-bite",

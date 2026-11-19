@@ -1,5 +1,6 @@
 import { ACHIEVEMENTS } from "./catalogue";
 import { buildNotification } from "./notification";
+import { unseenBackfilledIdsOf } from "./seen";
 
 import type { AchievementId } from "./catalogue";
 import type { UnlockNotificationPayload } from "./notification";
@@ -47,7 +48,7 @@ export const decideCelebrations = ({
   isBackfill,
   alreadyQueued,
 }: CelebrationInput): CelebrationDecision => {
-  const quietCount = held.filter(({ seenAt, backfilled }) => backfilled && seenAt === null).length;
+  const quietCount = unseenBackfilledIdsOf(held).length;
 
   if (isBackfill) {
     const summary = quietCount + recorded.length;

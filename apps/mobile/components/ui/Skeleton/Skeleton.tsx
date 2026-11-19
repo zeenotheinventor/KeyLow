@@ -482,6 +482,32 @@ function SkeletonAssistantThread() {
   );
 }
 
+// The Achievements screen's loading board: the level card, the three stat tiles, a heading bar and two rows of
+// four round badges. The screen gives their sides.
+const badgeBoneKeys = ["first", "second", "third", "fourth", "fifth", "sixth", "seventh", "eighth"];
+
+function SkeletonAchievements() {
+  return (
+    <View className="gap-4" testID="skeleton-achievements">
+      <SkeletonBone className="h-[118px] rounded-large" />
+      <View className="flex-row gap-2">
+        <SkeletonBone className="h-[68px] flex-1 rounded-medium" />
+        <SkeletonBone className="h-[68px] flex-1 rounded-medium" />
+        <SkeletonBone className="h-[68px] flex-1 rounded-medium" />
+      </View>
+      <SkeletonBone className="h-[20px] w-[160px]" />
+      {/* The same four columns as the category grid, so the bones line up with the badges that replace them. */}
+      <View className="-mx-1 flex-row flex-wrap">
+        {badgeBoneKeys.map((key) => (
+          <View key={key} className="w-1/4 items-center px-1 pb-3" testID="skeleton-badge-cell">
+            <SkeletonBone className="h-[56px] w-[56px] rounded-full" />
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
 /**
  * What a list shows while it loads, shaped like the content that replaces it. It draws nothing for the
  * first 200 ms (`--skeleton-delay`), so a load that is quick never flickers, then fades in. It is hidden
@@ -508,6 +534,7 @@ export function Skeleton({ variant = "row", rows = 3 }: SkeletonProps) {
       {variant === "program" ? <SkeletonProgram /> : null}
       {variant === "bodyComposition" ? <SkeletonBodyComposition /> : null}
       {variant === "assistantThread" ? <SkeletonAssistantThread /> : null}
+      {variant === "achievements" ? <SkeletonAchievements /> : null}
       {variant === "favourites" ? <SkeletonFavourites /> : null}
       {variant === "row" ? <SkeletonRow index={0} /> : null}
       {variant === "recipeGroup" ? (
