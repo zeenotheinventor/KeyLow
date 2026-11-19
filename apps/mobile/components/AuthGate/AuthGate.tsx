@@ -3,6 +3,7 @@ import { useRouter, useSegments } from "expo-router";
 import { useEffect, useState } from "react";
 import { View } from "react-native";
 
+import { AchievementSync } from "../../lib/achievements";
 import { takeNewTargets } from "../../lib/checkinToast";
 import { clearRecipePrefill } from "../../lib/recipePrefill";
 import { useCancelRemindersWhenSignedOut } from "../../lib/reminderScheduler";
@@ -153,6 +154,7 @@ export function AuthGate({ children, readStoredUserId = readNoStoredUserId }: Au
           <TermsGate onStateChange={setTermsGateState} />
           <SetupGate />
           <DeviceTimeZoneSync />
+          <AchievementSync />
           <HealthImportRunner />
           <CheckinRunner />
           <ReminderScheduler />

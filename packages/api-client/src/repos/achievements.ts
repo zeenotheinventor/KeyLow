@@ -34,6 +34,26 @@ export async function fetchAchievementStats(
 }
 
 /**
+ * When the signed in user's first achievements run was recorded as a backfill, or null while it has not
+ * been. The stats snapshot does not carry it, so it is read from the profile. A missing profile row reads
+ * as null, which is the quiet backfill, the safe side.
+ */
+export async function fetchAchievementsBackfilledAt(
+  client: SupabaseClient<Database>,
+): Promise<string | null> {
+  const { data, error } = await client
+    .from("profiles")
+    .select("achievements_backfilled_at")
+    .maybeSingle();
+
+  if (error) {
+    throw repoError("read the achievements backfill state", error);
+  }
+
+  return data?.achievements_backfilled_at ?? null;
+}
+
+/**
  * Records the achievements earned and resolves to the ids that were new to the database, which is what
  * one device is told to celebrate. An ordinary run with nothing earned sends nothing. A backfill is
  * always sent, even with no ids, because it is what marks the backfill done.

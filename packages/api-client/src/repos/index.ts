@@ -252,6 +252,7 @@ export { createFeatureRequest, isDailyLimitFailure } from "./featureRequests";
 export {
   appendFreezeEvents,
   fetchAchievementStats,
+  fetchAchievementsBackfilledAt,
   markAchievementsSeen,
   recordAchievements,
 } from "./achievements";

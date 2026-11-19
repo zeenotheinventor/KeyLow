@@ -5,6 +5,15 @@ export type {
   AchievementId,
   AchievementTier,
 } from "./catalogue";
+export { decideCelebrations } from "./celebrations";
+export type {
+  CelebrationDecision,
+  CelebrationEntry,
+  CelebrationInput,
+  HeldRow,
+} from "./celebrations";
+export { reminderEnabledFrom } from "./reminderEnabled";
+export type { ReminderSwitches } from "./reminderEnabled";
 export { evaluateAchievements } from "./evaluate";
 export type { AchievementProgress, AchievementResult } from "./evaluate";
 export { TIER_POINTS, levelFor, pointsForLevel, totalPoints } from "./points";
