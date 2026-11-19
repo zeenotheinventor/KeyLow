@@ -24,3 +24,8 @@ export type {
   StoredAchievementStats,
 } from "./stats";
 export type { StreakInput, StreakRun } from "./streakInput";
+export { buildNotification } from "./notification";
+export type { LevelUp, NotificationInput, UnlockNotificationPayload } from "./notification";
+export { runAchievements } from "./run";
+export type { RunInput, RunResult } from "./run";
+export * from "./streaks";

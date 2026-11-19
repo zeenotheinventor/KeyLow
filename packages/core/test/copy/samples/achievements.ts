@@ -18,4 +18,9 @@ export const samples: Record<string, () => string[]> = {
     });
     return [single.title, single.body, several.title, several.body];
   },
+  levelUpNotification: () => {
+    const alone = copy.levelUpNotification({ level: 6, levelName: "Sapling", freezes: 0 });
+    const withFreezes = copy.levelUpNotification({ level: 6, levelName: "Sapling", freezes: 2 });
+    return [alone.title, alone.body, withFreezes.title, withFreezes.body];
+  },
 };

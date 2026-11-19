@@ -7,6 +7,7 @@ import {
   BEYOND_LEGEND_LEVEL_NAME,
   LEVEL_NAMES,
   levelNameFor,
+  levelUpNotification,
   unlockNotification,
 } from "../../src/copy/achievements";
 
@@ -139,5 +140,23 @@ describe("unlockNotification", () => {
     expect(() =>
       unlockNotification({ badgeIds: [], points: 0, freezes: 0, reachedLevelName: null }),
     ).toThrow(RangeError);
+  });
+});
+
+describe("levelUpNotification", () => {
+  it("names the level reached and the level", () => {
+    expect(levelUpNotification({ level: 6, levelName: "Sapling", freezes: 0 })).toEqual({
+      title: "Level 6 reached",
+      body: "You reached Sapling",
+    });
+  });
+
+  it("adds the freezes the level gave, in the singular and the plural", () => {
+    expect(levelUpNotification({ level: 6, levelName: "Sapling", freezes: 1 }).body).toBe(
+      "You reached Sapling. +1 freeze",
+    );
+    expect(levelUpNotification({ level: 6, levelName: "Sapling", freezes: 3 }).body).toBe(
+      "You reached Sapling. +3 freezes",
+    );
   });
 });

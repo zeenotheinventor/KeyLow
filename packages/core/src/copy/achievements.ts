@@ -200,6 +200,9 @@ export const levelNameFor = (level: number): string =>
 
 const upperFirst = (text: string): string => `${text.charAt(0).toUpperCase()}${text.slice(1)}`;
 
+const freezeText = (freezes: number): string =>
+  freezes === 1 ? "+1 freeze" : `+${freezes} freezes`;
+
 export type UnlockNotificationInput = Readonly<{
   /** The badges one action earned, at least one. */
   badgeIds: readonly AchievementId[];
@@ -232,8 +235,22 @@ export const unlockNotification = (
   const parts = [
     ...(single ? [upperFirst(ACHIEVEMENT_COPY[firstId].earnedBy)] : []),
     `+${points} points`,
-    ...(freezes > 0 ? [freezes === 1 ? "+1 freeze" : `+${freezes} freezes`] : []),
+    ...(freezes > 0 ? [freezeText(freezes)] : []),
     ...(reachedLevelName === null ? [] : [`You reached ${reachedLevelName}`]),
   ];
   return { title, body: parts.join(". ") };
 };
+
+/**
+ * The notification of a level-up that came with no badge: the level reached, and the freezes it gave.
+ * Points only come from badges, so this is a guard for a run that raises the level some other way.
+ */
+export const levelUpNotification = (
+  input: Readonly<{ level: number; levelName: string; freezes: number }>,
+): Readonly<{ title: string; body: string }> => ({
+  title: `Level ${input.level} reached`,
+  body: [
+    `You reached ${input.levelName}`,
+    ...(input.freezes > 0 ? [freezeText(input.freezes)] : []),
+  ].join(". "),
+});
