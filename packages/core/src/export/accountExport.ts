@@ -44,6 +44,8 @@ export const ACCOUNT_EXPORT_TABLES = [
   "meal_plans",
   "meal_plan_days",
   "meal_plan_items",
+  "user_achievements",
+  "streak_freeze_events",
 ] as const;
 
 export type AccountExportTable = (typeof ACCOUNT_EXPORT_TABLES)[number];
@@ -100,6 +102,8 @@ export const accountExportSchema = z.strictObject({
     meal_plans: rowsSchema,
     meal_plan_days: rowsSchema,
     meal_plan_items: rowsSchema,
+    user_achievements: rowsSchema,
+    streak_freeze_events: rowsSchema,
   }),
 });
 
