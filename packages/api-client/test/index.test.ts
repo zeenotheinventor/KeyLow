@@ -6,6 +6,11 @@ describe("the package index", () => {
   it.each([
     "MIN_SEARCH_LENGTH",
     "acceptTerms",
+    "appendFreezeEvents",
+    "fetchAchievementStats",
+    "markAchievementsSeen",
+    "recordAchievements",
+    "useAchievementState",
     "getDiaryDay",
     "getDiaryWeek",
     "listCompleteDays",

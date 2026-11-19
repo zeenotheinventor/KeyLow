@@ -249,3 +249,11 @@ export type {
 } from "./assistantConversations";
 export { AccountExportError, exportMyData, readMyDataByTable } from "./accountExport";
 export { createFeatureRequest, isDailyLimitFailure } from "./featureRequests";
+export {
+  appendFreezeEvents,
+  fetchAchievementStats,
+  markAchievementsSeen,
+  recordAchievements,
+} from "./achievements";
+export type { AchievementSnapshot, HeldAchievement } from "./achievementStatsMapping";
+export { mapAchievementStats } from "./achievementStatsMapping";

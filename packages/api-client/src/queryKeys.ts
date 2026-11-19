@@ -28,6 +28,15 @@ export const keys = {
     targetsHistoryWithZeroDayRows: (weeks: number) =>
       ["program", "targets-history-with-zero-day-rows", weeks] as const,
   },
+  /**
+   * The achievements read: the stats snapshot, the held achievements and the freeze ledger behind the
+   * engine's run. Health data, a family of its own outside every list a persisted cache keeps, so
+   * nothing about it is stored on the device.
+   */
+  achievements: {
+    all: ["achievements"] as const,
+    state: ["achievements", "state"] as const,
+  },
   foods: {
     all: ["foods"] as const,
     detail: (id: string) => ["foods", id] as const,
