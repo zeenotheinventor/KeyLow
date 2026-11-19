@@ -81,3 +81,4 @@ export * from "./accountExport";
 export * from "./exerciseForm";
 export * from "./featureRequestScreen";
 export * from "./achievements";
+export * from "./achievementBadge";
