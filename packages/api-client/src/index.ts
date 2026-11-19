@@ -604,6 +604,7 @@ export type { AchievementState } from "./hooks";
 export {
   appendFreezeEvents,
   fetchAchievementStats,
+  fetchAchievementsBackfilledAt,
   markAchievementsSeen,
   recordAchievements,
 } from "./repos";

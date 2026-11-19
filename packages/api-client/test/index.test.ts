@@ -8,6 +8,7 @@ describe("the package index", () => {
     "acceptTerms",
     "appendFreezeEvents",
     "fetchAchievementStats",
+    "fetchAchievementsBackfilledAt",
     "markAchievementsSeen",
     "recordAchievements",
     "useAchievementState",

@@ -5,11 +5,12 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from
 import {
   appendFreezeEvents,
   fetchAchievementStats,
+  fetchAchievementsBackfilledAt,
   markAchievementsSeen,
   recordAchievements,
 } from "../../src/repos/achievements";
 import { createTestClient } from "../createTestClient";
-import { REST_URL, postgrestError } from "../support/postgrest";
+import { REST_URL, postgrestError, postgrestRows } from "../support/postgrest";
 
 type Recorded = { url: URL; method: string; body: unknown };
 
@@ -248,6 +249,56 @@ describe("markAchievementsSeen", () => {
     );
 
     expect(failure).toHaveProperty("message", "Could not mark the achievements seen (42501)");
+    expect(String(failure)).not.toContain("secret");
+  });
+});
+
+describe("fetchAchievementsBackfilledAt", () => {
+  it("should read the date the backfill was recorded from the profile", async () => {
+    server.use(
+      http.get(`${REST_URL}/profiles`, ({ request }) => {
+        recorded.push({ url: new URL(request.url), method: request.method, body: null });
+        return postgrestRows(request, [
+          { achievements_backfilled_at: "2026-11-01T09:00:00+00:00" },
+        ]);
+      }),
+    );
+
+    await expect(fetchAchievementsBackfilledAt(createTestClient())).resolves.toBe(
+      "2026-11-01T09:00:00+00:00",
+    );
+    expect(recorded[0]?.url.searchParams.get("select")).toBe("achievements_backfilled_at");
+  });
+
+  it("should answer null while the backfill has not been recorded", async () => {
+    server.use(
+      http.get(`${REST_URL}/profiles`, ({ request }) =>
+        postgrestRows(request, [{ achievements_backfilled_at: null }]),
+      ),
+    );
+
+    await expect(fetchAchievementsBackfilledAt(createTestClient())).resolves.toBeNull();
+  });
+
+  it("should answer null when there is no profile row", async () => {
+    server.use(http.get(`${REST_URL}/profiles`, ({ request }) => postgrestRows(request, [])));
+
+    await expect(fetchAchievementsBackfilledAt(createTestClient())).resolves.toBeNull();
+  });
+
+  it("should name the action and the code only when the read fails", async () => {
+    server.use(
+      http.get(`${REST_URL}/profiles`, () => postgrestError(500, "XX000", "secret stub message")),
+    );
+
+    const failure = await fetchAchievementsBackfilledAt(createTestClient()).catch(
+      (error: unknown) => error,
+    );
+
+    expect(failure).toHaveProperty(
+      "message",
+      "Could not read the achievements backfill state (XX000)",
+    );
     expect(String(failure)).not.toContain("secret");
   });
 });
