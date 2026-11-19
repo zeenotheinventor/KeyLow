@@ -113,6 +113,53 @@ describe("useAchievementState", () => {
     expect(result.current.data?.run.notification).toBeNull();
   });
 
+  it("should describe the calendar range the caller asks for, from today", async () => {
+    server.use(http.post(`${REST_URL}/rpc/achievement_stats`, () => HttpResponse.json(PAYLOAD)));
+    const { wrapper } = createWrapper();
+
+    const { result } = renderHook(
+      () =>
+        useAchievementState({
+          device: DEVICE,
+          now: NOW,
+          calendarRangeOf: (today) => ({ from: today, to: today }),
+        }),
+      { wrapper },
+    );
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+    expect(result.current.data?.run.calendar.map((day) => day.localDate)).toEqual(["2026-11-19"]);
+  });
+
+  it("should return today and the weeks the weekly streaks read, with this week always in the training weeks", async () => {
+    server.use(
+      http.post(`${REST_URL}/rpc/achievement_stats`, () =>
+        HttpResponse.json({
+          ...PAYLOAD,
+          weigh_ins: { count: 1, dates: ["2026-11-17"], before_nine_count: 0 },
+        }),
+      ),
+    );
+    const { wrapper } = createWrapper();
+
+    const { result } = renderHook(() => useAchievementState({ device: DEVICE, now: NOW }), {
+      wrapper,
+    });
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+    expect(result.current.data?.today).toBe("2026-11-19");
+    expect(result.current.data?.weeks.weighIn).toEqual([
+      { weekStart: "2026-11-16", achieved: 1, required: 1 },
+    ]);
+    expect(result.current.data?.weeks.training).toEqual([
+      { weekStart: "2026-11-16", achieved: 0, required: 3 },
+    ]);
+  });
+
   it("should not read anything while disabled", () => {
     const { wrapper } = createWrapper();
 

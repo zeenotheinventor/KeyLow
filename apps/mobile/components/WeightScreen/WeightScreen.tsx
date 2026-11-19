@@ -19,6 +19,7 @@ import { WeightEmptyState } from "./WeightEmptyState";
 import { WeightHeader } from "./WeightHeader";
 import { WeightImportStatus, WeightImportingLine } from "./WeightImportStatus";
 import { WeightList } from "./WeightList";
+import { WeightStreakCard } from "./WeightStreakCard";
 
 import type { WeightRange } from "@keylow/core/weight";
 
@@ -129,6 +130,7 @@ export function WeightScreen() {
                 onRangeChange={setRange}
                 {...viewProps}
               />
+              <WeightStreakCard />
               {connection === "connected" && bodyCompositionAccess !== null ? (
                 <BodyCompositionSection
                   access={bodyCompositionAccess}

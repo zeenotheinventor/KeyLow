@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import { aDay, aStats } from "./builders";
-import { streakDaysOf, trainingWeeksOf, weighInWeeksOf } from "../../src/achievements/streakInputs";
+import {
+  streakDaysOf,
+  trainingWeeksOf,
+  trainingWeeksThroughOf,
+  weighInWeeksOf,
+} from "../../src/achievements/streakInputs";
 
 const week = (weekStart: string, sessionCount: number) => ({
   weekStart,
@@ -83,6 +88,40 @@ describe("trainingWeeksOf", () => {
     const stats = aStats({ workouts: { ...aStats().workouts, weeks: [week("2026-11-02", 1)] } });
 
     expect(trainingWeeksOf(stats).map((record) => record.required)).toEqual([3]);
+  });
+});
+
+describe("trainingWeeksThroughOf", () => {
+  // 2026-11-19 is a Thursday, so this week starts on Monday the 16th.
+  const today = "2026-11-19";
+
+  it("should add this week, with what it plans, when no session is finished in it yet", () => {
+    const stats = aStats({
+      workouts: { ...aStats().workouts, weeks: [week("2026-11-09", 4)] },
+      trainingGoals: [goal(4, "2026-10-01", null)],
+    });
+
+    expect(trainingWeeksThroughOf(stats, today)).toEqual([
+      { weekStart: "2026-11-09", achieved: 4, required: 4 },
+      { weekStart: "2026-11-16", achieved: 0, required: 4 },
+    ]);
+  });
+
+  it("should plan 3 for this week when there is no goal and no routine", () => {
+    expect(trainingWeeksThroughOf(aStats(), today)).toEqual([
+      { weekStart: "2026-11-16", achieved: 0, required: 3 },
+    ]);
+  });
+
+  it("should leave this week alone when a session is already finished in it", () => {
+    const stats = aStats({
+      workouts: { ...aStats().workouts, weeks: [week("2026-11-16", 2)] },
+      trainingGoals: [goal(4, "2026-10-01", null)],
+    });
+
+    expect(trainingWeeksThroughOf(stats, today)).toEqual([
+      { weekStart: "2026-11-16", achieved: 2, required: 4 },
+    ]);
   });
 });
 

@@ -232,6 +232,36 @@ describe("Text", () => {
     });
   });
 
+  // The `--protein-ink` token is the protein blue in dark and a deeper blue in light, where protein is
+  // under 4.5:1 on the protein tint.
+  describe("the protein ink tone in the dark scheme", () => {
+    it("should be the protein blue", async () => {
+      await render(
+        <ThemeProvider fixedPreference="dark">
+          <Text tone="protein-ink">14</Text>
+        </ThemeProvider>,
+      );
+
+      expect(await screen.findByText("14")).toHaveStyle({
+        color: resolvedColor("dark", "protein-ink"),
+      });
+    });
+  });
+
+  describe("the protein ink tone in the light scheme", () => {
+    it("should be a deeper blue than the protein colour", async () => {
+      await render(
+        <ThemeProvider fixedPreference="light">
+          <Text tone="protein-ink">14</Text>
+        </ThemeProvider>,
+      );
+
+      expect(await screen.findByText("14")).toHaveStyle({
+        color: resolvedColor("light", "protein-ink"),
+      });
+    });
+  });
+
   it("should leave heading semantics to the caller, so a variant is only a look", async () => {
     await render(
       <Text role="heading" variant="h2">

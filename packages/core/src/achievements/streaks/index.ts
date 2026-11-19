@@ -19,5 +19,8 @@ export type {
   FreezeRow,
   StreakDay,
   WeekRecord,
+  WeekState,
   WeeklyStreak,
 } from "./types";
+export { recentWeeksOf, streakCalendarRangeOf, streakChipStateOf, streakMonthOf } from "./surfaces";
+export type { RecentWeeks, StreakChipState, StreakMonthCell, WeekBar } from "./surfaces";

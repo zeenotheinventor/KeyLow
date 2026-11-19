@@ -87,6 +87,38 @@ describe("the ink and camera colours", () => {
     expect(contrastRatio(lightColors["success-ink"], tint)).toBeGreaterThanOrEqual(4.5);
   });
 
+  it("should keep protein ink the protein blue in dark and a deeper blue in light", () => {
+    expect(colors["protein-ink"]).toBe("#6E9BFF");
+    expect(colors["protein-ink"]).toBe(colors.protein);
+    expect(lightColors["protein-ink"]).toBe("#1F54C9");
+    expect(lightColors["protein-ink"]).not.toBe(lightColors.protein);
+  });
+
+  it.each([
+    ["dark", colors],
+    ["light", lightColors],
+  ] as const)(
+    "should read protein ink as text on the surface and the background in %s, at 4.5:1 or more",
+    (_scheme, palette) => {
+      expect(contrastRatio(palette["protein-ink"], palette.surface)).toBeGreaterThanOrEqual(4.5);
+      expect(contrastRatio(palette["protein-ink"], palette.background)).toBeGreaterThanOrEqual(4.5);
+    },
+  );
+
+  // The frozen day cell draws its number on `protein-muted`, not on the bare surface.
+  it.each([
+    ["background", lightColors.background],
+    ["surface", lightColors.surface],
+    ["raised white", lightColors["surface-raised"]],
+  ])(
+    "should read protein ink on the light protein tint over the %s at 4.5:1 or more",
+    (_name, surface) => {
+      const tint = blendOver(lightColors["protein-muted"], surface);
+
+      expect(contrastRatio(lightColors["protein-ink"], tint)).toBeGreaterThanOrEqual(4.5);
+    },
+  );
+
   it("should keep the camera surface and the viewfinder dim the same in both themes", () => {
     for (const palette of [colors, lightColors]) {
       expect(palette.camera).toBe("#07090D");
@@ -101,6 +133,8 @@ describe("the ink and camera colours", () => {
     expect(themeVariables("light")["--kl-warning-ink"]).toBe("15 19 26");
     expect(themeVariables("dark")["--kl-success-ink"]).toBe("92 214 122");
     expect(themeVariables("light")["--kl-success-ink"]).toBe("18 109 49");
+    expect(themeVariables("dark")["--kl-protein-ink"]).toBe("110 155 255");
+    expect(themeVariables("light")["--kl-protein-ink"]).toBe("31 84 201");
     expect(themeVariables("light")["--kl-camera"]).toBe("7 9 13");
     expect(themeVariables("light")["--kl-viewfinder-dim"]).toBe("rgba(0,0,0,0.35)");
   });
