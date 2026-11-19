@@ -83,3 +83,4 @@ export * from "./featureRequestScreen";
 export * from "./achievements";
 export * from "./achievementBadge";
 export * from "./streaks";
+export * from "./webAchievements";
