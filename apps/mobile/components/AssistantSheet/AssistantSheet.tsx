@@ -297,6 +297,9 @@ export function AssistantSheet({
           : OPEN_SNAP_INDEX
       }
       snapPoints={SNAP_POINTS}
+      // While content panning is on, the library locks a scroll view whenever the sheet is below its top snap point,
+      // and snaps the thread back to the top on every scroll, undoing the scroll to the newest reply.
+      isContentDraggable={false}
       onClose={close}
     >
       <View className="flex-1">
