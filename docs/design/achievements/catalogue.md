@@ -8,14 +8,14 @@ Linear tickets under KEY-1079 point at.
 - Reward behaviour, never body outcomes. Ki-Lo is a health app, so no badge for kilos lost, a big
   calorie deficit, a low-calorie day or skipping meals. Target badges are for landing inside your
   range, which can mean eating more.
-- Every achievement maps to data Ki-Lo already stores (diary entries, weigh-ins, measurements,
+- Every achievement maps to data Ki-Lo already stores (diary entries, weigh-ins, body composition readings,
   workout sessions and sets, recipes, meal plans, shopping list, check-ins, the assistant).
 - Rules live in `@keylow/core` as pure functions over a stats snapshot, so they are unit-tested and
   shared by mobile and web.
 - Existing users are backfilled on first launch: everything they already earned unlocks quietly,
   with one summary card ("You have already earned 23 achievements") instead of 23 celebrations.
-- Each achievement has a tier: Bronze, Silver, Gold or Platinum. The section "Hidden and seasonal"
-  (123 to 128) shows as "???" until earned. Everything else, including Collector and
+- Each achievement has a tier: Bronze, Silver, Gold or Platinum. Badges 123 to 128 in "Hidden and
+  seasonal" show as "???" until earned. Everything else, including Collector and
   Completionist, is visible with its progress.
 
 ## Streaks
