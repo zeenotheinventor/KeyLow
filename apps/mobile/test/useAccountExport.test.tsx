@@ -3,6 +3,7 @@ import { StrictMode } from "react";
 
 import { fakePickedDirectory, madeUpAccountExport } from "./support/accountExportFixtures";
 import { resetRouterMock, routerMock } from "./support/expoRouterMock";
+import { mockRecordAchievementEvent } from "./support/recordAchievementEventMock";
 import { useAccountExport } from "../components/ExportMyDataScreen/useAccountExport";
 
 import type { AccountExport } from "@keylow/core";
@@ -21,6 +22,10 @@ const mockBackend: {
 jest.mock("@keylow/api-client", () => ({
   ...jest.requireActual<object>("@keylow/api-client"),
   exportMyData: () => mockBackend.exportMyData(),
+  useRecordAchievementEvent: () =>
+    jest.requireActual<{ mockRecordAchievementEvent: unknown }>(
+      "./support/recordAchievementEventMock",
+    ).mockRecordAchievementEvent,
 }));
 jest.mock("expo-file-system", () => ({
   Directory: { pickDirectoryAsync: () => mockBackend.pickDirectory() },
@@ -39,6 +44,7 @@ jest.mock("../lib/supabase", () => ({
 describe("useAccountExport letting go of the file", () => {
   beforeEach(() => {
     resetRouterMock();
+    mockRecordAchievementEvent.mockReset();
     mockBackend.exportMyData.mockReset();
     mockBackend.pickDirectory.mockReset();
     mockBackend.exportMyData.mockResolvedValue(madeUpAccountExport());
@@ -79,6 +85,39 @@ describe("useAccountExport letting go of the file", () => {
     });
 
     expect(mockBackend.pickDirectory).not.toHaveBeenCalled();
+  });
+
+  it("should record one data export when the file is written", async () => {
+    mockBackend.pickDirectory.mockResolvedValue(fakePickedDirectory("Downloads"));
+    const { result } = await renderHook(() => useAccountExport());
+    await waitFor(() => {
+      expect(result.current.state.status).toBe("ready");
+    });
+
+    await act(async () => {
+      await result.current.save();
+    });
+
+    expect(mockRecordAchievementEvent).toHaveBeenCalledTimes(1);
+    expect(mockRecordAchievementEvent).toHaveBeenCalledWith("data_exported");
+  });
+
+  it("should record no export when the write fails or the picker is closed", async () => {
+    const folder = fakePickedDirectory("Downloads");
+    folder.write.mockImplementation(() => {
+      throw new Error("no space left");
+    });
+    mockBackend.pickDirectory.mockResolvedValue(folder);
+    const { result } = await renderHook(() => useAccountExport());
+    await waitFor(() => {
+      expect(result.current.state.status).toBe("ready");
+    });
+
+    await act(async () => {
+      await result.current.save();
+    });
+
+    expect(mockRecordAchievementEvent).not.toHaveBeenCalled();
   });
 
   it("should write nothing a second time once the file is saved", async () => {

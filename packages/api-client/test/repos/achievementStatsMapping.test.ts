@@ -134,6 +134,15 @@ const PAYLOAD = {
   assistant_log_entry_actions: 6,
   assistant_create_recipe_actions: 1,
   feature_requests: 1,
+  event_counts: {
+    distinct_barcodes_scanned: 11,
+    exercise_demos_watched: 2,
+    week_view_opens: 3,
+    data_exports: 4,
+    logs_from_favourites: 5,
+    shopping_items_ticked_off: 6,
+    assistant_drafts_saved: 2,
+  },
   checkin_dates: ["2026-03-01", "2026-03-08"],
   programmes: [{ started_on: "2026-01-10", ended_on: null }],
   achievements: [
@@ -313,11 +322,27 @@ describe("mapAchievementStats", () => {
       userMessages: 14,
       conversations: 4,
       logEntryActions: 6,
-      createRecipeActions: 1,
+      createRecipeActions: 3,
     });
     expect(mapPayload().stats.featureRequestCount).toBe(1);
     expect(mapPayload().stats.checkinLocalDates).toEqual(["2026-03-01", "2026-03-08"]);
     expect(mapPayload().stats.programmes).toEqual([{ startedOn: "2026-01-10", endedOn: null }]);
+  });
+
+  it("should map the event counts into the counters the evaluators read", () => {
+    expect(mapPayload().stats.eventCounters).toEqual({
+      distinctBarcodesScanned: 11,
+      exerciseDemosWatched: 2,
+      weekViewOpens: 3,
+      dataExports: 4,
+      logsFromFavourites: 5,
+      shoppingItemsTickedOff: 6,
+    });
+  });
+
+  it("should count a recipe saved from an assistant draft with the assistant's create recipe actions", () => {
+    // One confirmed create_recipe action and two saved drafts: both paths unlock Sous Chef.
+    expect(mapPayload().stats.assistant.createRecipeActions).toBe(3);
   });
 
   it("should keep the held achievements with their seen state", () => {

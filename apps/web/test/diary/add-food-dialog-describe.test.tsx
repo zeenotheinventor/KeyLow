@@ -25,6 +25,8 @@ const api = vi.hoisted((): { local: FoodSearchResult["local"] } => ({ local: [] 
 
 vi.mock("@keylow/api-client", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@keylow/api-client")>()),
+  useRecordAchievementEvent: (await import("../recordAchievementEventMock"))
+    .mockUseRecordAchievementEvent,
   ...noFavouriteHooks,
   ...noPlateHooks,
   useRefreshOutdatedOffFood: () => undefined,

@@ -1,5 +1,6 @@
-import { useExerciseFormMedia } from "@keylow/api-client";
+import { useExerciseFormMedia, useRecordAchievementEvent } from "@keylow/api-client";
 import { exerciseFormMediaDisplayOf, formMediaToShow } from "@keylow/core/training";
+import { useEffect } from "react";
 
 import type { FormSectionProps } from "./types";
 
@@ -19,6 +20,16 @@ export function FormSection({ exerciseId, exerciseName }: FormSectionProps) {
     isOnline: useIsOnline(),
     enabled: true,
   });
+
+  const recordEvent = useRecordAchievementEvent();
+  // A demo is on show once the exercise has a video or photos to draw.
+  const isDemoShown =
+    state.status === "ready" && (state.media.video !== null || state.media.photos !== null);
+  useEffect(() => {
+    if (isDemoShown) {
+      recordEvent("exercise_demo_opened", exerciseId);
+    }
+  }, [isDemoShown, exerciseId, recordEvent]);
 
   switch (state.status) {
     case "loading":

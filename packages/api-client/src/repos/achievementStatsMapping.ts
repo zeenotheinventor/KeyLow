@@ -116,6 +116,15 @@ const payloadSchema = z.object({
   assistant_log_entry_actions: count,
   assistant_create_recipe_actions: count,
   feature_requests: count,
+  event_counts: z.object({
+    distinct_barcodes_scanned: count,
+    exercise_demos_watched: count,
+    week_view_opens: count,
+    data_exports: count,
+    logs_from_favourites: count,
+    shopping_items_ticked_off: count,
+    assistant_drafts_saved: count,
+  }),
   checkin_dates: z.array(date),
   programmes: z.array(z.object({ started_on: date, ended_on: date.nullable() })),
   achievements: z.array(
@@ -266,9 +275,20 @@ const mapStats = (payload: Payload): StoredAchievementStats => {
       userMessages: payload.assistant_user_messages,
       conversations: payload.assistant_conversations,
       logEntryActions: payload.assistant_log_entry_actions,
-      createRecipeActions: payload.assistant_create_recipe_actions,
+      // A draft saved through the recipe editor writes no assistant action, so its event is added: either
+      // path unlocks Sous Chef.
+      createRecipeActions:
+        payload.assistant_create_recipe_actions + payload.event_counts.assistant_drafts_saved,
     },
     featureRequestCount: payload.feature_requests,
+    eventCounters: {
+      distinctBarcodesScanned: payload.event_counts.distinct_barcodes_scanned,
+      exerciseDemosWatched: payload.event_counts.exercise_demos_watched,
+      shoppingItemsTickedOff: payload.event_counts.shopping_items_ticked_off,
+      dataExports: payload.event_counts.data_exports,
+      logsFromFavourites: payload.event_counts.logs_from_favourites,
+      weekViewOpens: payload.event_counts.week_view_opens,
+    },
     checkinLocalDates: payload.checkin_dates,
     programmes: payload.programmes.map((programme) => ({
       startedOn: programme.started_on,

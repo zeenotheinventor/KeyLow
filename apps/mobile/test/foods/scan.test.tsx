@@ -12,6 +12,7 @@ import ScanRoute from "../../app/foods/scan";
 import { ThemeProvider } from "../../lib/theme";
 import { cameraMock, permissions, resetCameraMock, scanBarcode } from "../support/expoCameraMock";
 import { resetRouterMock, routerMock } from "../support/expoRouterMock";
+import { mockRecordAchievementEvent } from "../support/recordAchievementEventMock";
 
 import type { ReactNode } from "react";
 import type { AppStateStatus } from "react-native";
@@ -76,6 +77,7 @@ describe("scan screen", () => {
     resetRouterMock();
     resetCameraMock();
     resetBarcodeLookupMock();
+    mockRecordAchievementEvent.mockReset();
   });
 
   afterEach(() => {
@@ -319,6 +321,38 @@ describe("scan screen", () => {
       await scan("ean13", crisps);
 
       expect(lookedUpCodes()).toEqual([cola]);
+    });
+  });
+
+  describe("the achievement event", () => {
+    it("should record one barcode scanned with the code, even for a code no food has", async () => {
+      setLookupOutcome({ result: { status: "not_found", code: cola } });
+      await renderScanner();
+
+      await scan("ean13", cola);
+
+      expect(mockRecordAchievementEvent).toHaveBeenCalledTimes(1);
+      expect(mockRecordAchievementEvent).toHaveBeenCalledWith("barcode_scanned", cola);
+    });
+
+    it("should record it before the lookup has answered", async () => {
+      setLookupOutcome({ isLoading: true, result: undefined });
+      await renderScanner();
+
+      await scan("ean13", cola);
+
+      expect(mockRecordAchievementEvent).toHaveBeenCalledWith("barcode_scanned", cola);
+    });
+
+    it("should record once when the same code is scanned twice 500 ms apart", async () => {
+      setLookupOutcome({ result: { status: "not_found", code: cola } });
+      await renderScanner();
+
+      await scan("ean13", cola);
+      await advance(500);
+      await scan("ean13", cola);
+
+      expect(mockRecordAchievementEvent).toHaveBeenCalledTimes(1);
     });
   });
 

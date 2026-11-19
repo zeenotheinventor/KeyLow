@@ -51,6 +51,7 @@ export const ACCOUNT_EXPORT_COVERAGE: Record<
   meal_plan_items: "exported",
   user_achievements: "exported",
   streak_freeze_events: "exported",
+  achievement_events: "exported",
   muscles: {
     notExported: "Shared reference data, the same for everyone. No row belongs to the account.",
   },

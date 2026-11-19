@@ -1,6 +1,11 @@
 "use client";
 
-import { exportMyData, useAccountExportFile, useSupabase } from "@keylow/api-client";
+import {
+  exportMyData,
+  useAccountExportFile,
+  useRecordAchievementEvent,
+  useSupabase,
+} from "@keylow/api-client";
 import {
   ACCOUNT_EXPORT_COPY,
   ACCOUNT_EXPORT_WEB_COPY,
@@ -71,6 +76,7 @@ export function ExportMyDataScreen() {
   const router = useRouter();
   const client = useSupabase();
   const isOnline = useIsOnline();
+  const recordEvent = useRecordAchievementEvent();
   const readExport = useCallback(() => exportMyData(client), [client]);
   const { state, fileName, sizeText, readFile, dispatch, failedOffline } = useAccountExportFile({
     isActive: true,
@@ -101,6 +107,7 @@ export function ExportMyDataScreen() {
       dispatch({ type: "failedWhile", step: "saving" });
       return;
     }
+    recordEvent("data_exported");
     dispatch({ type: "savedTo", folderName: "" });
   }
 

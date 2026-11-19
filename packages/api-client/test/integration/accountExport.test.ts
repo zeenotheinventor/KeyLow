@@ -491,6 +491,10 @@ async function seed(user: TestUser, options: { year: boolean }): Promise<void> {
     ).error,
     "streak freeze event",
   );
+  succeeded(
+    (await client.from("achievement_events").insert({ kind: "week_view_opened" })).error,
+    "achievement event",
+  );
   await addFavouriteFood(client, (foods[1] ?? food).id);
 }
 

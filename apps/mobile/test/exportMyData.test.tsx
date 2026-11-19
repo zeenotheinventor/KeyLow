@@ -29,6 +29,10 @@ const mockBackend: {
 jest.mock("@keylow/api-client", () => ({
   ...jest.requireActual<object>("@keylow/api-client"),
   exportMyData: () => mockBackend.exportMyData(),
+  useRecordAchievementEvent: () =>
+    jest.requireActual<{ mockRecordAchievementEvent: unknown }>(
+      "./support/recordAchievementEventMock",
+    ).mockRecordAchievementEvent,
 }));
 jest.mock("expo-file-system", () => ({
   Directory: { pickDirectoryAsync: () => mockBackend.pickDirectory() },

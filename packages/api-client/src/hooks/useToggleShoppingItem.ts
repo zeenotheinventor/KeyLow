@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSupabase } from "../KeyLowProvider";
 import { keys } from "../queryKeys";
 import { SHOPPING_LIST_SCOPE } from "./shoppingListScope";
+import { useRecordAchievementEvent } from "./useRecordAchievementEvent";
 import { setShoppingItemChecked } from "../repos/shoppingList";
 
 import type { ShoppingItem } from "@keylow/core/shopping";
@@ -16,6 +17,7 @@ export type ToggleShoppingItemInput = { id: string; checked: boolean };
 export function useToggleShoppingItem() {
   const client = useSupabase();
   const queryClient = useQueryClient();
+  const recordEvent = useRecordAchievementEvent();
 
   return useMutation({
     scope: SHOPPING_LIST_SCOPE,
@@ -30,6 +32,12 @@ export function useToggleShoppingItem() {
         list?.map((item) => (item.id === id ? { ...item, checked_at: checkedAt } : item)),
       );
       return { previous };
+    },
+    // A tick counts for the achievements, an untick does not. The event never blocks or fails the tick.
+    onSuccess: (_data, { checked }) => {
+      if (checked) {
+        recordEvent("shopping_item_ticked");
+      }
     },
     onError: (_error, _input, context) => {
       queryClient.setQueryData(keys.shoppingList.items, context?.previous);

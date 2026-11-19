@@ -56,10 +56,8 @@ describe("achievementStatsSchema", () => {
   });
 
   it("keeps the device inputs out of the stored stats the database returns", () => {
-    expect(Object.keys(deviceInputsSchema.shape).sort()).toEqual([
-      "eventCounters",
-      "reminderEnabled",
-    ]);
+    expect(Object.keys(deviceInputsSchema.shape)).toEqual(["reminderEnabled"]);
+    expect(Object.keys(storedAchievementStatsSchema.shape)).toContain("eventCounters");
     expect(Object.keys(storedAchievementStatsSchema.shape)).not.toContain("reminderEnabled");
   });
 

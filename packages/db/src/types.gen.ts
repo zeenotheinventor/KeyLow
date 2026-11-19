@@ -72,6 +72,30 @@ export type Database = {
           },
         ];
       };
+      achievement_events: {
+        Row: {
+          created_at: string;
+          id: string;
+          kind: string;
+          ref: string | null;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          kind: string;
+          ref?: string | null;
+          user_id?: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          kind?: string;
+          ref?: string | null;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       assistant_actions: {
         Row: {
           conversation_id: string | null;

@@ -706,7 +706,7 @@ select is(
   array[
     'achievements', 'active_routine_day_count', 'assistant_conversations', 'assistant_create_recipe_actions',
     'assistant_log_entry_actions', 'assistant_user_messages', 'body_measurement_count', 'checkin_dates',
-    'days', 'distinct_planned_days', 'entry_totals', 'favourites', 'feature_requests', 'longest_meal_plan_days', 'manual_targets',
+    'days', 'distinct_planned_days', 'entry_totals', 'event_counts', 'favourites', 'feature_requests', 'longest_meal_plan_days', 'manual_targets',
     'meal_plans', 'onboarding_completed_at', 'profile_created_at', 'programmes', 'recipes',
     'routines', 'shopping_list_items', 'streak_freeze_events', 'targets', 'targets_updated_at', 'time_zone',
     'training_goals', 'weigh_ins', 'workouts'

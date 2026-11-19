@@ -21,6 +21,7 @@ import { PlateProvider } from "../../lib/plate";
 import { ThemeProvider } from "../../lib/theme";
 import { resetRouterMock, routerMock } from "../support/expoRouterMock";
 import { registerAppStyles } from "../support/nativeWindStyles";
+import { mockRecordAchievementEvent } from "../support/recordAchievementEventMock";
 import { expectTextsInOrder } from "../support/textsInOrder";
 
 import type { FavouriteFood, FavouriteRecipe, RecipeSummary } from "@keylow/api-client";
@@ -114,6 +115,7 @@ describe("the Favourites strip in the log search", () => {
     resetRouterMock();
     resetApiClientMock();
     resetSearchApiClientMock();
+    mockRecordAchievementEvent.mockReset();
     onlineManager.setOnline(true);
   });
 
@@ -191,6 +193,34 @@ describe("the Favourites strip in the log search", () => {
     expect(routerMock.push).toHaveBeenCalledWith(
       `/foods/${porridgeId}/log?day=2026-10-14&time=12%3A00&recent=1`,
     );
+  });
+
+  it("should record one log from favourites for a food tile, and one for a recipe tile", async () => {
+    favouriteFoods.current = {
+      data: [favouriteFood(porridgeId, "Porridge", "2026-10-13T08:00:00+00:00")],
+      isPending: false,
+      isError: false,
+    };
+    favouriteRecipes.current = {
+      data: [
+        favouriteRecipe(
+          recipeSummary(oatsRecipeId, "Overnight oats", 300),
+          "2026-10-12T08:00:00+00:00",
+        ),
+      ],
+      isPending: false,
+      isError: false,
+    };
+    const user = await renderLogSearch();
+
+    await user.press(screen.getByRole("button", { name: "Choose an amount of Porridge" }));
+    expect(mockRecordAchievementEvent).toHaveBeenCalledTimes(1);
+    expect(mockRecordAchievementEvent).toHaveBeenLastCalledWith("log_from_favourites");
+
+    await user.press(
+      screen.getByRole("button", { name: "Choose an amount of Overnight oats, recipe" }),
+    );
+    expect(mockRecordAchievementEvent).toHaveBeenCalledTimes(2);
   });
 
   it("should open the recipe amount step when a recipe tile is pressed", async () => {

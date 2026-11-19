@@ -305,8 +305,8 @@ Consistency only. No badge is tied to how much weight changed or to a weight goa
    "Badges and levels" switch and Android channel) and the streak-at-risk reminder switch, both on
    the Reminders screen.
 6. Web: read-only Achievements page.
-7. A few achievements need tracking that does not exist yet (barcode scans, demo views, week view
-   opens). Those ship in a follow-up ticket with their counters.
+7. A few achievements needed tracking that did not exist (barcode scans, demo views, week view
+   opens). Those shipped in KEY-1094 with their counters.
 
 Tickets: Linear brief KEY-1079, children KEY-1080 to KEY-1096. Zee's rulings on the items that
 needed a concept Ki-Lo did not have (KEY-1081) are already folded in above.

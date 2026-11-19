@@ -1,4 +1,9 @@
-import { useFavouriteFoods, useFavouriteRecipes, useRecentFoods } from "@keylow/api-client";
+import {
+  useFavouriteFoods,
+  useFavouriteRecipes,
+  useRecentFoods,
+  useRecordAchievementEvent,
+} from "@keylow/api-client";
 import { FAVOURITES_STRIP } from "@keylow/core/copy";
 import { favouriteTiles } from "@keylow/core/diary";
 import { useId } from "react";
@@ -46,6 +51,7 @@ export function FavouriteFoods({ onOpenFood, onOpenRecent, onOpenRecipe }: Favou
   const foods = useFavouriteFoods();
   const recipes = useFavouriteRecipes();
   const recent = useRecentFoods();
+  const recordEvent = useRecordAchievementEvent();
 
   if (isUnreadable(foods) || isUnreadable(recipes)) {
     return null;
@@ -112,6 +118,8 @@ export function FavouriteFoods({ onOpenFood, onOpenRecent, onOpenRecipe }: Favou
                 name={tile.name}
                 onKeyDown={moveFocusWithArrows}
                 onPress={() => {
+                  // Choosing a favourite here is what starts a log from the strip, so it is counted now.
+                  recordEvent("log_from_favourites");
                   presses.get(`${tile.kind}-${tile.id}`)?.();
                 }}
               />

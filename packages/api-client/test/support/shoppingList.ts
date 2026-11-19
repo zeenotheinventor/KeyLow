@@ -124,9 +124,15 @@ const isObject = (value: unknown): value is Record<string, unknown> =>
 export function installShoppingListFake(server: SetupServer, seed: ShoppingItem[] = []) {
   const rows: ShoppingItem[] = seed.map((row) => ({ ...row }));
   const requests: Request[] = [];
-  const control: { writeGate: Promise<void> | null; failure: string | null } = {
+  const events: unknown[] = [];
+  const control: {
+    writeGate: Promise<void> | null;
+    failure: string | null;
+    isEventFailing: boolean;
+  } = {
     writeGate: null,
     failure: null,
+    isEventFailing: false,
   };
   let created = 0;
   const newId = () => {
@@ -229,6 +235,13 @@ export function installShoppingListFake(server: SetupServer, seed: ShoppingItem[
       }
       return new Response(null, { status: 204 });
     }),
+    // The achievement event a tick records. It has its own failure switch, so a test can fail it alone.
+    http.post(`${REST_URL}/achievement_events`, async ({ request }) => {
+      events.push(await request.clone().json());
+      return control.isEventFailing
+        ? postgrestError(500, "XX000", "stub event failure")
+        : new Response(null, { status: 201 });
+    }),
     http.delete(`${REST_URL}/shopping_list_items`, async ({ request }) => {
       const { url, failed } = await write(request, "DELETE");
       if (failed !== null) {
@@ -259,6 +272,10 @@ export function installShoppingListFake(server: SetupServer, seed: ShoppingItem[
     rows,
     requests,
     holdWrites: hold,
+    events,
+    failEvents: (isFailing: boolean) => {
+      control.isEventFailing = isFailing;
+    },
     failWith: (code: string | null) => {
       control.failure = code;
     },

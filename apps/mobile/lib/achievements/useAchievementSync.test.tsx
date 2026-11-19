@@ -3,6 +3,8 @@ import {
   fetchAchievementStats,
   fetchAchievementsBackfilledAt,
   recordAchievements,
+  KeyLowProvider,
+  useRecordAchievementEvent,
   useSupabase,
 } from "@keylow/api-client";
 import { MutationObserver, QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -489,6 +491,50 @@ describe("useAchievementSync", () => {
 
       expect(record).toHaveBeenCalledWith(client, expect.any(Array), true);
       expect(getCelebrationState().backfillSummary).toBeNull();
+    });
+  });
+
+  describe("an achievement event write", () => {
+    it("should lead to exactly one more run, and no loop", async () => {
+      const upsert = jest.fn(() => Promise.resolve({ error: null }));
+      const eventClient = {
+        from: jest.fn(() => ({ upsert })),
+        auth: { onAuthStateChange: () => ({ data: { subscription: { unsubscribe: jest.fn() } } }) },
+      };
+      const view = await renderHook(
+        () => {
+          useAchievementSync();
+          return useRecordAchievementEvent();
+        },
+        {
+          // A stub that answers only what the provider and the event write call.
+          wrapper: ({ children }: PropsWithChildren) => (
+            <KeyLowProvider
+              client={eventClient as unknown as ReturnType<typeof useSupabase>}
+              queryClient={queryClient}
+            >
+              {children}
+            </KeyLowProvider>
+          ),
+        },
+      );
+      await settle();
+      expect(fetchStats).toHaveBeenCalledTimes(1);
+
+      await act(async () => {
+        view.result.current("week_view_opened");
+        await jest.advanceTimersByTimeAsync(0);
+      });
+      await advance(2000);
+      await advance(20000);
+
+      expect(eventClient.from).toHaveBeenCalledWith("achievement_events");
+      expect(upsert).toHaveBeenCalledTimes(1);
+      expect(upsert).toHaveBeenCalledWith(
+        { kind: "week_view_opened", ref: null },
+        { onConflict: "user_id,kind,ref", ignoreDuplicates: true },
+      );
+      expect(fetchStats).toHaveBeenCalledTimes(2);
     });
   });
 });

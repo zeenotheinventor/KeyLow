@@ -1,6 +1,7 @@
 // TanStack Query hooks over the repos land here from M2 onward.
 export { useAcceptTerms } from "./useAcceptTerms";
 export { useAchievementState } from "./useAchievementState";
+export { useRecordAchievementEvent } from "./useRecordAchievementEvent";
 export type { AchievementState } from "./useAchievementState";
 export type { DiaryReadOptions } from "./DiaryReadOptions";
 export { useArchiveRecipe } from "./useArchiveRecipe";

@@ -1,8 +1,10 @@
 import { onlineManager } from "@tanstack/react-query";
-import { cleanup, fireEvent, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { StrictMode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { boardWeek, emptyWeek, noTargets, targets } from "../diary/support";
+import { mockRecordAchievementEvent } from "../recordAchievementEventMock";
 import { renderWithRouter } from "../ui/appRouter";
 
 import type { DiaryWeekDay, Targets } from "@keylow/api-client";
@@ -31,6 +33,8 @@ const backend = vi.hoisted(
 
 vi.mock("@keylow/api-client", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@keylow/api-client")>()),
+  useRecordAchievementEvent: (await import("../recordAchievementEventMock"))
+    .mockUseRecordAchievementEvent,
   useProfileTimeZone: () => backend.timeZone,
   useDiaryWeek: (weekStart: string) => {
     backend.weekReads.push(weekStart);
@@ -69,6 +73,23 @@ afterEach(() => {
 });
 
 describe("the weekly averages page", () => {
+  it("should record one week view opened even when strict mode runs the effect twice", () => {
+    render(
+      <StrictMode>
+        <WeekAveragesScreen />
+      </StrictMode>,
+    );
+
+    expect(mockRecordAchievementEvent).toHaveBeenCalledTimes(1);
+  });
+
+  it("should record one week view opened for one opening", () => {
+    renderWithRouter(<WeekAveragesScreen />);
+
+    expect(mockRecordAchievementEvent).toHaveBeenCalledTimes(1);
+    expect(mockRecordAchievementEvent).toHaveBeenCalledWith("week_view_opened");
+  });
+
   it("should head the page and lead back to the Dashboard", () => {
     renderWithRouter(<WeekAveragesScreen />);
 

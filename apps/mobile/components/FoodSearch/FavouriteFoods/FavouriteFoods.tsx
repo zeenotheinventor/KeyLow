@@ -1,4 +1,8 @@
-import { useFavouriteFoods, useFavouriteRecipes } from "@keylow/api-client";
+import {
+  useFavouriteFoods,
+  useFavouriteRecipes,
+  useRecordAchievementEvent,
+} from "@keylow/api-client";
 import { FAVOURITES_STRIP } from "@keylow/core/copy";
 import { favouriteTiles } from "@keylow/core/diary";
 import { ScrollView, View } from "react-native";
@@ -19,6 +23,7 @@ export function FavouriteFoods({ onOpenFood, onOpenRecipe }: FavouriteFoodsProps
   const isEnabled = useReadsEnabled();
   const foods = useFavouriteFoods({ enabled: isEnabled });
   const recipes = useFavouriteRecipes({ enabled: isEnabled });
+  const recordEvent = useRecordAchievementEvent();
 
   const hasFailed =
     (foods.isError && foods.data === undefined) || (recipes.isError && recipes.data === undefined);
@@ -54,6 +59,8 @@ export function FavouriteFoods({ onOpenFood, onOpenRecipe }: FavouriteFoodsProps
                 kind={tile.kind}
                 name={tile.name}
                 onPress={() => {
+                  // Choosing a favourite here is what starts a log from the strip, so it is counted now.
+                  recordEvent("log_from_favourites");
                   if (tile.kind === "recipe") {
                     onOpenRecipe(tile.id);
                   } else {

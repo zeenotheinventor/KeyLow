@@ -241,6 +241,67 @@ describe("useToggleShoppingItem", () => {
   });
 });
 
+describe("useToggleShoppingItem and the achievement events", () => {
+  it("should record one shopping item ticked event for one tick", async () => {
+    const item = shoppingItemRow();
+    const fake = installShoppingListFake(server, [item]);
+    const { result } = await renderList(fake);
+
+    await act(async () => {
+      await result.current.toggle.mutateAsync({ id: item.id, checked: true });
+    });
+
+    await waitFor(() => {
+      expect(fake.events).toEqual([{ kind: "shopping_item_ticked", ref: null }]);
+    });
+  });
+
+  it("should record nothing when an item is unticked", async () => {
+    const item = shoppingItemRow({ checked_at: TICKED_AT });
+    const fake = installShoppingListFake(server, [item]);
+    const { result } = await renderList(fake);
+
+    await act(async () => {
+      await result.current.toggle.mutateAsync({ id: item.id, checked: false });
+    });
+
+    expect(fake.events).toEqual([]);
+  });
+
+  it("should record nothing when the tick itself fails", async () => {
+    const item = shoppingItemRow();
+    const fake = installShoppingListFake(server, [item]);
+    const { result } = await renderList(fake);
+    fake.failWith("XX000");
+
+    await act(async () => {
+      await result.current.toggle
+        .mutateAsync({ id: item.id, checked: true })
+        .catch(() => undefined);
+    });
+
+    expect(fake.events).toEqual([]);
+  });
+
+  it("should still tick the item when the event cannot be recorded", async () => {
+    const item = shoppingItemRow();
+    const fake = installShoppingListFake(server, [item]);
+    const { result } = await renderList(fake);
+    fake.failEvents(true);
+
+    await act(async () => {
+      await result.current.toggle.mutateAsync({ id: item.id, checked: true });
+    });
+
+    await waitFor(() => {
+      expect(fake.events).toHaveLength(1);
+    });
+    expect(result.current.toggle.isSuccess).toBe(true);
+    expect(result.current.toggle.isError).toBe(false);
+    expect(fake.rows[0]?.checked_at).not.toBeNull();
+  });
+});
+
 describe("useRemoveShoppingItem", () => {
   it("should take the item out of the list, and put it back when the request fails", async () => {
     const item = shoppingItemRow();
