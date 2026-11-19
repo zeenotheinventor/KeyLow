@@ -1,6 +1,13 @@
+import type { StreakLine } from "@keylow/core/diary";
+
 export type DiaryHeaderProps = {
   /** "Today", or the day such as "Wed 14 Oct". */
   title: string;
+  /**
+   * The streak line under the title, from core's `streakLineOf`, or null/undefined for none (a day
+   * outside the streak window, or a streak that is not known yet).
+   */
+  streakLine?: StreakLine | null | undefined;
   /** The Assistant button's name, before the calendar. */
   assistantLabel: string;
   chooseDateLabel: string;

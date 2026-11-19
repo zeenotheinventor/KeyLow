@@ -33,6 +33,7 @@ const lookClassName = {
  */
 export function DayCompleteToggle({
   complete = false,
+  caption,
   onChange,
   disabled = false,
   className = "",
@@ -78,9 +79,10 @@ export function DayCompleteToggle({
             </Text>
           </PunchLabel>
           <Text variant="caption" tone="muted">
-            {complete
-              ? DAY_COMPLETE_TOGGLE.completeCaption
-              : DAY_COMPLETE_TOGGLE.markCompleteCaption}
+            {caption ??
+              (complete
+                ? DAY_COMPLETE_TOGGLE.completeCaption
+                : DAY_COMPLETE_TOGGLE.markCompleteCaption)}
           </Text>
         </View>
         <Switch isDecorative isOn={complete} onKnobIcon="Check" />

@@ -1,4 +1,5 @@
 import type { DiaryDay, LogEntry, Targets } from "@keylow/api-client";
+import type { DayCompleteState } from "@keylow/core/diary";
 import type { PlannedDayRow } from "@keylow/core/plans";
 
 export type DiaryDayContentProps = {
@@ -10,6 +11,10 @@ export type DiaryDayContentProps = {
   /** The diary shows today. */
   isToday: boolean;
   isOnline: boolean;
+  /** Which state the day's Day complete control is in, from core. */
+  dayCompleteState: DayCompleteState;
+  /** The current daily streak, or null while it is not known. */
+  streakDays: number | null;
   /** Yesterday has nothing to copy. */
   isYesterdayEmpty: boolean;
   /** A copy of yesterday is under way. */

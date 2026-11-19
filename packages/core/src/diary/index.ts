@@ -90,3 +90,10 @@ export { changedQuickValues } from "./changedQuickValues";
 export type { QuickValues } from "./changedQuickValues";
 export { entryTimeChange } from "./entryTimeChange";
 export type { EntryTimeChange } from "./entryTimeChange";
+export { dayCompleteView, streakLineOf } from "./dayCompleteView";
+export type {
+  DayCompleteState,
+  DayCompleteView,
+  DayCompleteViewInput,
+  StreakLine,
+} from "./dayCompleteView";

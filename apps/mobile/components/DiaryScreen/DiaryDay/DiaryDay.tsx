@@ -1,4 +1,5 @@
 import {
+  keys,
   useDiaryDay,
   useDiaryWeek,
   useMealPlans,
@@ -14,8 +15,9 @@ import {
   previousCalendarDay,
   toLocalDate,
 } from "@keylow/core/dates";
-import { nextWeek, previousWeek, weekOf } from "@keylow/core/diary";
+import { dayCompleteView, nextWeek, previousWeek, streakLineOf, weekOf } from "@keylow/core/diary";
 import { planDayViewsOf, plannedDayRowOf } from "@keylow/core/plans";
+import { useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 
@@ -34,6 +36,7 @@ import { DiaryMoreSheet } from "../DiaryMoreSheet";
 import { useCheckinToast } from "../useCheckinToast";
 import { useCopyYesterday } from "../useCopyYesterday";
 import { useDeleteEntryWithUndo } from "../useDeleteEntryWithUndo";
+import { useDiaryStreak } from "../useDiaryStreak";
 
 import type { DiaryDayProps } from "./types";
 import type { WeekStripWeekChange } from "../../ui";
@@ -137,6 +140,8 @@ export function DiaryDay({ timeZone, isReadEnabled }: DiaryDayProps) {
     [planRows, viewedDate, today],
   );
   const setDayComplete = useSetDayComplete();
+  const queryClient = useQueryClient();
+  const streak = useDiaryStreak(now, isReadEnabled);
   const deleteEntry = useDeleteEntryWithUndo();
   useCheckinToast();
   const { copyYesterday, isCopying, hasCopyFailed } = useCopyYesterday(viewedDate, timeZone);
@@ -152,6 +157,26 @@ export function DiaryDay({ timeZone, isReadEnabled }: DiaryDayProps) {
   if (day !== undefined && !hasLoadedADay) {
     setHasLoadedADay(true);
   }
+
+  const dayComplete =
+    day === undefined
+      ? null
+      : dayCompleteView({
+          localDate: viewedDate,
+          today,
+          now,
+          timeZone,
+          entryCount: day.entries.length,
+          isComplete: day.dayLog?.is_complete ?? false,
+          isOnline,
+        });
+  const streakLine =
+    dayComplete === null
+      ? null
+      : streakLineOf(dayComplete, viewedDate, today, streak?.current ?? null);
+  // The streak is not counted until the stats have caught up with a Day complete just saved, so the
+  // caption of a day completed today waits for that rather than saying the number from before.
+  const streakDaysForCaption = streak?.isTodayCounted === true ? streak.current : null;
 
   const title = describeDiaryTitle(
     instantAtLocalTime(viewedDate, NOON, 0, timeZone),
@@ -195,7 +220,7 @@ export function DiaryDay({ timeZone, isReadEnabled }: DiaryDayProps) {
         />
       );
     }
-    if (day === undefined || targets === undefined) {
+    if (day === undefined || targets === undefined || dayComplete === null) {
       return <DiaryLoading includesWeek={false} isOnline={isOnline} />;
     }
 
@@ -203,12 +228,14 @@ export function DiaryDay({ timeZone, isReadEnabled }: DiaryDayProps) {
       <DiaryDayContent
         currentHour={clockHourOf(now, timeZone)}
         day={day}
+        dayCompleteState={dayComplete.state}
         isOnline={isOnline}
         isToday={viewedDate === today}
         isCopying={isCopying}
         isYesterdayEmpty={isYesterdayEmpty}
         hasCopyFailed={hasCopyFailed}
         showHour={hourToShow}
+        streakDays={streakDaysForCaption}
         plannedRow={plannedRow}
         targets={targets}
         timeZone={timeZone}
@@ -217,9 +244,11 @@ export function DiaryDay({ timeZone, isReadEnabled }: DiaryDayProps) {
             router.push(foodSearchHref({ day: viewedDate, hour }));
           }
         }}
-        onCompleteChange={(complete) =>
-          setDayComplete.mutateAsync({ localDate: viewedDate, complete })
-        }
+        onCompleteChange={async (complete) => {
+          await setDayComplete.mutateAsync({ localDate: viewedDate, complete });
+          // The streak is read from the stored days, so it is read again once this one is saved.
+          await queryClient.invalidateQueries({ queryKey: keys.achievements.state });
+        }}
         onCopyYesterday={copyYesterday}
         onDeleteEntry={deleteEntry}
         onHourShown={() => {
@@ -236,6 +265,7 @@ export function DiaryDay({ timeZone, isReadEnabled }: DiaryDayProps) {
   return (
     <DiaryFrame
       moreLabel={DIARY_MORE_LABEL}
+      streakLine={streakLine}
       title={title}
       onAssistant={() => {
         openAssistant({ localDate: viewedDate });

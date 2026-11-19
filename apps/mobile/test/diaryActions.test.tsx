@@ -722,6 +722,8 @@ describe("the diary's actions", () => {
 
     it("should mark the day on view, not today, when another day is shown", async () => {
       const user = userEvent.setup();
+      // A day with nothing logged cannot be completed, so yesterday has its entries.
+      diaryBackend.entries = [...sampleDay(), ...yesterdaysEntries()];
       await renderLoadedDiary();
       await user.press(screen.getByRole("button", { name: "Wednesday 14 October" }));
       await screen.findByRole("heading", { name: "Wed 14 Oct" });
