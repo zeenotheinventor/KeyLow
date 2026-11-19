@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>Web Achievements page</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="/_blob/2fe51da7acf9d6abcc3277b8f18ab330">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+[data-theme]{background:var(--background);color:var(--text-primary);font-family:var(--font-sans)}
+.board{box-sizing:border-box;padding:48px 40px;background:var(--surface-sheet);font-family:var(--font-sans);color:var(--text-primary);display:flex;flex-direction:column;gap:28px}
+.eye{margin:0;font-size:12px;line-height:16px;font-weight:600;letter-spacing:.06em;color:var(--accent-ink)}
+.bt{margin:0;font-size:36px;line-height:42px;font-weight:700;letter-spacing:-0.02em}
+.bs{margin:0;font-size:16px;line-height:24px;color:var(--text-secondary);max-width:1300px}
+.row{display:flex;gap:40px;align-items:flex-start}
+.cap{display:flex;flex-direction:column;gap:10px}
+.lab{margin:0;font-size:13px;line-height:18px;font-weight:600;color:var(--text-secondary)}
+.w{width:1280px;height:880px;box-sizing:border-box;border-radius:16px;overflow:hidden;border:1px solid var(--border);display:flex;font-variant-numeric:tabular-nums}
+.nav{width:232px;flex:none;border-right:1px solid var(--border);background:var(--surface);padding:24px 16px;display:flex;flex-direction:column;gap:4px}
+.logo{margin:0 0 20px 8px;font-size:20px;font-weight:700;letter-spacing:-0.02em}
+.ni{display:flex;align-items:center;min-height:40px;padding:0 12px;border-radius:var(--radius-small);font-size:14px;font-weight:500;color:var(--text-secondary)}
+.na{background:var(--accent-muted);color:var(--accent-ink);font-weight:600}
+.main{flex:1;padding:32px 40px;display:flex;flex-direction:column;gap:20px;overflow:hidden}
+.h1{margin:0;font-size:28px;line-height:34px;font-weight:600;letter-spacing:-0.02em}
+.top{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-large);padding:16px;display:flex;flex-direction:column;gap:10px}
+.small{margin:0;font-size:12px;line-height:16px;font-weight:500;color:var(--text-muted)}
+.h2{margin:0;font-size:17px;line-height:24px;font-weight:600}
+.num{margin:0;font-size:24px;line-height:30px;font-weight:600}
+.sec{margin:0;font-size:14px;line-height:20px;color:var(--text-secondary)}
+.bar{height:8px;border-radius:999px;background:var(--surface-raised);overflow:hidden}
+.fill{height:100%;border-radius:999px;background:var(--accent)}
+.strip{display:grid;grid-template-columns:repeat(14,minmax(0,1fr));gap:4px}
+.d{height:22px;border-radius:5px}
+.c{background:var(--accent)}
+.z{background:var(--protein-muted);border:1px solid var(--protein)}
+.m{border:1px dashed var(--border-strong)}
+.r{background:var(--warning-muted);border:1px solid var(--warning)}
+.cath{display:flex;justify-content:space-between;align-items:baseline}
+.bg{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:12px}
+.b{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center}
+.med{width:56px;height:56px;border-radius:999px;display:flex;align-items:center;justify-content:center;background:var(--surface-raised);border:2px solid var(--border-strong);color:var(--text-muted)}
+.bronze{border-color:var(--warning);color:var(--warning-ink)}
+.silver{border-color:var(--text-secondary);color:var(--text-secondary)}
+.gold{border-color:var(--carbs);color:var(--carbs)}
+.bn{margin:0;font-size:12px;line-height:15px;font-weight:600}
+.bp{margin:0;font-size:11px;line-height:14px;font-weight:500;color:var(--text-muted)}
+.mw{width:375px;height:880px;box-sizing:border-box;border-radius:16px;overflow:hidden;border:1px solid var(--border);display:flex;flex-direction:column;gap:14px;padding:20px 16px}
+.bg4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px 6px}
+</style>
+</helmet>
+<div class="board" style="width:1775px;height:1100px">
+<div style="display:flex;flex-direction:column;gap:8px">
+<p class="eye">ACHIEVEMENTS / WEB-PAGE</p>
+<h1 class="bt">Web: Achievements</h1>
+<p class="bs">Read-only. The same level, streak and catalogue as the phone, in the web shell's side menu. A badge opens the same detail in a dialog. No celebrations on the web: badges earned here celebrate on the phone next time Ki-Lo opens.</p>
+</div>
+<div class="row">
+<div class="cap"><p class="lab">1280, dark</p>
+<div class="w" data-theme="dark">
+<nav class="nav" aria-label="Main">
+<p class="logo">Ki-Lo</p>
+<span class="ni">Dashboard</span><span class="ni">Diary</span><span class="ni">Foods</span><span class="ni">Weight</span><span class="ni na" aria-current="page">Achievements</span>
+</nav>
+<main class="main">
+<h2 class="h1">Achievements</h2>
+<div class="top">
+<div class="card"><p class="small">LEVEL 6</p><p class="num">Sapling</p><div class="bar"><div class="fill" style="width:37%"></div></div><p class="small">1,180 points. 220 to level 7</p></div>
+<div class="card"><p class="small">DAILY STREAK</p><p class="num">12 days</p><div class="strip" aria-label="Last 14 days">
+<span class="d c"></span><span class="d c"></span><span class="d m"></span><span class="d c"></span><span class="d c"></span><span class="d c"></span><span class="d c"></span><span class="d c"></span><span class="d c"></span><span class="d z"></span><span class="d c"></span><span class="d c"></span><span class="d c"></span><span class="d c"></span>
+</div><p class="small">Longest 31. 3 freezes held</p></div>
+<div class="card"><p class="small">BADGES</p><p class="num">41 of 130</p><p class="sec">Training streak 6 weeks. Weigh-in streak 9 weeks.</p></div>
+</div>
+<sc-for list="{{cats}}" as="cat" hint-placeholder-count="2">
+<div class="card">
+<div class="cath"><h3 class="h2">{{cat.title}}</h3><p class="small">{{cat.count}}</p></div>
+<div class="bg">
+<sc-for list="{{cat.items}}" as="it" hint-placeholder-count="8">
+<div class="b"><div class="med {{it.tier}}"><sc-if value="{{it.earned}}" hint-placeholder-val="{{ true }}"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 4h8v5a4 4 0 0 1-8 0z"></path><path d="M8 6H5a3 3 0 0 0 3 4"></path><path d="M16 6h3a3 3 0 0 1-3 4"></path><path d="M12 13v4"></path><path d="M9 20h6"></path></svg></sc-if><sc-if value="{{it.locked}}" hint-placeholder-val="{{ false }}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg></sc-if></div><p class="bn">{{it.name}}</p><p class="bp">{{it.sub}}</p></div>
+</sc-for>
+</div>
+</div>
+</sc-for>
+</main>
+</div></div>
+
+<div class="cap"><p class="lab">375, light</p>
+<div class="mw" data-theme="light">
+<h2 class="h1">Achievements</h2>
+<div class="card"><p class="small">LEVEL 6</p><p class="num">Sapling</p><div class="bar"><div class="fill" style="width:37%"></div></div><p class="small">1,180 points. 220 to level 7</p></div>
+<div class="card"><p class="small">DAILY STREAK</p><p class="num">12 days</p><p class="small">Longest 31. 3 freezes held</p></div>
+<div class="card">
+<div class="cath"><h3 class="h2">Daily streaks</h3><p class="small">6 of 14</p></div>
+<div class="bg4">
+<sc-for list="{{four}}" as="it" hint-placeholder-count="8">
+<div class="b"><div class="med {{it.tier}}"><sc-if value="{{it.earned}}" hint-placeholder-val="{{ true }}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 4h8v5a4 4 0 0 1-8 0z"></path><path d="M8 6H5a3 3 0 0 0 3 4"></path><path d="M16 6h3a3 3 0 0 1-3 4"></path><path d="M12 13v4"></path><path d="M9 20h6"></path></svg></sc-if><sc-if value="{{it.locked}}" hint-placeholder-val="{{ false }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg></sc-if></div><p class="bn">{{it.name}}</p><p class="bp">{{it.sub}}</p></div>
+</sc-for>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1775,"height":1100}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const e = (name, tier) => ({ name, tier, earned: true, locked: false, sub: tier[0].toUpperCase() + tier.slice(1) });
+    const l = (name, sub) => ({ name, tier: '', earned: false, locked: true, sub });
+    const streaks = [e('Hat Trick', 'bronze'), e('Full Week', 'bronze'), e('Fortnight', 'silver'), l('Habit Forming', '12 of 21'), l('Month Strong', '12 of 30'), l('Two Months', '12 of 60'), e('Back on Track', 'bronze'), e('Saved by the Snow', 'bronze')];
+    const training = [e('Routine Builder', 'bronze'), e('Warmed Up', 'bronze'), e('Ten Down', 'bronze'), e('Regular at the Rack', 'silver'), l('Fifty Sessions', '31 of 50'), l('Hundred Club', '31 of 100'), e('Set Counter', 'bronze'), l('Thousand Sets', '412 of 1,000')];
+    return {
+      cats: [{ title: 'Daily streaks', count: '6 of 14', items: streaks }, { title: 'Training volume', count: '5 of 15', items: training }],
+      four: streaks
+    };
+  }
+}
+</script>
+</body>
+</html>

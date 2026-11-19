@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>Unlock toast, big moment and backfill card</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="/_blob/2fe51da7acf9d6abcc3277b8f18ab330">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+[data-theme]{background:var(--background);color:var(--text-primary);font-family:var(--font-sans)}
+.board{box-sizing:border-box;padding:48px 40px;background:var(--surface-sheet);font-family:var(--font-sans);color:var(--text-primary);display:flex;flex-direction:column;gap:32px}
+.eye{margin:0;font-size:12px;line-height:16px;font-weight:600;letter-spacing:.06em;color:var(--accent-ink)}
+.bt{margin:0;font-size:36px;line-height:42px;font-weight:700;letter-spacing:-0.02em}
+.bs{margin:0;font-size:16px;line-height:24px;color:var(--text-secondary);max-width:1300px}
+.row{display:flex;gap:40px;align-items:flex-start}
+.cap{display:flex;flex-direction:column;gap:10px}
+.lab{margin:0;font-size:13px;line-height:18px;font-weight:600;color:var(--text-secondary)}
+.f{width:390px;height:844px;box-sizing:border-box;border-radius:28px;overflow:hidden;border:1px solid var(--border);display:flex;flex-direction:column;position:relative;font-variant-numeric:tabular-nums}
+.h1{margin:0;font-size:var(--type-h1-size);line-height:var(--type-h1-line);font-weight:600;letter-spacing:-0.02em;padding:56px 20px 12px}
+.body{padding:0 20px;display:flex;flex-direction:column;gap:12px}
+.ph{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-medium);height:64px}
+.toast{position:absolute;left:12px;right:12px;bottom:100px;background:var(--surface-sheet);border:1px solid var(--border-strong);border-radius:var(--radius-large);box-shadow:var(--elevation-toast);padding:12px 14px;display:flex;gap:12px;align-items:center}
+.med{flex:none;width:44px;height:44px;border-radius:999px;display:flex;align-items:center;justify-content:center;background:var(--surface-raised);border:2px solid var(--warning);color:var(--warning-ink)}
+.tt{margin:0;font-size:15px;line-height:20px;font-weight:600}
+.ts{margin:0;font-size:13px;line-height:18px;color:var(--text-secondary)}
+.view{margin-left:auto;flex:none;min-height:44px;border:0;background:transparent;color:var(--accent-ink);font:inherit;font-size:14px;font-weight:600;padding:0 4px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.chip{border-radius:999px;padding:2px 8px;font-size:12px;line-height:16px;font-weight:600;background:var(--accent-muted);color:var(--accent-ink)}
+.chipb{background:var(--protein-muted);color:var(--protein)}
+.tabs{position:absolute;left:0;right:0;bottom:0;height:83px;border-top:1px solid var(--border);background:var(--surface)}
+.moment{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:0 32px;text-align:center;background:radial-gradient(circle at 50% 38%,var(--carbs-muted),transparent 60%)}
+.big{width:148px;height:148px;border-radius:999px;display:flex;align-items:center;justify-content:center;background:var(--surface-raised);border:4px solid var(--carbs);color:var(--carbs);box-shadow:0 0 0 12px var(--carbs-muted)}
+.spark{position:absolute;width:8px;height:8px;border-radius:2px}
+.mt{margin:0;font-size:32px;line-height:38px;font-weight:700;letter-spacing:-0.02em}
+.btn{width:100%;min-height:52px;border:0;border-radius:var(--radius-medium);background:var(--accent);color:var(--accent-foreground);font:inherit;font-size:16px;font-weight:600}
+.btn2{width:100%;min-height:52px;border:0;border-radius:var(--radius-medium);background:transparent;color:var(--text-secondary);font:inherit;font-size:16px;font-weight:600}
+.card{background:var(--surface);border:1px solid var(--accent);border-radius:var(--radius-large);padding:16px;display:flex;flex-direction:column;gap:10px}
+.small{margin:0;font-size:12px;line-height:16px;font-weight:500;color:var(--text-muted)}
+.note{margin:0;font-size:13px;line-height:19px;color:var(--text-secondary);max-width:390px}
+</style>
+</helmet>
+<div class="board" style="width:1760px;height:1060px">
+<div style="display:flex;flex-direction:column;gap:8px">
+<p class="eye">ACHIEVEMENTS / UNLOCK-TOAST, BIG-MOMENT, BACKFILL-CARD</p>
+<h1 class="bt">Celebrating a badge</h1>
+<p class="bs">While Ki-Lo is open, an unlock shows as a toast with a light haptic, never as a phone notification as well. One action that earns several badges shows one grouped toast. Gold and Platinum get a full-screen moment instead. Existing users see one summary card, once, instead of a toast for every badge they already had.</p>
+</div>
+<div class="row">
+
+<div class="cap"><p class="lab">Toast, one badge (over the Diary)</p>
+<div class="f" data-theme="dark">
+<h2 class="h1">Today</h2>
+<div class="body" aria-hidden="true"><div class="ph" style="height:150px"></div><div class="ph"></div><div class="ph"></div><div class="ph"></div></div>
+<div class="toast" role="status">
+<div class="med"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 4h8v5a4 4 0 0 1-8 0z"></path><path d="M8 6H5a3 3 0 0 0 3 4"></path><path d="M16 6h3a3 3 0 0 1-3 4"></path><path d="M12 13v4"></path><path d="M9 20h6"></path></svg></div>
+<div><p class="tt">Badge earned: Hat Trick</p><p class="ts">3 days complete in a row. +10 points</p></div>
+<button class="view">View</button>
+</div>
+<div class="tabs" aria-hidden="true"></div>
+</div>
+<p class="note">Shows for 4 seconds, or until swiped away. View opens the badge detail.</p>
+</div>
+
+<div class="cap"><p class="lab">Toast, grouped, with freeze and level</p>
+<div class="f" data-theme="dark">
+<h2 class="h1">Today</h2>
+<div class="body" aria-hidden="true"><div class="ph" style="height:150px"></div><div class="ph"></div><div class="ph"></div><div class="ph"></div></div>
+<div class="toast" role="status" style="align-items:flex-start">
+<div class="med" style="border-color:var(--text-secondary);color:var(--text-secondary)"><span style="font-size:16px;font-weight:700">3</span></div>
+<div><p class="tt">3 badges earned</p><p class="ts">Fortnight, Notebook and Bullseye. +45 points</p>
+<div class="chips"><span class="chip chipb">+1 freeze</span><span class="chip">You reached Sapling</span></div></div>
+<button class="view">View</button>
+</div>
+<div class="tabs" aria-hidden="true"></div>
+</div>
+<p class="note">View opens the highest tier badge. The phone notification uses the same title and body.</p>
+</div>
+
+<div class="cap"><p class="lab">Big moment, Gold (Platinum uses the accent ring)</p>
+<div class="f" data-theme="dark">
+<div class="moment" role="dialog" aria-label="Gold badge earned, Month Strong">
+<span class="spark" style="left:70px;top:190px;background:var(--carbs)" aria-hidden="true"></span>
+<span class="spark" style="right:84px;top:230px;background:var(--accent)" aria-hidden="true"></span>
+<span class="spark" style="left:110px;top:330px;background:var(--protein)" aria-hidden="true"></span>
+<span class="spark" style="right:60px;top:360px;background:var(--fat)" aria-hidden="true"></span>
+<div class="big"><svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 4h8v5a4 4 0 0 1-8 0z"></path><path d="M8 6H5a3 3 0 0 0 3 4"></path><path d="M16 6h3a3 3 0 0 1-3 4"></path><path d="M12 13v4"></path><path d="M9 20h6"></path></svg></div>
+<p class="small" style="color:var(--carbs);letter-spacing:.08em;font-weight:600">GOLD BADGE</p>
+<p class="mt">Month Strong</p>
+<p class="ts" style="font-size:16px;line-height:24px">30 days complete in a row. That is a real habit.</p>
+<div class="chips" style="justify-content:center"><span class="chip">+50 points</span><span class="chip chipb">+1 freeze</span></div>
+</div>
+<div style="padding:0 24px 40px;display:flex;flex-direction:column;gap:4px">
+<button class="btn">Nice one</button>
+<button class="btn2">See all achievements</button>
+</div>
+</div>
+<p class="note">Motion: the ring scales in on the spring ease, the sparks drift out over 400 ms, a heavy double haptic. Built with Reanimated, no Lottie, so no new app build.</p>
+</div>
+
+<div class="cap"><p class="lab">Backfill card (Dashboard, top, once)</p>
+<div class="f" data-theme="dark">
+<h2 class="h1">Dashboard</h2>
+<div class="body">
+<div class="card">
+<div style="display:flex;gap:12px;align-items:center">
+<div class="med" style="border-color:var(--accent);color:var(--accent-ink)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 4h8v5a4 4 0 0 1-8 0z"></path><path d="M8 6H5a3 3 0 0 0 3 4"></path><path d="M16 6h3a3 3 0 0 1-3 4"></path><path d="M12 13v4"></path><path d="M9 20h6"></path></svg></div>
+<div><p class="tt">Achievements are here</p><p class="ts">You have already earned 23 badges and reached level 4.</p></div>
+</div>
+<div style="display:flex;gap:8px">
+<button class="btn" style="min-height:44px">See your badges</button>
+<button class="btn2" style="min-height:44px;width:auto;padding:0 16px">Dismiss</button>
+</div>
+</div>
+<div class="ph" style="height:180px" aria-hidden="true"></div><div class="ph" aria-hidden="true"></div><div class="ph" aria-hidden="true"></div>
+</div>
+<div class="tabs" aria-hidden="true"></div>
+</div>
+<p class="note">No toasts or notifications for these 23. The card goes once seen or dismissed.</p>
+</div>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1760,"height":1060}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

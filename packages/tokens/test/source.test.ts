@@ -39,6 +39,28 @@ describe("every design token", () => {
   );
 });
 
+// The achievement badge tiers (KEY-1080, the canvas's kilo-tier-proposals.css): struck medals, so every value is the
+// same in both themes.
+const tierNames = [
+  "tier-enamel",
+  "tier-enamel-edge",
+  "tier-bronze-hi",
+  "tier-bronze-mid",
+  "tier-bronze-lo",
+  "tier-silver-hi",
+  "tier-silver-mid",
+  "tier-silver-lo",
+  "tier-gold-hi",
+  "tier-gold-mid",
+  "tier-gold-lo",
+  "tier-plat-a",
+  "tier-plat-b",
+  "tier-plat-c",
+  "tier-plat-d",
+  "tier-locked",
+  "tier-locked-glyph",
+];
+
 describe("the training additions", () => {
   const expectedNames = [
     "body-silhouette",
@@ -66,6 +88,7 @@ describe("the training additions", () => {
     "role-secondary",
     "role-assist",
     "stage-background",
+    ...tierNames,
   ];
 
   it.each(["dark", "light"] as const)(
@@ -85,6 +108,34 @@ describe("the training additions", () => {
       expect(Object.keys(palette)).not.toContain("gap-ahead-far");
     },
   );
+
+  it("should hold the badge tier colours with the canvas's values", () => {
+    const tiers = Object.fromEntries(tierNames.map((name) => [name, trainingTokens("dark")[name]]));
+
+    expect(tiers).toEqual({
+      "tier-enamel": "#161B26",
+      "tier-enamel-edge": "#2A3142",
+      "tier-bronze-hi": "#F0B27A",
+      "tier-bronze-mid": "#C9783F",
+      "tier-bronze-lo": "#7E4420",
+      "tier-silver-hi": "#F4F6FA",
+      "tier-silver-mid": "#B9C1CE",
+      "tier-silver-lo": "#6E7787",
+      "tier-gold-hi": "#FFE9A3",
+      "tier-gold-mid": "#F2C14E",
+      "tier-gold-lo": "#A8740F",
+      "tier-plat-a": "#CCF249",
+      "tier-plat-b": "#F2FBFF",
+      "tier-plat-c": "#8FD3FF",
+      "tier-plat-d": "#C9B6FF",
+      "tier-locked": "#3A4355",
+      "tier-locked-glyph": "#6B768A",
+    });
+  });
+
+  it.each(tierNames)("should hold %s as the same colour in both themes", (name) => {
+    expect(trainingTokens("light")[name]).toBe(trainingTokens("dark")[name]);
+  });
 
   it("should refuse a training token that the light theme lacks", () => {
     const sources = readSourceTexts();

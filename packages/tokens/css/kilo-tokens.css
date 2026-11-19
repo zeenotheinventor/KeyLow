@@ -171,6 +171,23 @@
   --role-secondary: #8FA83A;
   --role-assist: #66783A;
   --stage-background: #0B0E13;
+  --tier-enamel: #161B26;
+  --tier-enamel-edge: #2A3142;
+  --tier-bronze-hi: #F0B27A;
+  --tier-bronze-mid: #C9783F;
+  --tier-bronze-lo: #7E4420;
+  --tier-silver-hi: #F4F6FA;
+  --tier-silver-mid: #B9C1CE;
+  --tier-silver-lo: #6E7787;
+  --tier-gold-hi: #FFE9A3;
+  --tier-gold-mid: #F2C14E;
+  --tier-gold-lo: #A8740F;
+  --tier-plat-a: #CCF249;
+  --tier-plat-b: #F2FBFF;
+  --tier-plat-c: #8FD3FF;
+  --tier-plat-d: #C9B6FF;
+  --tier-locked: #3A4355;
+  --tier-locked-glyph: #6B768A;
 }
 
 [data-theme="light"] {
@@ -251,6 +268,23 @@
   --role-secondary: #76A01A;
   --role-assist: #B9D67A;
   --stage-background: #0B0E13;
+  --tier-enamel: #161B26;
+  --tier-enamel-edge: #2A3142;
+  --tier-bronze-hi: #F0B27A;
+  --tier-bronze-mid: #C9783F;
+  --tier-bronze-lo: #7E4420;
+  --tier-silver-hi: #F4F6FA;
+  --tier-silver-mid: #B9C1CE;
+  --tier-silver-lo: #6E7787;
+  --tier-gold-hi: #FFE9A3;
+  --tier-gold-mid: #F2C14E;
+  --tier-gold-lo: #A8740F;
+  --tier-plat-a: #CCF249;
+  --tier-plat-b: #F2FBFF;
+  --tier-plat-c: #8FD3FF;
+  --tier-plat-d: #C9B6FF;
+  --tier-locked: #3A4355;
+  --tier-locked-glyph: #6B768A;
 }
 
 @media (prefers-reduced-motion: reduce) {

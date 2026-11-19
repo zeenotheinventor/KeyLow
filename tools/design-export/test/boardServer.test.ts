@@ -90,6 +90,20 @@ describe("startBoardServer", () => {
     expect(response.type).toContain("text/css");
   });
 
+  it("should serve the packages/tokens stylesheet under each blob URL a canvas set names", async () => {
+    write("tokens.css", ":root{--tier-gold-mid:#F2C14E}");
+    server = await startBoardServer({
+      designDirectory: directory,
+      runtimePath: join(directory, "runtime.js"),
+      tokenStylesheet: { path: join(directory, "tokens.css"), blobs: ["/_blob/one", "/_blob/two"] },
+    });
+    for (const blob of ["/_blob/one", "/_blob/two"]) {
+      const response = await fetchText(blob);
+      expect(response).toMatchObject({ status: 200, body: ":root{--tier-gold-mid:#F2C14E}" });
+      expect(response.type).toContain("text/css");
+    }
+  });
+
   it("should map the blob URL of a brand mark with an SVG type", async () => {
     await start();
     const mark = canvasAssets.find((asset) => asset.file === "source/brand/mark.svg");

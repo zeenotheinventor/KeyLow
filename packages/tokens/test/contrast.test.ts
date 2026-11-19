@@ -156,10 +156,11 @@ describe("body map colour contrast on the surface", () => {
   it.each(["dark", "light"] as const)(
     "should record the ratio of every body map colour in the %s theme, with no threshold for the rest",
     (scheme) => {
-      // The stage's backdrop is a background and not a colour drawn on the surface, so it has no ratio to record.
+      // The stage's backdrop is a background and not a colour drawn on the surface, and the badge tiers are medal
+      // colours, so neither has a ratio to record here.
       const ratios = Object.fromEntries(
         Object.keys(trainingTokens(scheme))
-          .filter((name) => name !== "stage-background")
+          .filter((name) => name !== "stage-background" && !name.startsWith("tier-"))
           .map((name) => [name, bodyMapRatioOnSurface(scheme, name)]),
       );
 

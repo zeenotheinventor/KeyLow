@@ -57,6 +57,8 @@ const fetchingUrlPattern =
 export type PageCheckOptions = {
   // False for a canvas that does not use the Ki-Lo tokens, such as the widget boards.
   requiresTokens: boolean;
+  // False for a canvas whose tokens are all in packages/tokens. Defaults to true.
+  requiresProposals?: boolean;
 };
 
 export function findPageProblems(
@@ -89,7 +91,10 @@ export function findPageProblems(
     if (!html.includes(`href="${tokensStylesheetHref}"`)) {
       problems.push(`does not link ${tokensStylesheetHref}`);
     }
-    if (!html.includes(`href="${proposalsStylesheetHref}"`)) {
+    if (
+      options.requiresProposals !== false &&
+      !html.includes(`href="${proposalsStylesheetHref}"`)
+    ) {
       problems.push(`does not link ${proposalsStylesheetHref}`);
     }
   }

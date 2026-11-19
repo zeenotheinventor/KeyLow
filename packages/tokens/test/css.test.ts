@@ -115,6 +115,18 @@ describe("kilo-tokens.css", () => {
     expect(committedScopes['[data-theme="light"]']?.["--stage-background"]).toBe(darkBackground);
   });
 
+  it("should hold the badge tier colours the same in both themes, since badges are struck medals", () => {
+    const tierDeclarations = (selector: string): Record<string, string> =>
+      Object.fromEntries(
+        Object.entries(committedScopes[selector] ?? {}).filter(([property]) =>
+          property.startsWith("--tier-"),
+        ),
+      );
+
+    expect(Object.keys(tierDeclarations(":root"))).toHaveLength(17);
+    expect(tierDeclarations('[data-theme="light"]')).toEqual(tierDeclarations(":root"));
+  });
+
   it("should set color-scheme for each theme", () => {
     expect(committedScopes[":root"]?.["color-scheme"]).toBe("dark");
     expect(committedScopes['[data-theme="light"]']?.["color-scheme"]).toBe("light");

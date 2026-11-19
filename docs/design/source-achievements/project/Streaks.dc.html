@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>Streak chip, calendar and weekly streaks</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="/_blob/2fe51da7acf9d6abcc3277b8f18ab330">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+[data-theme]{background:var(--background);color:var(--text-primary);font-family:var(--font-sans)}
+.board{box-sizing:border-box;padding:48px 40px;background:var(--surface-sheet);font-family:var(--font-sans);color:var(--text-primary);display:flex;flex-direction:column;gap:32px}
+.eye{margin:0;font-size:12px;line-height:16px;font-weight:600;letter-spacing:.06em;color:var(--accent-ink)}
+.bt{margin:0;font-size:36px;line-height:42px;font-weight:700;letter-spacing:-0.02em}
+.bs{margin:0;font-size:16px;line-height:24px;color:var(--text-secondary);max-width:1300px}
+.row{display:flex;gap:40px;align-items:flex-start}
+.cap{display:flex;flex-direction:column;gap:10px}
+.lab{margin:0;font-size:13px;line-height:18px;font-weight:600;color:var(--text-secondary)}
+.f{width:390px;height:844px;box-sizing:border-box;border-radius:28px;overflow:hidden;border:1px solid var(--border);display:flex;flex-direction:column;position:relative;font-variant-numeric:tabular-nums}
+.top{padding:56px 20px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.h1{margin:0;font-size:var(--type-h1-size);line-height:var(--type-h1-line);font-weight:600;letter-spacing:-0.02em}
+.body{padding:0 20px;display:flex;flex-direction:column;gap:12px}
+.ph{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-medium)}
+.chip{display:inline-flex;align-items:center;gap:6px;min-height:36px;box-sizing:border-box;border-radius:999px;padding:0 12px;border:1px solid var(--border-strong);background:var(--surface-raised);color:var(--text-primary);font:inherit;font-size:14px;font-weight:600}
+.risk{border-color:var(--warning);background:var(--warning-muted)}
+.frz{border-color:var(--protein);background:var(--protein-muted)}
+.h2{margin:0;font-size:17px;line-height:24px;font-weight:600}
+.sec{margin:0;font-size:14px;line-height:20px;color:var(--text-secondary)}
+.small{margin:0;font-size:12px;line-height:16px;font-weight:500;color:var(--text-muted)}
+.spec{display:flex;flex-direction:column;gap:6px;align-items:flex-start;padding:12px;border-radius:var(--radius-medium);background:var(--surface)}
+.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+.dow{margin:0;text-align:center;font-size:11px;font-weight:600;color:var(--text-muted)}
+.d{height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600}
+.c{background:var(--accent);color:var(--accent-foreground)}
+.z{background:var(--protein-muted);color:var(--protein);border:1px solid var(--protein)}
+.m{background:transparent;color:var(--text-muted);border:1px dashed var(--border-strong)}
+.r{background:var(--warning-muted);color:var(--warning-ink);border:1px solid var(--warning)}
+.u{background:var(--surface);color:var(--text-muted)}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.tile{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-medium);padding:12px;display:flex;flex-direction:column;gap:2px}
+.num{margin:0;font-size:20px;line-height:24px;font-weight:600}
+.leg{display:flex;flex-wrap:wrap;gap:12px}
+.li{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-secondary)}
+.sw{width:14px;height:14px;border-radius:4px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-large);padding:16px;display:flex;flex-direction:column;gap:12px}
+.weeks{display:flex;gap:6px;align-items:flex-end}
+.wk{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px}
+.wb{width:100%;height:28px;border-radius:8px}
+.tabs{position:absolute;left:0;right:0;bottom:0;height:83px;border-top:1px solid var(--border);background:var(--surface)}
+.sheet{position:absolute;left:0;right:0;bottom:0;top:72px;background:var(--surface-sheet);border-radius:var(--radius-large) var(--radius-large) 0 0;box-shadow:var(--elevation-sheet);padding:12px 20px 32px;display:flex;flex-direction:column;gap:16px}
+.handle{align-self:center;width:36px;height:4px;border-radius:999px;background:var(--border-strong)}
+.dim{position:absolute;inset:0;background:var(--overlay)}
+</style>
+</helmet>
+<div class="board" style="width:1760px;height:1060px">
+<div style="display:flex;flex-direction:column;gap:8px">
+<p class="eye">ACHIEVEMENTS / STREAK-CHIP, STREAK-CALENDAR, WEEKLY-STREAKS</p>
+<h1 class="bt">Streaks</h1>
+<p class="bs">The daily streak counts completed days. A chip at the top of the Dashboard shows it and opens the calendar. Training and weigh-in streaks count weeks, Monday to Sunday, and live on the Train tab and the Weight screen. Weekly streaks never use freezes.</p>
+</div>
+<div class="row">
+
+<div class="cap"><p class="lab">Dashboard chip, and its four states</p>
+<div class="f" data-theme="dark">
+<div class="top"><h2 class="h1">Dashboard</h2>
+<button class="chip" aria-label="12 day streak. Open streak calendar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="color:var(--warning-ink)" aria-hidden="true"><path d="M12 3c1 4 5 5.5 5 10a5 5 0 0 1-10 0c0-2 1-3.5 2-4.5 0 2 1 3 2 3 0-3-1-5 1-8.5z"></path></svg>12</button></div>
+<div class="body">
+<div class="spec"><p class="small">Active, today complete</p><span class="chip"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="color:var(--warning-ink)" aria-hidden="true"><path d="M12 3c1 4 5 5.5 5 10a5 5 0 0 1-10 0c0-2 1-3.5 2-4.5 0 2 1 3 2 3 0-3-1-5 1-8.5z"></path></svg>12</span></div>
+<div class="spec"><p class="small">At risk, today not complete yet (until midnight)</p><span class="chip risk"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="color:var(--warning-ink)" aria-hidden="true"><path d="M12 3c1 4 5 5.5 5 10a5 5 0 0 1-10 0c0-2 1-3.5 2-4.5 0 2 1 3 2 3 0-3-1-5 1-8.5z"></path></svg>12 · Complete today</span></div>
+<div class="spec"><p class="small">Freeze used for yesterday</p><span class="chip frz"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="color:var(--protein)" aria-hidden="true"><path d="M12 2v20"></path><path d="M3.3 7l17.4 10"></path><path d="M3.3 17L20.7 7"></path><path d="M9 4l3 2 3-2"></path><path d="M9 20l3-2 3 2"></path></svg>12 · Freeze used</span></div>
+<div class="spec"><p class="small">No streak</p><span class="chip"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-muted)" aria-hidden="true"><path d="M12 3c1 4 5 5.5 5 10a5 5 0 0 1-10 0c0-2 1-3.5 2-4.5 0 2 1 3 2 3 0-3-1-5 1-8.5z"></path></svg>Start a streak</span></div>
+<div class="ph" style="height:150px" aria-hidden="true"></div>
+</div>
+<div class="tabs" aria-hidden="true"></div>
+</div></div>
+
+<div class="cap"><p class="lab">Streak calendar (sheet from the chip)</p>
+<div class="f" data-theme="dark">
+<div class="dim"></div>
+<div class="sheet" role="dialog" aria-label="Your streak">
+<div class="handle"></div>
+<div><p class="h2" style="font-size:22px;line-height:28px">Your streak</p><p class="sec">Complete a day in the Diary to keep it going.</p></div>
+<div class="stats">
+<div class="tile"><p class="num">11</p><p class="small">current days</p></div>
+<div class="tile"><p class="num">31</p><p class="small">longest</p></div>
+<div class="tile"><p class="num" style="color:var(--protein)">3</p><p class="small">freezes held</p></div>
+</div>
+<div style="display:flex;justify-content:space-between;align-items:center"><p class="h2">November 2026</p><p class="small">Mon to Sun</p></div>
+<div class="cal">
+<p class="dow">M</p><p class="dow">T</p><p class="dow">W</p><p class="dow">T</p><p class="dow">F</p><p class="dow">S</p><p class="dow">S</p>
+<span></span><span></span><span></span><span></span><span></span><span></span><span class="d c">1</span>
+<span class="d c">2</span><span class="d c">3</span><span class="d c">4</span><span class="d c">5</span><span class="d c">6</span><span class="d m">7</span><span class="d c">8</span>
+<span class="d c">9</span><span class="d c">10</span><span class="d c">11</span><span class="d c">12</span><span class="d c">13</span><span class="d z" aria-label="14, frozen">14</span><span class="d c">15</span>
+<span class="d c">16</span><span class="d c">17</span><span class="d c">18</span><span class="d r" aria-label="19, today, not complete yet">19</span><span class="d u">20</span><span class="d u">21</span><span class="d u">22</span>
+<span class="d u">23</span><span class="d u">24</span><span class="d u">25</span><span class="d u">26</span><span class="d u">27</span><span class="d u">28</span><span class="d u">29</span>
+<span class="d u">30</span>
+</div>
+<div class="leg">
+<span class="li"><span class="sw c"></span>Complete</span>
+<span class="li"><span class="sw z"></span>Frozen</span>
+<span class="li"><span class="sw m"></span>Missed</span>
+<span class="li"><span class="sw r"></span>Today, at risk</span>
+</div>
+<p class="sec">You earn a freeze for every 7 days in a row, and from Gold and Platinum badges, level-ups and more. There is no limit to how many you hold.</p>
+</div>
+</div></div>
+
+<div class="cap"><p class="lab">Training streak, top of the Train tab</p>
+<div class="f" data-theme="dark">
+<div class="top"><h2 class="h1">Train</h2></div>
+<div class="body">
+<div class="card">
+<div style="display:flex;justify-content:space-between;align-items:baseline"><p class="h2">6-week training streak</p><p class="small">Best 9</p></div>
+<div class="weeks" aria-label="Last 8 weeks">
+<div class="wk"><span class="wb" style="background:var(--surface-raised)"></span><p class="small">W1</p></div>
+<div class="wk"><span class="wb" style="background:var(--surface-raised)"></span><p class="small">W2</p></div>
+<div class="wk"><span class="wb c"></span><p class="small">W3</p></div>
+<div class="wk"><span class="wb c"></span><p class="small">W4</p></div>
+<div class="wk"><span class="wb c"></span><p class="small">W5</p></div>
+<div class="wk"><span class="wb c"></span><p class="small">W6</p></div>
+<div class="wk"><span class="wb c"></span><p class="small">W7</p></div>
+<div class="wk"><span class="wb r"></span><p class="small">Now</p></div>
+</div>
+<p class="sec">2 of 4 sessions this week. 2 more by Sunday to keep it.</p>
+</div>
+<div class="ph" style="height:96px" aria-hidden="true"></div><div class="ph" style="height:96px" aria-hidden="true"></div><div class="ph" style="height:96px" aria-hidden="true"></div>
+</div>
+<div class="tabs" aria-hidden="true"></div>
+</div></div>
+
+<div class="cap"><p class="lab">Weigh-in streak, on the Weight screen</p>
+<div class="f" data-theme="light">
+<div class="top"><h2 class="h1">Weight</h2></div>
+<div class="body">
+<div class="ph" style="height:200px" aria-hidden="true"></div>
+<div class="card" style="flex-direction:row;align-items:center;gap:12px">
+<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent-ink);flex:none" aria-hidden="true"><path d="M5 12l4 4 10-10"></path></svg>
+<div><p class="h2">9-week weigh-in streak</p><p class="sec">Weighed in this week. Best 14 weeks.</p></div>
+</div>
+<div class="ph" style="height:72px" aria-hidden="true"></div><div class="ph" style="height:72px" aria-hidden="true"></div>
+</div>
+<p class="small" style="padding:16px 20px 0">Light theme shown here. The card names no weights, only the habit.</p>
+<div class="tabs" aria-hidden="true"></div>
+</div></div>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1760,"height":1060}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

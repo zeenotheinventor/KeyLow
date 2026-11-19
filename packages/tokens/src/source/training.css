@@ -19,6 +19,9 @@
    stage (KEY-835): --stage-background is the backdrop of the web 3D stage. It holds the dark theme's background in both themes,
    because the stage is dark whatever the app's theme and the app's theme sits on <html>, where var(--background) would
    resolve light under it. The kit's 3D body stays a clear canvas, and the stage that holds it draws this behind it.
+   tier (KEY-1080, the achievements canvas's kilo-tier-proposals.css, approved 2026-11-19): the enamel, bronze, silver, gold,
+   platinum and locked colours of an achievement badge. Badges are struck medals, so every tier token has the same value in
+   both themes, as --stage-background does.
    The far-behind and far-ahead gap steps are retired: core has three plan statuses (behind, on plan, ahead). */
 :root{
 --body-silhouette:#262D3A;
@@ -46,6 +49,23 @@
 --role-secondary:#8FA83A;
 --role-assist:#66783A;
 --stage-background:#0B0E13;
+--tier-enamel:#161B26;
+--tier-enamel-edge:#2A3142;
+--tier-bronze-hi:#F0B27A;
+--tier-bronze-mid:#C9783F;
+--tier-bronze-lo:#7E4420;
+--tier-silver-hi:#F4F6FA;
+--tier-silver-mid:#B9C1CE;
+--tier-silver-lo:#6E7787;
+--tier-gold-hi:#FFE9A3;
+--tier-gold-mid:#F2C14E;
+--tier-gold-lo:#A8740F;
+--tier-plat-a:#CCF249;
+--tier-plat-b:#F2FBFF;
+--tier-plat-c:#8FD3FF;
+--tier-plat-d:#C9B6FF;
+--tier-locked:#3A4355;
+--tier-locked-glyph:#6B768A;
 }
 [data-theme="light"]{
 --body-silhouette:#E2E6EC;
@@ -73,4 +93,21 @@
 --role-secondary:#76A01A;
 --role-assist:#B9D67A;
 --stage-background:#0B0E13;
+--tier-enamel:#161B26;
+--tier-enamel-edge:#2A3142;
+--tier-bronze-hi:#F0B27A;
+--tier-bronze-mid:#C9783F;
+--tier-bronze-lo:#7E4420;
+--tier-silver-hi:#F4F6FA;
+--tier-silver-mid:#B9C1CE;
+--tier-silver-lo:#6E7787;
+--tier-gold-hi:#FFE9A3;
+--tier-gold-mid:#F2C14E;
+--tier-gold-lo:#A8740F;
+--tier-plat-a:#CCF249;
+--tier-plat-b:#F2FBFF;
+--tier-plat-c:#8FD3FF;
+--tier-plat-d:#C9B6FF;
+--tier-locked:#3A4355;
+--tier-locked-glyph:#6B768A;
 }

@@ -156,6 +156,8 @@ describe("the classes the design's screens are written with", () => {
     "bg-role-secondary",
     "bg-role-assist",
     "bg-stage-background",
+    "bg-tier-gold-mid",
+    "bg-tier-locked-glyph",
   ];
 
   it.each(classNames)("should generate %s", async (className) => {

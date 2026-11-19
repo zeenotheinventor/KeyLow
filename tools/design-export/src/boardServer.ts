@@ -13,6 +13,8 @@ export type BoardServerOptions = {
   runtimePath: string;
   // The canvas source folder under designDirectory. Defaults to the M2 canvas.
   sourceFolder?: string;
+  // The canvas stylesheets served from the packages/tokens stylesheet, by their /_blob/ URL.
+  tokenStylesheet?: { path: string; blobs: readonly string[] };
 };
 
 export type BoardServer = {
@@ -45,6 +47,11 @@ export async function startBoardServer(options: BoardServerOptions): Promise<Boa
         found = {
           body: await readOrUndefined(options.runtimePath),
           contentType: "text/javascript",
+        };
+      } else if (options.tokenStylesheet?.blobs.includes(path) === true) {
+        found = {
+          body: await readOrUndefined(options.tokenStylesheet.path),
+          contentType: "text/css",
         };
       } else if (asset !== undefined) {
         found = {
