@@ -85,3 +85,4 @@ export * from "./achievementBadge";
 export * from "./streaks";
 export * from "./webAchievements";
 export * from "./achievementsScreen";
+export * from "./achievementCelebrations";

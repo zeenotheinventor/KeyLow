@@ -9,6 +9,7 @@ export { decideCelebrations } from "./celebrations";
 export type {
   CelebrationDecision,
   CelebrationEntry,
+  CelebrationExtras,
   CelebrationInput,
   HeldRow,
 } from "./celebrations";
@@ -72,3 +73,9 @@ export type {
 } from "./overview";
 export { freezesForBadge } from "./freezeGrants";
 export { unseenBackfilledIdsOf, unseenIdsOf, withSeen } from "./seen";
+export { summariseCelebrations } from "./celebrationSummary";
+export type {
+  CelebrationChip,
+  CelebrationSummary,
+  CelebrationSummaryInput,
+} from "./celebrationSummary";

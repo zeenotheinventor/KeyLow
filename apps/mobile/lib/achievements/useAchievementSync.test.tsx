@@ -353,6 +353,7 @@ describe("useAchievementSync", () => {
 
       expect(getCelebrationState()).toEqual({
         entries: [{ id: "first-bite", isNew: true }],
+        extras: { freezes: 1, levelName: null },
         notification: {
           title: "Badge earned: First Bite",
           body: "Logging your first food. +10 points. +1 freeze",
@@ -478,6 +479,7 @@ describe("useAchievementSync", () => {
       expect(record).toHaveBeenCalledWith(client, expect.arrayContaining(["first-bite"]), true);
       expect(getCelebrationState()).toEqual({
         entries: [],
+        extras: null,
         notification: null,
         wasActive: true,
         backfillSummary: 3,

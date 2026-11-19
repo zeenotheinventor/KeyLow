@@ -10,6 +10,7 @@ import { useCancelRemindersWhenSignedOut } from "../../lib/reminderScheduler";
 import { identifyUser } from "../../lib/sentry/identifyUser";
 import { supabase } from "../../lib/supabase";
 import { WidgetSync } from "../../lib/widgets/WidgetSync";
+import { AchievementCelebration } from "../AchievementCelebration";
 import { CheckinRunner } from "../CheckinRunner";
 import { DeviceTimeZoneSync } from "../DeviceTimeZoneSync";
 import { HealthImportRunner } from "../HealthImportRunner";
@@ -30,6 +31,9 @@ export function AuthGate({ children, readStoredUserId = readNoStoredUserId }: Au
   // Whether someone is signed in. It is not "there is a session object": see the first effect.
   const [isSignedIn, setIsSignedIn] = useState(false);
   const [isSessionLoaded, setIsSessionLoaded] = useState(false);
+  // Who is signed in, so what belongs to one account (the achievements waiting to be celebrated) is dropped
+  // when the account changes, even with no sign-out between the two.
+  const [accountId, setAccountId] = useState<string | null>(null);
   const [termsGateState, setTermsGateState] = useState<TermsGateState>("open");
 
   useEffect(() => {
@@ -40,6 +44,7 @@ export function AuthGate({ children, readStoredUserId = readNoStoredUserId }: Au
     const identify = (userId: string | null) => {
       if (userId !== identifiedUserId) {
         identifiedUserId = userId;
+        setAccountId(userId);
         identifyUser(userId);
       }
     };
@@ -154,7 +159,8 @@ export function AuthGate({ children, readStoredUserId = readNoStoredUserId }: Au
           <TermsGate onStateChange={setTermsGateState} />
           <SetupGate />
           <DeviceTimeZoneSync />
-          <AchievementSync />
+          <AchievementSync key={accountId} />
+          <AchievementCelebration key={accountId} />
           <HealthImportRunner />
           <CheckinRunner />
           <ReminderScheduler />

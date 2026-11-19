@@ -8,5 +8,7 @@ export const storyStates = [
   "SuccessFilled",
   "FavouriteAdded",
   "FavouriteRemoved",
+  "AchievementSingle",
+  "AchievementGrouped",
   "WithProvider",
 ];

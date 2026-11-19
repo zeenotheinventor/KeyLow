@@ -52,6 +52,43 @@ describe("decideCelebrations", () => {
       expect(decision.notification).toBeNull();
     });
 
+    it("should carry the freezes and the level of the run as numbers", () => {
+      const decision = decideCelebrations(
+        input({
+          run: {
+            ...quietRun,
+            newUnlocks: ["first-bite"],
+            points: 10,
+            levelUp: { from: 0, to: 1, name: "Sprout" },
+            freezeEventsToWrite: [
+              { kind: "earned", reason: "level", reference: "1", date: "2026-11-19", count: 2 },
+              {
+                kind: "used",
+                reason: "gap",
+                reference: "2026-11-18",
+                date: "2026-11-19",
+                count: 1,
+              },
+            ],
+          },
+          recorded: ["first-bite"],
+        }),
+      );
+
+      expect(decision.extras).toEqual({ freezes: 2, levelName: "Sprout" });
+    });
+
+    it("should carry no extras when the run earned no freeze and reached no level", () => {
+      const decision = decideCelebrations(
+        input({
+          run: { ...quietRun, newUnlocks: ["first-bite"], points: 10 },
+          recorded: ["first-bite"],
+        }),
+      );
+
+      expect(decision.extras).toBeNull();
+    });
+
     it("should queue a held row that was never seen as not new, with no notification", () => {
       const decision = decideCelebrations(
         input({ held: [{ id: "hat-trick", seenAt: null, backfilled: false }] }),
@@ -142,7 +179,12 @@ describe("decideCelebrations", () => {
         }),
       );
 
-      expect(decision).toEqual({ entries: [], notification: null, backfillSummary: 3 });
+      expect(decision).toEqual({
+        entries: [],
+        extras: null,
+        notification: null,
+        backfillSummary: 3,
+      });
     });
 
     it("should still yield no summary when nothing was earned", () => {
