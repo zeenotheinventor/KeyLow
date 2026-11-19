@@ -106,17 +106,18 @@ These come from the health-data rules in `AGENTS.md`.
 
 ### Models and request rules
 
-| Route                          | Model                          | Use                                                                                                             |
-| ------------------------------ | ------------------------------ | --------------------------------------------------------------------------------------------------------------- |
-| Chat, describe, recipe parsing | Haiku 5.5 (`claude-haiku-5-5`) | The streaming turn loop, the tool-less recipe parse and the tool-less choice of each imported line's food       |
-| Compaction                     | Haiku 5.5, no tools            | One call per compaction                                                                                         |
-| Coaching, later                | Opus 5.5 (`claude-opus-5-5`)   | After M6, not part of M8's build                                                                                |
-| Recipe and plan generation     | Opus 5.5 (`claude-opus-5-5`)   | One tool-less structured-output call inside each generation tool, effort `low`, refusal fallbacks (Amendment 6) |
+| Route                      | Model                          | Use                                                                                                             |
+| -------------------------- | ------------------------------ | --------------------------------------------------------------------------------------------------------------- |
+| Chat, describe             | Opus 5.5 (`claude-opus-5-5`)   | The streaming turn loop, from Amendment 8 (it was Haiku 5.5 before)                                             |
+| Recipe parsing             | Haiku 5.5 (`claude-haiku-5-5`) | The tool-less recipe parse and the tool-less choice of each imported line's food                                |
+| Compaction                 | Haiku 5.5, no tools            | One call per compaction, thinking disabled                                                                      |
+| Coaching, later            | Opus 5.5 (`claude-opus-5-5`)   | After M6, not part of M8's build                                                                                |
+| Recipe and plan generation | Opus 5.5 (`claude-opus-5-5`)   | One tool-less structured-output call inside each generation tool, effort `low`, refusal fallbacks (Amendment 6) |
 
 - Never send `temperature`, `top_p` or `top_k`. On API version `2026-10-21` any value is a 400 on every model.
 - `tool_choice` is always `auto`, with the rules in the system prompt and `strict: true` on every tool, except a tool that opts out to stay inside the API's caps on strict tools (KEY-688: strict by default, and the executor validates every input either way). Every training tool opts out (Amendment 1). A forced tool choice is a 400 on Opus 5.5.
-- Haiku 5.5 takes adaptive thinking with `output_config.effort`. It has no `budget_tokens` and no prefill. Opus 5.5 cannot have thinking disabled, so effort is its control.
-- Refusals: on `stop_reason: "refusal"` the turn loop runs no tool from that response and ends the turn with the turn status `refused` and the `turn_failed` notice (an error ending is `failed`, a refusal stop is `refused`, and both send that notice). Haiku 5.5 has no server-side `fallbacks` (a `fallbacks` list is a 400), so M8 handles the refusal itself. `fallbacks` belongs to the coaching wave on Opus 5.5.
+- Haiku 5.5 takes adaptive thinking with `output_config.effort`. The chat turn runs on Opus 5.5 from Amendment 8, which takes the same two settings. It has no `budget_tokens` and no prefill. Opus 5.5 cannot have thinking disabled, so effort is its control.
+- Refusals: on `stop_reason: "refusal"` the turn loop runs no tool from that response and ends the turn with the turn status `refused` and the `turn_failed` notice (an error ending is `failed`, a refusal stop is `refused`, and both send that notice). Haiku 5.5 has no server-side `fallbacks` (a `fallbacks` list is a 400), so M8 handles the refusal itself. `fallbacks` belongs to the coaching wave on Opus 5.5. The chat turn is on Opus 5.5 from Amendment 8 and still sends no `fallbacks`.
 - Streamed client tools get eager input streaming, which moves validation to the client. Every tool input is validated before it is sent to the server, an invalid input goes back as an `is_error` tool result, and a `tool_use` under `stop_reason: "max_tokens"` is never run.
 - Prompt caching: one constant system prompt over the 512-token minimum for Haiku 5.5 with a cache breakpoint, a deterministic tool order, history never edited, and a breakpoint on the last message. The system prompt holds no date, user id or flag. The second turn of a conversation must show a non-zero `cache_read_input_tokens`. The deterministic prefix is asserted in a unit test, and the live check runs in the eval runner.
 - One `assistant_usage` row per model call (ids and counts only, with the cost in `cost_usd_micros`), so spend and the cost view come from one table. The routes are `describe_or_ask` for a turn's calls, `compact` for a compaction call, and `recipe_parse` for the tool-less parse of a fetched recipe page and for the tool-less choice of each imported line's food. The last two use transport `none` (orchestrator decision, 2026-10-26).
@@ -226,7 +227,7 @@ This amendment adds no table, column or migration. The tables and columns it use
 - The medical rule is unchanged and applies to training. The assistant gives no diagnosis and no rehab plan, and for an injury or pain it suggests a doctor or a physio, the same as for medical questions about food. It can still swap an exercise when asked.
 - It cannot start a workout and it cannot accept a suggestion. It can build a routine.
 - Numbers come from Ki-Lo's own calculations (`muscleState`, `suggestSession`, `exerciseWeeklyTrend`), and the model explains them and never invents its own. Ki-Lo has no calculation for what weight to lift next, so "how much should I bench next?" is answered from the last performance and the trend and gets no new number.
-- Still out of scope: the nutrition coaching wave (section 8 of `M8-PLAN.md`, separate and unfiled), the web assistant (KEY-914 stays in Backlog and nothing is filed, because the assistant is deliberately not on the web, KEY-877), and any model other than Haiku 5.5.
+- Still out of scope: the nutrition coaching wave (section 8 of `M8-PLAN.md`, separate and unfiled), the web assistant (KEY-914 stays in Backlog and nothing is filed, because the assistant is deliberately not on the web, KEY-877), and any model other than Haiku 5.5 (superseded for the chat turn by Amendment 8).
 
 ### Addendum of 2026-11-10 (KEY-952): general training questions
 
@@ -304,6 +305,8 @@ The new words (the consent card, the Privacy Policy sentence for "Why Ki-Lo uses
 ### Models
 
 Haiku 5.5 (`claude-haiku-5-5`) stays for chat and compaction. Zee's condition: it stays unless the advice evals fail. KEY-895 runs the advice set and decides.
+
+- **Amendment of 2026-11-19 (KEY-1099): the chat turn moves to Opus 5.5 at Zee's request, see Amendment 8.** Compaction stays on Haiku 5.5.
 
 ### Evals
 
@@ -511,7 +514,7 @@ Recorded on 2026-11-13 under KEY-1026, part of KEY-216 (the M9 brief for the pal
 
 ### Context
 
-Haiku 5.5 routes a kitchen turn. It passes the person's words and any figures to a kitchen tool and reports what the tool returned. Proposing a recipe, a substitution or a ranking for a plan needs a stronger model, and moving the turn loop to Opus would re-bill the chat prefix as an Opus cache write, mix two models' thinking blocks in one history and put every existing eval set on a second model. The generation therefore happens inside the tool, the way `recipe_parse` makes its tool-less call (KEY-838).
+Haiku 5.5 routes a kitchen turn. (Amendment 8 moved the turn loop to Opus 5.5 on 2026-11-19, which answers the three costs named here: the cache write, the mixed thinking blocks and the eval sets.) It passes the person's words and any figures to a kitchen tool and reports what the tool returned. Proposing a recipe, a substitution or a ranking for a plan needs a stronger model, and moving the turn loop to Opus would re-bill the chat prefix as an Opus cache write, mix two models' thinking blocks in one history and put every existing eval set on a second model. The generation therefore happens inside the tool, the way `recipe_parse` makes its tool-less call (KEY-838).
 
 ### Decision
 
@@ -530,7 +533,7 @@ Haiku 5.5 routes a kitchen turn. It passes the person's words and any figures to
 - A kitchen job costs about $0.05 for a suggestion, $0.03 for a substitution and $0.08 to $0.13 for a seven-day plan, from the plan's estimates. The daily limit counts turns and not money, so it does not bound Opus spend. The monthly cap of USD 10 (`ASSISTANT_MONTHLY_CAP_USD_MICROS`) does, for the whole app.
 - A turn that reaches a generation tool late answers `busy_try_again`, and the person asks again. That is a worse answer than a long wait, and it is the price of ending inside 150 s on the free plan. On a paid plan (400 s) the 65 s and the 55 s can relax.
 - The acceptance of 10 live calls of each of the three jobs, with a 95th percentile under 40 s, has not run. It waits for the eval workspace and key of KEY-1020, and KEY-1026 records the measured cost and timing when it does. If a seven-day plan misses 40 s, the plan job ranks once for each time band and not for each day.
-- The chat prompt, the tool prefix and every eval set that runs on Haiku are untouched.
+- The chat prompt, the tool prefix and every eval set that runs on Haiku are untouched. (Amendment 8 later moved the turn loop to Opus 5.5.)
 
 ### Implemented by
 
@@ -572,3 +575,32 @@ The `turn` route streams the reply over one connection. Until now, the reader go
 ### Implemented by
 
 - KEY-1064: the `runInBackground` dependency of the `turn` route, the turn's own `stop` controller, the stream's comments and this amendment.
+
+## Amendment 8 to this ADR: the chat turn runs on Opus 5.5 (2026-11-19)
+
+### Status
+
+Recorded on 2026-11-19 under KEY-1099. It follows Zee's request of 2026-11-19: "I want to change the model used for the agent from haiku to opus". It adds no table, column or migration, and no app change.
+
+### Decision
+
+- **The streaming chat turn uses `claude-opus-5-5`.** Adaptive thinking, `output_config.effort` of `medium` (the Opus default, pinned so nothing changes it by accident), `max_tokens` 8,000 and `tool_choice` `auto`. A forced tool choice stays a 400 on Opus 5.5 and is never sent.
+- **Compaction and the recipe parse stay on Haiku 5.5.** Compaction sends thinking `disabled`, which Opus 5.5 refuses at every effort, so it has its own constant, `COMPACTION_MODEL`. The tool-less recipe parse and the choice of each imported line's food keep `RECIPE_PARSE_MODEL`. The eval judge stays on Haiku.
+- **No server-side `fallbacks`.** They exist on Opus 5.5 and are not used. A refusal still ends the turn `refused`, as in Models and request rules.
+- **The prompt cache minimum is 512 tokens on Opus 5.5, the same as on Haiku 5.5,** so the system prompt and the breakpoints are unchanged.
+- **The thinking replay rules are unchanged.** Opus 5.5 reads thinking blocks that Haiku 5.5 made, so a conversation started before the deploy carries on. Only the current turn's thinking blocks are sent, as before. Opus 5.5 runs the same history-editing check that Haiku 5.5 did, so the reasons given for simple compaction and for append-only history (the Compaction section and Amendment 5) hold for the turn model as they did for Haiku.
+- **The kitchen beta stays.** `mid-conversation-tool-changes-2026-07-01` is listed for Opus 5.5.
+- **Usage rows of the turn record `claude-opus-5-5`,** priced from the Opus rates already in `usage.ts`. The row stores the requested model, so a dated id in the response does not change it.
+
+### Consequences
+
+- Haiku 5.5 is $0.10 per million input tokens and $0.50 per million output tokens. Opus 5.5 is $4 and $20, with cache reads at $0.20. That is about 40 times more for each token.
+- The cache is kept for each model, so the first turn of every conversation after the deploy writes the prefix to the cache once.
+- The monthly cap of USD 10 is reached much sooner. Changing it is out of scope and is Zee's decision.
+- An Opus call is slower, so a long turn of many writes is more likely to reach the 100 s turn deadline than the 12 call cap. The conclude path ends such a turn gracefully.
+- The 45 s stream idle timer is unchanged until KEY-795 has measured Opus streams. If it trips, the fallback is to set thinking display to `summarized`.
+- The eval baselines were taken on Haiku and need running again. The advice-set rule of Amendment 1 (the assistant stays on Haiku unless the set fails) is replaced by this decision.
+
+### Implemented by
+
+- KEY-1099: the `MODEL` constant, `COMPACTION_MODEL`, the tests that name the models, the comments and this amendment.

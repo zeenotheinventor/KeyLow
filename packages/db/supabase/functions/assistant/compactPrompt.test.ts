@@ -7,7 +7,7 @@ import {
   buildCompactionRequest,
   renderTranscript,
 } from "./compactPrompt.ts";
-import { MODEL, toApiMessages } from "./prompt.ts";
+import { toApiMessages } from "./prompt.ts";
 
 import type { StoredHistoryMessage } from "./prompt.ts";
 
@@ -76,7 +76,7 @@ Deno.test(
   () => {
     const request = buildCompactionRequest("the transcript");
 
-    assertEquals(request.model, MODEL);
+    assertEquals(request.model, "claude-haiku-5-5");
     assertEquals(request.max_tokens, COMPACTION_MAX_TOKENS);
     assertEquals(request.thinking, { type: "disabled" });
     assertEquals(request.output_config, { effort: "low" });

@@ -80,7 +80,7 @@ function eventsOf(response: ScriptedResponse, index: number): { head: string[]; 
         id: `msg_${index}`,
         type: "message",
         role: "assistant",
-        model: "claude-haiku-5-5-20260301",
+        model: "claude-opus-5-5-20261101",
         content: [],
         stop_reason: null,
         stop_sequence: null,
@@ -158,7 +158,7 @@ function messageOf(response: ScriptedResponse, index: number) {
     id: `msg_${index}`,
     type: "message",
     role: "assistant",
-    model: "claude-haiku-5-5-20260301",
+    model: "claude-opus-5-5-20261101",
     content: response.blocks.map((block) =>
       block.type === "tool_use"
         ? { type: "tool_use", id: block.id, name: block.name, input: block.input ?? {} }
