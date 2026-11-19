@@ -1,3 +1,5 @@
+import { mockUseRecordAchievementEvent } from "../../support/recordAchievementEventMock";
+
 import type * as ApiClient from "@keylow/api-client";
 import type { UseFoodByBarcodeOptions, UseFoodByBarcodeReturn } from "@keylow/api-client";
 
@@ -45,6 +47,7 @@ export function lookedUpCodes(): string[] {
 // The real error classes and helpers stay in place. Only the barcode hook is replaced.
 export const mockBarcodeApiClient = {
   ...jest.requireActual<typeof ApiClient>("@keylow/api-client"),
+  useRecordAchievementEvent: mockUseRecordAchievementEvent,
   useFoodByBarcode: (rawCode: string, options?: UseFoodByBarcodeOptions) =>
     mockUseFoodByBarcode(rawCode, options),
 };

@@ -1,6 +1,8 @@
 import { TERMS_VERSION } from "@keylow/core/copy";
 import { buildFood, buildFoodPortion } from "@keylow/core/testing";
 
+import { mockUseRecordAchievementEvent } from "../../support/recordAchievementEventMock";
+
 import type * as ApiClient from "@keylow/api-client";
 import type {
   CreatedFood,
@@ -214,6 +216,7 @@ export function resetApiClientMock(): void {
 // Only the hooks are replaced.
 export const mockApiClient = {
   ...jest.requireActual<typeof ApiClient>("@keylow/api-client"),
+  useRecordAchievementEvent: mockUseRecordAchievementEvent,
   useCreateFood: () => ({ mutateAsync: mockCreateFood }),
   useUpdateFood: () => ({ mutateAsync: mockUpdateFood }),
   useLogFood: () => ({ mutateAsync: mockLogFood }),

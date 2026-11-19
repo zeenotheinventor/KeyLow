@@ -52,6 +52,8 @@ vi.mock("@keylow/api-client", async (importOriginal) => {
 
   return {
     ...original,
+    useRecordAchievementEvent: (await import("../recordAchievementEventMock"))
+      .mockUseRecordAchievementEvent,
     ...noFavouriteHooks,
     ...noPlateHooks,
     // The refresh of an old branded food is the off refresh tests' business.

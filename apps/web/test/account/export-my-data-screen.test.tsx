@@ -7,6 +7,7 @@ import { act, cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { mockRecordAchievementEvent } from "../recordAchievementEventMock";
 import { renderWithRouter } from "../ui/appRouter";
 
 import type { Database } from "@keylow/api-client";
@@ -22,6 +23,8 @@ const { exportMyData, router } = vi.hoisted(() => ({
 vi.mock("@keylow/api-client", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@keylow/api-client")>()),
   exportMyData,
+  useRecordAchievementEvent: (await import("../recordAchievementEventMock"))
+    .mockUseRecordAchievementEvent,
 }));
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
 
@@ -273,6 +276,17 @@ describe("Export my data, saving the file", () => {
     expect(screen.getAllByRole("button").map((button) => button.textContent)).toEqual([
       copy.saved.done,
     ]);
+  });
+
+  it("should record one data export when the file is downloaded, and none before", async () => {
+    renderScreen();
+    await answerWithFile();
+    expect(mockRecordAchievementEvent).not.toHaveBeenCalled();
+
+    await userEvent.click(saveButton());
+
+    expect(mockRecordAchievementEvent).toHaveBeenCalledTimes(1);
+    expect(mockRecordAchievementEvent).toHaveBeenCalledWith("data_exported");
   });
 
   it("should download once however often Save file is pressed in the same moment", async () => {

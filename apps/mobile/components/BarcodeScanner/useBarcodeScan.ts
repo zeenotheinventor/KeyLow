@@ -13,16 +13,19 @@ const MINIMUM_MILLISECONDS_BETWEEN_SCANS = 1500;
  * then a scan is only accepted 1.5 s after the last accepted one. A scan delivered while the
  * screen is not in focus is ignored, so a queued camera event cannot start a lookup under another
  * screen. The guards are refs, so two scans delivered before React re-renders cannot both get in.
+ * `onAccepted` is told the code of each accepted scan, once, before anything looks it up.
  */
-export function useBarcodeScan(isFocused: boolean) {
+export function useBarcodeScan(isFocused: boolean, onAccepted?: (rawCode: string) => void) {
   const [scan, setScan] = useState<ScannedBarcode | undefined>(undefined);
   const isScanActiveRef = useRef(false);
   const lastAcceptedAtRef = useRef<number | undefined>(undefined);
   const isFocusedRef = useRef(isFocused);
+  const onAcceptedRef = useRef(onAccepted);
 
   useEffect(() => {
     isFocusedRef.current = isFocused;
-  }, [isFocused]);
+    onAcceptedRef.current = onAccepted;
+  }, [isFocused, onAccepted]);
 
   const handleBarcodeScanned = useCallback(({ type, data }: { type: string; data: string }) => {
     if (!isFocusedRef.current || isScanActiveRef.current) {
@@ -39,6 +42,7 @@ export function useBarcodeScan(isFocused: boolean) {
 
     lastAcceptedAtRef.current = now;
     isScanActiveRef.current = true;
+    onAcceptedRef.current?.(data);
     setScan({ rawCode: data, symbology: toBarcodeSymbology(type) });
   }, []);
 

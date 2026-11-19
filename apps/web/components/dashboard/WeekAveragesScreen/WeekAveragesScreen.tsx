@@ -1,9 +1,10 @@
 "use client";
 
-import { useProfileTimeZone } from "@keylow/api-client";
+import { useProfileTimeZone, useRecordAchievementEvent } from "@keylow/api-client";
 import { DASHBOARD_LOAD_FAILED, WEEK_AVERAGES } from "@keylow/core/copy";
 import { toLocalDate } from "@keylow/core/dates";
 import Link from "next/link";
+import { useEffect, useRef } from "react";
 
 import { WeekAverages } from "../WeekAverages";
 
@@ -22,6 +23,16 @@ function WeekAveragesForZone({ timeZone }: { timeZone: string }) {
  */
 export function WeekAveragesScreen() {
   const timeZone = useProfileTimeZone();
+  const recordEvent = useRecordAchievementEvent();
+  const isCounted = useRef(false);
+
+  // Opening the page is the action. The ref keeps development's double effect to one event.
+  useEffect(() => {
+    if (!isCounted.current) {
+      isCounted.current = true;
+      recordEvent("week_view_opened");
+    }
+  }, [recordEvent]);
 
   function renderBody() {
     // A refetch that fails keeps the zone it already has: only a read that never produced one is a failure.

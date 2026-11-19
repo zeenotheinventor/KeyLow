@@ -18,12 +18,19 @@ import {
   serveFormMedia,
   videoRow,
 } from "./formMediaBackend";
+import { mockRecordAchievementEvent } from "../recordAchievementEventMock";
 import { goldenLegsOpen, legsRoutine, previousThursday } from "./sessionGolden";
 import { renderWithTrain, resetTrainBackend, trainBackend } from "./support";
 
 import { SessionScreen } from "@/components/train";
 import { ToastProvider } from "@/components/ui/Toast";
 import { resetBodyFigureForTests } from "@/lib/bodyFigure/testing";
+
+vi.mock("@keylow/api-client", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@keylow/api-client")>()),
+  useRecordAchievementEvent: (await import("../recordAchievementEventMock"))
+    .mockUseRecordAchievementEvent,
+}));
 
 const router = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
@@ -47,6 +54,7 @@ describe("the form media in the Muscles it works dialog of the session page", ()
   beforeEach(() => {
     resetTrainBackend();
     resetFormMediaBackend();
+    mockRecordAchievementEvent.mockReset();
     resetBodyFigureForTests();
     serveFormMedia();
     vi.useFakeTimers({ toFake: ["Date"] });
@@ -75,6 +83,31 @@ describe("the form media in the Muscles it works dialog of the session page", ()
     expect(link.getAttribute("target")).toBe("_blank");
     expect(link.getAttribute("rel")).toBe("noopener noreferrer");
     expect(document.querySelector("iframe")).toBeNull();
+  });
+
+  it("should record one exercise demo opened, with the exercise id the guide was read for", async () => {
+    formMediaBackend.rows = [videoRow];
+    const dialog = await openLegPress();
+    await within(dialog).findByRole("link", {
+      name: describeFormVideoLink("How to do a barbell bench press", "Strength Basics"),
+    });
+
+    expect(formMediaBackend.asked).toHaveLength(1);
+    expect(mockRecordAchievementEvent).toHaveBeenCalledTimes(1);
+    expect(mockRecordAchievementEvent).toHaveBeenCalledWith(
+      "exercise_demo_opened",
+      formMediaBackend.asked[0],
+    );
+  });
+
+  it("should record nothing for an exercise with no form media", async () => {
+    formMediaBackend.rows = noRows;
+    await openLegPress();
+    await waitFor(() => {
+      expect(formMediaBackend.asked).toHaveLength(1);
+    });
+
+    expect(mockRecordAchievementEvent).not.toHaveBeenCalled();
   });
 
   it("should show the start and end photos when there is no video", async () => {

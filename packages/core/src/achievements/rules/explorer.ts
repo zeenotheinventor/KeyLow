@@ -28,7 +28,7 @@ export const featureRequests: Measure = ({ stats }) => stats.featureRequestCount
 
 export const reminderEnabled: Measure = ({ stats }) => (stats.reminderEnabled ? 1 : 0);
 
-// A counter the phone does not track yet is absent, and reads as nothing done.
+// A counter that is absent reads as nothing done.
 const counterRule =
   (name: keyof EventCounters): Measure =>
   ({ stats }) =>

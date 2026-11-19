@@ -1,3 +1,4 @@
+import { useRecordAchievementEvent } from "@keylow/api-client";
 import { useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 
@@ -21,6 +22,7 @@ export default function NewRecipeRoute() {
     [NEW_RECIPE_NAME_PARAMETER]?: string | string[];
     [RECIPE_PREFILL_PARAMETER]?: string | string[];
   }>();
+  const recordEvent = useRecordAchievementEvent();
   const initialName = firstOf(parameters[NEW_RECIPE_NAME_PARAMETER]);
   const prefillId = firstOf(parameters[RECIPE_PREFILL_PARAMETER]);
   // Read without taking, so a render that runs twice reads the same draft, then taken once the screen is up.
@@ -44,6 +46,7 @@ export default function NewRecipeRoute() {
           ? undefined
           : (recipeId) => {
               markRecipePrefillSaved(prefill.draftKey, recipeId);
+              recordEvent("recipe_draft_saved");
             }
       }
     />

@@ -37,6 +37,8 @@ vi.mock("@/lib/foodLogActions", () => ({
 
 vi.mock("@keylow/api-client", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@keylow/api-client")>()),
+  useRecordAchievementEvent: (await import("../recordAchievementEventMock"))
+    .mockUseRecordAchievementEvent,
   useProfileTimeZone: () => ({ data: "UTC", isError: false, refetch: vi.fn() }),
   useDiaryDay: () => ({ data: backend.day, isError: false, isSuccess: true, refetch: vi.fn() }),
   useDiaryWeek: () => ({ data: backend.week, isError: false, isSuccess: true, refetch: vi.fn() }),

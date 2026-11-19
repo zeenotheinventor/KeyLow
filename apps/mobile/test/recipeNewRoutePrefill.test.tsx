@@ -3,6 +3,7 @@ import { act, cleanup, render } from "@testing-library/react-native";
 import NewRecipeRoute from "../app/recipes/new";
 import { beginRecipePrefill, peekRecipePrefill, savedRecipeIdOfDraft } from "../lib/recipePrefill";
 import { resetRouterMock, routerMock } from "./support/expoRouterMock";
+import { mockRecordAchievementEvent } from "./support/recordAchievementEventMock";
 import { resetRecipePrefillForTests } from "../lib/recipePrefill/testing";
 
 import type { RecipeEditorProps } from "../components/RecipeEditor";
@@ -15,6 +16,13 @@ jest.mock(
   "expo-router",
   () => jest.requireActual<{ mockExpoRouter: unknown }>("./support/expoRouterMock").mockExpoRouter,
 );
+
+jest.mock("@keylow/api-client", () => ({
+  useRecordAchievementEvent: () =>
+    jest.requireActual<{ mockRecordAchievementEvent: unknown }>(
+      "./support/recordAchievementEventMock",
+    ).mockRecordAchievementEvent,
+}));
 
 const mockEditor = jest.fn<null, [RecipeEditorProps]>(() => null);
 jest.mock("../components/RecipeEditor", () => ({
@@ -42,6 +50,7 @@ describe("the new recipe route", () => {
     resetRouterMock();
     resetRecipePrefillForTests();
     mockEditor.mockClear();
+    mockRecordAchievementEvent.mockReset();
   });
 
   afterEach(async () => {
@@ -85,6 +94,28 @@ describe("the new recipe route", () => {
     });
 
     expect(savedRecipeIdOfDraft("key-a")).toBe("55555555-5555-4555-8555-555555555555");
+  });
+
+  it("should record one recipe draft saved when a recipe made from a draft is saved", async () => {
+    const id = beginRecipePrefill({ draft, draftKey: "key-a", searchWord: null });
+    routerMock.searchParams = { prefill: id };
+    await render(<NewRecipeRoute />);
+
+    await act(() => {
+      lastProps().onSaved?.("55555555-5555-4555-8555-555555555555");
+    });
+
+    expect(mockRecordAchievementEvent).toHaveBeenCalledTimes(1);
+    expect(mockRecordAchievementEvent).toHaveBeenCalledWith("recipe_draft_saved");
+  });
+
+  it("should record nothing for a recipe that is not made from a draft", async () => {
+    routerMock.searchParams = { name: "pasta" };
+
+    await render(<NewRecipeRoute />);
+
+    expect(lastProps().onSaved).toBeUndefined();
+    expect(mockRecordAchievementEvent).not.toHaveBeenCalled();
   });
 
   it("should open the add-ingredient search on the first line that matched no food", async () => {

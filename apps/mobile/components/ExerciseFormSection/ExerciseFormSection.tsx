@@ -1,5 +1,6 @@
+import { useRecordAchievementEvent } from "@keylow/api-client";
 import { exerciseFormMediaDisplayOf, formMediaToShow } from "@keylow/core/training";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { View } from "react-native";
 
 import { useExerciseFormMedia } from "../../lib/exerciseFormMedia";
@@ -29,6 +30,18 @@ export function ExerciseFormSection({
 }: ExerciseFormSectionProps) {
   const media = useExerciseFormMedia({ exerciseId, isOpen });
   const { preference, isReady, setPreference } = useFormMediaPreference();
+  const recordEvent = useRecordAchievementEvent();
+  // The event fires only while the sheet is open and a demo is on show.
+  // The database ignores repeats for the same exercise.
+  const isDemoShown =
+    isOpen &&
+    media.status === "ready" &&
+    (media.media.video !== null || media.media.photos !== null);
+  useEffect(() => {
+    if (isDemoShown) {
+      recordEvent("exercise_demo_opened", exerciseId);
+    }
+  }, [isDemoShown, exerciseId, recordEvent]);
   // Until the preference has been read the media would be drawn as the default and then jump, so it waits.
   const live: ExerciseFormMediaState =
     media.status === "ready" && !isReady ? { status: "loading" } : media;

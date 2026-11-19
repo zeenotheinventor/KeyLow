@@ -68,6 +68,10 @@ export const diaryBackend: {
   timeZoneReadHangs: boolean;
   /** The bodies of the updates made to the profile. */
   saves: unknown[];
+  /** The bodies of the achievement events recorded. */
+  achievementEvents: unknown[];
+  /** Fails every write of an achievement event, so a test can prove the action it follows goes on. */
+  achievementEventsFail: boolean;
   /** Every request made, as the table, its query string and its method. */
   requests: { table: string; search: string; method: string }[];
   /** The bodies of the writes to the diary tables, in the order they arrived, with the table and the method. */
@@ -100,6 +104,8 @@ export const diaryBackend: {
   weekReadsHang: false,
   hungWeekStarts: new Set(),
   saves: [],
+  achievementEvents: [],
+  achievementEventsFail: false,
   requests: [],
   writes: [],
 };
@@ -134,6 +140,8 @@ export function resetDiaryBackend(): void {
   diaryBackend.failingInsertsFrom = null;
   diaryBackend.failingUpdates = 0;
   diaryBackend.saves = [];
+  diaryBackend.achievementEvents = [];
+  diaryBackend.achievementEventsFail = false;
   diaryBackend.targetsReadFails = false;
   diaryBackend.timeZoneReadFails = false;
   diaryBackend.timeZoneReadHangs = false;
@@ -797,6 +805,13 @@ export async function fakeFetch(
               (row) => searchParams.get("is_complete") !== "eq.true" || row["is_complete"] === true,
             ),
         ),
+      );
+    case "achievement_events":
+      diaryBackend.achievementEvents.push(readBody(init));
+      return Promise.resolve(
+        diaryBackend.achievementEventsFail
+          ? jsonResponse({ code: "XX000", message: "stub", details: null, hint: null }, 500)
+          : new Response(null, { status: 201 }),
       );
     case "day_totals":
       return Promise.resolve(

@@ -1,4 +1,4 @@
-import { useFoodByBarcode } from "@keylow/api-client";
+import { useFoodByBarcode, useRecordAchievementEvent } from "@keylow/api-client";
 import { BARCODE_SCAN } from "@keylow/core/copy";
 import { useFocusEffect, useIsFocused, useLocalSearchParams, useRouter } from "expo-router";
 import { vars } from "nativewind";
@@ -40,7 +40,11 @@ export default function ScanRoute() {
   const logContext = ingredientRequestId === undefined ? readLogContext({ day, time }) : undefined;
   const insets = useSafeAreaInsets();
   const isFocused = useIsFocused();
-  const { scan, handleBarcodeScanned, clearScan } = useBarcodeScan(isFocused);
+  const recordEvent = useRecordAchievementEvent();
+  // The scan is counted as it is accepted, before any lookup, so a code no food matches still counts.
+  const { scan, handleBarcodeScanned, clearScan } = useBarcodeScan(isFocused, (rawCode) => {
+    recordEvent("barcode_scanned", rawCode);
+  });
   const lookup = useFoodByBarcode(
     scan?.rawCode ?? "",
     scan === undefined

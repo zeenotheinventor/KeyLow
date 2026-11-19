@@ -12,6 +12,7 @@ import {
   resetFavouritesBackend,
 } from "./favouritesBackend";
 import { makeFood, makePortion } from "../foods/support";
+import { mockRecordAchievementEvent } from "../recordAchievementEventMock";
 
 import type { FoodWithPortionsState, RecentFood, RecipeSummary } from "@keylow/api-client";
 
@@ -67,6 +68,8 @@ const { useFoodWithPortions, useRecipeSearch, recent } = vi.hoisted((): Hoisted 
 vi.mock("@keylow/api-client", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@keylow/api-client")>()),
   ...(await import("../diary/noPlateHooks")).noPlateHooks,
+  useRecordAchievementEvent: (await import("../recordAchievementEventMock"))
+    .mockUseRecordAchievementEvent,
   useFoodWithPortions,
   useRecipeSearch,
   useRefreshOutdatedOffFood: () => undefined,
@@ -190,6 +193,23 @@ describe("the Favourites strip in the add food dialog", () => {
     beforeEach(() => {
       favouritesBackend.favouriteFoodIds = [porridge.id];
       favouritesBackend.favouriteRecipeIds = [chickenAndRice.id];
+    });
+
+    it("should record one log from favourites for each tile pressed, a food and a recipe", async () => {
+      renderDialog();
+      await tilesShown();
+
+      fireEvent.click(porridgeTile());
+
+      expect(mockRecordAchievementEvent).toHaveBeenCalledTimes(1);
+      expect(mockRecordAchievementEvent).toHaveBeenCalledWith("log_from_favourites");
+    });
+
+    it("should record nothing when the strip is only shown", async () => {
+      renderDialog();
+      await tilesShown();
+
+      expect(mockRecordAchievementEvent).not.toHaveBeenCalled();
     });
 
     it("should open a food's portion step", async () => {

@@ -31,6 +31,8 @@ const { useFoodByBarcode, push, router, logPlate, foods } = vi.hoisted(() => {
 
 vi.mock("@keylow/api-client", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@keylow/api-client")>()),
+  useRecordAchievementEvent: (await import("../recordAchievementEventMock"))
+    .mockUseRecordAchievementEvent,
   ...noFavouriteHooks,
   ...noPlateHooks,
   // The refresh of an old branded food is the off refresh tests' business.

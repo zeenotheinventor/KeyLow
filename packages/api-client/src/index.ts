@@ -599,13 +599,14 @@ export {
   useLogPlateEntries,
 } from "./hooks";
 export type { LogPlateEntriesInput, PlateFoodReaders, PlateLoggedWhen } from "./hooks";
-export { useAchievementState } from "./hooks";
+export { useAchievementState, useRecordAchievementEvent } from "./hooks";
 export type { AchievementState } from "./hooks";
 export {
   appendFreezeEvents,
+  recordAchievementEvent,
   fetchAchievementStats,
   fetchAchievementsBackfilledAt,
   markAchievementsSeen,
   recordAchievements,
 } from "./repos";
-export type { AchievementSnapshot, HeldAchievement } from "./repos";
+export type { AchievementEventKind, AchievementSnapshot, HeldAchievement } from "./repos";

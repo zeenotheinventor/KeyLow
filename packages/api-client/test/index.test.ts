@@ -11,6 +11,8 @@ describe("the package index", () => {
     "fetchAchievementsBackfilledAt",
     "markAchievementsSeen",
     "recordAchievements",
+    "recordAchievementEvent",
+    "useRecordAchievementEvent",
     "useAchievementState",
     "getDiaryDay",
     "getDiaryWeek",

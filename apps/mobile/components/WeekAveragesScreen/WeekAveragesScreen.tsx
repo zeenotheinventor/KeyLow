@@ -1,8 +1,9 @@
-import { useProfileTimeZone } from "@keylow/api-client";
+import { useProfileTimeZone, useRecordAchievementEvent } from "@keylow/api-client";
 import { DASHBOARD_LOAD_FAILED, WEEK_AVERAGES } from "@keylow/core/copy";
 import { toLocalDate } from "@keylow/core/dates";
 import { useRouter } from "expo-router";
 import { vars } from "nativewind";
+import { useEffect } from "react";
 import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -25,6 +26,12 @@ export function WeekAveragesScreen() {
   const router = useRouter();
   const isReadEnabled = useReadsEnabled();
   const timeZone = useProfileTimeZone({ enabled: isReadEnabled });
+  const recordEvent = useRecordAchievementEvent();
+
+  // Opening the screen is the action. Nothing is read for it, so it is counted as the screen mounts.
+  useEffect(() => {
+    recordEvent("week_view_opened");
+  }, [recordEvent]);
 
   function goBack() {
     // A cold link to this screen has nothing before it, so Back goes to the Dashboard instead.

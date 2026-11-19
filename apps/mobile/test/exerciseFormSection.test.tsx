@@ -123,6 +123,44 @@ describe("ExerciseFormSection", () => {
     expect(openURL).toHaveBeenCalledWith("https://www.youtube.com/watch?v=abcdefghijk");
   });
 
+  it("should record one exercise demo opened, with the exercise id, when the demo is on show", async () => {
+    formMediaBackend.rowsByExercise[SQUAT_ID] = VIDEO_ROW;
+    await renderSection(true);
+
+    await screen.findByRole("link", { name: describeFormVideoLink(VIDEO_TITLE, VIDEO_CHANNEL) });
+
+    await waitFor(() => {
+      expect(diaryBackend.achievementEvents).toEqual([
+        { kind: "exercise_demo_opened", ref: SQUAT_ID },
+      ]);
+    });
+  });
+
+  it("should record nothing for an exercise with no form media or a sheet that is closed", async () => {
+    const section = await renderSection(false);
+    await section.close();
+
+    expect(diaryBackend.achievementEvents).toEqual([]);
+
+    await section.open();
+    await waitFor(() => {
+      expect(formMediaBackend.reads).toBeGreaterThan(0);
+    });
+    expect(diaryBackend.achievementEvents).toEqual([]);
+  });
+
+  it("should still show the demo when the event cannot be recorded", async () => {
+    diaryBackend.achievementEventsFail = true;
+    formMediaBackend.rowsByExercise[SQUAT_ID] = VIDEO_ROW;
+    await renderSection(true);
+
+    expect(
+      await screen.findByRole("link", {
+        name: describeFormVideoLink(VIDEO_TITLE, VIDEO_CHANNEL),
+      }),
+    ).toBeOnTheScreen();
+  });
+
   it("should show the start and end photos of the exercise when it has no video", async () => {
     formMediaBackend.rowsByExercise[SQUAT_ID] = PHOTOS_ROW;
     await renderSection(true);

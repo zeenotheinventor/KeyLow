@@ -4,8 +4,9 @@ import { MUSCLE_GROUPS } from "../training/muscles";
 
 /*
  * The stats snapshot the achievement evaluators read (KEY-1082). `storedAchievementStatsSchema` is the
- * contract the database's stats RPC (KEY-1084) returns, with these camelCase names. `deviceInputsSchema`
- * is what only the phone knows, passed in beside it. Counts are whole numbers of zero or more.
+ * contract the database's stats RPC (KEY-1084, with the event counts of KEY-1094) returns, with these
+ * camelCase names. `deviceInputsSchema` is what only the phone knows, passed in beside it. Counts are whole numbers of
+ * zero or more.
  *
  * Health data stays out by design: there is no field for a body weight value or a weight goal. Weigh-ins
  * are counted, never read.
@@ -83,6 +84,16 @@ const programmeSchema = z.object({
   endedOn: localDate.nullable(),
 });
 
+/** Counts of the actions the database records in `achievement_events`. */
+export const eventCountersSchema = z.object({
+  distinctBarcodesScanned: count.optional(),
+  exerciseDemosWatched: count.optional(),
+  shoppingItemsTickedOff: count.optional(),
+  dataExports: count.optional(),
+  logsFromFavourites: count.optional(),
+  weekViewOpens: count.optional(),
+});
+
 export const storedAchievementStatsSchema = z.object({
   profileCreatedAt: instant,
   /** When the setup was finished with its targets, or null while it is not. */
@@ -154,22 +165,13 @@ export const storedAchievementStatsSchema = z.object({
   /** The local date of each `expenditure_snapshots` row with `kind = 'checkin'`. */
   checkinLocalDates: z.array(localDate),
   programmes: z.array(programmeSchema),
-});
-
-/** Counters of events the database does not record. Each is absent until the follow-up that tracks it. */
-export const eventCountersSchema = z.object({
-  distinctBarcodesScanned: count.optional(),
-  exerciseDemosWatched: count.optional(),
-  shoppingItemsTickedOff: count.optional(),
-  dataExports: count.optional(),
-  logsFromFavourites: count.optional(),
-  weekViewOpens: count.optional(),
+  /** What `achievement_events` counts. A counter left out reads as nothing done. */
+  eventCounters: eventCountersSchema.optional(),
 });
 
 /** What only the phone knows, passed in beside the stored stats. */
 export const deviceInputsSchema = z.object({
   reminderEnabled: z.boolean(),
-  eventCounters: eventCountersSchema.optional(),
 });
 
 export const achievementStatsSchema = storedAchievementStatsSchema.extend(deviceInputsSchema.shape);

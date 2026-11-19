@@ -1,5 +1,5 @@
 import { KeyLowProvider } from "@keylow/api-client";
-import { cleanup, render, screen, userEvent, within } from "@testing-library/react-native";
+import { cleanup, render, screen, userEvent, waitFor, within } from "@testing-library/react-native";
 import { ExpoRoot, Slot, useLocalSearchParams } from "expo-router";
 import { getMockContext } from "expo-router/testing-library";
 import { Text } from "react-native";
@@ -95,6 +95,26 @@ afterEach(async () => {
 });
 
 describe("the weekly averages screen", () => {
+  it("should record one week view opened for one opening", async () => {
+    await renderScreen();
+    await screen.findByRole("heading", { name: "Weekly averages" });
+
+    await waitFor(() => {
+      expect(diaryBackend.achievementEvents).toEqual([{ kind: "week_view_opened", ref: null }]);
+    });
+  });
+
+  it("should show the week all the same when the event cannot be recorded", async () => {
+    diaryBackend.achievementEventsFail = true;
+
+    await renderScreen();
+
+    expect(await screen.findByText("Week of Mon 12 Oct, Mon to yesterday")).toBeOnTheScreen();
+    await waitFor(() => {
+      expect(diaryBackend.achievementEvents).toHaveLength(1);
+    });
+  });
+
   it("should head the screen and name the week", async () => {
     await renderScreen();
 

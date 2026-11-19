@@ -256,5 +256,7 @@ export {
   markAchievementsSeen,
   recordAchievements,
 } from "./achievements";
+export { recordAchievementEvent } from "./achievementEvents";
+export type { AchievementEventKind } from "./achievementEvents";
 export type { AchievementSnapshot, HeldAchievement } from "./achievementStatsMapping";
 export { mapAchievementStats } from "./achievementStatsMapping";

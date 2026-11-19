@@ -1,4 +1,4 @@
-import { exportMyData, useAccountExportFile } from "@keylow/api-client";
+import { exportMyData, useAccountExportFile, useRecordAchievementEvent } from "@keylow/api-client";
 import { displayFolderName } from "@keylow/core";
 import { Directory } from "expo-file-system";
 import { useIsFocused } from "expo-router";
@@ -70,6 +70,7 @@ export function useAccountExport(): AccountExportController {
     isActive: isFocused,
     readExport,
   });
+  const recordEvent = useRecordAchievementEvent();
   const isSavingRef = useRef(false);
 
   const save = useCallback(async () => {
@@ -89,8 +90,12 @@ export function useAccountExport(): AccountExportController {
         dispatch({ type: "pickerCancelled" });
         return;
       }
+      const isWritten = writeFile(folder, file.name, file.text);
+      if (isWritten) {
+        recordEvent("data_exported");
+      }
       dispatch(
-        writeFile(folder, file.name, file.text)
+        isWritten
           ? { type: "savedTo", folderName: displayFolderName(folder.name) }
           : { type: "failedWhile", step: "saving" },
       );
@@ -100,7 +105,7 @@ export function useAccountExport(): AccountExportController {
     } finally {
       isSavingRef.current = false;
     }
-  }, [dispatch, readFile]);
+  }, [dispatch, readFile, recordEvent]);
 
   const retry = useCallback(() => {
     dispatch({ type: "retry" });
