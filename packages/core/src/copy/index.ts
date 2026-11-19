@@ -80,3 +80,4 @@ export * from "./widgets";
 export * from "./accountExport";
 export * from "./exerciseForm";
 export * from "./featureRequestScreen";
+export * from "./achievements";
