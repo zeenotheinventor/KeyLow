@@ -27,12 +27,14 @@ jest.mock(
 );
 const mockScrollToEnd = jest.fn();
 let lastScrollViewProps: ScrollViewProps = {};
+let lastSheetContentPanning: boolean | undefined;
 jest.mock("@gorhom/bottom-sheet", () =>
   jest
     .requireActual<{
       mockBottomSheet: (
         onScrollToEnd: () => void,
         onScrollViewProps: (props: ScrollViewProps) => void,
+        onSheetProps: (props: { enableContentPanningGesture?: boolean }) => void,
       ) => unknown;
     }>("./support/sheetScrollViewMock")
     .mockBottomSheet(
@@ -41,6 +43,9 @@ jest.mock("@gorhom/bottom-sheet", () =>
       },
       (props) => {
         lastScrollViewProps = props;
+      },
+      (props) => {
+        lastSheetContentPanning = props.enableContentPanningGesture;
       },
     ),
 );
@@ -196,6 +201,15 @@ describe("paging the assistant thread", () => {
       await layOut();
 
       expect(mockScrollToEnd).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("following a reply at the sheet's opening height", () => {
+    // Jest does not run the library's scroll-lock worklets, so the thread really scrolling is checked on a device.
+    it("should let the thread scroll on its own at the opening height, so the sheet does not pin it to the top", async () => {
+      await render(sheetTree());
+
+      expect(lastSheetContentPanning).toBe(false);
     });
   });
 
