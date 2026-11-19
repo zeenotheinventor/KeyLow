@@ -77,3 +77,6 @@ export const BodyComposition: Story = { args: { variant: "bodyComposition" } };
 
 // The assistant sheet's conversation while it opens: your message as a bubble bone, then the reply as lines, twice.
 export const AssistantThread: Story = { args: { variant: "assistantThread" } };
+
+// The Achievements screen while it loads: the level card, the three stat tiles, a heading bar and two rows of badges.
+export const Achievements: Story = { args: { variant: "achievements" } };

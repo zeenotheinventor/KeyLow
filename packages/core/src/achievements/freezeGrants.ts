@@ -3,6 +3,7 @@ import { judgeDay } from "./rules/targets";
 import { isBeforeDayCompleteCutoff } from "./streaks";
 import { dayNumber } from "../dates/calendarDay";
 
+import type { AchievementDefinition } from "./catalogue";
 import type { AchievementStats } from "./stats";
 import type { FreezeGrant } from "./streaks";
 
@@ -24,6 +25,15 @@ export type FreezeGrantsInput = Readonly<{
   now: Date;
   zone: string;
 }>;
+
+/** The freezes one badge brings when it is earned: one for Gold, three for Platinum, one for a Getting started badge. */
+export const freezesForBadge = ({
+  tier,
+  category,
+}: Pick<AchievementDefinition, "tier" | "category">): number =>
+  (tier === "gold" ? 1 : 0) +
+  (tier === "platinum" ? PLATINUM_FREEZES : 0) +
+  (category === "getting-started" ? 1 : 0);
 
 /** The days with calories and protein both on target, one calendar day each, oldest first. */
 const onTargetDays = (stats: AchievementStats): string[] =>

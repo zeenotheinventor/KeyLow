@@ -14,6 +14,7 @@ import { ScrollView } from "react-native";
 import { useIsOnline } from "../../../lib/connectivity";
 import { diaryHref } from "../../../lib/navigation";
 import { useNow } from "../../../lib/useNow";
+import { DashboardBackfillCard } from "../../AchievementsScreen";
 import { Banner, ErrorState } from "../../ui";
 import { DashboardBodyMap } from "../DashboardBodyMap";
 import { DashboardFrame } from "../DashboardFrame";
@@ -96,6 +97,7 @@ export function DashboardToday({ timeZone, isReadEnabled }: DashboardTodayProps)
   return (
     <DashboardFrame eyebrow={eyebrow}>
       <ScrollView className="flex-1" contentContainerClassName="gap-3 px-4 pb-4 pt-1">
+        <DashboardBackfillCard isReadEnabled={isReadEnabled} />
         {hasFailed ? null : (
           <>
             {day !== undefined && targets?.kcal === null ? (

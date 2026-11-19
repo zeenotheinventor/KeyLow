@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import { NOW, aDay, aStats, consecutiveDays } from "./builders";
-import { freezeGrantsOf } from "../../src/achievements/freezeGrants";
+import { ACHIEVEMENTS } from "../../src/achievements/catalogue";
+import { freezeGrantsOf, freezesForBadge } from "../../src/achievements/freezeGrants";
 
 const inRange = (localDate: string) => aDay(localDate, { kcal: 2000, proteinG: 100 });
 const grantsFor = (dayCount: number) =>
@@ -113,4 +114,22 @@ describe("freezeGrantsOf", () => {
       { reason: "perfect_week", reference: "2026-01-07", date: "2026-01-07", count: 1 },
     ]);
   });
+});
+
+describe("freezesForBadge", () => {
+  it.each(ACHIEVEMENTS.map((achievement) => [achievement.id, achievement] as const))(
+    "should match the freezes %s is granted when earned",
+    (_id, achievement) => {
+      const granted = freezeGrantsOf({
+        earnedIds: new Set([achievement.id]),
+        level: 0,
+        stats: aStats(),
+        today: "2026-11-19",
+        now: NOW,
+        zone: "UTC",
+      }).reduce((sum, grant) => sum + grant.count, 0);
+
+      expect(freezesForBadge(achievement)).toBe(granted);
+    },
+  );
 });

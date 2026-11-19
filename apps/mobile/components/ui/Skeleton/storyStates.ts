@@ -18,4 +18,5 @@ export const storyStates = [
   "Program",
   "BodyComposition",
   "AssistantThread",
+  "Achievements",
 ];

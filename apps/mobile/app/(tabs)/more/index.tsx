@@ -7,6 +7,7 @@ import {
 } from "@keylow/api-client";
 import {
   ACCOUNT_EXPORT_COPY,
+  ACHIEVEMENTS_SCREEN,
   MORE_SCREEN,
   TAB_TITLES,
   describeAssistantMoreRow,
@@ -24,6 +25,7 @@ import { DashboardBodyChartSetting } from "../../../components/DashboardBodyChar
 import { FormMediaSetting } from "../../../components/FormMediaSetting";
 import { ScreenHeader } from "../../../components/ScreenHeader";
 import { GroupedList, ListRow } from "../../../components/ui";
+import { achievementsPath } from "../../../lib/achievementRoutes";
 import { goalPath } from "../../../lib/goalRoutes";
 import { recipesPath } from "../../../lib/recipeRoutes";
 import { signOut } from "../../../lib/signOut";
@@ -46,7 +48,8 @@ import { useReadsEnabled } from "../../../lib/useReadsEnabled";
 // Request a feature is the last row of Settings and opens its screen inside this tab, where a request is typed
 // and sent to the Ki-Lo team. No board draws it, so it follows Export my data.
 // Reminders and About are under Settings and open their screens. No board draws Reminders, and its icon is the
-// clock because the kit has no bell.
+// clock because the kit has no bell. Achievements is the row after Reminders, placed there as Reminders was, because
+// no board draws the More screen with it, and opens its screen inside this tab.
 export default function MoreRoute() {
   const router = useRouter();
   const isReadEnabled = useReadsEnabled();
@@ -172,6 +175,15 @@ export default function MoreRoute() {
             title={MORE_SCREEN.settings.reminders.title}
             onPress={() => {
               router.push("/reminders");
+            }}
+          />
+          <ListRow
+            icon="Trophy"
+            title={ACHIEVEMENTS_SCREEN.title}
+            onPress={() => {
+              openOnce(() => {
+                router.push(achievementsPath());
+              });
             }}
           />
           <ListRow
