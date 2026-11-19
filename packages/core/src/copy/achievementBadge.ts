@@ -9,7 +9,7 @@ import type { AchievementId, AchievementTier } from "../achievements/catalogue";
  * A hidden badge says only that it is hidden, so neither its name nor its tier is given away.
  */
 
-const TIER_NAMES: Readonly<Record<AchievementTier, string>> = {
+export const ACHIEVEMENT_TIER_NAMES: Readonly<Record<AchievementTier, string>> = {
   bronze: "Bronze",
   silver: "Silver",
   gold: "Gold",
@@ -30,6 +30,6 @@ export function achievementBadgeLabel({ id, state, progress }: AchievementBadgeL
     return HIDDEN_BADGE_LABEL;
   }
   const tier = achievementTierOf(id);
-  const named = `${ACHIEVEMENT_COPY[id].name}, ${TIER_NAMES[tier]}, ${state}`;
+  const named = `${ACHIEVEMENT_COPY[id].name}, ${ACHIEVEMENT_TIER_NAMES[tier]}, ${state}`;
   return state === "locked" && progress !== undefined ? `${named}, ${progress}` : named;
 }

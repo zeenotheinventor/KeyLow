@@ -1,6 +1,12 @@
 "use client";
 
-import { SEARCH_LAUNCHER, TAB_BAR_LABEL, TAB_TITLES, TRAIN_HOME } from "@keylow/core/copy";
+import {
+  SEARCH_LAUNCHER,
+  TAB_BAR_LABEL,
+  TAB_TITLES,
+  TRAIN_HOME,
+  WEB_ACHIEVEMENTS,
+} from "@keylow/core/copy";
 import { iconStroke } from "@keylow/tokens";
 import { Menu } from "lucide-react";
 import Link from "next/link";
@@ -21,7 +27,7 @@ import { trainPath } from "@/lib/trainRoutes";
 import { useIsOnline } from "@/lib/useIsOnline";
 import { cn } from "@/lib/utils";
 
-// Recipes, Weight, the goal questionnaire and the setup wizard are not sections. Each is opened from a row of More, so More stays current on its page.
+// Achievements is a section of its own on the web, as board 7 draws it. Recipes, Weight, the goal questionnaire and the setup wizard are not sections. Each is opened from a row of More, so More stays current on its page.
 const SECTIONS: readonly DashboardSection[] = [
   { label: TAB_TITLES.dashboard, href: "/dashboard" },
   { label: TAB_TITLES.diary, href: "/diary" },
@@ -31,6 +37,7 @@ const SECTIONS: readonly DashboardSection[] = [
     href: "/more",
     alsoCurrentOn: [recipesPath(), "/weight", goalPath(), setupRootPath()],
   },
+  { label: WEB_ACHIEVEMENTS.pageTitle, href: "/achievements" },
 ];
 
 // A section is current on its own page, on the pages under it, and on the pages it holds that live elsewhere.

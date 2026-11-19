@@ -43,17 +43,24 @@ describe("DashboardNav", () => {
     expect(screen.getByRole("link", { name: "Ki-Lo" }).getAttribute("href")).toBe("/dashboard");
   });
 
-  it("should link to Dashboard, Diary, Train and More, in that order", () => {
+  it("should link to Dashboard, Diary, Train, More and Achievements, in that order", () => {
     render(<DashboardNav />);
 
     const links = within(screen.getByRole("navigation", { name: "Main" })).getAllByRole("link");
 
-    expect(links.map((link) => link.textContent)).toEqual(["Dashboard", "Diary", "Train", "More"]);
+    expect(links.map((link) => link.textContent)).toEqual([
+      "Dashboard",
+      "Diary",
+      "Train",
+      "More",
+      "Achievements",
+    ]);
     expect(links.map((link) => link.getAttribute("href"))).toEqual([
       "/dashboard",
       "/diary",
       "/train",
       "/more",
+      "/achievements",
     ]);
   });
 
@@ -191,6 +198,16 @@ describe("DashboardNav", () => {
       expect(current.map((link) => link.textContent)).toEqual(["More"]);
     },
   );
+
+  it("should mark Achievements, and only Achievements, as the current page on /achievements", () => {
+    pathname.mockReturnValue("/achievements");
+    render(<DashboardNav />);
+
+    const current = within(screen.getByRole("navigation", { name: "Main" })).getAllByRole("link", {
+      current: "page",
+    });
+    expect(current.map((link) => link.textContent)).toEqual(["Achievements"]);
+  });
 
   it("should not mark More current on a page whose address only begins like the library's", () => {
     pathname.mockReturnValue(`${recipesPath()}-old`);
