@@ -34,7 +34,7 @@ function isBoardRendered(expectedFrames: number): boolean {
 // Runs in the page. Copies the board root and strips what only the runtime needs: its sc-*
 // classes and its template markers. The span the runtime wraps around each interpolated value
 // stays, without its class, because in a flex or grid parent that span is a layout item of its
-// own and removing it changes the spacing. The component name stays, as data-screen.
+// own and removing it changes the spacing (except inside an SVG, see below). The component name stays, as data-screen.
 function serialiseBoard(): SerialisedBoard {
   const root = document.querySelector("#dc-root > .sc-host")?.firstElementChild;
   if (root === null || root === undefined) {
@@ -67,6 +67,12 @@ function serialiseBoard(): SerialisedBoard {
       element.removeAttribute("class");
     }
   });
+  // The runtime wraps interpolated text inside an SVG <text> in a <span>. Parsed from a saved page,
+  // an HTML <span> breaks out of its <svg>, so the text would land outside the image. Inside an SVG
+  // the span is no layout item, so it is unwrapped.
+  for (const span of copy.querySelectorAll("svg span")) {
+    span.replaceWith(...span.childNodes);
+  }
   const fonts = document.head.querySelector(
     'link[rel="stylesheet"][href^="https://fonts.googleapis.com"]',
   );

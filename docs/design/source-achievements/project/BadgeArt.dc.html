@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>Badge art system</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="/_blob/2fe51da7acf9d6abcc3277b8f18ab330">
+<link rel="stylesheet" href="/_blob/4dca4da7a7878d551adca2cea33f5974">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+.board{box-sizing:border-box;padding:48px 40px;background:var(--background);font-family:var(--font-sans);color:var(--text-primary);display:flex;flex-direction:column;gap:30px}
+.eye{margin:0;font-size:12px;line-height:16px;font-weight:600;letter-spacing:.06em;color:var(--accent-ink)}
+.bt{margin:0;font-size:36px;line-height:42px;font-weight:700;letter-spacing:-0.02em}
+.bs{margin:0;font-size:16px;line-height:24px;color:var(--text-secondary);max-width:1300px}
+.sec{display:flex;flex-direction:column;gap:12px}
+.sh{margin:0;font-size:18px;line-height:24px;font-weight:600}
+.sd{margin:0;font-size:14px;line-height:20px;color:var(--text-secondary);max-width:1100px}
+.row{display:flex;flex-wrap:wrap;gap:20px;align-items:flex-end}
+.cell{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;width:150px}
+.nm{margin:0;font-size:13px;line-height:17px;font-weight:600}
+.cp{margin:0;font-size:12px;line-height:16px;color:var(--text-muted)}
+.m-bz{fill:url(#gbz)}.m-sv{fill:url(#gsv)}.m-gd{fill:url(#ggd)}.m-gd2{fill:url(#ggd2)}.m-pt{fill:url(#gpt)}.m-pt2{fill:url(#gpt2)}
+.enamel{fill:var(--tier-enamel)}
+.edge{fill:none;stroke-width:1.2}.e-bz{stroke:var(--tier-bronze-lo)}.e-sv{stroke:var(--tier-silver-lo)}.e-gd{stroke:var(--tier-gold-lo)}.e-pt{stroke:var(--tier-plat-c)}
+.bead{fill:none;stroke:var(--tier-silver-hi);stroke-width:2.4;stroke-linecap:round}
+.shine{fill:none;stroke:var(--tier-gold-hi);stroke-width:1.6;stroke-linecap:round}
+.facet{fill:none;stroke:var(--tier-plat-b);stroke-width:.8;opacity:.75}
+.spark{fill:var(--tier-plat-b)}
+.g{fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.g-bz{stroke:var(--tier-bronze-hi)}.g-sv{stroke:var(--tier-silver-hi)}.g-gd{stroke:var(--tier-gold-hi)}.g-pt{stroke:var(--tier-plat-a)}
+.rb-bz{fill:var(--tier-bronze-mid)}.rb-sv{fill:var(--tier-silver-mid)}.rb-gd{fill:var(--tier-gold-mid)}.rb-pt{fill:var(--tier-plat-a)}
+.rbt{font-family:var(--font-sans);font-size:7.5px;font-weight:700;text-anchor:middle;fill:var(--tier-enamel)}
+.locked .m-bz,.locked .m-sv,.locked .m-gd,.locked .m-gd2,.locked .m-pt,.locked .m-pt2,.locked .rb{fill:var(--tier-locked)}
+.locked .bead,.locked .shine,.locked .facet,.locked .spark{display:none}
+.locked .edge{stroke:var(--tier-locked-glyph)}
+.locked .g{stroke:var(--tier-locked-glyph)}
+.locked .rbt{fill:var(--tier-locked-glyph)}
+.qm{font-family:var(--font-sans);font-size:18px;font-weight:700;text-anchor:middle;fill:var(--tier-locked-glyph)}
+.bar{width:96px;height:6px;border-radius:999px;background:var(--surface-raised);overflow:hidden}
+.fill{height:100%;background:var(--text-secondary)}
+</style>
+</helmet>
+<div class="board" style="width:1600px;height:1200px">
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+<defs>
+<linearGradient id="gbz" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--tier-bronze-hi)"></stop><stop offset=".5" style="stop-color:var(--tier-bronze-mid)"></stop><stop offset="1" style="stop-color:var(--tier-bronze-lo)"></stop></linearGradient>
+<linearGradient id="gsv" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--tier-silver-hi)"></stop><stop offset=".45" style="stop-color:var(--tier-silver-mid)"></stop><stop offset="1" style="stop-color:var(--tier-silver-lo)"></stop></linearGradient>
+<linearGradient id="ggd" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--tier-gold-hi)"></stop><stop offset=".5" style="stop-color:var(--tier-gold-mid)"></stop><stop offset="1" style="stop-color:var(--tier-gold-lo)"></stop></linearGradient>
+<linearGradient id="ggd2" x1="0" y1="1" x2="1" y2="0"><stop offset="0" style="stop-color:var(--tier-gold-lo)"></stop><stop offset=".55" style="stop-color:var(--tier-gold-hi)"></stop><stop offset="1" style="stop-color:var(--tier-gold-mid)"></stop></linearGradient>
+<linearGradient id="gpt" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:var(--tier-plat-b)"></stop><stop offset=".35" style="stop-color:var(--tier-plat-c)"></stop><stop offset=".65" style="stop-color:var(--tier-plat-d)"></stop><stop offset="1" style="stop-color:var(--tier-plat-a)"></stop></linearGradient>
+<linearGradient id="gpt2" x1="1" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--tier-plat-a)"></stop><stop offset=".5" style="stop-color:var(--tier-plat-b)"></stop><stop offset="1" style="stop-color:var(--tier-plat-c)"></stop></linearGradient>
+</defs>
+</svg>
+<div style="display:flex;flex-direction:column;gap:8px">
+<p class="eye">ACHIEVEMENTS / BADGE-ART</p>
+<h1 class="bt">Badge art: tiers and series</h1>
+<p class="bs">Every badge is a struck medal: a metal frame, a dark enamel centre and a motif in the metal's colour. The frame climbs with the tier, the motif names the series, and a ribbon carries the threshold. The full set of 130 is on the next board.</p>
+</div>
+<sc-for list="{{sections}}" as="s" hint-placeholder-count="5">
+<section class="sec">
+<h2 class="sh">{{s.title}}</h2>
+<p class="sd">{{s.text}}</p>
+<div class="row">
+<sc-for list="{{s.items}}" as="b" hint-placeholder-count="4">
+<div class="cell">
+<svg class="{{b.cls}}" viewBox="0 0 64 64" width="{{b.size}}" height="{{b.size}}" role="img" aria-label="{{b.aria}}">
+<sc-if value="{{b.bz}}" hint-placeholder-val="{{ true }}"><circle class="m-bz" cx="32" cy="32" r="28"></circle><circle class="enamel" cx="32" cy="32" r="22"></circle><circle class="edge e-bz" cx="32" cy="32" r="22"></circle></sc-if>
+<sc-if value="{{b.sv}}" hint-placeholder-val="{{ false }}"><circle class="m-sv" cx="32" cy="32" r="29.5"></circle><path class="bead" d="{{deco.beads}}"></path><circle class="enamel" cx="32" cy="32" r="21.5"></circle><circle class="edge e-sv" cx="32" cy="32" r="21.5"></circle></sc-if>
+<sc-if value="{{b.gd}}" hint-placeholder-val="{{ false }}"><path class="m-gd" d="{{deco.burst}}"></path><circle class="m-gd2" cx="32" cy="32" r="26.5"></circle><circle class="enamel" cx="32" cy="32" r="21"></circle><circle class="edge e-gd" cx="32" cy="32" r="21"></circle><path class="shine" d="{{deco.shine}}"></path></sc-if>
+<sc-if value="{{b.pt}}" hint-placeholder-val="{{ false }}"><path class="m-pt" d="{{deco.octagon}}"></path><path class="facet" d="{{deco.facets}}"></path><circle class="m-pt2" cx="32" cy="32" r="25.5"></circle><circle class="enamel" cx="32" cy="32" r="20.5"></circle><circle class="edge e-pt" cx="32" cy="32" r="20.5"></circle><path class="spark" d="{{deco.sparks}}"></path></sc-if>
+<g transform="translate(20 {{b.gy}})"><sc-for list="{{b.glyph}}" as="d" hint-placeholder-count="2"><path class="g g-{{b.tier}}" d="{{d}}"></path></sc-for></g>
+<sc-if value="{{b.hidden}}" hint-placeholder-val="{{ false }}"><text class="qm" x="32" y="38">???</text></sc-if>
+<sc-if value="{{b.hasLabel}}" hint-placeholder-val="{{ false }}"><path class="rb rb-{{b.tier}}" d="M13 45h38l-3.2 5.5 3.2 5.5H13l3.2-5.5z"></path><text class="rbt" x="32" y="53.2">{{b.label}}</text></sc-if>
+</svg>
+<p class="nm">{{b.name}}</p>
+<p class="cp">{{b.caption}}</p>
+<sc-if value="{{b.progress}}" hint-placeholder-val="{{ false }}"><div class="bar" role="progressbar" aria-label="Month Strong progress" aria-valuenow="12" aria-valuemin="0" aria-valuemax="30"><div class="fill" style="width:40%"></div></div></sc-if>
+</div>
+</sc-for>
+</div>
+</section>
+</sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1600,"height":1200}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const c = (x, y, r) => 'M' + (x - r) + ' ' + y + 'a' + r + ' ' + r + ' 0 1 0 ' + 2 * r + ' 0a' + r + ' ' + r + ' 0 1 0 ' + -2 * r + ' 0';
+    const pts = (n, r, off, cx, cy) => Array.from({ length: n }, (_, i) => { const a = (i / n) * Math.PI * 2 + off; return [cx + r * Math.sin(a), cy - r * Math.cos(a)]; });
+    const poly = (p) => 'M' + p.map((q) => q[0].toFixed(2) + ' ' + q[1].toFixed(2)).join('L') + 'z';
+    const star = (x, y, s) => 'M' + x + ' ' + (y - s) + 'L' + (x + s * 0.3) + ' ' + (y - s * 0.3) + 'L' + (x + s) + ' ' + y + 'L' + (x + s * 0.3) + ' ' + (y + s * 0.3) + 'L' + x + ' ' + (y + s) + 'L' + (x - s * 0.3) + ' ' + (y + s * 0.3) + 'L' + (x - s) + ' ' + y + 'L' + (x - s * 0.3) + ' ' + (y - s * 0.3) + 'z';
+    const dots = (p) => p.map((q) => 'M' + q[0].toFixed(2) + ' ' + q[1].toFixed(2) + 'h.01').join('');
+    const burstPts = Array.from({ length: 32 }, (_, i) => { const a = (i / 32) * Math.PI * 2; const r = i % 2 ? 27.6 : 31.2; return [32 + r * Math.sin(a), 32 - r * Math.cos(a)]; });
+    const oct = pts(8, 31.5, Math.PI / 8, 32, 32);
+    const inner = pts(8, 25.5, Math.PI / 8, 32, 32);
+    const deco = {
+      beads: dots(pts(16, 25.3, 0, 32, 32)),
+      burst: poly(burstPts),
+      shine: 'M15 25a18 18 0 0 1 12-12',
+      octagon: poly(oct),
+      facets: oct.map((p, i) => 'M' + p[0].toFixed(2) + ' ' + p[1].toFixed(2) + 'L' + inner[i][0].toFixed(2) + ' ' + inner[i][1].toFixed(2)).join(''),
+      sparks: star(32, 3.6, 3.4) + star(23.5, 5.4, 2) + star(40.5, 5.4, 2) + star(6, 9, 2.4) + star(58, 55, 2.2)
+    };
+    const G = {
+      flame: ['M12 3c1 4 5 5.5 5 10a5 5 0 0 1-10 0c0-2 1-3.5 2-4.5 0 2 1 3 2 3 0-3-1-5 1-8.5z'],
+      log: ['M6 3h10a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6z', 'M9 3v18', 'M12 8h3', 'M12 12h3'],
+      target: [c(12, 12, 9), c(12, 12, 5.5), c(12, 12, 2), 'M12 12l7-7', 'M17 5h2v2'],
+      dumbbell: ['M7 8v8', 'M17 8v8', 'M4 10v4', 'M20 10v4', 'M7 12h10'],
+      trophy: ['M8 4h8v5a4 4 0 0 1-8 0z', 'M8 6H5a3 3 0 0 0 3 4', 'M16 6h3a3 3 0 0 1-3 4', 'M12 13v4', 'M8.5 20h7', 'M9.5 17h5v3h-5z'],
+      scale: ['M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z', 'M8 10a4 4 0 0 1 8 0', 'M12 10l1.6-2.4'],
+      chain: ['M9.5 14.5l-2.5 2.5a3.2 3.2 0 0 1-4.5-4.5l3.5-3.5a3.2 3.2 0 0 1 4.5 0', 'M14.5 9.5l2.5-2.5a3.2 3.2 0 0 1 4.5 4.5l-3.5 3.5a3.2 3.2 0 0 1-4.5 0', 'M9 15l6-6'],
+      barcode: ['M5 6v12', 'M8 6v12', 'M10 6v12', 'M13 6v12', 'M16 6v12', 'M19 6v12', 'M3 4h3', 'M18 4h3', 'M3 20h3', 'M18 20h3'],
+      protein: ['M14 3.5a6.5 6.5 0 0 1 4.6 11.1c-1.7 1.7-4.1 2.2-6.2 1.5L9 19.5', 'M9 19.5a1.8 1.8 0 1 1-2.6 2.3 1.8 1.8 0 1 1-2.3-2.6 1.8 1.8 0 1 1 2.6-2.3', 'M6.7 16.9l3.4-3.4c-.7-2.1-.2-4.5 1.5-6.2A6.5 6.5 0 0 1 14 3.5'],
+      back: ['M9 14L4 9l5-5', 'M4 9h11a5 5 0 0 1 0 10h-4'],
+      snowShield: ['M12 3l7 3v5c0 5-3 8.5-7 10-4-1.5-7-5-7-10V6z', 'M12 8v8', 'M8.5 10l7 4', 'M15.5 10l-7 4'],
+      seven: [].concat(pts(7, 8.5, 0, 12, 12).map((q) => 'M' + q[0].toFixed(2) + ' ' + q[1].toFixed(2) + 'h.01'), [star(12, 12, 3.6)]),
+      bird: ['M3 14c3 0 5-2 6-5 1 3 4 5 8 5l4-2-3 4c-2 3-6 4-10 3-2-.5-4-2-5-5z', 'M15 10.5h.01', c(19.5, 5, 1.8)],
+      owl: ['M6 8L4.5 4l4 2a8 8 0 0 1 7 0l4-2L18 8c1.3 1.7 2 3.8 2 6 0 4-3.6 7-8 7s-8-3-8-7c0-2.2.7-4.3 2-6z', c(9, 12.5, 2), c(15, 12.5, 2), 'M11.5 16l.5 1 .5-1'],
+      frog: ['M5 14c0-4 3-7 7-7s7 3 7 7c0 3-3 5-7 5s-7-2-7-5z', c(8, 7, 2), c(16, 7, 2), 'M9 15c1.5 1 4.5 1 6 0', 'M4 20.5l3-2', 'M20 20.5l-3-2']
+    };
+    const TIER = { B: 'bz', S: 'sv', G: 'gd', P: 'pt' };
+    const TIER_NAME = { B: 'Bronze', S: 'Silver', G: 'Gold', P: 'Platinum' };
+    const b = (name, t, g, label, size, caption, state) => {
+      const tier = TIER[t];
+      const lab = label || '';
+      const hidden = state === 'hidden';
+      return {
+        name, tier, glyph: hidden ? [] : G[g], label: hidden ? '' : lab, hasLabel: !hidden && lab !== '',
+        gy: lab !== '' && !hidden ? 16.5 : 20, size, caption: caption || '',
+        bz: tier === 'bz', sv: tier === 'sv', gd: tier === 'gd', pt: tier === 'pt',
+        cls: state ? 'locked' : '', hidden, progress: state === 'locked',
+        aria: name + ', ' + TIER_NAME[t] + (state ? ', ' + state : '')
+      };
+    };
+    const sections = [
+      { title: 'One series, four tiers', text: 'The daily streak keeps its flame from start to finish. The frame is what climbs: Bronze is a plain struck ring, Silver adds a beaded rim, Gold sits on a sunburst with a shine, Platinum becomes a faceted gem with stars. The motif takes the colour of its metal.',
+        items: [b('Hat Trick', 'B', 'flame', '3', 140, 'Bronze: plain ring'), b('Fortnight', 'S', 'flame', '14', 140, 'Silver: beaded rim'), b('Month Strong', 'G', 'flame', '30', 140, 'Gold: sunburst and shine'), b('Full Circle', 'P', 'flame', '365', 140, 'Platinum: faceted gem')] },
+      { title: 'Same series, same tier', text: 'Where a series has two or more badges in one tier, the ribbon carries the threshold, so Hat Trick and Full Week never look alike.',
+        items: [b('Hat Trick', 'B', 'flame', '3', 96), b('Full Week', 'B', 'flame', '7', 96), b('Month Strong', 'G', 'flame', '30', 96), b('Two Months', 'G', 'flame', '60', 96), b('Quarter Year', 'G', 'flame', '90', 96)] },
+      { title: 'Different series, different motifs', text: 'Each series has a motif of its own: a logbook for entries, a target for calories in range, a dumbbell for workouts, a trophy for records, a scale for weigh-ins, a chain for training weeks, a barcode for scans, a drumstick for protein.',
+        items: [b('Jotter', 'B', 'log', '10', 96), b('Bullseye', 'B', 'target', '1', 96), b('Warmed Up', 'B', 'dumbbell', '5', 96), b('Personal Best', 'B', 'trophy', '1', 96), b('Weekly Weigh', 'B', 'scale', '10', 96), b('Two Good Weeks', 'B', 'chain', '2', 96), b('Scanner', 'B', 'barcode', '10', 96), b('Protein Pioneer', 'B', 'protein', '1', 96)] },
+      { title: 'One-offs', text: 'A badge that is not part of a series has its own motif and no ribbon.',
+        items: [b('Back on Track', 'B', 'back', '', 96), b('Saved by the Snow', 'B', 'snowShield', '', 96), b('Perfect Week', 'G', 'seven', '', 96), b('Early Bird', 'S', 'bird', '', 96), b('Night Owl', 'S', 'owl', '', 96), b('Leap of Faith', 'G', 'frog', '', 96)] },
+      { title: 'States', text: 'Locked badges keep their shape and motif in grey, so you can see what is coming, with a progress line. Hidden badges show only the frame and ??? until earned.',
+        items: [b('Month Strong', 'G', 'flame', '30', 96, 'Earned'), b('Month Strong', 'G', 'flame', '30', 96, '12 of 30 days', 'locked'), b('Hidden badge', 'B', 'flame', '', 96, 'Hidden', 'hidden')] }
+    ];
+    return { sections, deco };
+  }
+}
+</script>
+</body>
+</html>

@@ -8,6 +8,12 @@
 //
 //   pnpm --filter @keylow/design-export export --set widgets --canvas <widgets canvas folder> \
 //     --runtime <dc-runtime.js>
+//
+// The achievements canvas is a third set. It has no brand marks or design system either, and its
+// token stylesheets are served from packages/tokens:
+//
+//   pnpm --filter @keylow/design-export export --set achievements --canvas <achievements canvas folder> \
+//     --runtime <dc-runtime.js>
 import {
   cpSync,
   existsSync,
@@ -26,7 +32,7 @@ import { proposalsStylesheetHref, relativeAssetUrls, tokensStylesheetHref } from
 import { listBoards, listScreens, parseCanvas, sectionsOf } from "./boards.ts";
 import { startBoardServer } from "./boardServer.ts";
 import { countFrames, readPageTitle } from "./boardSource.ts";
-import { canvasSets, m2CanvasSet, widgetsCanvasSet } from "./canvasSets.ts";
+import { achievementsCanvasSet, canvasSets, m2CanvasSet, widgetsCanvasSet } from "./canvasSets.ts";
 import { checkBoards } from "./checkBoards.ts";
 import { extractProposals } from "./proposals.ts";
 import { renderBoard } from "./renderBoard.ts";
@@ -34,6 +40,7 @@ import { mergeScreenReadme } from "./screenReadme.ts";
 import { buildStaticPage, findPageProblems, rewriteAssetUrls } from "./staticPage.ts";
 
 import type { Board } from "./boards.ts";
+import type { CanvasSet } from "./canvasSets.ts";
 
 const repositoryRoot = resolve(import.meta.dirname, "../../..");
 const renderConcurrency = 4;
@@ -49,18 +56,27 @@ const { values } = parseArgs({
   },
 });
 
-if (values.set !== "m2" && values.set !== "widgets") {
-  console.error(`Unknown --set ${values.set}. Use m2 or widgets.`);
-  process.exit(2);
+function selectCanvasSet(name: string | undefined): CanvasSet {
+  switch (name) {
+    case "m2":
+      return m2CanvasSet;
+    case "widgets":
+      return widgetsCanvasSet;
+    case "achievements":
+      return achievementsCanvasSet;
+    default:
+      console.error(`Unknown --set ${name ?? ""}. Use m2, widgets or achievements.`);
+      return process.exit(2);
+  }
 }
-const canvasSet = values.set === "widgets" ? widgetsCanvasSet : m2CanvasSet;
+const canvasSet = selectCanvasSet(values.set);
 const sourceDirectoryName = canvasSet.sourceFolder;
 
 function requireOption(name: "canvas" | "design-source" | "runtime"): string {
   const value = values[name];
   if (value === undefined) {
     console.error(
-      "Usage: export [--set m2|widgets] --canvas <canvas folder> --design-source <design-source folder, m2 only> --runtime <dc-runtime.js> [--out <folder>] [--only <screen slug or board file>]",
+      "Usage: export [--set m2|widgets|achievements] --canvas <canvas folder> --design-source <design-source folder, m2 only> --runtime <dc-runtime.js> [--out <folder>] [--only <screen slug or board file>]",
     );
     process.exit(2);
   }
@@ -131,14 +147,18 @@ async function renderAll(boards: readonly Board[], origin: string): Promise<void
         const page = buildStaticPage({
           lang: rendered.lang,
           title: readPageTitle(source),
-          ...(canvasSet.linksTokens
-            ? { tokensHref: tokensStylesheetHref, proposalsHref: proposalsStylesheetHref }
+          ...(canvasSet.linksTokens ? { tokensHref: tokensStylesheetHref } : {}),
+          ...(canvasSet.linksTokens && canvasSet.linksProposals !== false
+            ? { proposalsHref: proposalsStylesheetHref }
             : {}),
           fontsHref: rendered.fontsHref,
           styles: rendered.styles,
           boardHtml: rewriteAssetUrls(rendered.boardHtml, relativeAssetUrls()),
         });
-        const problems = findPageProblems(page, { requiresTokens: canvasSet.linksTokens });
+        const problems = findPageProblems(page, {
+          requiresTokens: canvasSet.linksTokens,
+          requiresProposals: canvasSet.linksProposals !== false,
+        });
         if (problems.length > 0) {
           throw new Error(`${board.slug}/${board.state}: ${problems.join(", ")}`);
         }
@@ -218,6 +238,14 @@ const server = await startBoardServer({
   designDirectory: outputDirectory,
   runtimePath,
   sourceFolder: sourceDirectoryName,
+  ...(canvasSet.tokenBlobs === undefined
+    ? {}
+    : {
+        tokenStylesheet: {
+          path: join(repositoryRoot, "packages/tokens/css/kilo-tokens.css"),
+          blobs: canvasSet.tokenBlobs,
+        },
+      }),
 });
 try {
   await renderAll(selected, server.origin);

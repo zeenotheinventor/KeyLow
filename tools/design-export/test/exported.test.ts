@@ -6,7 +6,7 @@ import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { listBoards, parseCanvas } from "../src/boards.ts";
-import { canvasSets, widgetsCanvasSet } from "../src/canvasSets.ts";
+import { achievementsCanvasSet, canvasSets, widgetsCanvasSet } from "../src/canvasSets.ts";
 import { checkBoards } from "../src/checkBoards.ts";
 import { extractProposals } from "../src/proposals.ts";
 import { deviceScaleFactor } from "../src/renderBoard.ts";
@@ -22,6 +22,12 @@ const widgetCanvas = parseCanvas(
   JSON.parse(readFileSync(join(designDirectory, "source-widgets/project/canvas.json"), "utf8")),
 );
 const widgetBoards = listBoards(widgetCanvas, widgetsCanvasSet.boardNames);
+const achievementsCanvas = parseCanvas(
+  JSON.parse(
+    readFileSync(join(designDirectory, "source-achievements/project/canvas.json"), "utf8"),
+  ),
+);
+const achievementsBoards = listBoards(achievementsCanvas, achievementsCanvasSet.boardNames);
 
 // These two boards are the Ki-Lo mark on a plain background, with a line of text on the second.
 // They use no design system component.
@@ -42,8 +48,8 @@ function listFilesBelow(directory: string): string[] {
 describe("the committed design export", () => {
   it("should have a PNG, an HTML page and a README for every board in canvas.json and nothing else", () => {
     expect(checkBoards(designDirectory, canvasSets)).toEqual({
-      boardCount: 119,
-      screenCount: 10,
+      boardCount: 128,
+      screenCount: 11,
       missing: [],
       extra: [],
     });
@@ -69,7 +75,9 @@ describe("the committed design export", () => {
   );
 
   it.each(
-    [...boards, ...widgetBoards].map((board) => [`${board.slug}/${board.state}`, board] as const),
+    [...boards, ...widgetBoards, ...achievementsBoards].map(
+      (board) => [`${board.slug}/${board.state}`, board] as const,
+    ),
   )("%s should be listed in its screen README with its image", (_name, board) => {
     const readme = readFileSync(join(designDirectory, board.slug, "README.md"), "utf8");
     expect(readme).toContain(`![${board.slug} ${board.state}](${board.state}.png)`);
@@ -103,6 +111,56 @@ describe("the committed design export", () => {
       expect(html).not.toContain("kilo-tokens.css");
     },
   );
+
+  it("should export the nine achievements boards", () => {
+    expect(achievementsBoards.map((board) => `${board.slug}/${board.state}`)).toEqual([
+      "achievements/screen",
+      "achievements/badge-detail",
+      "achievements/celebrations",
+      "achievements/streaks",
+      "achievements/day-complete",
+      "achievements/reminders-switches",
+      "achievements/web-page",
+      "achievements/badge-art",
+      "achievements/badge-catalogue",
+    ]);
+  });
+
+  it.each(achievementsBoards.map((board) => [`${board.slug}/${board.state}`, board] as const))(
+    "%s should be a PNG of the board size at the export scale",
+    (name, board) => {
+      expect(pngSize(join(designDirectory, `${name}.png`))).toEqual({
+        width: board.width * deviceScaleFactor,
+        height: board.height * deviceScaleFactor,
+      });
+    },
+  );
+
+  it.each(achievementsBoards.map((board) => `${board.slug}/${board.state}`))(
+    "%s should be a static page that links packages/tokens alone, with no proposals stylesheet",
+    (name) => {
+      const html = readFileSync(join(designDirectory, `${name}.html`), "utf8");
+      expect(findPageProblems(html, { requiresTokens: true, requiresProposals: false })).toEqual(
+        [],
+      );
+      expect(html).toContain(
+        '<link rel="stylesheet" href="../../../packages/tokens/css/kilo-tokens.css">\n<link rel="stylesheet" href="https://fonts.googleapis.com',
+      );
+      expect(html).not.toContain("kilo-proposals.css");
+    },
+  );
+
+  it.each(achievementsBoards.map((board) => `${board.slug}/${board.state}`))(
+    "%s should hold no HTML span inside an SVG, which a browser would move out of the image",
+    (name) => {
+      const html = readFileSync(join(designDirectory, `${name}.html`), "utf8");
+      expect(html).not.toMatch(/<text\b[^>]*><span/);
+    },
+  );
+
+  it("should keep catalogue.md beside the achievements boards", () => {
+    expect(existsSync(join(designDirectory, "achievements/catalogue.md"))).toBe(true);
+  });
 
   it("should name every widget frame in the widgets README", () => {
     const readme = readFileSync(join(designDirectory, "widgets/README.md"), "utf8");

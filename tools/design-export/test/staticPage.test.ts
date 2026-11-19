@@ -162,6 +162,22 @@ describe("findPageProblems for a page that uses no design tokens", () => {
   });
 });
 
+describe("findPageProblems for a page that links the tokens and no proposals", () => {
+  const options = { requiresTokens: true, requiresProposals: false };
+  const page =
+    '<html><link rel="stylesheet" href="../../../packages/tokens/css/kilo-tokens.css"><div style="color: var(--text-primary)">x</div></html>';
+
+  it("should accept a page without the proposals stylesheet", () => {
+    expect(findPageProblems(page, options)).toEqual([]);
+  });
+
+  it("should still require the packages/tokens stylesheet", () => {
+    expect(findPageProblems("<html><div>var(--a)</div></html>", options)).toContainEqual(
+      expect.stringContaining("packages/tokens/css/kilo-tokens.css"),
+    );
+  });
+});
+
 describe("isAllowedRequestUrl", () => {
   it.each([
     "file:///repo/packages/tokens/css/kilo-tokens.css",

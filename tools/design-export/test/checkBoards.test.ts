@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { canvasSets, m2CanvasSet } from "../src/canvasSets.ts";
+import { m2CanvasSet, widgetsCanvasSet } from "../src/canvasSets.ts";
 import { checkBoards } from "../src/checkBoards.ts";
 
 import type { CanvasSet } from "../src/canvasSets.ts";
@@ -133,6 +133,7 @@ function writeWidgetsExport(
 }
 
 describe("checkBoards with the real widgets canvas set", () => {
+  const canvasSets = [m2CanvasSet, widgetsCanvasSet];
   const files = ["Main.dc.html", "QuickLog.dc.html", "LockScreen.dc.html", "States.dc.html"];
   const states = ["dashboard", "quick-log", "lock-screen", "states"];
 
