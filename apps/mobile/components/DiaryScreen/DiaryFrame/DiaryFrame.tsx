@@ -9,6 +9,7 @@ import type { DiaryFrameProps } from "./types";
 export function DiaryFrame({
   title = DAY_STEPPER.today,
   moreLabel,
+  streakLine,
   onAssistant,
   onChooseDate,
   onMore,
@@ -20,6 +21,7 @@ export function DiaryFrame({
         assistantLabel={ASSISTANT_SHEET.title}
         chooseDateLabel={DAY_STEPPER.chooseDate}
         moreLabel={moreLabel}
+        streakLine={streakLine}
         title={title}
         onAssistant={onAssistant}
         onChooseDate={onChooseDate}

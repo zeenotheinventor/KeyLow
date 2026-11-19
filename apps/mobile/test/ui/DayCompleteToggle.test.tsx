@@ -84,6 +84,13 @@ describe("DayCompleteToggle", () => {
       expect(screen.getByText("Counted in your expenditure estimate")).toBeOnTheScreen();
     });
 
+    it("should say the caption it is given in place of its own", async () => {
+      await render(inTheme({ caption: "Counts for your streak until 12:00 today" }));
+
+      expect(screen.getByText("Counts for your streak until 12:00 today")).toBeOnTheScreen();
+      expect(screen.queryByText("Complete days feed the expenditure estimate")).toBeNull();
+    });
+
     it("should be off when it is not told otherwise", async () => {
       await render(inTheme({}));
 

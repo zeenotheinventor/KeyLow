@@ -25,12 +25,14 @@ function logElement(props: Partial<FoodLogProps>) {
     <ThemeProvider fixedPreference="dark">
       <FoodLog
         currentHour={11}
+        dayCompleteState="ready"
         hours={groupEntriesByHour([], "Europe/London")}
         isComplete={false}
         isCopying={false}
         isOnline
         isToday
         isYesterdayEmpty={false}
+        streakDays={null}
         timeZone="Europe/London"
         onAddFood={() => undefined}
         onCompleteChange={() => Promise.resolve()}
@@ -62,6 +64,23 @@ describe("the day complete switch in the food log", () => {
 
     expect(onCompleteChange).toHaveBeenCalledTimes(1);
     expect(onCompleteChange).toHaveBeenCalledWith(true);
+  });
+
+  it("should not respond when the day has nothing logged", async () => {
+    const user = userEvent.setup();
+    const onCompleteChange = jest.fn(() => Promise.resolve());
+    await render(logElement({ dayCompleteState: "noEntries", onCompleteChange }));
+
+    await user.press(screen.getByRole("switch"));
+
+    expect(screen.getByRole("switch")).toBeDisabled();
+    expect(onCompleteChange).not.toHaveBeenCalled();
+  });
+
+  it("should not respond while offline, where a change could not be saved", async () => {
+    await render(logElement({ isOnline: false }));
+
+    expect(screen.getByRole("switch")).toBeDisabled();
   });
 
   // The control: a press that the day then answers plays the moment.

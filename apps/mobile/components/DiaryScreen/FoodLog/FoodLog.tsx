@@ -1,3 +1,4 @@
+import { describeDayCompleteCaption } from "@keylow/core/copy";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ScrollView, View } from "react-native";
@@ -20,7 +21,8 @@ const HOURS_PER_DAY = 24;
  * all been measured the log scrolls once so the first food's hour, or the current hour when the day is
  * empty, is near the top. A link can ask for another hour (`showHour`), which it scrolls to the same way,
  * also when it has already scrolled, once for each request. Key it by the day, so a new day scrolls
- * again, and so the day complete switch, which belongs to the day, is a new one for it.
+ * again, and so the day complete switch, which belongs to the day, is a new one for it. The switch says
+ * what the day's state is, as core works it out.
  */
 export function FoodLog({
   hours,
@@ -29,6 +31,8 @@ export function FoodLog({
   isToday,
   isOnline,
   isComplete,
+  dayCompleteState,
+  streakDays,
   isYesterdayEmpty,
   isCopying,
   showHour,
@@ -130,8 +134,10 @@ export function FoodLog({
       <DayCompleteToggle
         key={failedSaves}
         className="mt-4"
+        caption={describeDayCompleteCaption(dayCompleteState, streakDays)}
         complete={isComplete}
-        disabled={!isOnline}
+        // A day with nothing logged cannot be completed, and a change needs a connection.
+        disabled={dayCompleteState === "noEntries" || !isOnline}
         onChange={(complete) => {
           onCompleteChange(complete).catch(() => {
             setFailedSaves((count) => count + 1);

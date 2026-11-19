@@ -3,6 +3,7 @@ import { groupEntriesByHour, progressBars, sumEntries } from "@keylow/core/diary
 import { View } from "react-native";
 
 import { Banner, MacroProgressStrip } from "../../ui";
+import { DayCompleteNotice } from "../DayCompleteNotice";
 import { FoodLog } from "../FoodLog";
 import { PlanTodayRow } from "../PlanTodayRow";
 
@@ -20,6 +21,8 @@ export function DiaryDayContent({
   currentHour,
   isToday,
   isOnline,
+  dayCompleteState,
+  streakDays,
   isYesterdayEmpty,
   isCopying,
   hasCopyFailed,
@@ -52,6 +55,7 @@ export function DiaryDayContent({
           <Banner body={OFFLINE_BANNER.body} title={OFFLINE_BANNER.title} variant="offline" />
         )}
         {hasCopyFailed ? <Banner sentence title={COPY_FAILED_BANNER} variant="error" /> : null}
+        <DayCompleteNotice state={dayCompleteState} />
         {plannedRow === null ? null : <PlanTodayRow row={plannedRow} onPress={onOpenPlannedDay} />}
       </View>
       <FoodLog
@@ -59,12 +63,14 @@ export function DiaryDayContent({
         key={day.localDate}
         currentHour={currentHour}
         hours={groupEntriesByHour(day.entries, timeZone)}
+        dayCompleteState={dayCompleteState}
         isComplete={day.dayLog?.is_complete ?? false}
         isCopying={isCopying}
         isOnline={isOnline}
         isToday={isToday}
         isYesterdayEmpty={isYesterdayEmpty}
         showHour={showHour}
+        streakDays={streakDays}
         timeZone={timeZone}
         onAddFood={onAddFood}
         onCompleteChange={onCompleteChange}

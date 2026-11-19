@@ -1,5 +1,5 @@
 import type { LogEntry } from "@keylow/api-client";
-import type { HourGroup } from "@keylow/core/diary";
+import type { DayCompleteState, HourGroup } from "@keylow/core/diary";
 
 export type FoodLogProps = {
   /** All 24 hours, from core's `groupEntriesByHour`. */
@@ -12,6 +12,10 @@ export type FoodLogProps = {
   isOnline: boolean;
   /** The day is marked complete. */
   isComplete: boolean;
+  /** Which state the Day complete control is in, from core's `dayCompleteView`. */
+  dayCompleteState: DayCompleteState;
+  /** The current daily streak, for the caption of a day completed today, or null while it is not known. */
+  streakDays: number | null;
   /** Yesterday has nothing to copy, as the empty day's card says. */
   isYesterdayEmpty: boolean;
   /** A copy of yesterday is under way, as the empty day's button shows. */
