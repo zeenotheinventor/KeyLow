@@ -9,7 +9,7 @@
 // - Stored messages are replayed as they were stored, bar the thinking of turns that are over (below).
 //   Nothing is edited or reordered, so turn two's request starts with turn one's bytes. The one
 //   breakpoint that moves is put on a copy.
-// - Only the current turn's thinking blocks are sent. A Haiku 5.5 thinking block is bound to the system
+// - Only the current turn's thinking blocks are sent. An Opus 5.5 thinking block is bound to the system
 //   prompt, the tools and every message before it, so a deploy that changes any of them would make the API
 //   refuse every later request of a conversation that still holds one. Blocks made in a turn that is over
 //   are removed from the front of the history, which the API allows, and the rows are not touched. The one
@@ -28,14 +28,14 @@ import type { AssistantStoredMessage } from "../_shared/core.ts";
 import type { ConversationNote } from "./turnStore.ts";
 import type Anthropic from "@anthropic-ai/sdk";
 
-export const MODEL = "claude-haiku-5-5";
+export const MODEL = "claude-opus-5-5";
 
 // Thinking shares this cap with the reply and the tool inputs. A reply is a few lines and a write call
-// is a few hundred tokens, so 8,000 leaves room for thinking at the effort below and bounds what one
-// model step can cost to well under a cent on this model.
+// is a few hundred tokens, so 8,000 leaves room for thinking at the effort below and bounds the output
+// cost of one model step to $0.16 at Opus rates, and twelve steps (MAX_MODEL_CALLS) to about $1.90.
 const MAX_OUTPUT_TOKENS = 8000;
 
-// Haiku 5.5 defaults to medium. It is pinned so nothing changes it by accident, because a change of
+// Opus 5.5 defaults to medium. It is pinned so nothing changes it by accident, because a change of
 // effort is a change of prefix. Logging needs the model to follow the rules below and pick the right
 // portion, so it is not set lower before the evals (KEY-699 to KEY-702) show a lower level holds.
 const EFFORT = "medium";
@@ -279,7 +279,7 @@ function replayBlocks(
 //
 // What is left is a small window: a deploy that changes the system prompt or the tools between a question
 // and its answer makes the kept block invalid, and that one request is refused. The next turn strips the
-// block. Whether that next request is then accepted is not verified. It holds only if Haiku 5.5 takes a
+// block. Whether that next request is then accepted is not verified. It holds only if Opus 5.5 takes a
 // final assistant message with a call and no thinking block, and a live probe has not run yet (it needs the
 // eval key). If the model insists on thinking there, the conversation stays refused until a new one is
 // started, and the `drop_block` beta (`thinking-binding-controls-2026-08-01`) is the fallback.
@@ -486,7 +486,8 @@ function sdkTools(tools: readonly AnthropicTool[]): Anthropic.Tool[] {
 
 // The parameters of `messages.stream()`. The only inputs are the tools and the messages, so a user id, an
 // email or a profile field has nowhere to go. There is no temperature, top_p, top_k, budget_tokens,
-// prefill, fallbacks, MCP connector or beta header, because Haiku 5.5 refuses or does not need them.
+// prefill, MCP connector or beta header, because Opus 5.5 refuses or does not need them. Server-side
+// fallbacks exist on Opus 5.5 and are not used: a refusal ends the turn refused (ADR 0006, Amendment 8).
 export function buildTurnRequest({
   tools,
   messages,

@@ -2,7 +2,6 @@
 // the request that carries both. Compaction is one non-streaming call with no tools. Its system prompt
 // differs from the turn loop's, so it misses the loop's prompt cache, which is accepted because it runs once
 // every many turns. Nothing here holds a user id, an email or a profile field, and nothing is logged.
-import { MODEL } from "./prompt.ts";
 
 import type Anthropic from "@anthropic-ai/sdk";
 import type { ApiMessage } from "./prompt.ts";
@@ -35,14 +34,18 @@ export const COMPACTION_SYSTEM_PROMPT = [
   "Write short lines in British English, as plain text with no headings or formatting, and no more than 60 lines. Say Ki-Lo when naming the app. Write only the note.",
 ].join("\n\n");
 
+// Compaction stays on Haiku 5.5 when the chat turn runs on Opus 5.5 (ADR 0006, Amendment 8). It sends thinking
+// `disabled`, which Opus 5.5 refuses at every effort, and a note needs no reasoning.
+export const COMPACTION_MODEL = "claude-haiku-5-5";
+
 // The request has only the transcript as input, so a user id, an email or a profile field has nowhere to go.
-// Haiku 5.5 accepts thinking `disabled` at an effort of high or below, and a note needs no reasoning. There is
+// Haiku 5.5 accepts thinking `disabled` at an effort of high or below. There is
 // no temperature, top_p, top_k, budget_tokens, prefill, fallbacks, beta header or tools key.
 export function buildCompactionRequest(
   transcript: string,
 ): Anthropic.MessageCreateParamsNonStreaming {
   return {
-    model: MODEL,
+    model: COMPACTION_MODEL,
     max_tokens: COMPACTION_MAX_TOKENS,
     thinking: { type: "disabled" },
     output_config: { effort: "low" },

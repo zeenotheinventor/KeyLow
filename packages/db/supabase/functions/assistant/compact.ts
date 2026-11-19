@@ -6,7 +6,7 @@
 //
 // Things to know when changing this file:
 // - The note covers every turn up to the one that just ended and no tail of turns is kept word for word.
-//   Haiku 5.5 ties a thinking block to the conversation that made it, so replaying the last few turns after a
+//   The turn model ties a thinking block to the conversation that made it, so replaying the last few turns after a
 //   note is a 400 unless their thinking is stripped. The note keeps the open questions, so the recent context
 //   survives.
 // - It runs only after a turn that ended `complete`, so a question waiting for an answer is never cut, and
@@ -18,8 +18,8 @@
 // - Nothing here logs or reports the note, the transcript or a message.
 import { readLimit } from "../_shared/rateLimit.ts";
 import { logLine } from "../_shared/log.ts";
-import { buildCompactionRequest, renderTranscript } from "./compactPrompt.ts";
-import { MODEL, openToolUses, toApiMessages } from "./prompt.ts";
+import { COMPACTION_MODEL, buildCompactionRequest, renderTranscript } from "./compactPrompt.ts";
+import { openToolUses, toApiMessages } from "./prompt.ts";
 import { NO_MESSAGE_ID } from "./turnStore.ts";
 
 import type Anthropic from "@anthropic-ai/sdk";
@@ -132,7 +132,7 @@ async function recordCall(
       userId: input.userId,
       turnId: input.turnId,
       route: "compact",
-      model: MODEL,
+      model: COMPACTION_MODEL,
       inputTokens: message?.usage.input_tokens ?? 0,
       outputTokens: message?.usage.output_tokens ?? 0,
       cacheReadInputTokens: message?.usage.cache_read_input_tokens ?? 0,

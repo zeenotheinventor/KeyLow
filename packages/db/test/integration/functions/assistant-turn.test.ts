@@ -277,7 +277,7 @@ describe("a turn that calls search_foods and then answers", () => {
     expect(usage.data).toEqual([
       {
         transport: "mcp_http",
-        model: "claude-haiku-5-5",
+        model: "claude-opus-5-5",
         input_tokens: 500,
         output_tokens: 30,
         cache_read_input_tokens: 0,
@@ -286,7 +286,7 @@ describe("a turn that calls search_foods and then answers", () => {
       },
       {
         transport: "mcp_http",
-        model: "claude-haiku-5-5",
+        model: "claude-opus-5-5",
         input_tokens: 80,
         output_tokens: 12,
         cache_read_input_tokens: 300,

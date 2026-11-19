@@ -1,4 +1,4 @@
-// The streaming turn loop behind POST /assistant/turn (ADR 0006). It replays the conversation, calls Haiku 5.5
+// The streaming turn loop behind POST /assistant/turn (ADR 0006). It replays the conversation, calls Opus 5.5
 // with the tools Ki-Lo's own MCP client lists, streams the text to the app, runs each tool call through that
 // client, turns the executor's structured outcomes into cards, questions and citations, and stores
 // everything through the turn store.
@@ -85,6 +85,7 @@ import type { UsageToRecord } from "./usage.ts";
 // A turn with ten writes needs eleven model calls (one for each write and the answer), and the reads before
 // the writes take a few more. More than this is a loop, and each call is a few seconds of the Edge Function's
 // wall-clock limit, so the turn ends failed, or complete with the saved words when a write landed (`conclude`).
+// An Opus call takes longer than a Haiku one, so the turn deadline is more likely than this cap to end a long turn.
 export const MAX_MODEL_CALLS = 12;
 
 // The MCP client's default is 60 s per attempt, and a connect, a list or a read call retries once, so a hung

@@ -12,7 +12,7 @@ import {
   threadFromMessages,
 } from "../_shared/core.ts";
 import { DEFAULT_COMPACT_AT_TOKENS } from "./compact.ts";
-import { contextBlock, MODEL } from "./prompt.ts";
+import { contextBlock } from "./prompt.ts";
 import {
   MAX_EXERCISE_FORM_CARDS,
   MAX_EXERCISE_MUSCLES_CARDS,
@@ -206,7 +206,7 @@ Deno.test(
         const rows = harness.usageRows();
         assertEquals(rows.length, 3);
         for (const row of rows) {
-          assertEquals(row["model"], MODEL);
+          assertEquals(row["model"], "claude-opus-5-5");
           assertEquals(row["user_id"], userId);
           assertEquals(row["route"], "describe_or_ask");
           assertEquals(typeof row["latency_ms"], "number");
@@ -2383,7 +2383,7 @@ Deno.test(
           ]) {
             assertEquals(text.includes(personal), false, `${personal} in request ${index}`);
           }
-          assertEquals(bodies[index]?.["model"], MODEL);
+          assertEquals(bodies[index]?.["model"], "claude-opus-5-5");
           assertEquals(bodies[index]?.["tool_choice"], { type: "auto" });
         }
         // The tools array is byte for byte the same on a general, a recipe-import and a read turn.

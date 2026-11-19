@@ -79,7 +79,7 @@ const withoutBreakpoints = (value: unknown): unknown =>
   );
 
 Deno.test("the system prompt is well over the 512 token cache minimum", () => {
-  // Claude Haiku 5.5 counts about 30 per cent more tokens than older models do, and English runs near
+  // Newer Claude tokenizers count up to about 35 per cent more tokens than older ones, and English runs near
   // 4 characters a token, so 3,600 characters is over 512 tokens even at 7 characters a token.
   assert(SYSTEM_PROMPT.length >= 3600, `only ${SYSTEM_PROMPT.length} characters`);
 });
@@ -1261,7 +1261,7 @@ Deno.test(
   () => {
     const request = buildTurnRequest({ tools, messages: replay([userText("hi")]) });
 
-    assertEquals(request.model, "claude-haiku-5-5");
+    assertEquals(request.model, "claude-opus-5-5");
     assertEquals(request.thinking, { type: "adaptive" });
     assertEquals(request.output_config, { effort: "medium" });
     assertEquals(request.tool_choice, { type: "auto" });
@@ -1410,6 +1410,7 @@ Deno.test("no forbidden key or value appears anywhere in the serialised request"
   assertEquals(body.includes("mcp_toolset"), false);
   assertEquals(body.includes("mcp-client-2025-11-20"), false);
   assertEquals(body.includes('tool_choice":{"type":"any'), false);
+  assertEquals(body.includes('tool_choice":{"type":"tool'), false);
 });
 
 Deno.test("the request builder takes no user id, email or profile field", () => {
