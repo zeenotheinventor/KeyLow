@@ -1,6 +1,8 @@
 import { View } from "react-native";
 
+import { AchievementBadge } from "../AchievementBadge";
 import { Button } from "../Button";
+import { Text } from "../Text";
 import { Toast } from "./Toast";
 import { ToastProvider, useToast } from "./ToastProvider";
 
@@ -72,6 +74,50 @@ export const FavouriteAdded: Story = {
 
 export const FavouriteRemoved: Story = {
   args: { message: "Removed from favourites", icon: "Heart", topOffset: 64 },
+};
+
+// Board 3, the unlock toast for one badge: the medal at 44, how it was earned with the points, and View.
+export const AchievementSingle: Story = {
+  args: {
+    variant: "achievement",
+    message: "Badge earned: Hat Trick",
+    description: "3-day daily streak. +10 points",
+    actionLabel: "View",
+    onAction: () => undefined,
+    bottomInset: 34,
+  },
+  // A medal is an element, which a story's args may not hold, so the story draws it.
+  render: (args) => (
+    <Toast {...args} medal={<AchievementBadge decorative id="hat-trick" size={44} />} />
+  ),
+};
+
+// Board 3, the grouped toast: a count in place of the medal, the names, and the freeze and level chips.
+export const AchievementGrouped: Story = {
+  args: {
+    variant: "achievement",
+    message: "3 badges earned",
+    description: "Fortnight, Notebook and Bullseye. +45 points",
+    chips: [
+      { label: "+1 freeze", tone: "protein" },
+      { label: "You reached Sapling", tone: "accent" },
+    ],
+    actionLabel: "View",
+    onAction: () => undefined,
+    bottomInset: 34,
+  },
+  render: (args) => (
+    <Toast
+      {...args}
+      medal={
+        <View className="h-11 w-11 items-center justify-center rounded-full border-2 border-text-secondary">
+          <Text tone="secondary" variant="body-strong">
+            3
+          </Text>
+        </View>
+      }
+    />
+  ),
 };
 
 function ToastButtons() {

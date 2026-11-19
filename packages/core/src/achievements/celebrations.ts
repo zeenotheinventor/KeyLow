@@ -27,8 +27,13 @@ export type CelebrationInput = Readonly<{
   alreadyQueued: readonly string[];
 }>;
 
+/** What came with the badges a run recorded, as numbers: the freezes it earned and the level it reached. */
+export type CelebrationExtras = Readonly<{ freezes: number; levelName: string | null }>;
+
 export type CelebrationDecision = Readonly<{
   entries: CelebrationEntry[];
+  /** For the badges this run recorded, null when it earned no freeze and reached no level. Never set on a backfill. */
+  extras: CelebrationExtras | null;
   /** For the badges this run recorded, and none on a backfill run. */
   notification: UnlockNotificationPayload | null;
   /** How many achievements the one summary card says were earned quietly, null when it has nothing to say. */
@@ -54,6 +59,7 @@ export const decideCelebrations = ({
     const summary = quietCount + recorded.length;
     return {
       entries: [],
+      extras: null,
       notification: null,
       backfillSummary: summary === 0 ? null : summary,
     };
@@ -83,8 +89,11 @@ export const decideCelebrations = ({
     .filter((row) => row.kind === "earned")
     .reduce((sum, row) => sum + row.count, 0);
 
+  const levelName = run.levelUp?.name ?? null;
+
   return {
     entries,
+    extras: freezes === 0 && levelName === null ? null : { freezes, levelName },
     notification: buildNotification({
       newUnlocks: newIds,
       points: run.points,

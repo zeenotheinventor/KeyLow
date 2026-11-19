@@ -3,9 +3,14 @@ import { TERMS_VERSION } from "@keylow/core/copy";
 import { setUser } from "@sentry/react-native";
 import { AuthApiError, AuthRetryableFetchError } from "@supabase/supabase-js";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react-native";
-import { Text } from "react-native";
+import { AppState, Text } from "react-native";
 
 import { AuthGate } from "../components/AuthGate";
+import {
+  getCelebrationState,
+  getQueuedIds,
+  recordCelebrations,
+} from "../lib/achievements/celebrationStore";
 import { announceNewTargets, hasNewTargets, takeNewTargets } from "../lib/checkinToast";
 import {
   beginRecipePrefill,
@@ -34,6 +39,15 @@ import {
 
 import type { QueryClient } from "@tanstack/react-query";
 
+jest.mock(
+  "react-native-safe-area-context",
+  () =>
+    jest.requireActual<{ default: unknown }>("react-native-safe-area-context/jest/mock").default,
+);
+jest.mock("@keylow/api-client", () => ({
+  ...jest.requireActual<object>("@keylow/api-client"),
+  markAchievementsSeen: jest.fn(() => Promise.resolve()),
+}));
 jest.mock(
   "expo-router",
   () => jest.requireActual<{ mockExpoRouter: unknown }>("./support/expoRouterMock").mockExpoRouter,
@@ -223,6 +237,61 @@ describe("AuthGate", () => {
     });
 
     expect(routerMock.replace).toHaveBeenCalledWith("/(auth)/sign-in");
+  });
+
+  describe("the achievements waiting to be celebrated", () => {
+    const queueEntries = (entries: { id: "month-strong" | "bullseye"; isNew: boolean }[]) =>
+      act(() => {
+        recordCelebrations(
+          { entries, extras: null, notification: null, backfillSummary: null },
+          true,
+        );
+      });
+
+    beforeEach(() => {
+      Object.assign(AppState, { currentState: "active" });
+      mockSupabaseClient.auth.getSession.mockResolvedValue({
+        data: { session: fakeSession },
+        error: null,
+      });
+      routerMock.segments = ["(tabs)", "more"];
+    });
+
+    it("should close an open moment and forget the queue when the user signs out", async () => {
+      await renderGate();
+      await queueEntries([{ id: "month-strong", isNew: true }]);
+      expect(await screen.findByRole("heading", { name: "Month Strong" })).toBeOnTheScreen();
+      await queueEntries([{ id: "bullseye", isNew: false }]);
+
+      await act(() => {
+        emitAuthStateChange("SIGNED_OUT", null);
+      });
+
+      await waitFor(() => {
+        expect(screen.queryByRole("heading", { name: "Month Strong" })).not.toBeOnTheScreen();
+      });
+      expect(getCelebrationState().entries).toEqual([]);
+      expect(getQueuedIds()).toEqual([]);
+    });
+
+    it("should hand the next account an empty queue when the user changes with no sign-out between", async () => {
+      Object.assign(AppState, { currentState: "background" });
+      await renderGate();
+      await queueEntries([{ id: "bullseye", isNew: false }]);
+      expect(getCelebrationState().entries).toHaveLength(1);
+
+      await act(() => {
+        emitAuthStateChange("SIGNED_IN", {
+          ...fakeSession,
+          user: { ...fakeSession.user, id: "another-user-id" },
+        });
+      });
+
+      await waitFor(() => {
+        expect(getCelebrationState().entries).toEqual([]);
+      });
+      expect(getQueuedIds()).toEqual([]);
+    });
   });
 
   describe("the reminders when nobody is signed in", () => {

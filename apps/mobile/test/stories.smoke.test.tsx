@@ -63,6 +63,10 @@ const schemes: ThemeScheme[] = ["dark", "light"];
 // (ink by scheme) and TabItem (selected label by scheme). The files are found from the import graph of each story.
 const storyFilesWithSchemeCode = new Map([
   [
+    "AchievementCelebration/AchievementMoment/AchievementMoment.stories.tsx",
+    "Badge branches on the scheme",
+  ],
+  [
     "AchievementsScreen/BadgeDetailSheet/BadgeDetailSheet.stories.tsx",
     "Badge branches on the scheme",
   ],

@@ -5,3 +5,4 @@ export { BadgeDetailSheet } from "./BadgeDetailSheet";
 export type { BadgeDetailSheetProps } from "./BadgeDetailSheet";
 export { DashboardBackfillCard } from "./DashboardBackfillCard";
 export { useBadgeDetail } from "./useBadgeDetail";
+export { useMarkAchievementsSeen } from "./useMarkAchievementsSeen";

@@ -1,6 +1,7 @@
 import type {
   CelebrationDecision,
   CelebrationEntry,
+  CelebrationExtras,
   UnlockNotificationPayload,
 } from "@keylow/core";
 
@@ -8,6 +9,11 @@ import type {
 export type CelebrationState = Readonly<{
   /** The badges waiting for a toast or a screen, the ones this device recorded first. */
   entries: readonly CelebrationEntry[];
+  /**
+   * The freezes and the level that came with the waiting entries, kept only while they wait. A run that
+   * queued no entries leaves nothing here, so a level reached with no badge never attaches to a later drain.
+   */
+  extras: CelebrationExtras | null;
   /** The one notification for the badges this device recorded, which a later ticket sends or shows as a toast. */
   notification: UnlockNotificationPayload | null;
   /** Whether the app was in front when the run that left the entries finished. */
@@ -18,6 +24,7 @@ export type CelebrationState = Readonly<{
 
 const emptyState: CelebrationState = {
   entries: [],
+  extras: null,
   notification: null,
   wasActive: false,
   backfillSummary: null,
@@ -32,6 +39,17 @@ const emptyState: CelebrationState = {
 let state = emptyState;
 let acknowledged = new Set<string>();
 const listeners = new Set<() => void>();
+
+const mergeExtras = (
+  waiting: CelebrationExtras | null,
+  incoming: CelebrationExtras | null,
+): CelebrationExtras | null =>
+  waiting === null || incoming === null
+    ? (incoming ?? waiting)
+    : {
+        freezes: waiting.freezes + incoming.freezes,
+        levelName: incoming.levelName ?? waiting.levelName,
+      };
 
 const publish = (next: CelebrationState): void => {
   state = next;
@@ -63,6 +81,9 @@ export const recordCelebrations = (decision: CelebrationDecision, wasActive: boo
   }
   publish({
     entries: [...state.entries, ...decision.entries],
+    // Tied to the entries of the run: a run that queued none adds none.
+    extras:
+      decision.entries.length === 0 ? state.extras : mergeExtras(state.extras, decision.extras),
     notification: decision.notification ?? state.notification,
     wasActive,
     backfillSummary: decision.backfillSummary,
@@ -79,6 +100,7 @@ export const acknowledgeCelebrations = (ids: readonly string[]): void => {
   publish({
     ...state,
     entries,
+    extras: entries.length === 0 ? null : state.extras,
     notification: entries.length === 0 ? null : state.notification,
   });
 };

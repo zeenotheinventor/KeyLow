@@ -147,7 +147,10 @@ describe("the backfill card on the Dashboard", () => {
 
   it("should read the database and not the celebration queue", async () => {
     mockRead.data = readHolding([]);
-    recordCelebrations({ entries: [], notification: null, backfillSummary: 23 }, true);
+    recordCelebrations(
+      { entries: [], extras: null, notification: null, backfillSummary: 23 },
+      true,
+    );
     await renderCard();
 
     expect(screen.queryByRole("heading", { name: "Achievements are here" })).not.toBeOnTheScreen();
