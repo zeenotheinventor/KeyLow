@@ -474,6 +474,23 @@ async function seed(user: TestUser, options: { year: boolean }): Promise<void> {
     ).error,
     "feature request",
   );
+  const recorded = await client.rpc("record_achievements", {
+    p_ids: ["first-bite"],
+    p_backfill: false,
+  });
+  succeeded(recorded.error, "achievement");
+  succeeded(
+    (
+      await client.from("streak_freeze_events").insert({
+        kind: "earned",
+        reason: "daily_streak",
+        ref: "7",
+        count: 1,
+        local_date: "2026-01-17",
+      })
+    ).error,
+    "streak freeze event",
+  );
   await addFavouriteFood(client, (foods[1] ?? food).id);
 }
 

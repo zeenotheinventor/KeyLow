@@ -76,6 +76,8 @@ const READ_PLANS: { [Table in AccountExportTable]: ReadPlan<Table> } = {
   meal_plans: { ownerColumn: "owner_id", orderColumns: ["id"] },
   meal_plan_days: { ownerColumn: "owner_id", orderColumns: ["id"] },
   meal_plan_items: { ownerColumn: "owner_id", orderColumns: ["id"] },
+  user_achievements: { ownerColumn: "user_id", orderColumns: ["user_id", "achievement_id"] },
+  streak_freeze_events: { ownerColumn: "user_id", orderColumns: ["id"] },
 };
 
 /**

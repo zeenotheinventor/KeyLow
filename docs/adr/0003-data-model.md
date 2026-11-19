@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted, 2026-09-22. Amendment 1 appended 2026-10-07. Amendment 2 appended 2026-10-15. Amendment 3 appended 2026-10-15. Amendment 4 appended 2026-10-15. Amendment 5 appended 2026-10-15. Amendment 6 appended 2026-10-15. Amendment 7 appended 2026-10-15. Amendment 8 appended 2026-10-16. Amendment 9 appended 2026-10-18. Amendment 10 appended 2026-10-23. Amendment 11 appended 2026-10-23. Amendment 12 appended 2026-10-23. Amendment 13 appended 2026-10-23. Amendment 14 appended 2026-10-26, with addenda of 2026-11-03 and 2026-11-07. Amendment 15 appended 2026-10-29. Amendment 16 appended 2026-11-10. Amendment 17 appended 2026-11-10. Amendment 18 appended 2026-11-10. Amendment 19 appended 2026-11-11. Amendment 20 appended 2026-11-11. Amendment 21 appended 2026-11-11. Amendment 22 appended 2026-11-13. Amendment 23 appended 2026-11-13. Amendment 24 appended 2026-11-13. Amendment 25 appended 2026-11-13.
+Accepted, 2026-09-22. Amendment 1 appended 2026-10-07. Amendment 2 appended 2026-10-15. Amendment 3 appended 2026-10-15. Amendment 4 appended 2026-10-15. Amendment 5 appended 2026-10-15. Amendment 6 appended 2026-10-15. Amendment 7 appended 2026-10-15. Amendment 8 appended 2026-10-16. Amendment 9 appended 2026-10-18. Amendment 10 appended 2026-10-23. Amendment 11 appended 2026-10-23. Amendment 12 appended 2026-10-23. Amendment 13 appended 2026-10-23. Amendment 14 appended 2026-10-26, with addenda of 2026-11-03 and 2026-11-07. Amendment 15 appended 2026-10-29. Amendment 16 appended 2026-11-10. Amendment 17 appended 2026-11-10. Amendment 18 appended 2026-11-10. Amendment 19 appended 2026-11-11. Amendment 20 appended 2026-11-11. Amendment 21 appended 2026-11-11. Amendment 22 appended 2026-11-13. Amendment 23 appended 2026-11-13. Amendment 24 appended 2026-11-13. Amendment 25 appended 2026-11-13. Amendment 26 appended 2026-11-19.
 
 ## Context
 
@@ -2791,3 +2791,68 @@ The whole-account export (KEY-707) leaves the table out. A push token is a devic
 ### Consequences of Amendment 25
 
 The migration inserts no row, so it applies to a database that holds any data and needs no reset. Any further deviation from the frozen Decision, from Amendments 1 to 24 or from this amendment needs an Amendment 26 before the migration or code that implements it lands.
+
+## Amendment 26 (Achievements: what is stored, what is read, and where unlocks are decided, 2026-11-19)
+
+### Status
+
+Recorded on 2026-11-19 under KEY-1084, part of KEY-1079, for the spec in `docs/design/achievements/catalogue.md` and Zee's rulings on KEY-1079 and KEY-1081. The frozen Decision and Amendments 1 to 25 are unchanged. The tables, the column, the two functions and the snapshot shape below are interpretations. Zee confirms them by approving the pull request that carries this amendment.
+
+### Unlocks are decided on the client
+
+Whether an achievement is earned is a rule over a person's data, and every rule, threshold and window lives in `@keylow/core`. The database stores which achievements a person holds and returns the figures the rules read. It does arithmetic and grouping and nothing else. It does not know the catalogue, which is why `record_achievements` checks only that an id is a lowercase kebab slug. The spec's `day_completions` table is not built, because `day_logs` already records completion with `is_complete` and `completed_at`.
+
+### The tables
+
+`public.user_achievements`, one row per achievement a person holds:
+
+- `user_id uuid` not null, default `auth.uid()`, references `auth.users (id)` on delete cascade. `achievement_id text` not null, a lowercase kebab slug of at most 64 characters. Primary key `(user_id, achievement_id)`.
+- `unlocked_at timestamptz` not null, default `now()`. `seen_at timestamptz` null. `backfilled boolean` not null, default `false`.
+- Following Amendment 14: `revoke all` from `anon`, `authenticated` and `service_role`, then `select` and `update (seen_at)` to `authenticated`, and `select` to `service_role`. Two policies, `user_achievements_select_own` and `user_achievements_update_own`, on `user_id = (select auth.uid())`. There is no insert policy and no insert grant, so a client cannot insert, and there is no delete.
+
+`public.streak_freeze_events`, the append only ledger of freezes:
+
+- `id uuid` primary key. `user_id` as above. `kind text` in (`earned`, `used`). `reason text`. `ref text` not null, 1 to 64 characters. `count smallint` greater than 0. `local_date date` not null. `created_at timestamptz` not null, default `now()`.
+- Unique `(user_id, kind, reason, ref)`, so a freeze for the same cause is recorded once. `ref` is not null so the key cannot be dodged with a null.
+- The reason check ties each kind to its reasons. An `earned` row has one of `daily_streak`, `training_streak`, `weigh_in_streak`, `perfect_week`, `level_reached`, `achievement_gold`, `achievement_platinum` or `first_use`, which are the ways the spec lists. A `used` row has `missed_day`.
+- Privileges: `select` and `insert (kind, reason, ref, count, local_date)` to `authenticated`, `select` to `service_role`. No update, no delete, and a client cannot set `user_id`, `id` or `created_at`. Policies `streak_freeze_events_select_own` and `streak_freeze_events_insert_own`.
+
+`profiles.achievements_backfilled_at timestamptz` null. It is readable by its owner through the table wide select, is in no update or insert grant, and is written only by `record_achievements`.
+
+### The functions
+
+- `record_achievements(p_ids text[], p_backfill boolean) returns text[]` inserts the ids not already held with `unlocked_at = now()` and `backfilled = p_backfill`, and returns only the ids it inserted. The insert is `on conflict do nothing ... returning`, so of two devices racing on one id only one gets it back, which is what stops a double notification. When `p_backfill` is true it sets `achievements_backfilled_at` if it is null and never moves it. A null list is an empty list. A list of more than 200 ids, or an id that is null or not a slug, is refused with a message that names no value. It refuses a call with no signed-in person.
+- `record_achievements` is `security definer` with `set search_path = ''`, which differs from KEY-1084's "security invoker". An invoker function runs with the caller's privileges, and the caller has no insert privilege on `user_achievements` and no update privilege on the backfill mark, which the spec requires. It names the caller from `auth.uid()` and nothing else, as `register_push_token` does in Amendment 25.
+- `achievement_stats(p_from date) returns jsonb` is `security invoker`, `stable`, with `set search_path = ''`. It returns one snapshot for the caller. Row level security applies to every read and every query also filters on the caller.
+- Both are revoked from `public`, `anon` and `service_role` and granted to `authenticated` alone.
+
+### The snapshot
+
+Keys are snake case and core maps them to camel case. Counts cover all time. `p_from` bounds only the lists that grow with time and that a streak or week rule walks: `days`, `entry_totals.new_foods_per_week` (by the date a food was first logged over all history), `weigh_ins.dates`, `workouts.weeks` and `workouts.session_best_sets`. A null `p_from` means no lower bound. Empty lists are `[]` and absent counts are 0, never null.
+
+- Profile: `profile_created_at`, `onboarding_completed_at`, `targets_updated_at`, `time_zone`, `manual_targets {kcal, protein_g, carbs_g, fat_g}`.
+- `targets`: the engine rows `{effective_from, effective_to, calories_kcal, protein_g, carbs_g, fat_g, dow_calories_kcal}`.
+- `days`: `{local_date, entry_count, kcal, protein_g, carbs_g, fat_g, fibre_g, is_complete, completed_at, earliest_entry_local_time, logged_between_midnight_and_four}`. A day appears when it has a live entry or is complete. Entry times use `profiles.timezone`, because `food_log_entries` has no zone column, and an entry's time is its `created_at`. The flag covers 00:00:00 up to but not including 04:00:00.
+- `entry_totals {entries, distinct_foods, new_foods_per_week, most_logs_of_favourite_food, own_recipe_entries, most_days_for_one_recipe}`.
+- `weigh_ins {count, dates, before_nine_count}` and `body_measurement_count`. Weigh-ins read in their own row's `tz`. No weight value and no goal weight is in the snapshot.
+- `workouts {sessions, before_seven_count, from_twenty_one_count, working_sets, tonnage_kg, most_sets_in_session, legs_sessions, distinct_exercises, weeks, session_best_sets}`. Only finished sessions that are not deleted count, and only their sets that are not deleted and not warm-ups. Tonnage is reps times `load_kg`, a null load counting as 0. `weeks` is `{week_start, sessions, muscle_groups}` per Monday week by `local_date`, with primary muscles only. `session_best_sets` is `{started_at, local_date, sets: [{exercise_id, load_kg, reps}]}` per session, the best counted set per exercise by heavier load and then more reps.
+- `training_goals {days_per_week, effective_from, effective_to}`, `active_routine_day_count`, `routines` (not archived), `recipes` (not archived), `favourites` (food and recipe favourites), `meal_plans` (archived ones too), `longest_meal_plan_days`, `distinct_planned_days`, `shopping_list_items`, `assistant_user_messages`, `assistant_conversations`, `assistant_log_entry_actions` and `assistant_create_recipe_actions` (not undone), `feature_requests`.
+- `checkin_dates`: the `as_of_date` of each `expenditure_snapshots` row with `kind = 'checkin'`. `programmes`: `{started_on, ended_on}`.
+- `achievements`: `{achievement_id, unlocked_at, seen_at, backfilled}`. `streak_freeze_events`: `{kind, reason, ref, count, local_date, created_at}`.
+
+### Health data
+
+Following Amendment 9, no function raises a notice or a warning, and every exception message is a constant that quotes no value. Postgres can still put a failing row in the DETAIL of a constraint violation, as Amendment 8 notes, and the rows here hold achievement ids and freeze reasons and no health value.
+
+### The export
+
+Both tables are a person's own data and belong in the whole-account export. Both are classified `exported` in `packages/api-client/src/repos/accountExportCoverage.ts`, listed in core's `ACCOUNT_EXPORT_TABLES` and `accountExportSchema`, and given a read plan in `packages/api-client/src/repos/accountExport.ts` (owner column `user_id`, ordered by `user_id` and `achievement_id` for achievements and by `id` for the ledger). `ACCOUNT_EXPORT_VERSION` stays 1, as it did when meal plans and feature requests were added.
+
+### Implemented by
+
+- Migration `20261119100000_achievements.sql`, with pgTAP in `achievements.test.sql`.
+- `packages/db/src/types.gen.ts` gains the two tables, the column and the two functions.
+
+### Consequences of Amendment 26
+
+The migration inserts no row, so it applies to a database that holds any data and needs no reset. The counter events table that the spec's step 7 needs is a later amendment and a later migration. Any further deviation from the frozen Decision, from Amendments 1 to 25 or from this amendment needs an Amendment 27 before the migration or code that implements it lands.

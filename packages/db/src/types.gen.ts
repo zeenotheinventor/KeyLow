@@ -1230,6 +1230,7 @@ export type Database = {
       };
       profiles: {
         Row: {
+          achievements_backfilled_at: string | null;
           activity: Database["public"]["Enums"]["activity_level"] | null;
           assistant_consent_at: string | null;
           assistant_consent_version: string | null;
@@ -1254,6 +1255,7 @@ export type Database = {
           weight_unit: string | null;
         };
         Insert: {
+          achievements_backfilled_at?: string | null;
           activity?: Database["public"]["Enums"]["activity_level"] | null;
           assistant_consent_at?: string | null;
           assistant_consent_version?: string | null;
@@ -1278,6 +1280,7 @@ export type Database = {
           weight_unit?: string | null;
         };
         Update: {
+          achievements_backfilled_at?: string | null;
           activity?: Database["public"]["Enums"]["activity_level"] | null;
           assistant_consent_at?: string | null;
           assistant_consent_version?: string | null;
@@ -1700,6 +1703,39 @@ export type Database = {
           },
         ];
       };
+      streak_freeze_events: {
+        Row: {
+          count: number;
+          created_at: string;
+          id: string;
+          kind: string;
+          local_date: string;
+          reason: string;
+          ref: string;
+          user_id: string;
+        };
+        Insert: {
+          count: number;
+          created_at?: string;
+          id?: string;
+          kind: string;
+          local_date: string;
+          reason: string;
+          ref: string;
+          user_id?: string;
+        };
+        Update: {
+          count?: number;
+          created_at?: string;
+          id?: string;
+          kind?: string;
+          local_date?: string;
+          reason?: string;
+          ref?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       targets: {
         Row: {
           basis: Json;
@@ -1813,6 +1849,30 @@ export type Database = {
           muscle_priority?: Json;
           params_version?: string;
           session_minutes?: number;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+      user_achievements: {
+        Row: {
+          achievement_id: string;
+          backfilled: boolean;
+          seen_at: string | null;
+          unlocked_at: string;
+          user_id: string;
+        };
+        Insert: {
+          achievement_id: string;
+          backfilled?: boolean;
+          seen_at?: string | null;
+          unlocked_at?: string;
+          user_id?: string;
+        };
+        Update: {
+          achievement_id?: string;
+          backfilled?: boolean;
+          seen_at?: string | null;
+          unlocked_at?: string;
           user_id?: string;
         };
         Relationships: [];
@@ -2044,6 +2104,7 @@ export type Database = {
     };
     Functions: {
       accept_terms: { Args: { p_version: string }; Returns: undefined };
+      achievement_stats: { Args: { p_from: string }; Returns: Json };
       assistant_access: {
         Args: { p_user_id: string };
         Returns: {
@@ -2093,6 +2154,10 @@ export type Database = {
       recipe_instructions_are_valid: {
         Args: { steps: string[] };
         Returns: boolean;
+      };
+      record_achievements: {
+        Args: { p_backfill: boolean; p_ids: string[] };
+        Returns: string[];
       };
       record_checkin: {
         Args: {
