@@ -82,11 +82,12 @@ describe("Achievements screen", () => {
       expect(screen.getByText("Training streak 0 weeks. Weigh-in streak 0 weeks.")).toBeTruthy();
     });
 
-    it("should list the 13 categories as headed sections", () => {
+    it("should list the 14 categories as headed sections", () => {
       render(<AchievementsScreen />);
 
-      expect(screen.getAllByRole("region")).toHaveLength(13);
+      expect(screen.getAllByRole("region")).toHaveLength(14);
       expect(screen.getByRole("region", { name: "Daily streaks" })).toBeTruthy();
+      expect(screen.getByRole("region", { name: "Milestones" })).toBeTruthy();
       expect(
         within(screen.getByRole("region", { name: "Getting started" })).getByText("1 of 12"),
       ).toBeTruthy();

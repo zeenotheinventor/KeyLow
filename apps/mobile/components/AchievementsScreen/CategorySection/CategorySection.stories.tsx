@@ -25,5 +25,8 @@ type Story = StoryObj<typeof meta>;
 // Board 1's Daily streaks: earned, locked with progress and the count at the right of the heading.
 export const DailyStreaks: Story = { args: { category: storyCategory(2) } };
 
-// The last category holds the hidden badges, which show as ???.
+// This category holds the hidden badges, which show as ???.
 export const HiddenAndSeasonal: Story = { args: { category: storyCategory(12) } };
+
+// The last category holds the two visible milestone badges.
+export const Milestones: Story = { args: { category: storyCategory(13) } };

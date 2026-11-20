@@ -140,6 +140,11 @@ const TIER_OF_NUMBER: readonly (readonly [number, string])[] = [
 const idsOf = (category: string) =>
   ACHIEVEMENTS.filter((entry) => entry.category === category).map((entry) => entry.id);
 
+const numbersOf = (category: string, hiddenOnly = false) =>
+  ACHIEVEMENTS.filter((entry) => entry.category === category && (!hiddenOnly || entry.hidden)).map(
+    (entry) => entry.number,
+  );
+
 describe("the catalogue", () => {
   it("holds 130 achievements numbered 1 to 130 in order", () => {
     expect(ACHIEVEMENTS).toHaveLength(130);
@@ -148,11 +153,28 @@ describe("the catalogue", () => {
     );
   });
 
-  it("has 13 categories with the counts of the spec headings", () => {
-    expect(ACHIEVEMENT_CATEGORIES).toHaveLength(13);
+  it("has 14 categories with the counts of the spec headings", () => {
+    expect(ACHIEVEMENT_CATEGORIES).toHaveLength(14);
     expect(ACHIEVEMENT_CATEGORIES.map((category) => idsOf(category).length)).toEqual([
-      12, 11, 14, 12, 9, 10, 15, 8, 8, 10, 6, 7, 8,
+      12, 11, 14, 12, 9, 10, 15, 8, 8, 10, 6, 7, 6, 2,
     ]);
+  });
+
+  it("keeps the secret and seasonal badges together, all of them hidden", () => {
+    expect(idsOf("hidden-and-seasonal")).toEqual([
+      "new-year-new-log",
+      "festive-feast",
+      "spooky-snacks",
+      "leap-of-faith",
+      "midnight-snack",
+      "anniversary",
+    ]);
+    expect(numbersOf("hidden-and-seasonal")).toEqual(numbersOf("hidden-and-seasonal", true));
+  });
+
+  it("puts Collector and Completionist in the visible milestones category", () => {
+    expect(idsOf("milestones")).toEqual(["collector", "completionist"]);
+    expect(numbersOf("milestones", true)).toEqual([]);
   });
 
   it("keeps each category's achievements together, in category order", () => {

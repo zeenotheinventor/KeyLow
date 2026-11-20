@@ -46,9 +46,9 @@ describe("achievementsOverview", () => {
     expect(tiles.badges).toEqual({ value: "3", caption: "of 130 badges" });
   });
 
-  it("should list all 13 categories in catalogue order holding all 130 badges", () => {
+  it("should list all 14 categories in catalogue order holding all 130 badges", () => {
     const { categories } = overviewOf([]);
-    expect(categories).toHaveLength(13);
+    expect(categories).toHaveLength(14);
     expect(categories[0]?.title).toBe("Getting started");
     expect(categories.flatMap(({ badges }) => badges.map(({ id }) => id))).toEqual(
       ACHIEVEMENTS.map(({ id }) => id),

@@ -143,13 +143,14 @@ describe("the Achievements screen", () => {
   });
 
   describe("the catalogue", () => {
-    it("should list the 13 categories with how many of each are earned", async () => {
+    it("should list the 14 categories with how many of each are earned", async () => {
       await renderScreen();
 
-      // The screen's own heading and the 13 categories.
-      expect(screen.getAllByRole("heading")).toHaveLength(14);
+      // The screen's own heading and the 14 categories.
+      expect(screen.getAllByRole("heading")).toHaveLength(15);
       expect(screen.getByRole("heading", { name: "Getting started" })).toBeOnTheScreen();
       expect(screen.getByRole("heading", { name: "Hidden and seasonal" })).toBeOnTheScreen();
+      expect(screen.getByRole("heading", { name: "Milestones" })).toBeOnTheScreen();
       expect(screen.getByText("1 of 12")).toBeOnTheScreen();
     });
 

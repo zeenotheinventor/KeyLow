@@ -57,10 +57,10 @@ describe("the summary cards", () => {
 });
 
 describe("webAchievementCatalogue", () => {
-  it("groups all 130 into the 13 categories in the catalogue's order", () => {
+  it("groups all 130 into the 14 categories in the catalogue's order", () => {
     const catalogue = webAchievementCatalogue(everyAchievementLocked);
 
-    expect(catalogue).toHaveLength(13);
+    expect(catalogue).toHaveLength(14);
     expect(catalogue.flatMap(({ badges }) => badges)).toHaveLength(130);
     expect(catalogue[2]?.heading).toBe("Daily streaks");
   });
