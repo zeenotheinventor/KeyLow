@@ -1,3 +1,4 @@
+import { reminderEnabledFrom } from "@keylow/core";
 import { act, renderHook, waitFor } from "@testing-library/react-native";
 
 import {
@@ -46,7 +47,7 @@ describe("reminder settings", () => {
   });
 
   describe("defaults", () => {
-    it("should have every reminder off, the train time at 17:30, the food time at 20:00 and no variant used yet", () => {
+    it("should have every reminder off but badges and levels, the train time at 17:30, the food time at 20:00 and no variant used yet", () => {
       expect(defaultReminderSettings).toEqual({
         trainEnabled: false,
         progressEnabled: false,
@@ -54,6 +55,8 @@ describe("reminder settings", () => {
         missedEnabled: false,
         checkinEnabled: false,
         foodEnabled: false,
+        badgesEnabled: true,
+        streakNudgeEnabled: false,
         trainTime: "17:30",
         foodTime: "20:00",
         lastVariant: {
@@ -65,6 +68,14 @@ describe("reminder settings", () => {
           food: null,
         },
       });
+    });
+  });
+
+  describe("the Nudge Me badge", () => {
+    it("should not read the two achievements switches as a reminder turned on", () => {
+      const bothOn = { ...defaultReminderSettings, badgesEnabled: true, streakNudgeEnabled: true };
+
+      expect(reminderEnabledFrom(bothOn)).toBe(false);
     });
   });
 
@@ -81,6 +92,8 @@ describe("reminder settings", () => {
         missedEnabled: true,
         checkinEnabled: true,
         foodEnabled: true,
+        badgesEnabled: false,
+        streakNudgeEnabled: true,
         trainTime: "07:05",
         foodTime: "21:15",
         lastVariant: {
@@ -128,6 +141,44 @@ describe("reminder settings", () => {
         easeEnabled: true,
         trainTime: "07:05",
         lastVariant: { ...defaultReminderSettings.lastVariant, train: "train-2", ease: "ease-1" },
+      });
+    });
+
+    it("should load a record saved before the achievements switches with badges on and the nudge off", async () => {
+      mockStorageItems.set(
+        reminderSettingsStorageKey,
+        JSON.stringify({ trainEnabled: true, foodEnabled: true, trainTime: "07:05" }),
+      );
+
+      expect(await readReminderSettings()).toMatchObject({
+        trainEnabled: true,
+        foodEnabled: true,
+        badgesEnabled: true,
+        streakNudgeEnabled: false,
+      });
+    });
+
+    it("should keep a saved off for badges and a saved on for the nudge", async () => {
+      mockStorageItems.set(
+        reminderSettingsStorageKey,
+        JSON.stringify({ badgesEnabled: false, streakNudgeEnabled: true }),
+      );
+
+      expect(await readReminderSettings()).toMatchObject({
+        badgesEnabled: false,
+        streakNudgeEnabled: true,
+      });
+    });
+
+    it("should default an achievements switch that is not a boolean and keep the other", async () => {
+      mockStorageItems.set(
+        reminderSettingsStorageKey,
+        JSON.stringify({ badgesEnabled: "no", streakNudgeEnabled: true }),
+      );
+
+      expect(await readReminderSettings()).toMatchObject({
+        badgesEnabled: true,
+        streakNudgeEnabled: true,
       });
     });
 

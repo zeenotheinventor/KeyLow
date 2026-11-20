@@ -112,6 +112,32 @@ describe("tapping a reminder", () => {
       expect(goneTo()).toHaveLength(1);
     });
 
+    it("should open the badge for a tap on an unlock notification", async () => {
+      await renderHook(() => {
+        useReminderTapRouting();
+      });
+
+      await act(() => {
+        tapNotification("keylow-unlock:1", { kind: "unlock", achievementId: "hat-trick" });
+      });
+
+      expect(routerMock.push).toHaveBeenCalledWith("/more/achievements/hat-trick");
+      expect(goneTo()).toHaveLength(1);
+    });
+
+    it("should open the Achievements screen for an unlock that is a level-up alone", async () => {
+      await renderHook(() => {
+        useReminderTapRouting();
+      });
+
+      await act(() => {
+        tapNotification("keylow-unlock:2", { kind: "unlock", achievementId: null });
+      });
+
+      expect(routerMock.push).toHaveBeenCalledWith("/more/achievements");
+      expect(goneTo()).toHaveLength(1);
+    });
+
     it("should ignore a notification that is not one of ours", async () => {
       await renderHook(() => {
         useReminderTapRouting();
@@ -152,6 +178,17 @@ describe("tapping a reminder", () => {
       expect(goneTo()).toHaveLength(1);
     });
 
+    it("should open the badge of an unlock notification that opened the app", async () => {
+      leaveTapFromColdStart("keylow-unlock:3", { kind: "unlock", achievementId: "hat-trick" });
+
+      await renderHook(() => {
+        useReminderTapRouting();
+      });
+
+      expect(routerMock.push).toHaveBeenCalledWith("/more/achievements/hat-trick");
+      expect(goneTo()).toHaveLength(1);
+    });
+
     it("should not go again when it mounts a second time", async () => {
       leaveTapFromColdStart(identifierOf("train"), { type: "train" });
       const first = await renderHook(() => {
@@ -169,6 +206,20 @@ describe("tapping a reminder", () => {
   });
 
   describe("before the person is in the app", () => {
+    it("should hold an unlock tap too until they are", async () => {
+      routerMock.segments = ["(auth)", "sign-in"];
+      leaveTapFromColdStart("keylow-unlock:4", { kind: "unlock", achievementId: "hat-trick" });
+      const { rerender } = await renderHook(() => {
+        useReminderTapRouting();
+      });
+      expect(goneTo()).toEqual([]);
+
+      routerMock.segments = SIGNED_IN;
+      await rerender(undefined);
+
+      expect(routerMock.push).toHaveBeenCalledWith("/more/achievements/hat-trick");
+    });
+
     it.each([[[]], [["(auth)", "sign-in"]], [["auth", "callback"]]])(
       "should wait on %j and follow the tap once they are",
       async (segments) => {

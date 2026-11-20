@@ -23,12 +23,14 @@ const switchKeys = {
 
 /**
  * The Reminders screen, pushed from More: a Training group with a switch for each of the five training
- * reminders and the time of the train one, and a Food group with the food reminder's switch and time. The
+ * reminders and the time of the train one, a Food group with the food reminder's switch and time, and an
+ * Achievements group (board 6 of the achievements boards) with the switches for badges and levels and for
+ * the evening streak nudge, each marked New. The
  * first switch turned on asks for the permission to show notifications. If it is refused, or was before,
  * the switch stays off and a notice says how to allow them in the phone's settings, with a button that
  * opens them. On a build that cannot show notifications the switches are disabled and a notice says a
  * newer version must be installed. Changes apply at once and are kept by the settings, which the
- * scheduler at the root reads. No board draws this screen.
+ * scheduler at the root reads. Board 6 draws the Achievements group only, the rest has no board.
  */
 export function RemindersScreen() {
   const insets = useSafeAreaInsets();
@@ -141,6 +143,28 @@ export function RemindersScreen() {
             }}
           />
         </View>
+        <GroupedList title={REMINDERS_SCREEN.groups.achievements}>
+          <ReminderSwitchRow
+            badge={REMINDERS_SCREEN.achievements.newLabel}
+            disabled={isUnavailable}
+            helper={REMINDERS_SCREEN.achievements.badges.helper}
+            isOn={settings.badgesEnabled}
+            title={REMINDERS_SCREEN.achievements.badges.title}
+            onValueChange={(isOn) => {
+              void changeSwitch("badgesEnabled", isOn);
+            }}
+          />
+          <ReminderSwitchRow
+            badge={REMINDERS_SCREEN.achievements.newLabel}
+            disabled={isUnavailable}
+            helper={REMINDERS_SCREEN.achievements.streak.helper}
+            isOn={settings.streakNudgeEnabled}
+            title={REMINDERS_SCREEN.achievements.streak.title}
+            onValueChange={(isOn) => {
+              void changeSwitch("streakNudgeEnabled", isOn);
+            }}
+          />
+        </GroupedList>
       </ScrollView>
       <TimePicker
         open={pickerFor !== null}

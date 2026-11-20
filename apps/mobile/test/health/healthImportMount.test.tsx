@@ -27,6 +27,8 @@ jest.mock("../../components/ReminderTapRouting", () => ({ ReminderTapRouting: ()
 jest.mock("../../lib/reminderScheduler", () => ({
   useCancelRemindersWhenSignedOut: jest.fn(),
   useReminderScheduler: jest.fn(),
+  useStreakNudgeScheduler: jest.fn(),
+  useUnlockNotificationPoster: jest.fn(),
 }));
 // The hook is proved in useHealthImport.test.tsx. Here it is a marker, for where the gate mounts it.
 jest.mock("../../components/HealthImportRunner", () => ({

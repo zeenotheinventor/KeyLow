@@ -4,6 +4,8 @@ export {
   dayCompleteCutoff,
   isBeforeDayCompleteCutoff,
 } from "./dayCompleteCutoff";
+export { STREAK_NUDGE_HOUR, planStreakNudge } from "./streakNudge";
+export type { StreakNudge } from "./streakNudge";
 export { dailyStreak } from "./dailyStreak";
 export { weeklyStreak } from "./weeklyStreak";
 export { freezeEventsDue } from "./freezeEventsDue";

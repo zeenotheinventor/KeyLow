@@ -1,7 +1,9 @@
 import {
   cancelOurReminders,
   getPermission,
-  onReminderTap,
+  onNotificationTap,
+  postUnlockNotification,
+  replaceStreakNudge,
   requestPermission,
   scheduleReminders,
   setUpReminderNotifications,
@@ -35,8 +37,18 @@ describe("reminder notifications on a build without the native module", () => {
     await expect(setUpReminderNotifications()).resolves.toBeUndefined();
   });
 
+  it("should do nothing when asked to post an unlock or schedule the streak nudge", async () => {
+    await expect(
+      postUnlockNotification({ title: "Title", body: "Body", achievementId: "hat-trick" }),
+    ).resolves.toBeUndefined();
+    await expect(
+      replaceStreakNudge({ fireAt: new Date("2099-01-01T00:00:00.000Z"), title: "T", body: "B" }),
+    ).resolves.toBeUndefined();
+    await expect(replaceStreakNudge(null)).resolves.toBeUndefined();
+  });
+
   it("should give back an unsubscribe that does nothing when asked to listen for taps", () => {
-    const unsubscribe = onReminderTap(jest.fn());
+    const unsubscribe = onNotificationTap(jest.fn());
 
     expect(() => {
       unsubscribe();

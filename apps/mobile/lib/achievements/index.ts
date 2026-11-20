@@ -1,4 +1,4 @@
 export { AchievementSync } from "./AchievementSync";
 export { useCelebrationQueue } from "./useCelebrationQueue";
 export type { CelebrationState } from "./celebrationStore";
-export { resetCelebrations } from "./celebrationStore";
+export { getCelebrationEpoch, resetCelebrations } from "./celebrationStore";

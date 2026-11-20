@@ -1,5 +1,7 @@
 import {
   acknowledgeCelebrations,
+  discardNotification,
+  getCelebrationEpoch,
   getCelebrationState,
   getQueuedIds,
   recordCelebrations,
@@ -138,6 +140,34 @@ describe("celebrationStore", () => {
     acknowledgeCelebrations(["hat-trick"]);
 
     expect(getCelebrationState().extras).toBeNull();
+  });
+
+  it("should keep the waiting entries and their extras when the notification is discarded", () => {
+    recordCelebrations(
+      {
+        entries: [{ id: "hat-trick", isNew: true }],
+        extras: { freezes: 1, levelName: null },
+        notification,
+        backfillSummary: null,
+      },
+      false,
+    );
+
+    discardNotification();
+
+    expect(getCelebrationState()).toMatchObject({
+      entries: [{ id: "hat-trick", isNew: true }],
+      extras: { freezes: 1, levelName: null },
+      notification: null,
+    });
+  });
+
+  it("should change the epoch on each reset", () => {
+    const before = getCelebrationEpoch();
+
+    resetCelebrations();
+
+    expect(getCelebrationEpoch()).not.toBe(before);
   });
 
   it("should forget everything on reset", () => {

@@ -38,6 +38,8 @@ const emptyState: CelebrationState = {
  */
 let state = emptyState;
 let acknowledged = new Set<string>();
+// Counts the resets, so work that started for one account can tell the account has since gone.
+let epoch = 0;
 const listeners = new Set<() => void>();
 
 const mergeExtras = (
@@ -105,8 +107,22 @@ export const acknowledgeCelebrations = (ids: readonly string[]): void => {
   });
 };
 
+/**
+ * Takes the notification out once it has been dealt with, whether it was posted or not, so a payload that
+ * was not posted (the switch is off, the app was in front) cannot be posted by a later change of state.
+ */
+export const discardNotification = (): void => {
+  if (state.notification !== null) {
+    publish({ ...state, notification: null });
+  }
+};
+
+/** Changes whenever the store is reset, so an async step can tell the signed in user went away meanwhile. */
+export const getCelebrationEpoch = (): number => epoch;
+
 /** Forgets everything, for when the signed in user goes away. */
 export const resetCelebrations = (): void => {
+  epoch += 1;
   acknowledged = new Set();
   publish(emptyState);
 };

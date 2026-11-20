@@ -2,6 +2,7 @@ import { useSyncExternalStore } from "react";
 
 import {
   acknowledgeCelebrations,
+  discardNotification,
   getCelebrationState,
   subscribeToCelebrations,
 } from "./celebrationStore";
@@ -10,5 +11,5 @@ import {
 export function useCelebrationQueue() {
   const state = useSyncExternalStore(subscribeToCelebrations, getCelebrationState);
 
-  return { ...state, acknowledge: acknowledgeCelebrations };
+  return { ...state, acknowledge: acknowledgeCelebrations, discardNotification };
 }

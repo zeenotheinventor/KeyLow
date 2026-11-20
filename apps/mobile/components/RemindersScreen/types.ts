@@ -5,4 +5,6 @@ export type SwitchKey =
   | "easeEnabled"
   | "missedEnabled"
   | "checkinEnabled"
-  | "foodEnabled";
+  | "foodEnabled"
+  | "badgesEnabled"
+  | "streakNudgeEnabled";
