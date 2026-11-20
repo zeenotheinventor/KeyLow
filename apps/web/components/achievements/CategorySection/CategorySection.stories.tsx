@@ -29,3 +29,7 @@ export const DailyStreaks: Story = {
 export const HiddenAndSeasonal: Story = {
   args: { category: sampleCategory("hidden-and-seasonal") },
 };
+
+export const Milestones: Story = {
+  args: { category: sampleCategory("milestones") },
+};

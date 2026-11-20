@@ -29,8 +29,9 @@ describe("achievement names and earn-it lines", () => {
     );
   });
 
-  it("names all 13 categories", () => {
-    expect(Object.values(ACHIEVEMENT_CATEGORY_NAMES)).toHaveLength(13);
+  it("names all 14 categories", () => {
+    expect(Object.values(ACHIEVEMENT_CATEGORY_NAMES)).toHaveLength(14);
+    expect(ACHIEVEMENT_CATEGORY_NAMES.milestones).toBe("Milestones");
     expect(ACHIEVEMENT_CATEGORY_NAMES["ki-lo-explorer"]).toBe("Ki-Lo explorer");
   });
 

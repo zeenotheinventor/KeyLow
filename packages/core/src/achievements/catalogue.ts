@@ -1,6 +1,6 @@
 import type { RuleKey } from "./rules";
 
-/** The 13 headings of the catalogue, in order. Their words are in `ACHIEVEMENT_CATEGORY_NAMES`. */
+/** The 14 headings of the catalogue, in order. Their words are in `ACHIEVEMENT_CATEGORY_NAMES`. */
 export const ACHIEVEMENT_CATEGORIES = [
   "getting-started",
   "logging-volume",
@@ -15,6 +15,7 @@ export const ACHIEVEMENT_CATEGORIES = [
   "programme-and-check-ins",
   "ki-lo-explorer",
   "hidden-and-seasonal",
+  "milestones",
 ] as const;
 
 export type AchievementCategory = (typeof ACHIEVEMENT_CATEGORIES)[number];
@@ -1197,7 +1198,7 @@ export const ACHIEVEMENTS = [
   {
     id: "collector",
     number: 129,
-    category: "hidden-and-seasonal",
+    category: "milestones",
     tier: "gold",
     hidden: false,
     rule: "achievements-earned",
@@ -1206,7 +1207,7 @@ export const ACHIEVEMENTS = [
   {
     id: "completionist",
     number: 130,
-    category: "hidden-and-seasonal",
+    category: "milestones",
     tier: "platinum",
     hidden: false,
     rule: "achievements-earned",

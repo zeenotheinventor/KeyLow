@@ -3,7 +3,7 @@ import { joinInWords } from "./bodyMap";
 import type { AchievementCategory, AchievementId } from "../achievements/catalogue";
 
 /*
- * The words of achievements (KEY-1082): the 13 category headings, the 130 names with their "earn it by"
+ * The words of achievements (KEY-1082): the 14 category headings, the 130 names with their "earn it by"
  * lines as `docs/design/achievements/catalogue.md` has them, the level names and the unlock notification
  * text. The ids are the stable ones of the catalogue, so a rename here never changes an id.
  */
@@ -22,6 +22,7 @@ export const ACHIEVEMENT_CATEGORY_NAMES: Readonly<Record<AchievementCategory, st
   "programme-and-check-ins": "Programme and check-ins",
   "ki-lo-explorer": "Ki-Lo explorer",
   "hidden-and-seasonal": "Hidden and seasonal",
+  milestones: "Milestones",
 };
 
 export type AchievementWords = Readonly<{

@@ -278,7 +278,7 @@ Consistency only. No badge is tied to how much weight changed or to a weight goa
 | 121 | Favourites Fan | logging from favourites 25 times | Silver |
 | 122 | Weekly Review | opening the week view 10 times | Bronze |
 
-### 13. Hidden and seasonal (8)
+### 13. Hidden and seasonal (6)
 
 | # | Name | Earn it by | Tier |
 | --- | --- | --- | --- |
@@ -288,6 +288,11 @@ Consistency only. No badge is tied to how much weight changed or to a weight goa
 | 126 | Leap of Faith | logging on 29 February | Gold |
 | 127 | Midnight Snack | logging between 00:00 and 04:00 | Bronze |
 | 128 | Anniversary | one year since you joined | Gold |
+
+### 14. Milestones (2)
+
+| # | Name | Earn it by | Tier |
+| --- | --- | --- | --- |
 | 129 | Collector | 50 achievements earned | Gold |
 | 130 | Completionist | 100 achievements earned | Platinum |
 
