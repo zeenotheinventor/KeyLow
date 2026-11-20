@@ -204,8 +204,10 @@ const freezeText = (freezes: number): string =>
   freezes === 1 ? "+1 freeze" : `+${freezes} freezes`;
 
 export type UnlockNotificationInput = Readonly<{
-  /** The badges one action earned, at least one. */
-  badgeIds: readonly AchievementId[];
+  /** The badges one action earned that may be named on a lock screen. */
+  neutralBadgeIds: readonly AchievementId[];
+  /** The badges that reveal weight or the body. They are counted in the title, never named. */
+  sensitiveBadgeCount: number;
   /** The points of all of them together. */
   points: number;
   /** The freezes that came with them. */
@@ -214,31 +216,51 @@ export type UnlockNotificationInput = Readonly<{
   reachedLevelName: string | null;
 }>;
 
+const badgeCount = (count: number): string => `${count} ${count === 1 ? "badge" : "badges"}`;
+
+const unlockTitle = (
+  neutralBadgeIds: readonly AchievementId[],
+  sensitiveBadgeCount: number,
+): string => {
+  const [firstId] = neutralBadgeIds;
+  const totalCount = neutralBadgeIds.length + sensitiveBadgeCount;
+  if (firstId === undefined) {
+    return totalCount === 1 ? "You earned a badge" : `You earned ${badgeCount(totalCount)}`;
+  }
+  if (totalCount === 1) {
+    return `Badge earned: ${ACHIEVEMENT_COPY[firstId].name}`;
+  }
+  const names = neutralBadgeIds.map((id) => ACHIEVEMENT_COPY[id].name);
+  const listed =
+    sensitiveBadgeCount === 0
+      ? names
+      : [...names, `${sensitiveBadgeCount} more ${sensitiveBadgeCount === 1 ? "badge" : "badges"}`];
+  return `${totalCount} badges earned: ${joinInWords(listed)}`;
+};
+
 /**
  * The one notification an action's unlocks send: a single badge names itself and says how it was earned,
- * several are listed in one title so a busy log never sends a burst. A freeze or a new level is added to
- * the body when it came with them.
+ * several are listed in one title so a busy log never sends a burst. Sensitive badges are never named:
+ * they are counted ("and 2 more badges"), or all there is to say is "You earned a badge". A freeze or a
+ * new level is added to the body when it came with them.
  */
 export const unlockNotification = (
   input: UnlockNotificationInput,
 ): Readonly<{ title: string; body: string }> => {
-  const { badgeIds, points, freezes, reachedLevelName } = input;
-  const [firstId] = badgeIds;
-  if (firstId === undefined) {
+  const { neutralBadgeIds, sensitiveBadgeCount, points, freezes, reachedLevelName } = input;
+  const [firstId] = neutralBadgeIds;
+  if (neutralBadgeIds.length + sensitiveBadgeCount === 0) {
     throw new RangeError("An unlock notification needs at least one badge.");
   }
-  const single = badgeIds.length === 1;
-  const names = badgeIds.map((id) => ACHIEVEMENT_COPY[id].name);
-  const title = single
-    ? `Badge earned: ${ACHIEVEMENT_COPY[firstId].name}`
-    : `${badgeIds.length} badges earned: ${joinInWords(names)}`;
+  const isSingleNamedBadge =
+    firstId !== undefined && neutralBadgeIds.length === 1 && sensitiveBadgeCount === 0;
   const parts = [
-    ...(single ? [upperFirst(ACHIEVEMENT_COPY[firstId].earnedBy)] : []),
+    ...(isSingleNamedBadge ? [upperFirst(ACHIEVEMENT_COPY[firstId].earnedBy)] : []),
     `+${points} points`,
     ...(freezes > 0 ? [freezeText(freezes)] : []),
     ...(reachedLevelName === null ? [] : [`You reached ${reachedLevelName}`]),
   ];
-  return { title, body: parts.join(". ") };
+  return { title: unlockTitle(neutralBadgeIds, sensitiveBadgeCount), body: parts.join(". ") };
 };
 
 /**

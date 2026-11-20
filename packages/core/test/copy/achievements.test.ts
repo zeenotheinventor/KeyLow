@@ -77,7 +77,8 @@ describe("unlockNotification", () => {
   it("names a single badge, how it was earned and its points", () => {
     expect(
       unlockNotification({
-        badgeIds: ["hat-trick"],
+        neutralBadgeIds: ["hat-trick"],
+        sensitiveBadgeCount: 0,
         points: 10,
         freezes: 0,
         reachedLevelName: null,
@@ -87,15 +88,21 @@ describe("unlockNotification", () => {
 
   it("says so when a freeze comes with the badge", () => {
     expect(
-      unlockNotification({ badgeIds: ["diarist"], points: 50, freezes: 1, reachedLevelName: null })
-        .body,
+      unlockNotification({
+        neutralBadgeIds: ["diarist"],
+        sensitiveBadgeCount: 0,
+        points: 50,
+        freezes: 1,
+        reachedLevelName: null,
+      }).body,
     ).toBe("500 entries. +50 points. +1 freeze");
   });
 
   it("says how many freezes when there are several", () => {
     expect(
       unlockNotification({
-        badgeIds: ["archivist"],
+        neutralBadgeIds: ["archivist"],
+        sensitiveBadgeCount: 0,
         points: 100,
         freezes: 3,
         reachedLevelName: null,
@@ -106,7 +113,8 @@ describe("unlockNotification", () => {
   it("says so when a new level comes with the badge", () => {
     expect(
       unlockNotification({
-        badgeIds: ["hat-trick"],
+        neutralBadgeIds: ["hat-trick"],
+        sensitiveBadgeCount: 0,
         points: 10,
         freezes: 1,
         reachedLevelName: "Sapling",
@@ -117,7 +125,8 @@ describe("unlockNotification", () => {
   it("groups several badges from one action into one notification", () => {
     expect(
       unlockNotification({
-        badgeIds: ["hat-trick", "notebook", "bullseye"],
+        neutralBadgeIds: ["hat-trick", "notebook", "bullseye"],
+        sensitiveBadgeCount: 0,
         points: 30,
         freezes: 0,
         reachedLevelName: null,
@@ -128,7 +137,8 @@ describe("unlockNotification", () => {
   it("joins two badges with and", () => {
     expect(
       unlockNotification({
-        badgeIds: ["jotter", "first-bite"],
+        neutralBadgeIds: ["jotter", "first-bite"],
+        sensitiveBadgeCount: 0,
         points: 20,
         freezes: 0,
         reachedLevelName: null,
@@ -138,7 +148,13 @@ describe("unlockNotification", () => {
 
   it("refuses an empty list of badges", () => {
     expect(() =>
-      unlockNotification({ badgeIds: [], points: 0, freezes: 0, reachedLevelName: null }),
+      unlockNotification({
+        neutralBadgeIds: [],
+        sensitiveBadgeCount: 0,
+        points: 0,
+        freezes: 0,
+        reachedLevelName: null,
+      }),
     ).toThrow(RangeError);
   });
 });

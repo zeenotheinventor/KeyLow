@@ -34,4 +34,71 @@ describe("buildNotification", () => {
       achievementId: "hat-trick",
     });
   });
+
+  describe("with sensitive badges", () => {
+    it("should name nothing when a single badge is sensitive", () => {
+      expect(
+        buildNotification({
+          newUnlocks: ["on-the-scales"],
+          freezes: 0,
+          levelUp: null,
+        }),
+      ).toEqual({
+        title: "You earned a badge",
+        body: "+10 points",
+        achievementId: "on-the-scales",
+      });
+    });
+
+    it("should count the badges when several are all sensitive", () => {
+      const payload = buildNotification({
+        newUnlocks: ["on-the-scales", "weekly-weigh", "body-reader"],
+        freezes: 0,
+        levelUp: null,
+      });
+
+      expect(payload?.title).toBe("You earned 3 badges");
+    });
+
+    it("should name only the neutral badges and count the sensitive ones", () => {
+      expect(
+        buildNotification({
+          newUnlocks: ["hat-trick", "on-the-scales"],
+          freezes: 0,
+          levelUp: null,
+        })?.title,
+      ).toBe("2 badges earned: Hat Trick and 1 more badge");
+    });
+
+    it("should pluralise the count of hidden badges", () => {
+      expect(
+        buildNotification({
+          newUnlocks: ["hat-trick", "notebook", "on-the-scales", "weekly-weigh"],
+          freezes: 0,
+          levelUp: null,
+        })?.title,
+      ).toBe("4 badges earned: Hat Trick, Notebook and 2 more badges");
+    });
+
+    it("should keep the points, freezes and level in the body without a badge description", () => {
+      expect(
+        buildNotification({
+          newUnlocks: ["weekly-weigh"],
+          freezes: 1,
+          levelUp: { from: 0, to: 1, name: "Sprout" },
+        })?.body,
+      ).toBe("+10 points. +1 freeze. You reached Sprout");
+    });
+
+    it("should never put a sensitive badge name or its description in the text", () => {
+      const payload = buildNotification({
+        newUnlocks: ["hat-trick", "on-the-scales", "measured-up"],
+        freezes: 1,
+        levelUp: null,
+      });
+      const text = `${payload?.title} ${payload?.body}`;
+
+      expect(text).not.toMatch(/scales|measured|weigh|body|composition/i);
+    });
+  });
 });

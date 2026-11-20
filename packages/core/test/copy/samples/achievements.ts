@@ -5,13 +5,15 @@ export const samples: Record<string, () => string[]> = {
   levelNameFor: () => [copy.levelNameFor(0), copy.levelNameFor(6), copy.levelNameFor(26)],
   unlockNotification: () => {
     const single = copy.unlockNotification({
-      badgeIds: ["hat-trick"],
+      neutralBadgeIds: ["hat-trick"],
+      sensitiveBadgeCount: 0,
       points: 10,
       freezes: 1,
       reachedLevelName: "Sapling",
     });
     const several = copy.unlockNotification({
-      badgeIds: ["hat-trick", "notebook", "bullseye"],
+      neutralBadgeIds: ["hat-trick", "notebook", "bullseye"],
+      sensitiveBadgeCount: 0,
       points: 30,
       freezes: 3,
       reachedLevelName: null,
