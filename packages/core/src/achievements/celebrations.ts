@@ -17,7 +17,7 @@ export type HeldRow = Readonly<{ id: string; seenAt: string | null; backfilled: 
 export type CelebrationEntry = Readonly<{ id: AchievementId; isNew: boolean }>;
 
 export type CelebrationInput = Readonly<{
-  run: Pick<RunResult, "newUnlocks" | "points" | "levelUp" | "freezeEventsToWrite">;
+  run: Pick<RunResult, "newUnlocks" | "levelUp" | "freezeEventsToWrite">;
   /** The ids the database reported as new to it, which is all this device may call new. */
   recorded: readonly string[];
   /** The rows held before the run wrote. A row another device or the web recorded is among them. */
@@ -96,7 +96,6 @@ export const decideCelebrations = ({
     extras: freezes === 0 && levelName === null ? null : { freezes, levelName },
     notification: buildNotification({
       newUnlocks: newIds,
-      points: run.points,
       freezes,
       levelUp: run.levelUp,
     }),

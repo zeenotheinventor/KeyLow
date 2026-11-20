@@ -6,7 +6,6 @@ import type { CelebrationInput } from "../../src/achievements/celebrations";
 
 const quietRun: CelebrationInput["run"] = {
   newUnlocks: [],
-  points: 0,
   levelUp: null,
   freezeEventsToWrite: [],
 };
@@ -25,7 +24,7 @@ describe("decideCelebrations", () => {
     it("should queue an id the database recorded as new, with the notification for it", () => {
       const decision = decideCelebrations(
         input({
-          run: { ...quietRun, newUnlocks: ["first-bite"], points: 10 },
+          run: { ...quietRun, newUnlocks: ["first-bite"] },
           recorded: ["first-bite"],
         }),
       );
@@ -39,10 +38,32 @@ describe("decideCelebrations", () => {
       expect(decision.backfillSummary).toBeNull();
     });
 
+    it("should give only the points of the recorded badges, not the all-time total", () => {
+      const decision = decideCelebrations(
+        input({
+          run: { ...quietRun, newUnlocks: ["first-bite"] },
+          recorded: ["first-bite"],
+        }),
+      );
+
+      expect(decision.notification?.body).toBe("Logging your first food. +10 points");
+    });
+
+    it("should sum the points of several recorded badges", () => {
+      const decision = decideCelebrations(
+        input({
+          run: { ...quietRun, newUnlocks: ["diarist", "first-bite"] },
+          recorded: ["diarist", "first-bite"],
+        }),
+      );
+
+      expect(decision.notification?.body).toContain("+60 points");
+    });
+
     it("should not queue an id the engine found but another device had already recorded", () => {
       const decision = decideCelebrations(
         input({
-          run: { ...quietRun, newUnlocks: ["first-bite"], points: 10 },
+          run: { ...quietRun, newUnlocks: ["first-bite"] },
           recorded: [],
           held: [{ id: "first-bite", seenAt: "2026-11-19T09:00:00.000Z", backfilled: false }],
         }),
@@ -58,7 +79,6 @@ describe("decideCelebrations", () => {
           run: {
             ...quietRun,
             newUnlocks: ["first-bite"],
-            points: 10,
             levelUp: { from: 0, to: 1, name: "Sprout" },
             freezeEventsToWrite: [
               { kind: "earned", reason: "level", reference: "1", date: "2026-11-19", count: 2 },
@@ -81,7 +101,7 @@ describe("decideCelebrations", () => {
     it("should carry no extras when the run earned no freeze and reached no level", () => {
       const decision = decideCelebrations(
         input({
-          run: { ...quietRun, newUnlocks: ["first-bite"], points: 10 },
+          run: { ...quietRun, newUnlocks: ["first-bite"] },
           recorded: ["first-bite"],
         }),
       );
@@ -155,7 +175,7 @@ describe("decideCelebrations", () => {
     it("should put the new ids first, in the engine's order, then the held ones", () => {
       const decision = decideCelebrations(
         input({
-          run: { ...quietRun, newUnlocks: ["first-bite", "hat-trick"], points: 20 },
+          run: { ...quietRun, newUnlocks: ["first-bite", "hat-trick"] },
           recorded: ["hat-trick", "first-bite"],
           held: [{ id: "set-the-course", seenAt: null, backfilled: false }],
         }),

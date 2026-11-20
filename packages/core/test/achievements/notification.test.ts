@@ -7,7 +7,6 @@ describe("buildNotification", () => {
     expect(
       buildNotification({
         newUnlocks: [],
-        points: 0,
         freezes: 1,
         levelUp: { from: 1, to: 2, name: "Sprout" },
       }),
@@ -19,14 +18,13 @@ describe("buildNotification", () => {
   });
 
   it("should send nothing when there is neither a badge nor a level-up", () => {
-    expect(buildNotification({ newUnlocks: [], points: 0, freezes: 2, levelUp: null })).toBeNull();
+    expect(buildNotification({ newUnlocks: [], freezes: 2, levelUp: null })).toBeNull();
   });
 
   it("should fold a level-up into the badge payload instead of sending a second one", () => {
     expect(
       buildNotification({
         newUnlocks: ["hat-trick"],
-        points: 10,
         freezes: 0,
         levelUp: { from: 0, to: 1, name: "Sprout" },
       }),

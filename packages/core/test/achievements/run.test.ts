@@ -89,6 +89,27 @@ describe("runAchievements", () => {
     });
   });
 
+  it("should give only the points of the new unlocks when badges are already held", () => {
+    const held = ["diarist", "centurion", "quarter-master", "jotter", "notebook"];
+
+    const result = runOnce(withEntries(500), { held });
+
+    expect(result.newUnlocks).toEqual(["first-bite"]);
+    expect(result.points).toBe(130);
+    expect(result.notification?.body).toContain("+10 points");
+    expect(result.notification?.body).not.toContain("+130 points");
+  });
+
+  it("should sum the points of several new unlocks when badges are already held", () => {
+    const held = ["diarist", "centurion", "quarter-master"];
+
+    const result = runOnce(withEntries(500), { held });
+
+    expect(result.newUnlocks).toEqual(["first-bite", "jotter", "notebook"]);
+    expect(result.notification?.body).toContain("+30 points");
+    expect(result.notification?.body).not.toContain("+130 points");
+  });
+
   it("should write the Gold freeze, the level freeze and the first use freeze to the ledger", () => {
     const { freezeEventsToWrite } = runOnce(withEntries(500));
 
