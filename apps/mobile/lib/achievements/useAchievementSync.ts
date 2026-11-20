@@ -24,7 +24,7 @@ const DEBOUNCE_MILLISECONDS = 2000;
  * trigger. Nothing is read until the account has accepted the current Terms. Mount it once, where a user
  * is signed in.
  */
-export function useAchievementSync(): void {
+export function useAchievementSync(accountId: string | null): void {
   const client = useSupabase();
   const queryClient = useQueryClient();
   const isEnabled = useReadsEnabled();
@@ -35,7 +35,7 @@ export function useAchievementSync(): void {
     }
     let isCurrent = true;
     const scheduler = createSyncScheduler(
-      () => syncAchievements(client, queryClient, () => isCurrent),
+      () => syncAchievements(client, queryClient, () => isCurrent, accountId),
       DEBOUNCE_MILLISECONDS,
     );
     const stopWatchingWrites = queryClient.getMutationCache().subscribe((event) => {
@@ -67,5 +67,5 @@ export function useAchievementSync(): void {
       appState.remove();
       resetCelebrations();
     };
-  }, [client, queryClient, isEnabled]);
+  }, [client, queryClient, isEnabled, accountId]);
 }

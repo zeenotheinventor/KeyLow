@@ -9,9 +9,9 @@ import {
  * notification for a badge or level earned while the app is closed (`useUnlockNotificationPoster`), and
  * keeps the evening streak nudge right (`useStreakNudgeScheduler`).
  */
-export function ReminderScheduler() {
+export function ReminderScheduler({ accountId }: { accountId: string | null }) {
   useReminderScheduler();
-  useUnlockNotificationPoster();
+  useUnlockNotificationPoster(accountId);
   useStreakNudgeScheduler();
 
   return null;

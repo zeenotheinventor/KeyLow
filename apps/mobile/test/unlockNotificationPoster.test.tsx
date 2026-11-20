@@ -12,6 +12,7 @@ import {
   recordCelebrations,
   resetCelebrations,
 } from "../lib/achievements/celebrationStore";
+import { notifiedBadgesStorageKey } from "../lib/achievements/notifiedBadges";
 import { useUnlockNotificationPoster } from "../lib/reminderScheduler/useUnlockNotificationPoster";
 import { reminderSettingsStorageKey } from "../lib/reminderSettings";
 
@@ -65,7 +66,7 @@ function setAppState(state: AppStateStatus) {
 
 async function mountPoster() {
   const view = await renderHook(() => {
-    useUnlockNotificationPoster();
+    useUnlockNotificationPoster("account-a");
   });
   // Lets the saved settings load.
   await act(async () => {
@@ -85,6 +86,20 @@ describe("posting the unlock notification", () => {
 
   afterEach(() => {
     jest.restoreAllMocks();
+  });
+
+  it("should remember the badges it posted for, so a restart does not toast them", async () => {
+    await mountPoster();
+
+    await act(() => {
+      recordCelebrations(hatTrick, false);
+    });
+
+    await waitFor(() => {
+      expect(
+        JSON.parse(mockStorageItems.get(notifiedBadgesStorageKey("account-a")) ?? "[]"),
+      ).toEqual(["hat-trick"]);
+    });
   });
 
   it("should post the core's title and body once when a run records an unlock while the app is not active", async () => {

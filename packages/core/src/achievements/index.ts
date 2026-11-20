@@ -72,7 +72,7 @@ export type {
   OverviewCategory,
 } from "./overview";
 export { freezesForBadge } from "./freezeGrants";
-export { unseenBackfilledIdsOf, unseenIdsOf, withSeen } from "./seen";
+export { stillNotifiedIds, unseenBackfilledIdsOf, unseenIdsOf, withSeen } from "./seen";
 export { summariseCelebrations } from "./celebrationSummary";
 export type {
   CelebrationChip,

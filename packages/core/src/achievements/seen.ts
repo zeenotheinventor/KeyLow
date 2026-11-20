@@ -22,3 +22,15 @@ export const withSeen = <Row extends Pick<HeldRow, "id" | "seenAt">>(
   seenAt: string,
 ): Row[] =>
   held.map((row) => (row.seenAt === null && ids.includes(row.id) ? { ...row, seenAt } : row));
+
+/**
+ * The notified ids still worth remembering: those no held row says the person has seen. An id no row holds
+ * yet stays, because the notification can be recorded before a read that predates the row. Pure.
+ */
+export const stillNotifiedIds = (
+  notified: readonly string[],
+  held: readonly Pick<HeldRow, "id" | "seenAt">[],
+): string[] => {
+  const seenIds = new Set(held.filter(({ seenAt }) => seenAt !== null).map(({ id }) => id));
+  return notified.filter((id) => !seenIds.has(id));
+};

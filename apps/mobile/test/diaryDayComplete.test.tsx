@@ -60,7 +60,7 @@ async function renderDiaryAt(now: string) {
     <ThemeProvider fixedPreference="dark">
       <KeyLowProvider client={diaryClient} queryClient={queryClient}>
         <ToastProvider>
-          <AchievementSync />
+          <AchievementSync accountId="account-a" />
           <DiaryScreen />
         </ToastProvider>
       </KeyLowProvider>

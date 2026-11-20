@@ -25,6 +25,11 @@ export type CelebrationInput = Readonly<{
   isBackfill: boolean;
   /** The ids already waiting, or already celebrated this session, which are never queued twice. */
   alreadyQueued: readonly string[];
+  /**
+   * The ids this device already sent a notification for. They stay unseen in the database so the Achievements
+   * screen marks them new, and this list is what keeps them from also being toasted after a restart.
+   */
+  notified: readonly string[];
 }>;
 
 /** What came with the badges a run recorded, as numbers: the freezes it earned and the level it reached. */
@@ -52,6 +57,7 @@ export const decideCelebrations = ({
   held,
   isBackfill,
   alreadyQueued,
+  notified,
 }: CelebrationInput): CelebrationDecision => {
   const quietCount = unseenBackfilledIdsOf(held).length;
 
@@ -67,7 +73,7 @@ export const decideCelebrations = ({
 
   const recordedIds = new Set(recorded);
   const newIds = run.newUnlocks.filter((id) => recordedIds.has(id));
-  const waiting = new Set<string>(alreadyQueued);
+  const waiting = new Set<string>([...alreadyQueued, ...notified]);
   const entries: CelebrationEntry[] = [];
   const queue = (id: string, isNew: boolean) => {
     if (isKnown(id) && !waiting.has(id)) {

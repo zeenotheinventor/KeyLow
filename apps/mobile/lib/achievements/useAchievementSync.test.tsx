@@ -16,17 +16,26 @@ import {
   getCelebrationState,
   resetCelebrations,
 } from "./celebrationStore";
+import { notifiedBadgesStorageKey, rememberNotifiedIds } from "./notifiedBadges";
 import { snapshotHolding } from "./storedStatsFixture";
 import { useAchievementSync } from "./useAchievementSync";
+import { reminderSettingsStorageKey } from "../reminderSettings";
 import { useReadsEnabled } from "../useReadsEnabled";
 
 import type * as ApiClient from "@keylow/api-client";
 import type { PropsWithChildren } from "react";
 import type { AppStateStatus, NativeEventSubscription } from "react-native";
 
+const mockStorageItems = new Map<string, string>();
 jest.mock("@react-native-async-storage/async-storage", () => ({
   __esModule: true,
-  default: { getItem: jest.fn(() => Promise.resolve(null)), setItem: () => Promise.resolve() },
+  default: {
+    getItem: (key: string) => Promise.resolve(mockStorageItems.get(key) ?? null),
+    setItem: (key: string, value: string) => {
+      mockStorageItems.set(key, value);
+      return Promise.resolve();
+    },
+  },
 }));
 jest.mock("@keylow/api-client", () => ({
   ...jest.requireActual<typeof ApiClient>("@keylow/api-client"),
@@ -81,7 +90,7 @@ const succeedAMutation = () =>
 const mountAndSettle = async () => {
   const view = await renderHook(
     () => {
-      useAchievementSync();
+      useAchievementSync("account-a");
     },
     { wrapper: Wrapper },
   );
@@ -99,6 +108,7 @@ describe("useAchievementSync", () => {
     jest.useFakeTimers({ now: new Date("2026-11-19T22:00:00Z") });
     queryClient = new QueryClient();
     resetCelebrations();
+    mockStorageItems.clear();
     jest.mocked(useSupabase).mockReturnValue(client as unknown as ReturnType<typeof useSupabase>);
     jest.mocked(useReadsEnabled).mockReturnValue(true);
     fetchStats.mockReset().mockResolvedValue(snapshotHolding());
@@ -325,10 +335,7 @@ describe("useAchievementSync", () => {
     });
 
     it("should tell the engine a reminder is on when the device has one switched on", async () => {
-      const storage = jest.requireMock<{ default: { getItem: jest.Mock } }>(
-        "@react-native-async-storage/async-storage",
-      ).default;
-      storage.getItem.mockResolvedValueOnce(JSON.stringify({ foodEnabled: true }));
+      mockStorageItems.set(reminderSettingsStorageKey, JSON.stringify({ foodEnabled: true }));
 
       await mountAndSettle();
 
@@ -396,6 +403,53 @@ describe("useAchievementSync", () => {
       await foreground();
 
       expect(getCelebrationState().entries).toEqual([]);
+    });
+
+    it("should not queue an unseen badge this device sent a notification for, after a restart", async () => {
+      // The restart: the notification was posted by an earlier process, so the in-memory store starts empty.
+      await rememberNotifiedIds("account-a", ["first-bite"]);
+      fetchStats.mockResolvedValue(snapshotHolding([held("first-bite")]));
+
+      await mountAndSettle();
+
+      expect(getCelebrationState().entries).toEqual([]);
+    });
+
+    it("should forget a notified badge once the person has seen it, so it can never be held back", async () => {
+      await rememberNotifiedIds("account-a", ["first-bite", "hat-trick"]);
+      fetchStats.mockResolvedValue(
+        snapshotHolding([held("first-bite", { seenAt: SEEN }), held("hat-trick")]),
+      );
+
+      await mountAndSettle();
+
+      expect(
+        JSON.parse(mockStorageItems.get(notifiedBadgesStorageKey("account-a")) ?? "[]"),
+      ).toEqual(["hat-trick"]);
+    });
+
+    it("should keep the notified badges when reads go off and on again, as the terms gate does", async () => {
+      await rememberNotifiedIds("account-a", ["first-bite"]);
+      fetchStats.mockResolvedValue(snapshotHolding([held("first-bite")]));
+      const { rerender } = await mountAndSettle();
+
+      jest.mocked(useReadsEnabled).mockReturnValue(false);
+      await rerender(undefined);
+      jest.mocked(useReadsEnabled).mockReturnValue(true);
+      await rerender(undefined);
+      await settle();
+      await foreground();
+
+      expect(getCelebrationState().entries).toEqual([]);
+    });
+
+    it("should not hold back for this account a badge another account was notified of", async () => {
+      await rememberNotifiedIds("account-b", ["first-bite"]);
+      fetchStats.mockResolvedValue(snapshotHolding([held("first-bite")]));
+
+      await mountAndSettle();
+
+      expect(getCelebrationState().entries).toEqual([{ id: "first-bite", isNew: false }]);
     });
 
     it("should not queue as new an id another device already recorded and the person has seen", async () => {
@@ -505,7 +559,7 @@ describe("useAchievementSync", () => {
       };
       const view = await renderHook(
         () => {
-          useAchievementSync();
+          useAchievementSync("account-a");
           return useRecordAchievementEvent();
         },
         {

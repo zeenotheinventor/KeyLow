@@ -16,6 +16,7 @@ const input = (overrides: Partial<CelebrationInput>): CelebrationInput => ({
   held: [],
   isBackfill: false,
   alreadyQueued: [],
+  notified: [],
   ...overrides,
 });
 
@@ -162,6 +163,31 @@ describe("decideCelebrations", () => {
       );
 
       expect(decision.entries).toEqual([]);
+    });
+
+    it("should not queue a held unseen badge the person was already notified of, as after a restart", () => {
+      const decision = decideCelebrations(
+        input({
+          held: [{ id: "hat-trick", seenAt: null, backfilled: false }],
+          notified: ["hat-trick"],
+        }),
+      );
+
+      expect(decision.entries).toEqual([]);
+    });
+
+    it("should still queue a held unseen badge that was not notified", () => {
+      const decision = decideCelebrations(
+        input({
+          held: [
+            { id: "hat-trick", seenAt: null, backfilled: false },
+            { id: "first-bite", seenAt: null, backfilled: false },
+          ],
+          notified: ["hat-trick"],
+        }),
+      );
+
+      expect(decision.entries).toEqual([{ id: "first-bite", isNew: false }]);
     });
 
     it("should ignore a held id the catalogue does not know", () => {

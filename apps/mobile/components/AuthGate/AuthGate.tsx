@@ -159,11 +159,11 @@ export function AuthGate({ children, readStoredUserId = readNoStoredUserId }: Au
           <TermsGate onStateChange={setTermsGateState} />
           <SetupGate />
           <DeviceTimeZoneSync />
-          <AchievementSync key={accountId} />
+          <AchievementSync key={accountId} accountId={accountId} />
           <AchievementCelebration key={accountId} />
           <HealthImportRunner />
           <CheckinRunner />
-          <ReminderScheduler />
+          <ReminderScheduler accountId={accountId} />
           <ReminderTapRouting />
           <WidgetSync />
         </>
