@@ -40,6 +40,10 @@ const payloadSchema = z.object({
       protein_g: count,
       carbs_g: count,
       fat_g: count,
+      dow_calories_kcal: z
+        .tuple([count, count, count, count, count, count, count])
+        .nullable()
+        .optional(),
     }),
   ),
   days: z.array(
@@ -220,6 +224,7 @@ const mapStats = (payload: Payload): StoredAchievementStats => {
       proteinG: row.protein_g,
       carbsG: row.carbs_g,
       fatG: row.fat_g,
+      ...(row.dow_calories_kcal ? { dowCaloriesKcal: row.dow_calories_kcal } : {}),
     })),
     manualTargets: {
       kcal: payload.manual_targets.kcal,

@@ -201,10 +201,32 @@ describe("mapAchievementStats", () => {
     });
   });
 
-  it("should map the targets rows and drop the end date and the weekday calories", () => {
+  it("should map the targets rows with their weekday calories and drop the end date", () => {
     expect(mapPayload().stats.engineTargetsRows).toEqual([
+      {
+        effectiveFrom: "2026-01-10",
+        kcal: 2000,
+        proteinG: 110,
+        carbsG: 220,
+        fatG: 65,
+        dowCaloriesKcal: [2000, 2000, 2000, 2000, 2000, 2000, 2000],
+      },
+      {
+        effectiveFrom: "2026-02-01",
+        kcal: 2200,
+        proteinG: 130,
+        carbsG: 240,
+        fatG: 70,
+        dowCaloriesKcal: [2200, 2200, 2200, 2200, 2200, 2200, 2200],
+      },
+    ]);
+  });
+
+  it("should leave the weekday calories out of a row that has none", () => {
+    const [firstRow] = PAYLOAD.targets;
+    const payload = { ...PAYLOAD, targets: [{ ...firstRow, dow_calories_kcal: null }] };
+    expect(mapAchievementStats(payload).stats.engineTargetsRows).toEqual([
       { effectiveFrom: "2026-01-10", kcal: 2000, proteinG: 110, carbsG: 220, fatG: 65 },
-      { effectiveFrom: "2026-02-01", kcal: 2200, proteinG: 130, carbsG: 240, fatG: 70 },
     ]);
   });
 

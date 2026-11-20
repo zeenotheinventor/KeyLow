@@ -1,24 +1,41 @@
 import { dayNumber } from "../../dates/calendarDay";
+import { dayTarget } from "../../engine/dayTarget";
 import { TOLERANCE_EPSILON, toleranceOf } from "../../recipes/fit/judgeTargets";
 
 import type { Measure } from "./types";
 import type { AchievementStats, DayStats } from "../stats";
 
-type DayTargets = AchievementStats["manualTargets"];
+type EngineRow = AchievementStats["engineTargetsRows"][number];
+type DayTargets = NonNullable<AchievementStats["manualTargets"]> &
+  Partial<Pick<EngineRow, "dowCaloriesKcal">>;
 
 /**
  * The targets that judge a day: the engine row in force that day (the latest one that started on or before
  * it), else the person's own targets.
  */
-export const targetsInForce = (stats: AchievementStats, localDate: string): DayTargets => {
+export const targetsInForce = (stats: AchievementStats, localDate: string): DayTargets | null => {
   const row = stats.engineTargetsRows
     .filter((candidate) => candidate.effectiveFrom <= localDate)
-    .reduce<AchievementStats["engineTargetsRows"][number] | undefined>(
+    .reduce<EngineRow | undefined>(
       (latest, candidate) =>
         latest === undefined || candidate.effectiveFrom > latest.effectiveFrom ? candidate : latest,
       undefined,
     );
   return row ?? stats.manualTargets;
+};
+
+/** The calories for the day: the weekday figure when the row has them, else its one figure, through `dayTarget`. */
+const kcalTargetOf = (targets: DayTargets, localDate: string): number | null => {
+  if (targets.kcal === null) {
+    return null;
+  }
+  const { dowCaloriesKcal } = targets;
+  return dayTarget(
+    dowCaloriesKcal === undefined
+      ? { caloriesKcal: targets.kcal }
+      : { caloriesKcal: targets.kcal, dowCaloriesKcal },
+    localDate,
+  );
 };
 
 const isWithinTolerance = (
@@ -43,7 +60,8 @@ type DayJudgement = Readonly<{
 export const judgeDay = (stats: AchievementStats, day: DayStats): DayJudgement => {
   const targets = day.isComplete ? targetsInForce(stats, day.localDate) : null;
   return {
-    calories: targets !== null && isWithinTolerance("kcal", day.kcal, targets.kcal),
+    calories:
+      targets !== null && isWithinTolerance("kcal", day.kcal, kcalTargetOf(targets, day.localDate)),
     protein: targets !== null && isProteinReached(day.proteinG, targets.proteinG),
     carbs: targets !== null && isWithinTolerance("carbs_g", day.carbsG, targets.carbsG),
     fat: targets !== null && isWithinTolerance("fat_g", day.fatG, targets.fatG),
