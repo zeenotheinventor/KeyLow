@@ -1,5 +1,6 @@
 import { achievementTierOf } from "./art";
 import { totalPoints } from "./points";
+import { isSensitiveAchievement } from "./sensitivity";
 import { levelUpNotification, unlockNotification } from "../copy/achievements";
 
 import type { AchievementId } from "./catalogue";
@@ -22,7 +23,8 @@ export type NotificationInput = Readonly<{
 
 /**
  * One payload for everything a run earned, never more. Its points are those of the badges in
- * `newUnlocks`, never the all-time total. Badges are grouped into one title, and a new level or
+ * `newUnlocks`, never the all-time total. Badges are grouped into one title, and a sensitive badge
+ * (see `isSensitiveAchievement`) is only counted there, never named. A new level or
  * freezes ride along in the body. A level-up with no badge gets its own payload, and a run with
  * neither sends nothing. Points only come from badges, so that level-up alone is a guard rather than
  * a case that real stats reach.
@@ -36,7 +38,8 @@ export const buildNotification = ({
   if (firstId !== undefined) {
     return {
       ...unlockNotification({
-        badgeIds: newUnlocks,
+        neutralBadgeIds: newUnlocks.filter((id) => !isSensitiveAchievement(id)),
+        sensitiveBadgeCount: newUnlocks.filter(isSensitiveAchievement).length,
         points: totalPoints(newUnlocks.map(achievementTierOf)),
         freezes,
         reachedLevelName: levelUp?.name ?? null,
