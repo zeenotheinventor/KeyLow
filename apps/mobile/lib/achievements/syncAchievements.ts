@@ -5,10 +5,16 @@ import {
   keys,
   recordAchievements,
 } from "@keylow/api-client";
-import { decideCelebrations, reminderEnabledFrom, runAchievements } from "@keylow/core";
+import {
+  decideCelebrations,
+  reminderEnabledFrom,
+  runAchievements,
+  stillNotifiedIds,
+} from "@keylow/core";
 import { AppState } from "react-native";
 
 import { getQueuedIds, recordCelebrations } from "./celebrationStore";
+import { updateNotifiedIds } from "./notifiedBadges";
 import { readReminderSettings } from "../reminderSettings";
 
 import type { Database } from "@keylow/api-client";
@@ -27,6 +33,7 @@ export async function syncAchievements(
   client: SupabaseClient<Database>,
   queryClient: QueryClient,
   isCurrent: () => boolean,
+  accountId: string | null,
 ): Promise<void> {
   const [snapshot, backfilledAt, reminders] = await Promise.all([
     fetchAchievementStats(client),
@@ -37,6 +44,15 @@ export async function syncAchievements(
     return;
   }
   const isBackfill = backfilledAt === null;
+  // A badge the person has seen needs no more holding back, so the list does not grow for ever. The prune
+  // and the poster's saves are queued one after the other, so neither loses the other's change.
+  const stillNotified =
+    accountId === null
+      ? []
+      : await updateNotifiedIds(accountId, (saved) => stillNotifiedIds(saved, snapshot.held));
+  if (!isCurrent()) {
+    return;
+  }
 
   const run = runAchievements({
     stats: snapshot.stats,
@@ -62,6 +78,7 @@ export async function syncAchievements(
       held: snapshot.held,
       isBackfill,
       alreadyQueued: getQueuedIds(),
+      notified: stillNotified,
     }),
     AppState.currentState === "active",
   );

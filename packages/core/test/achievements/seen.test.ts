@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { unseenBackfilledIdsOf, unseenIdsOf, withSeen } from "../../src/achievements";
+import {
+  stillNotifiedIds,
+  unseenBackfilledIdsOf,
+  unseenIdsOf,
+  withSeen,
+} from "../../src/achievements";
 
 const rows = [
   { id: "first-bite", seenAt: null, backfilled: true },
@@ -48,5 +53,15 @@ describe("withSeen", () => {
       backfilled: true,
     });
     expect(rows[0]?.seenAt).toBeNull();
+  });
+});
+
+describe("stillNotifiedIds", () => {
+  it("should drop the ids the person has seen and keep the unseen ones", () => {
+    expect(stillNotifiedIds(["home-cook", "notebook"], rows)).toEqual(["home-cook"]);
+  });
+
+  it("should keep an id no row holds yet", () => {
+    expect(stillNotifiedIds(["hat-trick"], rows)).toEqual(["hat-trick"]);
   });
 });
