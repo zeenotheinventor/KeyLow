@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { REMINDERS_SCREEN } from "../../src/copy";
+import { REMINDERS_SCREEN, streakNudgeNotification } from "../../src/copy";
 import {
   CHECKIN_STREAK_DAYS,
   EASE_REMINDER_TIME,
@@ -55,8 +55,33 @@ describe("the Reminders screen copy", () => {
     });
   });
 
-  it("should head the two groups Training and Food", () => {
-    expect(REMINDERS_SCREEN.groups).toEqual({ training: "Training", food: "Food" });
+  it("should head the three groups Training, Food and Achievements", () => {
+    expect(REMINDERS_SCREEN.groups).toEqual({
+      training: "Training",
+      food: "Food",
+      achievements: "Achievements",
+    });
+  });
+
+  it("should word the two achievement switches as the board does", () => {
+    expect(REMINDERS_SCREEN.achievements).toEqual({
+      newLabel: "New",
+      badges: {
+        title: "Badges and levels",
+        helper: "When you earn a badge or reach a new level while Ki-Lo is closed.",
+      },
+      streak: {
+        title: "Keep your streak",
+        helper: "At 8pm, if today is not complete yet.",
+      },
+    });
+  });
+
+  it("should word the streak nudge with the length of the streak, in the catalogue's words", () => {
+    expect(streakNudgeNotification(12)).toEqual({
+      title: "Keep your streak",
+      body: "Complete today to keep your 12-day streak",
+    });
   });
 
   it("should head the food time field with the reminder's name", () => {

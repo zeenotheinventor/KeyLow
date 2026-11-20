@@ -25,6 +25,16 @@ jest.mock("@react-native-async-storage/async-storage", () => ({
   },
 }));
 
+// The Reminders screen reads the permission to show notifications, and the library's native module answers
+// nothing in Jest. The in-memory stand-in answers that the person has not been asked yet.
+jest.mock(
+  "expo-notifications",
+  () =>
+    jest.requireActual<typeof import("./support/expoNotificationsMock")>(
+      "./support/expoNotificationsMock",
+    ).mockExpoNotifications,
+);
+
 // GL does not run in Jest, and the canvas module brings in three, which Jest does not transform. The 3D
 // body's story renders its figure with nothing in it.
 jest.mock("../components/ui/Body3D/Body3DCanvas", () => ({ Body3DCanvas: () => null }));

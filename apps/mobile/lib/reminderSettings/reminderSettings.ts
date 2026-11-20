@@ -9,6 +9,10 @@ export type ReminderSettings = {
   missedEnabled: boolean;
   checkinEnabled: boolean;
   foodEnabled: boolean;
+  /** Whether a badge or level earned while the app is closed is sent as a notification. On unless turned off. */
+  badgesEnabled: boolean;
+  /** Whether a day not yet complete gets an evening nudge to keep the streak. */
+  streakNudgeEnabled: boolean;
   /** The time of day for the train reminder, as 24 hour "HH:MM". */
   trainTime: string;
   /** The time of day for the food reminder, as 24 hour "HH:MM". */
@@ -26,6 +30,8 @@ export const defaultReminderSettings: ReminderSettings = {
   missedEnabled: false,
   checkinEnabled: false,
   foodEnabled: false,
+  badgesEnabled: true,
+  streakNudgeEnabled: false,
   trainTime: "17:30",
   foodTime: "20:00",
   lastVariant: { train: null, progress: null, ease: null, missed: null, checkin: null, food: null },
@@ -83,13 +89,18 @@ function parseReminderSettings(raw: string): ReminderSettings {
     missedEnabled: booleanOr(stored.missedEnabled, defaultReminderSettings.missedEnabled),
     checkinEnabled: booleanOr(stored.checkinEnabled, defaultReminderSettings.checkinEnabled),
     foodEnabled: booleanOr(stored.foodEnabled, defaultReminderSettings.foodEnabled),
+    badgesEnabled: booleanOr(stored.badgesEnabled, defaultReminderSettings.badgesEnabled),
+    streakNudgeEnabled: booleanOr(
+      stored.streakNudgeEnabled,
+      defaultReminderSettings.streakNudgeEnabled,
+    ),
     trainTime: timeOr(stored.trainTime, defaultReminderSettings.trainTime),
     foodTime: timeOr(stored.foodTime, defaultReminderSettings.foodTime),
     lastVariant: variantsFrom(stored.lastVariant),
   };
 }
 
-/** The saved settings, or the defaults (every reminder off) when nothing valid is saved or storage cannot be read. */
+/** The saved settings, or the defaults (every reminder off, badges and levels on) when nothing valid is saved or storage cannot be read. */
 export async function readReminderSettings(): Promise<ReminderSettings> {
   try {
     const raw = await AsyncStorage.getItem(reminderSettingsStorageKey);

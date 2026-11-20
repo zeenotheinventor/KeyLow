@@ -42,7 +42,8 @@ jest.mock(
 );
 
 const [train, progress, ease, missed, checkin] = REMINDERS_SCREEN.reminders;
-const { food } = REMINDERS_SCREEN;
+const { food, achievements } = REMINDERS_SCREEN;
+const { badges, streak } = achievements;
 
 let openSettings: jest.SpyInstance;
 
@@ -88,7 +89,7 @@ describe("the Reminders screen", () => {
       expect(routerMock.replace).toHaveBeenCalledWith("/(tabs)/more");
     });
 
-    it("should draw the six switches in order, all off, each with its helper line", async () => {
+    it("should draw the eight switches in order, each with its helper line, only badges and levels on", async () => {
       await renderReminders();
 
       expect(screen.getAllByRole("switch")).toEqual([
@@ -98,20 +99,47 @@ describe("the Reminders screen", () => {
         switchNamed(missed.title),
         switchNamed(checkin.title),
         switchNamed(food.title),
+        switchNamed(badges.title),
+        switchNamed(streak.title),
       ]);
-      for (const reminder of [train, progress, ease, missed, checkin, food]) {
-        expect(switchNamed(reminder.title)).not.toBeChecked();
+      for (const reminder of [train, progress, ease, missed, checkin, food, badges, streak]) {
         expect(screen.getByText(reminder.helper)).toBeOnTheScreen();
       }
+      for (const reminder of [train, progress, ease, missed, checkin, food, streak]) {
+        expect(switchNamed(reminder.title)).not.toBeChecked();
+      }
+      expect(switchNamed(badges.title)).toBeChecked();
     });
 
-    it("should head the two groups Training and Food", async () => {
+    it("should head the three groups Training, Food and Achievements", async () => {
       await renderReminders();
 
       expect(
         screen.getByRole("heading", { name: REMINDERS_SCREEN.groups.training }),
       ).toBeOnTheScreen();
       expect(screen.getByRole("heading", { name: REMINDERS_SCREEN.groups.food })).toBeOnTheScreen();
+      expect(
+        screen.getByRole("heading", { name: REMINDERS_SCREEN.groups.achievements }),
+      ).toBeOnTheScreen();
+    });
+
+    it("should mark both achievements switches New, and no other", async () => {
+      await renderReminders();
+
+      expect(screen.getAllByText(achievements.newLabel)).toHaveLength(2);
+    });
+
+    it("should show a saved off for badges and levels, and a saved on for the streak", async () => {
+      mockStorageItems.set(
+        reminderSettingsStorageKey,
+        JSON.stringify({ badgesEnabled: false, streakNudgeEnabled: true }),
+      );
+      await renderReminders();
+
+      await waitFor(() => {
+        expect(switchNamed(streak.title)).toBeChecked();
+      });
+      expect(switchNamed(badges.title)).not.toBeChecked();
     });
 
     it("should show the saved switches on", async () => {
@@ -190,6 +218,30 @@ describe("the Reminders screen", () => {
         expect(switchNamed(title)).toBeChecked();
       });
       expect((await readReminderSettings())[key]).toBe(true);
+    });
+
+    it("should turn the streak switch on and keep it, asking for the permission as the others do", async () => {
+      const user = await renderReminders();
+
+      await user.press(switchNamed(streak.title));
+
+      await waitFor(() => {
+        expect(switchNamed(streak.title)).toBeChecked();
+      });
+      expect(mockExpoNotifications.requestPermissionsAsync).toHaveBeenCalledTimes(1);
+      expect((await readReminderSettings()).streakNudgeEnabled).toBe(true);
+    });
+
+    it("should turn badges and levels off without asking, and keep it off", async () => {
+      const user = await renderReminders();
+
+      await user.press(switchNamed(badges.title));
+
+      await waitFor(() => {
+        expect(switchNamed(badges.title)).not.toBeChecked();
+      });
+      expect(mockExpoNotifications.requestPermissionsAsync).not.toHaveBeenCalled();
+      expect((await readReminderSettings()).badgesEnabled).toBe(false);
     });
 
     it("should keep the food switch off and show the denied notice when the person refuses", async () => {

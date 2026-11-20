@@ -11,3 +11,5 @@ export { useReminderScheduler } from "./useReminderScheduler";
 export { reminderTapPath } from "./reminderTapPath";
 export { useReminderTapRouting } from "./useReminderTapRouting";
 export { useCancelRemindersWhenSignedOut } from "./useCancelRemindersWhenSignedOut";
+export { useStreakNudgeScheduler } from "./useStreakNudgeScheduler";
+export { useUnlockNotificationPoster } from "./useUnlockNotificationPoster";

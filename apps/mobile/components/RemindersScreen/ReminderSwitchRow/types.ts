@@ -2,6 +2,8 @@ export type ReminderSwitchRowProps = {
   title: string;
   /** One plain line under the title that says when the reminder comes. */
   helper: string;
+  /** A short pill beside the title, such as "New". */
+  badge?: string;
   isOn: boolean;
   /** Dims the row and stops the switch responding, for a build that cannot show reminders. */
   disabled?: boolean;

@@ -3,7 +3,7 @@ import { Platform } from "react-native";
 import {
   cancelOurReminders,
   getPermission,
-  onReminderTap,
+  onNotificationTap,
   replaceReminders,
   requestPermission,
   scheduleReminders,
@@ -184,16 +184,16 @@ describe("reminder notifications", () => {
   describe("tapping a reminder", () => {
     it("should hand the handler the type of the reminder that was tapped", () => {
       const handler = jest.fn();
-      onReminderTap(handler);
+      onNotificationTap(handler);
 
       tapNotification("keylow-reminder:progress:1", { type: "progress" });
 
-      expect(handler).toHaveBeenCalledWith("progress");
+      expect(handler).toHaveBeenCalledWith({ kind: "reminder", type: "progress" });
     });
 
     it("should ignore a notification that is not one of its reminders", () => {
       const handler = jest.fn();
-      onReminderTap(handler);
+      onNotificationTap(handler);
 
       tapNotification("someone-else", { type: "train" });
       tapNotification("keylow-reminder:other:1", { type: "other" });
@@ -203,7 +203,7 @@ describe("reminder notifications", () => {
 
     it("should stop calling the handler once unsubscribed", () => {
       const handler = jest.fn();
-      const unsubscribe = onReminderTap(handler);
+      const unsubscribe = onNotificationTap(handler);
 
       unsubscribe();
       tapNotification("keylow-reminder:train:1", { type: "train" });
@@ -215,11 +215,11 @@ describe("reminder notifications", () => {
       leaveTapFromColdStart("keylow-reminder:ease:1", { type: "ease" });
       const handler = jest.fn();
 
-      onReminderTap(handler);
-      onReminderTap(handler);
+      onNotificationTap(handler);
+      onNotificationTap(handler);
 
       expect(handler).toHaveBeenCalledTimes(1);
-      expect(handler).toHaveBeenCalledWith("ease");
+      expect(handler).toHaveBeenCalledWith({ kind: "reminder", type: "ease" });
     });
   });
 
@@ -230,10 +230,10 @@ describe("reminder notifications", () => {
       });
       const handler = jest.fn();
 
-      expect(() => onReminderTap(handler)).not.toThrow();
+      expect(() => onNotificationTap(handler)).not.toThrow();
       tapNotification("keylow-reminder:train:1", { type: "train" });
 
-      expect(handler).toHaveBeenCalledWith("train");
+      expect(handler).toHaveBeenCalledWith({ kind: "reminder", type: "train" });
     });
   });
 

@@ -34,6 +34,8 @@ jest.mock("../components/ReminderTapRouting", () => ({ ReminderTapRouting: () =>
 jest.mock("../lib/reminderScheduler", () => ({
   useCancelRemindersWhenSignedOut: jest.fn(),
   useReminderScheduler: jest.fn(),
+  useStreakNudgeScheduler: jest.fn(),
+  useUnlockNotificationPoster: jest.fn(),
 }));
 // The other runners are proved in their own tests. They have nothing to say about the setup.
 jest.mock("../components/CheckinRunner", () => ({ CheckinRunner: () => null }));
