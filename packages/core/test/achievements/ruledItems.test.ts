@@ -122,6 +122,47 @@ describe("in range (38 to 47)", () => {
     });
   });
 
+  describe("weekday calorie targets", () => {
+    // 2026-11-10 is a Tuesday, the second figure of a week that starts on Monday.
+    const rowWithoutWeekdays = {
+      effectiveFrom: "2026-11-01",
+      kcal: 2000,
+      proteinG: 100,
+      carbsG: 200,
+      fatG: 70,
+    };
+    const rowWithWeekdays = {
+      ...rowWithoutWeekdays,
+      dowCaloriesKcal: [2000, 2600, 2000, 2000, 2000, 2000, 2000] satisfies [
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+      ],
+    };
+
+    it("counts a day that is in range only against its weekday figure", () => {
+      const stats = aStats({ days: [day({ kcal: 2600 })], engineTargetsRows: [rowWithWeekdays] });
+      expect(measure("calorie-days", stats)).toBe(1);
+    });
+
+    it("does not count a day that is in range only against the base figure", () => {
+      const stats = aStats({ days: [day({ kcal: 2000 })], engineTargetsRows: [rowWithWeekdays] });
+      expect(measure("calorie-days", stats)).toBe(0);
+    });
+
+    it("judges a row with no weekday figures against its base figure", () => {
+      const stats = aStats({
+        days: [day({ kcal: 2000 })],
+        engineTargetsRows: [rowWithoutWeekdays],
+      });
+      expect(measure("calorie-days", stats)).toBe(1);
+    });
+  });
+
   describe("Perfect Week", () => {
     it("breaks a run at a day that is out of range", () => {
       const days = consecutiveDays(8, (date) =>

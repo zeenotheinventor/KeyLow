@@ -43,6 +43,8 @@ const targetsRowSchema = z.object({
   proteinG: amount,
   carbsG: amount,
   fatG: amount,
+  /** The calories for each weekday, Monday first. Missing when the row has one figure for every day. */
+  dowCaloriesKcal: z.tuple([amount, amount, amount, amount, amount, amount, amount]).optional(),
 });
 
 /** The targets on the profile itself. A target the person never set is null. */
