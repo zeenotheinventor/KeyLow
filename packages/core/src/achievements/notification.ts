@@ -1,3 +1,5 @@
+import { achievementTierOf } from "./art";
+import { totalPoints } from "./points";
 import { levelUpNotification, unlockNotification } from "../copy/achievements";
 
 import type { AchievementId } from "./catalogue";
@@ -14,20 +16,19 @@ export type UnlockNotificationPayload = Readonly<{
 export type NotificationInput = Readonly<{
   /** The badges this run earned, highest tier first. The first one is the one a tap opens. */
   newUnlocks: readonly AchievementId[];
-  points: number;
   freezes: number;
   levelUp: LevelUp | null;
 }>;
 
 /**
- * One payload for everything a run earned, never more. Badges are grouped into one title, and a new
- * level or freezes ride along in the body. A level-up with no badge gets its own payload, and a run
- * with neither sends nothing. Points only come from badges, so that level-up alone is a guard rather
- * than a case that real stats reach.
+ * One payload for everything a run earned, never more. Its points are those of the badges in
+ * `newUnlocks`, never the all-time total. Badges are grouped into one title, and a new level or
+ * freezes ride along in the body. A level-up with no badge gets its own payload, and a run with
+ * neither sends nothing. Points only come from badges, so that level-up alone is a guard rather than
+ * a case that real stats reach.
  */
 export const buildNotification = ({
   newUnlocks,
-  points,
   freezes,
   levelUp,
 }: NotificationInput): UnlockNotificationPayload | null => {
@@ -36,7 +37,7 @@ export const buildNotification = ({
     return {
       ...unlockNotification({
         badgeIds: newUnlocks,
-        points,
+        points: totalPoints(newUnlocks.map(achievementTierOf)),
         freezes,
         reachedLevelName: levelUp?.name ?? null,
       }),

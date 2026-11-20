@@ -182,9 +182,7 @@ const resultOf = (
     perAchievementProgress: state.results.map((result) =>
       state.earned.has(result.id) ? { id: result.id, earned: true } : result,
     ),
-    notification: input.isBackfill
-      ? null
-      : buildNotification({ newUnlocks, points, freezes, levelUp }),
+    notification: input.isBackfill ? null : buildNotification({ newUnlocks, freezes, levelUp }),
     backfillSummary: input.isBackfill ? newUnlocks.length : null,
   };
 };
