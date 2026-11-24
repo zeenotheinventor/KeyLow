@@ -86,3 +86,4 @@ export * from "./streaks";
 export * from "./webAchievements";
 export * from "./achievementsScreen";
 export * from "./achievementCelebrations";
+export * from "./accountPassword";
