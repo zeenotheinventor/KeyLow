@@ -1,53 +1,22 @@
+import { authLinkDestination } from "@keylow/core/accounts";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 
 import { LinkNotValid } from "../../components/LinkNotValid";
 import { SigningInLink } from "../../components/SigningInLink";
-import { supabase } from "../../lib/supabase";
+import { completeAuthLink } from "../../lib/authLink";
+import { clearRecoveryRequest, readRecoveryRequestedAt } from "../../lib/recoveryRequest";
 
-import type { EmailOtpType } from "@supabase/supabase-js";
+import type { AuthLinkDestination, AuthLinkResult } from "@keylow/core/accounts";
 
-const emailOtpTypes: readonly EmailOtpType[] = [
-  "signup",
-  "invite",
-  "magiclink",
-  "recovery",
-  "email_change",
-  "email",
-];
-
-function toEmailOtpType(value: string | undefined): EmailOtpType | undefined {
-  return emailOtpTypes.find((emailOtpType) => emailOtpType === value);
-}
-
-// Whether the link signed the person in. Why it did not is for the server's log and not the screen: the
-// board draws one sentence for a link that cannot be used, whatever went wrong with it, including a call
-// that threw, so the screen never waits for ever.
-async function completeSignIn(
-  code: string | undefined,
-  tokenHash: string | undefined,
-  type: string | undefined,
-): Promise<boolean> {
-  const emailOtpType = toEmailOtpType(type);
-
-  try {
-    if (code !== undefined) {
-      const { error } = await supabase.auth.exchangeCodeForSession(code);
-      return error === null;
-    }
-
-    if (tokenHash !== undefined && emailOtpType !== undefined) {
-      const { error } = await supabase.auth.verifyOtp({
-        token_hash: tokenHash,
-        type: emailOtpType,
-      });
-      return error === null;
-    }
-  } catch {
-    return false;
+async function destinationOf(result: AuthLinkResult): Promise<AuthLinkDestination> {
+  if (result.kind === "recovery") {
+    await clearRecoveryRequest();
   }
 
-  return false;
+  const recoveryRequestedAt = result.kind === "failed" ? await readRecoveryRequestedAt() : null;
+
+  return authLinkDestination({ result, recoveryRequestedAt, now: Date.now() });
 }
 
 export default function AuthCallbackRoute() {
@@ -71,13 +40,27 @@ export default function AuthCallbackRoute() {
     }
     hasStarted.current = true;
 
-    void completeSignIn(code, tokenHash, type).then((isSignedIn) => {
-      if (isSignedIn) {
-        router.replace("/(tabs)/dashboard");
-      } else {
-        setHasFailed(true);
-      }
-    });
+    void completeAuthLink({ code, tokenHash, type })
+      .then(destinationOf)
+      .then((destination) => {
+        switch (destination) {
+          case "home":
+            router.replace("/(tabs)/dashboard");
+            break;
+          // The two cases below are interim: a reset link signs the person in and opens the dashboard, and a
+          // failed reset link shows the ordinary link error. The set new password and reset link error
+          // screens each replace one line.
+          case "setNewPassword":
+            router.replace("/(tabs)/dashboard");
+            break;
+          case "resetLinkInvalid":
+            setHasFailed(true);
+            break;
+          case "signInLinkInvalid":
+            setHasFailed(true);
+            break;
+        }
+      });
   }, [code, tokenHash, type, router]);
 
   return hasFailed ? (

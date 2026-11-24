@@ -4,10 +4,24 @@ import { resetRouterMock, routerMock } from "./support/expoRouterMock";
 import { renderAuthScreen } from "./support/renderAuthScreen";
 import { resetSupabaseMock, mockSupabaseClient } from "./support/supabaseMock";
 import CallbackRoute from "../app/auth/callback";
+import { recoveryRequestStorageKey } from "../lib/recoveryRequest";
+
+const mockStorageItems = new Map<string, string>();
+const mockGetItem = jest.fn((key: string) => Promise.resolve(mockStorageItems.get(key) ?? null));
 
 jest.mock("@react-native-async-storage/async-storage", () => ({
   __esModule: true,
-  default: { getItem: () => Promise.resolve(null), setItem: () => Promise.resolve() },
+  default: {
+    getItem: (key: string) => mockGetItem(key),
+    setItem: (key: string, value: string) => {
+      mockStorageItems.set(key, value);
+      return Promise.resolve();
+    },
+    removeItem: (key: string) => {
+      mockStorageItems.delete(key);
+      return Promise.resolve();
+    },
+  },
 }));
 
 jest.mock(
@@ -21,6 +35,8 @@ jest.mock("../lib/supabase", () => ({
 
 describe("auth callback route", () => {
   beforeEach(() => {
+    mockStorageItems.clear();
+    mockGetItem.mockClear();
     resetRouterMock();
     resetSupabaseMock();
     mockSupabaseClient.auth.exchangeCodeForSession.mockResolvedValue({ data: {}, error: null });
@@ -158,5 +174,69 @@ describe("auth callback route", () => {
 
     expect(await screen.findByRole("alert", { name: /^Link not valid/ })).toBeOnTheScreen();
     expect(mockSupabaseClient.auth.verifyOtp).not.toHaveBeenCalled();
+  });
+
+  describe("when the link is a password reset", () => {
+    it("should clear the reset request marker and go to the dashboard", async () => {
+      mockStorageItems.set(recoveryRequestStorageKey, String(Date.now()));
+      routerMock.searchParams = { token_hash: "hash", type: "recovery" };
+
+      await renderAuthScreen(<CallbackRoute />);
+
+      await waitFor(() => {
+        expect(routerMock.replace).toHaveBeenCalledWith("/(tabs)/dashboard");
+      });
+      expect(mockStorageItems.has(recoveryRequestStorageKey)).toBe(false);
+    });
+
+    it("should go to the dashboard for a PKCE code that began as a reset request", async () => {
+      mockSupabaseClient.auth.exchangeCodeForSession.mockResolvedValue({
+        data: { redirectType: "recovery" },
+        error: null,
+      });
+      routerMock.searchParams = { code: "pkce-code" };
+
+      await renderAuthScreen(<CallbackRoute />);
+
+      await waitFor(() => {
+        expect(routerMock.replace).toHaveBeenCalledWith("/(tabs)/dashboard");
+      });
+    });
+  });
+
+  describe("when a link fails", () => {
+    beforeEach(() => {
+      mockSupabaseClient.auth.exchangeCodeForSession.mockResolvedValue({
+        data: {},
+        error: { message: "Code expired" },
+      });
+      routerMock.searchParams = { code: "stale" };
+    });
+
+    it("should say the link is not valid when a reset was requested a moment ago", async () => {
+      mockStorageItems.set(recoveryRequestStorageKey, String(Date.now()));
+
+      await renderAuthScreen(<CallbackRoute />);
+
+      expect(await screen.findByRole("alert", { name: /^Link not valid/ })).toBeOnTheScreen();
+      expect(mockGetItem).toHaveBeenCalledWith(recoveryRequestStorageKey);
+    });
+
+    it("should say the link is not valid when no reset was requested", async () => {
+      await renderAuthScreen(<CallbackRoute />);
+
+      expect(await screen.findByRole("alert", { name: /^Link not valid/ })).toBeOnTheScreen();
+      expect(mockGetItem).toHaveBeenCalledWith(recoveryRequestStorageKey);
+    });
+
+    it("should leave the marker for the reset link that may still be coming", async () => {
+      const requestedAt = String(Date.now());
+      mockStorageItems.set(recoveryRequestStorageKey, requestedAt);
+
+      await renderAuthScreen(<CallbackRoute />);
+      await screen.findByRole("alert");
+
+      expect(mockStorageItems.get(recoveryRequestStorageKey)).toBe(requestedAt);
+    });
   });
 });

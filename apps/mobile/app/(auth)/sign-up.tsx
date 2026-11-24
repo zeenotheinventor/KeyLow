@@ -4,20 +4,18 @@ import { useQueryClient } from "@tanstack/react-query";
 
 import { AuthForm } from "../../components/AuthForm";
 import { authErrorCode } from "../../lib/authErrorCode";
+import { AUTH_CALLBACK_URL } from "../../lib/authLink";
 import { signInWithGoogle } from "../../lib/googleSignIn";
 import { supabase } from "../../lib/supabase";
 
 import type { AuthFormOutcome } from "../../components/AuthForm";
 import type { Credentials } from "../../lib/validateCredentials";
 
-// Matches the redirect URL registered in the Supabase auth config and the scheme in app.json.
-const authCallbackUrl = "keylow://auth/callback";
-
 async function signUp(credentials: Credentials): Promise<AuthFormOutcome> {
   const { data, error } = await supabase.auth.signUp({
     ...credentials,
     // The profile trigger records the acceptance from the version in the user's metadata.
-    options: { emailRedirectTo: authCallbackUrl, data: { terms_version: TERMS_VERSION } },
+    options: { emailRedirectTo: AUTH_CALLBACK_URL, data: { terms_version: TERMS_VERSION } },
   });
 
   if (error !== null) {
