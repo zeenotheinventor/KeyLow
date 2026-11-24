@@ -16,6 +16,8 @@ export type {
   FoodSource,
   NutrientBasis,
 } from "./food";
+export { deleteAccountRequestSchema, deleteAccountResponseSchema } from "./deleteAccount";
+export type { DeleteAccountRequest, DeleteAccountResponse } from "./deleteAccount";
 export {
   runCheckinBackstopResponseSchema,
   runCheckinRecomputeResponseSchema,

@@ -584,7 +584,10 @@ export type { AssistantLiveTurn } from "./assistantLiveTurn";
 export type { SkippedKind, StreamingFetch, StreamingResponse } from "./runAssistantTurn";
 
 export { AccountExportError, exportMyData, readMyDataByTable } from "./repos";
+export { AccountDeletionError, deleteMyAccount } from "./repos";
+export type { AccountDeletionErrorCode, AccountDeletionResult } from "./repos";
 export { useAccountExportFile } from "./hooks";
+export { useDeleteMyAccount } from "./hooks";
 export type {
   AccountExportFile,
   AccountExportScreenEvent,

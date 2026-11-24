@@ -320,6 +320,7 @@ export { useAssistantCardUndo } from "./useAssistantCardUndo";
 export type { AssistantCardUndo } from "./useAssistantCardUndo";
 export { useHeldWords, MINIMUM_WORDS_TIME_MS } from "./useHeldWords";
 export { useAccountExportFile } from "./useAccountExportFile";
+export { useDeleteMyAccount } from "./useDeleteMyAccount";
 export type {
   AccountExportFile,
   AccountExportScreenEvent,
