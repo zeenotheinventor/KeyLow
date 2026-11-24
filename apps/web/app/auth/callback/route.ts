@@ -1,7 +1,12 @@
+import { authLinkDestination, type AuthLinkResult } from "@keylow/core/accounts";
 import { NextResponse, type NextRequest } from "next/server";
 
-import type { AuthError, EmailOtpType } from "@supabase/supabase-js";
+import type { EmailOtpType } from "@supabase/supabase-js";
 
+import {
+  RECOVERY_REQUESTED_COOKIE,
+  readRecoveryRequestedAt,
+} from "@/lib/auth/recoveryRequestedCookie";
 import { TERMS_PENDING_COOKIE, readPendingTermsVersion } from "@/lib/auth/termsPendingCookie";
 import { createClient } from "@/lib/supabase/server";
 
@@ -50,39 +55,73 @@ async function recordPendingTermsAcceptance(
   }
 }
 
-async function completeSignIn(request: NextRequest) {
-  const { searchParams, origin } = request.nextUrl;
-  const failureRedirect = NextResponse.redirect(new URL("/login?error=callback", origin));
+async function completeSignIn(request: NextRequest): Promise<AuthLinkResult> {
+  const { searchParams } = request.nextUrl;
   const code = searchParams.get("code");
   const tokenHash = searchParams.get("token_hash");
   const emailOtpType = EMAIL_OTP_TYPES.find((type) => type === searchParams.get("type"));
 
   if (!code && !(tokenHash && emailOtpType)) {
-    return failureRedirect;
+    return { kind: "failed" };
   }
 
   const supabase = await createClient();
-  let error: AuthError | null;
   if (code) {
-    ({ error } = await supabase.auth.exchangeCodeForSession(code));
-    if (!error) {
-      await recordPendingTermsAcceptance(supabase, request);
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+    if (error) {
+      return { kind: "failed" };
     }
-  } else if (tokenHash && emailOtpType) {
-    ({ error } = await supabase.auth.verifyOtp({ type: emailOtpType, token_hash: tokenHash }));
-  } else {
-    return failureRedirect;
+    // Under PKCE the reset request stored its verifier with a recovery suffix, and that is where the
+    // redirect type comes from. The client returns it at run time but does not declare it in its types.
+    if (typeof data === "object" && "redirectType" in data && data.redirectType === "recovery") {
+      return { kind: "recovery" };
+    }
+    await recordPendingTermsAcceptance(supabase, request);
+    return { kind: "signedIn" };
   }
 
-  if (error) {
-    return failureRedirect;
+  if (tokenHash && emailOtpType) {
+    const { error } = await supabase.auth.verifyOtp({ type: emailOtpType, token_hash: tokenHash });
+    if (error) {
+      return { kind: "failed" };
+    }
+    return emailOtpType === "recovery" ? { kind: "recovery" } : { kind: "signedIn" };
   }
 
-  return NextResponse.redirect(resolveNext(searchParams.get("next"), origin));
+  return { kind: "failed" };
+}
+
+// The two interim destinations, `setNewPassword` and `resetLinkInvalid`, are each one line to change
+// when their pages exist.
+function redirectFor(request: NextRequest, result: AuthLinkResult) {
+  const { searchParams, origin } = request.nextUrl;
+  const destination = authLinkDestination({
+    result,
+    recoveryRequestedAt: readRecoveryRequestedAt(
+      request.cookies.get(RECOVERY_REQUESTED_COOKIE)?.value,
+    ),
+    now: Date.now(),
+  });
+
+  switch (destination) {
+    case "home":
+      return NextResponse.redirect(resolveNext(searchParams.get("next"), origin));
+    case "setNewPassword":
+      // A reset link must not carry the person anywhere else, so `next` is ignored.
+      return NextResponse.redirect(new URL("/dashboard", origin));
+    case "resetLinkInvalid":
+      return NextResponse.redirect(new URL("/login?error=recovery-link", origin));
+    case "signInLinkInvalid":
+      return NextResponse.redirect(new URL("/login?error=callback", origin));
+  }
 }
 
 export async function GET(request: NextRequest) {
-  const response = await completeSignIn(request);
+  const result = await completeSignIn(request);
+  const response = redirectFor(request, result);
+  if (result.kind === "recovery") {
+    response.cookies.delete(RECOVERY_REQUESTED_COOKIE);
+  }
   // The cookie is good for one sign-in only, whatever came of it.
   response.cookies.delete(TERMS_PENDING_COOKIE);
 
