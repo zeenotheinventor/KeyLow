@@ -30,6 +30,8 @@ async function redirectLocation(search: string) {
 }
 
 const TERMS_PENDING = `kl-terms-pending=${TERMS_VERSION}`;
+const recoveryRequestedCookie = (requestedAt: number) =>
+  `kl-recovery-requested=${String(requestedAt)}`;
 const setCookies = (response: Response) => response.headers.getSetCookie().join("\n");
 
 describe("GET /auth/callback", () => {
@@ -206,6 +208,99 @@ describe("GET /auth/callback", () => {
 
       expect(rpc).not.toHaveBeenCalled();
       expect(setCookies(response)).toMatch(/kl-terms-pending=;/);
+    });
+  });
+
+  describe("password reset links", () => {
+    const failedExchange = { data: {}, error: { message: "bad code" } };
+
+    it("should land a recovery code on the dashboard, whatever next says, and clear the cookie", async () => {
+      exchangeCodeForSession.mockResolvedValue({ data: { redirectType: "recovery" }, error: null });
+
+      const response = await callback(
+        "?code=abc&next=/weight",
+        recoveryRequestedCookie(Date.now()),
+      );
+
+      expect(response.headers.get("location")).toBe("http://localhost:3000/dashboard");
+      expect(setCookies(response)).toMatch(/kl-recovery-requested=;/);
+    });
+
+    it("should land a recovery token hash on the dashboard, whatever next says, and clear the cookie", async () => {
+      const response = await callback(
+        "?token_hash=hash123&type=recovery&next=/weight",
+        recoveryRequestedCookie(Date.now()),
+      );
+
+      expect(verifyOtp).toHaveBeenCalledWith({ type: "recovery", token_hash: "hash123" });
+      expect(response.headers.get("location")).toBe("http://localhost:3000/dashboard");
+      expect(setCookies(response)).toMatch(/kl-recovery-requested=;/);
+    });
+
+    it("should land a recovery link on the dashboard even when no reset was recorded", async () => {
+      const response = await callback("?token_hash=hash123&type=recovery&next=/weight");
+
+      expect(response.headers.get("location")).toBe("http://localhost:3000/dashboard");
+    });
+
+    it("should leave the recovery cookie alone after a sign in link", async () => {
+      const response = await callback("?code=abc", recoveryRequestedCookie(Date.now()));
+
+      expect(setCookies(response)).not.toMatch(/kl-recovery-requested/);
+    });
+
+    it("should record no Terms acceptance for a recovery code", async () => {
+      exchangeCodeForSession.mockResolvedValue({ data: { redirectType: "recovery" }, error: null });
+
+      await callback("?code=abc", TERMS_PENDING);
+
+      expect(rpc).not.toHaveBeenCalled();
+    });
+
+    it("should show the reset link error when the exchange fails soon after a reset request", async () => {
+      exchangeCodeForSession.mockResolvedValue(failedExchange);
+
+      const response = await callback("?code=abc", recoveryRequestedCookie(Date.now()));
+
+      expect(response.headers.get("location")).toBe(
+        "http://localhost:3000/login?error=recovery-link",
+      );
+    });
+
+    it("should show the reset link error when a token hash fails soon after a reset request", async () => {
+      verifyOtp.mockResolvedValue({ error: { message: "expired" } });
+
+      const response = await callback(
+        "?token_hash=hash123&type=recovery",
+        recoveryRequestedCookie(Date.now()),
+      );
+
+      expect(response.headers.get("location")).toBe(
+        "http://localhost:3000/login?error=recovery-link",
+      );
+    });
+
+    it("should show the reset link error for an error link with no code soon after a reset request", async () => {
+      const response = await callback(
+        "?error=access_denied&error_code=otp_expired",
+        recoveryRequestedCookie(Date.now()),
+      );
+
+      expect(response.headers.get("location")).toBe(
+        "http://localhost:3000/login?error=recovery-link",
+      );
+    });
+
+    it.each([
+      ["no cookie", undefined],
+      ["an hour-old cookie", recoveryRequestedCookie(Date.now() - 3_600_001)],
+      ["a forged cookie", "kl-recovery-requested=soon"],
+    ])("should show the sign in link error when the exchange fails with %s", async (_, cookie) => {
+      exchangeCodeForSession.mockResolvedValue(failedExchange);
+
+      const response = await callback("?code=abc", cookie);
+
+      expect(response.headers.get("location")).toBe("http://localhost:3000/login?error=callback");
     });
   });
 });

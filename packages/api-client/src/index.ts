@@ -57,6 +57,7 @@ export {
   useProfileTimeZone,
   useSyncTimeZone,
   useTargets,
+  useRequestPasswordReset,
   useTermsAcceptance,
   useToggleFavouriteFood,
   useToggleFavouriteRecipe,
@@ -64,6 +65,7 @@ export {
   useUpdateEntry,
   useUpdateFood,
   useUpdateRecipe,
+  useUpdatePassword,
   useUpdateTargets,
 } from "./hooks";
 export { TargetsValidationError } from "./hooks";
@@ -121,6 +123,7 @@ export {
   logQuickEntry,
   removeFavouriteFood,
   removeFavouriteRecipe,
+  requestPasswordReset,
   replaceFoodPortions,
   restoreLogEntry,
   searchFoods,
@@ -135,6 +138,7 @@ export {
   updateLogEntry,
   updateMyTargets,
   updateMyTimeZone,
+  updatePassword,
   updateRecipe,
 } from "./repos";
 export type {
