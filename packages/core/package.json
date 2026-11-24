@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./accounts": "./src/accounts/index.ts",
     "./dates": "./src/dates/index.ts",
     "./diary": "./src/diary/index.ts",
     "./featureRequests": "./src/featureRequests/index.ts",
