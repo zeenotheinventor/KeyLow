@@ -224,6 +224,20 @@ describe("AuthGate", () => {
     });
   });
 
+  it("should count a password recovery event with a session as signed in", async () => {
+    // The set new password screen depends on this: the reset link signs the person in, so the gate
+    // treats them as any other signed in person and takes them out of the sign-in screens.
+    routerMock.segments = ["(auth)", "sign-in"];
+    await renderGate();
+
+    await act(() => {
+      emitAuthStateChange("PASSWORD_RECOVERY", fakeSession);
+    });
+
+    expect(routerMock.replace).toHaveBeenCalledWith("/(tabs)/dashboard");
+    expect(routerMock.replace).not.toHaveBeenCalledWith("/(auth)/sign-in");
+  });
+
   it("should redirect to sign-in when the user signs out", async () => {
     mockSupabaseClient.auth.getSession.mockResolvedValue({
       data: { session: fakeSession },
