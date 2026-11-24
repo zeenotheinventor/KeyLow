@@ -61,3 +61,9 @@ apps/mobile/components/ui/index.ts
 apps/mobile/components/ui/Icon/iconMap.ts
 apps/mobile/components/ui/Icon/iconColorTones.ts
 apps/mobile/.rnstorybook/storybook.requires.ts
+
+# Left by tools in a developer's checkout (KEY-1109): the desktop app's session worktrees and agent
+# memory, and the folder a Supabase CLI run from the repository root creates. The real Supabase project
+# is packages/db/supabase.
+/.claude/
+/supabase/
