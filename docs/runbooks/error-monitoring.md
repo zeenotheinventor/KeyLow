@@ -100,12 +100,13 @@ The mobile DSN is an EAS environment variable in the `production` environment, a
 eas env:create --environment production --name EXPO_PUBLIC_SENTRY_DSN --visibility plaintext
 ```
 
-It is in no committed file, so it does not change the native fingerprint. `eas update` runs with `--environment production`, so OTA bundles get it, and the `production-apk` build profile sets `environment: production`, so that APK gets it. A build from the plain `production` profile does not, and would have reporting off. Do not assume it is already set.
+It is in no committed file, so it does not change the native fingerprint. `eas update` runs with `--environment production`, so OTA bundles get it, and the `production` and `production-apk` build profiles both set `environment: production`, so the iOS store build and the Android APK both get it. Do not assume it is already set.
 
 ### Source maps
 
 - **Web.** Uploaded when `SENTRY_AUTH_TOKEN` is present on the Vercel build, then deleted from the build output.
-- **EAS builds (mobile).** The Sentry Gradle plugin uploads during the build, and the build **fails** if `SENTRY_AUTH_TOKEN` is not an EAS secret. To build without uploading, set `SENTRY_DISABLE_AUTO_UPLOAD=true` for that build.
+- **EAS builds (mobile, Android).** The Sentry Gradle plugin uploads during the build, and the build **fails** if `SENTRY_AUTH_TOKEN` is not an EAS secret. To build without uploading, set `SENTRY_DISABLE_AUTO_UPLOAD=true` for that build.
+- **EAS builds (mobile, iOS).** The `@sentry/react-native/expo` plugin adds two Xcode build phases (read from `node_modules/@sentry/react-native` and from a prebuild). The `Bundle React Native code and images` phase runs `sentry-xcode.sh`, which uploads the source maps with `sentry-cli`. A failed upload there prints an `error:` line and exits 1, so it fails the build. A new phase, `Upload Debug Symbols to Sentry`, uploads the dSYM files for every configuration that is not Debug. The generated `ios/sentry.properties` holds only the URL, organisation and project, and says the token comes from the `SENTRY_AUTH_TOKEN` environment variable, so the iOS build reads the same secret as Android. `SENTRY_DISABLE_AUTO_UPLOAD=true` skips both phases. Not confirmed from the plugin source: what `sentry-cli` does when the token is missing (that code is not in the plugin), whether a failed dSYM upload fails the build (the script prints `error:` but its exit status is that of its last command), and whether EAS passes the secret to an iOS build the way it does to Android.
 - **OTA updates.** The `EAS Update` step uploads only when `SENTRY_AUTH_TOKEN` is set, and publishes the update either way.
 
 Never paste a DSN or the token into an issue, a PR or a doc. The repository is public.

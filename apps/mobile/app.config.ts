@@ -5,9 +5,10 @@ import type { ConfigContext } from "expo/config";
 // exactly. The main app, `eas update` in CI and the fingerprint CI job all run without it.
 //
 // The development build (EAS profile `development`, which sets APP_VARIANT) gets its own Android
-// package and name so it installs beside the main app, and its variant in `extra`. iOS is left alone:
-// there are no iOS builds yet, and a new bundle identifier would need a new iOS OAuth client in Google
-// Cloud.
+// package and name so it installs beside the main app, and its variant in `extra`. The iOS bundle
+// identifier is left alone, because a second one would need a second iOS OAuth client in Google Cloud.
+// An iOS development build therefore shares `com.sojisoft.keylow` with the TestFlight build and only
+// the display name differs.
 export function withAppVariant<Config extends { android?: object; extra?: object }>(
   config: Config,
   appVariant: unknown,

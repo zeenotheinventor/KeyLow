@@ -8,9 +8,18 @@
 // edit to it does not make a JavaScript update incompatible with an installed build. Everything
 // else that reaches a native build (plugins, bundle identifier, scheme, icons) still counts.
 //
+// Skip the app version, the Android `versionCode` and the iOS `buildNumber`. A store build needs a
+// new number every time (`autoIncrement` in eas.json), and a release bumps `version`. A number on its
+// own changes no native code, so it must not make an over-the-air update incompatible with an
+// installed build.
+//
 // `sourceSkips` replaces the library default rather than adding to it, so the default skip
 // (package.json android/ios scripts that do not contain "run") is listed here as well.
 // Note that eas.json is hashed whole, so editing its env block also changes the fingerprint.
 module.exports = {
-  sourceSkips: ["ExpoConfigEASProject", "PackageJsonAndroidAndIosScriptsIfNotContainRun"],
+  sourceSkips: [
+    "ExpoConfigEASProject",
+    "ExpoConfigVersions",
+    "PackageJsonAndroidAndIosScriptsIfNotContainRun",
+  ],
 };

@@ -25,7 +25,6 @@ module.exports = {
     "<rootDir>/test/support/warmReactNative.ts",
     "<rootDir>/test/support/expoHapticsMock.ts",
     "<rootDir>/test/support/reanimatedWorkletsMock.ts",
-    "<rootDir>/test/support/nitroModulesMock.ts",
     "<rootDir>/test/support/skiaMock.ts",
     "<rootDir>/test/support/holdSplashScreenMock.ts",
     "<rootDir>/test/support/sentryMock.ts",

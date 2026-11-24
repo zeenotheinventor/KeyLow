@@ -9,7 +9,6 @@ describe("native libraries that ship before their milestones", () => {
     "@shopify/react-native-skia",
     "victory-native",
     "react-native-health-connect",
-    "@kingstinct/react-native-healthkit",
     "expo-application",
     "expo-device",
     "expo-localization",

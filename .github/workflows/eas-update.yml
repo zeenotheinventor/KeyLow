@@ -42,8 +42,8 @@
 #
 # EXPO_PUBLIC_SENTRY_DSN (KEY-278) is the exception: it is neither here nor in eas.json. It is an EAS
 # environment variable in the `production` environment on expo.dev. `eas update --environment production`
-# below reads it for the OTA bundle, and the `production-apk` profile in eas.json (`environment:
-# production`) reads it for the build, so the two cannot disagree. Without it, error reporting is off.
+# below reads it for the OTA bundle, and the `production` and `production-apk` profiles in eas.json
+# (`environment: production`) read it for the iOS store build and the Android APK, so they cannot disagree. Without it, error reporting is off.
 #
 # EXPO_PUBLIC_COMMIT_SHA is the commit the bundle was built from, shown on the
 # About screen (KEY-261). It is set here only, never in eas.json (which the
@@ -60,10 +60,12 @@
 # a new store build. An update published under a runtime version that no
 # installed build has is simply never delivered.
 #
-# Who receives it: the main Ki-Lo app, built with the `production-apk` profile in
-# apps/mobile/eas.json (package com.sojisoft.keylow, channel `production`). This job
-# runs without APP_VARIANT, as does that build, so both compute the same fingerprint
-# runtime version. The development build sets APP_VARIANT=development, gets a different
+# Who receives it: the main Ki-Lo app, in two builds. The Android APK comes from the `production-apk`
+# profile in apps/mobile/eas.json and the iOS store build (TestFlight) from the `production` profile, both
+# on channel `production` with bundle id and package com.sojisoft.keylow. `eas update` publishes for every
+# platform, and each build receives the update published under its own platform's runtime version, because
+# the iOS and Android fingerprints differ. This job runs without APP_VARIANT, as do those builds, so they
+# compute the same fingerprints. The development build sets APP_VARIANT=development, gets a different
 # package and fingerprint, and never receives these updates.
 #
 # Not verifiable before the secret exists and a real push to main happens.
