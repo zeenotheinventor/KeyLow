@@ -371,7 +371,10 @@ select ok(
 --   t-1   16:00 300 g (sixteen or later)   t-1   10:59 400 g (before eleven)
 --   t-89  15:59 500 g (eleven to sixteen, the oldest day inside the window)
 --   t-90  09:00 900 g (outside the window) t-2   09:00 900 g (soft deleted)
--- Food two: one entry at 04:00 local, which is 22:30 UTC the day before, so a timezone shows.
+-- Food two: one entry on t-1 at 04:00 local, which is 22:30 UTC the day before, so a timezone shows. It is
+-- dated t-1 and not t so that it stays inside the window after A moves to UTC at every hour the file can
+-- run. Between 18:30 and 24:00 UTC the Kolkata date is one day ahead of the UTC date, and an entry
+-- dated t would then be tomorrow in UTC and drop out of the view. The UTC date is t or t-1, never less.
 -- Recipe: two entries at 23:30 local, one of them with no resolved grams.
 -- A quick entry names nothing, so it has no row.
 create function pg_temp.at_local(day_offset integer, wall_clock time)
@@ -387,7 +390,7 @@ insert into public.food_log_entries (user_id, local_date, logged_at, item_type, 
   ('10230000-0000-4000-8000-00000000000a', (now() at time zone 'Asia/Kolkata')::date - 89, pg_temp.at_local(-89, '15:59'), 'food', '10230000-0000-4000-8000-000000000101', null, 1, 'g', 500, '{}', '{"kcal":1,"protein_g":1,"fat_g":1,"carbs_g":1,"fibre_g":1}', null),
   ('10230000-0000-4000-8000-00000000000a', (now() at time zone 'Asia/Kolkata')::date - 90, pg_temp.at_local(-90, '09:00'), 'food', '10230000-0000-4000-8000-000000000101', null, 1, 'g', 900, '{}', '{"kcal":1,"protein_g":1,"fat_g":1,"carbs_g":1,"fibre_g":1}', null),
   ('10230000-0000-4000-8000-00000000000a', (now() at time zone 'Asia/Kolkata')::date - 2, pg_temp.at_local(-2, '09:00'), 'food', '10230000-0000-4000-8000-000000000101', null, 1, 'g', 900, '{}', '{"kcal":1,"protein_g":1,"fat_g":1,"carbs_g":1,"fibre_g":1}', now()),
-  ('10230000-0000-4000-8000-00000000000a', (now() at time zone 'Asia/Kolkata')::date, pg_temp.at_local(0, '04:00'), 'food', '10230000-0000-4000-8000-000000000102', null, 1, 'g', 50, '{}', '{"kcal":1,"protein_g":1,"fat_g":1,"carbs_g":1,"fibre_g":1}', null),
+  ('10230000-0000-4000-8000-00000000000a', (now() at time zone 'Asia/Kolkata')::date - 1, pg_temp.at_local(-1, '04:00'), 'food', '10230000-0000-4000-8000-000000000102', null, 1, 'g', 50, '{}', '{"kcal":1,"protein_g":1,"fat_g":1,"carbs_g":1,"fibre_g":1}', null),
   ('10230000-0000-4000-8000-00000000000a', (now() at time zone 'Asia/Kolkata')::date, pg_temp.at_local(0, '23:30'), 'recipe', null, '10230000-0000-4000-8000-0000000000f1', 1, 'serving', 250, '{}', '{"kcal":1,"protein_g":1,"fat_g":1,"carbs_g":1,"fibre_g":1}', null),
   ('10230000-0000-4000-8000-00000000000a', (now() at time zone 'Asia/Kolkata')::date - 3, pg_temp.at_local(-3, '23:30'), 'recipe', null, '10230000-0000-4000-8000-0000000000f1', 1, 'serving', null, '{}', '{"kcal":1,"protein_g":1,"fat_g":1,"carbs_g":1,"fibre_g":1}', null),
   ('10230000-0000-4000-8000-00000000000a', (now() at time zone 'Asia/Kolkata')::date, pg_temp.at_local(0, '13:00'), 'quick', null, null, null, null, null, '{}', '{"kcal":1,"protein_g":1,"fat_g":1,"carbs_g":1,"fibre_g":1}', null),
@@ -500,7 +503,8 @@ select is(
 );
 
 -- A person who changes timezone sees their past entries re-banded: the same 04:00 Kolkata entry is
--- 22:30 UTC, which is the evening band in UTC.
+-- 22:30 UTC, which is the evening band in UTC. The entry is dated t-1 in Kolkata, so it is inside the UTC
+-- window whatever the hour.
 update public.profiles set timezone = 'UTC' where id = '10230000-0000-4000-8000-00000000000a';
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"10230000-0000-4000-8000-00000000000a","role":"authenticated"}';
