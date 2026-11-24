@@ -1,3 +1,5 @@
+import { isAuthApiError } from "@supabase/supabase-js";
+
 import { adminClient, anonClient } from "./stack";
 
 import type { Database } from "../../../src/types.gen";
@@ -51,14 +53,17 @@ export async function createTestUser(suite: string): Promise<TestUser> {
 
 /**
  * Deletes every user this file created and returns their ids. Their own rows (foods, portions,
- * profile) go with them (on delete cascade).
+ * profile) go with them (on delete cascade). A user the auth service no longer knows is already
+ * deleted, as one is when a suite deleted it through the delete-account function. Any other error throws.
  */
 export async function deleteCreatedTestUsers(): Promise<string[]> {
   const admin = adminClient();
   const ids = createdUserIds.splice(0);
 
   const results = await Promise.all(ids.map((id) => admin.auth.admin.deleteUser(id)));
-  const failed = results.find(({ error }) => error !== null);
+  const failed = results.find(
+    ({ error }) => error !== null && !(isAuthApiError(error) && error.code === "user_not_found"),
+  );
 
   if (failed?.error) {
     throw new Error("Could not delete a test user", { cause: failed.error });

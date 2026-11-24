@@ -249,6 +249,8 @@ export type {
   AssistantUndoResult,
 } from "./assistantConversations";
 export { AccountExportError, exportMyData, readMyDataByTable } from "./accountExport";
+export { AccountDeletionError, deleteMyAccount } from "./deleteAccount";
+export type { AccountDeletionErrorCode, AccountDeletionResult } from "./deleteAccount";
 export { createFeatureRequest, isDailyLimitFailure } from "./featureRequests";
 export {
   appendFreezeEvents,

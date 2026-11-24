@@ -1,6 +1,7 @@
 // Fixed-window rate limiting over the consume_rate_limit Postgres function. A function chooses its
 // buckets (per user from the verified caller, never from the request body) and its limits (from
-// env vars, read with `readLimit`).
+// env vars, read with `readLimit`). A per-user bucket name ends in `:<user id>`, because the trigger on
+// auth.users that purges a deleted user's buckets matches on that suffix (ADR 0003, Amendment 28).
 import { createServiceClient } from "./clients.ts";
 import { error } from "./http.ts";
 

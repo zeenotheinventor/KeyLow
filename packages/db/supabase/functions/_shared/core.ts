@@ -262,6 +262,8 @@ export {
   requireStats,
   applyRoutineChanges,
   routineFingerprint,
+  deleteAccountRequestSchema,
+  deleteAccountResponseSchema,
   runCheckinBackstopResponseSchema,
   runCheckinRecomputeResponseSchema,
   runCheckinRequestSchema,
