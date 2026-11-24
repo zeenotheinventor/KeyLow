@@ -34,6 +34,7 @@
     "production": {
       "extends": "base",
       "channel": "production",
+      "environment": "production",
       "autoIncrement": true
     },
     "production-apk": {

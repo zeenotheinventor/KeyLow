@@ -2,6 +2,7 @@ import { CAMERA_PERMISSION } from "@keylow/core/copy";
 import { themes } from "@keylow/tokens";
 
 import appJson from "../app.json";
+import packageJson from "../package.json";
 
 // Typed by hand because the app has no Node type definitions.
 const { existsSync, readFileSync } = jest.requireActual<{
@@ -115,24 +116,37 @@ describe("app.json", () => {
       expect(android.minSdkVersion).toBeGreaterThanOrEqual(26);
     });
 
-    it("should explain in plain words why the app reads Apple Health, in the app's own name", () => {
-      const reason = String(
-        pluginOptions("@kingstinct/react-native-healthkit")?.NSHealthShareUsageDescription,
+    it("should not include the HealthKit plugin, because no iOS code reads Apple Health yet", () => {
+      expect(plugins.map(pluginName)).not.toContain("@kingstinct/react-native-healthkit");
+    });
+
+    it("should not depend on a HealthKit library, so no HealthKit entitlement or usage text reaches the iOS build", () => {
+      const dependencyNames = Object.keys({
+        ...packageJson.dependencies,
+        ...packageJson.devDependencies,
+      });
+
+      expect(dependencyNames.filter((name) => name.toLowerCase().includes("healthkit"))).toEqual(
+        [],
       );
-
-      expect(reason).toContain("Ki-Lo");
-      expect(reason).toContain("weight");
-      expect(reason).not.toContain("KeyLow");
     });
 
-    it("should not claim the HealthKit background delivery entitlement, which the app has no use for yet", () => {
-      expect(pluginOptions("@kingstinct/react-native-healthkit")?.background).toBe(false);
+    it("should not depend on react-native-nitro-modules, which only the HealthKit library needed", () => {
+      expect(packageJson.dependencies).not.toHaveProperty("react-native-nitro-modules");
+    });
+  });
+
+  describe("iOS store build", () => {
+    it("should declare that the app uses no non-exempt encryption, so App Store Connect skips the export compliance question", () => {
+      expect(expo.ios.config.usesNonExemptEncryption).toBe(false);
     });
 
-    it("should not ask for permission to write to Apple Health, because the app only reads weight", () => {
-      expect(
-        pluginOptions("@kingstinct/react-native-healthkit")?.NSHealthUpdateUsageDescription,
-      ).toBe(false);
+    it("should not support iPad, because the app is portrait only and has no iPad layout", () => {
+      expect(expo.ios.supportsTablet).toBe(false);
+    });
+
+    it("should stay portrait only", () => {
+      expect(expo.orientation).toBe("portrait");
     });
   });
 

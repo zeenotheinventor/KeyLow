@@ -14,8 +14,11 @@
       "url": "https://u.expo.dev/cd8bec0b-6864-4b6f-97ef-e07d1a381b3a"
     },
     "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.sojisoft.keylow"
+      "supportsTablet": false,
+      "bundleIdentifier": "com.sojisoft.keylow",
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -74,14 +77,6 @@
           "android": {
             "minSdkVersion": 26
           }
-        }
-      ],
-      [
-        "@kingstinct/react-native-healthkit",
-        {
-          "NSHealthShareUsageDescription": "Ki-Lo reads your weight from Apple Health so your weigh-ins appear in your trend without typing them twice.",
-          "NSHealthUpdateUsageDescription": false,
-          "background": false
         }
       ],
       "expo-system-ui",

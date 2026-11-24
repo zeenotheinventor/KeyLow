@@ -8,7 +8,7 @@ Accepted when the pull request that carries it merges. Written on 2026-11-03 und
 
 Zee asked for widgets on the phone itself, outside the app: the dashboard cards (Today, This week, Body map) and quick logging. Zee approved the concept boards on 2026-11-03 ("I love all these"). They are on the canvas "Ki-Lo home screen widgets" and will be exported to `docs/design/widgets/` under KEY-800.
 
-Ki-Lo ships on Android only. `apps/mobile/app.config.ts` and `docs/runbooks/local-dev.md` both say there are no iOS builds yet. Concept C (lock screen widgets, a Live Activity and the Dynamic Island) exists only on iOS. Zee ruled: "Do A and B. Keep C in house keeping, mark it as a medium". So this brief builds concepts A and B on Android, and concept C plus every iOS widget moved to KEY-809.
+Ki-Lo ships on Android only. When this ADR was written there were no iOS builds (the first one is KEY-647). Concept C (lock screen widgets, a Live Activity and the Dynamic Island) exists only on iOS. Zee ruled: "Do A and B. Keep C in house keeping, mark it as a medium". So this brief builds concepts A and B on Android, and concept C plus every iOS widget moved to KEY-809.
 
 A widget is drawn by the phone's launcher, not by the app. It cannot run the app's React tree, so the data it shows has to be handed to it, and each tap either opens the app or runs a small handler. Those mechanics, and the privacy rules around them, are decisions every widget ticket would otherwise re-derive.
 
