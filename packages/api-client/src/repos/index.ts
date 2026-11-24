@@ -74,6 +74,7 @@ export type {
   SetupStats,
   SetupWeighIn,
 } from "./setup";
+export { requestPasswordReset, updatePassword } from "./accountPassword";
 export { acceptTerms, getMyTermsAcceptance } from "./terms";
 export { createRecipe, duplicateRecipe, setRecipeArchived, updateRecipe } from "./recipeWrites";
 export type { DuplicateRecipeInput, RecipeSave, RecipeUpdate } from "./recipeWrites";
