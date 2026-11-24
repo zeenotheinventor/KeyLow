@@ -3,8 +3,9 @@
  * the date the current wording took effect. A later version asks everyone to turn it on again. It is
  * separate from `TERMS_VERSION`, or every later change to the Terms would switch the assistant off.
  *
- * Moving it means moving `TERMS_VERSION` in `copy/legal.ts` when the Terms change too, and then the pins
- * in `test/copy/legal.test.ts` (the version and the "Last updated" line). The other tests read it from here.
+ * Moving it means moving `TERMS_VERSION` in `copy/legal.ts` when the Terms change too, and then the
+ * `TERMS_VERSION` pin in `test/copy/legal.test.ts`. The "Last updated" line follows `LEGAL_TEXT_UPDATED`
+ * and does not move with either version. The other tests read it from here.
  */
 export const ASSISTANT_CONSENT_VERSION = "2026-11-07";
 

@@ -4,11 +4,16 @@ import { MONTH_NAMES_LONG } from "./diaryDay";
  * The version of the Terms of Use and the Privacy Policy that people accept at sign-up. It is the date
  * the current wording took effect. A later version asks people to accept again.
  *
- * Moving it means moving the pins in `test/copy/legal.test.ts` (the version and the "Last updated" line).
+ * Moving it means moving the pin in `test/copy/legal.test.ts`. It is for acceptance only. The "Last updated"
+ * line comes from `LEGAL_TEXT_UPDATED`, so a change of wording can show a new date without asking anyone to
+ * accept again.
  * The assistant's own consent has a version of its own, `ASSISTANT_CONSENT_VERSION`, which does not move
  * with this one unless the assistant's words change too.
  */
 export const TERMS_VERSION = "2026-11-07";
+
+/** The day the words of the two documents last changed. The "Last updated" line shows it. */
+export const LEGAL_TEXT_UPDATED = "2026-11-25";
 
 /** The "Last updated" line under a document's title, from a version date such as `2026-10-15`. */
 export function describeLastUpdated(versionDate: string): string {
@@ -16,7 +21,7 @@ export function describeLastUpdated(versionDate: string): string {
   return `Last updated ${day} ${MONTH_NAMES_LONG[(month ?? 1) - 1]} ${year}`;
 }
 
-const LAST_UPDATED = describeLastUpdated(TERMS_VERSION);
+const LAST_UPDATED = describeLastUpdated(LEGAL_TEXT_UPDATED);
 
 /** The route paths of the two pages on the web app. */
 export const LEGAL_PATHS = {
@@ -169,7 +174,7 @@ export const PRIVACY_POLICY: LegalDocument = {
       heading: "How to use your rights",
       paragraphs: [
         `Email ${COMPANY_DETAILS.contactEmail} and say what you need.`,
-        `You export your information in the app, from More, under Export my data. Today, you delete it by emailing ${COMPANY_DETAILS.contactEmail}. In-app delete is on the way.`,
+        `You export your information in the app, from More, under Export my data. You delete your account in the app too: from More, under Account, choose Delete account. Deleting is immediate and permanent, and the screen offers Export my data first. If you cannot use the app, or you use the web app, email ${COMPANY_DETAILS.contactEmail} and ask for your account to be deleted.`,
       ],
     },
     {
@@ -229,7 +234,7 @@ export const TERMS: LegalDocument = {
       heading: "Ending your account",
       paragraphs: [
         "You can delete your account at any time.",
-        `Today, you delete your account by emailing ${COMPANY_DETAILS.contactEmail}. In-app delete is on the way. What happens to your information is in the Privacy Policy.`,
+        `You delete it in the Ki-Lo app: from More, under Account, choose Delete account. Deleting is immediate and permanent, and the screen offers to export your information first. If you cannot use the app, or you use the web app, email ${COMPANY_DETAILS.contactEmail} and ask for your account to be deleted. What happens to your information is in the Privacy Policy.`,
       ],
     },
     {
