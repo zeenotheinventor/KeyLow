@@ -44,3 +44,10 @@ pnpm-debug.log*
 /packages/db/data/
 e2e/
 /.github/
+
+# Left in a developer's checkout by tools, never part of the app. The desktop app keeps its session
+# worktrees under .claude/, which are whole copies of the repository, and a Supabase CLI run from the
+# repository root leaves supabase/.temp. Neither is tracked, so without these lines a build from such a
+# checkout uploads them (KEY-1109).
+/.claude/
+/supabase/
