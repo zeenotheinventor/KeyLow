@@ -477,6 +477,57 @@ describe("Banner", () => {
     });
   });
 
+  describe("success look, as the change password board draws it", () => {
+    it("should announce a success as a status", () => {
+      render(
+        <Banner tone="success" title="Password changed">
+          Use your new password next time you sign in.
+        </Banner>,
+      );
+
+      expect(screen.getByRole("status").textContent).toContain("Password changed");
+    });
+
+    it("should draw the success border and fill, and pad 16 across and 12 down as an error does", () => {
+      render(<Banner tone="success">Saved</Banner>);
+
+      const classes = classesOf(screen.getByRole("status"));
+      expect(classes).toContain("border-success");
+      expect(classes).toContain("bg-success-muted");
+      expect(classes).toContain("px-4");
+      expect(classes).toContain("py-3");
+    });
+
+    it("should colour the icon and set the title in the strong body weight in the primary ink", () => {
+      render(
+        <Banner tone="success" title="Password changed">
+          Use your new password next time you sign in.
+        </Banner>,
+      );
+
+      const status = screen.getByRole("status");
+      expect(status.querySelector("svg")?.getAttribute("aria-hidden")).toBe("true");
+      expect(classesOf(status.querySelector("svg")?.parentElement ?? status)).toContain(
+        "text-success",
+      );
+      const title = classesOf(screen.getByText("Password changed"));
+      expect(title).toContain("text-body-strong");
+      expect(title).toContain("text-text-primary");
+    });
+
+    it("should set the body under the title at caption size in the secondary ink", () => {
+      render(
+        <Banner tone="success" title="Password changed">
+          Use your new password next time you sign in.
+        </Banner>,
+      );
+
+      const body = classesOf(screen.getByText("Use your new password next time you sign in."));
+      expect(body).toContain("text-caption");
+      expect(body).toContain("text-text-secondary");
+    });
+  });
+
   describe("light mode", () => {
     it("should keep the review title in the primary text colour", () => {
       render(

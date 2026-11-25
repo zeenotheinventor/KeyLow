@@ -331,6 +331,63 @@ describe("More page", () => {
     ]);
   });
 
+  describe("Change password", () => {
+    const signedInWith = (appMetadata?: unknown) => {
+      getUser.mockResolvedValue({
+        data: { user: { email: "ada@example.com", app_metadata: appMetadata } },
+        error: null,
+      });
+    };
+
+    it("should sit between Export my data and Sign out for an account with a password", async () => {
+      signedInWith({ provider: "email", providers: ["email"] });
+      await renderPage();
+
+      const account = screen.getByRole("region", { name: "Account" });
+      expect(
+        within(account)
+          .getAllByRole("listitem")
+          .map((row) => row.textContent),
+      ).toEqual([
+        "Export my dataA file with everything in your account",
+        "Change password",
+        expect.stringContaining("Sign out"),
+      ]);
+    });
+
+    it("should open the Change password page, with a chevron and nothing else drawn", async () => {
+      signedInWith({ providers: ["email"] });
+      await renderPage();
+
+      const link = screen.getByRole("link", { name: "Change password" });
+      expect(link.getAttribute("href")).toBe("/more/change-password");
+      expect(link.querySelectorAll("svg")).toHaveLength(1);
+    });
+
+    it("should show for an account that signs in with a password and with Google", async () => {
+      signedInWith({ provider: "google", providers: ["google", "email"] });
+      await renderPage();
+
+      expect(screen.getByRole("link", { name: "Change password" })).toBeTruthy();
+    });
+
+    it("should not show for an account that signs in with Google only", async () => {
+      signedInWith({ provider: "google", providers: ["google"] });
+      await renderPage();
+
+      expect(screen.queryByRole("link", { name: "Change password" })).toBeNull();
+      const account = screen.getByRole("region", { name: "Account" });
+      expect(within(account).getAllByRole("listitem")).toHaveLength(2);
+    });
+
+    it("should not show when the account has no sign in metadata", async () => {
+      signedInWith(undefined);
+      await renderPage();
+
+      expect(screen.queryByRole("link", { name: "Change password" })).toBeNull();
+    });
+  });
+
   it("should show who is signed in under the Sign out button", async () => {
     await renderPage();
 
