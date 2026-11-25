@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>Delete account, the screen and its confirm step</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="/_blob/3a65f0c82c379c55348a70f3299ab6db">
+<link rel="stylesheet" href="/_blob/ee57beef133f250c657bb30799b71d1f">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div data-theme="{{theme}}" data-screen="DeleteAccountScreen" style="position: relative; width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; font-family: var(--font-sans); background: var(--background); color: var(--text-primary)">
+
+<header data-kilo="SheetHeader stack" style="flex-shrink: 0; display: flex; align-items: center; gap: var(--space-2); padding: 56px var(--space-4) var(--space-2)">
+<button data-kilo="IconButton ghost" type="button" aria-label="Back to More" style="width: 44px; height: 44px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; padding: 0; background: transparent; border: 0; border-radius: var(--radius-medium); color: var(--text-primary)"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg></button>
+<h1 class="t-bs" style="flex: 1; min-width: 0; margin: 0; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Delete account</h1>
+<span aria-hidden="true" style="width: 44px; height: 44px; flex-shrink: 0"></span>
+</header>
+
+<main data-kilo="ScrollView" style="flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: var(--space-4); padding: var(--space-1) var(--space-4) 0">
+
+<sc-if value="{{failed}}" hint-placeholder-val="{{ false }}">
+<div data-kilo="Banner error" role="alert" style="flex-shrink: 0; display: flex; align-items: flex-start; gap: var(--space-3); padding: var(--space-3) var(--space-4); background: var(--danger-muted); border: 1px solid var(--danger); border-radius: var(--radius-medium)">
+<span aria-hidden="true" style="display: flex; padding-top: 2px; color: var(--danger)"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" x2="12" y1="8" y2="12"></line><line x1="12" x2="12.01" y1="16" y2="16"></line></svg></span>
+<span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+<span class="t-bs">Your account was not deleted</span>
+<span class="t-cap c-sec">Nothing was removed. Try again or use email.</span>
+<a href="#email" data-kilo="Banner action" style="align-self: flex-start; min-height: var(--touch-target); display: inline-flex; align-items: center; margin: 0 calc(-1 * var(--space-2)) -10px; padding: 0 var(--space-2); font-size: var(--type-label-small-size); line-height: var(--type-label-small-line); font-weight: var(--type-label-small-weight); color: var(--text-primary); text-decoration: none">Email hello@sojisoft.com</a>
+</span>
+</div>
+</sc-if>
+
+<sc-if value="{{unconfirmed}}" hint-placeholder-val="{{ false }}">
+<div data-kilo="Banner review, announce" role="alert" style="flex-shrink: 0; display: flex; align-items: flex-start; gap: var(--space-3); padding: var(--space-3) var(--space-4); background: var(--warning-muted); border: 1px solid var(--warning); border-radius: var(--radius-medium)">
+<span aria-hidden="true" style="display: flex; padding-top: 2px; color: var(--warning)"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" x2="12" y1="8" y2="12"></line><line x1="12" x2="12.01" y1="16" y2="16"></line></svg></span>
+<span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+<span class="t-bs" style="color: var(--warning-ink)">Ki-Lo could not confirm the deletion</span>
+<span class="t-cap c-sec">Your account may already be deleted. Check your connection and try again.</span>
+</span>
+</div>
+</sc-if>
+
+<sc-if value="{{offline}}" hint-placeholder-val="{{ false }}">
+<div data-kilo="Banner offline" role="status" style="flex-shrink: 0; display: flex; align-items: flex-start; gap: var(--space-3); padding: var(--space-3); background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius-medium)">
+<span aria-hidden="true" style="display: flex; padding-top: 2px; color: var(--text-secondary)"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h.01"></path><path d="M8.5 16.429a5 5 0 0 1 7 0"></path><path d="M5 12.859a10 10 0 0 1 5.17-2.69"></path><path d="M19 12.859a10 10 0 0 0-2.007-1.523"></path><path d="M2 8.82a15 15 0 0 1 4.177-2.643"></path><path d="M22 8.82a15 15 0 0 0-11.288-3.764"></path><path d="m2 2 20 20"></path></svg></span>
+<span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+<span class="t-bs">You're offline</span>
+<span class="t-body c-sec">Deleting your account needs a connection.</span>
+</span>
+</div>
+</sc-if>
+
+<section data-kilo="Card" aria-label="What Ki-Lo deletes" class="kl-card" style="flex-shrink: 0; display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-4)">
+<h2 class="t-bs" style="margin: 0">What Ki-Lo deletes</h2>
+<ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column">
+<li class="t-body" style="display: flex; align-items: center; gap: var(--space-2)"><span aria-hidden="true" style="width: 4px; height: 4px; flex-shrink: 0; border-radius: var(--radius-pill); background: var(--text-muted)"></span>Your diary</li>
+<li class="t-body" style="display: flex; align-items: center; gap: var(--space-2)"><span aria-hidden="true" style="width: 4px; height: 4px; flex-shrink: 0; border-radius: var(--radius-pill); background: var(--text-muted)"></span>Your own foods and recipes</li>
+<li class="t-body" style="display: flex; align-items: center; gap: var(--space-2)"><span aria-hidden="true" style="width: 4px; height: 4px; flex-shrink: 0; border-radius: var(--radius-pill); background: var(--text-muted)"></span>Your weight and body measurements</li>
+<li class="t-body" style="display: flex; align-items: center; gap: var(--space-2)"><span aria-hidden="true" style="width: 4px; height: 4px; flex-shrink: 0; border-radius: var(--radius-pill); background: var(--text-muted)"></span>Your programme and targets</li>
+<li class="t-body" style="display: flex; align-items: center; gap: var(--space-2)"><span aria-hidden="true" style="width: 4px; height: 4px; flex-shrink: 0; border-radius: var(--radius-pill); background: var(--text-muted)"></span>Your training</li>
+<li class="t-body" style="display: flex; align-items: center; gap: var(--space-2)"><span aria-hidden="true" style="width: 4px; height: 4px; flex-shrink: 0; border-radius: var(--radius-pill); background: var(--text-muted)"></span>Your assistant conversations</li>
+<li class="t-body" style="display: flex; align-items: center; gap: var(--space-2)"><span aria-hidden="true" style="width: 4px; height: 4px; flex-shrink: 0; border-radius: var(--radius-pill); background: var(--text-muted)"></span>Your achievements</li>
+<li class="t-body" style="display: flex; align-items: center; gap: var(--space-2)"><span aria-hidden="true" style="width: 4px; height: 4px; flex-shrink: 0; border-radius: var(--radius-pill); background: var(--text-muted)"></span>What Ki-Lo keeps on this phone</li>
+</ul>
+<p class="t-cap c-mut" style="margin: 0">Error reports and what the assistant sent to Anthropic can stay with those services for up to 30 days.</p>
+</section>
+
+<div data-kilo="Banner review, sentence" role="note" style="flex-shrink: 0; display: flex; align-items: flex-start; gap: var(--space-3); padding: var(--space-3) var(--space-4); background: var(--warning-muted); border: 1px solid var(--warning); border-radius: var(--radius-medium)">
+<span aria-hidden="true" style="display: flex; padding-top: 2px; color: var(--warning)"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg></span>
+<span class="t-body" style="flex: 1; min-width: 0; color: var(--warning-ink)">Your account is deleted at once. This cannot be undone.</span>
+</div>
+
+<div data-kilo="GroupedList" class="kl-card" style="flex-shrink: 0; overflow: hidden">
+<button data-kilo="ListRow" type="button" aria-label="Export my data, Save a copy first" style="width: 100%; min-height: 56px; box-sizing: border-box; display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-3); background: transparent; border: 0; text-align: left; font-family: var(--font-sans); color: var(--text-primary)">
+<span aria-hidden="true" style="width: 36px; height: 36px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-small); background: var(--surface-raised); color: var(--text-secondary)"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"></path><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="m7 10 5 5 5-5"></path></svg></span>
+<span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span class="t-bs">Export my data</span><span class="t-cap c-mut">Save a copy first</span></span>
+<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; color: var(--text-muted)"><path d="m9 18 6-6-6-6"></path></svg>
+</button>
+</div>
+
+</main>
+
+<footer style="flex-shrink: 0; display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-3) var(--space-4) 34px">
+<sc-if value="{{canDelete}}" hint-placeholder-val="{{ true }}">
+<button data-kilo="Button destructive" type="button" class="kl-btn" style="width: 100%; background: var(--danger); border: 1px solid var(--danger); color: var(--text-on-status)">Delete account</button>
+</sc-if>
+<sc-if value="{{offline}}" hint-placeholder-val="{{ false }}">
+<button data-kilo="Button destructive, disabled" type="button" disabled="true" aria-disabled="true" class="kl-btn kl-disabled" style="width: 100%; background: var(--danger); border: 1px solid var(--danger); color: var(--text-on-status)">Delete account</button>
+</sc-if>
+<sc-if value="{{retry}}" hint-placeholder-val="{{ false }}">
+<button data-kilo="Button destructive" type="button" class="kl-btn" style="width: 100%; background: var(--danger); border: 1px solid var(--danger); color: var(--text-on-status)">Try again</button>
+</sc-if>
+<sc-if value="{{canKeep}}" hint-placeholder-val="{{ true }}">
+<button data-kilo="Button secondary" type="button" class="kl-btn kl-secondary" style="width: 100%">Keep my account</button>
+</sc-if>
+<sc-if value="{{unconfirmed}}" hint-placeholder-val="{{ false }}">
+<button data-kilo="Button secondary" type="button" class="kl-btn kl-secondary" style="width: 100%">Back to More</button>
+</sc-if>
+</footer>
+
+<sc-if value="{{isDialog}}" hint-placeholder-val="{{ false }}">
+<div data-kilo="ConfirmDialog dim" aria-hidden="true" style="position: absolute; top: 0; right: 0; bottom: 0; left: 0; background: var(--overlay)"></div>
+<div style="position: absolute; top: 0; right: 0; bottom: 0; left: 0; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; padding: 0 var(--space-6)">
+<div data-kilo="ConfirmDialog tone destructive" role="alertdialog" aria-modal="true" aria-label="{{dialogTitle}}" aria-busy="{{busy}}" style="display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-5); background: var(--surface-sheet); border: 1px solid var(--border); border-radius: var(--radius-large); box-shadow: var(--elevation-card)">
+<h2 class="t-h2" style="margin: 0">{{dialogTitle}}</h2>
+<p class="t-body c-sec" style="margin: 0">{{dialogBody}}</p>
+
+<sc-if value="{{hasField}}" hint-placeholder-val="{{ false }}">
+<div data-kilo="Input (new in the dialog)" style="display: flex; flex-direction: column; gap: var(--space-1)">
+<label for="{{fieldId}}" class="t-cap c-sec">Password</label>
+<div style="height: var(--control-height-md); box-sizing: border-box; display: flex; align-items: center; padding: 0 var(--space-4); background: var(--surface-raised); border: 1px solid {{fieldBorder}}; border-radius: var(--radius-medium)">
+<input id="{{fieldId}}" type="password" autocomplete="current-password" value="{{fieldValue}}" aria-invalid="{{fieldInvalid}}" onChange="{{noop}}" style="flex: 1; min-width: 0; height: 40px; padding: 0; border: 0; outline: none; background: transparent; font-family: var(--font-sans); font-size: var(--type-body-size); line-height: var(--type-body-line); color: var(--text-primary)">
+</div>
+<sc-if value="{{hasFieldError}}" hint-placeholder-val="{{ false }}"><span role="alert" class="t-cap" style="color: var(--danger)">That password is not right. Nothing was deleted.</span></sc-if>
+<div style="display: flex; justify-content: flex-end">
+<a href="#forgot" data-kilo="Link" style="min-height: var(--touch-target); display: inline-flex; align-items: center; padding: 0 var(--space-1); font-size: var(--type-body-size); line-height: var(--type-body-line); font-weight: 600; color: var(--text-primary); text-decoration: underline">Forgot password?</a>
+</div>
+</div>
+</sc-if>
+
+<div style="display: flex; flex-direction: column; gap: var(--space-2); margin-top: {{actionsGap}}">
+<sc-if value="{{idle}}" hint-placeholder-val="{{ true }}">
+<button data-kilo="Button secondary tone danger" type="button" class="kl-btn kl-secondary" style="width: 100%; color: var(--danger)">Delete account</button>
+<button data-kilo="Button primary" type="button" class="kl-btn kl-primary" style="width: 100%">Keep my account</button>
+</sc-if>
+<sc-if value="{{busy}}" hint-placeholder-val="{{ false }}">
+<button data-kilo="Button secondary tone danger, loading" type="button" aria-busy="true" class="kl-btn kl-secondary" style="position: relative; width: 100%; color: var(--danger)"><span style="visibility: hidden">Delete account</span><span data-kilo="ButtonSpinner" role="progressbar" aria-label="Deleting your account" style="position: absolute; width: 18px; height: 18px; box-sizing: border-box; border-radius: var(--radius-pill); border: 2px solid currentColor; border-right-color: transparent"></span></button>
+<button data-kilo="Button primary, disabled" type="button" disabled="true" aria-disabled="true" class="kl-btn kl-primary kl-disabled" style="width: 100%">Keep my account</button>
+</sc-if>
+</div>
+</div>
+</div>
+</sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"screenState":{"editor":"enum","options":["explain","explain-offline","confirm","confirm-password","confirm-password-wrong","deleting","failed","unconfirmed"],"default":"explain"},"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    // Colours, type, spacing and radius come from the Ki-Lo token stylesheet. data-theme picks dark or light.
+    // The Delete account screen (KEY-1117), pushed from the More row: SheetHeader stack, a Card, Banners and two
+    // footer Buttons, modelled on ExportMyDataScreen. The confirm is the shipped ConfirmDialog with tone destructive.
+    // explain and explain-offline are the screen. confirm is every account until KEY-1111 lands, and a Google account after.
+    // confirm-password and confirm-password-wrong are an email account after KEY-1111. deleting is the confirm while busy.
+    // failed is the screen after the server answered that nothing was deleted.
+    // unconfirmed is the screen after the connection dropped before the answer came, so the account may or may not be gone.
+    const theme = this.props.theme === 'light' ? 'light' : 'dark';
+    const st = this.props.screenState ?? 'explain';
+    const offline = st === 'explain-offline';
+    const failed = st === 'failed';
+    const unconfirmed = st === 'unconfirmed';
+    const busy = st === 'deleting';
+    const hasField = st === 'confirm-password' || st === 'confirm-password-wrong';
+    const wrong = st === 'confirm-password-wrong';
+    const isDialog = st === 'confirm' || hasField || busy;
+    const question = 'Everything in your account is deleted now. This cannot be undone.';
+    return {
+      theme, noop: () => {},
+      offline, failed, unconfirmed, retry: failed || unconfirmed,
+      canDelete: !offline && !failed && !unconfirmed, canKeep: !unconfirmed,
+      isDialog, busy, idle: !busy,
+      dialogTitle: busy ? 'Deleting your account' : 'Delete your account?',
+      dialogBody: busy ? 'This can take a moment. Keep Ki-Lo open.' : hasField ? question + ' Enter your password to confirm.' : question,
+      hasField, fieldId: 'delete-account-password-' + theme,
+      fieldValue: wrong ? 'correcthorse' : '',
+      fieldBorder: wrong ? 'var(--danger)' : 'var(--border)',
+      fieldInvalid: wrong ? 'true' : 'false',
+      hasFieldError: wrong,
+      actionsGap: hasField ? '0' : 'var(--space-2)'
+    };
+  }
+}
+</script>
+</body>
+</html>

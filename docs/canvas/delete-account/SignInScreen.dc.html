@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>Sign in, after an account was deleted</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="/_blob/3a65f0c82c379c55348a70f3299ab6db">
+<link rel="stylesheet" href="/_blob/ee57beef133f250c657bb30799b71d1f">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div data-theme="{{theme}}" data-screen="SignInScreen" style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; font-family: var(--font-sans); font-size: var(--type-body-size); line-height: var(--type-body-line); background: var(--background); color: var(--text-primary)">
+<form data-kilo="AuthForm" style="flex: 1; display: flex; flex-direction: column; justify-content: center; gap: var(--space-4); margin: 0; padding: 56px var(--space-6) 34px">
+
+<sc-if value="{{hasDeleted}}" hint-placeholder-val="{{ true }}">
+<div data-kilo="Banner success, sentence (new on this screen)" role="status" style="display: flex; align-items: flex-start; gap: var(--space-3); padding: var(--space-3); background: var(--success-muted); border: 1px solid var(--success); border-radius: var(--radius-medium)">
+<span aria-hidden="true" style="display: flex; padding-top: 2px; color: var(--success)"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg></span>
+<span style="flex: 1; min-width: 0; font-size: var(--type-body-size); line-height: var(--type-body-line); color: var(--success-ink)">Your account has been deleted.</span>
+</div>
+</sc-if>
+
+<div style="display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-2); margin-bottom: var(--space-2)">
+<img src="{{markUrl}}" alt="Ki-Lo" style="width: 64px; height: 64px; margin-bottom: var(--space-2)">
+<h1 style="margin: 0; font-size: var(--type-h1-size); line-height: var(--type-h1-line); font-weight: var(--type-h1-weight); letter-spacing: var(--type-h1-tracking)">Welcome back</h1>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: var(--space-1)">
+<label for="{{emailId}}" style="font-size: var(--type-caption-size); line-height: var(--type-caption-line); font-weight: var(--type-caption-weight); letter-spacing: var(--type-caption-tracking); color: var(--text-secondary)">Email</label>
+<div data-kilo="Input" style="height: var(--control-height-md); box-sizing: border-box; display: flex; align-items: center; padding: 0 var(--space-4); background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius-medium)">
+<input id="{{emailId}}" type="email" autocomplete="email" value="" onChange="{{noop}}" style="flex: 1; min-width: 0; height: 40px; padding: 0; border: 0; outline: none; background: transparent; font-family: var(--font-sans); font-size: var(--type-body-size); line-height: var(--type-body-line); color: var(--text-primary)">
+</div>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: var(--space-1)">
+<label for="{{passwordId}}" style="font-size: var(--type-caption-size); line-height: var(--type-caption-line); font-weight: var(--type-caption-weight); letter-spacing: var(--type-caption-tracking); color: var(--text-secondary)">Password</label>
+<div data-kilo="Input" style="height: var(--control-height-md); box-sizing: border-box; display: flex; align-items: center; padding: 0 var(--space-4); background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius-medium)">
+<input id="{{passwordId}}" type="password" autocomplete="current-password" value="" onChange="{{noop}}" style="flex: 1; min-width: 0; height: 40px; padding: 0; border: 0; outline: none; background: transparent; font-family: var(--font-sans); font-size: var(--type-body-size); line-height: var(--type-body-line); color: var(--text-primary)">
+</div>
+<div style="display: flex; justify-content: flex-end">
+<a href="#forgot" data-kilo="Link (KEY-1111)" style="min-height: var(--touch-target); display: inline-flex; align-items: center; padding: 0 var(--space-1); font-size: var(--type-body-size); line-height: var(--type-body-line); font-weight: 600; color: var(--text-primary); text-decoration: underline">Forgot password?</a>
+</div>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: var(--space-2); margin-top: var(--space-2)">
+<button data-kilo="Button primary" type="submit" style="height: var(--control-height-lg); display: flex; align-items: center; justify-content: center; background: var(--accent); border: 0; border-radius: var(--radius-medium); color: var(--accent-foreground); font-family: var(--font-sans); font-size: var(--type-body-strong-size); line-height: var(--type-body-strong-line); font-weight: var(--type-body-strong-weight); letter-spacing: var(--type-body-strong-tracking)">Sign in</button>
+<button data-kilo="Button secondary" type="button" style="height: var(--control-height-lg); display: flex; align-items: center; justify-content: center; gap: var(--space-3); background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius-medium); color: var(--text-primary); font-family: var(--font-sans); font-size: var(--type-body-strong-size); line-height: var(--type-body-strong-line); font-weight: var(--type-body-strong-weight); letter-spacing: var(--type-body-strong-tracking)"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 48 48" data-kilo="GoogleMark (brand asset)"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path></svg>Continue with Google</button>
+</div>
+
+<p style="margin: var(--space-2) 0 0; display: flex; align-items: center; justify-content: center; gap: var(--space-1); font-size: var(--type-body-size); line-height: var(--type-body-line); color: var(--text-secondary)">New to Ki-Lo?<a href="#create" style="min-height: var(--touch-target); display: inline-flex; align-items: center; padding: 0 var(--space-1); font-weight: 600; color: var(--text-primary); text-decoration: underline">Create account</a></p>
+</form>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"screenState":{"editor":"enum","options":["account-deleted","plain"],"default":"account-deleted"},"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    // Colours, type, spacing and radius come from the Ki-Lo token stylesheet. data-theme picks dark or light.
+    // The Sign in screen as the canvas "Ki-Lo password reset and change" draws it (PasswordScreen, sign-in-forgot),
+    // with empty fields. account-deleted adds one success Banner above the mark, straight after a deletion (KEY-1117).
+    // The Google mark keeps its own brand colours, as on that canvas.
+    const theme = this.props.theme === 'light' ? 'light' : 'dark';
+    const st = this.props.screenState ?? 'account-deleted';
+    return {
+      theme, noop: () => {},
+      hasDeleted: st !== 'plain',
+      markUrl: theme === 'light' ? '/_blob/20d95761b4318e2c5400c4ba03a7ce06' : '/_blob/0a7a83ee8abd097dab0b4a634c83ffa0',
+      emailId: 'sign-in-email-' + theme,
+      passwordId: 'sign-in-password-' + theme
+    };
+  }
+}
+</script>
+</body>
+</html>

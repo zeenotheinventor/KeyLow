@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>More, scrolled to Account, with the Delete account row</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="/_blob/3a65f0c82c379c55348a70f3299ab6db">
+<link rel="stylesheet" href="/_blob/ee57beef133f250c657bb30799b71d1f">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div data-theme="{{theme}}" data-screen="MoreScreen" style="position: relative; width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; font-family: var(--font-sans); background: var(--background); color: var(--text-primary)">
+<header data-kilo="ScreenHeader" style="flex-shrink: 0; padding: 56px var(--space-4) var(--space-3)"><h1 class="t-h1" style="margin: 0">More</h1></header>
+
+<div data-kilo="ScrollView, scrolled to the end" style="flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; padding: 0 var(--space-4) var(--space-4)">
+<div style="flex-shrink: 0; display: flex; flex-direction: column; gap: var(--space-4)">
+
+<section aria-label="Settings" style="flex-shrink: 0; display: flex; flex-direction: column; gap: var(--space-2)">
+<h2 class="t-bs" style="margin: 0; padding: 0 var(--space-1)">Settings</h2>
+<div data-kilo="GroupedList" class="kl-card" style="overflow: hidden">
+<div data-kilo="ListRow with a control under it" style="display: flex; flex-direction: column">
+<div style="display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-3) 0">
+<span aria-hidden="true" style="width: 36px; height: 36px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-small); background: var(--surface-raised); color: var(--text-secondary)"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polygon points="6 3 20 12 6 21 6 3"></polygon></svg></span>
+<span class="t-bs" style="flex: 1; min-width: 0">Exercise demos</span>
+</div>
+<div style="display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-3)">
+<div data-kilo="SegmentedControl" role="radiogroup" aria-label="Exercise demos" style="height: var(--control-height-md); box-sizing: border-box; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 3px; background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius-medium)">
+<button type="button" role="radio" aria-checked="true" style="display: flex; align-items: center; justify-content: center; padding: 0 var(--space-2); background: var(--text-primary); border: 0; border-radius: 9px; font-family: var(--font-sans); font-size: var(--type-label-small-size); line-height: var(--type-label-small-line); font-weight: var(--type-label-small-weight); color: var(--background)">Video</button>
+<button type="button" role="radio" aria-checked="false" style="display: flex; align-items: center; justify-content: center; padding: 0 var(--space-2); background: transparent; border: 0; border-radius: 9px; font-family: var(--font-sans); font-size: var(--type-label-small-size); line-height: var(--type-label-small-line); font-weight: var(--type-label-small-weight); color: var(--text-secondary)">Photos</button>
+<button type="button" role="radio" aria-checked="false" style="display: flex; align-items: center; justify-content: center; padding: 0 var(--space-2); background: transparent; border: 0; border-radius: 9px; font-family: var(--font-sans); font-size: var(--type-label-small-size); line-height: var(--type-label-small-line); font-weight: var(--type-label-small-weight); color: var(--text-secondary)">Both</button>
+</div>
+<span class="t-cap c-sec" style="padding: 0 var(--space-1)">Shows the form video. When an exercise has no video, its photos show instead.</span>
+</div>
+</div>
+<button data-kilo="ListRow" type="button" style="width: 100%; min-height: 56px; box-sizing: border-box; display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-3); background: transparent; border: 0; border-top: 1px solid var(--border); text-align: left; font-family: var(--font-sans); color: var(--text-primary)">
+<span aria-hidden="true" style="width: 36px; height: 36px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-small); background: var(--surface-raised); color: var(--text-secondary)"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></span>
+<span class="t-bs" style="flex: 1; min-width: 0">Reminders</span>
+<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; color: var(--text-muted)"><path d="m9 18 6-6-6-6"></path></svg>
+</button>
+<button data-kilo="ListRow" type="button" style="width: 100%; min-height: 56px; box-sizing: border-box; display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-3); background: transparent; border: 0; border-top: 1px solid var(--border); text-align: left; font-family: var(--font-sans); color: var(--text-primary)">
+<span aria-hidden="true" style="width: 36px; height: 36px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-small); background: var(--surface-raised); color: var(--text-secondary)"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path></svg></span>
+<span class="t-bs" style="flex: 1; min-width: 0">Achievements</span>
+<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; color: var(--text-muted)"><path d="m9 18 6-6-6-6"></path></svg>
+</button>
+<button data-kilo="ListRow with a Switch" type="button" role="switch" aria-checked="true" aria-label="Workout suggestions, Suggest a workout on Train for your planned days" style="width: 100%; min-height: 60px; box-sizing: border-box; display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-3); background: transparent; border: 0; border-top: 1px solid var(--border); text-align: left; font-family: var(--font-sans); color: var(--text-primary)">
+<span aria-hidden="true" style="width: 36px; height: 36px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-small); background: var(--surface-raised); color: var(--text-secondary)"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"></path><path d="M16 2v4"></path><rect width="18" height="18" x="3" y="4" rx="2"></rect><path d="M3 10h18"></path><path d="M8 14h.01"></path><path d="M12 14h.01"></path><path d="M16 14h.01"></path><path d="M8 18h.01"></path><path d="M12 18h.01"></path><path d="M16 18h.01"></path></svg></span>
+<span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span class="t-bs">Workout suggestions</span><span class="t-cap c-mut">Suggest a workout on Train for your planned days</span></span>
+<span data-kilo="Switch on" aria-hidden="true" style="position: relative; width: 44px; height: 26px; flex-shrink: 0; border-radius: var(--radius-pill); background: var(--accent)"><span style="position: absolute; top: 3px; left: 21px; width: 20px; height: 20px; border-radius: var(--radius-pill); background: var(--accent-foreground)"></span></span>
+</button>
+<button data-kilo="ListRow" type="button" style="width: 100%; min-height: 56px; box-sizing: border-box; display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-3); background: transparent; border: 0; border-top: 1px solid var(--border); text-align: left; font-family: var(--font-sans); color: var(--text-primary)">
+<span aria-hidden="true" style="width: 36px; height: 36px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-small); background: var(--surface-raised); color: var(--text-secondary)"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg></span>
+<span class="t-bs" style="flex: 1; min-width: 0">About</span>
+<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; color: var(--text-muted)"><path d="m9 18 6-6-6-6"></path></svg>
+</button>
+<button data-kilo="ListRow" type="button" aria-label="Request a feature, Tell us what Ki-Lo should do next" style="width: 100%; min-height: 56px; box-sizing: border-box; display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-3); background: transparent; border: 0; border-top: 1px solid var(--border); text-align: left; font-family: var(--font-sans); color: var(--text-primary)">
+<span aria-hidden="true" style="width: 36px; height: 36px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-small); background: var(--surface-raised); color: var(--text-secondary)"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path><path d="M13 8H7"></path><path d="M17 12H7"></path></svg></span>
+<span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span class="t-bs">Request a feature</span><span class="t-cap c-mut">Tell us what Ki-Lo should do next</span></span>
+<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; color: var(--text-muted)"><path d="m9 18 6-6-6-6"></path></svg>
+</button>
+</div>
+</section>
+
+<section aria-label="Account" style="flex-shrink: 0; display: flex; flex-direction: column; gap: var(--space-2)">
+<h2 class="t-bs" style="margin: 0; padding: 0 var(--space-1)">Account</h2>
+<div data-kilo="GroupedList" class="kl-card" style="overflow: hidden">
+<button data-kilo="ListRow" type="button" aria-label="Export my data, A file with everything in your account" style="width: 100%; min-height: 56px; box-sizing: border-box; display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-3); background: transparent; border: 0; text-align: left; font-family: var(--font-sans); color: var(--text-primary)">
+<span aria-hidden="true" style="width: 36px; height: 36px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-small); background: var(--surface-raised); color: var(--text-secondary)"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"></path><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="m7 10 5 5 5-5"></path></svg></span>
+<span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span class="t-bs">Export my data</span><span class="t-cap c-mut">A file with everything in your account</span></span>
+<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; color: var(--text-muted)"><path d="m9 18 6-6-6-6"></path></svg>
+</button>
+<button data-kilo="ListRow" type="button" style="width: 100%; min-height: 56px; box-sizing: border-box; display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-3); background: transparent; border: 0; border-top: 1px solid var(--border); text-align: left; font-family: var(--font-sans); color: var(--text-primary)">
+<span aria-hidden="true" style="width: 36px; height: 36px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-small); background: var(--surface-raised); color: var(--text-secondary)"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" x2="9" y1="12" y2="12"></line></svg></span>
+<span class="t-bs" style="flex: 1; min-width: 0">Sign out</span>
+</button>
+<sc-if value="{{hasDeleteRow}}" hint-placeholder-val="{{ true }}">
+<div style="border-top: 1px solid var(--border)">
+<button data-kilo="ListRow titleTone danger (new row)" type="button" style="width: 100%; min-height: 56px; box-sizing: border-box; display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-3); background: transparent; border: 0; outline: 2px dashed var(--accent); outline-offset: -3px; border-radius: var(--radius-large); text-align: left; font-family: var(--font-sans); color: var(--text-primary)">
+<span aria-hidden="true" style="width: 36px; height: 36px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-small); background: var(--surface-raised); color: var(--text-secondary)"><svg data-kilo="Icon Trash2" aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path><line x1="10" x2="10" y1="11" y2="17"></line><line x1="14" x2="14" y1="11" y2="17"></line></svg></span>
+<span class="t-bs" style="flex: 1; min-width: 0; color: var(--danger)">Delete account</span>
+<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; color: var(--text-muted)"><path d="m9 18 6-6-6-6"></path></svg>
+</button>
+</div>
+</sc-if>
+</div>
+</section>
+
+</div>
+</div>
+
+<nav data-kilo="MainTabBar" aria-label="Main" style="flex-shrink: 0; position: relative; height: 83px; box-sizing: border-box; padding-bottom: 34px; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); background: var(--surface); border-top: 1px solid var(--border)">
+<span aria-hidden="true" style="position: absolute; top: -1px; left: 80%; width: 20%; height: 2px; display: flex; justify-content: center"><span style="width: 28px; height: 2px; border-radius: 1px; background: var(--accent); transform: skewX(-20deg)"></span></span>
+<a href="#dashboard" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; text-decoration: none; color: var(--text-muted); font-size: 10px; line-height: 12px; font-weight: 500"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"></rect><rect width="7" height="5" x="14" y="3" rx="1"></rect><rect width="7" height="9" x="14" y="12" rx="1"></rect><rect width="7" height="5" x="3" y="16" rx="1"></rect></svg>Dashboard</a>
+<a href="#diary" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; text-decoration: none; color: var(--text-muted); font-size: 10px; line-height: 12px; font-weight: 500"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"></path><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"></path></svg>Diary</a>
+<div style="display: flex; align-items: center; justify-content: center"><button data-kilo="Button primary" type="button" aria-label="Find food" style="width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; padding: 0; background: var(--accent); border: 0; border-radius: var(--radius-pill); color: var(--accent-foreground); box-shadow: var(--elevation-card)"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg></button></div>
+<a href="#train" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; text-decoration: none; color: var(--text-muted); font-size: 10px; line-height: 12px; font-weight: 500"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14.4 14.4 9.6 9.6"></path><path d="M18.657 21.485a2 2 0 1 1-2.829-2.828l-1.767 1.768a2 2 0 1 1-2.829-2.829l6.364-6.364a2 2 0 1 1 2.829 2.829l-1.768 1.767a2 2 0 1 1 2.828 2.829z"></path><path d="m21.5 21.5-1.4-1.4"></path><path d="M3.9 3.9 2.5 2.5"></path><path d="M6.404 12.768a2 2 0 1 1-2.829-2.829l1.768-1.767a2 2 0 1 1-2.828-2.829l2.828-2.828a2 2 0 1 1 2.829 2.828l1.767-1.768a2 2 0 1 1 2.829 2.829z"></path></svg>Train</a>
+<a href="#more" aria-current="page" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; text-decoration: none; color: var(--text-primary); font-size: 10px; line-height: 12px; font-weight: 600"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>More</a>
+</nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"screenState":{"editor":"enum","options":["delete-account-row","today"],"default":"delete-account-row"},"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    // Colours, type, spacing and radius come from the Ki-Lo token stylesheet. data-theme picks dark or light.
+    // More as it ships (apps/mobile/app/(tabs)/more/index.tsx), scrolled to the end so the Account group shows.
+    // Food, Nutrition, Body and the top of Settings are above the fold. The Settings rows in view are the shipped ones.
+    // delete-account-row adds the new row, last in Account, after Sign out (KEY-1117). today is Account as it ships now.
+    const theme = this.props.theme === 'light' ? 'light' : 'dark';
+    const st = this.props.screenState ?? 'delete-account-row';
+    return { theme, hasDeleteRow: st !== 'today' };
+  }
+}
+</script>
+</body>
+</html>
