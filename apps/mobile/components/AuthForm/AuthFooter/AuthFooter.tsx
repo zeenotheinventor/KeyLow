@@ -3,6 +3,7 @@ import { Pressable, Text as NativeText, View } from "react-native";
 
 import { useTheme } from "../../../lib/theme";
 import { Text } from "../../ui";
+import { AuthLink } from "../AuthLink";
 
 import type { AuthFooterProps } from "./types";
 
@@ -11,7 +12,7 @@ import type { AuthFooterProps } from "./types";
  * because a class on the link's own text is not read on a device. The caption size draws the link in the
  * accent ink as the checkbox links are: lime in dark and the primary text colour in light.
  */
-export function AuthFooter({ footer, size = "body" }: AuthFooterProps) {
+export function AuthFooter({ footer, size = "body", onPress }: AuthFooterProps) {
   const { scheme } = useTheme();
   const inkClassName = scheme === "dark" ? "text-accent" : "text-text-primary";
 
@@ -20,21 +21,23 @@ export function AuthFooter({ footer, size = "body" }: AuthFooterProps) {
       <Text tone="secondary" variant={size === "caption" ? "caption" : "body"}>
         {footer.prompt}
       </Text>
-      <Link asChild href={footer.href}>
-        <Pressable className="min-h-touch-target justify-center px-1" role="link">
+      {onPress === undefined ? (
+        <Link asChild href={footer.href}>
           {size === "caption" ? (
-            <NativeText
-              className={`text-caption font-medium tabular-nums underline ${inkClassName}`}
-            >
-              {footer.linkLabel}
-            </NativeText>
+            <Pressable className="min-h-touch-target justify-center px-1" role="link">
+              <NativeText
+                className={`text-caption font-medium tabular-nums underline ${inkClassName}`}
+              >
+                {footer.linkLabel}
+              </NativeText>
+            </Pressable>
           ) : (
-            <Text className="underline" variant="body-strong">
-              {footer.linkLabel}
-            </Text>
+            <AuthLink label={footer.linkLabel} />
           )}
-        </Pressable>
-      </Link>
+        </Link>
+      ) : (
+        <AuthLink label={footer.linkLabel} onPress={onPress} />
+      )}
     </View>
   );
 }

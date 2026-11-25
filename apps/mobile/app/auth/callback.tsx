@@ -3,6 +3,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 
 import { LinkNotValid } from "../../components/LinkNotValid";
+import { ResetLinkNotValid } from "../../components/ResetLinkNotValid";
 import { SigningInLink } from "../../components/SigningInLink";
 import { completeAuthLink } from "../../lib/authLink";
 import { clearRecoveryRequest, readRecoveryRequestedAt } from "../../lib/recoveryRequest";
@@ -30,7 +31,7 @@ export default function AuthCallbackRoute() {
     token_hash?: string;
     type?: string;
   }>();
-  const [hasFailed, setHasFailed] = useState(false);
+  const [failure, setFailure] = useState<"resetLink" | "signInLink" | undefined>(undefined);
   const hasStarted = useRef(false);
 
   useEffect(() => {
@@ -47,23 +48,35 @@ export default function AuthCallbackRoute() {
           case "home":
             router.replace("/(tabs)/dashboard");
             break;
-          // The two cases below are interim: a reset link signs the person in and opens the dashboard, and a
-          // failed reset link shows the ordinary link error. The set new password and reset link error
-          // screens each replace one line.
+          // Interim: a reset link signs the person in and opens the dashboard. The set new password screen
+          // replaces this line.
           case "setNewPassword":
             router.replace("/(tabs)/dashboard");
             break;
           case "resetLinkInvalid":
-            setHasFailed(true);
+            setFailure("resetLink");
             break;
           case "signInLinkInvalid":
-            setHasFailed(true);
+            setFailure("signInLink");
             break;
         }
       });
   }, [code, tokenHash, type, router]);
 
-  return hasFailed ? (
+  if (failure === "resetLink") {
+    return (
+      <ResetLinkNotValid
+        onBackToSignIn={() => {
+          router.replace("/(auth)/sign-in");
+        }}
+        onSendNewLink={() => {
+          router.replace("/(auth)/forgot-password");
+        }}
+      />
+    );
+  }
+
+  return failure === "signInLink" ? (
     <LinkNotValid
       onBackToSignIn={() => {
         router.replace("/(auth)/sign-in");
