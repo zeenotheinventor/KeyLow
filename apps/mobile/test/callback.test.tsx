@@ -178,19 +178,19 @@ describe("auth callback route", () => {
   });
 
   describe("when the link is a password reset", () => {
-    it("should clear the reset request marker and go to the dashboard", async () => {
+    it("should clear the reset request marker and go to set a new password", async () => {
       mockStorageItems.set(recoveryRequestStorageKey, String(Date.now()));
       routerMock.searchParams = { token_hash: "hash", type: "recovery" };
 
       await renderAuthScreen(<CallbackRoute />);
 
       await waitFor(() => {
-        expect(routerMock.replace).toHaveBeenCalledWith("/(tabs)/dashboard");
+        expect(routerMock.replace).toHaveBeenCalledWith("/auth/set-password");
       });
       expect(mockStorageItems.has(recoveryRequestStorageKey)).toBe(false);
     });
 
-    it("should go to the dashboard for a PKCE code that began as a reset request", async () => {
+    it("should go to set a new password for a PKCE code that began as a reset request", async () => {
       mockSupabaseClient.auth.exchangeCodeForSession.mockResolvedValue({
         data: { redirectType: "recovery" },
         error: null,
@@ -200,7 +200,7 @@ describe("auth callback route", () => {
       await renderAuthScreen(<CallbackRoute />);
 
       await waitFor(() => {
-        expect(routerMock.replace).toHaveBeenCalledWith("/(tabs)/dashboard");
+        expect(routerMock.replace).toHaveBeenCalledWith("/auth/set-password");
       });
     });
   });
