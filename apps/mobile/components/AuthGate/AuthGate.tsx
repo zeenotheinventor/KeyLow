@@ -14,6 +14,7 @@ import { AchievementCelebration } from "../AchievementCelebration";
 import { CheckinRunner } from "../CheckinRunner";
 import { DeviceTimeZoneSync } from "../DeviceTimeZoneSync";
 import { HealthImportRunner } from "../HealthImportRunner";
+import { PendingAccountDeletion } from "../PendingAccountDeletion";
 import { ReminderScheduler } from "../ReminderScheduler";
 import { ReminderTapRouting } from "../ReminderTapRouting";
 import { SessionCover } from "../SessionCover";
@@ -154,6 +155,8 @@ export function AuthGate({ children, readStoredUserId = readNoStoredUserId }: Au
         {children}
       </View>
       {isSessionLoaded ? null : <SessionCover />}
+      {/* Outside the signed in group: a deletion left unfinished often has no session left to mount under. */}
+      <PendingAccountDeletion />
       {isSessionLoaded && isSignedIn ? (
         <>
           <TermsGate onStateChange={setTermsGateState} />

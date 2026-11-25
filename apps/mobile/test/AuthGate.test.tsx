@@ -7,6 +7,11 @@ import { AppState, Text } from "react-native";
 
 import { AuthGate } from "../components/AuthGate";
 import {
+  announceAccountDeleted,
+  hasAccountDeletedNotice,
+  takeAccountDeletedNotice,
+} from "../lib/accountDeletion/accountDeletedNotice";
+import {
   getCelebrationState,
   getQueuedIds,
   recordCelebrations,
@@ -59,6 +64,10 @@ jest.mock("@react-native-async-storage/async-storage", () => ({
     getItem: (key: string) => Promise.resolve(mockStorageItems.get(key) ?? null),
     setItem: (key: string, value: string) => {
       mockStorageItems.set(key, value);
+      return Promise.resolve();
+    },
+    removeItem: (key: string) => {
+      mockStorageItems.delete(key);
       return Promise.resolve();
     },
   },
@@ -614,5 +623,28 @@ describe("AuthGate", () => {
     await screen.unmount();
 
     expect(unsubscribeMock).toHaveBeenCalled();
+  });
+
+  it("should finish an account deletion left unfinished, with nobody signed in", async () => {
+    mockStorageItems.set("account.deletionPending", "11111111-1111-4111-8111-111111111111");
+
+    await renderGate();
+
+    await waitFor(() => {
+      expect(mockStorageItems.has("account.deletionPending")).toBe(false);
+    });
+  });
+
+  it("should leave the account deleted notice waiting when the session ends", async () => {
+    announceAccountDeleted();
+    await renderGate();
+
+    await act(async () => {
+      emitAuthStateChange("SIGNED_OUT", null);
+      await Promise.resolve();
+    });
+
+    expect(hasAccountDeletedNotice()).toBe(true);
+    takeAccountDeletedNotice();
   });
 });
