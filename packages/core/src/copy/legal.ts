@@ -155,7 +155,8 @@ export const PRIVACY_POLICY: LegalDocument = {
       paragraphs: [
         "Your information is kept until you delete your account. After that, it is deleted.",
         "Your assistant conversations are kept until you delete them or delete your account. You can delete them in More, under Assistant. The list of changes the assistant has made for you is kept until you delete your account.",
-        "The exceptions are error reports, which Sentry keeps for 30 days, and what the assistant sent to Anthropic, which Anthropic keeps for up to 30 days. Both can outlast a deleted account, and Anthropic's copy can outlast a deleted conversation, by up to 30 days. Anthropic can keep its copy longer only to enforce its usage policy or where the law requires it.",
+        "The main exceptions are error reports, which Sentry keeps for 30 days, and what the assistant sent to Anthropic, which Anthropic keeps for up to 30 days. Both can outlast a deleted account, and Anthropic's copy can outlast a deleted conversation, by up to 30 days. Anthropic can keep its copy longer only to enforce its usage policy or where the law requires it.",
+        "Supabase also keeps a record of each sign-up and sign-in in its own logs, including your email address and the IP address you used. That record can outlast a deleted account by up to 7 days, and Ki-Lo cannot remove it sooner.",
       ],
     },
     {
@@ -174,7 +175,7 @@ export const PRIVACY_POLICY: LegalDocument = {
       heading: "How to use your rights",
       paragraphs: [
         `Email ${COMPANY_DETAILS.contactEmail} and say what you need.`,
-        `You export your information in the app, from More, under Export my data. You delete your account in the app too: from More, under Account, choose Delete account. Deleting is immediate and permanent, and the screen offers Export my data first. If you cannot use the app, or you use the web app, email ${COMPANY_DETAILS.contactEmail} and ask for your account to be deleted.`,
+        `You export your information in the app, from More, under Export my data. You delete your account in the app too: from More, under Account, choose Delete account. Deleting is immediate and permanent, and the screen offers Export my data first. A few copies held by the services Ki-Lo uses can last longer, usually by up to 30 days, as set out under How long it is kept. If you cannot use the app, or you use the web app, email ${COMPANY_DETAILS.contactEmail} and ask for your account to be deleted.`,
       ],
     },
     {
@@ -190,7 +191,7 @@ export const PRIVACY_POLICY: LegalDocument = {
     {
       heading: "Changes to this policy",
       paragraphs: [
-        "If this policy changes, the new version is dated. You will be asked to accept it again.",
+        "If this policy changes in a way that matters to you, the new version is dated and you will be asked to accept it again. A change that only adds to what you can do, or makes the wording clearer without changing what it means, is dated without asking.",
       ],
     },
     {
@@ -240,7 +241,7 @@ export const TERMS: LegalDocument = {
     {
       heading: "Changes to Ki-Lo and these terms",
       paragraphs: [
-        `${COMPANY_DETAILS.name} may change or stop Ki-Lo. It may also change these terms. If it does, the new version is dated and you will be asked to accept it again.`,
+        `${COMPANY_DETAILS.name} may change or stop Ki-Lo. It may also change these terms. If it changes them in a way that matters to you, the new version is dated and you will be asked to accept it again. A change that only adds to what you can do, or makes the wording clearer without changing what it means, is dated without asking.`,
       ],
     },
     {
