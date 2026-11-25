@@ -160,8 +160,8 @@ export function DeleteAccountScreen() {
             <View className="gap-0" role="list">
               {copy.card.items.map((item) => (
                 <View key={item} className="flex-row items-center gap-2" role="listitem">
-                  <View aria-hidden className="h-1 w-1 rounded-pill bg-text-muted" />
-                  <Text>{item}</Text>
+                  <View aria-hidden className="h-1 w-1 shrink-0 rounded-pill bg-text-muted" />
+                  <Text className="flex-1">{item}</Text>
                 </View>
               ))}
             </View>
