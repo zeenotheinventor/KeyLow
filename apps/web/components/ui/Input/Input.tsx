@@ -35,6 +35,7 @@ function Field({
   helper,
   error,
   labelHint,
+  labelAction,
   invalid,
   describedBy: extraDescribedBy,
   disabled,
@@ -75,14 +76,17 @@ function Field({
 
   return (
     <div className="flex flex-col gap-1">
-      {hint === undefined ? (
+      {hint === undefined && labelAction === undefined ? (
         labelElement
       ) : (
-        <div className="flex justify-between gap-1">
+        <div className="flex items-baseline justify-between gap-1">
           {labelElement}
-          <span id={hintId} className={cn("text-caption text-text-muted", mutedWhenDisabled)}>
-            {hint}
-          </span>
+          {hint !== undefined && (
+            <span id={hintId} className={cn("text-caption text-text-muted", mutedWhenDisabled)}>
+              {hint}
+            </span>
+          )}
+          {labelAction}
         </div>
       )}
       {children({
@@ -115,6 +119,7 @@ function TextField({
   helper,
   error,
   labelHint,
+  labelAction,
   invalid,
   describedBy,
   trailingIcon: TrailingIcon,
@@ -129,6 +134,7 @@ function TextField({
       helper={helper}
       error={error}
       labelHint={labelHint}
+      labelAction={labelAction}
       invalid={invalid}
       describedBy={describedBy}
       disabled={disabled}

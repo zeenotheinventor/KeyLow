@@ -91,8 +91,7 @@ async function completeSignIn(request: NextRequest): Promise<AuthLinkResult> {
   return { kind: "failed" };
 }
 
-// The two interim destinations, `setNewPassword` and `resetLinkInvalid`, are each one line to change
-// when their pages exist.
+// The interim destination `setNewPassword` is one line to change when its page exists.
 function redirectFor(request: NextRequest, result: AuthLinkResult) {
   const { searchParams, origin } = request.nextUrl;
   const destination = authLinkDestination({
@@ -110,7 +109,7 @@ function redirectFor(request: NextRequest, result: AuthLinkResult) {
       // A reset link must not carry the person anywhere else, so `next` is ignored.
       return NextResponse.redirect(new URL("/dashboard", origin));
     case "resetLinkInvalid":
-      return NextResponse.redirect(new URL("/login?error=recovery-link", origin));
+      return NextResponse.redirect(new URL("/forgot-password/link-not-valid", origin));
     case "signInLinkInvalid":
       return NextResponse.redirect(new URL("/login?error=callback", origin));
   }

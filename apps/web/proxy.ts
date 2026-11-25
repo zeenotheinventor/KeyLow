@@ -20,7 +20,7 @@ const PROTECTED_PATHS = [
 ];
 
 // A signed in user has no use for these pages.
-const AUTH_PATHS = ["/login", "/sign-up"];
+const AUTH_PATHS = ["/login", "/sign-up", "/forgot-password"];
 
 function isProtectedPath(pathname: string) {
   return PROTECTED_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));

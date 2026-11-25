@@ -3,6 +3,7 @@ export const storyStates = [
   "Filled",
   "WithHelper",
   "WithLabelHint",
+  "WithLabelAction",
   "Focused",
   "WithError",
   "Disabled",

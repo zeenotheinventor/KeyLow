@@ -80,6 +80,20 @@ export const allowlist: AllowlistEntry[] = [
   },
   {
     rule: "light-mode-coloured-text",
+    path: "apps/web/components/auth/AuthMessageCard/AuthMessageCard.tsx",
+    detail: "text-danger",
+    reason:
+      "The reset-link-error tile's icon glyph, which is aria-hidden and not text. The boards (canvas \"Ki-Lo password reset and change\", approved 2026-11-25, KEY-1112, copied to docs/canvas/password-reset/ by KEY-1130) draw the glyph in the danger colour in the light frames too. The card's words stay in text-text-primary and text-text-secondary. If the design is ever changed so the glyph is not coloured in light, change the component and delete this entry.",
+  },
+  {
+    rule: "light-mode-coloured-text",
+    path: "apps/web/components/auth/AuthMessageCard/AuthMessageCard.tsx",
+    detail: "text-success",
+    reason:
+      "The set-new-password-saved tile's icon glyph, which is aria-hidden and not text. The boards (canvas \"Ki-Lo password reset and change\", approved 2026-11-25, KEY-1112, copied to docs/canvas/password-reset/ by KEY-1130) draw the glyph in the success colour in the light frames too. The card's words stay in text-text-primary and text-text-secondary. If the design is ever changed so the glyph is not coloured in light, change the component and delete this entry.",
+  },
+  {
+    rule: "light-mode-coloured-text",
     path: "apps/web/components/ui/EmptyState/EmptyState.tsx",
     detail: "text-danger",
     reason:

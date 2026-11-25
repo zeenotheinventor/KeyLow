@@ -31,6 +31,20 @@ export const WithHelper: Story = { args: { helper: "As it appears on the pack" }
 // The hint sits beside the label and is read as part of the field's description.
 export const WithLabelHint: Story = { args: { labelHint: "Required" } };
 
+// The action sits at the end of the label's row, outside the label, so it is not part of the field's name.
+export const WithLabelAction: Story = {
+  args: {
+    label: "Password",
+    type: "password",
+    placeholder: "",
+    labelAction: (
+      <a href="/forgot-password" className="text-caption font-semibold text-accent-ink underline">
+        Forgot password?
+      </a>
+    ),
+  },
+};
+
 // Focus is real: the play function tabs onto the field, so the accent border shows. The ring joins
 // it in the light theme.
 export const Focused: Story = {

@@ -270,6 +270,35 @@ describe("TextField", () => {
     });
   });
 
+  describe("label action", () => {
+    it("should draw the action after the label", () => {
+      render(<TextField label="Password" labelAction={<a href="/forgot-password">Forgot?</a>} />);
+
+      const label = screen.getByText("Password");
+      const action = screen.getByRole("link", { name: "Forgot?" });
+
+      expect(label.compareDocumentPosition(action) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    it("should keep the action out of the label element", () => {
+      render(<TextField label="Password" labelAction={<a href="/forgot-password">Forgot?</a>} />);
+
+      expect(screen.getByText("Password").contains(screen.getByRole("link"))).toBe(false);
+    });
+
+    it("should leave the action out of the field's name", () => {
+      render(<TextField label="Password" labelAction={<a href="/forgot-password">Forgot?</a>} />);
+
+      expect(screen.getByRole("textbox", { name: "Password" })).toBeTruthy();
+    });
+
+    it("should draw nothing extra without an action", () => {
+      render(<TextField label="Password" />);
+
+      expect(screen.queryByRole("link")).toBeNull();
+    });
+  });
+
   describe("trailing icon", () => {
     it("should draw a decorative icon after the input", () => {
       render(<TextField label="Barcode" trailingIcon={Lock} />);
