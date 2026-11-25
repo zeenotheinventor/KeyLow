@@ -4,6 +4,7 @@ import { resetRouterMock, routerMock } from "./support/expoRouterMock";
 import { renderAuthScreen } from "./support/renderAuthScreen";
 import { resetSupabaseMock, mockSupabaseClient } from "./support/supabaseMock";
 import CallbackRoute from "../app/auth/callback";
+import { takeForgotPasswordEmail } from "../lib/forgotPasswordEmail";
 import { recoveryRequestStorageKey } from "../lib/recoveryRequest";
 
 const mockStorageItems = new Map<string, string>();
@@ -213,19 +214,48 @@ describe("auth callback route", () => {
       routerMock.searchParams = { code: "stale" };
     });
 
-    it("should say the link is not valid when a reset was requested a moment ago", async () => {
-      mockStorageItems.set(recoveryRequestStorageKey, String(Date.now()));
+    describe("and a reset was requested a moment ago", () => {
+      beforeEach(() => {
+        mockStorageItems.set(recoveryRequestStorageKey, String(Date.now()));
+      });
 
-      await renderAuthScreen(<CallbackRoute />);
+      it("should say the reset link is not valid, as an alert, and not the sign-in link error", async () => {
+        await renderAuthScreen(<CallbackRoute />);
 
-      expect(await screen.findByRole("alert", { name: /^Link not valid/ })).toBeOnTheScreen();
-      expect(mockGetItem).toHaveBeenCalledWith(recoveryRequestStorageKey);
+        expect(
+          await screen.findByRole("alert", {
+            name: "Reset link not valid This link has expired or was already used. A link works once, for one hour, on the phone where you asked for it.",
+          }),
+        ).toBeOnTheScreen();
+        expect(screen.queryByText("Link not valid")).not.toBeOnTheScreen();
+        expect(mockGetItem).toHaveBeenCalledWith(recoveryRequestStorageKey);
+      });
+
+      it("should open the forgot password screen with an empty field from Send a new link", async () => {
+        const user = userEvent.setup();
+        await renderAuthScreen(<CallbackRoute />);
+
+        await user.press(await screen.findByRole("button", { name: "Send a new link" }));
+
+        expect(routerMock.replace).toHaveBeenCalledWith("/(auth)/forgot-password");
+        expect(takeForgotPasswordEmail()).toBe("");
+      });
+
+      it("should go back to sign-in from Back to sign in", async () => {
+        const user = userEvent.setup();
+        await renderAuthScreen(<CallbackRoute />);
+
+        await user.press(await screen.findByRole("button", { name: "Back to sign in" }));
+
+        expect(routerMock.replace).toHaveBeenCalledWith("/(auth)/sign-in");
+      });
     });
 
     it("should say the link is not valid when no reset was requested", async () => {
       await renderAuthScreen(<CallbackRoute />);
 
       expect(await screen.findByRole("alert", { name: /^Link not valid/ })).toBeOnTheScreen();
+      expect(screen.queryByRole("button", { name: "Send a new link" })).not.toBeOnTheScreen();
       expect(mockGetItem).toHaveBeenCalledWith(recoveryRequestStorageKey);
     });
 

@@ -7,4 +7,9 @@ export type AuthFooterProps = {
    * sign in board's. Defaults to `body`.
    */
   size?: "body" | "caption";
+  /**
+   * Runs in place of the link's navigation, for a screen that must return to the screen below it and not
+   * push another copy of it, such as the forgot password form's Sign in. Draws the body size link.
+   */
+  onPress?: (() => void) | undefined;
 };

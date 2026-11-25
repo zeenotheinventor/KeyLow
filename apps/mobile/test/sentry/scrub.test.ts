@@ -38,6 +38,16 @@ describe("scrubEvent", () => {
     expect(scrubbed.message).toBe("Keyboard lift out of range");
   });
 
+  it("should keep the fixed message of the password reset code report, which no value is in", () => {
+    const scrubbed = scrub({
+      message: "Password reset request answered with an unexpected code",
+      tags: { code: "unexpected_failure" },
+    });
+
+    expect(scrubbed.message).toBe("Password reset request answered with an unexpected code");
+    expect(scrubbed.tags).toEqual({ code: "unexpected_failure" });
+  });
+
   it("should still drop a message that is not the fixed one, even with the tags of the report", () => {
     const scrubbed = scrub({
       message: `Keyboard lift out of range for ${FOOD_NAME}`,

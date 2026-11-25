@@ -399,4 +399,10 @@ describe("sign-up screen", () => {
       expect(screen.queryByRole("alert")).not.toBeOnTheScreen();
     });
   });
+
+  it("should not offer Forgot password, which only Sign in does", async () => {
+    await renderAuthScreen(<SignUpRoute />);
+
+    expect(screen.queryByRole("link", { name: "Forgot password?" })).not.toBeOnTheScreen();
+  });
 });
