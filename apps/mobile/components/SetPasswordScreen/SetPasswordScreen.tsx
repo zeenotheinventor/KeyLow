@@ -1,7 +1,7 @@
 import { PASSWORD_SAVED, SET_PASSWORD_SCREEN, describePasswordFor } from "@keylow/core/copy";
 import { useRouter } from "expo-router";
-import { useState } from "react";
-import { View } from "react-native";
+import { useEffect, useState } from "react";
+import { AccessibilityInfo, View } from "react-native";
 
 import { signOut } from "../../lib/signOut";
 import { useSessionUser } from "../../lib/useSessionUser";
@@ -19,6 +19,12 @@ export function SetPasswordScreen() {
   const router = useRouter();
   const user = useSessionUser();
   const [isSaved, setIsSaved] = useState(false);
+
+  useEffect(() => {
+    if (isSaved) {
+      AccessibilityInfo.announceForAccessibility(PASSWORD_SAVED.title);
+    }
+  }, [isSaved]);
 
   if (isSaved) {
     return (
@@ -46,9 +52,14 @@ export function SetPasswordScreen() {
         setIsSaved(true);
       }}
       onSendNewLink={() => {
-        void signOut().then(() => {
-          router.replace("/(auth)/forgot-password");
-        });
+        // Forgot password is in the signed out group, so with the session still there the gate would send the
+        // person to the dashboard. A failed sign out therefore stays on this screen, with its notice.
+        signOut().then(
+          () => {
+            router.replace("/(auth)/forgot-password");
+          },
+          () => undefined,
+        );
       }}
     >
       <View className="mb-2 items-start gap-2">

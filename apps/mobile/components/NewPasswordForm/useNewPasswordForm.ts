@@ -1,5 +1,6 @@
 import { useUpdatePassword } from "@keylow/api-client";
-import { validateNewPassword } from "@keylow/core/accounts";
+import { describePasswordUpdateFailure, validateNewPassword } from "@keylow/core/accounts";
+import { onlineManager } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { reportOtherDevicesNotSignedOut } from "../../lib/sentry/reportOtherDevicesNotSignedOut";
@@ -30,6 +31,13 @@ export function useNewPasswordForm({ context, onSaved }: Options) {
     setProblems(found);
     setFailure(undefined);
     if (found.password !== undefined || found.confirmation !== undefined) {
+      return;
+    }
+
+    // Offline the mutation would pause, spin for ever and then save on reconnect with no one watching, so
+    // it is not started.
+    if (!onlineManager.isOnline()) {
+      setFailure(describePasswordUpdateFailure("network", context));
       return;
     }
 

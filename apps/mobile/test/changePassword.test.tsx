@@ -1,4 +1,4 @@
-import { screen, userEvent, waitFor } from "@testing-library/react-native";
+import { act, screen, userEvent, waitFor } from "@testing-library/react-native";
 
 import { resetRouterMock, routerMock } from "./support/expoRouterMock";
 import {
@@ -7,7 +7,7 @@ import {
   resetPasswordUpdateBackend,
 } from "./support/passwordUpdateBackend";
 import { emailAccount, signInAs } from "./support/sessionUser";
-import { resetSupabaseMock } from "./support/supabaseMock";
+import { emitAuthStateChange, resetSupabaseMock } from "./support/supabaseMock";
 import ChangePasswordRoute from "../app/(tabs)/more/change-password";
 
 jest.mock("@react-native-async-storage/async-storage", () => ({
@@ -57,6 +57,17 @@ describe("the change password screen", () => {
     expect(
       await screen.findByText(`For ${address}. Other devices will be signed out.`),
     ).toBeOnTheScreen();
+  });
+
+  it("should keep the stored account when an offline start repeats no session", async () => {
+    await renderWithPasswordUpdate(<ChangePasswordRoute />);
+    await screen.findByText(`For ${address}. Other devices will be signed out.`);
+
+    await act(() => {
+      emitAuthStateChange("INITIAL_SESSION", null);
+    });
+
+    expect(screen.getByText(`For ${address}. Other devices will be signed out.`)).toBeOnTheScreen();
   });
 
   it("should go back to More with its back button", async () => {

@@ -1,5 +1,7 @@
 import { captureMessage } from "@sentry/react-native";
+import { onlineManager } from "@tanstack/react-query";
 import { act, screen, userEvent, waitFor } from "@testing-library/react-native";
+import { AccessibilityInfo } from "react-native";
 
 import { resetRouterMock } from "./support/expoRouterMock";
 import {
@@ -68,6 +70,26 @@ describe("the new password form", () => {
     onSendNewLink.mockReset();
     onDone.mockReset();
     jest.mocked(captureMessage).mockClear();
+  });
+
+  describe("offline", () => {
+    afterEach(() => {
+      onlineManager.setOnline(true);
+    });
+
+    it("should say the server cannot be reached and send nothing, so no save waits to run later", async () => {
+      onlineManager.setOnline(false);
+      await renderForm(recovery);
+      await typePasswords(newPassword, newPassword);
+
+      await save();
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "Ki-Lo could not reach the server. Check your connection and try again.",
+      );
+      expect(passwordUpdateBackend.updates).toHaveLength(0);
+      expect(screen.getByRole("button", { name: "Save password" })).toBeEnabled();
+    });
   });
 
   describe("its fields", () => {
@@ -308,6 +330,19 @@ describe("the new password form", () => {
       expect(screen.getByLabelText("New password")).toBeDisabled();
       expect(screen.getByLabelText("Confirm new password")).toBeDisabled();
       expect(screen.queryByRole("button", { name: "Save password" })).not.toBeOnTheScreen();
+    });
+
+    it("should announce the saved notice once, because it appears as the button is swapped", async () => {
+      const announce = jest.spyOn(AccessibilityInfo, "announceForAccessibility");
+      announce.mockClear();
+      await renderForm(change);
+      await typePasswords(newPassword, newPassword);
+
+      await save();
+
+      await screen.findByRole("button", { name: "Done" });
+      expect(announce).toHaveBeenCalledTimes(1);
+      expect(announce).toHaveBeenCalledWith("Password changed");
     });
 
     it("should go back to More with Done", async () => {

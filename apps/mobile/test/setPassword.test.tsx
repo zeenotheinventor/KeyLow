@@ -1,4 +1,5 @@
 import { screen, userEvent, waitFor } from "@testing-library/react-native";
+import { AccessibilityInfo } from "react-native";
 
 import { resetRouterMock, routerMock } from "./support/expoRouterMock";
 import {
@@ -88,6 +89,17 @@ describe("the set a new password screen", () => {
       expect(screen.queryByLabelText("New password")).not.toBeOnTheScreen();
     });
 
+    it("should announce that the password is saved", async () => {
+      const announce = jest.spyOn(AccessibilityInfo, "announceForAccessibility");
+      announce.mockClear();
+      await openSetPassword();
+
+      await saveNewPassword();
+
+      await screen.findByRole("button", { name: "Continue" });
+      expect(announce).toHaveBeenCalledWith("Password saved");
+    });
+
     it("should open the dashboard with Continue, replacing this screen", async () => {
       const user = userEvent.setup();
       await openSetPassword();
@@ -115,6 +127,22 @@ describe("the set a new password screen", () => {
       expect(mockSupabaseClient.auth.signOut.mock.invocationCallOrder[0]).toBeLessThan(
         routerMock.replace.mock.invocationCallOrder[0] ?? 0,
       );
+    });
+
+    it("should stay on this screen, signed in, when signing out fails", async () => {
+      passwordUpdateBackend.hasSession = false;
+      mockSupabaseClient.auth.signOut.mockRejectedValue(new Error("offline"));
+      const user = userEvent.setup();
+      await openSetPassword();
+      await saveNewPassword();
+
+      await user.press(await screen.findByRole("button", { name: "Send a new link" }));
+
+      await waitFor(() => {
+        expect(mockSupabaseClient.auth.signOut).toHaveBeenCalled();
+      });
+      expect(routerMock.replace).not.toHaveBeenCalled();
+      expect(screen.getByRole("button", { name: "Send a new link" })).toBeOnTheScreen();
     });
   });
 });

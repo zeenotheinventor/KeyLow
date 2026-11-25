@@ -20,7 +20,12 @@ export function useSessionUser(): User | null {
       }
     });
 
-    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data } = supabase.auth.onAuthStateChange((event, session) => {
+      // An offline start repeats no session here although one is stored, and the read above is the one that
+      // tells the two apart, so this event is not allowed to undo it.
+      if (event === "INITIAL_SESSION" && session === null) {
+        return;
+      }
       setUser(session?.user ?? null);
     });
 

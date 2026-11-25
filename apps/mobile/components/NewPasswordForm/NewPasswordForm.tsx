@@ -5,8 +5,8 @@ import {
   SET_PASSWORD_SCREEN,
 } from "@keylow/core/copy";
 import { vars } from "nativewind";
-import { useRef } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
+import { useEffect, useRef } from "react";
+import { AccessibilityInfo, KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
 
 import { useNewPasswordForm } from "./useNewPasswordForm";
 import { useKeyboardLift } from "../../lib/useKeyboardLift";
@@ -48,6 +48,13 @@ export function NewPasswordForm(props: NewPasswordFormProps) {
   const trackScrollOffset = useScrollFocusedInputIntoView(scrollViewRef, keyboardLift);
 
   const isLocked = props.context === "change" && form.isSaved;
+
+  // Save unmounts and Done mounts, so the saved notice is not announced as it appears. Say it once.
+  useEffect(() => {
+    if (isLocked) {
+      AccessibilityInfo.announceForAccessibility(PASSWORD_CHANGED.title);
+    }
+  }, [isLocked]);
 
   function renderNotice() {
     if (isLocked) {
