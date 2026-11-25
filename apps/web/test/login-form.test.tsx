@@ -4,6 +4,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { LoginForm } from "@/app/login/LoginForm";
+import { takeForgotPasswordEmail } from "@/lib/auth/forgotPasswordEmail";
 
 const { signInWithPassword, signInWithOAuth, push, refresh } = vi.hoisted(() => ({
   signInWithPassword: vi.fn(),
@@ -31,10 +32,56 @@ function fillForm(email: string, password: string) {
 describe("LoginForm", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    sessionStorage.clear();
   });
 
   afterEach(() => {
     cleanup();
+  });
+
+  describe("forgot password link", () => {
+    it("should point to the forgot password page from the password row", () => {
+      render(<LoginForm />);
+
+      expect(screen.getByRole("link", { name: "Forgot password?" }).getAttribute("href")).toBe(
+        "/forgot-password",
+      );
+    });
+
+    it("should leave the link out of the password field's name", () => {
+      render(<LoginForm />);
+
+      expect(screen.getByLabelText("Password")).toBeTruthy();
+    });
+
+    it("should carry the trimmed email to the next page without putting it in the link", () => {
+      render(<LoginForm />);
+      fillForm("  ada@example.com  ", "");
+
+      fireEvent.click(screen.getByRole("link", { name: "Forgot password?" }));
+
+      expect(takeForgotPasswordEmail()).toBe("ada@example.com");
+      expect(screen.getByRole("link", { name: "Forgot password?" }).getAttribute("href")).toBe(
+        "/forgot-password",
+      );
+    });
+
+    it("should be drawn in the primary text, and leave the other links accent", () => {
+      render(<LoginForm />);
+
+      const link = screen.getByRole("link", { name: "Forgot password?" });
+      expect(link.className).toContain("text-text-primary");
+      expect(link.className).toContain("font-semibold");
+      expect(link.className).not.toContain("text-accent-ink");
+    });
+
+    it("should carry nothing when no email was typed", () => {
+      render(<LoginForm />);
+
+      fireEvent.click(screen.getByRole("link", { name: "Forgot password?" }));
+
+      expect(takeForgotPasswordEmail()).toBeNull();
+    });
   });
 
   describe("client-side validation", () => {

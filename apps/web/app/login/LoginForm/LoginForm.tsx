@@ -1,11 +1,13 @@
 "use client";
 
-import { AUTH_SCREEN, GENERIC_ERROR } from "@keylow/core/copy";
+import { AUTH_SCREEN, FORGOT_PASSWORD_LINK, GENERIC_ERROR } from "@keylow/core/copy";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type SubmitEvent } from "react";
 
 import type { LoginFormProps, PendingAction } from "./types";
 
+import { authLinkClassFor } from "@/components/auth/authLink";
 import { GoogleButton } from "@/components/auth/GoogleButton";
 import { OrDivider } from "@/components/auth/OrDivider";
 import { Banner } from "@/components/ui/Banner";
@@ -17,8 +19,10 @@ import {
   validateCredentials,
   type FieldErrors,
 } from "@/lib/auth/credentials";
+import { setForgotPasswordEmail } from "@/lib/auth/forgotPasswordEmail";
 import { describeClearedTermsPendingCookie } from "@/lib/auth/termsPendingCookie";
 import { createClient } from "@/lib/supabase/client";
+import { cn } from "@/lib/utils";
 
 export function LoginForm({ linkError }: LoginFormProps) {
   const router = useRouter();
@@ -110,6 +114,17 @@ export function LoginForm({ linkError }: LoginFormProps) {
           setPassword(event.target.value);
         }}
         error={fieldErrors.password}
+        labelAction={
+          <Link
+            href="/forgot-password"
+            className={cn(authLinkClassFor("primary"), "text-caption font-semibold")}
+            onClick={() => {
+              setForgotPasswordEmail(email);
+            }}
+          >
+            {FORGOT_PASSWORD_LINK}
+          </Link>
+        }
       />
 
       {formError !== null && <Banner tone="error">{formError}</Banner>}

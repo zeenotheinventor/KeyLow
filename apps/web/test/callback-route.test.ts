@@ -263,7 +263,7 @@ describe("GET /auth/callback", () => {
       const response = await callback("?code=abc", recoveryRequestedCookie(Date.now()));
 
       expect(response.headers.get("location")).toBe(
-        "http://localhost:3000/login?error=recovery-link",
+        "http://localhost:3000/forgot-password/link-not-valid",
       );
     });
 
@@ -276,7 +276,7 @@ describe("GET /auth/callback", () => {
       );
 
       expect(response.headers.get("location")).toBe(
-        "http://localhost:3000/login?error=recovery-link",
+        "http://localhost:3000/forgot-password/link-not-valid",
       );
     });
 
@@ -287,7 +287,7 @@ describe("GET /auth/callback", () => {
       );
 
       expect(response.headers.get("location")).toBe(
-        "http://localhost:3000/login?error=recovery-link",
+        "http://localhost:3000/forgot-password/link-not-valid",
       );
     });
 

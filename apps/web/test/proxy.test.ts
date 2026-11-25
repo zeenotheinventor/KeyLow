@@ -111,6 +111,29 @@ describe("proxy", () => {
     expect(response.headers.get("location")).toBeNull();
   });
 
+  it("should send a signed in request for the forgot password page to the dashboard", async () => {
+    getUser.mockResolvedValue(signedIn);
+
+    const response = await proxy(requestFor("/forgot-password"));
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe("http://localhost:3000/dashboard");
+  });
+
+  it("should let a signed out request for the forgot password page through", async () => {
+    const response = await proxy(requestFor("/forgot-password"));
+
+    expect(response.headers.get("location")).toBeNull();
+  });
+
+  it("should leave the reset link error page to a signed in person", async () => {
+    getUser.mockResolvedValue(signedIn);
+
+    const response = await proxy(requestFor("/forgot-password/link-not-valid"));
+
+    expect(response.headers.get("location")).toBeNull();
+  });
+
   it("should send a signed in request for the sign-up page to the dashboard", async () => {
     getUser.mockResolvedValue(signedIn);
 

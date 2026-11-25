@@ -27,6 +27,16 @@ const repositoryErrorEvent = () => ({
 });
 
 describe("scrubEvent", () => {
+  it("should keep the password reset code tag and drop the message", () => {
+    const scrubbed = scrub({
+      message: "Password reset request ended with an unexpected code",
+      tags: { passwordResetCode: "unexpected_failure" },
+    });
+
+    expect(scrubbed.tags).toEqual({ passwordResetCode: "unexpected_failure" });
+    expect(scrubbed.message).toBeUndefined();
+  });
+
   it("should leave neither a weight nor a food name in the payload of a repository error", () => {
     const scrubbed = JSON.stringify(scrub(repositoryErrorEvent()));
 
