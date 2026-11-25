@@ -72,6 +72,11 @@ export async function clearAnchor(userId: string): Promise<void> {
   ]);
 }
 
+/** Clears everything this phone stored for `userId`: the three anchors and the last import time. For an account deletion. */
+export async function clearHealthImportState(userId: string): Promise<void> {
+  await Promise.all([clearAnchor(userId), remove(lastImportKey(userId))]);
+}
+
 /** The ISO instant at which an import last ended as imported or nothing-new, or null. */
 export function getLastImport(userId: string): Promise<string | null> {
   return read(lastImportKey(userId));

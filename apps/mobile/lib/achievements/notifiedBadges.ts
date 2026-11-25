@@ -65,3 +65,20 @@ export async function rememberNotifiedIds(
 /** The account's saved ids, after any change already waiting. */
 export const readNotifiedIds = (accountId: string): Promise<string[]> =>
   updateNotifiedIds(accountId, (saved) => saved);
+
+/**
+ * Removes the account's saved list, for an account deletion. It goes through the same queue as every
+ * other change, so a write already waiting cannot bring the ids back. A store that fails is swallowed:
+ * the deletion's clean-up goes on with the rest.
+ */
+export function forgetNotifiedBadges(accountId: string): Promise<void> {
+  const run = queue.then(async () => {
+    try {
+      await AsyncStorage.removeItem(notifiedBadgesStorageKey(accountId));
+    } catch {
+      // Nothing to do: the list holds badge ids only, and goes at the next clean-up.
+    }
+  });
+  queue = run;
+  return run;
+}
