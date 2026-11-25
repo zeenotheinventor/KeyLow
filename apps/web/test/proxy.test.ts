@@ -39,6 +39,7 @@ describe("proxy", () => {
     "/weight",
     "/settings",
     "/foods",
+    "/set-password",
   ])("should send a signed out request for %s to the login page", async (path) => {
     const response = await proxy(requestFor(path));
 
@@ -108,6 +109,38 @@ describe("proxy", () => {
   it("should let a signed out request for the login page through", async () => {
     const response = await proxy(requestFor("/login"));
 
+    expect(response.headers.get("location")).toBeNull();
+  });
+
+  it("should send a signed in request for the forgot password page to the dashboard", async () => {
+    getUser.mockResolvedValue(signedIn);
+
+    const response = await proxy(requestFor("/forgot-password"));
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe("http://localhost:3000/dashboard");
+  });
+
+  it("should let a signed out request for the forgot password page through", async () => {
+    const response = await proxy(requestFor("/forgot-password"));
+
+    expect(response.headers.get("location")).toBeNull();
+  });
+
+  it("should leave the reset link error page to a signed in person", async () => {
+    getUser.mockResolvedValue(signedIn);
+
+    const response = await proxy(requestFor("/forgot-password/link-not-valid"));
+
+    expect(response.headers.get("location")).toBeNull();
+  });
+
+  it("should let a signed in request for the set a new password page through", async () => {
+    getUser.mockResolvedValue(signedIn);
+
+    const response = await proxy(requestFor("/set-password"));
+
+    expect(response.status).toBe(200);
     expect(response.headers.get("location")).toBeNull();
   });
 

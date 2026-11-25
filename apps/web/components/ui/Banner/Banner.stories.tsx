@@ -1,3 +1,4 @@
+import { PASSWORD_CHANGED } from "@keylow/core/copy";
 import { Mail } from "lucide-react";
 
 import { Banner } from "./Banner";
@@ -74,6 +75,21 @@ export const ReviewWithAction: Story = {
     children:
       "Energy and carbohydrate are not given. Fill them in to save your own copy of this food.",
     action: { label: "Copy to your foods", onClick: () => undefined },
+  },
+};
+
+export const SuccessWithTitle: Story = {
+  args: {
+    tone: "success",
+    title: PASSWORD_CHANGED.title,
+    children: PASSWORD_CHANGED.body,
+  },
+};
+
+export const SuccessMessage: Story = {
+  args: {
+    tone: "success",
+    children: PASSWORD_CHANGED.body,
   },
 };
 

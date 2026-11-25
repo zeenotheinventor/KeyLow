@@ -18,6 +18,7 @@ import {
   hasAccountDeletedNotice,
   takeAccountDeletedNotice,
 } from "../lib/accountDeletion/accountDeletedNotice";
+import { takeForgotPasswordEmail } from "../lib/forgotPasswordEmail";
 import { ThemeProvider } from "../lib/theme";
 
 import type { ReactNode } from "react";
@@ -403,6 +404,43 @@ describe("sign-in screen", () => {
       await renderAuthScreen(<SignInRoute />);
 
       expect(screen.queryByText(/coming soon/i)).not.toBeOnTheScreen();
+    });
+  });
+
+  describe("the Forgot password link", () => {
+    afterEach(() => {
+      takeForgotPasswordEmail();
+    });
+
+    it("should hand over the trimmed typed email and open the forgot password screen", async () => {
+      const user = userEvent.setup();
+      await renderAuthScreen(<SignInRoute />);
+      await user.type(screen.getByLabelText("Email"), "  person@example.test  ");
+
+      await user.press(screen.getByRole("link", { name: "Forgot password?" }));
+
+      expect(takeForgotPasswordEmail()).toBe("person@example.test");
+      expect(routerMock.push).toHaveBeenCalledWith("/(auth)/forgot-password");
+    });
+
+    it("should hand over an empty email when none was typed", async () => {
+      const user = userEvent.setup();
+      await renderAuthScreen(<SignInRoute />);
+
+      await user.press(screen.getByRole("link", { name: "Forgot password?" }));
+
+      expect(takeForgotPasswordEmail()).toBe("");
+      expect(routerMock.push).toHaveBeenCalledWith("/(auth)/forgot-password");
+    });
+
+    it("should put the email in no route", async () => {
+      const user = userEvent.setup();
+      await renderAuthScreen(<SignInRoute />);
+      await user.type(screen.getByLabelText("Email"), "person@example.test");
+
+      await user.press(screen.getByRole("link", { name: "Forgot password?" }));
+
+      expect(JSON.stringify(routerMock.push.mock.calls)).not.toContain("person@example.test");
     });
   });
 });

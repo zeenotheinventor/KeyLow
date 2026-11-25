@@ -1,6 +1,7 @@
 import {
   AUTH_SCREEN,
   CHECK_EMAIL_TITLE,
+  FORGOT_PASSWORD_LINK,
   SIGN_UP_SCREEN,
   describeAuthError,
   describeCheckEmail,
@@ -18,6 +19,7 @@ import { GoogleButton } from "../GoogleButton";
 import { KiLoMark } from "../KiLoMark";
 import { Banner, Button, Input, Text } from "../ui";
 import { AuthFooter } from "./AuthFooter";
+import { AuthLink } from "./AuthLink";
 
 import type { AuthFormOutcome, AuthFormProps } from "./types";
 import type { GoogleSignInResult } from "../../lib/googleSignIn";
@@ -49,6 +51,7 @@ export function AuthForm({
   requireAcceptance = false,
   notice,
   onGoogleSignIn = signInWithGoogle,
+  onForgotPassword,
 }: AuthFormProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -101,6 +104,20 @@ export function AuthForm({
       size={requireAcceptance ? "md" : "lg"}
       disabled={isSubmitting || isAwaitingAcceptance}
       onPress={() => void handleGoogleSignIn()}
+    />
+  );
+
+  const passwordField = (
+    <Input
+      autoCapitalize="none"
+      autoComplete={isSigningUp ? "new-password" : "current-password"}
+      autoCorrect={false}
+      error={fieldErrors.password}
+      label={AUTH_SCREEN.passwordLabel}
+      placeholder={requireAcceptance ? SIGN_UP_SCREEN.passwordPlaceholder : undefined}
+      secureTextEntry
+      value={password}
+      onChangeText={setPassword}
     />
   );
 
@@ -170,17 +187,21 @@ export function AuthForm({
             value={email}
             onChangeText={setEmail}
           />
-          <Input
-            autoCapitalize="none"
-            autoComplete={isSigningUp ? "new-password" : "current-password"}
-            autoCorrect={false}
-            error={fieldErrors.password}
-            label={AUTH_SCREEN.passwordLabel}
-            placeholder={requireAcceptance ? SIGN_UP_SCREEN.passwordPlaceholder : undefined}
-            secureTextEntry
-            value={password}
-            onChangeText={setPassword}
-          />
+          {onForgotPassword === undefined ? (
+            passwordField
+          ) : (
+            <View className="gap-1">
+              {passwordField}
+              <View className="items-end">
+                <AuthLink
+                  label={FORGOT_PASSWORD_LINK}
+                  onPress={() => {
+                    onForgotPassword(email.trim());
+                  }}
+                />
+              </View>
+            </View>
+          )}
 
           {outcome.status === "error" ? (
             <Banner sentence title={describeAuthError(outcome.code)} variant="error" />

@@ -1,4 +1,6 @@
 import { KEYBOARD_LIFT_OUT_OF_RANGE_MESSAGE } from "./keyboardLiftMessage";
+import { OTHER_DEVICES_NOT_SIGNED_OUT_MESSAGE } from "./otherDevicesNotSignedOutMessage";
+import { PASSWORD_RESET_CODE_MESSAGE } from "./passwordResetCodeMessage";
 
 import type { Breadcrumb, ErrorEvent } from "@sentry/react-native";
 
@@ -56,7 +58,11 @@ const BREADCRUMB_DATA_KEYS_SENT: Record<string, string[]> = {
 
 // A message that is fixed text in our own code, so no value can be in it, and is the one thing that says
 // what a report is about. Any other message is worded from what happened and is not sent.
-const FIXED_MESSAGES_SENT = new Set([KEYBOARD_LIFT_OUT_OF_RANGE_MESSAGE]);
+const FIXED_MESSAGES_SENT = new Set([
+  KEYBOARD_LIFT_OUT_OF_RANGE_MESSAGE,
+  PASSWORD_RESET_CODE_MESSAGE,
+  OTHER_DEVICES_NOT_SIGNED_OUT_MESSAGE,
+]);
 
 const SKIPPED_KIND_NAME = /^[a-z][a-z0-9_]{0,63}$/;
 

@@ -1,5 +1,5 @@
 import { AUTH_SCREEN, DELETE_ACCOUNT_COPY } from "@keylow/core/copy";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 
 import { AuthForm } from "../../components/AuthForm";
@@ -10,6 +10,7 @@ import {
   takeAccountDeletedNotice,
 } from "../../lib/accountDeletion/accountDeletedNotice";
 import { authErrorCode } from "../../lib/authErrorCode";
+import { setForgotPasswordEmail } from "../../lib/forgotPasswordEmail";
 import { supabase } from "../../lib/supabase";
 
 import type { AuthFormOutcome } from "../../components/AuthForm";
@@ -51,6 +52,7 @@ function useAccountDeletedNotice(): boolean {
 
 export default function SignInRoute() {
   const isAccountDeleted = useAccountDeletedNotice();
+  const router = useRouter();
 
   return (
     <AuthForm
@@ -63,6 +65,10 @@ export default function SignInRoute() {
       submitLabel={AUTH_SCREEN.signIn.submitLabel}
       passwordRule="required"
       onSubmit={signIn}
+      onForgotPassword={(typedEmail) => {
+        setForgotPasswordEmail(typedEmail);
+        router.push("/(auth)/forgot-password");
+      }}
       footer={{
         prompt: AUTH_SCREEN.signIn.footerPrompt,
         linkLabel: AUTH_SCREEN.signIn.footerLink,

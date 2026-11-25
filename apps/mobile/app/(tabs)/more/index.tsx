@@ -5,9 +5,11 @@ import {
   useTargets,
   useTrainingGoals,
 } from "@keylow/api-client";
+import { hasPasswordSignIn } from "@keylow/core/accounts";
 import {
   ACCOUNT_EXPORT_COPY,
   ACHIEVEMENTS_SCREEN,
+  CHANGE_PASSWORD_SCREEN,
   DELETE_ACCOUNT_COPY,
   MORE_SCREEN,
   TAB_TITLES,
@@ -33,6 +35,7 @@ import { signOut } from "../../../lib/signOut";
 import { useSuggestionsEnabled } from "../../../lib/suggestionsPreference";
 import { useOpenOnce } from "../../../lib/useOpenOnce";
 import { useReadsEnabled } from "../../../lib/useReadsEnabled";
+import { useSessionUser } from "../../../lib/useSessionUser";
 
 // The sections of the `tab-shell.more` board, with Nutrition between Food and Body. Your foods opens the search
 // sheet in its own-foods mode, Targets opens the Targets screen and shows the calorie target once one is set,
@@ -43,7 +46,8 @@ import { useReadsEnabled } from "../../../lib/useReadsEnabled";
 // shows the current goal's answers and asks the first question itself when there is no goal. Its sub line is
 // the day the goal was set or the invitation to set one, and none until both the goal and the time zone it is
 // dated in are read, so the invitation does not show and then flip. Appearance, the Body map, the Dashboard body map and the Exercise demos are set here, and Account
-// holds Export my data, which opens its screen inside this tab, above Sign out.
+// holds Export my data, which opens its screen inside this tab, Change password, which opens its screen
+// inside this tab too and is left out for an account with no password to change, and Sign out.
 // Assistant is the first row of Settings and opens its settings screen inside this tab, its sub line and value
 // following whether the assistant is on, and none until that is read.
 // Request a feature is the last row of Settings and opens its screen inside this tab, where a request is typed
@@ -59,6 +63,7 @@ export default function MoreRoute() {
   const assistantConsent = useAssistantConsent({ enabled: isReadEnabled });
   const trainingGoals = useTrainingGoals({ enabled: isReadEnabled });
   const timeZone = useProfileTimeZone({ enabled: isReadEnabled });
+  const sessionUser = useSessionUser();
   const openOnce = useOpenOnce();
   const suggestions = useSuggestionsEnabled();
   const assistantRow = describeAssistantMoreRow(assistantConsent.data?.isOn);
@@ -227,6 +232,17 @@ export default function MoreRoute() {
               });
             }}
           />
+          {hasPasswordSignIn(sessionUser?.app_metadata) ? (
+            <ListRow
+              icon="KeyRound"
+              title={CHANGE_PASSWORD_SCREEN.rowLabel}
+              onPress={() => {
+                openOnce(() => {
+                  router.push("/more/change-password");
+                });
+              }}
+            />
+          ) : null}
           <ListRow
             chevron={false}
             icon="LogOut"

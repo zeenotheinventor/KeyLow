@@ -37,4 +37,9 @@ export type AuthFormProps = {
   notice?: ReactNode;
   /** What the Google button runs. Defaults to a plain Google sign-in. */
   onGoogleSignIn?: (() => Promise<GoogleSignInResult>) | undefined;
+  /**
+   * Draws the Forgot password link under the Password field, right aligned, and hands it the trimmed typed
+   * email (possibly empty) when pressed. Only the sign in screen sets it.
+   */
+  onForgotPassword?: ((typedEmail: string) => void) | undefined;
 };

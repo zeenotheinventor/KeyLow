@@ -18,6 +18,8 @@ export type TextFieldProps = Omit<
   describedBy?: string | undefined;
   /** A decorative icon at the end of the box, such as a lock on a field that cannot be changed. */
   trailingIcon?: LucideIcon | undefined;
+  /** A link or button at the end of the label's row, such as "Forgot password?". It is outside the label, so it is not part of the field's name. */
+  labelAction?: React.ReactNode;
 };
 
 /** What the control inside a `Field` needs to be named, flagged and described. */
@@ -33,6 +35,7 @@ export type FieldProps = {
   helper?: string | undefined;
   error?: string | undefined;
   labelHint?: string | undefined;
+  labelAction?: React.ReactNode;
   invalid?: boolean | undefined;
   describedBy?: string | undefined;
   disabled?: boolean | undefined;

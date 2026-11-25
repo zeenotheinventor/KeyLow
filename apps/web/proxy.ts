@@ -5,8 +5,9 @@ import type { Database } from "@keylow/db";
 
 import { getSupabaseEnv } from "@/lib/supabase/env";
 
-// Pages that need a session. The accept-terms page is one: the terms check itself is in the
-// dashboard layout, as the proxy has no profile to read.
+// Pages that need a session. The accept-terms page is one: the terms check itself is in the dashboard
+// layout, as the proxy has no profile to read. The set a new password page is another, as a reset link
+// signs the person in first. It stays out of AUTH_PATHS, because a signed in person must reach it.
 const PROTECTED_PATHS = [
   "/accept-terms",
   "/dashboard",
@@ -17,10 +18,11 @@ const PROTECTED_PATHS = [
   "/about",
   "/weight",
   "/settings",
+  "/set-password",
 ];
 
 // A signed in user has no use for these pages.
-const AUTH_PATHS = ["/login", "/sign-up"];
+const AUTH_PATHS = ["/login", "/sign-up", "/forgot-password"];
 
 function isProtectedPath(pathname: string) {
   return PROTECTED_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));

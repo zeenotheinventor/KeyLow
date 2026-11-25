@@ -1,4 +1,10 @@
-import { ACCOUNT_EXPORT_COPY, MORE_SCREEN, TAB_TITLES } from "@keylow/core/copy";
+import { hasPasswordSignIn } from "@keylow/core/accounts";
+import {
+  ACCOUNT_EXPORT_COPY,
+  CHANGE_PASSWORD_SCREEN,
+  MORE_SCREEN,
+  TAB_TITLES,
+} from "@keylow/core/copy";
 import { cookies } from "next/headers";
 
 import { PageFrame } from "../PageFrame";
@@ -63,6 +69,9 @@ export default async function MorePage() {
             subtitle={ACCOUNT_EXPORT_COPY.moreRow.subtitle}
             href="/more/export"
           />
+          {hasPasswordSignIn(user?.app_metadata) && (
+            <ListRow title={CHANGE_PASSWORD_SCREEN.rowLabel} href="/more/change-password" />
+          )}
           <SignOutRow email={user?.email} />
         </GroupedList>
       </div>

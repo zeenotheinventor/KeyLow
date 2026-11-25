@@ -18,6 +18,7 @@ import {
   showGoldenProgram,
   showProgramWithoutSnapshot,
 } from "./support/programBackend";
+import { emailAccount, googleOnlyAccount, signInAs } from "./support/sessionUser";
 import { mockSupabaseClient, resetSupabaseMock } from "./support/supabaseMock";
 import { storedGoalRow } from "./support/trainingGoalsRead";
 import { installVirtualClock } from "./support/virtualClock";
@@ -951,7 +952,8 @@ describe("the More screen", () => {
   });
 
   describe("Export my data", () => {
-    it("should be the first row in Account, above Sign out and Delete account, with its icon and a chevron", async () => {
+    it("should be the first row in Account, above Change password, Sign out and Delete account, with its icon and a chevron", async () => {
+      signInAs("sam.taylor@example.com", emailAccount);
       await renderMore();
 
       const account = within(screen.getByLabelText("Account"));
@@ -961,10 +963,13 @@ describe("the More screen", () => {
 
       expect(row).toBeEnabled();
       expect(drawingsIn(row)).toHaveLength(2);
+      await screen.findByRole("button", { name: "Change password" });
       const rows = account.getAllByRole("button");
-      expect(rows).toHaveLength(3);
+      expect(rows).toHaveLength(4);
       expect(rows[0]).toBe(row);
-      expect(rows[1]).toHaveAccessibleName("Sign out");
+      expect(rows[1]).toHaveAccessibleName("Change password");
+      expect(rows[2]).toHaveAccessibleName("Sign out");
+      expect(rows[3]).toHaveAccessibleName("Delete account");
     });
 
     it("should open the Export my data screen inside the More tab when pressed", async () => {
@@ -985,6 +990,66 @@ describe("the More screen", () => {
       await user.press(row);
 
       expect(routerMock.push).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("Change password", () => {
+    it("should draw its icon and a chevron, because it goes somewhere", async () => {
+      signInAs("sam.taylor@example.com", emailAccount);
+      await renderMore();
+
+      expect(
+        drawingsIn(await screen.findByRole("button", { name: "Change password" })),
+      ).toHaveLength(2);
+    });
+
+    it("should open the Change password screen inside the More tab when pressed", async () => {
+      signInAs("sam.taylor@example.com", emailAccount);
+      const user = userEvent.setup();
+      await renderMore();
+
+      await user.press(await screen.findByRole("button", { name: "Change password" }));
+
+      expect(routerMock.push).toHaveBeenCalledWith("/more/change-password");
+    });
+
+    it("should open the screen once on a double tap", async () => {
+      signInAs("sam.taylor@example.com", emailAccount);
+      const user = userEvent.setup();
+      await renderMore();
+      const row = await screen.findByRole("button", { name: "Change password" });
+
+      await user.press(row);
+      await user.press(row);
+
+      expect(routerMock.push).toHaveBeenCalledTimes(1);
+    });
+
+    it("should be left out for an account that signed in with Google only", async () => {
+      signInAs("sam.taylor@example.com", googleOnlyAccount);
+      await renderMore();
+
+      await waitFor(() => {
+        expect(mockSupabaseClient.auth.getSession).toHaveBeenCalled();
+      });
+      expect(screen.queryByRole("button", { name: "Change password" })).not.toBeOnTheScreen();
+      expect(within(screen.getByLabelText("Account")).getAllByRole("button")).toHaveLength(3);
+    });
+
+    it("should be left out when the session says nothing about how the account signs in", async () => {
+      signInAs("sam.taylor@example.com", {});
+      await renderMore();
+
+      await waitFor(() => {
+        expect(mockSupabaseClient.auth.getSession).toHaveBeenCalled();
+      });
+      expect(screen.queryByRole("button", { name: "Change password" })).not.toBeOnTheScreen();
+    });
+
+    it("should be left out while there is no session", async () => {
+      await renderMore();
+
+      expect(screen.queryByRole("button", { name: "Change password" })).not.toBeOnTheScreen();
     });
   });
 
