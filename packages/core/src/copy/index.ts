@@ -87,3 +87,4 @@ export * from "./webAchievements";
 export * from "./achievementsScreen";
 export * from "./achievementCelebrations";
 export * from "./accountPassword";
+export * from "./deleteAccount";

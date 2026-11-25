@@ -1,6 +1,7 @@
 import type { GoogleSignInResult } from "../../lib/googleSignIn";
 import type { Credentials, PasswordRule } from "../../lib/validateCredentials";
 import type { Href } from "expo-router";
+import type { ReactNode } from "react";
 
 /**
  * What a sign in came to. An error carries Supabase's error code, never its message, so the form can
@@ -29,6 +30,11 @@ export type AuthFormProps = {
    * button both disabled until it is ticked. Only the sign up screen sets it.
    */
   requireAcceptance?: boolean | undefined;
+  /**
+   * A notice drawn above the mark and the heading, in the reading order before the form, such as the
+   * confirmation that an account was deleted. Only the sign in screen passes one.
+   */
+  notice?: ReactNode;
   /** What the Google button runs. Defaults to a plain Google sign-in. */
   onGoogleSignIn?: (() => Promise<GoogleSignInResult>) | undefined;
 };

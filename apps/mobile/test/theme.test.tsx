@@ -1,9 +1,14 @@
 import { themes } from "@keylow/tokens";
-import { render, screen, userEvent, waitFor } from "@testing-library/react-native";
+import { act, render, screen, userEvent, waitFor } from "@testing-library/react-native";
 import { Appearance, Pressable, Text } from "react-native";
 
+import {
+  announceAccountDeleted,
+  takeAccountDeletedNotice,
+} from "../lib/accountDeletion/accountDeletedNotice";
 import { ThemeProvider, useTheme } from "../lib/theme";
 import { deviceScheme } from "./support/deviceScheme";
+import { defaultThemePreference } from "../lib/theme/themePreference";
 
 import type { Theme } from "../lib/theme";
 
@@ -210,6 +215,108 @@ describe("ThemeProvider", () => {
 
     await user.press(screen.getByRole("button", { name: "Use system" }));
     expect(["dark", "light"]).not.toContain(setColorScheme.mock.lastCall?.[0]);
+  });
+});
+
+describe("ThemeProvider after an account deletion", () => {
+  beforeEach(() => {
+    mockStorageItems.clear();
+    deviceScheme.current = "dark";
+    mockGetItem.mockClear();
+    mockSetItem.mockClear();
+  });
+
+  afterEach(() => {
+    takeAccountDeletedNotice();
+    jest.restoreAllMocks();
+  });
+
+  // A change of the default is a decision, so it has to change this line too.
+  it("should have dark as the default preference", () => {
+    expect(defaultThemePreference).toBe("dark");
+  });
+
+  it("should apply what a fresh start applies, because the deletion wiped the saved choice", async () => {
+    deviceScheme.current = "light";
+    mockStorageItems.set(storageKey, "light");
+    let latestTheme: Theme | undefined;
+    const wiped = await render(
+      <ThemeProvider>
+        <ThemeProbe
+          onTheme={(theme) => {
+            latestTheme = theme;
+          }}
+        />
+      </ThemeProvider>,
+    );
+    await screen.findByText("scheme:light");
+
+    await act(() => {
+      announceAccountDeleted();
+    });
+    const afterDeletion = { scheme: latestTheme?.scheme, preference: latestTheme?.preference };
+    await wiped.unmount();
+    takeAccountDeletedNotice();
+
+    mockStorageItems.clear();
+    await render(
+      <ThemeProvider>
+        <ThemeProbe
+          onTheme={(theme) => {
+            latestTheme = theme;
+          }}
+        />
+      </ThemeProvider>,
+    );
+    await screen.findByText(/^scheme:/);
+
+    expect(afterDeletion).toEqual({
+      scheme: latestTheme?.scheme,
+      preference: latestTheme?.preference,
+    });
+    expect(afterDeletion.preference).toBeDefined();
+  });
+
+  it("should not save a preference again, because the deletion wiped it", async () => {
+    mockStorageItems.set(storageKey, "light");
+    await renderProbe();
+
+    await act(() => {
+      announceAccountDeleted();
+    });
+
+    expect(mockSetItem).not.toHaveBeenCalled();
+  });
+
+  it("should keep the preference when the notice is used up, which is not a deletion", async () => {
+    const user = userEvent.setup();
+    await renderProbe();
+    await act(() => {
+      announceAccountDeleted();
+    });
+    // The preference is moved off the default, so a reset that fired on the notice being used up would show.
+    await user.press(screen.getByRole("button", { name: "Use light" }));
+    expect(screen.getByText("preference:light")).toBeOnTheScreen();
+
+    await act(() => {
+      takeAccountDeletedNotice();
+    });
+
+    expect(screen.getByText("preference:light")).toBeOnTheScreen();
+  });
+
+  it("should leave a fixed preference alone", async () => {
+    await render(
+      <ThemeProvider fixedPreference="light">
+        <ThemeProbe onTheme={noop} />
+      </ThemeProvider>,
+    );
+
+    await act(() => {
+      announceAccountDeleted();
+    });
+
+    expect(screen.getByText("preference:light")).toBeOnTheScreen();
   });
 });
 

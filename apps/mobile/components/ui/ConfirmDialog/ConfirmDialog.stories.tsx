@@ -50,6 +50,12 @@ export const Primary: Story = {
 // The answer is being carried out: the confirm button shows a spinner and ignores presses.
 export const Busy: Story = { args: { busy: true } };
 
+// The answer cannot be left once it has started, as on the delete account board: the dim, the escape gesture and
+// the Android back button do nothing, the cancel button is disabled, and the busy confirm button is named by what it is doing.
+export const BusyLocked: Story = {
+  args: { busy: true, lockWhileBusy: true, confirmBusyLabel: "Discarding your session" },
+};
+
 // A title and a sentence that wrap onto several lines, as they do at the largest text sizes the device allows.
 // The card takes its height from its contents and stays centred.
 export const LongTitle: Story = {

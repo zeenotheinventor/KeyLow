@@ -951,7 +951,7 @@ describe("the More screen", () => {
   });
 
   describe("Export my data", () => {
-    it("should be the first row in Account, above Sign out, with its icon and a chevron", async () => {
+    it("should be the first row in Account, above Sign out and Delete account, with its icon and a chevron", async () => {
       await renderMore();
 
       const account = within(screen.getByLabelText("Account"));
@@ -962,7 +962,7 @@ describe("the More screen", () => {
       expect(row).toBeEnabled();
       expect(drawingsIn(row)).toHaveLength(2);
       const rows = account.getAllByRole("button");
-      expect(rows).toHaveLength(2);
+      expect(rows).toHaveLength(3);
       expect(rows[0]).toBe(row);
       expect(rows[1]).toHaveAccessibleName("Sign out");
     });
@@ -980,6 +980,43 @@ describe("the More screen", () => {
       const user = userEvent.setup();
       await renderMore();
       const row = screen.getByRole("button", { name: /^Export my data/ });
+
+      await user.press(row);
+      await user.press(row);
+
+      expect(routerMock.push).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("Delete account", () => {
+    it("should be the last row in Account, after Sign out, with a bin and a chevron", async () => {
+      await renderMore();
+
+      const rows = within(screen.getByLabelText("Account")).getAllByRole("button");
+
+      expect(rows).toHaveLength(3);
+      expect(rows[0]).toHaveAccessibleName(
+        "Export my data, A file with everything in your account",
+      );
+      expect(rows[1]).toHaveAccessibleName("Sign out");
+      expect(rows[2]).toHaveAccessibleName("Delete account");
+      expect(drawingsIn(screen.getByRole("button", { name: "Delete account" }))).toHaveLength(2);
+    });
+
+    it("should open the Delete account screen inside the More tab when pressed, and delete nothing", async () => {
+      const user = userEvent.setup();
+      await renderMore();
+
+      await user.press(screen.getByRole("button", { name: "Delete account" }));
+
+      expect(routerMock.push).toHaveBeenCalledWith("/more/delete-account");
+      expect(mockSupabaseClient.auth.signOut).not.toHaveBeenCalled();
+    });
+
+    it("should open the screen once on a double tap", async () => {
+      const user = userEvent.setup();
+      await renderMore();
+      const row = screen.getByRole("button", { name: "Delete account" });
 
       await user.press(row);
       await user.press(row);

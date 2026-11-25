@@ -1,1 +1,1 @@
-export const storyStates = ["Destructive", "Primary", "Busy", "LongTitle", "Closed"];
+export const storyStates = ["Destructive", "Primary", "Busy", "BusyLocked", "LongTitle", "Closed"];
