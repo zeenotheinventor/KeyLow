@@ -1,7 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import type * as React from "react";
 
-export type BannerTone = "info" | "review" | "error";
+export type BannerTone = "info" | "review" | "error" | "success";
 
 /** The kit's notice, or the trend explainer's compact one: 12 on every side and a 14 over 20 title. */
 export type BannerSize = "default" | "compact";
@@ -30,7 +30,7 @@ export type BannerAction = { label: string } & (
 );
 
 export type BannerProps = {
-  /** Info is neutral, review is warning toned and error is danger toned. */
+  /** Info is neutral, review is warning toned, error is danger toned and success is success toned. */
   tone?: BannerTone;
   /** A short heading. Without one, the children are the whole message. */
   title?: string;
@@ -54,7 +54,7 @@ export type BannerProps = {
   children: React.ReactNode;
   /** Replaces the tone's icon. */
   icon?: LucideIcon;
-  /** Info is a status, review is a note and an error is an alert. A screen can choose another. */
+  /** Info and success are a status, review is a note and an error is an alert. A screen can choose another. */
   role?: "alert" | "status" | "note";
   action?: BannerAction;
   actionPlacement?: BannerActionPlacement;

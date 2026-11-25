@@ -214,7 +214,7 @@ describe("GET /auth/callback", () => {
   describe("password reset links", () => {
     const failedExchange = { data: {}, error: { message: "bad code" } };
 
-    it("should land a recovery code on the dashboard, whatever next says, and clear the cookie", async () => {
+    it("should land a recovery code on the set a new password page, whatever next says, and clear the cookie", async () => {
       exchangeCodeForSession.mockResolvedValue({ data: { redirectType: "recovery" }, error: null });
 
       const response = await callback(
@@ -222,25 +222,25 @@ describe("GET /auth/callback", () => {
         recoveryRequestedCookie(Date.now()),
       );
 
-      expect(response.headers.get("location")).toBe("http://localhost:3000/dashboard");
+      expect(response.headers.get("location")).toBe("http://localhost:3000/set-password");
       expect(setCookies(response)).toMatch(/kl-recovery-requested=;/);
     });
 
-    it("should land a recovery token hash on the dashboard, whatever next says, and clear the cookie", async () => {
+    it("should land a recovery token hash on the set a new password page, whatever next says, and clear the cookie", async () => {
       const response = await callback(
         "?token_hash=hash123&type=recovery&next=/weight",
         recoveryRequestedCookie(Date.now()),
       );
 
       expect(verifyOtp).toHaveBeenCalledWith({ type: "recovery", token_hash: "hash123" });
-      expect(response.headers.get("location")).toBe("http://localhost:3000/dashboard");
+      expect(response.headers.get("location")).toBe("http://localhost:3000/set-password");
       expect(setCookies(response)).toMatch(/kl-recovery-requested=;/);
     });
 
-    it("should land a recovery link on the dashboard even when no reset was recorded", async () => {
+    it("should land a recovery link on the set a new password page even when no reset was recorded", async () => {
       const response = await callback("?token_hash=hash123&type=recovery&next=/weight");
 
-      expect(response.headers.get("location")).toBe("http://localhost:3000/dashboard");
+      expect(response.headers.get("location")).toBe("http://localhost:3000/set-password");
     });
 
     it("should leave the recovery cookie alone after a sign in link", async () => {

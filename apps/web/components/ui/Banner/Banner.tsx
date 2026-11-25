@@ -1,5 +1,5 @@
 import { iconStroke } from "@keylow/tokens";
-import { CircleAlert, Info } from "lucide-react";
+import { CircleAlert, CircleCheck, Info } from "lucide-react";
 import Link from "next/link";
 
 import type { BannerAction, BannerProps, BannerTone } from "./types";
@@ -52,6 +52,19 @@ const toneStyles = {
     defaultActionPlacement: "trailing",
     defaultRole: "alert",
     defaultIcon: CircleAlert,
+  },
+  success: {
+    frame: "border-success bg-success-muted px-4 py-3",
+    compactFrame: "border-success bg-success-muted p-3",
+    icon: "text-success",
+    ink: "text-text-primary",
+    sentence: "text-caption text-text-secondary",
+    trailingActionText: "text-[14px] font-semibold leading-5 text-text-primary",
+    belowActionText:
+      "text-[14px] font-semibold leading-5 text-text-primary underline after:-inset-y-3",
+    defaultActionPlacement: "below",
+    defaultRole: "status",
+    defaultIcon: CircleCheck,
   },
 } as const satisfies Record<BannerTone, object>;
 
