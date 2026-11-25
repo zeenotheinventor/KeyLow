@@ -14,6 +14,9 @@ const confirmLook = {
   primary: { variant: "primary" },
 } as const satisfies Record<ConfirmDialogTone, Pick<ButtonProps, "variant" | "tone">>;
 
+// The Android modal asks for a handler to its back button, so a locked dialog gives it one that does nothing.
+function doNothing() {}
+
 const cancelVariant = {
   destructive: "primary",
   primary: "secondary",
@@ -28,6 +31,9 @@ const cancelVariant = {
  *
  * A destructive answer is written in the danger colour and leaves the main button to Keep, so the way back
  * is the easy one, as the board draws it.
+ *
+ * `lockWhileBusy` turns every way out into nothing while `busy`, for a step that cannot be left once it has
+ * started, such as deleting an account.
  */
 export function ConfirmDialog({
   open,
@@ -37,10 +43,16 @@ export function ConfirmDialog({
   cancelLabel,
   tone,
   busy = false,
+  confirmBusyLabel,
+  lockWhileBusy = false,
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
   const titleRef = useRef<View>(null);
+  const isLocked = busy && lockWhileBusy;
+  const dismiss = isLocked ? doNothing : onCancel;
+  const confirmName =
+    busy && confirmBusyLabel !== undefined ? { accessibilityLabel: confirmBusyLabel } : {};
 
   // A screen reader starts on the title, so the user hears what the dialog is for.
   useEffect(() => {
@@ -56,21 +68,21 @@ export function ConfirmDialog({
       navigationBarTranslucent
       statusBarTranslucent
       visible={open}
-      onRequestClose={onCancel}
+      onRequestClose={dismiss}
     >
       <View className="flex-1 justify-center px-6">
         <Pressable
           aria-hidden
           className="absolute inset-0 bg-overlay"
           role="button"
-          onPress={onCancel}
+          onPress={dismiss}
         />
         <View
           aria-label={title}
           aria-modal
           className="gap-3 rounded-large border border-border bg-surface-sheet p-5 elevation-card"
           role="alertdialog"
-          onAccessibilityEscape={onCancel}
+          onAccessibilityEscape={dismiss}
         >
           {/* The view carries the heading role and takes the screen reader's focus, because the kit's Text takes no ref. */}
           <View ref={titleRef} accessible role="heading">
@@ -78,10 +90,16 @@ export function ConfirmDialog({
           </View>
           <Text tone="secondary">{body}</Text>
           <View className="mt-2 gap-2">
-            <Button fullWidth loading={busy} {...confirmLook[tone]} onPress={onConfirm}>
+            <Button
+              fullWidth
+              loading={busy}
+              {...confirmName}
+              {...confirmLook[tone]}
+              onPress={onConfirm}
+            >
               {confirmLabel}
             </Button>
-            <Button fullWidth variant={cancelVariant[tone]} onPress={onCancel}>
+            <Button disabled={isLocked} fullWidth variant={cancelVariant[tone]} onPress={onCancel}>
               {cancelLabel}
             </Button>
           </View>

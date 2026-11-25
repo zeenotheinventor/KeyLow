@@ -3,7 +3,15 @@ import { colorScheme, vars } from "nativewind";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useColorScheme, View } from "react-native";
 
-import { readThemePreference, writeThemePreference } from "../themePreference";
+import {
+  hasAccountDeletedNotice,
+  subscribeToAccountDeletedNotice,
+} from "../../accountDeletion/accountDeletedNotice";
+import {
+  defaultThemePreference,
+  readThemePreference,
+  writeThemePreference,
+} from "../themePreference";
 import { ThemeContext } from "./themeContext";
 
 import type { ThemePreference } from "../themePreference";
@@ -58,6 +66,23 @@ export function ThemeProvider({ children, fixedPreference }: ThemeProviderProps)
     return () => {
       isCancelled = true;
     };
+  }, [isFixed]);
+
+  // A deleted account wipes the saved preference, but the state in memory outlives the wipe until the next start.
+  // So Sign in, which opens straight after, would still wear the deleted account's theme. The reset is what a
+  // fresh install starts with, the default preference, and saves nothing, because the wipe left nothing to keep.
+  // Only the announcement counts: the notice being used up calls the listener too.
+  useEffect(() => {
+    if (isFixed) {
+      return;
+    }
+
+    return subscribeToAccountDeletedNotice(() => {
+      if (hasAccountDeletedNotice()) {
+        colorScheme.set(defaultThemePreference);
+        setPreference(defaultThemePreference);
+      }
+    });
   }, [isFixed]);
 
   const setScheme = useCallback(

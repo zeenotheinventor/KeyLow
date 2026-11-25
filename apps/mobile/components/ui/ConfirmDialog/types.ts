@@ -18,6 +18,17 @@ export type ConfirmDialogProps = {
   tone: ConfirmDialogTone;
   /** Shows a spinner on the confirm button and stops it responding, while the answer is being carried out. */
   busy?: boolean | undefined;
+  /**
+   * Names the confirm button for a screen reader while `busy`, in place of its label, such as "Deleting your
+   * account" for a button that shows only a spinner. Without it the button keeps its label as its name.
+   */
+  confirmBusyLabel?: string | undefined;
+  /**
+   * Makes the dialog impossible to dismiss while `busy`: the dim, the screen reader's escape gesture and the
+   * Android back button do nothing, and the cancel button is disabled. For a step that cannot be left once
+   * it has started. Defaults to `false`, and has no effect when the dialog is not busy.
+   */
+  lockWhileBusy?: boolean | undefined;
   onConfirm: () => void;
   /**
    * Called when the user backs out, by the cancel button or by a press on the dim, the screen reader's

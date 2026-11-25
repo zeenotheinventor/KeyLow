@@ -32,6 +32,11 @@ const personsOwnStatements = [
   ...copy.ASSISTANT_TRAIN_SHEET.starters,
   copy.ACCOUNT_EXPORT_COPY.moreRow.title,
   copy.ACCOUNT_EXPORT_COPY.title,
+  // The Delete account screen names the same row, and its Keep my account button says my as that row does
+  // (choice 11 on the delete account canvas, approved as drawn).
+  copy.DELETE_ACCOUNT_COPY.exportRow.title,
+  copy.DELETE_ACCOUNT_COPY.buttons.keep,
+  copy.DELETE_ACCOUNT_COPY.dialog.cancelLabel,
   // The web's downloaded footer sends the person back to the page by its name.
   copy.ACCOUNT_EXPORT_WEB_COPY.saved.footer,
   // The Privacy Policy names the row by its label.

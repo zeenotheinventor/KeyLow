@@ -10,6 +10,7 @@ import {
   ACCOUNT_EXPORT_COPY,
   ACHIEVEMENTS_SCREEN,
   CHANGE_PASSWORD_SCREEN,
+  DELETE_ACCOUNT_COPY,
   MORE_SCREEN,
   TAB_TITLES,
   describeAssistantMoreRow,
@@ -248,6 +249,16 @@ export default function MoreRoute() {
             title={MORE_SCREEN.account.signOut}
             onPress={() => {
               void signOut();
+            }}
+          />
+          <ListRow
+            icon="Trash2"
+            title={DELETE_ACCOUNT_COPY.moreRow.title}
+            titleTone="danger"
+            onPress={() => {
+              openOnce(() => {
+                router.push("/more/delete-account");
+              });
             }}
           />
         </GroupedList>

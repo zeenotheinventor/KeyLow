@@ -281,6 +281,139 @@ describe("ConfirmDialog", () => {
     });
   });
 
+  describe("while busy and locked", () => {
+    const locked = { busy: true, lockWhileBusy: true } as const;
+
+    it("should not call onCancel when the dim behind it is pressed", async () => {
+      const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+      const onCancel = jest.fn();
+      await renderDialog({ ...locked, onCancel });
+
+      await user.press(dim());
+      await advance(1000);
+
+      expect(onCancel).not.toHaveBeenCalled();
+    });
+
+    it("should not call onCancel on the screen reader's escape gesture", async () => {
+      const onCancel = jest.fn();
+      await renderDialog({ ...locked, onCancel });
+
+      await fireEvent(screen.getByLabelText("Discard this session?"), "accessibilityEscape");
+
+      expect(onCancel).not.toHaveBeenCalled();
+    });
+
+    it("should not call onCancel on the Android back button", async () => {
+      const onCancel = jest.fn();
+      await renderDialog({ ...locked, onCancel });
+
+      await fireEvent(screen.getByLabelText("Discard this session?"), "requestClose");
+
+      expect(onCancel).not.toHaveBeenCalled();
+    });
+
+    it("should disable the cancel button and say so to a screen reader", async () => {
+      const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+      const onCancel = jest.fn();
+      await renderDialog({ ...locked, onCancel });
+
+      const cancel = screen.getByRole("button", { name: "Keep logging" });
+      await user.press(cancel);
+      await advance(1000);
+
+      expect(cancel).toBeDisabled();
+      expect(onCancel).not.toHaveBeenCalled();
+    });
+
+    it("should draw the disabled cancel button at 40 per cent", async () => {
+      await renderDialog(locked);
+
+      expect(await screen.findByRole("button", { name: "Keep logging" })).toHaveStyle({
+        opacity: Math.fround(0.4),
+      });
+    });
+
+    it("should back out again once it is no longer busy", async () => {
+      const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+      const onCancel = jest.fn();
+      const view = await renderDialog({ ...locked, onCancel });
+      await view.rerender(dialogElement({ busy: false, lockWhileBusy: true, onCancel }));
+
+      await user.press(screen.getByRole("button", { name: "Keep logging" }));
+      await advance(1000);
+
+      expect(onCancel).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("while busy and not locked", () => {
+    it("should still call onCancel when the dim behind it is pressed", async () => {
+      const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+      const onCancel = jest.fn();
+      await renderDialog({ busy: true, onCancel });
+
+      await user.press(dim());
+      await advance(1000);
+
+      expect(onCancel).toHaveBeenCalledTimes(1);
+    });
+
+    it("should still call onCancel on the Android back button and the escape gesture", async () => {
+      const onCancel = jest.fn();
+      await renderDialog({ busy: true, onCancel });
+
+      await fireEvent(screen.getByLabelText("Discard this session?"), "requestClose");
+      await fireEvent(screen.getByLabelText("Discard this session?"), "accessibilityEscape");
+
+      expect(onCancel).toHaveBeenCalledTimes(2);
+    });
+
+    it("should keep the cancel button enabled", async () => {
+      await renderDialog({ busy: true });
+
+      expect(screen.getByRole("button", { name: "Keep logging" })).toBeEnabled();
+    });
+  });
+
+  describe("when locked but not busy", () => {
+    it("should call onCancel on the dim, the escape gesture and the Android back button", async () => {
+      const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+      const onCancel = jest.fn();
+      await renderDialog({ lockWhileBusy: true, onCancel });
+
+      await user.press(dim());
+      await fireEvent(screen.getByLabelText("Discard this session?"), "accessibilityEscape");
+      await fireEvent(screen.getByLabelText("Discard this session?"), "requestClose");
+      await advance(1000);
+
+      expect(onCancel).toHaveBeenCalledTimes(3);
+    });
+  });
+
+  describe("confirmBusyLabel", () => {
+    it("should name the confirm button by it while busy", async () => {
+      await renderDialog({ busy: true, confirmBusyLabel: "Discarding your session" });
+
+      expect(
+        screen.getByRole("button", { name: "Discarding your session", busy: true }),
+      ).toBeOnTheScreen();
+      expect(screen.queryByRole("button", { name: /Discard session/ })).not.toBeOnTheScreen();
+    });
+
+    it("should name the confirm button by its label while not busy", async () => {
+      await renderDialog({ busy: false, confirmBusyLabel: "Discarding your session" });
+
+      expect(screen.getByRole("button", { name: "Discard session" })).toBeOnTheScreen();
+    });
+
+    it("should keep naming the confirm button by its label when it is not given", async () => {
+      await renderDialog({ busy: true });
+
+      expect(screen.getByRole("button", { name: /Discard session/, busy: true })).toBeOnTheScreen();
+    });
+  });
+
   describe("cancelling", () => {
     it("should call onCancel once, and not onConfirm, when the cancel button is pressed", async () => {
       const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });

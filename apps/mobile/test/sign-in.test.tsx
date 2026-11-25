@@ -1,5 +1,6 @@
 import { AuthApiError, AuthRetryableFetchError } from "@supabase/supabase-js";
-import { screen, userEvent, waitFor } from "@testing-library/react-native";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { act, render, screen, userEvent, waitFor } from "@testing-library/react-native";
 
 import { resetRouterMock, routerMock } from "./support/expoRouterMock";
 import {
@@ -12,7 +13,15 @@ import { renderAuthScreen } from "./support/renderAuthScreen";
 import { resetSupabaseMock, mockSupabaseClient } from "./support/supabaseMock";
 import { installVirtualClock } from "./support/virtualClock";
 import SignInRoute from "../app/(auth)/sign-in";
+import {
+  announceAccountDeleted,
+  hasAccountDeletedNotice,
+  takeAccountDeletedNotice,
+} from "../lib/accountDeletion/accountDeletedNotice";
 import { takeForgotPasswordEmail } from "../lib/forgotPasswordEmail";
+import { ThemeProvider } from "../lib/theme";
+
+import type { ReactNode } from "react";
 
 jest.mock("@react-native-async-storage/async-storage", () => ({
   __esModule: true,
@@ -433,5 +442,100 @@ describe("sign-in screen", () => {
 
       expect(JSON.stringify(routerMock.push.mock.calls)).not.toContain("person@example.test");
     });
+  });
+});
+
+function ProvidedScreen({ children }: { children: ReactNode }) {
+  return (
+    <ThemeProvider fixedPreference="dark">
+      <QueryClientProvider client={new QueryClient()}>{children}</QueryClientProvider>
+    </ThemeProvider>
+  );
+}
+
+// Renders the screen with its providers kept across a rerender, which renderAuthScreen's do not.
+function renderSignIn() {
+  return render(<SignInRoute />, { wrapper: ProvidedScreen });
+}
+
+describe("sign-in screen after an account deletion", () => {
+  const NOTICE = "Your account has been deleted.";
+
+  beforeEach(() => {
+    installVirtualClock();
+    resetRouterMock();
+    resetSupabaseMock();
+    resetGoogleSignInMock();
+  });
+
+  afterEach(() => {
+    takeAccountDeletedNotice();
+    jest.restoreAllMocks();
+    jest.useRealTimers();
+  });
+
+  it("should show no confirmation when no account was deleted", async () => {
+    await renderSignIn();
+
+    expect(screen.queryByText(NOTICE)).not.toBeOnTheScreen();
+    expect(screen.queryByRole("status")).not.toBeOnTheScreen();
+  });
+
+  it("should confirm the deletion in a status above the form, and keep Welcome back and empty fields", async () => {
+    announceAccountDeleted();
+
+    await renderSignIn();
+
+    expect(screen.getByRole("status")).toHaveTextContent(NOTICE);
+    expect(screen.getByRole("heading", { name: "Welcome back" })).toBeOnTheScreen();
+    expect(screen.getByLabelText("Email")).toHaveDisplayValue("");
+    expect(screen.getByLabelText("Password")).toHaveDisplayValue("");
+  });
+
+  it("should show it when the deletion is announced after the screen is already showing", async () => {
+    await renderSignIn();
+    expect(screen.queryByText(NOTICE)).not.toBeOnTheScreen();
+
+    await act(() => {
+      announceAccountDeleted();
+    });
+
+    expect(screen.getByRole("status")).toHaveTextContent(NOTICE);
+  });
+
+  it("should keep it while the screen is showing, and not move focus to it", async () => {
+    announceAccountDeleted();
+    await renderSignIn();
+
+    expect(hasAccountDeletedNotice()).toBe(true);
+    expect(screen.getByLabelText("Email")).not.toHaveProp("autoFocus", true);
+  });
+
+  it("should use the notice up when the screen unmounts, so a second mount shows nothing", async () => {
+    announceAccountDeleted();
+    const first = await renderSignIn();
+    expect(screen.getByText(NOTICE)).toBeOnTheScreen();
+
+    await first.unmount();
+    expect(hasAccountDeletedNotice()).toBe(false);
+    await renderSignIn();
+
+    expect(screen.queryByText(NOTICE)).not.toBeOnTheScreen();
+  });
+
+  it("should use the notice up when Create account opens over it, which leaves the screen mounted", async () => {
+    announceAccountDeleted();
+    const view = await renderSignIn();
+
+    routerMock.isFocused = false;
+    await view.rerender(<SignInRoute />);
+
+    expect(hasAccountDeletedNotice()).toBe(false);
+    expect(screen.queryByText(NOTICE)).not.toBeOnTheScreen();
+
+    routerMock.isFocused = true;
+    await view.rerender(<SignInRoute />);
+
+    expect(screen.queryByText(NOTICE)).not.toBeOnTheScreen();
   });
 });

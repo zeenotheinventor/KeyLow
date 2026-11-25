@@ -952,7 +952,7 @@ describe("the More screen", () => {
   });
 
   describe("Export my data", () => {
-    it("should be the first row in Account, above Change password and Sign out, with its icon and a chevron", async () => {
+    it("should be the first row in Account, above Change password, Sign out and Delete account, with its icon and a chevron", async () => {
       signInAs("sam.taylor@example.com", emailAccount);
       await renderMore();
 
@@ -965,10 +965,11 @@ describe("the More screen", () => {
       expect(drawingsIn(row)).toHaveLength(2);
       await screen.findByRole("button", { name: "Change password" });
       const rows = account.getAllByRole("button");
-      expect(rows).toHaveLength(3);
+      expect(rows).toHaveLength(4);
       expect(rows[0]).toBe(row);
       expect(rows[1]).toHaveAccessibleName("Change password");
       expect(rows[2]).toHaveAccessibleName("Sign out");
+      expect(rows[3]).toHaveAccessibleName("Delete account");
     });
 
     it("should open the Export my data screen inside the More tab when pressed", async () => {
@@ -1032,7 +1033,7 @@ describe("the More screen", () => {
         expect(mockSupabaseClient.auth.getSession).toHaveBeenCalled();
       });
       expect(screen.queryByRole("button", { name: "Change password" })).not.toBeOnTheScreen();
-      expect(within(screen.getByLabelText("Account")).getAllByRole("button")).toHaveLength(2);
+      expect(within(screen.getByLabelText("Account")).getAllByRole("button")).toHaveLength(3);
     });
 
     it("should be left out when the session says nothing about how the account signs in", async () => {
@@ -1049,6 +1050,43 @@ describe("the More screen", () => {
       await renderMore();
 
       expect(screen.queryByRole("button", { name: "Change password" })).not.toBeOnTheScreen();
+    });
+  });
+
+  describe("Delete account", () => {
+    it("should be the last row in Account, after Sign out, with a bin and a chevron", async () => {
+      await renderMore();
+
+      const rows = within(screen.getByLabelText("Account")).getAllByRole("button");
+
+      expect(rows).toHaveLength(3);
+      expect(rows[0]).toHaveAccessibleName(
+        "Export my data, A file with everything in your account",
+      );
+      expect(rows[1]).toHaveAccessibleName("Sign out");
+      expect(rows[2]).toHaveAccessibleName("Delete account");
+      expect(drawingsIn(screen.getByRole("button", { name: "Delete account" }))).toHaveLength(2);
+    });
+
+    it("should open the Delete account screen inside the More tab when pressed, and delete nothing", async () => {
+      const user = userEvent.setup();
+      await renderMore();
+
+      await user.press(screen.getByRole("button", { name: "Delete account" }));
+
+      expect(routerMock.push).toHaveBeenCalledWith("/more/delete-account");
+      expect(mockSupabaseClient.auth.signOut).not.toHaveBeenCalled();
+    });
+
+    it("should open the screen once on a double tap", async () => {
+      const user = userEvent.setup();
+      await renderMore();
+      const row = screen.getByRole("button", { name: "Delete account" });
+
+      await user.press(row);
+      await user.press(row);
+
+      expect(routerMock.push).toHaveBeenCalledTimes(1);
     });
   });
 

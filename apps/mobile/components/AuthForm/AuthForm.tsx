@@ -49,6 +49,7 @@ export function AuthForm({
   onSubmit,
   footer,
   requireAcceptance = false,
+  notice,
   onGoogleSignIn = signInWithGoogle,
   onForgotPassword,
 }: AuthFormProps) {
@@ -141,6 +142,8 @@ export function AuthForm({
           onScroll={trackScrollOffset}
           contentContainerClassName={`flex-grow justify-center px-6 pb-[34px] pt-[56px] ${requireAcceptance ? "gap-[14px]" : "gap-4"}`}
         >
+          {notice}
+
           {requireAcceptance ? (
             <View className="items-center gap-1.5">
               <KiLoMark label="Ki-Lo" size={56} />
