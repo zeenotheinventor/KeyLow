@@ -48,6 +48,12 @@ describe("scrubEvent", () => {
     expect(scrubbed.tags).toEqual({ code: "unexpected_failure" });
   });
 
+  it("should keep the fixed message of the other devices report, which no value is in", () => {
+    const scrubbed = scrub({ message: "Password saved but the other devices were not signed out" });
+
+    expect(scrubbed.message).toBe("Password saved but the other devices were not signed out");
+  });
+
   it("should still drop a message that is not the fixed one, even with the tags of the report", () => {
     const scrubbed = scrub({
       message: `Keyboard lift out of range for ${FOOD_NAME}`,

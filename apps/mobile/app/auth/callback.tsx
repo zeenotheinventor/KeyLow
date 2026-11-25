@@ -48,10 +48,9 @@ export default function AuthCallbackRoute() {
           case "home":
             router.replace("/(tabs)/dashboard");
             break;
-          // Interim: a reset link signs the person in and opens the dashboard. The set new password screen
-          // replaces this line.
+          // A reset link has signed the person in, so the next thing they need is the new password.
           case "setNewPassword":
-            router.replace("/(tabs)/dashboard");
+            router.replace("/auth/set-password");
             break;
           case "resetLinkInvalid":
             setFailure("resetLink");
