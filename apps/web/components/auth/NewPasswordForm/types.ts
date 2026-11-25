@@ -4,6 +4,7 @@ import type { PasswordUpdateOutcome } from "@keylow/core/accounts";
 export type NewPasswordFormCopy = {
   newPasswordLabel: string;
   confirmPasswordLabel: string;
+  helper: string;
   submitLabel: string;
   submittingLabel: string;
 };

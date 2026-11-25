@@ -1,7 +1,7 @@
 "use client";
 
 import { validateNewPassword, type NewPasswordProblems } from "@keylow/core/accounts";
-import { GENERIC_ERROR, RESET_LINK_INVALID, SET_PASSWORD_SCREEN } from "@keylow/core/copy";
+import { GENERIC_ERROR, RESET_LINK_INVALID } from "@keylow/core/copy";
 import { useState, type SubmitEvent } from "react";
 
 import type { NewPasswordFormProps } from "./types";
@@ -17,7 +17,7 @@ type Failure = { sentence: string; offersNewLink: boolean };
 
 // Each class is written out whole so Tailwind can see it.
 const buttonPlacementClasses = {
-  fill: "",
+  fill: "flex flex-col",
   end: "flex justify-end",
 } as const satisfies Record<NonNullable<NewPasswordFormProps["buttonPlacement"]>, string>;
 
@@ -97,7 +97,7 @@ export function NewPasswordForm({
         onChange={(event) => {
           setNewPassword(event.target.value);
         }}
-        helper={SET_PASSWORD_SCREEN.helper}
+        helper={copy.helper}
         error={problems.password}
         disabled={isCompleted}
       />

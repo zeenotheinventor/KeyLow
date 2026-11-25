@@ -5,6 +5,8 @@ export const storyStates = [
   "InfoWithCustomIcon",
   "Review",
   "ReviewWithAction",
+  "SuccessWithTitle",
+  "SuccessMessage",
   "ErrorMessage",
   "ErrorWithTitle",
   "ErrorWithDisabledAction",

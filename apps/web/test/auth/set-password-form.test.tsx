@@ -114,6 +114,17 @@ describe("SetPasswordForm", () => {
       expect(screen.queryByRole("button", { name: "Save password" })).toBeNull();
     });
 
+    it("should move focus to the Password saved heading once saved", async () => {
+      updateUser.mockResolvedValue(answered);
+      render(<SetPasswordForm email={EMAIL} />);
+
+      await fillAndSave();
+
+      expect(screen.getByRole("heading", { name: PASSWORD_SAVED.title })).toBe(
+        document.activeElement,
+      );
+    });
+
     it("should offer Continue to the dashboard once saved", async () => {
       updateUser.mockResolvedValue(answered);
       render(<SetPasswordForm email={EMAIL} />);

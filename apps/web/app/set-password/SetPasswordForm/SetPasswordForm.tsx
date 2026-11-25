@@ -5,7 +5,7 @@ import { PASSWORD_SAVED, SET_PASSWORD_SCREEN, describePasswordFor } from "@keylo
 import { captureException } from "@sentry/nextjs";
 import { CircleCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { SetPasswordFormProps } from "./types";
 
@@ -27,6 +27,14 @@ const FORGOT_PASSWORD_PATH = "/forgot-password";
 export function SetPasswordForm({ email }: SetPasswordFormProps) {
   const router = useRouter();
   const [isSaved, setIsSaved] = useState(false);
+  const savedTitleRef = useRef<HTMLHeadingElement>(null);
+
+  // The form is replaced by the saved message, so the title takes focus rather than the page body.
+  useEffect(() => {
+    if (isSaved) {
+      savedTitleRef.current?.focus();
+    }
+  }, [isSaved]);
 
   async function sendNewLink() {
     try {
@@ -45,6 +53,7 @@ export function SetPasswordForm({ email }: SetPasswordFormProps) {
         <AuthMessageCard
           tone="success"
           icon={CircleCheck}
+          titleRef={savedTitleRef}
           title={PASSWORD_SAVED.title}
           body={PASSWORD_SAVED.body}
           primaryAction={{ label: PASSWORD_SAVED.continueLabel, href: DASHBOARD_PATH }}

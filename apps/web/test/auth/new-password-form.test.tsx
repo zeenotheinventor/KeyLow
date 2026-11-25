@@ -82,7 +82,7 @@ describe("NewPasswordForm", () => {
     });
 
     it("should use the labels it is given", () => {
-      renderForm({ copy: CHANGE_PASSWORD_SCREEN });
+      renderForm({ copy: { ...CHANGE_PASSWORD_SCREEN, helper: SET_PASSWORD_SCREEN.helper } });
 
       expect(screen.getByLabelText(CHANGE_PASSWORD_SCREEN.newPasswordLabel)).toBeTruthy();
       expect(screen.getByLabelText(CHANGE_PASSWORD_SCREEN.confirmPasswordLabel)).toBeTruthy();

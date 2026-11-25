@@ -5,6 +5,7 @@ import { describePasswordUpdateFailure } from "@keylow/core/accounts";
 import {
   CHANGE_PASSWORD_SCREEN,
   PASSWORD_CHANGED,
+  SET_PASSWORD_SCREEN,
   TAB_TITLES,
   describePasswordFor,
 } from "@keylow/core/copy";
@@ -47,7 +48,7 @@ export function ChangePasswordScreen({ email }: ChangePasswordScreenProps) {
       <Card padding="none" className="flex flex-col gap-4 p-6 sm:p-8">
         <p className="text-body text-text-secondary">{describePasswordFor(email)}</p>
         <NewPasswordForm
-          copy={CHANGE_PASSWORD_SCREEN}
+          copy={{ ...CHANGE_PASSWORD_SCREEN, helper: SET_PASSWORD_SCREEN.helper }}
           onSave={save}
           onSaved={() => {
             setIsSaved(true);
