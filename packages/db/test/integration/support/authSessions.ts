@@ -13,8 +13,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 const run = promisify(execFile);
 
-// The CLI is the one pinned in this package, run from here so `supabase` finds this project.
-const databasePackageDirectory = new URL("../../../", import.meta.url).pathname;
+// The local stack's database container, named `supabase_db_<project_id>` and the project_id in
+// supabase/config.toml is "keylow". CI starts the same project, so the name is the same there.
+const databaseContainer = "supabase_db_keylow";
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -114,7 +115,7 @@ async function setProviders(userId: string, provider: string, providers: string[
  * Makes the session's password sign-in older by `minutes`, by updating that session's own row in
  * `auth.mfa_amr_claims`, which is where the auth service reads the `amr` claim from when it signs a token.
  * The next `refreshSession` then signs a token whose password entry is that much older, with a recent
- * `iat`. It touches the local database through the pinned CLI with `--local`, never any other target, and
+ * `iat`. It runs psql inside the local stack's own database container, never any other target, and
  * builds the statement itself from a uuid it has checked and a whole number of minutes.
  */
 export async function agePasswordEntry(accessToken: string, minutes: number): Promise<void> {
@@ -128,18 +129,32 @@ export async function agePasswordEntry(accessToken: string, minutes: number): Pr
     `updated_at = updated_at - interval '${minutes} minutes' ` +
     `where session_id = '${sessionId}' and authentication_method = 'password' returning id`;
 
-  const { stdout } = await run(
-    "pnpm",
-    ["exec", "supabase", "db", "query", "--local", "--output", "json", statement],
-    { cwd: databasePackageDirectory },
-  );
-  // The CLI can print a notice (such as one about a newer version) around the JSON document on stdout, so
-  // only the text from the first "{" to the last "}" is parsed.
-  const document: unknown = JSON.parse(
-    stdout.slice(stdout.indexOf("{"), stdout.lastIndexOf("}") + 1),
-  );
-  const rows = isRecord(document) ? document["rows"] : undefined;
-  if (!Array.isArray(rows) || rows.length !== 1) {
-    throw new Error("Expected to age exactly one password entry");
+  let stdout: string;
+  try {
+    ({ stdout } = await run("docker", [
+      "exec",
+      databaseContainer,
+      "psql",
+      "-U",
+      "postgres",
+      "-q",
+      "-v",
+      "ON_ERROR_STOP=1",
+      "-tA",
+      "-c",
+      statement,
+    ]));
+  } catch (failure) {
+    const exitCode = isRecord(failure) ? failure["code"] : undefined;
+    throw new Error(`docker exec psql failed (exit code ${String(exitCode)})`);
+  }
+
+  // One id per returned row. Lines that are not an id (a command tag, if psql prints one) are not counted.
+  const lines = stdout.split("\n").filter((line) => line.trim() !== "");
+  const aged = lines.filter((line) => uuidPattern.test(line.trim())).length;
+  if (aged !== 1) {
+    throw new Error(
+      `Expected to age exactly one password entry, aged ${aged} (${lines.length} lines)`,
+    );
   }
 }
