@@ -16,6 +16,15 @@ export const FORGOT_PASSWORD_SCREEN = {
   footerLink: "Sign in",
 };
 
+/**
+ * What the Forgot password screen says in place of its Sign in words when it is reached signed in, from Delete
+ * account: the header's Back, and the sent message's way back. The "Remembered it? Sign in" line is not drawn then.
+ */
+export const FORGOT_PASSWORD_FROM_DELETE_ACCOUNT = {
+  backLabel: "Back",
+  sentBackLabel: "Back to Delete account",
+};
+
 /** What the screen says once a reset link has been requested. `describeResetLinkSent` is its body. */
 export const RESET_LINK_SENT_SCREEN = {
   heading: "Check your email",

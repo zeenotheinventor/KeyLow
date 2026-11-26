@@ -48,12 +48,16 @@ describe("DELETE_ACCOUNT_COPY", () => {
     });
   });
 
-  it("should word the dialog as confirm and deleting print it", () => {
+  it("should word the dialog as confirm, confirm-password, confirm-password-wrong and deleting print it", () => {
     expect(DELETE_ACCOUNT_COPY.dialog).toEqual({
       title: "Delete your account?",
       body: "Everything in your account is deleted now. This cannot be undone.",
       confirmLabel: "Delete account",
       cancelLabel: "Keep my account",
+      password: {
+        body: "Everything in your account is deleted now. This cannot be undone. Enter your password to confirm.",
+        wrongPassword: "That password is not right. Nothing was deleted.",
+      },
       deleting: {
         title: "Deleting your account",
         body: "This can take a moment. Keep Ki-Lo open.",

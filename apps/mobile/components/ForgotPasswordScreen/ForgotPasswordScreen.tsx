@@ -1,4 +1,6 @@
 import {
+  AUTH_SCREEN,
+  FORGOT_PASSWORD_FROM_DELETE_ACCOUNT,
   RESET_LINK_SENT_SCREEN,
   describeResetLinkSent,
   describeSendAgainCountdown,
@@ -18,8 +20,12 @@ import type { ForgotPasswordScreenProps } from "./types";
  * email message with its Send again countdown. The sent message reads the same for an address with an
  * account and one without.
  */
-export function ForgotPasswordScreen({ onBackToSignIn }: ForgotPasswordScreenProps) {
+export function ForgotPasswordScreen({
+  from = "signIn",
+  onBackToSignIn,
+}: ForgotPasswordScreenProps) {
   const forgotPassword = useForgotPassword();
+  const isFromSignIn = from === "signIn";
 
   // Back is always Sign in, in the form and in the sent message, even when this screen replaced another
   // (Send a new link) and has nothing of its own under it.
@@ -41,6 +47,10 @@ export function ForgotPasswordScreen({ onBackToSignIn }: ForgotPasswordScreenPro
         failure={forgotPassword.failure}
         fieldError={forgotPassword.fieldError}
         isSending={forgotPassword.isSending}
+        backLabel={
+          isFromSignIn ? AUTH_SCREEN.backToSignIn : FORGOT_PASSWORD_FROM_DELETE_ACCOUNT.backLabel
+        }
+        hasSignInFooter={isFromSignIn}
         onBackToSignIn={onBackToSignIn}
         onChangeEmail={forgotPassword.setEmail}
         onSend={forgotPassword.send}
@@ -55,7 +65,12 @@ export function ForgotPasswordScreen({ onBackToSignIn }: ForgotPasswordScreenPro
       <AuthMessage
         body={describeResetLinkSent(forgotPassword.sentTo, "phone")}
         icon="Mail"
-        secondary={{ label: RESET_LINK_SENT_SCREEN.backToSignInLabel, onPress: onBackToSignIn }}
+        secondary={{
+          label: isFromSignIn
+            ? RESET_LINK_SENT_SCREEN.backToSignInLabel
+            : FORGOT_PASSWORD_FROM_DELETE_ACCOUNT.sentBackLabel,
+          onPress: onBackToSignIn,
+        }}
         title={RESET_LINK_SENT_SCREEN.heading}
         tone="neutral"
       >

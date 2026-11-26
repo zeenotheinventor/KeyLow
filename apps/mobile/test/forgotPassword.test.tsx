@@ -1,5 +1,5 @@
 import { captureMessage } from "@sentry/react-native";
-import { act, screen, userEvent, waitFor, within } from "@testing-library/react-native";
+import { act, cleanup, screen, userEvent, waitFor, within } from "@testing-library/react-native";
 import { BackHandler } from "react-native";
 
 import { resetRouterMock, routerMock } from "./support/expoRouterMock";
@@ -11,6 +11,7 @@ import {
 import { resetSupabaseMock } from "./support/supabaseMock";
 import { installVirtualClock } from "./support/virtualClock";
 import ForgotPasswordRoute from "../app/(auth)/forgot-password";
+import SignedInForgotPasswordRoute from "../app/(tabs)/more/forgot-password";
 import { setForgotPasswordEmail, takeForgotPasswordEmail } from "../lib/forgotPasswordEmail";
 import { readRecoveryRequestedAt } from "../lib/recoveryRequest";
 
@@ -67,8 +68,10 @@ describe("forgot password screen", () => {
     jest.mocked(captureMessage).mockClear();
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     takeForgotPasswordEmail();
+    // Unmounting clears the Send again countdown, and it must happen on the fake clock that started it.
+    await cleanup();
     jest.useRealTimers();
   });
 
@@ -463,6 +466,68 @@ describe("forgot password screen", () => {
       ).toBeOnTheScreen();
       expect(screen.getByLabelText("Email")).toHaveDisplayValue(address);
       expect(screen.getByRole("button", { name: "Send link" })).toBeOnTheScreen();
+    });
+  });
+
+  describe("reached signed in, from Forgot password? in the Delete account confirm", () => {
+    async function openSignedIn(handedOver = "") {
+      setForgotPasswordEmail(handedOver);
+      await renderWithPasswordReset(<SignedInForgotPasswordRoute />);
+    }
+
+    it("should be the same screen, with the handed over email filled in", async () => {
+      await openSignedIn(address);
+
+      expect(screen.getByRole("heading", { name: "Reset your password" })).toBeOnTheScreen();
+      expect(screen.getByLabelText("Email")).toHaveDisplayValue(address);
+    });
+
+    it("should name the header chevron Back, and draw no Sign in line", async () => {
+      await openSignedIn();
+
+      expect(screen.getByRole("button", { name: "Back" })).toBeOnTheScreen();
+      expect(screen.queryByRole("button", { name: "Back to sign in" })).not.toBeOnTheScreen();
+      expect(screen.queryByRole("link", { name: "Sign in" })).not.toBeOnTheScreen();
+      expect(screen.queryByText("Remembered it?")).not.toBeOnTheScreen();
+    });
+
+    it("should go back to the screen under it from the chevron and the hardware button", async () => {
+      const addListener = jest.spyOn(BackHandler, "addEventListener");
+      await openSignedIn();
+
+      await userEvent.setup().press(screen.getByRole("button", { name: "Back" }));
+      const listener = addListener.mock.calls.at(-1)?.[1];
+      let wasHandled: boolean | null | undefined;
+      await act(() => {
+        wasHandled = listener?.({ type: "hardwareBackPress", timeStamp: 0 });
+      });
+
+      expect(routerMock.back).toHaveBeenCalledTimes(2);
+      expect(wasHandled).toBe(true);
+      expect(routerMock.dismissTo).not.toHaveBeenCalled();
+    });
+
+    it("should go to More when there is nothing before it", async () => {
+      routerMock.canGoBack.mockReturnValue(false);
+      await openSignedIn();
+
+      await userEvent.setup().press(screen.getByRole("button", { name: "Back" }));
+
+      expect(routerMock.replace).toHaveBeenCalledWith("/(tabs)/more");
+      expect(routerMock.dismissTo).not.toHaveBeenCalled();
+    });
+
+    it("should offer Back to Delete account in the sent message, and go back with it", async () => {
+      const user = userEvent.setup();
+      await openSignedIn(address);
+      await user.press(screen.getByRole("button", { name: "Send link" }));
+      await screen.findByRole("status");
+
+      expect(screen.queryByRole("button", { name: "Back to sign in" })).not.toBeOnTheScreen();
+      await user.press(screen.getByRole("button", { name: "Back to Delete account" }));
+
+      expect(routerMock.back).toHaveBeenCalledTimes(1);
+      expect(routerMock.dismissTo).not.toHaveBeenCalled();
     });
   });
 });
