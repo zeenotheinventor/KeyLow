@@ -22,6 +22,8 @@ export function ForgotPasswordForm({
   failure,
   isSending,
   onSend,
+  backLabel,
+  hasSignInFooter,
   onBackToSignIn,
 }: ForgotPasswordFormProps) {
   const frameRef = useRef<View>(null);
@@ -48,7 +50,7 @@ export function ForgotPasswordForm({
           <IconButton
             icon="ChevronLeft"
             iconSize="lg"
-            label={AUTH_SCREEN.backToSignIn}
+            label={backLabel}
             variant="ghost"
             onPress={onBackToSignIn}
           />
@@ -92,14 +94,16 @@ export function ForgotPasswordForm({
             </Button>
           </View>
 
-          <AuthFooter
-            footer={{
-              prompt: FORGOT_PASSWORD_SCREEN.footerPrompt,
-              linkLabel: FORGOT_PASSWORD_SCREEN.footerLink,
-              href: "/(auth)/sign-in",
-            }}
-            onPress={onBackToSignIn}
-          />
+          {hasSignInFooter ? (
+            <AuthFooter
+              footer={{
+                prompt: FORGOT_PASSWORD_SCREEN.footerPrompt,
+                linkLabel: FORGOT_PASSWORD_SCREEN.footerLink,
+                href: "/(auth)/sign-in",
+              }}
+              onPress={onBackToSignIn}
+            />
+          ) : null}
         </ScrollView>
       </View>
     </KeyboardAvoidingView>

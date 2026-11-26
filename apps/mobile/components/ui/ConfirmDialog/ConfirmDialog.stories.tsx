@@ -1,5 +1,7 @@
 import { View } from "react-native";
 
+import { AuthLink } from "../../AuthForm/AuthLink";
+import { Input } from "../Input";
 import { Text } from "../Text";
 import { ConfirmDialog } from "./ConfirmDialog";
 
@@ -64,6 +66,55 @@ export const LongTitle: Story = {
     body: "The 8 sets you logged in Legs on Thursday 15 October are removed from your history and your body map, and your last performance for each exercise goes back to the session before it. This cannot be undone.",
     confirmLabel: "Delete session",
     cancelLabel: "Keep session",
+  },
+};
+
+// The delete account board for an email account: a field between the sentence and the buttons, and a link under
+// it. The field is not focused when the dialog opens, and the card moves up when the keyboard does.
+export const WithAField: Story = {
+  args: {
+    title: "Delete your account?",
+    body: "Everything in your account is deleted now. This cannot be undone. Enter your password to confirm.",
+    confirmLabel: "Delete account",
+    cancelLabel: "Keep my account",
+    children: (
+      <View className="gap-1">
+        <Input
+          autoCapitalize="none"
+          autoCorrect={false}
+          label="Password"
+          secureTextEntry
+          value=""
+          onChangeText={() => undefined}
+        />
+        <View className="items-end">
+          <AuthLink label="Forgot password?" onPress={() => undefined} />
+        </View>
+      </View>
+    ),
+  },
+};
+
+// The same board after a wrong password: the field takes the danger border and says so, and the typed value stays.
+export const WithAFieldError: Story = {
+  args: {
+    ...WithAField.args,
+    children: (
+      <View className="gap-1">
+        <Input
+          autoCapitalize="none"
+          autoCorrect={false}
+          error="That password is not right. Nothing was deleted."
+          label="Password"
+          secureTextEntry
+          value="not-the-password"
+          onChangeText={() => undefined}
+        />
+        <View className="items-end">
+          <AuthLink label="Forgot password?" onPress={() => undefined} />
+        </View>
+      </View>
+    ),
   },
 };
 

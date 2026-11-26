@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 export type ConfirmDialogTone = "destructive" | "primary";
 
 export type ConfirmDialogProps = {
@@ -29,6 +31,12 @@ export type ConfirmDialogProps = {
    * it has started. Defaults to `false`, and has no effect when the dialog is not busy.
    */
   lockWhileBusy?: boolean | undefined;
+  /**
+   * Drawn between the body and the buttons, for a field the answer needs, such as the password a deletion asks
+   * for. With it the card moves up to stay clear of the keyboard, and the gap above the buttons gives way to
+   * the field's own. Defaults to nothing, which leaves the card as every other dialog draws it.
+   */
+  children?: ReactNode | undefined;
   onConfirm: () => void;
   /**
    * Called when the user backs out, by the cancel button or by a press on the dim, the screen reader's

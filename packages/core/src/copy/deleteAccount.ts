@@ -1,7 +1,7 @@
 import { COMPANY_DETAILS } from "./legal";
 
 /**
- * The words of Delete account (KEY-1117): the More row, the screen, its confirm step, the two ways an attempt
+ * The words of Delete account (KEY-1117): the More row, the screen, its confirm step (with the password step of an email account), the two ways an attempt
  * can end without a deletion, and the Sign in confirmation, as the `delete-account` boards and `sign-in ·
  * account-deleted` print them. The email action's label comes from `describeDeleteAccountEmailAction`.
  */
@@ -46,6 +46,11 @@ export const DELETE_ACCOUNT_COPY = {
     body: "Everything in your account is deleted now. This cannot be undone.",
     confirmLabel: "Delete account",
     cancelLabel: "Keep my account",
+    // The confirm-password board, for an account with a password: the same question, then the ask.
+    password: {
+      body: "Everything in your account is deleted now. This cannot be undone. Enter your password to confirm.",
+      wrongPassword: "That password is not right. Nothing was deleted.",
+    },
     deleting: {
       title: "Deleting your account",
       body: "This can take a moment. Keep Ki-Lo open.",

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   CHANGE_PASSWORD_SCREEN,
+  FORGOT_PASSWORD_FROM_DELETE_ACCOUNT,
   FORGOT_PASSWORD_LINK,
   FORGOT_PASSWORD_SCREEN,
   PASSWORD_CHANGED,
@@ -22,6 +23,13 @@ const email = `${crypto.randomUUID()}@keylow.test`;
 describe("the forgot password sentences", () => {
   it("should pin the link on the sign in screen", () => {
     expect(FORGOT_PASSWORD_LINK).toBe("Forgot password?");
+  });
+
+  it("should pin the words of the screen when it is reached from Delete account", () => {
+    expect(FORGOT_PASSWORD_FROM_DELETE_ACCOUNT).toEqual({
+      backLabel: "Back",
+      sentBackLabel: "Back to Delete account",
+    });
   });
 
   it("should pin the request screen", () => {

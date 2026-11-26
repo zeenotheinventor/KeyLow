@@ -7,5 +7,9 @@ export type ForgotPasswordFormProps = {
   failure: string | undefined;
   isSending: boolean;
   onSend: () => void;
+  /** The header chevron's name. */
+  backLabel: string;
+  /** Whether the Sign in line is drawn under the button, which only a signed out person needs. */
+  hasSignInFooter: boolean;
   onBackToSignIn: () => void;
 };

@@ -1,6 +1,8 @@
 import {
+  AUTH_SCREEN,
   COMPANY_DETAILS,
   DELETE_ACCOUNT_COPY,
+  FORGOT_PASSWORD_LINK,
   describeDeleteAccountEmailAction,
 } from "@keylow/core/copy";
 import { Stack, useFocusEffect, useRouter } from "expo-router";
@@ -9,12 +11,14 @@ import { useCallback } from "react";
 import { BackHandler, Linking, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { AuthLink } from "../AuthForm/AuthLink";
 import {
   Banner,
   Button,
   Card,
   ConfirmDialog,
   GroupedList,
+  Input,
   ListRow,
   SheetHeader,
   Text,
@@ -33,14 +37,15 @@ function openEmail() {
  * The Delete account screen, pushed from More (`delete-account · explain`, `explain-offline`, `confirm`, `deleting`,
  * `failed` and `unconfirmed`). The card, the warning and the Export my data row stay in every state. Above them
  * sit the notices of the last attempt, and below them the two buttons that stay fixed while the rest scrolls. The
- * confirm is the kit's destructive dialog, locked while the deletion runs. A confirmed deletion signs out and
+ * confirm is the kit's destructive dialog, locked while the password is checked and the deletion runs, with the
+ * password field of `confirm-password` for an account with password sign-in. A confirmed deletion signs out and
  * AuthGate opens Sign in, so this screen never navigates after one.
  */
 export function DeleteAccountScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const flow = useDeleteAccountFlow();
-  const { view, isOnline, isConfirmOpen, isDeleting } = flow;
+  const { view, isOnline, isConfirmOpen, isDeleting, isBusy } = flow;
 
   function goBack() {
     // A cold link to this screen has nothing before it, so Back goes to More instead.
@@ -55,12 +60,12 @@ export function DeleteAccountScreen() {
   // from the edge goes back on iOS, so it is off then too.
   useFocusEffect(
     useCallback(() => {
-      const subscription = BackHandler.addEventListener("hardwareBackPress", () => isDeleting);
+      const subscription = BackHandler.addEventListener("hardwareBackPress", () => isBusy);
 
       return () => {
         subscription.remove();
       };
-    }, [isDeleting]),
+    }, [isBusy]),
   );
 
   // The offline banner sits under the error banner. On the unconfirmed board its own banner already says to check
@@ -98,7 +103,12 @@ export function DeleteAccountScreen() {
       case "explain":
         return (
           <>
-            <Button disabled={!isOnline} fullWidth variant="destructive" onPress={flow.openConfirm}>
+            <Button
+              disabled={!isOnline || !flow.isAccountKnown}
+              fullWidth
+              variant="destructive"
+              onPress={flow.openConfirm}
+            >
               {copy.buttons.delete}
             </Button>
             <Button fullWidth variant="secondary" onPress={goBack}>
@@ -109,7 +119,12 @@ export function DeleteAccountScreen() {
       case "failed":
         return (
           <>
-            <Button disabled={!isOnline} fullWidth variant="destructive" onPress={flow.openConfirm}>
+            <Button
+              disabled={!isOnline || !flow.isAccountKnown}
+              fullWidth
+              variant="destructive"
+              onPress={flow.openConfirm}
+            >
               {copy.buttons.retry}
             </Button>
             <Button fullWidth variant="secondary" onPress={goBack}>
@@ -138,15 +153,47 @@ export function DeleteAccountScreen() {
     }
   }
 
+  function renderDialogBody() {
+    if (isDeleting) {
+      return copy.dialog.deleting.body;
+    }
+
+    return flow.hasPasswordStep ? copy.dialog.password.body : copy.dialog.body;
+  }
+
+  // The password is not focused when the dialog opens, so the question is read first. It is locked while the
+  // password is checked and the deletion runs. The link is the one Sign in draws.
+  function renderPasswordField() {
+    return (
+      <View className="gap-1">
+        <Input
+          autoCapitalize="none"
+          autoComplete="current-password"
+          autoCorrect={false}
+          disabled={isBusy}
+          error={flow.passwordError}
+          label={AUTH_SCREEN.passwordLabel}
+          secureTextEntry
+          textContentType="password"
+          value={flow.password}
+          onChangeText={flow.changePassword}
+        />
+        <View className="items-end">
+          <AuthLink label={FORGOT_PASSWORD_LINK} onPress={flow.forgotPassword} />
+        </View>
+      </View>
+    );
+  }
+
   return (
     // The insets are runtime values no class can name, so they go through variables, as the Export my data screen's do.
     <View
       className="flex-1 bg-background pb-[var(--inset-bottom)] pt-[var(--inset-top)]"
       style={vars({ "--inset-top": insets.top, "--inset-bottom": insets.bottom })}
     >
-      <Stack.Screen options={{ gestureEnabled: !isDeleting }} />
+      <Stack.Screen options={{ gestureEnabled: !isBusy }} />
       <SheetHeader
-        leading={{ icon: "ChevronLeft", label: copy.back, disabled: isDeleting, onPress: goBack }}
+        leading={{ icon: "ChevronLeft", label: copy.back, disabled: isBusy, onPress: goBack }}
         title={copy.title}
         variant="stack"
       />
@@ -184,8 +231,8 @@ export function DeleteAccountScreen() {
       </ScrollView>
       <View className="gap-2 px-4 pb-3 pt-3">{renderFooter()}</View>
       <ConfirmDialog
-        busy={isDeleting}
-        body={isDeleting ? copy.dialog.deleting.body : copy.dialog.body}
+        busy={isBusy}
+        body={renderDialogBody()}
         cancelLabel={copy.dialog.cancelLabel}
         confirmBusyLabel={copy.dialog.deleting.spinnerLabel}
         confirmLabel={copy.dialog.confirmLabel}
@@ -195,7 +242,9 @@ export function DeleteAccountScreen() {
         tone="destructive"
         onCancel={flow.closeConfirm}
         onConfirm={flow.confirmDeletion}
-      />
+      >
+        {flow.hasPasswordStep ? renderPasswordField() : undefined}
+      </ConfirmDialog>
     </View>
   );
 }

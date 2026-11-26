@@ -1,9 +1,9 @@
 import { borderRadius, controlHeight, themes } from "@keylow/tokens";
 import { act, fireEvent, render, screen, userEvent } from "@testing-library/react-native";
-import { AccessibilityInfo } from "react-native";
+import { AccessibilityInfo, Keyboard, Platform, Text as NativeText } from "react-native";
 import { setUpTests } from "react-native-reanimated";
 
-import { ConfirmDialog } from "../../components/ui";
+import { ConfirmDialog, Input } from "../../components/ui";
 import { ThemeProvider } from "../../lib/theme";
 import { compileKitStyles } from "../support/kitStyles";
 import { registerAppStyles } from "../support/nativeWindStyles";
@@ -472,6 +472,81 @@ describe("ConfirmDialog", () => {
       await advance(1000);
 
       expect(onCancel).not.toHaveBeenCalled();
+    });
+  });
+  describe("with a field in it", () => {
+    function renderWithField(props: Partial<ConfirmDialogProps> = {}) {
+      return renderDialog({
+        children: <Input label="Password" value="" onChangeText={() => undefined} />,
+        ...props,
+      });
+    }
+
+    it("should draw the field between the sentence and the buttons", async () => {
+      await renderWithField();
+
+      const drawn = JSON.stringify(screen.toJSON());
+      const positions = [sessionBody, "Password", "Discard session", "Keep logging"].map((text) =>
+        drawn.indexOf(text),
+      );
+
+      expect(positions.every((position) => position > -1)).toBe(true);
+      expect(positions).toEqual([...positions].sort((first, second) => first - second));
+    });
+
+    it("should leave the field unfocused when it opens, so the question is read first", async () => {
+      await renderWithField();
+
+      expect(screen.getByLabelText("Password")).not.toHaveProp("autoFocus", true);
+    });
+
+    it("should keep both buttons working beside the field", async () => {
+      const onConfirm = jest.fn();
+      const onCancel = jest.fn();
+      const user = userEvent.setup();
+      await renderWithField({ onConfirm, onCancel });
+
+      await user.press(screen.getByRole("button", { name: "Discard session" }));
+      await user.press(screen.getByRole("button", { name: "Keep logging" }));
+
+      expect(onConfirm).toHaveBeenCalledTimes(1);
+      expect(onCancel).toHaveBeenCalledTimes(1);
+    });
+
+    it("should listen to the keyboard on Android to stay clear of it", async () => {
+      jest.replaceProperty(Platform, "OS", "android");
+      const addListener = jest.spyOn(Keyboard, "addListener");
+
+      await renderWithField();
+
+      expect(addListener).toHaveBeenCalledWith("keyboardDidShow", expect.any(Function));
+    });
+
+    it("should listen to nothing without a field, so every other dialog is as it was", async () => {
+      jest.replaceProperty(Platform, "OS", "android");
+      const addListener = jest.spyOn(Keyboard, "addListener");
+
+      await renderDialog();
+
+      expect(addListener).not.toHaveBeenCalled();
+    });
+
+    it.each([[null], [false], [undefined]])(
+      "should treat %s as no field, and listen to nothing",
+      async (children) => {
+        jest.replaceProperty(Platform, "OS", "android");
+        const addListener = jest.spyOn(Keyboard, "addListener");
+
+        await renderDialog({ children });
+
+        expect(addListener).not.toHaveBeenCalled();
+      },
+    );
+
+    it("should draw any other child too, such as a note", async () => {
+      await renderDialog({ children: <NativeText>A note under the sentence</NativeText> });
+
+      expect(screen.getByText("A note under the sentence")).toBeOnTheScreen();
     });
   });
 });

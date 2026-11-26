@@ -1,2 +1,2 @@
 export { ForgotPasswordScreen } from "./ForgotPasswordScreen";
-export type { ForgotPasswordScreenProps } from "./types";
+export type { ForgotPasswordOrigin, ForgotPasswordScreenProps } from "./types";

@@ -11,11 +11,14 @@ import {
 import { BackHandler, Linking } from "react-native";
 
 import DeleteAccountRoute from "../app/(tabs)/more/delete-account";
+import { takeForgotPasswordEmail } from "../lib/forgotPasswordEmail";
 import { ThemeProvider } from "../lib/theme";
 import { resetRouterMock, routerMock } from "./support/expoRouterMock";
 import { installVirtualClock } from "./support/virtualClock";
 
 import type { DeleteAccountOnDeviceResult } from "../lib/accountDeletion/types";
+import type { ReauthenticationOutcome } from "@keylow/core/accounts";
+import type { User } from "@supabase/supabase-js";
 
 // What the deletion answers. The hook is KEY-1123's and is tested where it lives, so it is mocked at its module
 // boundary with the same mutation settings, which keeps React Query's own pending and callback behaviour.
@@ -30,6 +33,35 @@ jest.mock("../lib/accountDeletion/useDeleteAccountOnDevice", () => ({
         retry: false,
         networkMode: "always",
       }),
+}));
+// Who is signed in. The api-client hook is KEY-1124's and is tested where it lives, so it is mocked at its module
+// boundary with the same mutation settings, and answers an empty password as the real call does, without a request.
+const mockSessionUser = jest.fn<User | null, []>();
+const mockReauthenticate = jest.fn<Promise<ReauthenticationOutcome>, [{ password: string }]>();
+
+// The last mutation the screen holds for the password check, so a test can see what it still keeps.
+const mockReauthenticationMutation: { current: { variables: unknown } | undefined } = {
+  current: undefined,
+};
+
+jest.mock("../lib/useSessionUser", () => ({ useSessionUser: () => mockSessionUser() }));
+jest.mock("@keylow/api-client", () => ({
+  ...jest.requireActual<object>("@keylow/api-client"),
+  useReauthenticateWithPassword: () => {
+    const mutation = jest
+      .requireActual<typeof import("@tanstack/react-query")>("@tanstack/react-query")
+      .useMutation({
+        mutationFn: (input: { password: string }) =>
+          input.password === ""
+            ? Promise.resolve<ReauthenticationOutcome>({ kind: "emptyPassword" })
+            : mockReauthenticate(input),
+        retry: false,
+        networkMode: "always",
+        gcTime: 0,
+      });
+    mockReauthenticationMutation.current = mutation;
+    return mutation;
+  },
 }));
 jest.mock("@react-native-async-storage/async-storage", () => ({
   __esModule: true,
@@ -72,6 +104,12 @@ const WORDS = {
   failedBody: "Nothing was removed. Try again or use email.",
   unconfirmedTitle: "Ki-Lo could not confirm the deletion",
   unconfirmedBody: "Your account may already be deleted. Check your connection and try again.",
+  passwordBody:
+    "Everything in your account is deleted now. This cannot be undone. Enter your password to confirm.",
+  wrongPassword: "That password is not right. Nothing was deleted.",
+  generic: "Something went wrong. Try again.",
+  tooManyAttempts: "Too many attempts. Wait a few minutes, then try again.",
+  network: "Ki-Lo could not reach the server. Check your connection and try again.",
 };
 
 // The handlers registered for the Android back button. The last one registered is asked first.
@@ -106,6 +144,22 @@ function holdTheDeletion() {
       await jest.advanceTimersByTimeAsync(10);
     });
 }
+
+// A signed in account built at run time, so no address or password is written into the repository.
+function accountWith(appMetadata: User["app_metadata"], email?: string): User {
+  return {
+    id: globalThis.crypto.randomUUID(),
+    aud: "authenticated",
+    created_at: "2026-01-01T00:00:00Z",
+    app_metadata: appMetadata,
+    user_metadata: {},
+    ...(email === undefined ? {} : { email }),
+  };
+}
+
+const emailAddress = `${globalThis.crypto.randomUUID()}@keylow.test`;
+const emailAccount = () => accountWith({ provider: "email", providers: ["email"] }, emailAddress);
+const googleOnlyAccount = () => accountWith({ provider: "google", providers: ["google"] });
 
 function renderScreen() {
   return render(
@@ -185,6 +239,11 @@ describe("the Delete account screen", () => {
     installVirtualClock();
     resetRouterMock();
     mockDeleteAccount.mockReset();
+    mockReauthenticate.mockReset();
+    mockSessionUser.mockReset();
+    // A Google only account keeps the plain confirm, which every board before confirm-password draws.
+    mockSessionUser.mockReturnValue(googleOnlyAccount());
+    takeForgotPasswordEmail();
     onlineManager.setOnline(true);
     backPressHandlers.length = 0;
     jest.spyOn(BackHandler, "addEventListener").mockImplementation((_eventName, handler) => {
@@ -764,6 +823,347 @@ describe("the Delete account screen", () => {
 
       expect(screen.queryByLabelText(WORDS.dialogTitle)).not.toBeOnTheScreen();
       expect(screen.getByRole("alert")).toHaveTextContent(WORDS.unconfirmedTitle, { exact: false });
+    });
+  });
+  describe("delete-account · confirm-password", () => {
+    const strongPassword = globalThis.crypto.randomUUID();
+
+    beforeEach(() => {
+      mockSessionUser.mockReturnValue(emailAccount());
+    });
+
+    const field = () => within(dialog()).getByLabelText("Password");
+
+    async function openConfirm() {
+      const user = userEvent.setup();
+      await renderScreen();
+      await user.press(screenDeleteButton());
+      return user;
+    }
+
+    async function typeAndPressDelete(user: ReturnType<typeof userEvent.setup>, typed: string) {
+      if (typed !== "") {
+        await user.type(field(), typed);
+      }
+      await user.press(within(dialog()).getByRole("button", { name: "Delete account" }));
+    }
+
+    it("should ask the question, then to enter the password, with a Password field and a Forgot password? link", async () => {
+      await openConfirm();
+
+      expect(within(dialog()).getByRole("heading", { name: WORDS.dialogTitle })).toBeOnTheScreen();
+      expect(within(dialog()).getByText(WORDS.passwordBody)).toBeOnTheScreen();
+      expect(field()).toBeOnTheScreen();
+      expect(within(dialog()).getByRole("link", { name: "Forgot password?" })).toBeOnTheScreen();
+      expect(within(dialog()).getByRole("button", { name: "Delete account" })).toBeEnabled();
+      expect(within(dialog()).getByRole("button", { name: "Keep my account" })).toBeEnabled();
+    });
+
+    it("should draw the field under the sentence, with the link under the field", async () => {
+      await openConfirm();
+
+      expectInOrder([WORDS.passwordBody, "Password", "Forgot password?"]);
+    });
+
+    it("should hide what is typed, and not focus the field when the dialog opens", async () => {
+      await openConfirm();
+
+      expect(field()).toHaveProp("secureTextEntry", true);
+      expect(field()).not.toHaveProp("autoFocus", true);
+      expect(field()).toHaveDisplayValue("");
+    });
+
+    it("should not hold Delete account disabled while the field is empty, and say Enter your password when it is pressed", async () => {
+      const user = await openConfirm();
+
+      await typeAndPressDelete(user, "");
+
+      expect(within(dialog()).getByRole("alert")).toHaveTextContent("Enter your password");
+      expect(mockDeleteAccount).not.toHaveBeenCalled();
+    });
+
+    it("should check the password on the press and delete only once it is confirmed", async () => {
+      const user = await openConfirm();
+      mockReauthenticate.mockResolvedValueOnce({ kind: "confirmed" });
+      mockDeleteAccount.mockResolvedValueOnce({ kind: "deleted" });
+
+      await typeAndPressDelete(user, strongPassword);
+
+      expect(mockReauthenticate).toHaveBeenCalledWith({ password: strongPassword });
+      expect(mockDeleteAccount).toHaveBeenCalledTimes(1);
+      expect(mockReauthenticate.mock.invocationCallOrder[0]).toBeLessThan(
+        mockDeleteAccount.mock.invocationCallOrder[0] ?? 0,
+      );
+    });
+
+    it("should send nothing to delete-account while the password is being checked", async () => {
+      const user = await openConfirm();
+      mockReauthenticate.mockImplementationOnce(() => new Promise(() => undefined));
+
+      await typeAndPressDelete(user, strongPassword);
+
+      expect(mockDeleteAccount).not.toHaveBeenCalled();
+    });
+
+    it("should lock the dialog while the password is checked: the field, the dim, the escape gesture and the back button", async () => {
+      const user = await openConfirm();
+      mockReauthenticate.mockImplementationOnce(() => new Promise(() => undefined));
+
+      await typeAndPressDelete(user, strongPassword);
+      await user.press(dim());
+      await fireEvent(dialog(), "accessibilityEscape");
+      await fireEvent(dialog(), "requestClose");
+
+      expect(dialog()).toBeOnTheScreen();
+      expect(field()).toBeDisabled();
+      expect(within(dialog()).getByRole("button", { name: "Keep my account" })).toBeDisabled();
+    });
+
+    describe("delete-account · confirm-password-wrong", () => {
+      async function submitWrongPassword() {
+        const user = await openConfirm();
+        mockReauthenticate.mockResolvedValueOnce({ kind: "wrongPassword" });
+        await typeAndPressDelete(user, strongPassword);
+        return user;
+      }
+
+      it("should stay open, say the password is not right as an alert, and delete nothing", async () => {
+        await submitWrongPassword();
+
+        expect(dialog()).toBeOnTheScreen();
+        expect(within(dialog()).getByRole("alert")).toHaveTextContent(WORDS.wrongPassword);
+        expect(mockDeleteAccount).not.toHaveBeenCalled();
+      });
+
+      it("should keep the typed password in the field", async () => {
+        await submitWrongPassword();
+
+        expect(field()).toHaveDisplayValue(strongPassword);
+      });
+
+      it("should take the error away when the field is edited", async () => {
+        const user = await submitWrongPassword();
+
+        await user.type(field(), "x");
+
+        expect(within(dialog()).queryByRole("alert")).not.toBeOnTheScreen();
+      });
+
+      it("should let the person try a right password next, and delete then", async () => {
+        const user = await submitWrongPassword();
+        mockReauthenticate.mockResolvedValueOnce({ kind: "confirmed" });
+        mockDeleteAccount.mockResolvedValueOnce({ kind: "deleted" });
+
+        await user.press(within(dialog()).getByRole("button", { name: "Delete account" }));
+
+        expect(mockDeleteAccount).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    it("should say too many attempts with the sentence Sign in uses", async () => {
+      const user = await openConfirm();
+      mockReauthenticate.mockResolvedValueOnce({ kind: "tooManyAttempts" });
+
+      await typeAndPressDelete(user, strongPassword);
+
+      expect(within(dialog()).getByRole("alert")).toHaveTextContent(WORDS.tooManyAttempts);
+      expect(mockDeleteAccount).not.toHaveBeenCalled();
+    });
+
+    it("should say Ki-Lo could not reach the server when the check had no connection", async () => {
+      const user = await openConfirm();
+      mockReauthenticate.mockResolvedValueOnce({ kind: "network" });
+
+      await typeAndPressDelete(user, strongPassword);
+
+      expect(within(dialog()).getByRole("alert")).toHaveTextContent(WORDS.network);
+      expect(mockDeleteAccount).not.toHaveBeenCalled();
+    });
+
+    it("should lock the field while the deletion runs, with the deleting words and no link press", async () => {
+      const user = await openConfirm();
+      const answer = holdTheDeletion();
+      mockReauthenticate.mockResolvedValueOnce({ kind: "confirmed" });
+
+      await typeAndPressDelete(user, strongPassword);
+
+      expect(
+        within(deletingDialog()).getByRole("heading", { name: WORDS.deletingTitle }),
+      ).toBeOnTheScreen();
+      expect(within(deletingDialog()).getByText(WORDS.deletingBody)).toBeOnTheScreen();
+      expect(within(deletingDialog()).getByLabelText("Password")).toBeDisabled();
+
+      await user.press(within(deletingDialog()).getByRole("link", { name: "Forgot password?" }));
+
+      expect(routerMock.push).not.toHaveBeenCalled();
+      await answer({ kind: "deleted" });
+    });
+
+    it("should close on Forgot password?, open the Forgot password screen with the account's email, and delete nothing", async () => {
+      const user = await openConfirm();
+
+      await user.press(within(dialog()).getByRole("link", { name: "Forgot password?" }));
+
+      expect(screen.queryByLabelText(WORDS.dialogTitle)).not.toBeOnTheScreen();
+      expect(routerMock.push).toHaveBeenCalledWith("/more/forgot-password");
+      expect(takeForgotPasswordEmail()).toBe(emailAddress);
+      expect(mockReauthenticate).not.toHaveBeenCalled();
+      expect(mockDeleteAccount).not.toHaveBeenCalled();
+    });
+
+    it("should reopen with an empty field after Keep my account", async () => {
+      const user = await openConfirm();
+      await user.type(field(), strongPassword);
+      await user.press(within(dialog()).getByRole("button", { name: "Keep my account" }));
+
+      await user.press(screenDeleteButton());
+
+      expect(field()).toHaveDisplayValue("");
+    });
+
+    it("should reopen with an empty field on Try again after the server refused the deletion", async () => {
+      const user = await openConfirm();
+      mockReauthenticate.mockResolvedValueOnce({ kind: "confirmed" });
+      mockDeleteAccount.mockResolvedValueOnce({ kind: "notDeleted", code: "internal_error" });
+      await typeAndPressDelete(user, strongPassword);
+
+      await user.press(screen.getByRole("button", { name: "Try again" }));
+
+      expect(dialog()).toBeOnTheScreen();
+      expect(field()).toHaveDisplayValue("");
+      expect(mockDeleteAccount).toHaveBeenCalledTimes(1);
+    });
+
+    it("should ask for the password again when Try again on the unconfirmed board is refused for want of a fresh sign-in", async () => {
+      const user = await openConfirm();
+      mockReauthenticate.mockResolvedValueOnce({ kind: "confirmed" });
+      mockDeleteAccount.mockResolvedValueOnce({ kind: "unconfirmed" });
+      await typeAndPressDelete(user, strongPassword);
+      mockDeleteAccount.mockResolvedValueOnce({
+        kind: "notDeleted",
+        code: "reauthentication_required",
+      });
+
+      await user.press(screen.getByRole("button", { name: "Try again" }));
+
+      expect(dialog()).toBeOnTheScreen();
+      expect(within(dialog()).getByText(WORDS.passwordBody)).toBeOnTheScreen();
+      expect(field()).toHaveDisplayValue("");
+      expect(screen.queryByText(WORDS.unconfirmedTitle)).not.toBeOnTheScreen();
+      expect(screen.queryByText(WORDS.failedTitle)).not.toBeOnTheScreen();
+    });
+  });
+
+  describe("when the password step cannot be trusted or must not leak", () => {
+    const typedPassword = globalThis.crypto.randomUUID();
+
+    beforeEach(() => {
+      mockSessionUser.mockReturnValue(emailAccount());
+    });
+
+    async function pressDeleteWithPassword() {
+      const user = userEvent.setup();
+      await renderScreen();
+      await user.press(screenDeleteButton());
+      await user.type(within(dialog()).getByLabelText("Password"), typedPassword);
+      await user.press(within(dialog()).getByRole("button", { name: "Delete account" }));
+      return user;
+    }
+
+    it("should keep no password in the check's mutation once Keep my account closes the dialog after a wrong one", async () => {
+      mockReauthenticate.mockResolvedValueOnce({ kind: "wrongPassword" });
+      const user = await pressDeleteWithPassword();
+
+      await user.press(within(dialog()).getByRole("button", { name: "Keep my account" }));
+
+      expect(mockReauthenticationMutation.current?.variables).toBeUndefined();
+    });
+
+    it("should keep no password in the check's mutation once the answer is mapped", async () => {
+      mockReauthenticate.mockResolvedValueOnce({ kind: "wrongPassword" });
+
+      await pressDeleteWithPassword();
+
+      expect(mockReauthenticationMutation.current?.variables).toBeUndefined();
+    });
+
+    it("should reopen the password confirm when the first confirm is refused for want of a fresh sign-in", async () => {
+      mockReauthenticate.mockResolvedValueOnce({ kind: "confirmed" });
+      mockDeleteAccount.mockResolvedValueOnce({
+        kind: "notDeleted",
+        code: "reauthentication_required",
+      });
+
+      await pressDeleteWithPassword();
+
+      expect(dialog()).toBeOnTheScreen();
+      expect(within(dialog()).getByLabelText("Password")).toHaveDisplayValue("");
+      expect(screen.queryByText(WORDS.failedTitle)).not.toBeOnTheScreen();
+    });
+
+    it.each([
+      ["a session that has ended", { kind: "sessionEnded" }],
+      ["an unexpected failure", { kind: "failed" }],
+    ] as const)(
+      "should say the generic sentence for %s, and delete nothing",
+      async (_name, answer) => {
+        mockReauthenticate.mockResolvedValueOnce(answer);
+
+        await pressDeleteWithPassword();
+
+        expect(within(dialog()).getByRole("alert")).toHaveTextContent(WORDS.generic);
+        expect(mockDeleteAccount).not.toHaveBeenCalled();
+      },
+    );
+
+    it("should say the generic sentence when the check throws, and delete nothing", async () => {
+      mockReauthenticate.mockRejectedValueOnce(new Error("could not run"));
+
+      await pressDeleteWithPassword();
+
+      expect(within(dialog()).getByRole("alert")).toHaveTextContent(WORDS.generic);
+      expect(mockDeleteAccount).not.toHaveBeenCalled();
+    });
+
+    it("should swallow the Android back button while the password is checked", async () => {
+      mockReauthenticate.mockImplementationOnce(() => new Promise(() => undefined));
+      await pressDeleteWithPassword();
+
+      expect(await pressAndroidBackButton()).toBe(true);
+    });
+  });
+
+  describe("before the signed in account is read", () => {
+    it("should not offer Delete account, so no deletion can go ahead without knowing which confirm applies", async () => {
+      mockSessionUser.mockReturnValue(null);
+      const user = userEvent.setup();
+      await renderScreen();
+
+      const button = screenDeleteButton();
+      await user.press(button);
+
+      expect(button).toBeDisabled();
+      expect(screen.queryByLabelText(WORDS.dialogTitle)).not.toBeOnTheScreen();
+      expect(mockDeleteAccount).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("a Google only account", () => {
+    it("should keep the plain confirm, with no field and no link, and delete with no password check", async () => {
+      const user = userEvent.setup();
+      mockDeleteAccount.mockResolvedValueOnce({ kind: "deleted" });
+      await renderScreen();
+
+      await user.press(screenDeleteButton());
+
+      expect(within(dialog()).getByText(WORDS.dialogBody)).toBeOnTheScreen();
+      expect(within(dialog()).queryByLabelText("Password")).not.toBeOnTheScreen();
+      expect(within(dialog()).queryByRole("link")).not.toBeOnTheScreen();
+
+      await user.press(within(dialog()).getByRole("button", { name: "Delete account" }));
+
+      expect(mockReauthenticate).not.toHaveBeenCalled();
+      expect(mockDeleteAccount).toHaveBeenCalledTimes(1);
     });
   });
 });
