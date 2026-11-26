@@ -4,8 +4,8 @@
 // loudly. The delete is a hard delete: every owned row goes through the cascading keys and the purge
 // trigger inside GoTrue's own transaction, so the database is never half deleted. An account that signs in
 // with a password must also have signed in with it in the last 15 minutes (core's `freshPasswordVerdict`),
-// read from the verified token's `amr` claim and the verified user's metadata. Where the rule is not
-// enforced it is still computed and logged, so the hosted shape of `amr` is on record before it is.
+// read from the verified token's `amr` claim and the verified user's metadata. The verdict is also logged
+// on success, as `freshPassword`.
 import {
   deleteAccountRequestSchema,
   deleteAccountResponseSchema,
@@ -35,8 +35,6 @@ export type DeleteAccountDependencies = {
   now: () => number;
   /** Epoch seconds from the wall clock, to compare with the timestamps in `amr`. Not `now`, which is monotonic. */
   nowSeconds: () => number;
-  /** Whether a stale or missing password sign-in refuses the deletion. Off, it is only logged. */
-  enforceFreshPassword: boolean;
 };
 
 // The body is empty or an empty object. Anything else, including a field naming a user, is refused.
@@ -57,8 +55,7 @@ function isAcceptableBody(text: string): boolean {
 export function deleteAccountHandler(
   dependencies: DeleteAccountDependencies,
 ): (request: Request) => Promise<Response> {
-  const { requireUser, consume, deleteUser, log, now, nowSeconds, enforceFreshPassword } =
-    dependencies;
+  const { requireUser, consume, deleteUser, log, now, nowSeconds } = dependencies;
 
   return async (request) => {
     if (request.method !== "POST") {
@@ -88,7 +85,7 @@ export function deleteAccountHandler(
       amr: user.amr,
       nowSeconds: nowSeconds(),
     });
-    if (enforceFreshPassword && (verdict === "stale" || verdict === "missing")) {
+    if (verdict === "stale" || verdict === "missing") {
       log("info", "account deletion refused", { function: functionName, reason: verdict });
       return error(
         "reauthentication_required",

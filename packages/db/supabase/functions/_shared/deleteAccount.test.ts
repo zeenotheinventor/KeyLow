@@ -57,7 +57,6 @@ function fakes(
     },
     now: () => 1000,
     nowSeconds: () => nowSeconds,
-    enforceFreshPassword: true,
     ...overrides,
   };
   const names = () => calls.map(({ name }) => name);
@@ -291,7 +290,7 @@ Deno.test("nothing is logged for a refusal", async () => {
   assertEquals(logs, []);
 });
 
-Deno.test("with the rule enforced", async (test) => {
+Deno.test("the fresh password rule", async (test) => {
   const refusalCases: [string, Caller][] = [
     ["a stale password sign-in", callerWith([passwordEntry(3600)])],
     ["a session with no password entry", callerWith([otpEntry])],
@@ -415,35 +414,3 @@ Deno.test("with the rule enforced", async (test) => {
     assertEquals(names(), ["requireUser", "consume"]);
   });
 });
-
-Deno.test(
-  "with the rule not enforced, a stale sign-in still deletes and the success line carries the verdict",
-  async () => {
-    const { dependencies, names, logs } = fakes(
-      { enforceFreshPassword: false },
-      callerWith([passwordEntry(3600)]),
-    );
-
-    const response = await deleteAccountHandler(dependencies)(post());
-
-    assertEquals(response.status, 200);
-    assertEquals(names().at(-1), "deleteUser");
-    assertEquals(logs[0]?.fields?.freshPassword, "stale");
-  },
-);
-
-Deno.test(
-  "with the rule not enforced, a missing password entry still deletes and says missing",
-  async () => {
-    const { dependencies, names, logs } = fakes(
-      { enforceFreshPassword: false },
-      callerWith([otpEntry]),
-    );
-
-    const response = await deleteAccountHandler(dependencies)(post());
-
-    assertEquals(response.status, 200);
-    assertEquals(names().at(-1), "deleteUser");
-    assertEquals(logs[0]?.fields?.freshPassword, "missing");
-  },
-);
