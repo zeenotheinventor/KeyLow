@@ -133,7 +133,11 @@ export async function agePasswordEntry(accessToken: string, minutes: number): Pr
     ["exec", "supabase", "db", "query", "--local", "--output", "json", statement],
     { cwd: databasePackageDirectory },
   );
-  const document: unknown = JSON.parse(stdout.slice(stdout.indexOf("{")));
+  // The CLI can print a notice (such as one about a newer version) around the JSON document on stdout, so
+  // only the text from the first "{" to the last "}" is parsed.
+  const document: unknown = JSON.parse(
+    stdout.slice(stdout.indexOf("{"), stdout.lastIndexOf("}") + 1),
+  );
   const rows = isRecord(document) ? document["rows"] : undefined;
   if (!Array.isArray(rows) || rows.length !== 1) {
     throw new Error("Expected to age exactly one password entry");
