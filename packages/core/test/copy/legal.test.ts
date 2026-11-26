@@ -4,6 +4,7 @@ import {
   COMPANY_DETAILS,
   LEGAL_FOOTER,
   LEGAL_PATHS,
+  LEGAL_TEXT_UPDATED,
   LEGAL_URLS,
   PRIVACY_POLICY,
   TERMS,
@@ -41,7 +42,7 @@ function allTextOf(document: LegalDocument): string {
 
 describe("the legal copy", () => {
   describe("the terms version", () => {
-    it("should be the date the current terms took effect", () => {
+    it("should be the date the current terms took effect, and not move with a copy change", () => {
       expect(TERMS_VERSION).toBe("2026-11-07");
     });
 
@@ -91,9 +92,18 @@ describe("the legal copy", () => {
       expect(describeLastUpdated("2027-01-03")).toBe("Last updated 3 January 2027");
     });
 
-    it("should be what both documents show for the current terms version", () => {
-      expect(PRIVACY_POLICY.lastUpdated).toBe(describeLastUpdated(TERMS_VERSION));
-      expect(TERMS.lastUpdated).toBe(describeLastUpdated(TERMS_VERSION));
+    it("should come from its own date, the day the words last changed", () => {
+      expect(LEGAL_TEXT_UPDATED).toBe("2026-11-26");
+    });
+
+    it("should be what both documents show for the date the words last changed", () => {
+      expect(PRIVACY_POLICY.lastUpdated).toBe(describeLastUpdated(LEGAL_TEXT_UPDATED));
+      expect(TERMS.lastUpdated).toBe(describeLastUpdated(LEGAL_TEXT_UPDATED));
+    });
+
+    it("should not follow the terms version that people accept", () => {
+      expect(describeLastUpdated(TERMS_VERSION)).not.toBe(PRIVACY_POLICY.lastUpdated);
+      expect(describeLastUpdated(TERMS_VERSION)).not.toBe(TERMS.lastUpdated);
     });
   });
 
@@ -153,7 +163,7 @@ describe("the legal copy", () => {
 
   describe.each(documents)("the %s", (_name, document) => {
     it("should carry the date it was last updated", () => {
-      expect(document.lastUpdated).toBe("Last updated 7 November 2026");
+      expect(document.lastUpdated).toBe("Last updated 26 November 2026");
     });
 
     it("should have sections that each have a heading and at least one paragraph", () => {
@@ -197,9 +207,21 @@ describe("the legal copy", () => {
       );
     });
 
-    it("should say in-app delete is on the way, not that it exists", () => {
-      expect(allTextOf(document)).toContain("on the way");
-      expect(allTextOf(document)).not.toMatch(/Settings/);
+    it("should say where to delete the account in the app, and that it is immediate and permanent", () => {
+      const text = allTextOf(document);
+      expect(text).toContain("from More, under Account, choose Delete account");
+      expect(text).toContain("immediate and permanent");
+      expect(text).not.toMatch(/Settings/);
+    });
+
+    it("should no longer say in-app delete is on the way", () => {
+      expect(allTextOf(document)).not.toMatch(/on the way|Today, you delete/);
+    });
+
+    it("should keep the email address as the way to delete for anyone who cannot use the app", () => {
+      expect(allTextOf(document)).toContain(
+        "If you cannot use the app, or you use the web app, email hello@sojisoft.com",
+      );
     });
   });
 
@@ -367,7 +389,16 @@ describe("the legal copy", () => {
         (section) => section.heading === "How long it is kept",
       );
       expect(kept?.paragraphs).toContain(
-        "The exceptions are error reports, which Sentry keeps for 30 days, and what the assistant sent to Anthropic, which Anthropic keeps for up to 30 days. Both can outlast a deleted account, and Anthropic's copy can outlast a deleted conversation, by up to 30 days. Anthropic can keep its copy longer only to enforce its usage policy or where the law requires it.",
+        "The main exceptions are error reports, which Sentry keeps for 30 days, and what the assistant sent to Anthropic, which Anthropic keeps for up to 30 days. Both can outlast a deleted account, and Anthropic's copy can outlast a deleted conversation, by up to 30 days. Anthropic can keep its copy longer only to enforce its usage policy or where the law requires it.",
+      );
+    });
+
+    it("should say Supabase keeps a sign-up and sign-in record in its own logs for up to 7 days after a deleted account", () => {
+      const kept = PRIVACY_POLICY.sections.find(
+        (section) => section.heading === "How long it is kept",
+      );
+      expect(kept?.paragraphs).toContain(
+        "Supabase also keeps a record of each sign-up and sign-in in its own logs, including your email address and the IP address you used. That record can outlast a deleted account by up to 7 days, and Ki-Lo cannot remove it sooner.",
       );
     });
 
@@ -411,13 +442,13 @@ describe("the legal copy", () => {
       expect(rights?.bullets?.join("\n")).toContain("ico.org.uk");
     });
 
-    it("should tell people to email to use their rights, export from More, and say in-app delete is on the way", () => {
+    it("should tell people to email to use their rights, export and delete in the app, and keep email as the fallback", () => {
       const how = PRIVACY_POLICY.sections.find(
         (section) => section.heading === "How to use your rights",
       );
       expect(how?.paragraphs).toEqual([
         "Email hello@sojisoft.com and say what you need.",
-        "You export your information in the app, from More, under Export my data. Today, you delete it by emailing hello@sojisoft.com. In-app delete is on the way.",
+        "You export your information in the app, from More, under Export my data. You delete your account in the app too: from More, under Account, choose Delete account. Deleting is immediate and permanent, and the screen offers Export my data first. A few copies held by the services Ki-Lo uses can last longer, usually by up to 30 days, as set out under How long it is kept. If you cannot use the app, or you use the web app, email hello@sojisoft.com and ask for your account to be deleted.",
       ]);
     });
 
@@ -432,8 +463,13 @@ describe("the legal copy", () => {
       expect(cookies?.paragraphs.join(" ")).toContain("light or dark");
     });
 
-    it("should say a changed policy is dated and has to be accepted again", () => {
-      expect(text).toContain("You will be asked to accept it again.");
+    it("should say a changed policy is dated, and that a change that matters has to be accepted again", () => {
+      const changes = PRIVACY_POLICY.sections.find(
+        (section) => section.heading === "Changes to this policy",
+      );
+      expect(changes?.paragraphs).toEqual([
+        "If this policy changes in a way that matters to you, the new version is dated and you will be asked to accept it again. A change that only adds to what you can do, or makes the wording clearer without changing what it means, is dated without asking.",
+      ]);
     });
   });
 
@@ -464,14 +500,21 @@ describe("the legal copy", () => {
       expect(text).toContain("You are responsible for your account");
     });
 
-    it("should say the account can be deleted at any time, by email until in-app delete exists", () => {
-      expect(text).toContain("You can delete your account at any time.");
-      expect(text).toContain("Today, you delete your account by emailing hello@sojisoft.com.");
-      expect(text).toContain("In-app delete is on the way.");
+    it("should say the account can be deleted at any time, in the app or by email", () => {
+      const ending = TERMS.sections.find((section) => section.heading === "Ending your account");
+      expect(ending?.paragraphs).toEqual([
+        "You can delete your account at any time.",
+        "You delete it in the Ki-Lo app: from More, under Account, choose Delete account. Deleting is immediate and permanent, and the screen offers to export your information first. If you cannot use the app, or you use the web app, email hello@sojisoft.com and ask for your account to be deleted. What happens to your information is in the Privacy Policy.",
+      ]);
     });
 
-    it("should say the service may change or stop", () => {
-      expect(text).toContain("Sojisoft Limited may change or stop Ki-Lo.");
+    it("should say the service may change or stop, and that a change that matters has to be accepted again", () => {
+      const changes = TERMS.sections.find(
+        (section) => section.heading === "Changes to Ki-Lo and these terms",
+      );
+      expect(changes?.paragraphs).toEqual([
+        "Sojisoft Limited may change or stop Ki-Lo. It may also change these terms. If it changes them in a way that matters to you, the new version is dated and you will be asked to accept it again. A change that only adds to what you can do, or makes the wording clearer without changing what it means, is dated without asking.",
+      ]);
     });
 
     it("should be governed by the law of England and Wales", () => {
