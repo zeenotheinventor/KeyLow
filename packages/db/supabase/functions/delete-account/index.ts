@@ -24,9 +24,6 @@ Deno.serve(
       log: logLine,
       now: () => performance.now(),
       nowSeconds: () => Math.floor(Date.now() / 1000),
-      // Exactly "true" and nothing else. Production leaves it unset until the screen that asks for the password
-      // is on phones, and KEY-1138 then makes the rule unconditional and removes this variable.
-      enforceFreshPassword: Deno.env.get("DELETE_ACCOUNT_ENFORCE_FRESH_PASSWORD") === "true",
     }),
   ),
 );
