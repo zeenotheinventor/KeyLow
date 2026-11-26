@@ -13,7 +13,7 @@ import { MONTH_NAMES_LONG } from "./diaryDay";
 export const TERMS_VERSION = "2026-11-07";
 
 /** The day the words of the two documents last changed. The "Last updated" line shows it. */
-export const LEGAL_TEXT_UPDATED = "2026-11-25";
+export const LEGAL_TEXT_UPDATED = "2026-11-26";
 
 /** The "Last updated" line under a document's title, from a version date such as `2026-10-15`. */
 export function describeLastUpdated(versionDate: string): string {

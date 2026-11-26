@@ -93,7 +93,7 @@ describe("the legal copy", () => {
     });
 
     it("should come from its own date, the day the words last changed", () => {
-      expect(LEGAL_TEXT_UPDATED).toBe("2026-11-25");
+      expect(LEGAL_TEXT_UPDATED).toBe("2026-11-26");
     });
 
     it("should be what both documents show for the date the words last changed", () => {
@@ -163,7 +163,7 @@ describe("the legal copy", () => {
 
   describe.each(documents)("the %s", (_name, document) => {
     it("should carry the date it was last updated", () => {
-      expect(document.lastUpdated).toBe("Last updated 25 November 2026");
+      expect(document.lastUpdated).toBe("Last updated 26 November 2026");
     });
 
     it("should have sections that each have a heading and at least one paragraph", () => {
