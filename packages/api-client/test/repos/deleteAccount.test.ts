@@ -105,6 +105,19 @@ describe("deleteMyAccount", () => {
       expect(seen.user).toHaveLength(0);
     });
 
+    it("should throw reauthentication_required and make no check, because nothing was deleted", async () => {
+      const { client, seen } = await arrange({
+        function: () => edgeErrorResponse(403, "reauthentication_required", SERVER_MESSAGE),
+      });
+
+      const failure = await expectedFailure(() => deleteMyAccount(client));
+
+      expect(failure.code).toBe("reauthentication_required");
+      expect(failure.retryAfterSeconds).toBeUndefined();
+      expect(seen.user).toHaveLength(0);
+      expect(JSON.stringify(failure.cause)).not.toContain(SERVER_MESSAGE);
+    });
+
     it.each(["invalid_request", "internal_error"] as const)(
       "should throw %s and make no check, because nothing was deleted",
       async (code) => {

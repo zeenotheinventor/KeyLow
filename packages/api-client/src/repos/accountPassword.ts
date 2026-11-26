@@ -1,12 +1,17 @@
 import {
   describePasswordUpdateFailure,
   passwordResetRequestOutcome,
+  reauthenticationOutcome,
   validateEmailAddress,
 } from "@keylow/core/accounts";
 import { isAuthRetryableFetchError, isAuthSessionMissingError } from "@supabase/supabase-js";
 
 import type { Database } from "../database.types";
-import type { PasswordResetRequestOutcome, PasswordUpdateOutcome } from "@keylow/core/accounts";
+import type {
+  PasswordResetRequestOutcome,
+  PasswordUpdateOutcome,
+  ReauthenticationOutcome,
+} from "@keylow/core/accounts";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
@@ -90,6 +95,37 @@ export async function updatePassword(
   }
 
   return { kind: "saved", otherDevicesSignedOut: await signOutOtherSessions(client) };
+}
+
+/**
+ * Signs the signed in user in again with their password, which gives `delete-account` the fresh password sign-in
+ * it asks for. The email is the session user's. A wrong password leaves the current session as it was, and a
+ * right one replaces it with a new session of the same user. An empty password is refused here and no request is
+ * made, and so is a session that has ended or has no email. It never throws, never logs, and never returns the
+ * server's message or the password. The kind is core's `reauthenticationOutcome`, and the words are the screen's.
+ */
+export async function reauthenticateWithPassword(
+  client: SupabaseClient<Database>,
+  { password }: { password: string },
+): Promise<ReauthenticationOutcome> {
+  if (password === "") {
+    return { kind: "emptyPassword" };
+  }
+
+  try {
+    const { data, error: sessionError } = await client.auth.getSession();
+    const email = data.session?.user.email;
+
+    if (sessionError !== null || email === undefined || email === "") {
+      return reauthenticationOutcome("session_missing");
+    }
+
+    const { error } = await client.auth.signInWithPassword({ email, password });
+
+    return reauthenticationOutcome(error === null ? undefined : authFailureCode(error));
+  } catch (thrown) {
+    return reauthenticationOutcome(authFailureCode(thrown));
+  }
 }
 
 async function signOutOtherSessions(client: SupabaseClient<Database>): Promise<boolean> {

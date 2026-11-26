@@ -135,6 +135,24 @@ Deno.test("logLine drops an extra key named like an inherited property and does 
   assertEquals(lines, ["x code=ok"]);
 });
 
+Deno.test(
+  "a verdict word is kept in the freshPassword and reason slots, and free text is not",
+  () => {
+    assertEquals(
+      lineOf(() =>
+        logLine("info", "account deletion refused", { reason: "stale", freshPassword: "missing" }),
+      ),
+      ["account deletion refused reason=stale freshPassword=missing"],
+    );
+    assertEquals(
+      lineOf(() =>
+        logLine("info", "x", { reason: "caller@keylow.test", freshPassword: "1800000000 s" }),
+      ),
+      ["x reason=unknown freshPassword=unknown"],
+    );
+  },
+);
+
 Deno.test("the allow list is exactly the keys the functions log", () => {
   assertEquals(
     [...allowedLogKeys].sort(),
@@ -144,6 +162,7 @@ Deno.test("the allow list is exactly the keys the functions log", () => {
       "conversation",
       "ending",
       "failed",
+      "freshPassword",
       "function",
       "gate",
       "milliseconds",
@@ -152,6 +171,7 @@ Deno.test("the allow list is exactly the keys the functions log", () => {
       "noteTokens",
       "promptTokens",
       "ran",
+      "reason",
       "result",
       "route",
       "status",

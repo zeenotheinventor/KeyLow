@@ -3,7 +3,11 @@ import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
-import { requestPasswordReset, updatePassword } from "../../src/repos/accountPassword";
+import {
+  reauthenticateWithPassword,
+  requestPasswordReset,
+  updatePassword,
+} from "../../src/repos/accountPassword";
 import { createTestClient } from "../createTestClient";
 import { AUTH_USER_URL, SIGNED_IN_USER_ID, signInAs } from "../support/postgrest";
 
@@ -351,5 +355,177 @@ describe("updatePassword", () => {
 
     expect(outcome).toMatchObject({ kind: "failed", reason: "other" });
     expect(JSON.stringify(outcome)).not.toContain("server wording");
+  });
+});
+
+describe("reauthenticateWithPassword", () => {
+  const EMAIL = "someone@keylow.test";
+  const unsignedToken = (marker: string) =>
+    ["header", "payload", marker].map((part) => btoa(part).replaceAll("=", "")).join(".");
+
+  /** A client whose session has an email, which the unsigned test session does not give on its own. */
+  const signedInClientWithEmail = async (email: string | null = EMAIL) => {
+    server.use(
+      http.get(AUTH_USER_URL, () =>
+        HttpResponse.json({
+          id: SIGNED_IN_USER_ID,
+          aud: "authenticated",
+          role: "authenticated",
+          ...(email === null ? {} : { email }),
+        }),
+      ),
+    );
+    const client = createTestClient();
+    await signInAs(client, SIGNED_IN_USER_ID);
+    return client;
+  };
+
+  const tokenResponse = (accessToken: string) =>
+    HttpResponse.json({
+      access_token: accessToken,
+      token_type: "bearer",
+      expires_in: 3600,
+      refresh_token: "new-refresh-token",
+      user: { id: SIGNED_IN_USER_ID, aud: "authenticated", email: EMAIL },
+    });
+
+  afterEach(() => {
+    server.events.removeAllListeners();
+  });
+
+  type PasswordGrant = { url: string; body: unknown };
+  const recordPasswordGrants = (answer: () => Response) => {
+    const grants: PasswordGrant[] = [];
+    server.use(
+      http.post(`${AUTH_URL}/token`, async ({ request }) => {
+        grants.push({ url: request.url, body: await request.json() });
+        return answer();
+      }),
+    );
+    return grants;
+  };
+
+  it("should return confirmed, sending the session's email and the given password and nothing else", async () => {
+    const password = newPassword();
+    const grants = recordPasswordGrants(() => tokenResponse(unsignedToken("fresh")));
+    const client = await signedInClientWithEmail();
+    const requests: string[] = [];
+    server.events.on("request:start", ({ request }) =>
+      requests.push(new URL(request.url).pathname),
+    );
+
+    const outcome = await reauthenticateWithPassword(client, { password });
+
+    expect(outcome).toEqual({ kind: "confirmed" });
+    expect(grants).toHaveLength(1);
+    expect(new URL(grants[0]?.url ?? "").searchParams.get("grant_type")).toBe("password");
+    expect(grants[0]?.body).toMatchObject({ email: EMAIL, password });
+    expect(requests).toEqual(["/auth/v1/token"]);
+  });
+
+  it("should replace the device session with the new one on success", async () => {
+    recordPasswordGrants(() => tokenResponse(unsignedToken("fresh")));
+    const client = await signedInClientWithEmail();
+
+    await reauthenticateWithPassword(client, { password: newPassword() });
+
+    expect((await client.auth.getSession()).data.session?.access_token).toBe(
+      unsignedToken("fresh"),
+    );
+  });
+
+  it("should return wrongPassword for invalid_credentials and leave the session as it was", async () => {
+    recordPasswordGrants(() => authFailure(400, "invalid_credentials"));
+    const client = await signedInClientWithEmail();
+    const before = (await client.auth.getSession()).data.session?.access_token;
+
+    const outcome = await reauthenticateWithPassword(client, { password: newPassword() });
+
+    expect(outcome).toEqual({ kind: "wrongPassword" });
+    expect((await client.auth.getSession()).data.session?.access_token).toBe(before);
+  });
+
+  it("should return tooManyAttempts for over_request_rate_limit", async () => {
+    recordPasswordGrants(() => authFailure(429, "over_request_rate_limit"));
+
+    expect(
+      await reauthenticateWithPassword(await signedInClientWithEmail(), {
+        password: newPassword(),
+      }),
+    ).toEqual({ kind: "tooManyAttempts" });
+  });
+
+  it("should return network when the request cannot be made", async () => {
+    recordPasswordGrants(() => HttpResponse.error());
+
+    expect(
+      await reauthenticateWithPassword(await signedInClientWithEmail(), {
+        password: newPassword(),
+      }),
+    ).toEqual({ kind: "network" });
+  });
+
+  it("should return failed for a 500", async () => {
+    recordPasswordGrants(() => authFailure(500, "unexpected_failure"));
+
+    expect(
+      await reauthenticateWithPassword(await signedInClientWithEmail(), {
+        password: newPassword(),
+      }),
+    ).toEqual({ kind: "failed" });
+  });
+
+  it("should return emptyPassword and send nothing for an empty password", async () => {
+    const grants = recordPasswordGrants(() => tokenResponse(unsignedToken("fresh")));
+
+    const outcome = await reauthenticateWithPassword(await signedInClientWithEmail(), {
+      password: "",
+    });
+
+    expect(outcome).toEqual({ kind: "emptyPassword" });
+    expect(grants).toHaveLength(0);
+  });
+
+  it("should return sessionEnded and send nothing when there is no session", async () => {
+    const grants = recordPasswordGrants(() => tokenResponse(unsignedToken("fresh")));
+
+    const outcome = await reauthenticateWithPassword(createTestClient(), {
+      password: newPassword(),
+    });
+
+    expect(outcome).toEqual({ kind: "sessionEnded" });
+    expect(grants).toHaveLength(0);
+  });
+
+  it("should return sessionEnded and send nothing when the session user has no email", async () => {
+    const grants = recordPasswordGrants(() => tokenResponse(unsignedToken("fresh")));
+
+    const outcome = await reauthenticateWithPassword(await signedInClientWithEmail(null), {
+      password: newPassword(),
+    });
+
+    expect(outcome).toEqual({ kind: "sessionEnded" });
+    expect(grants).toHaveLength(0);
+  });
+
+  it("should not throw when the client throws", async () => {
+    const client = await signedInClientWithEmail();
+    client.auth.signInWithPassword = () => Promise.reject(new Error("boom"));
+
+    expect(await reauthenticateWithPassword(client, { password: newPassword() })).toEqual({
+      kind: "failed",
+    });
+  });
+
+  it("should never put the server's message or the password in an outcome", async () => {
+    const password = newPassword();
+    recordPasswordGrants(() => authFailure(400, "invalid_credentials"));
+
+    const outcome = await reauthenticateWithPassword(await signedInClientWithEmail(), {
+      password,
+    });
+
+    expect(JSON.stringify(outcome)).not.toContain("server wording");
+    expect(JSON.stringify(outcome)).not.toContain(password);
   });
 });

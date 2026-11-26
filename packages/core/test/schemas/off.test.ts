@@ -207,13 +207,14 @@ describe("edgeErrorCodeSchema", () => {
     "bad_mode",
     "no_program",
     "missing_stats",
+    "reauthentication_required",
   ];
 
   it.each(allCodes)("should accept %s", (code) => {
     expect(edgeErrorCodeSchema.parse(code)).toBe(code);
   });
 
-  it("should have exactly the nine documented codes", () => {
+  it("should have exactly the ten documented codes", () => {
     expect([...edgeErrorCodeSchema.options].sort()).toEqual([...allCodes].sort());
   });
 

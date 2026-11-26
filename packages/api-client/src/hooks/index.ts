@@ -77,6 +77,7 @@ export { useSetupDraft } from "./useSetupDraft";
 export { useSetupState } from "./useSetupState";
 export { useSkipSetup } from "./useSkipSetup";
 export { targetsForDay, useTargets } from "./useTargets";
+export { useReauthenticateWithPassword } from "./useReauthenticateWithPassword";
 export { useRequestPasswordReset } from "./useRequestPasswordReset";
 export { useTermsAcceptance } from "./useTermsAcceptance";
 export { useUpdatePassword } from "./useUpdatePassword";

@@ -36,11 +36,11 @@ describe("describeEdgeError", () => {
     expect(RETRY_LABEL).toBe("Try again");
   });
 
-  it("should have its own sentence for each of the nine edge error codes", () => {
-    expect(codes).toHaveLength(9);
+  it("should have its own sentence for each of the ten edge error codes", () => {
+    expect(codes).toHaveLength(10);
     const sentences = codes.map((code) => describeEdgeError(code));
 
-    expect(new Set(sentences).size).toBe(9);
+    expect(new Set(sentences).size).toBe(10);
     for (const sentence of sentences) {
       expect(sentence).not.toBe(GENERIC_ERROR);
     }
