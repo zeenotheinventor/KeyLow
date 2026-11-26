@@ -10,8 +10,6 @@ export type DeleteAccountFlow = {
   isOnline: boolean;
   /** Whether the confirm is open, whether it asks the question or is busy deleting. */
   isConfirmOpen: boolean;
-  /** Whether the signed in account has been read, which decides the confirm. Delete account is not offered before. */
-  isAccountKnown: boolean;
   /**
    * Whether the confirm asks for the account's password, as `confirm-password` does: an account with password
    * sign-in. A Google only account keeps the plain `confirm`.

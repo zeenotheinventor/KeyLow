@@ -103,12 +103,7 @@ export function DeleteAccountScreen() {
       case "explain":
         return (
           <>
-            <Button
-              disabled={!isOnline || !flow.isAccountKnown}
-              fullWidth
-              variant="destructive"
-              onPress={flow.openConfirm}
-            >
+            <Button disabled={!isOnline} fullWidth variant="destructive" onPress={flow.openConfirm}>
               {copy.buttons.delete}
             </Button>
             <Button fullWidth variant="secondary" onPress={goBack}>
@@ -119,12 +114,7 @@ export function DeleteAccountScreen() {
       case "failed":
         return (
           <>
-            <Button
-              disabled={!isOnline || !flow.isAccountKnown}
-              fullWidth
-              variant="destructive"
-              onPress={flow.openConfirm}
-            >
+            <Button disabled={!isOnline} fullWidth variant="destructive" onPress={flow.openConfirm}>
               {copy.buttons.retry}
             </Button>
             <Button fullWidth variant="secondary" onPress={goBack}>

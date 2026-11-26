@@ -1134,7 +1134,7 @@ describe("the Delete account screen", () => {
   });
 
   describe("before the signed in account is read", () => {
-    it("should not offer Delete account, so no deletion can go ahead without knowing which confirm applies", async () => {
+    it("should fail open: Delete account is enabled and the plain confirm shows, as the server enforces the password", async () => {
       mockSessionUser.mockReturnValue(null);
       const user = userEvent.setup();
       await renderScreen();
@@ -1142,9 +1142,9 @@ describe("the Delete account screen", () => {
       const button = screenDeleteButton();
       await user.press(button);
 
-      expect(button).toBeDisabled();
-      expect(screen.queryByLabelText(WORDS.dialogTitle)).not.toBeOnTheScreen();
-      expect(mockDeleteAccount).not.toHaveBeenCalled();
+      expect(button).toBeEnabled();
+      expect(within(dialog()).getByText(WORDS.dialogBody)).toBeOnTheScreen();
+      expect(within(dialog()).queryByLabelText("Password")).not.toBeOnTheScreen();
     });
   });
 

@@ -55,10 +55,11 @@ export function useDeleteAccountFlow(): DeleteAccountFlow {
   const [password, setPassword] = useState("");
   const [passwordError, setPasswordError] = useState<string | undefined>(undefined);
 
-  // The server refuses a deletion that needed the password, and `settle` then reopens the confirm with the field.
+  // This fails open on purpose: while the session user is not known (`useSessionUser` can be null for a while) the
+  // plain confirm shows, as it did before the password step. The server enforces the rule, so a deletion that
+  // needed the password is refused with `reauthentication_required`, and `settle` then reopens the confirm with
+  // the field. Holding Delete account back until the user is known would only leave it disabled.
   const hasPasswordStep = hasPasswordSignIn(user?.app_metadata);
-  // Without the account there is no telling which confirm applies, so a deletion is not offered until it is read.
-  const isAccountKnown = user !== null;
 
   // A confirmed deletion stays busy, so the moment before Sign in opens offers no second deletion.
   const isDeleting = deletion.isPending || isConfirmed;
@@ -134,7 +135,6 @@ export function useDeleteAccountFlow(): DeleteAccountFlow {
     view: viewOf[outcome],
     isOnline,
     isConfirmOpen,
-    isAccountKnown,
     hasPasswordStep,
     password,
     passwordError,
@@ -155,7 +155,7 @@ export function useDeleteAccountFlow(): DeleteAccountFlow {
     openConfirm: openConfirmWithEmptyField,
     closeConfirm,
     confirmDeletion: () => {
-      if (isBusy || !isAccountKnown) {
+      if (isBusy) {
         return;
       }
       if (hasPasswordStep) {
