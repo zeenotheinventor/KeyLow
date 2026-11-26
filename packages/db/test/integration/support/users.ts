@@ -8,6 +8,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 export type TestUser = {
   id: string;
   email: string;
+  /** The password the user was created with, generated at run time, for a test that signs in again. */
+  password: string;
   /** The user's real JWT, sent as the bearer token of a function call. */
   accessToken: string;
   /** Signed in as this user, so every request carries the user's real JWT. */
@@ -48,7 +50,13 @@ export async function createTestUser(suite: string): Promise<TestUser> {
     throw new Error(`Could not sign in as the test user ${email}`, { cause: signInError });
   }
 
-  return { id: data.user.id, email, accessToken: signedIn.session.access_token, client };
+  return {
+    id: data.user.id,
+    email,
+    password,
+    accessToken: signedIn.session.access_token,
+    client,
+  };
 }
 
 /**

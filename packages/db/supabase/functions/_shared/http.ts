@@ -14,6 +14,7 @@ const statusByCode: Record<EdgeErrorCode, number> = {
   bad_mode: 400,
   no_program: 409,
   missing_stats: 409,
+  reauthentication_required: 403,
 };
 
 // Browsers call these functions directly from the web app, so every response carries CORS headers.

@@ -7,19 +7,42 @@ import type { DeleteAccountDependencies } from "./deleteAccount.ts";
 import type { LogFields, LogLevel } from "./log.ts";
 
 const verifiedUser = { id: "11111111-1111-4111-8111-111111111111", email: "caller@keylow.test" };
+const nowSeconds = 1_800_000_000;
+const emailAccount = { provider: "email", providers: ["email"] };
+const googleAccount = { provider: "google", providers: ["google"] };
+const emailAndGoogleAccount = { provider: "email", providers: ["email", "google"] };
+const passwordEntry = (secondsAgo: number) => ({
+  method: "password",
+  timestamp: nowSeconds - secondsAgo,
+});
+const oauthEntry = { method: "oauth", timestamp: nowSeconds };
+const otpEntry = { method: "otp", timestamp: nowSeconds };
+
+type Caller = { appMetadata: unknown; amr: unknown };
+const callerWith = (amr: unknown, appMetadata: unknown = emailAccount): Caller => ({
+  appMetadata,
+  amr,
+});
 const otherUserId = "22222222-2222-4222-8222-222222222222";
 const authMessage = "Database error deleting user: secret@keylow.test row 42";
 
 type Call = { name: string; argumentsGiven: unknown[] };
 
 // Fakes for every dependency. Each call is recorded in order, so a test reads what ran and what did not.
-function fakes(overrides: Partial<DeleteAccountDependencies> = {}) {
+function fakes(
+  overrides: Partial<DeleteAccountDependencies> = {},
+  caller: Caller = callerWith([passwordEntry(0)]),
+) {
   const calls: Call[] = [];
   const logs: { level: LogLevel; event: string; fields: LogFields | undefined }[] = [];
   const dependencies: DeleteAccountDependencies = {
     requireUser: (request) => {
       calls.push({ name: "requireUser", argumentsGiven: [request.method] });
-      return Promise.resolve(verifiedUser);
+      return Promise.resolve({
+        id: verifiedUser.id,
+        app_metadata: caller.appMetadata,
+        amr: caller.amr,
+      });
     },
     consume: (bucket, max, windowSeconds) => {
       calls.push({ name: "consume", argumentsGiven: [bucket, max, windowSeconds] });
@@ -33,6 +56,8 @@ function fakes(overrides: Partial<DeleteAccountDependencies> = {}) {
       logs.push({ level, event, fields });
     },
     now: () => 1000,
+    nowSeconds: () => nowSeconds,
+    enforceFreshPassword: true,
     ...overrides,
   };
   const names = () => calls.map(({ name }) => name);
@@ -239,7 +264,7 @@ Deno.test(
   },
 );
 
-Deno.test("the success line names no user and holds the duration", async () => {
+Deno.test("the success line names no user and holds the duration and the verdict", async () => {
   let clock = 1000;
   const { dependencies, logs } = fakes({ now: () => (clock += 7) });
 
@@ -249,12 +274,13 @@ Deno.test("the success line names no user and holds the duration", async () => {
     {
       level: "info",
       event: "account deleted",
-      fields: { function: "delete-account", milliseconds: 7 },
+      fields: { function: "delete-account", milliseconds: 7, freshPassword: "fresh" },
     },
   ]);
   const written = JSON.stringify(logs);
   assertEquals(written.includes(verifiedUser.id), false);
   assertEquals(written.includes(verifiedUser.email), false);
+  assertEquals(written.includes(String(nowSeconds)), false);
 });
 
 Deno.test("nothing is logged for a refusal", async () => {
@@ -264,3 +290,160 @@ Deno.test("nothing is logged for a refusal", async () => {
 
   assertEquals(logs, []);
 });
+
+Deno.test("with the rule enforced", async (test) => {
+  const refusalCases: [string, Caller][] = [
+    ["a stale password sign-in", callerWith([passwordEntry(3600)])],
+    ["a session with no password entry", callerWith([otpEntry])],
+    ["no amr at all", callerWith(undefined)],
+    [
+      "a password and Google account with an oauth entry",
+      callerWith([oauthEntry], emailAndGoogleAccount),
+    ],
+  ];
+
+  for (const [name, caller] of refusalCases) {
+    await test.step(`${name} gives 403 reauthentication_required and deletes nothing`, async () => {
+      const { dependencies, names, logs } = fakes({}, caller);
+
+      const response = await deleteAccountHandler(dependencies)(post());
+
+      assertEquals(response.status, 403);
+      assertEquals((await response.json()).error.code, "reauthentication_required");
+      assertEquals(names().includes("deleteUser"), false);
+      assertEquals(logs.length, 1);
+      assertEquals(logs[0]?.level, "info");
+      assertEquals(logs[0]?.event, "account deletion refused");
+    });
+  }
+
+  await test.step("a fresh password sign-in gives 200 and deleteUser(id, false)", async () => {
+    const { dependencies, calls } = fakes({}, callerWith([passwordEntry(30)]));
+
+    const response = await deleteAccountHandler(dependencies)(post());
+
+    assertEquals(response.status, 200);
+    assertEquals(calls.at(-1), { name: "deleteUser", argumentsGiven: [verifiedUser.id, false] });
+  });
+
+  await test.step("a Google-only account with an oauth entry gives 200", async () => {
+    const { dependencies, names, logs } = fakes({}, callerWith([oauthEntry], googleAccount));
+
+    const response = await deleteAccountHandler(dependencies)(post());
+
+    assertEquals(response.status, 200);
+    assertEquals(names().at(-1), "deleteUser");
+    assertEquals(logs[0]?.fields?.freshPassword, "notRequired");
+  });
+
+  await test.step("exactly 900 seconds old is accepted", async () => {
+    const { dependencies, names } = fakes({}, callerWith([passwordEntry(900)]));
+
+    const response = await deleteAccountHandler(dependencies)(post());
+
+    assertEquals(response.status, 200);
+    assertEquals(names().at(-1), "deleteUser");
+  });
+
+  await test.step("901 seconds old is refused", async () => {
+    const { dependencies, names } = fakes({}, callerWith([passwordEntry(901)]));
+
+    const response = await deleteAccountHandler(dependencies)(post());
+
+    assertEquals(response.status, 403);
+    assertEquals(names().includes("deleteUser"), false);
+  });
+
+  await test.step("a refreshed old session is refused, because the rule reads amr and never iat", async () => {
+    // The payload a refresh produces: a recent iat and a password entry an hour old.
+    const refreshed = { iat: nowSeconds - 5, amr: [passwordEntry(3600)] };
+    const { dependencies, names } = fakes({}, callerWith(refreshed.amr));
+
+    const response = await deleteAccountHandler(dependencies)(post());
+
+    assertEquals(response.status, 403);
+    assertEquals(names().includes("deleteUser"), false);
+  });
+
+  await test.step("a refusal logs the reason and nothing about the person or the token", async () => {
+    const { dependencies, logs } = fakes({}, callerWith([passwordEntry(3600)]));
+
+    await deleteAccountHandler(dependencies)(post());
+
+    assertEquals(logs, [
+      {
+        level: "info",
+        event: "account deletion refused",
+        fields: { function: "delete-account", reason: "stale" },
+      },
+    ]);
+    const written = JSON.stringify(logs);
+    assertEquals(written.includes(verifiedUser.id), false);
+    assertEquals(written.includes(verifiedUser.email), false);
+    assertEquals(written.includes(String(nowSeconds)), false);
+  });
+
+  await test.step("a refused body with a stale token gives 400 invalid_request, not the freshness refusal", async () => {
+    const { dependencies, names } = fakes({}, callerWith([passwordEntry(3600)]));
+
+    const response = await deleteAccountHandler(dependencies)(post({ body: "not json" }));
+
+    assertEquals(response.status, 400);
+    assertEquals((await response.json()).error.code, "invalid_request");
+    assertEquals(names().includes("deleteUser"), false);
+  });
+
+  await test.step("a 429 comes back before the freshness check", async () => {
+    const limited = error("rate_limited", "Too many requests.", { retryAfterSeconds: 60 });
+    const { dependencies, names, logs } = fakes(
+      { consume: () => Promise.resolve(limited) },
+      callerWith([passwordEntry(3600)]),
+    );
+
+    const response = await deleteAccountHandler(dependencies)(post());
+
+    assertEquals(response, limited);
+    assertEquals(names().includes("deleteUser"), false);
+    assertEquals(logs, []);
+  });
+
+  await test.step("a refused stale call spends one hit of the limit", async () => {
+    const { dependencies, names } = fakes({}, callerWith([passwordEntry(3600)]));
+
+    await deleteAccountHandler(dependencies)(post());
+
+    assertEquals(names(), ["requireUser", "consume"]);
+  });
+});
+
+Deno.test(
+  "with the rule not enforced, a stale sign-in still deletes and the success line carries the verdict",
+  async () => {
+    const { dependencies, names, logs } = fakes(
+      { enforceFreshPassword: false },
+      callerWith([passwordEntry(3600)]),
+    );
+
+    const response = await deleteAccountHandler(dependencies)(post());
+
+    assertEquals(response.status, 200);
+    assertEquals(names().at(-1), "deleteUser");
+    assertEquals(logs[0]?.fields?.freshPassword, "stale");
+  },
+);
+
+Deno.test(
+  "with the rule not enforced, a missing password entry still deletes and says missing",
+  async () => {
+    const { dependencies, names, logs } = fakes(
+      { enforceFreshPassword: false },
+      callerWith([otpEntry]),
+    );
+
+    const response = await deleteAccountHandler(dependencies)(post());
+
+    assertEquals(response.status, 200);
+    assertEquals(names().at(-1), "deleteUser");
+    assertEquals(logs[0]?.fields?.freshPassword, "missing");
+  },
+);

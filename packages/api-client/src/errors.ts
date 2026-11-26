@@ -44,7 +44,7 @@ export class EntryNotFoundError extends Error {
 }
 
 /**
- * What went wrong with an Edge Function call, with no sentence in it: one of the nine codes an Edge
+ * What went wrong with an Edge Function call, with no sentence in it: one of the ten codes an Edge
  * Function answers with, or `failed` when the failure was not a typed answer (no network, or a
  * body that was not an edge error). A screen turns a kind into words with `describeEdgeError`.
  */

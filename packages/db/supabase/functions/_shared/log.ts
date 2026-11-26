@@ -30,6 +30,9 @@ const textPatterns = {
   model: codePattern,
   transport: codePattern,
   errorType: codePattern,
+  // The freshness verdict of delete-account: a word, never a time.
+  freshPassword: codePattern,
+  reason: codePattern,
 } as const;
 
 const numberKeys = [

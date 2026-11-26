@@ -56,8 +56,9 @@ export const offProductResponseSchema = z.object({
 });
 
 /**
- * The codes of the shared error body. The last three are `run-checkin`'s: a mode it does not know (400),
- * a user with no active program (409) and a user whose profile lacks a stat the engine needs (409).
+ * The codes of the shared error body. The three after `internal_error` are `run-checkin`'s: a mode it does not
+ * know (400), a user with no active program (409) and a user whose profile lacks a stat the engine needs (409).
+ * The last is `delete-account`'s: the caller has no password sign-in inside the last 15 minutes (403).
  */
 export const edgeErrorCodeSchema = z.enum([
   "not_found",
@@ -69,6 +70,7 @@ export const edgeErrorCodeSchema = z.enum([
   "bad_mode",
   "no_program",
   "missing_stats",
+  "reauthentication_required",
 ]);
 
 /** Error body shared by every Edge Function. */

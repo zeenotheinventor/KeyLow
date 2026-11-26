@@ -2,8 +2,15 @@
 // admin API is the verified user's and comes from nowhere in the request, so the query, the headers and
 // the body are never read for one. The body must be empty, which makes a client that names a user fail
 // loudly. The delete is a hard delete: every owned row goes through the cascading keys and the purge
-// trigger inside GoTrue's own transaction, so the database is never half deleted.
-import { deleteAccountRequestSchema, deleteAccountResponseSchema } from "./core.ts";
+// trigger inside GoTrue's own transaction, so the database is never half deleted. An account that signs in
+// with a password must also have signed in with it in the last 15 minutes (core's `freshPasswordVerdict`),
+// read from the verified token's `amr` claim and the verified user's metadata. Where the rule is not
+// enforced it is still computed and logged, so the hosted shape of `amr` is on record before it is.
+import {
+  deleteAccountRequestSchema,
+  deleteAccountResponseSchema,
+  freshPasswordVerdict,
+} from "./core.ts";
 import { error, json } from "./http.ts";
 import { readLimit } from "./rateLimit.ts";
 
@@ -18,12 +25,18 @@ const windowSeconds = 3600;
 type AdminError = { code?: string | undefined; status?: number | undefined; message?: string };
 
 export type DeleteAccountDependencies = {
-  requireUser: (request: Request) => Promise<{ id: string } | Response>;
+  requireUser: (
+    request: Request,
+  ) => Promise<{ id: string; app_metadata: unknown; amr: unknown } | Response>;
   consume: (bucket: string, max: number, windowSeconds: number) => Promise<Response | null>;
   deleteUser: (userId: string, shouldSoftDelete: boolean) => Promise<{ error: AdminError | null }>;
   log: (level: LogLevel, event: string, fields?: LogFields) => void;
   /** Milliseconds, from any fixed starting point. */
   now: () => number;
+  /** Epoch seconds from the wall clock, to compare with the timestamps in `amr`. Not `now`, which is monotonic. */
+  nowSeconds: () => number;
+  /** Whether a stale or missing password sign-in refuses the deletion. Off, it is only logged. */
+  enforceFreshPassword: boolean;
 };
 
 // The body is empty or an empty object. Anything else, including a field naming a user, is refused.
@@ -38,12 +51,14 @@ function isAcceptableBody(text: string): boolean {
   }
 }
 
-// The order is method, caller, rate limit, body, delete. The limit comes before the body so refused
-// bodies spend hits and the limit can be reached without deleting anything.
+// The order is method, caller, rate limit, body, fresh password, delete. The limit comes before the body so
+// refused bodies spend hits and the limit can be reached without deleting anything, and a refused stale
+// call spends one hit.
 export function deleteAccountHandler(
   dependencies: DeleteAccountDependencies,
 ): (request: Request) => Promise<Response> {
-  const { requireUser, consume, deleteUser, log, now } = dependencies;
+  const { requireUser, consume, deleteUser, log, now, nowSeconds, enforceFreshPassword } =
+    dependencies;
 
   return async (request) => {
     if (request.method !== "POST") {
@@ -68,6 +83,19 @@ export function deleteAccountHandler(
       return error("invalid_request", "The request body must be empty.");
     }
 
+    const verdict = freshPasswordVerdict({
+      appMetadata: user.app_metadata,
+      amr: user.amr,
+      nowSeconds: nowSeconds(),
+    });
+    if (enforceFreshPassword && (verdict === "stale" || verdict === "missing")) {
+      log("info", "account deletion refused", { function: functionName, reason: verdict });
+      return error(
+        "reauthentication_required",
+        "Sign in with your password again to delete this account.",
+      );
+    }
+
     const startedAt = now();
     const { error: adminError } = await deleteUser(user.id, false);
     if (adminError !== null) {
@@ -86,6 +114,7 @@ export function deleteAccountHandler(
     log("info", "account deleted", {
       function: functionName,
       milliseconds: Math.round(now() - startedAt),
+      freshPassword: verdict,
     });
     return json(deleteAccountResponseSchema.parse({ deleted: true }));
   };

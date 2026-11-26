@@ -57,6 +57,7 @@ export {
   useProfileTimeZone,
   useSyncTimeZone,
   useTargets,
+  useReauthenticateWithPassword,
   useRequestPasswordReset,
   useTermsAcceptance,
   useToggleFavouriteFood,
@@ -123,6 +124,7 @@ export {
   logQuickEntry,
   removeFavouriteFood,
   removeFavouriteRecipe,
+  reauthenticateWithPassword,
   requestPasswordReset,
   replaceFoodPortions,
   restoreLogEntry,
@@ -590,6 +592,7 @@ export type { SkippedKind, StreamingFetch, StreamingResponse } from "./runAssist
 export { AccountExportError, exportMyData, readMyDataByTable } from "./repos";
 export { AccountDeletionError, deleteMyAccount } from "./repos";
 export type { AccountDeletionErrorCode, AccountDeletionResult } from "./repos";
+export type { ReauthenticationOutcome } from "@keylow/core/accounts";
 export { useAccountExportFile } from "./hooks";
 export { useDeleteMyAccount } from "./hooks";
 export type {

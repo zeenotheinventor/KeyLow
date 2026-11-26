@@ -2,6 +2,7 @@
 // bundle behind it is written by `bundle-core-for-deno` and typed by the @ts-self-types pragma in
 // it, so a missing or stale bundle fails `deno check` here. Export what a function needs.
 export type {
+  FreshPasswordVerdict,
   PlanRanking,
   AdjustmentOutcome,
   FitMiss,
@@ -91,6 +92,8 @@ export type {
   SuggestionLine,
 } from "./core/index.js";
 export {
+  FRESH_PASSWORD_WINDOW_SECONDS,
+  freshPasswordVerdict,
   addCalendarDays,
   planRankingSchema,
   PLAN_NOT_SAVED_WORDS,

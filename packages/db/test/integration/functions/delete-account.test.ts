@@ -14,9 +14,17 @@ import {
   saveRoutine,
   startSession,
 } from "../../../../api-client/test/integration/support/training";
+import {
+  agePasswordEntry,
+  claimsOf,
+  makeEmailAndGoogle,
+  makeGoogleOnly,
+  passwordTimestampOf,
+  signInWithLink,
+} from "../support/authSessions";
 import { callFunction } from "../support/functionClient";
 import { requireServedFunction } from "../support/functionsLane";
-import { adminClient } from "../support/stack";
+import { adminClient, anonClient } from "../support/stack";
 import { requireFunctionEnvironmentValue } from "../support/testEnvironment";
 import { createTestUser, deleteCreatedTestUsers } from "../support/users";
 
@@ -86,9 +94,8 @@ async function userExists(id: string): Promise<boolean> {
 
 type Bystander = { user: TestUser; weighInId: string };
 
-/** User B: with a weigh-in B wrote through B's own client. */
-async function newBystander(): Promise<Bystander> {
-  const user = await createTestUser(suite);
+/** A weigh-in the user writes through their own client, and its id. */
+async function writeWeighIn(user: TestUser): Promise<string> {
   const { data, error } = await user.client
     .from("weigh_ins")
     .insert({
@@ -101,9 +108,15 @@ async function newBystander(): Promise<Bystander> {
     .select("id")
     .single();
   if (error !== null) {
-    throw new Error(`Could not write the bystander's weigh-in (${error.code})`);
+    throw new Error(`Could not write the weigh-in (${error.code})`);
   }
-  return { user, weighInId: data.id };
+  return data.id;
+}
+
+/** User B: with a weigh-in B wrote through B's own client. */
+async function newBystander(): Promise<Bystander> {
+  const user = await createTestUser(suite);
+  return { user, weighInId: await writeWeighIn(user) };
 }
 
 /** B is untouched: B exists, and B's own client still reads B's profile and B's weigh-in. */
@@ -326,6 +339,164 @@ describe("delete-account", () => {
       expect(errorCodeOf(limited.text)).toBe("rate_limited");
       expect(Number(limited.headers.get("retry-after"))).toBeGreaterThan(0);
       expect(await userExists(a.id)).toBe(true);
+      await expectBystanderUntouched(bystander);
+    });
+  });
+
+  describe("the fresh password rule", () => {
+    /** A, with a weigh-in of their own, and the untouched bystander B. */
+    async function newCallerAndBystander() {
+      const [a, bystander] = await Promise.all([newBystander(), newBystander()]);
+      return { a: a.user, weighInId: a.weighInId, bystander };
+    }
+
+    /** After a refusal A is still there and A's own client still reads A's weigh-in. */
+    async function expectCallerKept(a: TestUser, weighInId: string) {
+      expect(await userExists(a.id)).toBe(true);
+      const weighIns = await a.client.from("weigh_ins").select("id");
+      expect(weighIns.error).toBeNull();
+      expect(weighIns.data?.map(({ id }) => id)).toEqual([weighInId]);
+    }
+
+    /** A new password sign-in for the user, and the token of the new session. */
+    async function signInAgain(user: TestUser): Promise<string> {
+      const { data, error } = await anonClient().auth.signInWithPassword({
+        email: user.email,
+        password: user.password,
+      });
+      if (error !== null) {
+        throw new Error(`Could not sign in again (${error.code ?? "unknown"})`);
+      }
+      return data.session.access_token;
+    }
+
+    /** The token of a session whose password sign-in is sixteen minutes old, after a refresh. */
+    async function refreshedOldToken(user: TestUser): Promise<string> {
+      await agePasswordEntry(user.accessToken, 16);
+      const { data, error } = await user.client.auth.refreshSession();
+      if (error !== null || data.session === null) {
+        throw new Error("Could not refresh the aged session");
+      }
+      return data.session.access_token;
+    }
+
+    it("13. accepts a fresh password session", async () => {
+      const { a, bystander } = await newCallerAndBystander();
+      expect(Date.now() / 1000 - passwordTimestampOf(a.accessToken)).toBeLessThan(60);
+
+      const response = await callRaw({ accessToken: a.accessToken });
+
+      expect(response.status).toBe(200);
+      expect(await userExists(a.id)).toBe(false);
+      await expectBystanderUntouched(bystander);
+    });
+
+    it("14. refuses a stale token and a refreshed old session, then accepts a new password sign-in", async () => {
+      const { a, weighInId, bystander } = await newCallerAndBystander();
+      const refreshed = await refreshedOldToken(a);
+      // The refreshed token is new, and its password entry is older than the window even so.
+      expect(Number(claimsOf(refreshed)["iat"]) - passwordTimestampOf(refreshed)).toBeGreaterThan(
+        900,
+      );
+
+      const refused = await callRaw({ accessToken: refreshed });
+
+      expect(refused.status).toBe(403);
+      expect(errorCodeOf(refused.text)).toBe("reauthentication_required");
+      await expectCallerKept(a, weighInId);
+
+      const accepted = await callRaw({ accessToken: await signInAgain(a) });
+
+      expect(accepted.status).toBe(200);
+      expect(await userExists(a.id)).toBe(false);
+      await expectBystanderUntouched(bystander);
+    });
+
+    it("15. refuses a recovery link session", async () => {
+      const { a, weighInId, bystander } = await newCallerAndBystander();
+      const { accessToken } = await signInWithLink(a, "recovery");
+
+      const response = await callRaw({ accessToken });
+
+      expect(response.status).toBe(403);
+      expect(errorCodeOf(response.text)).toBe("reauthentication_required");
+      await expectCallerKept(a, weighInId);
+      await expectBystanderUntouched(bystander);
+    });
+
+    it("16. refuses a magic link session", async () => {
+      const { a, weighInId, bystander } = await newCallerAndBystander();
+      const { accessToken } = await signInWithLink(a, "magiclink");
+
+      const response = await callRaw({ accessToken });
+
+      expect(response.status).toBe(403);
+      expect(errorCodeOf(response.text)).toBe("reauthentication_required");
+      await expectCallerKept(a, weighInId);
+      await expectBystanderUntouched(bystander);
+    });
+
+    it("17. accepts a Google-only account with no password sign-in", async () => {
+      const { a, bystander } = await newCallerAndBystander();
+      const { accessToken } = await signInWithLink(a, "magiclink");
+      // After the link, which resets `providers` to email as it signs the user in.
+      await makeGoogleOnly(a.id);
+
+      const response = await callRaw({ accessToken });
+
+      expect(response.status).toBe(200);
+      expect(await userExists(a.id)).toBe(false);
+      await expectBystanderUntouched(bystander);
+    });
+
+    it("18. asks a password and Google account for the password", async () => {
+      const { a, weighInId, bystander } = await newCallerAndBystander();
+      const { accessToken } = await signInWithLink(a, "magiclink");
+      await makeEmailAndGoogle(a.id);
+
+      const refused = await callRaw({ accessToken });
+
+      expect(refused.status).toBe(403);
+      expect(errorCodeOf(refused.text)).toBe("reauthentication_required");
+      await expectCallerKept(a, weighInId);
+
+      const accepted = await callRaw({ accessToken: await signInAgain(a) });
+
+      expect(accepted.status).toBe(200);
+      expect(await userExists(a.id)).toBe(false);
+      await expectBystanderUntouched(bystander);
+    });
+
+    it("19. refuses a direct fetch call, with no client and no body, that has no fresh sign-in", async () => {
+      const { a, weighInId, bystander } = await newCallerAndBystander();
+      const { accessToken } = await signInWithLink(a, "recovery");
+
+      const response = await callRaw({ accessToken });
+
+      expect(response.status).toBe(403);
+      expect(errorCodeOf(response.text)).toBe("reauthentication_required");
+      await expectCallerKept(a, weighInId);
+      await expectBystanderUntouched(bystander);
+    });
+
+    it("20. refuses a token whose payload was rewritten to claim a fresh password sign-in", async () => {
+      const { a, weighInId, bystander } = await newCallerAndBystander();
+      const aged = await refreshedOldToken(a);
+      const [header, payload, signature] = aged.split(".");
+      const claims = claimsOf(aged);
+      const rewritten = Buffer.from(
+        JSON.stringify({
+          ...claims,
+          amr: [{ method: "password", timestamp: Math.floor(Date.now() / 1000) }],
+        }),
+      ).toString("base64url");
+      expect(rewritten).not.toBe(payload);
+
+      const response = await callRaw({ accessToken: [header, rewritten, signature].join(".") });
+
+      expect(response.status).toBe(401);
+      expect(errorCodeOf(response.text)).toBe("unauthorized");
+      await expectCallerKept(a, weighInId);
       await expectBystanderUntouched(bystander);
     });
   });
